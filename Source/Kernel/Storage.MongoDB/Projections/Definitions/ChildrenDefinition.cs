@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-
 namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 
 /// <summary>
@@ -49,4 +47,9 @@ public class ChildrenDefinition
     /// Gets or sets the property on model that identifies the unique object, typically the key - or id (event source id).
     /// </summary>
     public required string IdentifiedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
 }

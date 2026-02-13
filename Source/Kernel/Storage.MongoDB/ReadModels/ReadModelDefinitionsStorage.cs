@@ -51,9 +51,14 @@ public class ReadModelDefinitionsStorage(
     public Task Save(ReadModelDefinition definition)
     {
         var readModel = new ReadModel(
-            definition.Identifier.Value,
-            definition.Name.Value,
+            definition.Identifier,
+            definition.ContainerName,
+            definition.DisplayName,
             definition.Owner,
+            definition.Source,
+            definition.ObserverType,
+            definition.ObserverIdentifier,
+            definition.Sink,
             definition.Schemas.ToDictionary(_ => _.Key.ToString(), _ => BsonDocument.Parse(_.Value.ToJson())));
         return Collection.ReplaceOneAsync(rm => rm.Id == readModel.Id, readModel, new ReplaceOptions { IsUpsert = true });
     }
@@ -66,6 +71,16 @@ public class ReadModelDefinitionsStorage(
             var generation = (ReadModelGeneration)key!;
             schemas[generation] = await JsonSchema.FromJsonAsync(schema.ToJson());
         }
-        return new(readModel.Id, readModel.Name, readModel.Owner, schemas);
+        return new(
+            readModel.Id,
+            readModel.ContainerName,
+            readModel.DisplayName,
+            readModel.Owner,
+            readModel.Source,
+            readModel.ObserverType,
+            readModel.ObserverIdentifier,
+            readModel.Sink,
+            schemas,
+            []);
     }
 }

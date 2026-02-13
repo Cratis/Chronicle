@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Specifications.Projections.Events;
-using Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.ReadModels;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event.with_multiple_children_with_same_id.context;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Events;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event.with_multiple_children_with_same_id.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event;
 
@@ -16,7 +16,7 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
     const string GroupName2 = "Group2";
     const string UserName = "User";
 
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId FirstGroupId;

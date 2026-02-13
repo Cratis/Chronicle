@@ -8,7 +8,7 @@
         <ResourceNamespace>$(RootNamespace)</ResourceNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
-        <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001</NoWarn>
+        <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001;MA0182</NoWarn>
         <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 
@@ -56,8 +56,8 @@
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
-        <PackageReference Include="Cratis.Applications" />
-        <PackageReference Include="Cratis.Applications.Swagger" />
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="ILRepack.Lib.MSBuild.Task">
@@ -75,6 +75,7 @@
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
         <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Web/Api</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
     </PropertyGroup>
 
     <Target Name="EmbedXmlDocs" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
@@ -87,7 +88,8 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <PackageReference Include="Cratis.Applications.ProxyGenerator.Build" />
+      <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 </Project>

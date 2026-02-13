@@ -5,6 +5,8 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -23,6 +25,24 @@ public record ProjectionEventContext(
     ProjectionOperationType OperationType,
     bool NeedsInitialState)
 {
+    readonly List<ProjectionFuture> _deferredFutures = [];
+    readonly List<FailedPartition> _failedPartitions = [];
+
+    /// <summary>
+    /// Gets the collection of deferred futures that need to be stored.
+    /// </summary>
+    public IEnumerable<ProjectionFuture> DeferredFutures => _deferredFutures;
+
+    /// <summary>
+    /// Gets whether this event has been deferred (has futures that couldn't be resolved).
+    /// </summary>
+    public bool IsDeferred => _deferredFutures.Count > 0;
+
+    /// <summary>
+    /// Gets the collection of failed partitions from bulk operations.
+    /// </summary>
+    public IEnumerable<FailedPartition> FailedPartitions => _failedPartitions;
+
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
     /// </summary>
@@ -47,6 +67,27 @@ public record ProjectionEventContext(
     /// Whether the operation type affects children.
     /// </summary>
     public bool ChildrenAffected => OperationType.HasFlag(ProjectionOperationType.ChildrenAffected);
+
+    /// <summary>
+    /// Adds a deferred future to the context.
+    /// </summary>
+    /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
+    public void AddDeferredFuture(ProjectionFuture future)
+    {
+        // Avoid adding duplicate futures for the same event sequence number
+        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber))
+        {
+            return;
+        }
+
+        _deferredFutures.Add(future);
+    }
+
+    /// <summary>
+    /// Adds a failed partition to the context.
+    /// </summary>
+    /// <param name="failedPartition">The <see cref="FailedPartition"/> to add.</param>
+    public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and

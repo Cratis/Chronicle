@@ -23,6 +23,7 @@ public class GroupProjection : IProjectionFor<Group>
                 .UsingKey(e => e.UserId))
             .RemovedWith<UserRemovedFromGroup>(e => e.UserId));
 }
+
 ```
 
 ## Read model with children
@@ -38,6 +39,7 @@ public record Group(
 public record GroupMember(
     string UserId,
     string Role);
+
 ```
 
 ## Event definitions
@@ -56,6 +58,7 @@ public record UserRoleChanged(string UserId, string NewRole);
 
 [EventType]
 public record UserRemovedFromGroup(string UserId);
+
 ```
 
 ## How children work
@@ -65,6 +68,81 @@ public record UserRemovedFromGroup(string UserId);
 3. `IdentifiedBy()` specifies how to identify child items (by `UserId` in this example)
 4. `UsingKey()` tells the projection which property contains the child identifier
 5. Child items are created, updated, or remain unchanged based on the events
+
+## Parent key resolution
+
+By default, when a child event is processed, the framework uses the **EventSourceId** to identify the parent. This works well when the event is appended with the parent's identifier as the EventSourceId.
+
+### Default behavior (EventSourceId as parent key)
+
+In most scenarios, you don't need to specify the parent key explicitly:
+
+```csharp
+.Children(m => m.Members, children => children
+    .IdentifiedBy(e => e.UserId)
+    .AutoMap()
+    .From<UserAddedToGroup>(b => b
+        .UsingKey(e => e.UserId)))
+    // No UsingParentKey needed - uses EventSourceId by default
+
+```
+
+When you append the event:
+
+
+```csharp
+await EventStore.EventLog.Append(groupId, new UserAddedToGroup(userId, role));
+
+```
+
+The `groupId` (EventSourceId) is automatically used to find the parent `Group`.
+
+### Extracting parent key from event content
+
+If your event contains the parent key as a property (instead of using EventSourceId), use `UsingParentKey()`:
+
+```csharp
+.Children(m => m.Members, children => children
+    .IdentifiedBy(e => e.UserId)
+    .AutoMap()
+    .From<UserAddedToGroup>(b => b
+        .UsingParentKey(e => e.GroupId)  // Extract from event content
+        .UsingKey(e => e.UserId)))
+
+```
+
+
+
+When you append the event:
+
+```csharp
+await EventStore.EventLog.Append(userId, new UserAddedToGroup(userId, groupId, role));
+
+```
+
+The `groupId` property from the event content is used to find the parent `Group`.
+
+### Using EventSourceId explicitly with UsingParentKeyFromContext
+
+In some advanced scenarios, you might want to explicitly indicate that the EventSourceId should be used as the parent key (e.g., for documentation clarity):
+
+```csharp
+.Children(m => m.Members, children => children
+    .IdentifiedBy(e => e.UserId)
+    .AutoMap()
+    .From<UserAddedToGroup>(b => b
+        .UsingParentKeyFromContext(ctx => ctx.EventSourceId)  // Explicit
+        .UsingKey(e => e.UserId)))
+
+```
+
+This is functionally equivalent to not specifying the parent key at all, but can make the intent clearer in complex projections.
+
+### When to use each approach
+
+- **No parent key specified** (default): Use when EventSourceId represents the parent identifier
+- **`UsingParentKey(e => e.Property)`**: Use when parent identifier is in the event content
+- **`UsingParentKeyFromContext(ctx => ctx.EventSourceId)`**: Use for explicit documentation of default behavior
 
 ## Child lifecycle
 
@@ -81,6 +159,7 @@ The `RemovedWith<>()` method specifies how to remove child items from collection
     .IdentifiedBy(e => e.UserId)
     .From<UserAddedToGroup>(_ => /* ... */)
     .RemovedWith<UserRemovedFromGroup>(e => e.UserId))
+
 ```
 
 When a `UserRemovedFromGroup` event is processed:
@@ -105,6 +184,7 @@ A single projection can have multiple child collections:
     .IdentifiedBy(e => e.TaskId)
     .AutoMap()
     .From<TaskAssignedToGroup>(_ => /* ... */));
+
 ```
 
 This pattern allows you to build rich, hierarchical read models from events.

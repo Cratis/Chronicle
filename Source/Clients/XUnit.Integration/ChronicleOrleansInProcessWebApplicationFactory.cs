@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.MongoDB;
+using Cratis.Arc;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
@@ -21,6 +22,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="fixture">The <see cref="IChronicleSetupFixture"/>.</param>
 /// <param name="configureServices">Action to configure the services.</param>
 /// <param name="configureMongoDB">Action to configure MongoDB options.</param>
+/// <param name="configureWebHost">Action to configure <see cref="IWebHostBuilder"/>.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
@@ -28,6 +30,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     IChronicleSetupFixture fixture,
     Action<IServiceCollection> configureServices,
     Action<IMongoDBBuilder> configureMongoDB,
+    Action<IWebHostBuilder> configureWebHost,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
@@ -37,11 +40,14 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
-        builder.UseCratisMongoDB(
+        var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}/?directConnection=true";
+
+        builder.AddCratisMongoDB(
             mongo =>
             {
-                mongo.Server = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}";
+                mongo.Server = mongoServer;
                 mongo.Database = "orleans";
+                mongo.DirectConnection = true;
             },
             configureMongoDB);
         builder.ConfigureLogging(_ =>
@@ -53,7 +59,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
             .ConfigureServices((ctx, services) =>
             {
-                services.AddCratisApplicationModelMeter();
+                services.AddCratisArcMeter();
                 services.AddBindingsByConvention();
                 services.AddSelfBindings();
                 services.AddChronicleTelemetry(ctx.Configuration);
@@ -70,11 +76,15 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     .UseLocalhostClustering()
                     .AddCratisChronicle(
                         options => options.EventStoreName = Constants.EventStore,
-                        chronicleBuilder => chronicleBuilder.WithMongoDB(chronicleOptions.Storage.ConnectionDetails, Constants.EventStore));
+                        chronicleBuilder => chronicleBuilder.WithMongoDB(mongoServer, Constants.EventStore));
             })
             .UseConsoleLifetime();
 
-        builder.ConfigureWebHostDefaults(b => b.Configure(app => app.UseCratisChronicle()));
+        builder.ConfigureWebHostDefaults(b =>
+        {
+            b.Configure(app => app.UseCratisChronicle());
+            configureWebHost(b);
+        });
         return builder;
     }
 }

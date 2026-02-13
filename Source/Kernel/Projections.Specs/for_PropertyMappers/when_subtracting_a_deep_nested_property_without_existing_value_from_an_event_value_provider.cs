@@ -5,6 +5,8 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_PropertyMappers;
 
@@ -31,18 +33,20 @@ public class when_subtracting_a_deep_nested_property_without_existing_value_from
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
-        _propertyMapper = PropertyMappers.SubtractWithEventValueProvider("deep.nested.property", _ =>
+        _propertyMapper = PropertyMappers.SubtractWithEventValueProvider(new TypeFormats(), "deep.nested.property", new JsonSchemaProperty { Type = JsonObjectType.Integer }, _ =>
         {
             _providedEvent = _;
-            return 2d;
+            return 2;
         });
     }
 
     void Because() => _propertyMapper(_event, _result, ArrayIndexers.NoIndexers);
 
-    [Fact] void should_result_in_expected_value() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(-2d);
+    [Fact] void should_result_in_expected_value() => ((object)((dynamic)_result).deep.nested.property).ShouldEqual(-2);
     [Fact] void should_pass_the_event_to_the_value_provider() => _providedEvent.ShouldEqual(_event);
 }

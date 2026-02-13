@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Grains.Observation;
@@ -52,11 +53,18 @@ internal sealed class Reducers(
         ConcurrentDictionary<EventSourceId, TaskCompletionSource<ReducerSubscriberResult>> reducerResultTcs = [];
         IReducer? clientObserver = null;
 
+        // The read model definition will be populated once the reducer is registered.
         var model = new ReadModelDefinition(
             ReadModelIdentifier.NotSet,
-            ReadModelName.NotSet,
+            ReadModelContainerName.NotSet,
+            ReadModelDisplayName.NotSet,
             ReadModelOwner.None,
-            new Dictionary<ReadModelGeneration, JsonSchema>());
+            ReadModelSource.Code,
+            ReadModelObserverType.Reducer,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema>(),
+            []);
 
         messages.Subscribe(message =>
         {
@@ -70,7 +78,7 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                    var readModel = grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
                         result =>
                         {
                             model = result.Result;

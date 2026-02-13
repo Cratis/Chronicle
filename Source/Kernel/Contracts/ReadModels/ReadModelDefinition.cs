@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Sinks;
+
 namespace Cratis.Chronicle.Contracts.ReadModels;
 
 /// <summary>
@@ -13,23 +15,59 @@ public class ReadModelDefinition
     /// Gets or sets the unique identifier of the model.
     /// </summary>
     [ProtoMember(1)]
-    public string Identifier { get; set; }
+    public ReadModelType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the model.
+    /// Gets or sets the container name of the model (collection, table, etc.).
     /// </summary>
     [ProtoMember(2)]
-    public string Name { get; set; }
+    public string ContainerName { get; set; }
 
     /// <summary>
-    /// Gets or sets the generation of the model.
+    /// Gets or sets the display name of the model.
     /// </summary>
     [ProtoMember(3)]
-    public ulong Generation { get; set; }
+    public string DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the projection sink definition.
+    /// </summary>
+    [ProtoMember(4)]
+    public SinkDefinition Sink { get; set; }
 
     /// <summary>
     /// Gets or sets the JSON schema for the model.
     /// </summary>
-    [ProtoMember(4)]
+    [ProtoMember(5)]
     public string Schema { get; set; }
+
+    /// <summary>
+    /// Gets or sets the indexes defined for the model.
+    /// </summary>
+    [ProtoMember(6, IsRequired = true)]
+    public IList<IndexDefinition> Indexes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the type of owner for the read model.
+    /// </summary>
+    [ProtoMember(7)]
+    public ReadModelObserverType ObserverType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the observer identifier for the read model.
+    /// </summary>
+    [ProtoMember(8)]
+    public string ObserverIdentifier { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the owner of the read model.
+    /// </summary>
+    [ProtoMember(9)]
+    public ReadModelOwner Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source of the read model.
+    /// </summary>
+    [ProtoMember(10)]
+    public ReadModelSource Source { get; set; }
 }

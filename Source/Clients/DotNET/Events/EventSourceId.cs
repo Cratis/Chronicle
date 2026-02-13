@@ -15,6 +15,14 @@ public record EventSourceId(string Value) : ConceptAs<string>(Value)
     public static readonly EventSourceId Unspecified = new(string.Empty);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="EventSourceId"/> class.
+    /// </summary>
+    /// <param name="value">The <see cref="Guid"/> value.</param>
+    public EventSourceId(Guid value) : this(value.ToString())
+    {
+    }
+
+    /// <summary>
     /// Check whether or not the <see cref="EventSourceId"/> is specified.
     /// </summary>
     public bool IsSpecified => this != Unspecified;

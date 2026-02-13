@@ -9,7 +9,10 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Monads;
 using Cratis.Reflection;
 using Cratis.Types;
 
@@ -64,7 +67,7 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber)
     {
         var state = changeset.InitialState.Clone();
         var collection = Collection;
@@ -73,15 +76,21 @@ public class InMemorySink(
         if (changeset.HasBeenRemoved())
         {
             collection.Remove(keyValue);
-            return Task.CompletedTask;
+            return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
 
-        return Task.CompletedTask;
+        return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context)
@@ -109,6 +118,34 @@ public class InMemorySink(
     {
         Collection.Clear();
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
+    {
+        var collection = Collection;
+        var pathSegments = childPropertyPath.Segments.ToArray();
+
+        foreach (var (rootKey, document) in collection)
+        {
+            if (TryFindValueInDocument(document, pathSegments, 0, childValue))
+            {
+                return Task.FromResult(new Option<Key>(new Key(rootKey, ArrayIndexers.NoIndexers)));
+            }
+        }
+
+        return Task.FromResult(Option<Key>.None());
+    }
+
+    /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var instances = Collection.Values.Skip(skip).Take(take);
+        var totalCount = Collection.Count;
+        return Task.FromResult(new ReadModelInstances(instances, totalCount));
     }
 
     /// <inheritdoc/>
@@ -176,5 +213,59 @@ public class InMemorySink(
         }
 
         return state;
+    }
+
+    bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
+    {
+        if (segmentIndex >= pathSegments.Length)
+        {
+            return false;
+        }
+
+        var currentSegment = pathSegments[segmentIndex];
+        var dict = (IDictionary<string, object?>)document;
+
+        if (!dict.TryGetValue(currentSegment.Value, out var value) || value is null)
+        {
+            return false;
+        }
+
+        if (segmentIndex == pathSegments.Length - 1)
+        {
+            return ValuesAreEqual(value, targetValue);
+        }
+
+        if (value is IEnumerable<object> collection)
+        {
+            foreach (var item in collection)
+            {
+                if (item is ExpandoObject itemExpando &&
+                    TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
+                {
+                    return true;
+                }
+            }
+        }
+        else if (value is ExpandoObject nestedExpando)
+        {
+            return TryFindValueInDocument(nestedExpando, pathSegments, segmentIndex + 1, targetValue);
+        }
+
+        return false;
+    }
+
+#pragma warning disable SA1204 // Static elements should appear before instance elements
+    static bool ValuesAreEqual(object value, object targetValue)
+#pragma warning restore SA1204
+    {
+        if (value.Equals(targetValue))
+        {
+            return true;
+        }
+
+        var valueString = value.ToString();
+        var targetString = targetValue.ToString();
+
+        return valueString == targetString;
     }
 }

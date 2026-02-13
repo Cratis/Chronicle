@@ -121,16 +121,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> ComplianceForPropertiesProviders => GetArtifactTypes(provider => provider.ComplianceForPropertiesProviders);
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Rules => GetArtifactTypes(provider => provider.Rules);
-
-    /// <inheritdoc/>
     public virtual IEnumerable<Type> AdditionalEventInformationProviders => GetArtifactTypes(provider => provider.AdditionalEventInformationProviders);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRoots => GetArtifactTypes(provider => provider.AggregateRoots);
-
-    /// <inheritdoc/>
-    public virtual IEnumerable<Type> AggregateRootStateTypes => GetArtifactTypes(provider => provider.AggregateRootStateTypes);
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> ConstraintTypes => GetArtifactTypes(provider => provider.ConstraintTypes);
@@ -140,6 +131,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> for resolving services.
@@ -196,6 +190,23 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
     public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
+
+    /// <summary>
+    /// Create a new <see cref="HttpClient"/> instance.
+    /// </summary>
+    /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
+    /// <param name="handler">The <see cref="HttpMessageHandler"/> to use.</param>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    public HttpClient CreateClient(WebApplicationFactoryClientOptions options, HttpMessageHandler handler)
+    {
+        var client = CreateClient(options);
+        var newClient = new HttpClient(handler)
+        {
+            BaseAddress = client.BaseAddress
+        };
+        client.Dispose();
+        return newClient;
+    }
 
     /// <inheritdoc/>
     public virtual void Dispose()
@@ -270,6 +281,12 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     protected abstract IAsyncDisposable CreateWebApplicationFactory();
 
     /// <summary>
+    /// Configure the WebHostBuilder.
+    /// </summary>
+    /// <param name="builder">The builder for continuation.</param>
+    protected abstract void ConfigureWebHostBuilder(IWebHostBuilder builder);
+
+    /// <summary>
     /// Ensures that the event store is built.
     /// </summary>
     protected void EnsureBuilt()
@@ -307,7 +324,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
             _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
             _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
-
             _isInitialized = true;
         }
     }
@@ -355,11 +371,8 @@ public class ChronicleClientFixture<TChronicleFixture, TFactory, TStartup>(TChro
         return (Activator.CreateInstance(webApplicationFactoryType, [this, ContentRoot]) as IAsyncDisposable)!;
     }
 
-    /// <summary>
-    /// Configures the <see cref="IWebHostBuilder"/>.
-    /// </summary>
-    /// <param name="builder">The <see cref="IWebHostBuilder"/> to configure.</param>
-    protected virtual void ConfigureWebHostBuilder(IWebHostBuilder builder)
+    /// <inheritdoc/>
+    protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
     }
 }

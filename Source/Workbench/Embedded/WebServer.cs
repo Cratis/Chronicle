@@ -38,12 +38,13 @@ public class WebServer(
                 builder.Services.AddSingleton(chronicleServices);
 
                 builder.Host
-                    .UseCratisApplicationModel(options =>
-                    {
-                        options.CorrelationId = workbenchOptions.Value.ApplicationModel.CorrelationId;
-                        options.Tenancy = workbenchOptions.Value.ApplicationModel.Tenancy;
-                        options.IdentityDetailsProvider = workbenchOptions.Value.ApplicationModel.IdentityDetailsProvider;
-                    });
+                    .AddCratisArc(
+                        options =>
+                        {
+                            options.CorrelationId = workbenchOptions.Value.ArcOptions.CorrelationId;
+                            options.Tenancy = workbenchOptions.Value.ArcOptions.Tenancy;
+                            options.IdentityDetailsProvider = workbenchOptions.Value.ArcOptions.IdentityDetailsProvider;
+                        });
 
                 builder.Services.AddCratisChronicleApi();
                 builder.Services.Configure<MvcOptions>(options => options.UseRoutePrefix(workbenchOptions.Value.BasePath));

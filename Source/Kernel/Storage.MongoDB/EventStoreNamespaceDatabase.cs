@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -43,9 +43,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
 
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
-        var client = clientManager.GetClientFor(settings);
-        _database = client.GetDatabase(databaseName);
+        Client = clientManager.GetClientFor(settings);
+        _database = Client.GetDatabase(databaseName);
     }
+
+    /// <inheritdoc/>
+    public IMongoClient Client { get; }
 
     /// <inheritdoc/>
     public IMongoCollection<T> GetCollection<T>(string? name = null) => name == null ? _database.GetCollection<T>() : _database.GetCollection<T>(name);
@@ -210,6 +213,20 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
                     new CreateIndexOptions
                     {
                         Name = "eventSourceId_eventTypeId_eventStreamType_eventStreamId_eventSourceType",
+                        Background = true
+                    }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Ascending(x => x.Tags),
+                    new CreateIndexOptions { Name = "tags" }));
+
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<Event>(
+                    Builders<Event>.IndexKeys.Wildcard(_ => _.ContentHashes),
+                    new CreateIndexOptions
+                    {
+                        Name = "contentHashes",
                         Background = true
                     }));
 

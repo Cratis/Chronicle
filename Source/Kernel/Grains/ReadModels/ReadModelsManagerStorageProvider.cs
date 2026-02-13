@@ -24,5 +24,13 @@ public class ReadModelsManagerStorageProvider(IStorage storage) : IGrainStorage
     }
 
     /// <inheritdoc/>
-    public Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
+    public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    {
+        var actualGrainState = (grainState as IGrainState<ReadModelsManagerState>)!;
+        var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
+        foreach (var definition in actualGrainState.State.ReadModels)
+        {
+            await eventStore.ReadModels.Save(definition);
+        }
+    }
 }

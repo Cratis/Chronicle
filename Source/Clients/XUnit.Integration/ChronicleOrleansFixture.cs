@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -20,14 +21,12 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
+        await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+
         await base.DisposeAsync();
 
-        _ = Task.Run(async () =>
-        {
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        });
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     /// <inheritdoc/>
@@ -38,7 +37,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var webApplicationFactoryType = typeof(ChronicleOrleansInProcessWebApplicationFactory<>).MakeGenericType(startupType!);
         var configureServices = ConfigureServices;
         var configureMongoDB = ConfigureMongoDB;
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, ContentRoot]) as IAsyncDisposable)!;
+        var configureWebHostBuilder = ConfigureWebHostBuilder;
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, ContentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>
@@ -54,6 +54,11 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// </summary>
     /// <param name="mongoDBBuilder"><see cref="IMongoDBBuilder"/> to configure.</param>
     protected virtual void ConfigureMongoDB(IMongoDBBuilder mongoDBBuilder)
+    {
+    }
+
+    /// <inheritdoc/>
+    protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
     }
 }

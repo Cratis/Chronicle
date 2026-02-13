@@ -5,7 +5,11 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -32,13 +36,37 @@ public interface ISink
     Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
+    /// Find the root key of a read model that contains a child with the specified value at the given property path.
+    /// </summary>
+    /// <param name="childPropertyPath">The property path to the child property (e.g., "configurations.configurationId").</param>
+    /// <param name="childValue">The value to search for.</param>
+    /// <returns>An <see cref="Option{T}"/> containing the root key if found, otherwise None.</returns>
+    /// <remarks>
+    /// This method is used to resolve parent keys when projecting nested children.
+    /// For optimal performance, ensure the child property path has an index defined using <c>[Index]</c> attribute.
+    /// </remarks>
+    Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
+
+    /// <summary>
     /// Update or insert read model based on key.
     /// </summary>
     /// <param name="key">Key of the read model to upsert.</param>
     /// <param name="changeset">All changes in the form of a <see cref="Changeset{Event, ExpandoObject}"/>.</param>
     /// <param name="eventSequenceNumber">The sequence number of the event that caused the changes.</param>
+    /// <returns>A collection of <see cref="FailedPartition"/> if any partitions failed.</returns>
+    Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
+
+    /// <summary>
+    /// Begin bulk operation mode.
+    /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber);
+    Task BeginBulk();
+
+    /// <summary>
+    /// End bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndBulk();
 
     /// <summary>
     /// Enter replay state.
@@ -70,4 +98,24 @@ public interface ISink
     /// the idempotency of the projection.
     /// </remarks>
     Task PrepareInitialRun();
+
+    /// <summary>
+    /// Ensure that all required indexes are created on the sink.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method is called during projection registration to ensure that all indexes
+    /// defined on the read model are created. This is important for performance when
+    /// using nested children with <c>UsingParentKeyFromContext</c>.
+    /// </remarks>
+    Task EnsureIndexes();
+
+    /// <summary>
+    /// Get instances from the sink.
+    /// </summary>
+    /// <param name="occurrence">Optional <see cref="ReadModelContainerName"/> of the occurrence to get instances from. If not provided, gets from the default/current model.</param>
+    /// <param name="skip">Number of instances to skip.</param>
+    /// <param name="take">Number of instances to take.</param>
+    /// <returns>A tuple containing the collection of instances and the total count.</returns>
+    Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50);
 }

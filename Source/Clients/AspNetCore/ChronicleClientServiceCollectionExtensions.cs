@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Rules;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,10 +17,10 @@ namespace Microsoft.AspNetCore.Builder;
 /// </summary>
 public static class ChronicleClientServiceCollectionExtensions
 {
-#if NET9_0
-    static readonly Lock _eventStoreInitLock = new();
-#else
+#if NET8_0
     static readonly object _eventStoreInitLock = new();
+#else
+    static readonly Lock _eventStoreInitLock = new();
 #endif
 
     static readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStore> _eventStores = new();
@@ -101,7 +100,6 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
-        services.AddScoped<IRules, Rules>();
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);

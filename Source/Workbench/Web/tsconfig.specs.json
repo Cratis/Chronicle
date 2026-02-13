@@ -1,0 +1,28 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "composite": false,
+        "noEmit": true,
+        "types": ["vitest/globals", "chai", "sinon", "mocha", "sinon-chai", "node"]
+    },
+    "include": [
+        "**/for_*/**/*.ts",
+        "**/for_*/**/*.tsx",
+        "vitest.setup.ts",
+        "given.ts",
+        "global.d.ts",
+        "test.d.ts",
+        "Api/**/*.ts",
+        "State/**/*.ts",
+        "Shared/**/*.ts",
+        "Features/**/*.ts",
+        "Features/**/*.tsx",
+        "Components/**/*.ts",
+        "Components/**/*.tsx",
+        "Layout/**/*.ts",
+        "Layout/**/*.tsx",
+        "Utils/**/*.ts",
+        "Strings.ts"
+    ],
+    "exclude": []
+}

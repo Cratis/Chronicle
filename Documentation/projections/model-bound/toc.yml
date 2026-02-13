@@ -10,6 +10,8 @@
   href: counters.md
 - name: Children
   href: children.md
+- name: Removal
+  href: removal.md
 - name: Joins
   href: joins.md
 - name: Event Sequence Source

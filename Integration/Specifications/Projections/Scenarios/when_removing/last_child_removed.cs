@@ -2,17 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Specifications.Projections.Events;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Events;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing.last_child_removed.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing.last_child_removed.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing;
 
 [Collection(ChronicleCollection.Name)]
 public class last_child_removed(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleInProcessFixture)
     {
         public EventSourceId FirstGroupId;
         public override IEnumerable<Type> EventTypes => [typeof(GroupCreated), typeof(UserCreated), typeof(UserAddedToGroup), typeof(UserRemovedFromGroup)];
@@ -34,7 +34,7 @@ public class last_child_removed(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
+            var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
             Groups = result.ToList().ToArray();
         }
     }

@@ -21,10 +21,10 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class Reactors : IReactors
 {
-#if NET9_0
-    static readonly Lock _registerLock = new();
-#else
+#if NET8_0
     static readonly object _registerLock = new();
+#else
+    static readonly Lock _registerLock = new();
 #endif
     readonly IEventStore _eventStore;
     readonly IEventTypes _eventTypes;
@@ -143,8 +143,31 @@ public class Reactors : IReactors
     public IReactorHandler GetHandlerById(ReactorId id)
     {
         var reactorHandler = _handlers.Values.SingleOrDefault(_ => _.Id == id);
-        ThrowIfUnknownReactorId(reactorHandler, id);
-        return reactorHandler!;
+        if (reactorHandler is not null)
+        {
+            return reactorHandler;
+        }
+
+        var request = new HasReactorRequest
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ReactorId = id.Value
+        };
+        var response = _servicesAccessor.Services.Reactors.HasReactor(request).GetAwaiter().GetResult();
+        if (!response.Exists)
+        {
+            ThrowIfUnknownReactorId(null, id);
+        }
+
+        return new ReactorHandler(
+            _eventStore,
+            id,
+            typeof(object),
+            new(response.EventSequenceId!),
+            new NullReactorInvoker(),
+            _causationManager,
+            _identityProvider);
     }
 
     /// <inheritdoc/>
@@ -201,6 +224,7 @@ public class Reactors : IReactors
         var handler = new ReactorHandler(
             _eventStore,
             reactorType.GetReactorId(),
+            reactorType,
             reactorType.GetEventSequenceId(),
             new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
             _causationManager,
@@ -227,7 +251,8 @@ public class Reactors : IReactors
             {
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
-                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray()
+                EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                Tags = handler.ReactorType.GetTags().ToArray()
             }
         };
 

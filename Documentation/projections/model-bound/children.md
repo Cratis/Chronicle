@@ -14,24 +14,31 @@ public record Order(
     [Key]
     Guid OrderId,
 
-    [ChildrenFrom<LineItemAdded>(
-        key: nameof(LineItemAdded.ItemId),
-        identifiedBy: nameof(LineItem.Id))]
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
     IEnumerable<LineItem> Items);
 
 public record LineItem(
-    [Key] Guid Id,
+    [Key] Guid Id,  // Chronicle automatically discovers this as the key
     string ProductName,
     int Quantity,
     decimal Price);
 ```
 
+In this example, the `[Key]` attribute on the `LineItem.Id` property is automatically discovered by Chronicle, so you don't need to specify `identifiedBy` explicitly in the `ChildrenFrom` attribute.
+
 ### Parameters
 
 - **key** (optional): Property on the event that identifies the child. Defaults to `EventSourceId`
-- **identifiedBy** (optional): Property on the child model that identifies it. Defaults to `Id`
+- **identifiedBy** (optional): Property on the child model that identifies it. If not specified, Chronicle will:
+  1. Look for a property with the `[Key]` attribute
+  2. Look for a property named `Id` (case-insensitive)
+  3. Fall back to `EventSourceId` if neither is found
 - **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
+  - Use this when the parent identifier is a property in the event content rather than the EventSourceId
+  - Example: `parentKey: nameof(LineItemAdded.OrderId)` when OrderId is in the event
 - **autoMap** (optional): Whether to automatically map matching properties from the event to the child model. Defaults to `true`
+
+> **Note**: With automatic key discovery, you typically don't need to specify `identifiedBy` explicitly. Just mark your child model's key property with `[Key]` attribute, or name it `Id`, and Chronicle will automatically discover it.
 
 ### Auto-Mapping
 
@@ -127,7 +134,9 @@ When a `QuantityIncreased` event occurs later:
 
 ## Removing Children
 
-Use `RemovedWith` to remove children from collections:
+Use `RemovedWith` to remove children from collections. You can apply it either on the collection property or on the child type class:
+
+### Property-Level Removal
 
 ```csharp
 public record Order(
@@ -143,9 +152,29 @@ public record OrderLine(
     string Description);
 ```
 
+### Class-Level Removal
+
+Apply `RemovedWith` directly on the child type for better separation of concerns:
+
+```csharp
+public record Order(
+    [Key]
+    Guid OrderId,
+
+    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
+    IEnumerable<OrderLine> Lines);
+
+[RemovedWith<LineItemRemoved>(
+    key: nameof(LineItemRemoved.ItemId),
+    parentKey: nameof(LineItemRemoved.OrderId))]
+public record OrderLine(
+    [Key] Guid Id,
+    string Description);
+```
+
 ### RemovedWithJoin
 
-For more complex removal scenarios using joins:
+For removal based on events from different streams (joins), use `RemovedWithJoin`:
 
 ```csharp
 public record Subscription(
@@ -156,6 +185,17 @@ public record Subscription(
     [RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
     IEnumerable<Feature> Features);
 ```
+
+Or at the class level:
+
+```csharp
+[RemovedWithJoin<FeatureDeactivated>(key: nameof(FeatureDeactivated.FeatureId))]
+public record Feature(
+    [Key] Guid FeatureId,
+    string Name);
+```
+
+> **Note**: For comprehensive documentation on removal options including removing root read models, see [Removal](./removal.md).
 
 ## Complete Example
 
@@ -218,29 +258,93 @@ public record OrderLine(
 
 ## Nested Children
 
-Children can have their own children, creating deeply nested structures:
+Children can have their own children, creating deeply nested structures. All projection attributes (joins, removal, counters, context mapping, etc.) work recursively at every level:
 
 ```csharp
+// Events
+[EventType]
+public record OrganizationCreated(string Name);
+
+[EventType]
+public record DepartmentAdded(DepartmentId Id, string Name);
+
+[EventType]
+public record DepartmentRenamed(DepartmentId Id, string NewName);
+
+[EventType]
+public record TeamAdded(TeamId Id, DepartmentId DepartmentId, string Name);
+
+[EventType]
+public record TeamRenamed(TeamId Id, string NewName);
+
+[EventType]
+public record MemberAdded(MemberId Id, TeamId TeamId, string Name);
+
+[EventType]
+public record MemberRemoved(MemberId Id, TeamId TeamId);
+
+// Read Models - all attributes work at every nesting level
 public record Organization(
     [Key] Guid Id,
-    [ChildrenFrom<DepartmentCreated>] IEnumerable<Department> Departments);
+
+    [SetFrom<OrganizationCreated>]
+    string Name,
+
+    [ChildrenFrom<DepartmentAdded>(
+        key: nameof(DepartmentAdded.Id),
+        identifiedBy: nameof(Department.Id))]
+    IEnumerable<Department> Departments);
 
 public record Department(
-    [Key] Guid Id,
-    [SetFrom<DepartmentCreated>] string Name,
-    [ChildrenFrom<TeamCreated>] IEnumerable<Team> Teams);
+    [Key] DepartmentId Id,
+
+    [SetFrom<DepartmentAdded>]
+    [Join<DepartmentRenamed>(nameof(DepartmentRenamed.Id))]  // Joins work on children
+    string Name,
+
+    [ChildrenFrom<TeamAdded>(
+        key: nameof(TeamAdded.Id),
+        identifiedBy: nameof(Team.Id),
+        parentKey: nameof(TeamAdded.DepartmentId))]  // Nested children
+    IEnumerable<Team> Teams);
 
 public record Team(
-    [Key] Guid Id,
-    [SetFrom<TeamCreated>] string Name,
-    [ChildrenFrom<MemberAdded>] IEnumerable<Member> Members);
+    [Key] TeamId Id,
+
+    [SetFrom<TeamAdded>]
+    [Join<TeamRenamed>(nameof(TeamRenamed.Id))]  // Joins work on nested children too
+    string Name,
+
+    [ChildrenFrom<MemberAdded>(
+        key: nameof(MemberAdded.Id),
+        identifiedBy: nameof(Member.Id),
+        parentKey: nameof(MemberAdded.TeamId))]
+    [RemovedWith<MemberRemoved>(key: nameof(MemberRemoved.Id))]  // Removal works at all levels
+    IEnumerable<Member> Members);
 
 public record Member(
-    [Key] Guid Id,
-    [SetFrom<MemberAdded>] string Name);
+    [Key] MemberId Id,
+
+    [SetFrom<MemberAdded>]
+    string Name);
 ```
 
-All attributes are processed recursively at every level of the hierarchy.
+### What Works Recursively
+
+All projection attributes are fully supported on child types at any nesting level:
+
+| Attribute | Works on Children |
+|-----------|-------------------|
+| `SetFrom` | ✓ |
+| `AddFrom` / `SubtractFrom` | ✓ |
+| `SetFromContext` | ✓ |
+| `Join` | ✓ |
+| `Increment` / `Decrement` / `Count` | ✓ |
+| `ChildrenFrom` (nested children) | ✓ |
+| `RemovedWith` / `RemovedWithJoin` | ✓ |
+| `FromEvent` (class-level) | ✓ |
+
+This means you can build arbitrarily deep hierarchies with full projection capabilities at every level.
 
 ## Best Practices
 

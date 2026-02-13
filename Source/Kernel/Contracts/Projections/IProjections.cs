@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
+using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
+
 namespace Cratis.Chronicle.Contracts.Projections;
 
 /// <summary>
@@ -19,47 +22,50 @@ public interface IProjections
     Task Register(RegisterRequest request, CallContext context = default);
 
     /// <summary>
-    /// Get an instance by a specific models key and projection id.
+    /// Get all projection definitions.
     /// </summary>
-    /// <param name="request"><see cref="GetInstanceByIdRequest"/> holding the details.</param>
+    /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns><see cref="ProjectionResult"/> containing the projected result and details of the projection.</returns>
-    [Operation]
-    Task<ProjectionResult> GetInstanceById(GetInstanceByIdRequest request, CallContext context = default);
+    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
+    Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default);
 
     /// <summary>
-    /// Gets an instance by a specific model key and projection id for a specific session.
+    /// Get all projection definition.
     /// </summary>
-    /// <param name="request"><see cref="GetInstanceByIdForSessionRequest"/> with all the details about the request.</param>
+    /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns><see cref="ProjectionResult"/> containing the projected result and details of the projection.</returns>
-    [Operation]
-    Task<ProjectionResult> GetInstanceByIdForSession(GetInstanceByIdForSessionRequest request, CallContext context = default);
+    /// <returns>A collection of <see cref="ProjectionWithDeclaration"/>.</returns>
+    Task<IEnumerable<ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default);
 
     /// <summary>
-    /// Gets an instance by a specific model key and projection id for a specific session with events applied.
+    /// Preview a projection from its declaration representation.
     /// </summary>
-    /// <param name="request"><see cref="GetInstanceByIdForSessionWithEventsAppliedRequest"/> with all the details about the request.</param>
+    /// <param name="request"><see cref="PreviewProjectionRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns><see cref="ProjectionResult"/> containing the projected result and details of the projection.</returns>
-    [Operation]
-    Task<ProjectionResult> GetInstanceByIdForSessionWithEventsApplied(GetInstanceByIdForSessionWithEventsAppliedRequest request, CallContext context = default);
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="ContractProjectionPreview"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default);
 
     /// <summary>
-    /// Observe changes for a specific projection.
+    /// Save a projection from its declaration representation.
     /// </summary>
-    /// <param name="request"><see cref="ProjectionWatchRequest"/> with all the details about the request.</param>
+    /// <param name="request"><see cref="SaveProjectionRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>Observable of <see cref="ProjectionChangeset"/> containing the changeset for the projection.</returns>
-    [Operation]
-    IObservable<ProjectionChangeset> Watch(ProjectionWatchRequest request, CallContext context = default);
+    /// <returns><see cref="SaveProjectionResult"/> containing any errors.</returns>
+    Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default);
 
     /// <summary>
-    /// Dehydrate a specific projection session.
+    /// Generate declarative C# projection code from declaration.
     /// </summary>
-    /// <param name="request"><see cref="DehydrateSessionRequest"/> with all the details about the request.</param>
+    /// <param name="request"><see cref="GenerateDeclarativeCodeRequest"/> with all the details about the request.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>Awaitable task.</returns>
-    [Operation]
-    Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default);
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateDeclarativeCode(GenerateDeclarativeCodeRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Generate model-bound C# read model code from declaration.
+    /// </summary>
+    /// <param name="request"><see cref="GenerateModelBoundCodeRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="OneOf{T0, T1}"/> containing either the <see cref="GeneratedCode"/> or <see cref="ContractProjectionDefinitionParsingErrors"/>.</returns>
+    Task<OneOf<GeneratedCode, ContractProjectionDefinitionParsingErrors>> GenerateModelBoundCode(GenerateModelBoundCodeRequest request, CallContext context = default);
 }

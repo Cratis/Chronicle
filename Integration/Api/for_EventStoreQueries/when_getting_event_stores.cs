@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.Queries;
+using Cratis.Arc.Queries;
 using Cratis.Chronicle.Api.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_EventStoreQueries.when_getting_event_stores.context;
 
@@ -24,9 +24,7 @@ public class when_getting_event_stores(context context) : Given<context>(context
         }
     }
 
-    [Fact]
-    void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_succeed_query() => Context.Result.IsSuccess.ShouldBeTrue();
 
-    [Fact]
-    void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
+    [Fact] void should_return_two_event_stores_including_system() => Context.Data.ShouldContainOnly(EventStoreName.System.Value, "testing");
 }

@@ -9,8 +9,8 @@ in an ASP.NET Core application.
 
 The sample will focus on a straightforward and well-understood domain: a library.
 
-You can find the complete working sample [here](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore).
-which also leverages common things from [here](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
+You can find the complete working sample [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore).
+which also leverages common things from [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
 [!INCLUDE [docker](./docker.md)]
 
@@ -37,13 +37,23 @@ Chronicle supports this paradigm out of the box, and there are convenience metho
 
 In your `Program.cs` simply change your setup to the following:
 
-{{snippet:Quickstart-AspNetCore-WebApplicationBuilder}}
+```csharp
+var builder = WebApplication.CreateBuilder(args)
+    .AddCratisChronicle(options => options.EventStore = "Quickstart");
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/AspNetCore/Program.cs#L19-L20)
 
 The code adds Chronicle to your application and sets the name of the event store to use.
 In contrast to what you need to do when running bare-bone as shown in the [console](./console.md) sample,
 all discovery and registration of artifacts will happen automatically.
 
-{{snippet:Quickstart-AspNetCore-WebApplication}}
+```csharp
+var app = builder.Build();
+app.UseCratisChronicle();
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/AspNetCore/Program.cs#L30-L31)
 
 [!INCLUDE [common](./common.md)]
 
@@ -52,7 +62,14 @@ all discovery and registration of artifacts will happen automatically.
 Appending events is typically something you would be doing directly, or indirectly through an API exposed as a minimal
 API or a Controller.
 
-{{snippet:Quickstart-AspNetCore-BookBorrowed}}
+```csharp
+        app.MapPost("/api/books/{bookId}/borrow/{userId}", async (
+            [FromServices] IEventLog eventLog,
+            [FromRoute] Guid bookId,
+            [FromRoute] Guid userId) => await eventLog.Append(bookId, new BookBorrowed(userId)));
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/Api.cs#L19-L22)
 
 The code exposes an API endpoint that takes parameters for what book to borrow and what user is borrowing it.
 It then appends a `BookBorrowed` event. The `bookId` is used as the [event source](../concepts/event-source.md), while
@@ -65,7 +82,15 @@ such as **Reactors**, **Reducers** and **Projections**.
 In order for this to work, the artifacts needs to be registered as services. In your `Program.cs` file you would add
 service registrations for the artifacts you have:
 
-{{snippet:Quickstart-AspNetCore-ArtifactsServices}}
+```csharp
+        builder.Services.AddTransient<UsersReactor>();
+        builder.Services.AddTransient<BooksReducer>();
+        builder.Services.AddTransient<BorrowedBooksProjection>();
+        builder.Services.AddTransient<OverdueBooksProjection>();
+        builder.Services.AddTransient<ReservedBooksProjection>();
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/CommonServices.cs#L14-L18)
 
 This can become very tedious to do as your solution grows, Cratis Fundamentals offers a way couple of extension methods
 that will automatically hook this up:
@@ -90,10 +115,23 @@ what you need; access to the specific database or specific collections.
 
 The following code shows how to set this up for your `WebApplicationBuilder` to enable that scenario.
 
-{{snippet:Quickstart-AspNetCore-MongoSetup}}
+```csharp
+        builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
+        builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
+        builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/MongoDBServices.cs#L15-L17)
 
 > Note: The code adds service registrations for typed collections based on types found in the [sample code](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
 With this you can now quite easily create a type that encapsulates getting the data that takes a specific collection as a dependency:
 
-{{snippet:Quickstart-Books}}
+```csharp
+public class Books(IMongoCollection<Book> collection)
+{
+    public IEnumerable<Book> GetAll() => collection.Find(Builders<Book>.Filter.Empty).ToList();
+}
+```
+
+[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Books.cs#L9-L12)

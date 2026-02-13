@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Specifications.Projections.Events;
-using Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.ReadModels;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children.and_event_joined_has_happened_first.context;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Events;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.and_event_joined_has_happened_first.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children;
 
@@ -15,7 +15,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
     const string GroupName = "Group";
     const string UserName = "User";
 
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

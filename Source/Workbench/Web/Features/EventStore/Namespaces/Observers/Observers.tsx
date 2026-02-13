@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { withViewModel } from '@cratis/applications.react.mvvm';
+import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -26,6 +26,8 @@ const observerType = (observer: ObserverInformation) => {
             return strings.eventStore.namespaces.observers.types.projection;
         case ObserverType.reducer:
             return strings.eventStore.namespaces.observers.types.reducer;
+        case ObserverType.external:
+            return strings.eventStore.namespaces.observers.types.external;
     }
     return strings.eventStore.namespaces.observers.types.unknown;
 };

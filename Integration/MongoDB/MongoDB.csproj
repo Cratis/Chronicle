@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.MongoDB.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.MongoDB.Integration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="NSubstitute" />
+    </ItemGroup>
+</Project>

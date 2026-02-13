@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -48,8 +49,8 @@ public class when_adding_properties_and_there_are_changes_matching_some_of_the_p
             new PropertyDifference("FifthProperty", "Fifth original value", "Fifth new value")
         ]);
 
-        _firstChildAdded = new ChildAdded(new ExpandoObject(), "[ForthProperty]", "", 0);
-        _secondChildAdded = new ChildAdded(new ExpandoObject(), "[SixthProperty]", "", 0);
+        _firstChildAdded = new ChildAdded(new ExpandoObject(), "[ForthProperty]", "", 0, ArrayIndexers.NoIndexers);
+        _secondChildAdded = new ChildAdded(new ExpandoObject(), "[SixthProperty]", "", 0, ArrayIndexers.NoIndexers);
 
         _changeset.Changes.Returns(
         [

@@ -3,9 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
@@ -15,6 +13,7 @@ using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using Orleans.Providers;
@@ -28,20 +27,20 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ProjectionObserverSubscriber"/> class.
 /// </remarks>
-/// <param name="projectionManager"><see cref="Chronicle.Projections.IProjectionsManager"/> for getting projections.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for creating projection pipelines.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="logger">The logger.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class ProjectionObserverSubscriber(
-    Chronicle.Projections.IProjectionsManager projectionManager,
     IProjectionFactory projectionFactory,
     IProjectionPipelineManager projectionPipelineManager,
     IExpandoObjectConverter expandoObjectConverter,
+    IStorage storage,
     ILogger<ProjectionObserverSubscriber> logger) : Grain<ProjectionDefinition>, IProjectionObserverSubscriber, INotifyProjectionDefinitionsChanged
 {
-    ObserverSubscriberKey _key = new(ObserverId.Unspecified, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Unspecified, EventSourceId.Unspecified, string.Empty);
+    ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
     IAsyncStream<ProjectionChangeset>? _changeStream;
     JsonSchema? _schema;
@@ -50,7 +49,7 @@ public class ProjectionObserverSubscriber(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var streamProvider = this.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
-        _key = ObserverSubscriberKey.Parse(this.GetPrimaryKeyString());
+        (_, _key) = this.GetKeys();
 
         var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, _key.ObserverId));
         _changeStream = streamProvider.GetStream<ProjectionChangeset>(streamId);
@@ -68,9 +67,13 @@ public class ProjectionObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task OnProjectionDefinitionsChanged()
+    public async Task OnProjectionDefinitionsChanged(ProjectionDefinition definition)
     {
-        await ReadStateAsync();
+        // Update state with the new definition
+        State = definition;
+        await WriteStateAsync();
+
+        // Rebuild the pipeline with the updated definition
         await HandlePipeline();
     }
 
@@ -90,7 +93,23 @@ public class ProjectionObserverSubscriber(
 
             foreach (var @event in events)
             {
-                changeset = await _pipeline.Handle(@event);
+                var pipelineContext = await _pipeline.Handle(@event);
+                changeset = pipelineContext.Changeset;
+
+                // Check if there are any failed partitions from bulk operations
+                if (pipelineContext.FailedPartitions.Any())
+                {
+                    var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+                    foreach (var failedPartition in pipelineContext.FailedPartitions)
+                    {
+                        await observer.PartitionFailed(
+                            failedPartition.EventSourceId,
+                            failedPartition.EventSequenceNumber,
+                            [$"Bulk operation failed for partition {failedPartition.EventSourceId}"],
+                            string.Empty);
+                    }
+                }
+
                 lastSuccessfullyObservedEvent = @event;
                 logger.SuccessfullyHandledEvent(@event.Context.SequenceNumber, _key);
             }
@@ -118,11 +137,15 @@ public class ProjectionObserverSubscriber(
 
     async Task HandlePipeline()
     {
-        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
-        if (!projectionManager.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out var projection))
+        if (State.ReadModel is null)
         {
-            projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel);
+            return;
         }
+
+        var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
+        var eventStoreStorage = storage.GetEventStore(_key.EventStore);
+        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }

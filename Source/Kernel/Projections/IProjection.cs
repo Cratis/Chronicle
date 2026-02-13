@@ -5,8 +5,8 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
@@ -28,11 +28,6 @@ public interface IProjection
     ProjectionId Identifier { get; }
 
     /// <summary>
-    /// Gets the <see cref="SinkDefinition">sink</see> to store the results of the projection.
-    /// </summary>
-    SinkDefinition Sink { get; }
-
-    /// <summary>
     /// Gets the initial state used for each model instance.
     /// </summary>
     ExpandoObject InitialModelState { get; }
@@ -46,6 +41,11 @@ public interface IProjection
     /// Gets the fully qualified <see cref="PropertyPath"/> that represents the array that children will be operated on. Only applies to child projections.
     /// </summary>
     PropertyPath ChildrenPropertyPath { get; }
+
+    /// <summary>
+    /// Gets the <see cref="PropertyPath"/> that identifies items in the children collection. Only applies to child projections.
+    /// </summary>
+    PropertyPath IdentifiedByProperty { get; }
 
     /// <summary>
     /// Gets whether or not there is a parent.
@@ -71,6 +71,11 @@ public interface IProjection
     /// Gets whether or not the projection is rewindable.
     /// </summary>
     bool IsRewindable { get; }
+
+    /// <summary>
+    /// Gets whether properties should be auto-mapped from events at the projection level.
+    /// </summary>
+    AutoMap AutoMap { get; }
 
     /// <summary>
     /// Gets the <see cref="IObservable{T}">observable</see> <see cref="ProjectionEventContext">event</see>.

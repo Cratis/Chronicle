@@ -12,7 +12,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
@@ -25,5 +25,6 @@
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
 </Project>

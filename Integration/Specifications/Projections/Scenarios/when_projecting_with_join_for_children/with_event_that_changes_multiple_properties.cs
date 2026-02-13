@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Specifications.Projections.Events;
-using Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.ReadModels;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children.with_event_that_changes_multiple_properties.context;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Events;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_join_for_children.with_event_that_changes_multiple_properties.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_join_for_children;
 
@@ -16,7 +16,7 @@ public class with_event_that_changes_multiple_properties(context context) : Give
     const string UserName = "User";
     const string ProfileName = "ProfileName";
 
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleInProcessFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

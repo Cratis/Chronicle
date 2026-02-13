@@ -22,10 +22,13 @@ using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
+using Cratis.Chronicle.Storage.MongoDB.ReadModels;
 using Cratis.Chronicle.Storage.MongoDB.Recommendations;
-using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
@@ -99,7 +102,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
-        ReplayedModels = new ReplayedModelsStorage(eventStoreNamespaceDatabase);
+        ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
+        EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
+        ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
 
         _converter = new EventConverter(
             eventStore,
@@ -141,7 +146,13 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     public IReplayContexts ReplayContexts { get; }
 
     /// <inheritdoc/>
-    public IReplayedModelsStorage ReplayedModels { get; }
+    public IReplayedReadModelsStorage ReplayedReadModels { get; }
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; }
+
+    /// <inheritdoc/>
+    public IProjectionFuturesStorage ProjectionFutures { get; }
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId)

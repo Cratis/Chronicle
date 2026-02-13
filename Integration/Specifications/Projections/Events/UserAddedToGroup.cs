@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Events;
 

@@ -1,12 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
         <NoWarn>$(NoWarn);CS8618;PBN2008</NoWarn>
     </PropertyGroup>
-
     <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="protobuf-net.BuildTools">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

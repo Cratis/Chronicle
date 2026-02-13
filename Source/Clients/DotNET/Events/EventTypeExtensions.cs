@@ -23,7 +23,7 @@ public static class EventTypeExtensions
             return false;
         }
 
-        if (type.GetCustomAttribute<EventTypeAttribute>() != null)
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             return true;
         }
@@ -41,7 +41,7 @@ public static class EventTypeExtensions
     {
         eventTypes = eventTypes.Except([type]);
 
-        if (type.GetCustomAttribute<EventTypeAttribute>() != null)
+        if (Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             yield return type;
         }
@@ -62,7 +62,7 @@ public static class EventTypeExtensions
     /// <exception cref="TypeIsNotAnEventType">Thrown if the type is not an event type.</exception>
     public static void ValidateEventType(this Type type)
     {
-        if (type.GetCustomAttribute<EventTypeAttribute>() == null)
+        if (!Attribute.IsDefined(type, typeof(EventTypeAttribute)))
         {
             throw new TypeIsNotAnEventType(type);
         }

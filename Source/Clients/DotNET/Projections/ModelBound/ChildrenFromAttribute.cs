@@ -11,15 +11,13 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// Initializes a new instance of <see cref="ChildrenFromAttribute{TEvent}"/>.
 /// </remarks>
 /// <param name="key">Optional property name on the event that identifies the child. Defaults to WellKnownExpressions.EventSourceId.</param>
-/// <param name="identifiedBy">Optional property name on the child model that identifies it. Defaults to WellKnownExpressions.Id.</param>
+/// <param name="identifiedBy">Optional property name on the child model that identifies it. If not specified, will look for [Key] attribute, then an Id property by convention, finally defaulting to WellKnownExpressions.EventSourceId.</param>
 /// <param name="parentKey">Optional property name that identifies the parent. Defaults to WellKnownExpressions.EventSourceId.</param>
-/// <param name="autoMap">Whether to automatically map matching properties from the event to the child model. Defaults to true.</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = true)]
 public sealed class ChildrenFromAttribute<TEvent>(
     string? key = default,
     string? identifiedBy = default,
-    string? parentKey = default,
-    bool autoMap = true) : Attribute, IProjectionAnnotation, IChildrenFromAttribute
+    string? parentKey = default) : Attribute, IProjectionAnnotation, IChildrenFromAttribute
 {
     /// <inheritdoc/>
     public Type EventType => typeof(TEvent);
@@ -28,11 +26,8 @@ public sealed class ChildrenFromAttribute<TEvent>(
     public string Key { get; } = key ?? WellKnownExpressions.EventSourceId;
 
     /// <inheritdoc/>
-    public string ParentKey { get; } = parentKey ?? WellKnownExpressions.EventSourceId;
+    public string? ParentKey { get; } = parentKey;
 
     /// <inheritdoc/>
-    public string IdentifiedBy { get; } = identifiedBy ?? WellKnownExpressions.Id;
-
-    /// <inheritdoc/>
-    public bool AutoMap { get; } = autoMap;
+    public string? IdentifiedBy { get; } = identifiedBy;
 }

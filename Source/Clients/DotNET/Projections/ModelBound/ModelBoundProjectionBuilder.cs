@@ -3,12 +3,10 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
@@ -44,14 +42,13 @@ internal class ModelBoundProjectionBuilder(
         var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
-        var passiveAttr = modelType.GetCustomAttribute<PassiveAttribute>();
 
         var definition = new ProjectionDefinition
         {
             EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
-            IsActive = passiveAttr is null,
+            IsActive = !modelType.IsPassive(),
             IsRewindable = notRewindableAttr is null,
             InitialModelState = "{}",
             From = new Dictionary<EventType, FromDefinition>(),
@@ -60,11 +57,7 @@ internal class ModelBoundProjectionBuilder(
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
-            Sink = new SinkDefinition
-            {
-                ConfigurationId = Guid.Empty,
-                TypeId = WellKnownSinkTypes.MongoDB
-            }
+            Tags = modelType.GetTags().ToArray()
         };
 
         var classLevelFromEvents = modelType.GetCustomAttributes()
@@ -72,9 +65,30 @@ internal class ModelBoundProjectionBuilder(
                           attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
             .ToList();
 
+        // Initialize From definitions for class-level FromEvent attributes
+        // This ensures that even if NoAutoMapAttribute prevents auto-mapping,
+        // we still have the From definition structure
+        foreach (var attr in classLevelFromEvents)
+        {
+            var eventType = attr.GetType().GetGenericArguments()[0];
+            var eventTypeId = GetOrCreateEventType(eventType);
+            if (!definition.From.ContainsKey(eventTypeId))
+            {
+                definition.From[eventTypeId] = new FromDefinition
+                {
+                    Key = WellKnownExpressions.EventSourceId,
+                    Properties = new Dictionary<string, string>()
+                };
+            }
+        }
+
+        ProcessClassLevelRemovedWith(modelType, definition);
         var primaryConstructor = ProcessRecord(modelType, definition, classLevelFromEvents);
         ProcessProperties(modelType, definition, classLevelFromEvents, primaryConstructor);
         BuildFromEveryDefinition(definition);
+
+        var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
+        definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
 
         return definition;
     }
@@ -132,6 +146,19 @@ internal class ModelBoundProjectionBuilder(
         };
     }
 
+    void ProcessClassLevelRemovedWith(Type modelType, ProjectionDefinition definition)
+    {
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
+        {
+            definition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+        }
+
+        foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
+        {
+            definition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+        }
+    }
+
     void ProcessProperties(Type modelType, ProjectionDefinition definition, List<Attribute> classLevelFromEvents, ConstructorInfo? primaryConstructor)
     {
         foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
@@ -141,7 +168,7 @@ internal class ModelBoundProjectionBuilder(
                 continue;
             }
 
-            ProcessMember(property, definition, classLevelFromEvents, isRoot: true);
+            ProcessMember(property, definition, classLevelFromEvents, isRoot: true, modelType: modelType);
         }
     }
 
@@ -156,7 +183,7 @@ internal class ModelBoundProjectionBuilder(
 
             foreach (var parameter in primaryConstructor.GetParameters())
             {
-                ProcessParameter(parameter, definition, classLevelFromEvents, allEventTypesReferencedByModel, isRoot: true);
+                ProcessParameter(parameter, definition, classLevelFromEvents, allEventTypesReferencedByModel, isRoot: true, modelType);
             }
         }
 
@@ -169,6 +196,7 @@ internal class ModelBoundProjectionBuilder(
         List<Attribute> classLevelFromEvents,
         HashSet<Type> allEventTypesReferencedByModel,
         bool isRoot,
+        Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
         var memberName = parameter.Name!;
@@ -195,7 +223,10 @@ internal class ModelBoundProjectionBuilder(
                 var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? parameter.Name!;
-                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                if (attr is ICanMapToEventProperty)
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                }
                 mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }
@@ -232,26 +263,31 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember);
+            foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
-            var eventProperty = eventType.GetProperty(memberName);
+            allEventTypesReferencedByModel.Add(eventType);
 
-            if (eventProperty is not null)
+            // Only set custom key if specified, don't auto-map properties (server handles that based on AutoMap flag)
+            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+            var key = keyProperty?.GetValue(attr) as string;
+            if (!string.IsNullOrEmpty(key))
             {
-                allEventTypesReferencedByModel.Add(eventType);
-                var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-                var key = keyProperty?.GetValue(attr) as string;
-                if (!string.IsNullOrEmpty(key))
-                {
-                    PropertyValidator.ValidatePropertyExists(eventType, key);
-                }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, memberName, key);
+                PropertyValidator.ValidatePropertyExists(eventType, key);
+                var eventTypeId = GetOrCreateEventType(eventType);
+                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+                var keyPropertyPath = new PropertyPath(key);
+                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
             }
         }
 
@@ -267,6 +303,7 @@ internal class ModelBoundProjectionBuilder(
         ProjectionDefinition definition,
         List<Attribute> classLevelFromEvents,
         bool isRoot,
+        Type? modelType = null,
         ChildrenDefinition? childrenDef = null)
     {
         var propertyPath = new PropertyPath(property.Name);
@@ -294,7 +331,10 @@ internal class ModelBoundProjectionBuilder(
                 var eventPropertyNameProperty = attr.GetType().GetProperty(nameof(ICanMapToEventProperty.EventPropertyName));
                 var eventPropertyName = eventPropertyNameProperty?.GetValue(attr) as string;
                 var propertyToUse = eventPropertyName ?? property.Name;
-                PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                if (attr is ICanMapToEventProperty)
+                {
+                    PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
+                }
                 mappingAction(targetFrom, eventType, propertyName, propertyToUse);
             }
         }
@@ -331,27 +371,35 @@ internal class ModelBoundProjectionBuilder(
             targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
         }
 
-        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+        // Only process ChildrenFromAttribute when at root level.
+        // For nested children, ProcessNestedChildren handles adding them to the correct parent ChildrenDefinition.
+        if (isRoot)
         {
-            var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
-            definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember);
+            foreach (var (attr, eventType) in property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
+            {
+                var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
-            var eventProperty = eventType.GetProperty(property.Name);
+            eventTypesReferencedByMember.Add(eventType);
 
-            if (eventProperty is not null)
+            // Create FromDefinition for class-level events
+            // The server handles auto-mapping properties based on AutoMap flag
+            var eventTypeId = GetOrCreateEventType(eventType);
+            var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+
+            // Only set custom key if specified
+            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+            var key = keyProperty?.GetValue(attr) as string;
+            if (!string.IsNullOrEmpty(key))
             {
-                eventTypesReferencedByMember.Add(eventType);
-                var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-                var key = keyProperty?.GetValue(attr) as string;
-                if (!string.IsNullOrEmpty(key))
-                {
-                    PropertyValidator.ValidatePropertyExists(eventType, key);
-                }
-                targetFrom.AddSetMappingWithKey(GetOrCreateEventType, _namingPolicy, eventType, propertyName, property.Name, key);
+                PropertyValidator.ValidatePropertyExists(eventType, key);
+                var keyPropertyPath = new PropertyPath(key);
+                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
             }
         }
 

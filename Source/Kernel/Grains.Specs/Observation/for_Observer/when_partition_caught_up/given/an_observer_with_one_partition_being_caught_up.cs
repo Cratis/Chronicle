@@ -12,7 +12,7 @@ public class an_observer_with_one_partition_being_caught_up : an_observer
     protected static EventSequenceNumber _lastHandledEventSequenceNumber;
     protected static EventSequenceNumber _nextEventSequenceNumber;
 
-    protected void Establish()
+    void Establish()
     {
         _partition = "some-partition";
         _lastHandledEventSequenceNumber = 42UL;

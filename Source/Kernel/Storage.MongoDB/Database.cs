@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -25,10 +25,14 @@ public class Database : IDatabase
     /// </summary>
     /// <param name="clientManager"><see cref="IMongoDBClientManager"/> for working with MongoDB.</param>
     /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
+    /// <param name="customSerializers"><see cref="ICustomSerializers"/> for registering custom serializers.</param>
     public Database(
         IMongoDBClientManager clientManager,
-        IOptions<MongoDBOptions> mongoDBOptions)
+        IOptions<MongoDBOptions> mongoDBOptions,
+        ICustomSerializers customSerializers)
     {
+        customSerializers.Register();
+
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
         settings.DirectConnection = mongoDBOptions.Value.DirectConnection;

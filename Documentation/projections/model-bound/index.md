@@ -44,11 +44,11 @@ Model-bound projections support all projection engine capabilities:
 - **Property Mapping**: SetFrom, AddFrom, SubtractFrom, SetFromContext
 - **FromEvery**: Set properties from all events
 - **Counters**: Increment, Decrement, Count
-- **Relationships**: Join, Children
+- **Relationships**: Join, Children (with unlimited nesting depth)
 - **Removal**: RemovedWith, RemovedWithJoin
 - **Convention-based**: FromEvent for automatic property matching
 - **Configuration**: FromEventSequence, NotRewindable, Passive
-- **Recursive**: All attributes work on child types and joined types
+- **Fully Recursive**: All attributes work at any nesting level - children, grandchildren, and beyond
 
 See the following pages for detailed information on each feature:
 
@@ -57,6 +57,7 @@ See the following pages for detailed information on each feature:
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
+- [Removal](./removal.md) - Removing read models and children with RemovedWith, RemovedWithJoin
 - [Joins](./joins.md) - Joining with other events
 - [Event Sequence Source](./event-sequence-source.md) - Reading from specific event sequences
 - [Not Rewindable](./not-rewindable.md) - Forward-only projections
@@ -125,3 +126,12 @@ public record AccountInfo(
 ```
 
 Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping benefits as `.AutoMap()` in fluent projections.
+
+## Reading Your Model-Bound Projections
+
+Once you've defined a model-bound projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
+
+- [Getting a Single Instance](../../read-models/getting-single-instance.md) - Retrieve a specific instance by key with strong consistency
+- [Getting a Collection of Instances](../../read-models/getting-collection-instances.md) - Retrieve all instances for reporting and analysis
+- [Getting Snapshots](../../read-models/getting-snapshots.md) - Retrieve historical state snapshots grouped by correlation ID
+- [Watching Read Models](../../read-models/watching-read-models.md) - Observe real-time changes as events are applied

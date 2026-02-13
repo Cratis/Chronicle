@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
-using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Projections.Pipelines;
 
@@ -35,9 +33,21 @@ public interface IProjectionPipeline
     Task EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Begin bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task BeginBulk();
+
+    /// <summary>
+    /// End bulk operation mode.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task EndBulk();
+
+    /// <summary>
     /// Handles the event and coordinates everything according to the pipeline.
     /// </summary>
     /// <param name="event"><see cref="AppendedEvent"/> to handle.</param>
-    /// <returns>The <see cref="IChangeset{TSource, TResult}"/> containing what changed.</returns>
-    Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event);
+    /// <returns>The <see cref="ProjectionEventContext"/> with the result of processing.</returns>
+    Task<ProjectionEventContext> Handle(AppendedEvent @event);
 }

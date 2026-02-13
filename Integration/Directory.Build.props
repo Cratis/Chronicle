@@ -8,15 +8,16 @@
         <NoWarn>$(NoWarn);SA1600;CA1034;CS8981;SA1201;ORLEANS0010</NoWarn>
         <NuGetAuditMode>all</NuGetAuditMode>
 
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit\XUnit.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\Testing\Testing.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration\XUnit.Integration.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Cratis.Fundamentals" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio">

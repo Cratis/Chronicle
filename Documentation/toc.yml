@@ -4,15 +4,35 @@
   href: get-started/toc.yml
 - name: Concepts
   href: concepts/toc.yml
-- name: Clients
-  href: clients/toc.yml
-- name: Recipes
-  href: recipes/toc.yml
+- name: Dynamic Consistency Boundary
+  href: dynamic-consistency-boundary/toc.yml
+- name: Events
+  href: events/toc.yml
+- name: Event Seeding
+  href: event-seeding/toc.yml
+- name: Configuration
+  href: configuration/toc.yml
+- name: Connection Strings
+  href: connection-strings/toc.yml
+- name: Namespaces
+  href: namespaces/toc.yml
+- name: Constraints
+  href: constraints/toc.yml
+- name: Read Models
+  href: read-models/toc.yml
 - name: Projections
   href: projections/toc.yml
+- name: Reactors
+  href: reactors/toc.yml
+- name: Reducers
+  href: reducers/toc.yml
+- name: Code Analysis
+  href: code-analysis/toc.yml
 - name: Hosting
   href: hosting/toc.yml
 - name: Contributing
   href: contributing/toc.yml
+- name: Statistics
+  href: statistics/toc.yml
 - name: Api
   href: ../../api/chronicle/

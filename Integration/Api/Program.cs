@@ -28,22 +28,22 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel();
+   .AddCratisArc();
 
 builder.WebHost.UseKestrel(options =>
 {
-    options.ListenAnyIP(chronicleApiOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    options.ListenAnyIP(chronicleApiOptions.ManagementPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
 var app = builder.Build();
 app
     .UseRouting()
-    .UseCratisApplicationModel()
+    .UseCratisArc()
     .UseCratisChronicle()
     .UseCratisChronicleApi();
 
-Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ApiPort}");
+Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ManagementPort}");
 
 await app.RunAsync();
 
@@ -72,5 +72,3 @@ static void PrintExceptionInfo(Exception exception)
     Console.WriteLine($"Exception message: {exception.Message}");
     Console.WriteLine($"Stack Trace: {exception.StackTrace}");
 }
-
-public partial class Program;

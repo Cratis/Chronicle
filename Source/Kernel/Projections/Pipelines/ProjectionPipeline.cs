@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
@@ -35,7 +35,7 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await changesetStorage.BeginReplay(projection.ReadModel.Name);
+        await changesetStorage.BeginReplay(projection.ReadModel.ContainerName);
         await sink.BeginReplay(context);
     }
 
@@ -46,17 +46,22 @@ public class ProjectionPipeline(
     public async Task EndReplay(ReplayContext context)
     {
         await sink.EndReplay(context);
-        await changesetStorage.EndReplay(projection.ReadModel.Name);
+        await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
     }
 
     /// <inheritdoc/>
-    public async Task<IChangeset<AppendedEvent, ExpandoObject>> Handle(AppendedEvent @event)
+    public Task BeginBulk() => sink.BeginBulk();
+
+    /// <inheritdoc/>
+    public Task EndBulk() => sink.EndBulk();
+
+    /// <inheritdoc/>
+    public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
         logger.StartingPipeline(@event.Context.SequenceNumber);
         var context = ProjectionEventContext.Empty(objectComparer, @event) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
-
         };
 
         foreach (var step in steps)
@@ -73,6 +78,6 @@ public class ProjectionPipeline(
         }
         logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
-        return context.Changeset;
+        return context;
     }
 }

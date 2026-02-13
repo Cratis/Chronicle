@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Applications.MongoDB;
+using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
@@ -28,7 +28,7 @@ public class ProjectionDefinitionsStorage(
     {
         using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
         var projections = result.ToList();
-        return projections.Select(projection => projection.Definitions.Last().Value.ToKernel(projection.Sink)).ToArray();
+        return projections.Select(projection => projection.Definitions.Last().Value.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>
@@ -39,7 +39,7 @@ public class ProjectionDefinitionsStorage(
     {
         using var result = await Collection.FindAsync(_ => _.Id == id);
         var projection = result.Single();
-        return projection.Definitions.Last().Value.ToKernel(projection.Sink);
+        return projection.Definitions.Last().Value.ToKernel();
     }
 
     /// <inheritdoc/>
@@ -53,7 +53,6 @@ public class ProjectionDefinitionsStorage(
             definition.Identifier,
             definition.Owner,
             new(definition.ReadModel, ReadModelGeneration.First),
-            definition.Sink,
             new Dictionary<string, Definitions.ProjectionDefinition>
             {
                 { ProjectionGeneration.First.ToString(), definition.ToMongoDB() }

@@ -5,7 +5,11 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -14,6 +18,11 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// </summary>
 public class NullSink : ISink
 {
+    /// <summary>
+    /// Gets a singleton instance of <see cref="NullSink"/>.
+    /// </summary>
+    public static readonly NullSink Instance = new();
+
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.Null;
 
@@ -21,7 +30,14 @@ public class NullSink : ISink
     public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
+        Task.FromResult<IEnumerable<FailedPartition>>([]);
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
@@ -36,5 +52,15 @@ public class NullSink : ISink
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);
 
     /// <inheritdoc/>
+    public Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue) => Task.FromResult(Option<Key>.None());
+
+    /// <inheritdoc/>
     public Task PrepareInitialRun() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        Task.FromResult(new ReadModelInstances([], 0));
 }

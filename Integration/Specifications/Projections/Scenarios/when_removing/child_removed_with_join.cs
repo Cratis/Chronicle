@@ -2,18 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Integration.Specifications.AggregateRoots.Concepts;
-using Cratis.Chronicle.Integration.Specifications.Projections.Events;
-using Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.ReadModels;
+using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
+using Cratis.Chronicle.InProcess.Integration.Projections.Events;
+using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ReadModels;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing.child_removed_with_join.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing.child_removed_with_join.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing;
 
 [Collection(ChronicleCollection.Name)]
 public class child_removed_with_join(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithRemovedWithJoin, User>(chronicleFixture)
+    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithRemovedWithJoin, User>(chronicleInProcessFixture)
     {
         public EventSourceId UserId;
         public EventSourceId FirstGroupId;
@@ -41,7 +41,7 @@ public class child_removed_with_join(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
+            var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
             Users = result.ToList().ToArray();
         }
     }

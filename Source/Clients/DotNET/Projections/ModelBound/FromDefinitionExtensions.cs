@@ -31,30 +31,6 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
-    /// Adds a set mapping to the From definition for a given event type with an optional key.
-    /// </summary>
-    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
-    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
-    /// <param name="namingPolicy">The naming policy for converting property names.</param>
-    /// <param name="eventType">The event type to map from.</param>
-    /// <param name="propertyName">The property name on the projection model.</param>
-    /// <param name="eventPropertyName">The property name on the event.</param>
-    /// <param name="key">Optional key expression to use for identifying the model instance.</param>
-    internal static void AddSetMappingWithKey(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName, string? key)
-    {
-        var eventTypeId = getOrCreateEventType(eventType);
-        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        var eventPropertyPath = new PropertyPath(eventPropertyName);
-        fromDefinition.Properties[propertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
-
-        if (!string.IsNullOrEmpty(key))
-        {
-            var keyPropertyPath = new PropertyPath(key);
-            fromDefinition.Key = namingPolicy.GetPropertyName(keyPropertyPath);
-        }
-    }
-
-    /// <summary>
     /// Adds an add mapping to the From definition for a given event type.
     /// </summary>
     /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
@@ -101,7 +77,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Increment}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Increment;
     }
 
     /// <summary>
@@ -115,7 +91,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Decrement}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Decrement;
     }
 
     /// <summary>
@@ -129,7 +105,7 @@ static class FromDefinitionExtensions
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Count}()";
+        fromDefinition.Properties[propertyName] = WellKnownExpressions.Count;
     }
 
     /// <summary>
@@ -151,28 +127,12 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
-    /// Auto-maps properties from event type to model type by matching property names.
+    /// Gets or creates a FromDefinition for the specified event type.
     /// </summary>
-    /// <param name="fromDefinition">The FromDefinition to add property mappings to.</param>
-    /// <param name="namingPolicy">The naming policy for converting property names.</param>
-    /// <param name="eventType">The event type to map from.</param>
-    /// <param name="modelType">The model type to map to.</param>
-    internal static void AutoMapMatchingProperties(this FromDefinition fromDefinition, INamingPolicy namingPolicy, Type eventType, Type modelType)
-    {
-        foreach (var modelProperty in modelType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
-        {
-            var eventProperty = eventType.GetProperty(modelProperty.Name);
-            if (eventProperty is not null)
-            {
-                var modelPropertyPath = new PropertyPath(modelProperty.Name);
-                var modelPropertyName = namingPolicy.GetPropertyName(modelPropertyPath);
-                var eventPropertyPath = new PropertyPath(eventProperty.Name);
-                fromDefinition.Properties[modelPropertyName] = namingPolicy.GetPropertyName(eventPropertyPath);
-            }
-        }
-    }
-
-    static FromDefinition GetOrCreateFromDefinition(this IDictionary<EventType, FromDefinition> targetFrom, EventType eventTypeId)
+    /// <param name="targetFrom">The target From dictionary.</param>
+    /// <param name="eventTypeId">The event type ID.</param>
+    /// <returns>The existing or newly created FromDefinition.</returns>
+    internal static FromDefinition GetOrCreateFromDefinition(this IDictionary<EventType, FromDefinition> targetFrom, EventType eventTypeId)
     {
         if (!targetFrom.TryGetValue(eventTypeId, out var fromDefinition))
         {

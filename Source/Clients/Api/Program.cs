@@ -27,21 +27,21 @@ builder.Host
        _.ValidateScopes = false;
        _.ValidateOnBuild = false;
    })
-   .UseCratisApplicationModel();
+   .AddCratisArc(b => { });
 
 builder.WebHost.UseKestrel(options =>
 {
-    options.ListenAnyIP(chronicleApiOptions.ApiPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
+    options.ListenAnyIP(chronicleApiOptions.ManagementPort, listenOptions => listenOptions.Protocols = HttpProtocols.Http1);
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
 var app = builder.Build();
 app
     .UseRouting()
-    .UseCratisApplicationModel()
+    .UseCratisArc()
     .UseCratisChronicleApi();
 
-Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ApiPort}");
+Console.WriteLine($"Chronicle API started on port {chronicleApiOptions.ManagementPort}");
 
 await app.RunAsync();
 

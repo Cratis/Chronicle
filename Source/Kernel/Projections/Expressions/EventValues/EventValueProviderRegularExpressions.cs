@@ -11,5 +11,5 @@ public static class EventValueProviderRegularExpressions
     /// <summary>
     /// Gets the expression that represents the event value provider as a parameter.
     /// </summary>
-    public const string Expression = "[A-Za-z.$]";
+    public const string Expression = "[A-Za-z0-9.$]";
 }

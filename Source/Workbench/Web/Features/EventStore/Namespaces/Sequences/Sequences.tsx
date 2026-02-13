@@ -52,12 +52,10 @@ export const Sequences = () => {
         eventStore: params.eventStore!
     });
 
-
     const handler = new PropertyPathResolverProxyHandler();
     const proxy = new Proxy({}, handler);
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
-    console.log(handler.path);
 
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (

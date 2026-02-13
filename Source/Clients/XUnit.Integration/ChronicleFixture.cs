@@ -5,6 +5,7 @@ using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -18,10 +19,10 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     public const int MongoDBPort = 27018;
 
-#if NET9_0
-    readonly Lock _containerLock = new();
-#else
+#if NET8_0
     readonly object _containerLock = new();
+#else
+    readonly Lock _containerLock = new();
 #endif
 
     MongoDBDatabase? _eventStore;
@@ -35,6 +36,12 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     protected ChronicleFixture()
     {
+        LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+
         Directory.CreateDirectory("backups");
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
@@ -74,6 +81,11 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
 
+    /// <summary>
+    /// Gets the logger factory for creating loggers.
+    /// </summary>
+    protected ILoggerFactory LoggerFactory { get; }
+
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()
     {
@@ -90,7 +102,7 @@ public abstract class ChronicleFixture : IChronicleFixture
             prefix = $"{prefix}-";
         }
 
-        var backupName = $"{prefix}{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.tgz";
+        var backupName = $"{prefix}{DateTimeOffset.Now:yyyyMMdd-HHmmss}.tgz";
         try
         {
             MongoDBContainer.ExecAsync(

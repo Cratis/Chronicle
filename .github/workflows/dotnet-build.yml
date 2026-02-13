@@ -1,7 +1,9 @@
 name: .NET Build & Integration
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  DOTNET8_VERSION: "8.0.410"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
@@ -35,6 +37,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -68,6 +72,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - name: Clean output for repackaged clients
@@ -89,6 +95,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -98,7 +106,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --framework net9.0 --settings specs.runsettings
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings
 
   discover-integration-namespaces:
     runs-on: ubuntu-latest
@@ -180,6 +188,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -211,6 +221,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
