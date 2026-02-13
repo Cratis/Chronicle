@@ -46,8 +46,8 @@ public static class ProjectionDefinitionConverters
             Owner = definition.Owner,
             ReadModelName = definition.ReadModel,
             ReadModelGeneration = ReadModelGeneration.First,
-            SinkType = definition.Sink.TypeId,
-            SinkConfigurationId = definition.Sink.ConfigurationId,
+            SinkType = Guid.Empty,
+            SinkConfigurationId = Guid.Empty,
             Definitions = new Dictionary<uint, string>
             {
                 { ProjectionGeneration.First, JsonSerializer.Serialize(definition, _serializerOptions) }

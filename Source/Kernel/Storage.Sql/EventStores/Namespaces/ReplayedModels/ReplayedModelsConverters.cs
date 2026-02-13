@@ -33,7 +33,7 @@ public static class ReplayedModelsConverters
     /// <returns>The converted <see cref="ReadModelOccurrence"/>.</returns>
     public static ReadModelOccurrence ToReadModelOccurrence(ReplayedModelOccurrence occurrence) =>
         new(
-            new(Guid.Parse(occurrence.ObserverId)),
+            new(occurrence.ObserverId),
             occurrence.Started,
             new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), ReadModelGeneration.First),
             new(occurrence.ReadModelName),

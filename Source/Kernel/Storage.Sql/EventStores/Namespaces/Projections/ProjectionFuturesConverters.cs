@@ -25,17 +25,17 @@ public static class ProjectionFuturesConverters
     public static ProjectionFutureEntity ToEntity(ProjectionId projectionId, ProjectionFuture future, JsonSerializerOptions jsonSerializerOptions) =>
         new()
         {
-            Id = future.Id.Value,
+            Id = future.Id.Value.ToString(),
             ProjectionId = projectionId.Value,
             EventSequenceNumber = future.Event.Context.SequenceNumber.Value,
             EventTypeId = future.Event.Context.EventType.Id.Value,
             EventTypeGeneration = future.Event.Context.EventType.Generation.Value,
             EventSourceId = future.Event.Context.EventSourceId.Value,
             EventContentJson = JsonSerializer.Serialize(future.Event.Content, jsonSerializerOptions),
-            ParentPath = future.ParentPath.Value,
-            ChildPath = future.ChildPath.Value,
-            IdentifiedByProperty = future.IdentifiedByProperty.Value,
-            ParentIdentifiedByProperty = future.ParentIdentifiedByProperty.Value,
+            ParentPath = future.ParentPath.Path,
+            ChildPath = future.ChildPath.Path,
+            IdentifiedByProperty = future.IdentifiedByProperty.Path,
+            ParentIdentifiedByProperty = future.ParentIdentifiedByProperty.Path,
             ParentKeyJson = JsonSerializer.Serialize(future.ParentKey.Value, jsonSerializerOptions),
             Created = future.Created
         };
@@ -61,7 +61,7 @@ public static class ProjectionFuturesConverters
             content);
 
         return new ProjectionFuture(
-            new ProjectionFutureId(entity.Id),
+            new ProjectionFutureId(Guid.Parse(entity.Id)),
             new ProjectionId(entity.ProjectionId),
             appendedEvent,
             new PropertyPath(entity.ParentPath),

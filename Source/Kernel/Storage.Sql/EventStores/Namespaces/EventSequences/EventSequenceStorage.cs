@@ -288,7 +288,9 @@ public class EventSequenceStorage(
             @namespace,
             new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
             eventCausation,
-            await identityStorage.GetFor(eventCausedBy));
+            await identityStorage.GetFor(eventCausedBy),
+            [],
+            EventHash.NotSet);
 
         return new AppendedEvent(eventMetadata, content);
     }
@@ -532,7 +534,9 @@ public class EventSequenceStorage(
                 @namespace,
                 new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
                 causation,
-                await identityStorage.GetFor(causedBy));
+                await identityStorage.GetFor(causedBy),
+                [],
+                EventHash.NotSet);
 
             var appendedEvent = new AppendedEvent(eventMetadata, content);
             return (Option<AppendedEvent>)appendedEvent;
@@ -569,7 +573,9 @@ public class EventSequenceStorage(
             @namespace,
             new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
             causation,
-            await identityStorage.GetFor(causedBy));
+            await identityStorage.GetFor(causedBy),
+            [],
+            EventHash.NotSet);
 
         return new AppendedEvent(eventMetadata, content);
     }
@@ -610,7 +616,9 @@ public class EventSequenceStorage(
             @namespace,
             new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
             causation,
-            await identityStorage.GetFor(causedBy));
+            await identityStorage.GetFor(causedBy),
+            [],
+            EventHash.NotSet);
 
         return new AppendedEvent(eventMetadata, content);
     }

@@ -24,7 +24,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entity = await scope.DbContext.ProjectionFutures
-            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == future.Id.Value);
+            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == future.Id.Value.ToString());
 
         if (entity is null)
         {
@@ -68,7 +68,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entity = await scope.DbContext.ProjectionFutures
-            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == futureId.Value);
+            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == futureId.Value.ToString());
 
         if (entity is not null)
         {
