@@ -76,9 +76,9 @@ public class LanguageService(
 
     /// <inheritdoc/>
     public string GenerateDeclarativeCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        declarativeCodeGenerator.Generate(definition, readModelDefinition);
+        declarativeCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
 
     /// <inheritdoc/>
     public string GenerateModelBoundCode(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
-        modelBoundCodeGenerator.Generate(definition, readModelDefinition);
+        modelBoundCodeGenerator.Generate(definition, readModelDefinition).ToFullString();
 }

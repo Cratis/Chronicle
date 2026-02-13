@@ -14,5 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reactive" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     </ItemGroup>
 </Project>

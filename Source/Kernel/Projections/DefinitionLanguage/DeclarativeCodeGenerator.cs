@@ -1,17 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Cratis.Chronicle.Projections.DefinitionLanguage;
 
 /// <summary>
-/// Generates declarative C# projection code from a <see cref="ProjectionDefinition"/>.
+/// Generates declarative C# projection code from a <see cref="ProjectionDefinition"/> using Roslyn Syntax Factory.
 /// </summary>
 public class DeclarativeCodeGenerator
 {
@@ -20,51 +23,25 @@ public class DeclarativeCodeGenerator
     /// </summary>
     /// <param name="definition">The projection definition to generate code from.</param>
     /// <param name="readModelDefinition">The read model definition the projection targets.</param>
-    /// <returns>Generated C# code for declarative projection.</returns>
-    public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    /// <returns>Generated <see cref="CompilationUnitSyntax"/> for declarative projection.</returns>
+    public CompilationUnitSyntax Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
-        var sb = new StringBuilder();
-        var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
+        var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title!;
         var projectionName = definition.Identifier.Value;
 
-        sb.AppendLine("using Cratis.Chronicle.Projections;")
-          .AppendLine()
-            .AppendLine($"public class {projectionName} : IProjectionFor<{readModelName}>")
-            .AppendLine("{")
-            .AppendLine($"    public void Define(IProjectionBuilderFor<{readModelName}> builder) => builder");
+        var usingDirective = UsingDirective(ParseName("Cratis.Chronicle.Projections"));
 
-        var lines = new List<string>();
+        var classDeclaration = CreateProjectionClass(projectionName, readModelName, definition);
 
-        // Generate From blocks
-        GenerateFromBlocks(definition.From, definition.AutoMap, lines, 8);
-
-        // Generate Join blocks
-        GenerateJoinBlocks(definition.Join, definition.AutoMap, lines, 8);
-
-        // Generate Children blocks
-        GenerateChildrenBlocks(definition.Children, lines, 8);
-
-        // Generate RemovedWith blocks
-        GenerateRemovedWithBlocks(definition.RemovedWith, lines, 8);
-
-        if (lines.Count > 0)
-        {
-            lines[^1] += ";";  // Add semicolon to last line
-        }
-
-        foreach (var line in lines)
-        {
-            sb.AppendLine(line);
-        }
-
-        sb.AppendLine("}");
-
-        return sb.ToString();
+        return CompilationUnit()
+            .WithUsings(SingletonList(usingDirective))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(classDeclaration))
+            .NormalizeWhitespace();
     }
 
     static string ConvertExpression(string expression)
     {
-        // Handle event context properties - these return ToEventContextProperty syntax
+        // Handle event context properties
         if (expression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal) && expression.EndsWith(')'))
         {
             var property = expression[(WellKnownExpressions.EventContext.Length + 1)..^1];
@@ -126,10 +103,135 @@ public class DeclarativeCodeGenerator
         return expression;
     }
 
-    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines, int indent)
+    static string GenerateKeyExpression(string keyExpression)
     {
-        var indentStr = new string(' ', indent);
+        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
+        {
+            // Parse: $composite(TypeName, prop1=expr1, prop2=expr2)
+            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
+            var parts = inner.Split([", "], StringSplitOptions.None);
+            var typeName = parts[0];
+            var propMappings = parts.Skip(1);
 
+            var result = new List<string> { $".UsingCompositeKey<{typeName}>(_ => _" };
+            foreach (var mapping in propMappings)
+            {
+                var keyValue = mapping.Split('=', 2);
+                var prop = keyValue[0];
+                var expr = keyValue[1];
+                result.Add($"    .Set(k => k.{prop}).To({ConvertExpression(expr)})");
+            }
+            result[^1] += ")";
+            return string.Join("\n            ", result);
+        }
+
+        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
+        {
+            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+            return $".UsingKeyFromContext(c => c.{property})";
+        }
+
+        return $".UsingKey({ConvertExpression(keyExpression)})";
+    }
+
+    static string GenerateParentKeyExpression(string keyExpression)
+    {
+        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
+        {
+            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
+            var parts = inner.Split([", "], StringSplitOptions.None);
+            var typeName = parts[0];
+            var propMappings = parts.Skip(1);
+
+            var result = new List<string> { $".UsingParentCompositeKey<{typeName}>(_ => _" };
+            foreach (var mapping in propMappings)
+            {
+                var keyValue = mapping.Split('=', 2);
+                var prop = keyValue[0];
+                var expr = keyValue[1];
+                result.Add($"    .Set(k => k.{prop}).To({ConvertExpression(expr)})");
+            }
+            result[^1] += ")";
+            return string.Join("\n            ", result);
+        }
+
+        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
+        {
+            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
+            return $".UsingParentKeyFromContext(c => c.{property})";
+        }
+
+        return $".UsingParentKey({ConvertExpression(keyExpression)})";
+    }
+
+    ClassDeclarationSyntax CreateProjectionClass(string projectionName, string readModelName, ProjectionDefinition definition)
+    {
+        var baseType = SimpleBaseType(
+            GenericName("IProjectionFor")
+                .WithTypeArgumentList(
+                    TypeArgumentList(
+                        SingletonSeparatedList<TypeSyntax>(IdentifierName(readModelName)))));
+
+        var defineMethod = CreateDefineMethod(readModelName, definition);
+
+        return ClassDeclaration(projectionName)
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+            .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(baseType)))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(defineMethod));
+    }
+
+    MethodDeclarationSyntax CreateDefineMethod(string readModelName, ProjectionDefinition definition)
+    {
+        // Build the fluent builder chain as a code string then parse it
+        var builderCode = BuildFluentChain(definition);
+        var builderExpression = ParseExpression($"builder{builderCode}");
+
+        var arrowExpression = ArrowExpressionClause(builderExpression);
+
+        return MethodDeclaration(
+                PredefinedType(Token(SyntaxKind.VoidKeyword)),
+                Identifier("Define"))
+            .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+            .WithParameterList(
+                ParameterList(
+                    SingletonSeparatedList(
+                        Parameter(Identifier("builder"))
+                            .WithType(
+                                GenericName("IProjectionBuilderFor")
+                                    .WithTypeArgumentList(
+                                        TypeArgumentList(
+                                            SingletonSeparatedList<TypeSyntax>(
+                                                IdentifierName(readModelName))))))))
+            .WithExpressionBody(arrowExpression)
+            .WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
+    }
+
+    string BuildFluentChain(ProjectionDefinition definition)
+    {
+        var lines = new List<string>();
+
+        // Generate From blocks
+        GenerateFromBlocks(definition.From, definition.AutoMap, lines);
+
+        // Generate Join blocks
+        GenerateJoinBlocks(definition.Join, definition.AutoMap, lines);
+
+        // Generate Children blocks
+        GenerateChildrenBlocks(definition.Children, lines);
+
+        // Generate RemovedWith blocks
+        GenerateRemovedWithBlocks(definition.RemovedWith, lines);
+
+        if (lines.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return "\n        " + string.Join("\n        ", lines);
+    }
+
+    void GenerateFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, AutoMap autoMap, List<string> lines)
+    {
         foreach (var from in fromBlocks)
         {
             var eventTypeName = from.Key.Id.Value;
@@ -141,7 +243,7 @@ public class DeclarativeCodeGenerator
 
             if (!needsLambda)
             {
-                lines.Add($"{indentStr}.From<{eventTypeName}>()");
+                lines.Add($".From<{eventTypeName}>()");
                 continue;
             }
 
@@ -150,15 +252,13 @@ public class DeclarativeCodeGenerator
             // Add key configuration
             if (hasKey)
             {
-                var keyLine = GenerateKeyExpression(fromDef.Key!, indentStr);
-                propLines.Add(keyLine);
+                propLines.Add(GenerateKeyExpression(fromDef.Key!));
             }
 
             // Add parent key configuration
             if (hasParentKey)
             {
-                var parentKeyLine = GenerateParentKeyExpression(fromDef.ParentKey!, indentStr);
-                propLines.Add(parentKeyLine);
+                propLines.Add(GenerateParentKeyExpression(fromDef.ParentKey!));
             }
 
             // Add property mappings
@@ -170,109 +270,46 @@ public class DeclarativeCodeGenerator
                 if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
                     var innerExpr = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
-                    propLines.Add($"{indentStr}    .Add(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
+                    propLines.Add($".Add(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
                 }
                 else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
                 {
                     var innerExpr = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
-                    propLines.Add($"{indentStr}    .Subtract(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
+                    propLines.Add($".Subtract(m => m.{propertyPath}).With({ConvertExpression(innerExpr)})");
                 }
                 else if (normalizedExpression == WellKnownExpressions.Increment)
                 {
-                    propLines.Add($"{indentStr}    .Increment(m => m.{propertyPath})");
+                    propLines.Add($".Increment(m => m.{propertyPath})");
                 }
                 else if (normalizedExpression == WellKnownExpressions.Decrement)
                 {
-                    propLines.Add($"{indentStr}    .Decrement(m => m.{propertyPath})");
+                    propLines.Add($".Decrement(m => m.{propertyPath})");
                 }
                 else if (normalizedExpression == WellKnownExpressions.Count)
                 {
-                    propLines.Add($"{indentStr}    .Count(m => m.{propertyPath})");
+                    propLines.Add($".Count(m => m.{propertyPath})");
                 }
                 else
                 {
-                    propLines.Add($"{indentStr}    .Set(m => m.{propertyPath}).{ConvertExpressionForSet(normalizedExpression)}");
+                    propLines.Add($".Set(m => m.{propertyPath}).{ConvertExpressionForSet(normalizedExpression)}");
                 }
             }
 
             if (propLines.Count > 0)
             {
-                lines.Add($"{indentStr}.From<{eventTypeName}>(_ => _");
-                lines.AddRange(propLines);
+                lines.Add($".From<{eventTypeName}>(_ => _");
+                lines.AddRange(propLines.Select(l => "    " + l));
                 lines[^1] += ")";
             }
             else
             {
-                lines.Add($"{indentStr}.From<{eventTypeName}>(_ => _)");
+                lines.Add($".From<{eventTypeName}>(_ => _)");
             }
         }
     }
 
-    string GenerateKeyExpression(string keyExpression, string indentStr)
+    void GenerateJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, AutoMap autoMap, List<string> lines)
     {
-        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
-        {
-            // Parse: $composite(TypeName, prop1=expr1, prop2=expr2)
-            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
-            var parts = inner.Split([", "], StringSplitOptions.None);
-            var typeName = parts[0];
-            var propMappings = parts.Skip(1);
-
-            var result = new List<string> { $"{indentStr}    .UsingCompositeKey<{typeName}>(_ => _" };
-            foreach (var mapping in propMappings)
-            {
-                var keyValue = mapping.Split('=');
-                var prop = keyValue[0];
-                var expr = keyValue[1];
-                result.Add($"{indentStr}        .Set(k => k.{prop}).To({ConvertExpression(expr)})");
-            }
-            result[^1] += ")";
-            return string.Join(Environment.NewLine, result);
-        }
-
-        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
-        {
-            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
-            return $"{indentStr}    .UsingKeyFromContext(c => c.{property})";
-        }
-
-        return $"{indentStr}    .UsingKey({ConvertExpression(keyExpression)})";
-    }
-
-    string GenerateParentKeyExpression(string keyExpression, string indentStr)
-    {
-        if (keyExpression.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal))
-        {
-            var inner = keyExpression[(WellKnownExpressions.Composite.Length + 1)..^1];
-            var parts = inner.Split([", "], StringSplitOptions.None);
-            var typeName = parts[0];
-            var propMappings = parts.Skip(1);
-
-            var result = new List<string> { $"{indentStr}    .UsingParentCompositeKey<{typeName}>(_ => _" };
-            foreach (var mapping in propMappings)
-            {
-                var keyValue = mapping.Split('=');
-                var prop = keyValue[0];
-                var expr = keyValue[1];
-                result.Add($"{indentStr}        .Set(k => k.{prop}).To({ConvertExpression(expr)})");
-            }
-            result[^1] += ")";
-            return string.Join(Environment.NewLine, result);
-        }
-
-        if (keyExpression.StartsWith($"{WellKnownExpressions.EventContext}(", StringComparison.Ordinal))
-        {
-            var property = keyExpression[(WellKnownExpressions.EventContext.Length + 1)..^1];
-            return $"{indentStr}    .UsingParentKeyFromContext(c => c.{property})";
-        }
-
-        return $"{indentStr}    .UsingParentKey({ConvertExpression(keyExpression)})";
-    }
-
-    void GenerateJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, AutoMap autoMap, List<string> lines, int indent)
-    {
-        var indentStr = new string(' ', indent);
-
         foreach (var join in joinBlocks)
         {
             var eventTypeName = join.Key.Id.Value;
@@ -280,7 +317,7 @@ public class DeclarativeCodeGenerator
 
             if (joinDef.Properties.Count == 0 && autoMap != AutoMap.Disabled)
             {
-                lines.Add($"{indentStr}.Join<{eventTypeName}>(j => j.On(m => m.{joinDef.On}))");
+                lines.Add($".Join<{eventTypeName}>(j => j.On(m => m.{joinDef.On}))");
             }
             else
             {
@@ -289,67 +326,69 @@ public class DeclarativeCodeGenerator
                 {
                     var propertyPath = prop.Key;
                     var expression = prop.Value;
-                    propLines.Add($"{indentStr}        .Set(m => m.{propertyPath}).To({ConvertExpression(expression)})");
+                    propLines.Add($"    .Set(m => m.{propertyPath}).To({ConvertExpression(expression)})");
                 }
 
                 if (propLines.Count > 0)
                 {
-                    lines.Add($"{indentStr}.Join<{eventTypeName}>(j => j");
-                    lines.Add($"{indentStr}    .On(m => m.{joinDef.On})");
+                    lines.Add($".Join<{eventTypeName}>(j => j");
+                    lines.Add($"    .On(m => m.{joinDef.On})");
                     lines.AddRange(propLines);
                     lines[^1] += ")";
                 }
                 else
                 {
-                    lines.Add($"{indentStr}.Join<{eventTypeName}>(j => j.On(m => m.{joinDef.On}))");
+                    lines.Add($".Join<{eventTypeName}>(j => j.On(m => m.{joinDef.On}))");
                 }
             }
         }
     }
 
-    void GenerateChildrenBlocks(IDictionary<PropertyPath, ChildrenDefinition> childrenBlocks, List<string> lines, int indent)
+    void GenerateChildrenBlocks(IDictionary<PropertyPath, ChildrenDefinition> childrenBlocks, List<string> lines)
     {
-        var indentStr = new string(' ', indent);
-
         foreach (var child in childrenBlocks)
         {
             var propertyName = child.Key.Path;
             var childDef = child.Value;
 
-            lines.Add($"{indentStr}.Children(m => m.{propertyName}, children => children");
-            lines.Add($"{indentStr}    .IdentifiedBy(e => e.{childDef.IdentifiedBy})");
+            lines.Add($".Children(m => m.{propertyName}, children => children");
+            lines.Add($"    .IdentifiedBy(e => e.{childDef.IdentifiedBy})");
 
             // Generate child From blocks
             if (childDef.From.Count > 0)
             {
-                GenerateFromBlocks(childDef.From, childDef.AutoMap, lines, indent + 4);
+                var childLines = new List<string>();
+                GenerateFromBlocks(childDef.From, childDef.AutoMap, childLines);
+                lines.AddRange(childLines.Select(l => "    " + l));
             }
 
             // Generate child Join blocks
             if (childDef.Join.Count > 0)
             {
-                GenerateJoinBlocks(childDef.Join, childDef.AutoMap, lines, indent + 4);
+                var childLines = new List<string>();
+                GenerateJoinBlocks(childDef.Join, childDef.AutoMap, childLines);
+                lines.AddRange(childLines.Select(l => "    " + l));
             }
 
             // Generate nested children
             if (childDef.Children.Count > 0)
             {
-                GenerateChildrenBlocks(childDef.Children, lines, indent + 4);
+                var childLines = new List<string>();
+                GenerateChildrenBlocks(childDef.Children, childLines);
+                lines.AddRange(childLines.Select(l => "    " + l));
             }
 
             lines[^1] += ")";
         }
     }
 
-    void GenerateRemovedWithBlocks(IDictionary<EventType, RemovedWithDefinition> removedWithBlocks, List<string> lines, int indent)
+    void GenerateRemovedWithBlocks(IDictionary<EventType, RemovedWithDefinition> removedWithBlocks, List<string> lines)
     {
-        var indentStr = new string(' ', indent);
-
         foreach (var removed in removedWithBlocks)
         {
             var eventTypeName = removed.Key.Id.Value;
             var removedDef = removed.Value;
-            lines.Add($"{indentStr}.RemovedWith<{eventTypeName}>(e => e.{removedDef.Key})");
+            lines.Add($".RemovedWith<{eventTypeName}>(e => e.{removedDef.Key})");
         }
     }
 }
