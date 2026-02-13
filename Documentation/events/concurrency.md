@@ -3,15 +3,15 @@ uid: Chronicle.ConcurrencyScope
 ---
 # Concurrency
 
-Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on event metadata tags.
+Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on formalized event metadata tags.
 
 ## Understanding ConcurrencyScope
 
-A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses the [event metadata tags](../concepts/event-metadata-tags.md) to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected.
+A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.
 
-### Event Metadata Tags for Concurrency
+### Formalized Metadata Tags for Concurrency
 
-Chronicle uses the following event metadata tags to scope concurrency:
+Chronicle uses the following formalized, indexed metadata tags to scope concurrency:
 
 - **EventSourceId**: Unique identifier for the event source
 - **EventSourceType**: Overarching, binding concept (e.g., Account)
