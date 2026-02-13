@@ -92,6 +92,18 @@ internal static partial class JobsManagerLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Failed to resume Job {JobId}")]
     internal static partial void FailedResumingJob(this ILogger<JobsManager> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Information, "Cleaning up dead jobs")]
+    internal static partial void CleaningUpDeadJobs(this ILogger<JobsManager> logger);
+
+    [LoggerMessage(LogLevel.Information, "Found {Count} dead jobs to clean up")]
+    internal static partial void FoundDeadJobs(this ILogger<JobsManager> logger, int count);
+
+    [LoggerMessage(LogLevel.Debug, "No dead jobs found")]
+    internal static partial void NoDeadJobsFound(this ILogger<JobsManager> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to get jobs for cleanup")]
+    internal static partial void FailedToGetJobsForCleanup(this ILogger<JobsManager> logger, Exception exception);
 }
 
 internal static class JobsManagerScopes

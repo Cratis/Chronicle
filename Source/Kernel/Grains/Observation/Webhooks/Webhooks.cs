@@ -218,7 +218,7 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SubscribeIfNotSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
         var subscribed = await observer.IsSubscribed();
@@ -235,7 +235,7 @@ public class Webhooks(
         logger.AlreadySubscribed(definition.Identifier, namespaceName);
     }
 
-    async Task UnsubscribeIfSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
         var subscribed = await observer.IsSubscribed();
