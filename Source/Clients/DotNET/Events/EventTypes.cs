@@ -42,6 +42,9 @@ public class EventTypes : IEventTypes
     public IImmutableList<Type> AllClrTypes => _typesByEventType.Values.ToImmutableList();
 
     /// <inheritdoc/>
+    public IImmutableList<EventType> All => _typesByEventType.Keys.ToImmutableList();
+
+    /// <inheritdoc/>
     public Task Discover()
     {
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new

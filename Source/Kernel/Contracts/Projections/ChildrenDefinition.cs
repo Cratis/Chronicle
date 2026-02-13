@@ -58,4 +58,10 @@ public class ChildrenDefinition
     /// </summary>
     [ProtoMember(8, IsRequired = true)]
     public IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin { get; set; } = new Dictionary<EventType, RemovedWithJoinDefinition>();
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    [ProtoMember(9)]
+    public AutoMap AutoMap { get; set; }
 }

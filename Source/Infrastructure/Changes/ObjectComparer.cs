@@ -9,6 +9,7 @@ using Cratis.Collections;
 using Cratis.Concepts;
 using Cratis.DependencyInjection;
 using Cratis.Reflection;
+using OneOf;
 
 namespace Cratis.Chronicle.Changes;
 
@@ -65,11 +66,11 @@ public class ObjectComparer : IObjectComparer
 
         foreach (var key in keys.Distinct())
         {
-            if (!left!.TryGetValue(key, out var leftValue))
+            if (!left.TryGetValue(key, out var leftValue))
             {
                 leftValue = null;
             }
-            if (!right!.TryGetValue(key, out var rightValue))
+            if (!right.TryGetValue(key, out var rightValue))
             {
                 rightValue = null;
             }
@@ -95,11 +96,11 @@ public class ObjectComparer : IObjectComparer
 
         foreach (var key in keys.Distinct())
         {
-            if (!leftDictionary!.TryGetValue(key, out var leftValue))
+            if (!leftDictionary.TryGetValue(key, out var leftValue))
             {
                 leftValue = null;
             }
-            if (!rightDictionary!.TryGetValue(key, out var rightValue))
+            if (!rightDictionary.TryGetValue(key, out var rightValue))
             {
                 rightValue = null;
             }
@@ -127,6 +128,22 @@ public class ObjectComparer : IObjectComparer
         else if (type.IsAssignableTo(typeof(ExpandoObject)))
         {
             CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
+        }
+        else if (type.IsAssignableTo(typeof(IOneOf)))
+        {
+            var valueProperty = type.GetProperty(nameof(IOneOf.Value));
+            var leftOneOfValue = valueProperty?.GetValue(leftValue);
+            var rightOneOfValue = valueProperty?.GetValue(rightValue);
+            var oneOfValueType = leftOneOfValue?.GetType() ?? rightOneOfValue?.GetType();
+
+            if (oneOfValueType is not null)
+            {
+                CompareValues(oneOfValueType, leftOneOfValue, rightOneOfValue, propertyPath, differences);
+            }
+            else if (!Equals(leftOneOfValue, rightOneOfValue))
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
         }
         else if (type.IsDictionary())
         {

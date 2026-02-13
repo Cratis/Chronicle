@@ -1,0 +1,7 @@
+- name: Overview
+  href: index.md
+- name: DotNET client usage
+  href: dotnet-client.md
+- name: ASP.NET Core namespace resolution
+  href: aspnetcore.md
+

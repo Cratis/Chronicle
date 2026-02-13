@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Grains.Observation.Reducers;
@@ -36,6 +37,12 @@ public class ReducerPipeline(
     public Task EndReplay(ReplayContext context) => Sink.EndReplay(context);
 
     /// <inheritdoc/>
+    public Task BeginBulk() => Sink.BeginBulk();
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Sink.EndBulk();
+
+    /// <inheritdoc/>
     public async Task Handle(ReducerContext context, ReducerDelegate reducer)
     {
         var initial = await Sink.FindOrDefault(context.Key);
@@ -59,7 +66,13 @@ public class ReducerPipeline(
 
         if (changeset.HasChanges)
         {
-            await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
+            var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber);
+
+            if (failedPartitions.Any())
+            {
+                var firstFailure = failedPartitions.First();
+                throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
+            }
         }
     }
 }

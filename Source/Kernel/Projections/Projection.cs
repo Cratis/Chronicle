@@ -7,8 +7,8 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
@@ -27,7 +27,6 @@ public class Projection : IProjection, IDisposable
     /// </summary>
     /// <param name="eventSequenceId">The unique identifier of the event sequence.</param>
     /// <param name="identifier">The unique identifier of the projection.</param>
-    /// <param name="sink">The <see cref="SinkDefinition">sink</see> to store the results of the projection.</param>
     /// <param name="initialModelState">The initial state to use for new model instances.</param>
     /// <param name="path">The qualified path of the projection.</param>
     /// <param name="childrenPropertyPath">The fully qualified path of the array that holds the children, if this is a child projection.</param>
@@ -35,11 +34,11 @@ public class Projection : IProjection, IDisposable
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> for the root read model.</param>
     /// <param name="readModelSchema">The target <see cref="JsonSchema"/> for the read model.</param>
     /// <param name="rewindable">Whether the projection is rewindable.</param>
+    /// <param name="autoMap">Whether properties should be auto-mapped from events at the projection level.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         EventSequenceId eventSequenceId,
         ProjectionId identifier,
-        SinkDefinition sink,
         ExpandoObject initialModelState,
         ProjectionPath path,
         PropertyPath childrenPropertyPath,
@@ -47,15 +46,16 @@ public class Projection : IProjection, IDisposable
         ReadModelDefinition readModel,
         JsonSchema readModelSchema,
         bool rewindable,
+        AutoMap autoMap,
         IEnumerable<IProjection> childProjections)
     {
         EventSequenceId = eventSequenceId;
         Identifier = identifier;
-        Sink = sink;
         InitialModelState = initialModelState;
         ReadModel = readModel;
         TargetReadModelSchema = readModelSchema;
         IsRewindable = rewindable;
+        AutoMap = autoMap;
         Event = FilterEventTypes(_subject);
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
@@ -68,9 +68,6 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public ProjectionId Identifier { get; }
-
-    /// <inheritdoc/>
-    public SinkDefinition Sink { get; }
 
     /// <inheritdoc/>
     public ExpandoObject InitialModelState { get; }
@@ -92,6 +89,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public bool IsRewindable { get; }
+
+    /// <inheritdoc/>
+    public AutoMap AutoMap { get; }
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> Event { get; }

@@ -31,12 +31,12 @@ public interface IEventSequence
     /// Get all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to get for.</param>
-    /// <param name="eventTypes">Collection of <see cref="EventType"/> to get for.</param>
+    /// <param name="filterEventTypes">Collection of <see cref="EventType"/> to get for.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to append to. Defaults to <see cref="EventStreamType.All"/>.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> eventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
+    Task<IImmutableList<AppendedEvent>> GetForEventSourceIdAndEventTypes(EventSourceId eventSourceId, IEnumerable<EventType> filterEventTypes, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, EventSourceType? eventSourceType = default);
 
     /// <summary>
     /// Check if there are events for a specific <see cref="EventSourceId"/>.
@@ -50,9 +50,9 @@ public interface IEventSequence
     /// </summary>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the first event to get from.</param>
     /// <param name="eventSourceId">The optional <see cref="EventSourceId"/>.</param>
-    /// <param name="eventTypes">The optional <see cref="IEnumerable{T}"/> of <see cref="EventType"/>.</param>
+    /// <param name="filterEventTypes">The optional <see cref="IEnumerable{T}"/> of <see cref="EventType"/>.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
-    Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default);
+    Task<IImmutableList<AppendedEvent>> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, IEnumerable<EventType>? filterEventTypes = default);
 
     /// <summary>
     /// Get the next sequence number.
@@ -67,14 +67,14 @@ public interface IEventSequence
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to get for. If not specified, it will return the tail sequence number for all event source types.</param>
     /// <param name="eventStreamType">Optional <see cref="EventStreamType"/> to get for. If not specified, it will return the tail sequence number for all event stream types.</param>
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to get for. If not specified, it will return the tail sequence number for all event streams.</param>
-    /// <param name="eventTypes">Optional collection of <see cref="EventType"/> to filter by. If not specified, it will return the tail sequence number for all.</param>
+    /// <param name="filterEventTypes">Optional collection of <see cref="EventType"/> to filter by. If not specified, it will return the tail sequence number for all.</param>
     /// <returns>Tail sequence number.</returns>
     Task<EventSequenceNumber> GetTailSequenceNumber(
         EventSourceId? eventSourceId = default,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default);
+        IEnumerable<EventType>? filterEventTypes = default);
 
     /// <summary>
     /// Get the sequence number of the last (tail) event in the sequence for a specific observer.
@@ -95,6 +95,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
@@ -104,6 +105,7 @@ public interface IEventSequence
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
@@ -115,6 +117,7 @@ public interface IEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
@@ -127,6 +130,7 @@ public interface IEventSequence
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default);
 
     /// <summary>
@@ -134,6 +138,7 @@ public interface IEventSequence
     /// </summary>
     /// <param name="events">Collection of <see cref="EventForEventSourceId"/> to append.</param>
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScopes">Optional <see cref="IDictionary{TKey, TValue}"/> of <see cref="EventSourceId"/> and <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to an empty dictionary.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
@@ -142,6 +147,7 @@ public interface IEventSequence
     Task<AppendManyResult> AppendMany(
         IEnumerable<EventForEventSourceId> events,
         CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default);
 
     /// <summary>

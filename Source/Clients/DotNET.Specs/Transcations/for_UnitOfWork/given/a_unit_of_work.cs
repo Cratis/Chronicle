@@ -29,7 +29,8 @@ public class a_unit_of_work : Specification
         _eventSequence
             .AppendMany(
                 Arg.Any<IEnumerable<EventForEventSourceId>>(),
-                Arg.Any<CorrelationId>(),
+                Arg.Any<CorrelationId?>(),
+                Arg.Any<IEnumerable<string>>(),
                 Arg.Any<IDictionary<EventSourceId, ConcurrencyScope>>())
             .Returns(callInfo =>
             {

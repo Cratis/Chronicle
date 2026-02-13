@@ -15,11 +15,13 @@ using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
+using Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
+using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -76,6 +78,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IProjectionDefinitionsStorage Projections { get; } = new ProjectionDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);

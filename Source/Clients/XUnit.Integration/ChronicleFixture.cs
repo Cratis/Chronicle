@@ -5,6 +5,7 @@ using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -35,6 +36,12 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// </summary>
     protected ChronicleFixture()
     {
+        LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+
         Directory.CreateDirectory("backups");
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
@@ -73,6 +80,11 @@ public abstract class ChronicleFixture : IChronicleFixture
 
     /// <inheritdoc/>
     public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+
+    /// <summary>
+    /// Gets the logger factory for creating loggers.
+    /// </summary>
+    protected ILoggerFactory LoggerFactory { get; }
 
     /// <inheritdoc/>
     public virtual async ValueTask DisposeAsync()

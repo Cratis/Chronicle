@@ -24,7 +24,8 @@ public class using_parent_id_as_key : given.a_model_bound_projection_builder
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_use_warehouse_id_from_event_as_key()
+    [Fact]
+    void should_use_warehouse_id_from_event_as_key()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
         var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
@@ -32,7 +33,8 @@ public class using_parent_id_as_key : given.a_model_bound_projection_builder
         fromDef.Key.ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
     }
 
-    [Fact] void should_map_warehouse_id_property_to_event_id_not_event_source_id()
+    [Fact]
+    void should_map_warehouse_id_property_to_event_id_not_event_source_id()
     {
         var eventType = event_types.GetEventTypeFor(typeof(WarehouseAddedToSimulation)).ToContract();
         var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
@@ -40,7 +42,8 @@ public class using_parent_id_as_key : given.a_model_bound_projection_builder
         fromDef.Properties[nameof(Warehouse.Id)].ShouldEqual(nameof(WarehouseAddedToSimulation.Id));
     }
 
-    [Fact] void should_use_parent_id_property_as_parent_key()
+    [Fact]
+    void should_use_parent_id_property_as_parent_key()
     {
         // This test verifies the builder discovers the event property that identifies the parent
         // by matching the property type with the parent's Id property type (WarehouseSimulationId)
@@ -51,7 +54,8 @@ public class using_parent_id_as_key : given.a_model_bound_projection_builder
         fromDef.ParentKey.ShouldEqual(nameof(WarehouseAddedToSimulation.SimulationId));
     }
 
-    [Fact] void should_apply_naming_policy_to_identified_by()
+    [Fact]
+    void should_apply_naming_policy_to_identified_by()
     {
         var childrenDef = _result.Children[nameof(WarehousesForSimulation.Warehouses)];
         childrenDef.IdentifiedBy.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(Warehouse.Id))));

@@ -19,7 +19,7 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         _metrics?.PartitionFailed(partition);
-        logger.PartitionFailed(partition, sequenceNumber);
+        logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var config = await configurationProvider.GetFor(_observerKey);
         if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)

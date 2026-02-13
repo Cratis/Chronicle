@@ -39,7 +39,8 @@ public class with_mixed_scopes_some_should_not_be_validated : given.a_concurrenc
 
     [Fact] void should_return_no_violations() => _result.ShouldBeEmpty();
     [Fact] void should_only_call_storage_for_scope_that_can_be_validated() => _eventSequenceStorage.Received(1).GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _eventSourceId2, Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());
-    [Fact] void should_not_call_storage_for_scopes_that_can_not_be_validated()
+    [Fact]
+    void should_not_call_storage_for_scopes_that_can_not_be_validated()
     {
         _eventSequenceStorage.DidNotReceive().GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _eventSourceId1, Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());
         _eventSequenceStorage.DidNotReceive().GetTailSequenceNumber(Arg.Any<IEnumerable<EventType>>(), _eventSourceId3, Arg.Any<EventSourceType>(), Arg.Any<EventStreamId>(), Arg.Any<EventStreamType>());

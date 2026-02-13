@@ -44,4 +44,10 @@ public class EventToAppend
     /// </summary>
     [ProtoMember(6)]
     public string Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags associated with the event.
+    /// </summary>
+    [ProtoMember(7, IsRequired = true)]
+    public IEnumerable<string> Tags { get; set; } = [];
 }

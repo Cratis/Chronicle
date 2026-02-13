@@ -55,7 +55,7 @@ public record ReadModel(
         _random.Next(5000),
         _random.NextSingle(),
         _random.NextDouble(),
-        (EnumWithValues)_random.Next((int)EnumWithValues.ThirdValue),
+        (EnumWithValues)(_random.Next((int)EnumWithValues.ThirdValue) + 1),
         Guid.NewGuid(),
         DateTime.UtcNow.AddDays(_random.Next(60)).RoundDownTicks(),
         DateOnly.FromDateTime(DateTime.UtcNow.AddDays(_random.Next(60))),

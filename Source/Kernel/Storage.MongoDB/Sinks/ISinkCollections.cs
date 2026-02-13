@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.ReadModels;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -18,25 +19,32 @@ public interface ISinkCollections
     IMongoCollection<BsonDocument> GetCollection();
 
     /// <summary>
+    /// Gets the <see cref="IMongoCollection{TDocument}"/> with a specific name.
+    /// </summary>
+    /// <param name="collectionName">The name of the collection to get.</param>
+    /// <returns><see cref="IMongoCollection{T}"/> for the specified collection.</returns>
+    IMongoCollection<BsonDocument> GetCollection(string collectionName);
+
+    /// <summary>
     /// Signals that a replay is about to begin.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task BeginReplay(Chronicle.Storage.Sinks.ReplayContext context);
+    Task BeginReplay(ReplayContext context);
 
     /// <summary>
     /// Signals that a replay is about to resume.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ResumeReplay(Chronicle.Storage.Sinks.ReplayContext context);
+    Task ResumeReplay(ReplayContext context);
 
     /// <summary>
     /// Signals that a replay has ended.
     /// </summary>
     /// <param name="context">The <see cref="ReplayContext"/> for the replay.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task EndReplay(Chronicle.Storage.Sinks.ReplayContext context);
+    Task EndReplay(ReplayContext context);
 
     /// <summary>
     /// Prepare the sink for an initial run.

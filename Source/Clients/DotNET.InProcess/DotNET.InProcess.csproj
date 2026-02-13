@@ -47,7 +47,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../Orleans/Orleans.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
 
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
@@ -106,6 +105,7 @@
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="OneOf" />

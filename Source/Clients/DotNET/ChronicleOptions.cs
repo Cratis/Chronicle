@@ -14,7 +14,12 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents the settings for connecting to Chronicle.
 /// </summary>
-/// <param name="url"><see cref="ChronicleUrl"/> to use.</param>
+/// <remarks>
+/// Using the default constructor initializes the options with the development connection string
+/// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+/// client credentials. This is intended for local development and testing only.
+/// </remarks>
+/// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
 /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/> to use. Will revert to default if not configured.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
@@ -27,7 +32,7 @@ namespace Cratis.Chronicle;
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/> to use internally in client for logging.</param>
 public class ChronicleOptions(
-    ChronicleUrl url,
+    ChronicleConnectionString connectionString,
     INamingPolicy? namingPolicy = null,
     IIdentityProvider? identityProvider = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
@@ -43,24 +48,35 @@ public class ChronicleOptions(
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleOptions"/> class.
     /// </summary>
-    public ChronicleOptions() : this(ChronicleUrl.Default)
+    /// <remarks>
+    /// This initializes the options with the development connection string
+    /// (<see cref="ChronicleConnectionString.Development" />), which includes the default development
+    /// client credentials.
+    /// </remarks>
+    public ChronicleOptions() : this(ChronicleConnectionString.Development)
     {
     }
 
     /// <summary>
-    /// Gets the <see cref="ChronicleUrl"/> to use.
+    /// Gets the <see cref="ChronicleConnectionString"/> to use.
     /// </summary>
-    public ChronicleUrl Url { get; set; } = url;
+    public ChronicleConnectionString ConnectionString { get; set; } = connectionString;
 
     /// <summary>
     /// Gets or sets the software version.
+    /// Defaults to the version of the entry assembly (your application), extracted from the
+    /// AssemblyInformationalVersion or AssemblyVersion attribute.
+    /// This is included in the root causation to track which version of your application is running.
     /// </summary>
-    public string SoftwareVersion { get; set; } = "0.0.0";
+    public string SoftwareVersion { get; set; } = VersionInformation.GetVersion();
 
     /// <summary>
-    /// Gets or sets the software commit.
+    /// Gets or sets the software commit SHA.
+    /// Defaults to the commit SHA from the entry assembly's (your application's)
+    /// AssemblyInformationalVersion metadata (the portion after the '+' separator).
+    /// This is included in the root causation to track which commit of your application is running.
     /// </summary>
-    public string SoftwareCommit { get; set; } = "[N/A]";
+    public string SoftwareCommit { get; set; } = VersionInformation.GetCommitSha();
 
     /// <summary>
     /// Gets or sets the program identifier.
@@ -139,16 +155,47 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
+    /// Gets or sets the TLS configuration.
+    /// </summary>
+    public Tls Tls { get; set; } = new Tls();
+
+    /// <summary>
+    /// Gets or sets the authentication configuration.
+    /// </summary>
+    public Authentication Authentication { get; set; } = new Authentication();
+
+    /// <summary>
+    /// Gets or sets the port for the Management API and well-known certificate endpoint.
+    /// </summary>
+    public int ManagementPort { get; set; } = 8080;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromConnectionString(string connectionString) => FromUrl(new ChronicleUrl(connectionString));
+    public static ChronicleOptions FromConnectionString(string connectionString) => FromConnectionString(new ChronicleConnectionString(connectionString));
 
     /// <summary>
-    /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleUrl"/>.
+    /// Create a <see cref="ChronicleOptions"/> from a <see cref="ChronicleConnectionString"/>.
     /// </summary>
-    /// <param name="url"><see cref="ChronicleUrl"/> to create from.</param>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to create from.</param>
     /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
-    public static ChronicleOptions FromUrl(ChronicleUrl url) => new(url);
+    public static ChronicleOptions FromConnectionString(ChronicleConnectionString connectionString) => new(connectionString)
+    {
+        Authentication = new Authentication()
+    };
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> from the development connection string.
+    /// </summary>
+    /// <returns>A new <see cref="ChronicleOptions"/> configured for development.</returns>
+    /// <remarks>
+    /// This is a convenience method for quickly creating options for development purposes. It uses the
+    /// default development connection string which points to localhost with the default development
+    /// client credentials. This is not intended for production use and should only be used for local
+    /// development and testing. For production scenarios, it's recommended to explicitly configure the
+    /// connection string and other options as needed.
+    /// </remarks>
+    public static ChronicleOptions FromDevelopmentConnectionString() => FromConnectionString(ChronicleConnectionString.Development);
 }
