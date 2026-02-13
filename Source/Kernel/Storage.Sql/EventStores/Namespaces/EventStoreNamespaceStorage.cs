@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -11,7 +12,10 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -29,7 +33,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
 /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, IObserverDefinitionsStorage observerDefinitionsStorage) : IEventStoreNamespaceStorage
+/// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
+public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
@@ -62,7 +67,13 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public ISinks Sinks { get; } = new SinksSinks(eventStore, @namespace, sinkFactories);
 
     /// <inheritdoc/>
-    public IReplayedModelsStorage ReplayedModels { get; } = new ReplayedModels.ReplayedModelsStorage(eventStore, @namespace, database);
+    public IReplayedReadModelsStorage ReplayedReadModels { get; } = new ReplayedModels.ReplayedModelsStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; } = new Seeding.EventSeedingStorage(eventStore, @namespace, database, jsonSerializerOptions);
+
+    /// <inheritdoc/>
+    public IProjectionFuturesStorage ProjectionFutures { get; } = new Projections.ProjectionFuturesStorage(eventStore, @namespace, database, jsonSerializerOptions);
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(EventSequenceId eventSequenceId) =>
