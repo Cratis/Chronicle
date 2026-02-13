@@ -14,8 +14,6 @@
   href: constraints/toc.yml
 - name: Clients
   href: clients/toc.yml
-- name: Recipes
-  href: recipes/toc.yml
 - name: Read Models
   href: read-models/toc.yml
 - name: Projections
@@ -28,6 +26,8 @@
   href: code-analysis/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Recipes
+  href: recipes/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Statistics
