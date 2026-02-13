@@ -21,9 +21,9 @@ public static class ReplayContextEntryConverter
     {
         return new ReplayContextEntry
         {
-            ReadModelIdentifier = context.ReadModelIdentifier.Value,
-            ReadModel = context.ReadModel.Value,
-            RevertModel = context.RevertModel.Value,
+            ReadModelIdentifier = context.Type.Value,
+            ReadModel = context.ContainerName.Value,
+            RevertModel = context.RevertContainerName.Value,
             Started = context.Started
         };
     }
@@ -36,9 +36,9 @@ public static class ReplayContextEntryConverter
     public static ReplayContext ToReplayContext(ReplayContextEntry entry)
     {
         return new ReplayContext(
-            new ReadModelIdentifier(entry.ReadModelIdentifier),
-            new ReadModelName(entry.ReadModel),
-            new ReadModelName(entry.RevertModel),
+            new ReadModelType(entry.ReadModelIdentifier),
+            new ReadModelContainerName(entry.ReadModel),
+            new ReadModelContainerName(entry.RevertModel),
             entry.Started);
     }
 }

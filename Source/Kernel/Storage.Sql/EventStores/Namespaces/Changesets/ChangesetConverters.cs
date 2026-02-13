@@ -18,7 +18,7 @@ public static class ChangesetConverters
     /// <summary>
     /// Convert to a <see cref="Changeset">SQL</see> representation.
     /// </summary>
-    /// <param name="readModel">The <see cref="ReadModelName"/>.</param>
+    /// <param name="readModel">The <see cref="ReadModelContainerName"/>.</param>
     /// <param name="readModelKey">The <see cref="Key"/>.</param>
     /// <param name="eventType">The <see cref="EventType"/>.</param>
     /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/>.</param>
@@ -26,7 +26,7 @@ public static class ChangesetConverters
     /// <param name="changeset">The <see cref="IChangeset{TSource, TTarget}"/> to convert.</param>
     /// <returns>Converted <see cref="Changeset"/>.</returns>
     public static Changeset ToSql(
-        ReadModelName readModel,
+        ReadModelContainerName readModel,
         Key readModelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,

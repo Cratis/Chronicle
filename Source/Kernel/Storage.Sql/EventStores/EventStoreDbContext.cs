@@ -10,6 +10,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Projections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 using Cratis.Chronicle.Storage.Sql.EventStores.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
+using Cratis.Chronicle.Storage.Sql.EventStores.Webhooks;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores;
@@ -54,6 +55,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the read models DbSet.
     /// </summary>
     public DbSet<ReadModelDefinition> ReadModels { get; set; }
+
+    /// <summary>
+    /// Gets or sets the webhooks DbSet.
+    /// </summary>
+    public DbSet<WebhookDefinition> WebhookDefinitions { get; set; }
 
     /// <summary>
     /// Gets or sets the constraints DbSet.
