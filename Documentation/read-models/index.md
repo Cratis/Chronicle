@@ -15,102 +15,26 @@ Read models serve several purposes:
 
 ## How Read Models are Produced
 
-Chronicle supports two primary mechanisms for producing read models, both accessible through the `IReadModels` API:
+Read models are produced by either projections or reducers, both exposed through the `IReadModels` API. Use the overview pages to choose the approach and then drill into the projection style you need:
 
-### Projections
+- [Projections overview](../projections/index.md)
+- [Reducers overview](../reducers/index.md)
+- [Declarative projections](../projections/declarative/index.md)
+- [Model-bound projections](../projections/model-bound/index.md)
 
-Projections transform events into read models by defining how each event type affects the state. Chronicle supports two styles of projections:
+## Read Model Access
 
-**Model-Bound Projections** use attributes on the read model:
-
-```csharp
-public record AccountInfo(
-    [Key] Guid Id,
-    [SetFrom<AccountOpened>(nameof(AccountOpened.Name))] string Name,
-    [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
-    [Add<MoneyDeposited>(nameof(MoneyDeposited.Amount))]
-    [Subtract<MoneyWithdrawn>(nameof(MoneyWithdrawn.Amount))] decimal Balance);
-```
-
-**Declarative Projections** use a fluent API:
-
-```csharp
-public class AccountInfoProjection : IProjectionFor<AccountInfo>
-{
-    public ProjectionId Identifier => "AccountInfo";
-
-    public void Define(IProjectionBuilderFor<AccountInfo> builder) => builder
-        .From<AccountOpened>(_ => _
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.Balance).To(e => e.InitialBalance))
-        .From<MoneyDeposited>(_ => _
-            .Add(m => m.Balance).With(e => e.Amount))
-        .From<MoneyWithdrawn>(_ => _
-            .Subtract(m => m.Balance).With(e => e.Amount));
-}
-```
-
-Learn more about projections in the [Projections documentation](../projections/index.md).
-
-### Reducers
-
-Reducers provide an aggregate-based approach where all events for an aggregate root are reduced into a single state. They're ideal for maintaining entity state:
-
-```csharp
-public record Account(Guid Id, string Name, decimal Balance);
-
-public class AccountReducer : IReducerFor<Account>
-{
-    public ReducerId Identifier => "Account";
-
-    public Account Initial => new(Guid.Empty, string.Empty, 0m);
-
-    public Account Reduce(Account current, object @event) => @event switch
-    {
-        AccountOpened e => current with { Id = e.Id, Name = e.Name, Balance = e.InitialBalance },
-        MoneyDeposited e => current with { Balance = current.Balance + e.Amount },
-        MoneyWithdrawn e => current with { Balance = current.Balance - e.Amount },
-        _ => current
-    };
-}
-```
-
-Learn more about reducers in the [Reducers documentation](../recipes/reducers.md).
-
-## The IReadModels API
-
-The `IReadModels` interface provides a unified API for working with read models, regardless of whether they're produced by projections or reducers.
-
-### Accessing IReadModels
-
-The `IReadModels` interface is accessible through the `IEventStore`:
-
-```csharp
-public class AccountService
-{
-    readonly IEventStore _eventStore;
-
-    public AccountService(IEventStore eventStore)
-    {
-        _eventStore = eventStore;
-    }
-
-    public async Task<AccountInfo?> GetCurrentAccount(Guid accountId)
-    {
-        return await _eventStore.ReadModels.GetInstanceById<AccountInfo>(accountId);
-    }
-}
-```
+Chronicle provides an API for working with read models regardless of how they are produced. The next steps show the different ways to get instances, collections, and snapshots, and how to observe changes.
 
 ## Key Characteristics
 
 ### Strong Consistency
 
-When you retrieve a read model using `GetInstanceById`, Chronicle ensures you get the most up-to-date state by applying all relevant events from the event log. This provides strong consistency guarantees.
+When you retrieve a read model instance, Chronicle ensures you get the most up-to-date state by applying all relevant events from the event log. This provides strong consistency guarantees.
 
 ### On-Demand Computation
 
-Read models retrieved through `GetInstanceById` are computed on-demand by replaying events. This ensures accuracy but comes with performance considerations for read models with long event histories.
+Read models are computed on-demand by replaying events. This ensures accuracy but comes with performance considerations for read models with long event histories.
 
 ### Type Safety
 
