@@ -10,6 +10,8 @@ using Cratis.Chronicle.Grains.Namespaces;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.DefinitionLanguage;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
@@ -21,6 +23,8 @@ namespace Cratis.Chronicle.Grains.Projections;
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
+/// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 [ImplicitChannelSubscription]
@@ -28,6 +32,8 @@ namespace Cratis.Chronicle.Grains.Projections;
 public class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IProjectionsServiceClient projectionsService,
+    ILanguageService languageService,
+    IStorage storage,
     ILocalSiloDetails localSiloDetails,
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
@@ -47,14 +53,52 @@ public class ProjectionsManager(
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
         await projectionsService.Register(_eventStoreName, definitions);
-        State.Projections = definitions;
+
+        // Merge new definitions with existing ones, replacing any with the same identifier
+        var existingProjections = State.Projections.ToList();
+        foreach (var newDefinition in definitions)
+        {
+            var existingIndex = existingProjections.FindIndex(p => p.Identifier == newDefinition.Identifier);
+            if (existingIndex >= 0)
+            {
+                existingProjections[existingIndex] = newDefinition;
+            }
+            else
+            {
+                existingProjections.Add(newDefinition);
+            }
+        }
+
+        State.Projections = existingProjections;
+        await WriteStateAsync();
         await SetDefinitionAndSubscribeForAllProjections();
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions()
+    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
     {
-        return Task.FromResult(State.Projections);
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        return State.Projections
+            .Select(definition =>
+            {
+                var readModel = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModel is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                    return null;
+                }
+
+                return new ProjectionWithDeclaration(
+                    definition.Identifier,
+                    readModel.ContainerName,
+                    languageService.Generate(definition, readModel));
+            })
+            .Where(_ => _ is not null)
+            .Select(_ => _!)
+            .ToArray();
     }
 
     /// <inheritdoc/>
@@ -77,7 +121,14 @@ public class ProjectionsManager(
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
             await projection.SetDefinition(projectionDefinition);
-            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinitions.Single(rm => rm.Identifier == projectionDefinition.ReadModel), added.Namespace);
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
+                continue;
+            }
+
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
         }
     }
 
@@ -88,7 +139,14 @@ public class ProjectionsManager(
 
         foreach (var definition in State.Projections)
         {
-            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel));
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                continue;
+            }
+
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
         }
     }
 
@@ -118,7 +176,9 @@ public class ProjectionsManager(
         if (!subscribed && definition.IsActive)
         {
             logger.Subscribing(definition.Identifier, namespaceName);
-            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
+            var eventStoreStorage = storage.GetEventStore(_eventStoreName);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
 
             logger.SubscribingWithEventTypes(
                 definition.Identifier,

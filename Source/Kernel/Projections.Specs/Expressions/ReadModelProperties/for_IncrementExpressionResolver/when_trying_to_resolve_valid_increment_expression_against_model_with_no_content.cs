@@ -33,15 +33,17 @@ public class when_trying_to_resolve_valid_increment_expression_against_model_wit
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                [],
+                EventHash.NotSet),
             content);
         _resolver = new(new TypeFormats());
     }
 
     void Because()
     {
-        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Increment}()")(_event, _target, ArrayIndexers.NoIndexers);
-        _resolver.Resolve("targetProperty", new(), $"{WellKnownExpressions.Increment}()")(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), WellKnownExpressions.Increment)(_event, _target, ArrayIndexers.NoIndexers);
+        _resolver.Resolve("targetProperty", new(), WellKnownExpressions.Increment)(_event, _target, ArrayIndexers.NoIndexers);
     }
 
     [Fact] void should_resolve_to_a_propertymapper_that_counts_increments_the_property() => ((double)((dynamic)_target).targetProperty).ShouldEqual(2d);

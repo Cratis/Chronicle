@@ -12,6 +12,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Grains.Observation;
 using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
+using Cratis.Chronicle.Storage;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
@@ -27,11 +28,13 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
+    IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<Reactors> logger) : IReactors
 {
@@ -167,5 +170,20 @@ internal sealed class Reactors(
         });
 
         return observable;
+    }
+
+    /// <inheritdoc/>
+    public async Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default)
+    {
+        var eventStore = storage.GetEventStore(request.EventStore);
+        var exists = await eventStore.Reactors.Has(new(request.ReactorId));
+
+        if (!exists)
+        {
+            return new HasReactorResponse { Exists = false, EventSequenceId = null };
+        }
+
+        var definition = await eventStore.Reactors.Get(new(request.ReactorId));
+        return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
 }

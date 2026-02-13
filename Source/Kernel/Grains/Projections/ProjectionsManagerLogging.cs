@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Projections;
@@ -20,4 +21,7 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Information, "Subscribing projection '{Identifier}' with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<ProjectionsManager> logger, ProjectionId identifier, int count, string eventTypes);
+
+    [LoggerMessage(LogLevel.Warning, "Read model definition '{ReadModel}' not found for projection '{Identifier}'")]
+    internal static partial void MissingReadModelDefinitionForProjection(this ILogger<ProjectionsManager> logger, ProjectionId identifier, ReadModelIdentifier readModel);
 }

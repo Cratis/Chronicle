@@ -19,15 +19,15 @@ public class ChangesetStorage(
     IEventStoreNamespaceDatabase eventStoreDatabase) : IChangesetStorage
 {
     /// <inheritdoc/>
-    public Task BeginReplay(ReadModelName readModel) =>
+    public Task BeginReplay(ReadModelContainerName readModel) =>
         GetCollection(readModel).DeleteManyAsync(FilterDefinition<ReadModelChangeset>.Empty);
 
     /// <inheritdoc/>
-    public Task EndReplay(ReadModelName readModel) => Task.CompletedTask;
+    public Task EndReplay(ReadModelContainerName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task Save(
-        ReadModelName readModel,
+        ReadModelContainerName readModel,
         Key readModelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,
@@ -40,6 +40,6 @@ public class ChangesetStorage(
         await collection.InsertOneAsync(modelChangeset);
     }
 
-    IMongoCollection<ReadModelChangeset> GetCollection(ReadModelName readModel) =>
+    IMongoCollection<ReadModelChangeset> GetCollection(ReadModelContainerName readModel) =>
         eventStoreDatabase.GetCollection<ReadModelChangeset>($"{readModel}-changes");
 }

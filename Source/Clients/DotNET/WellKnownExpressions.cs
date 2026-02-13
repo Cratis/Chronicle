@@ -62,4 +62,9 @@ public static class WellKnownExpressions
     /// The identifier expression.
     /// </summary>
     public const string Id = "$id";
+
+    /// <summary>
+    /// The caused by expression.
+    /// </summary>
+    public const string CausedBy = "$causedBy";
 }

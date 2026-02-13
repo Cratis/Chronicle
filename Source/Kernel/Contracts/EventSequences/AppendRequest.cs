@@ -85,4 +85,10 @@ public class AppendRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(13)]
     public ConcurrencyScope ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags associated with the event.
+    /// </summary>
+    [ProtoMember(14, IsRequired = true)]
+    public IEnumerable<string> Tags { get; set; } = [];
 }

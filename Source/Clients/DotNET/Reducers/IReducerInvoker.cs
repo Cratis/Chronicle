@@ -23,9 +23,9 @@ public interface IReducerInvoker
     Type ReadModelType { get; }
 
     /// <summary>
-    /// Gets the name of the read model.
+    /// Gets the container name of the read model (collection, table, etc.).
     /// </summary>
-    ReadModelName ReadModelName { get; }
+    ReadModelContainerName ContainerName { get; }
 
     /// <summary>
     /// Invoke the reducer for a set of events.

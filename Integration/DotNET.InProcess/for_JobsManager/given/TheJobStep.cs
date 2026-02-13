@@ -12,8 +12,9 @@ public class TheJobStep(
     TheJobStepProcessor jobStepProcessor,
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TheJobStepState> state,
+    IJobStepThrottle throttle,
     ILogger<JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>> logger)
-    : JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>(state, logger), ITheJobStep
+    : JobStep<TheJobStepRequest, TheJobStepResult, TheJobStepState>(state, throttle, logger), ITheJobStep
 {
     ITheJobStep _selfGrainReference;
 

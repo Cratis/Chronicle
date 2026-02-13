@@ -26,12 +26,14 @@
 
     <ItemGroup Condition="'$(Repack)' == 'true'">
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Repack)' != 'true'">
         <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj"/>
         <ProjectReference Include="../../Kernel/Grains/Grains.csproj"/>
         <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj"/>
@@ -39,7 +41,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
     </ItemGroup>
 

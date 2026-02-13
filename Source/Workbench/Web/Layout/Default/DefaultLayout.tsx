@@ -14,6 +14,7 @@ import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
 import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as Shared from 'Shared';
+import { WorkbenchProvider } from './context/WorkbenchContext';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -36,38 +37,40 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
 
     return (
         <ErrorBoundary>
-            <div
-                className={`${!layoutContext.layoutConfig.leftSidebarOpen
-                    ? css.sidebarClosed
-                    : ''
-                    }`}>
-                <header className={css.appHeader}>
-                    <TopBar />
-                </header>
+            <WorkbenchProvider>
+                <div
+                    className={`${!layoutContext.layoutConfig.leftSidebarOpen
+                        ? css.sidebarClosed
+                        : ''
+                        }`}>
+                    <header className={css.appHeader}>
+                        <TopBar />
+                    </header>
 
-                <aside className={css.appLeftSidebar}>
-                    <div className={css.sidebarContainer}>
-                        <NamespaceSelector onNamespaceSelected={namespaceSelected} />
-                        {props.menu && (
-                            <MenuProvider params={{ namespace }}>
-                                <SidebarMenu
-                                    items={props.menu}
-                                    basePath={sidebarBasePath}
-                                />
-                            </MenuProvider>
-                        )}
-                    </div>
-                </aside>
+                    <aside className={css.appLeftSidebar}>
+                        <div className={css.sidebarContainer}>
+                            <NamespaceSelector onNamespaceSelected={namespaceSelected} />
+                            {props.menu && (
+                                <MenuProvider params={{ namespace }}>
+                                    <SidebarMenu
+                                        items={props.menu}
+                                        basePath={sidebarBasePath}
+                                    />
+                                </MenuProvider>
+                            )}
+                        </div>
+                    </aside>
 
-                <main className={css.appOutlet}>
-                    <ErrorBoundary>
-                        <Outlet />
-                    </ErrorBoundary>
-                </main>
-                <footer className={css.appFooter}>
-                    <Footer />
-                </footer>
-            </div>
+                    <main className={css.appOutlet}>
+                        <ErrorBoundary>
+                            <Outlet />
+                        </ErrorBoundary>
+                    </main>
+                    <footer className={css.appFooter}>
+                        <Footer />
+                    </footer>
+                </div>
+            </WorkbenchProvider>
         </ErrorBoundary>
     );
 };

@@ -17,4 +17,13 @@ public interface IReactors
     /// <returns>An observable of <see cref="EventsToObserve"/>.</returns>
     [Operation]
     IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default);
+
+    /// <summary>
+    /// Check if a reactor exists.
+    /// </summary>
+    /// <param name="request">The <see cref="HasReactorRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="HasReactorResponse"/>.</returns>
+    [Operation]
+    Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default);
 }

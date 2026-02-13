@@ -26,7 +26,9 @@ public static class ReducerDefinitionConverters
                 et => et.EventType.ToString(),
                 et => et.Key.ToString()),
             ReadModel = definition.ReadModel,
-            Sink = definition.Sink
+            IsActive = definition.IsActive,
+            Sink = definition.Sink,
+            Tags = definition.Tags
         };
 
     /// <summary>
@@ -40,5 +42,7 @@ public static class ReducerDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
             definition.ReadModel,
-            definition.Sink);
+            definition.IsActive,
+            definition.Sink,
+            definition.Tags);
 }

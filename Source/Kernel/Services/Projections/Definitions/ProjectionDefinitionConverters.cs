@@ -34,12 +34,12 @@ internal static class ProjectionDefinitionConverters
             Join = definition.Join.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
             FromEvery = definition.FromDerivatives.Select(_ => _.ToContract()).ToList(),
-            Sink = definition.Sink.ToContract(),
             All = definition.FromEvery.ToContract(),
             FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
             RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
-            LastUpdated = definition.LastUpdated ?? null!
+            LastUpdated = definition.LastUpdated ?? null!,
+            AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap
         };
     }
 
@@ -64,11 +64,11 @@ internal static class ProjectionDefinitionConverters
             contract.Children.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             contract.FromEvery.Select(_ => _.ToChronicle()),
             contract.All.ToChronicle(),
-            contract.Sink.ToChronicle(),
             contract.RemovedWith.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.RemovedWithJoin.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.FromEventProperty?.ToChronicle() ?? null!,
-            contract.LastUpdated ?? null!
+            contract.LastUpdated ?? null!,
+            AutoMap: (AutoMap)contract.AutoMap
         );
     }
 }

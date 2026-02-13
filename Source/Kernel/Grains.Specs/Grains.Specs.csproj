@@ -9,10 +9,12 @@
     <ItemGroup>
         <ProjectReference Include="../Grains/Grains.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
+        <ProjectReference Include="../Contracts/Contracts.csproj" />
+        <ProjectReference Include="../Services/Services.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="OrleansTestKit" />
+        <PackageReference Include="OrleansTestKit10" />
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
 

@@ -23,7 +23,8 @@ public static class EventTypeConverters
     {
         return new EventType(
             schema.Type.Id,
-            EventTypeOwner.Client,
+            schema.Owner,
+            schema.Source,
             schema.Type.Tombstone,
             new Dictionary<string, BsonDocument>
             {
@@ -46,6 +47,8 @@ public static class EventTypeConverters
                schema.Id,
                EventTypeGeneration.First,
                schema.Tombstone),
+            schema.Owner,
+            schema.Source,
             result);
     }
 }

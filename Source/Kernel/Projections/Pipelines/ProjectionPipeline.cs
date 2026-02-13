@@ -5,6 +5,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Projections.Pipelines.Steps;
 using Cratis.Chronicle.Storage.Changes;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using EngineProjection = Cratis.Chronicle.Projections.IProjection;
@@ -34,7 +35,7 @@ public class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await changesetStorage.BeginReplay(projection.ReadModel.Name);
+        await changesetStorage.BeginReplay(projection.ReadModel.ContainerName);
         await sink.BeginReplay(context);
     }
 
@@ -45,8 +46,14 @@ public class ProjectionPipeline(
     public async Task EndReplay(ReplayContext context)
     {
         await sink.EndReplay(context);
-        await changesetStorage.EndReplay(projection.ReadModel.Name);
+        await changesetStorage.EndReplay(projection.ReadModel.ContainerName);
     }
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => sink.BeginBulk();
+
+    /// <inheritdoc/>
+    public Task EndBulk() => sink.EndBulk();
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)

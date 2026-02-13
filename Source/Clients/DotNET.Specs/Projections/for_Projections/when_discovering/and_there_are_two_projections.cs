@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Projections;
 using NJsonSchema;
 
@@ -35,15 +34,10 @@ public class and_there_are_two_projections : given.all_dependencies
         _projections = new Projections(
             _eventStore,
             _eventTypes,
-            _projectionWatcherManager,
             _clientArtifacts,
             _namingPolicy,
-            _eventSerializer,
             _serviceProvider,
             _jsonSerializerOptions);
-        _projections.SetRulesProjections(_rulesProjections);
-
-        _rulesProjections.Discover().Returns(ImmutableList<ProjectionDefinition>.Empty);
     }
 
     async Task Because()

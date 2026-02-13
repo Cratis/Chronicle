@@ -59,10 +59,10 @@ public static class ApiServiceCollectionExtensions
         var hasServices = services.Any(s => s.ServiceType == typeof(IServices));
         if (!hasServices || useGrpc)
         {
-            services.AddCratisChronicleConnection(urlFactory: sp =>
+            services.AddCratisChronicleConnection(connectionStringFactory: sp =>
             {
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>();
-                return options.Value.Url;
+                return options.Value.ConnectionString;
             });
         }
 

@@ -16,6 +16,6 @@ public class EventSequences : ControllerBase
     /// <returns>Collection of names of event sequences.</returns>
     [HttpGet]
 #pragma warning disable IDE0060 // Remove unused parameter
-    public Task<IEnumerable<string>> AllEventSequences([FromRoute] string eventStore) => Task.FromResult<IEnumerable<string>>(["Log"]);
+    public Task<IEnumerable<string>> AllEventSequences([FromRoute] string eventStore) => Task.FromResult<IEnumerable<string>>(["event-log"]);
 #pragma warning restore IDE0060 // Remove unused parameter
 }

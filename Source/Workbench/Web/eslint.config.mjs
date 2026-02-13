@@ -5,7 +5,7 @@ import js from '@eslint/js';
 import eslint from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import header from 'eslint-plugin-header';
+import header from '@tony.ganchev/eslint-plugin-header';
 import noNull from 'eslint-plugin-no-null';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -70,7 +70,7 @@ const rules = {
         '@typescript-eslint/ban-ts-comment': 0,
         "@typescript-eslint/no-empty-interface": 0,
 
-        'header/header': [
+        '@tony.ganchev/header': [
             2,
             'line',
             [
@@ -81,9 +81,6 @@ const rules = {
         ],
     },
 };
-
-const reactCompat = compat.extends('plugin:react/recommended');
-const reactPlugin = reactCompat[0].plugins.react;
 
 const defaultConfig = [
     {
@@ -107,8 +104,8 @@ const defaultConfig = [
 
         plugins: {
             '@typescript-eslint': typescriptEslint,
-            react: reactPlugin,
-            header,
+            react: reactlint,
+            '@tony.ganchev': header,
             'no-null': noNull
         },
 
@@ -124,7 +121,7 @@ const defaultConfig = [
 
         settings: {
             react: {
-                version: 'detect',
+                version: '19.2',
             },
         },
     },

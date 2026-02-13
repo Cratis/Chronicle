@@ -17,7 +17,7 @@
   -webkit-text-size-adjust: 100%;
 
   --topbar-height: 4rem;
-  --sidebar-width: 280px;
+  --sidebar-width: 200px;
   --sidebar-closed-width: calc(4.5rem + 2px);
   --footer-height: 0px;
   --focus-border: var(--primary-color);
@@ -61,4 +61,105 @@ h1 {
     border: 1px solid var(--shade600);
     border-radius: var(--border-radius);
     color: var(--menu-text-color);
+}
+
+/* Layout helpers to allow flex children to scroll correctly */
+.panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.allotment, .allotment-pane {
+    height: 100%;
+    min-height: 0;
+}
+
+.p-datatable {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.p-datatable .p-datatable-tbody-wrapper,
+.p-datatable .p-datatable-tablewrapper {
+    min-height: 0;
+}
+
+/* Ensure DataTable fills its parent and the wrapper scrolls instead of expanding */
+.p-datatable {
+    height: 100%;
+}
+.p-datatable .p-datatable-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+.p-datatable .p-datatable-table {
+    width: 100%;
+}
+
+/* Allotment uses .split-view classes when rendered; ensure they stretch to full height */
+.split-view,
+.split-view-container,
+.split-view-view,
+.split-view .split-view-container,
+.split-view .split-view-view {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Ensure the visible split view child grows */
+.split-view-view.split-view-view-visible {
+    flex: 1 1 0% !important;
+}
+
+/* Prevent menubar from collapsing to hamburger menu at all breakpoints */
+.p-menubar .p-menubar-button {
+    display: none !important;
+}
+
+.p-menubar .p-menubar-root-list {
+    display: flex !important;
+    flex-direction: row !important;
+    position: static !important;
+    width: auto !important;
+    padding: 0 !important;
+}
+
+.p-menubar {
+    border: 1px solid var(--surface-border) !important;
+}
+
+@media screen and (max-width: 960px) {
+    .p-menubar .p-menubar-root-list {
+        display: flex !important;
+        flex-direction: row !important;
+        position: static !important;
+        width: auto !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+
+/* Monaco Editor modified line decorations */
+.modified-line-decoration {
+    width: 3px !important;
+    margin-left: 3px;
+}
+
+.modified-line-decoration.modified-line {
+    background-color: #0c7d9d;
+}
+
+.modified-line-decoration.added-line {
+    background-color: #587c0c;
 }

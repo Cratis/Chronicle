@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -20,6 +19,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="RemovedWith">All the <see cref="RemovedWithDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
+/// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
     IDictionary<EventType, FromDefinition> From,
@@ -28,7 +28,8 @@ public record ChildrenDefinition(
     FromEveryDefinition All,
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
-    FromEventPropertyDefinition? FromEventProperty = default) :
+    FromEventPropertyDefinition? FromEventProperty = default,
+    AutoMap AutoMap = AutoMap.Inherit) :
     ProjectionDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,
@@ -42,7 +43,7 @@ public record ChildrenDefinition(
         Children,
         [],
         All,
-        SinkDefinition.None,
         RemovedWith,
         RemovedWithJoin,
-        FromEventProperty);
+        FromEventProperty,
+        AutoMap: AutoMap);

@@ -18,7 +18,7 @@ docker pull cratis/chronicle:1.0.0
 
 ## Configuration
 
-Chronicle requires configuration to define its runtime behavior. For complete configuration details, see the [Configuration](configuration.md) guide.
+Chronicle requires configuration to define its runtime behavior. For complete configuration details, see the [Configuration](configuration/index.md) guide.
 
 The configuration file must be mounted into the container at `/app/chronicle.json`, or you can use environment variables with the `Cratis__Chronicle__` prefix.
 
@@ -28,7 +28,7 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | API Server        | REST API for client interactions         |
+| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
 | 35000 | Main Service      | Primary Chronicle gRPC service port      |
@@ -80,10 +80,11 @@ volumes:
 1. **Use specific version tags** instead of `latest` for production deployments
 2. **Mount configuration as read-only** (`-v /path/to/chronicle.json:/app/chronicle.json:ro`)
 3. **Use environment-specific connection strings** for MongoDB
-4. **Configure appropriate timeouts** based on your infrastructure (see [Configuration](configuration.md))
+4. **Configure appropriate timeouts** based on your infrastructure (see [Configuration](configuration/index.md))
 5. **Enable health checks** for container orchestration
 6. **Set up monitoring** for all exposed ports
 7. **Use secrets management** for sensitive configuration values
+8. **Enable TLS** with proper certificates (see [TLS Configuration](configuration/tls.md))
 
 ## Health Checks
 
@@ -94,15 +95,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 ```
 
-> **Note**: The health check endpoint path is configurable. See [Configuration](configuration.md#health-check-endpoint) for details.
+> **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details.
 
 ## Security Considerations
 
 - **Network Isolation**: Run Chronicle in a private network with MongoDB
-- **Connection Encryption**: Use TLS for MongoDB connections in production
+- **Connection Encryption**: Use TLS for all connections in production
 - **Access Control**: Implement proper firewall rules for exposed ports
 - **Secrets Management**: Use external secret management for sensitive configuration
 - **Regular Updates**: Keep Chronicle and MongoDB images updated
+- **TLS Certificates**: Configure valid TLS certificates for production (see [TLS Configuration](configuration/tls.md))
 
 ## Scaling
 

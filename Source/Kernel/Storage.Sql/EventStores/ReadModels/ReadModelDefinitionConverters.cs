@@ -19,7 +19,8 @@ public static class ReadModelDefinitionConverters
     public static ReadModelDefinition ToSql(this Concepts.ReadModels.ReadModelDefinition definition) =>
         new()
         {
-            Id = definition.Name,
+            Id = definition.Identifier,
+            Name = definition.ContainerName,
             Owner = definition.Owner,
             Schemas = definition.Schemas.ToDictionary(kvp => (uint)kvp.Key, kvp => kvp.Value.ToJson())
         };
@@ -33,6 +34,12 @@ public static class ReadModelDefinitionConverters
         new(
             schema.Id,
             schema.Name,
+            ReadModelDisplayName.NotSet,
             schema.Owner,
-            schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult()));
+            ReadModelSource.Unknown,
+            ReadModelObserverType.NotSet,
+            ReadModelObserverIdentifier.Unspecified,
+            Concepts.Sinks.SinkDefinition.None,
+            schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult()),
+            []);
 }

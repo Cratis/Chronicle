@@ -26,6 +26,15 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndReplayFor(observerDetails));
 
+    /// <inheritdoc/>
+    public async Task BeginCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.BeginCatchupFor(observerDetails));
+
+    /// <inheritdoc/>
+    public async Task ResumeCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.ResumeCatchupFor(observerDetails));
+
+    /// <inheritdoc/>
+    public async Task EndCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndCatchupFor(observerDetails));
+
     async Task ForEachGrainService(Func<IObserverService, Task> callback)
     {
         var hosts = await _managementGrain.GetHosts(true);

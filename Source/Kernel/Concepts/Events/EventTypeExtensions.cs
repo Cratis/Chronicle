@@ -35,4 +35,11 @@ public static class EventTypeExtensions
         var eventTypeAttribute = eventType.GetCustomAttribute<EventTypeAttribute>()!;
         return new EventType(eventType.Name, eventTypeAttribute.Generation);
     }
+
+    /// <summary>
+    /// Check if an event type should be registered in all event stores.
+    /// </summary>
+    /// <param name="type">Type to check.</param>
+    /// <returns>True if it should be registered in all event stores, false if it should only be in the system event store.</returns>
+    public static bool IsForAllEventStores(this Type type) => Attribute.IsDefined(type, typeof(AllEventStoresAttribute));
 }

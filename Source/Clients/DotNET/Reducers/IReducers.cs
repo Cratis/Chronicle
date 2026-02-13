@@ -40,6 +40,20 @@ public interface IReducers
     bool HasReducerFor(Type readModelType);
 
     /// <summary>
+    /// Check if there is a reducer for a specific read model type.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type to check for.</typeparam>
+    /// <returns>True if it has, false if not.</returns>
+    bool HasFor<TReadModel>();
+
+    /// <summary>
+    /// Check if there is a reducer for a specific read model type.
+    /// </summary>
+    /// <param name="readModelType">The read model type to check for.</param>
+    /// <returns>True if it has, false if not.</returns>
+    bool HasFor(Type readModelType);
+
+    /// <summary>
     /// Get all registered handlers.
     /// </summary>
     /// <returns>Collection of <see cref="IReducerHandler"/>.</returns>

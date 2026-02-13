@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 
@@ -22,6 +23,11 @@ public class EventType
     /// Gets or sets the owner identifier for the event type.
     /// </summary>
     public EventTypeOwner Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source identifier for the event type.
+    /// </summary>
+    public EventTypeSource Source { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the event type is a tombstone.

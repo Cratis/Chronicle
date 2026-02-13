@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -15,11 +16,13 @@ namespace Cratis.Chronicle.Grains.Observation;
 /// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for projections.
 /// </summary>
 /// <param name="projections"><see cref="IProjectionsManager"/> for managing projections.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionReplayHandler(
     IProjectionsManager projections,
+    IGrainFactory grainFactory,
     IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
     ILogger<ProjectionReplayHandler> logger) : ICanHandleReplayForObserver
@@ -30,7 +33,7 @@ public class ProjectionReplayHandler(
         async projection =>
         {
             var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
-            return await replayContexts.Establish(projection.ReadModel.Identifier, projection.ReadModel.Name);
+            return await replayContexts.Establish(new(projection.ReadModel.Identifier, projection.ReadModel.LatestGeneration), projection.ReadModel.ContainerName);
         },
         (pipeline, _, context) => pipeline.BeginReplay(context));
 
@@ -60,7 +63,8 @@ public class ProjectionReplayHandler(
         {
             await pipeline.EndReplay(context);
             var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
-            await namespaceStorage.ReplayedModels.Replayed(observerDetails.Key.ObserverId, context);
+            var replayManager = grainFactory.GetReadModelReplayManager(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection.ReadModel.Identifier);
+            await replayManager.Replayed(observerDetails.Key.ObserverId, context);
             await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Identifier);
         });
 

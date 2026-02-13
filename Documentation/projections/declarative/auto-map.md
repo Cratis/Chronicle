@@ -2,9 +2,11 @@
 
 AutoMap is a powerful feature that automatically maps properties with matching names between events and read models. This eliminates the need for explicit property mappings when property names and types are compatible.
 
+> **Important:** AutoMap is now **enabled by default** at the top level for all projections. You only need to explicitly call `.AutoMap()` when you want to re-enable it in contexts where it was previously disabled (e.g., within a specific event handler or child projection).
+
 ## Basic AutoMap usage
 
-At the top level, `AutoMap()` automatically maps all properties from events to the read model:
+Since AutoMap is enabled by default, you can simply use `.From<>()` without explicitly calling `.AutoMap()`:
 
 ```csharp
 using Cratis.Chronicle.Projections;
@@ -12,13 +14,22 @@ using Cratis.Chronicle.Projections;
 public class UserProjection : IProjectionFor<User>
 {
     public void Define(IProjectionBuilderFor<User> builder) => builder
-        .AutoMap()
         .From<UserCreated>()
         .From<UserUpdated>();
 }
 ```
 
 This automatically maps all properties with matching names from both `UserCreated` and `UserUpdated` events to the `User` read model.
+
+If you want to explicitly enable AutoMap (for clarity or to override a previous `.NoAutoMap()` call), you can still call it:
+
+```csharp
+public void Define(IProjectionBuilderFor<User> builder) => builder
+    .AutoMap()  // Explicit (but redundant at top level)
+    .From<UserCreated>()
+    .From<UserUpdated>();
+}
+```
 
 ## How AutoMap works
 
@@ -47,56 +58,65 @@ With `AutoMap()`, all properties including the nested `Address` object are autom
 
 ## AutoMap at different levels
 
-AutoMap can be applied at three different levels in a projection:
+AutoMap is enabled by default at the top level and can be controlled at three different levels in a projection:
 
-### 1. Top-level AutoMap
+### 1. Top-level AutoMap (Default Enabled)
 
-Apply to the entire projection - affects all event handlers:
+At the top level, AutoMap is enabled by default and affects all event handlers:
 
 ```csharp
 public void Define(IProjectionBuilderFor<Account> builder) => builder
-    .AutoMap()  // Applies to all From() and Join() calls
-    .From<AccountOpened>()
-    .From<AccountUpdated>()
+    .From<AccountOpened>()   // AutoMap enabled by default
+    .From<AccountUpdated>()  // AutoMap enabled by default
     .Join<CustomerUpdated>(j => j.On(m => m.CustomerId));
+```
+
+If you need to disable AutoMap at the top level, use `.NoAutoMap()`:
+
+```csharp
+public void Define(IProjectionBuilderFor<Account> builder) => builder
+    .NoAutoMap()  // Disables default AutoMap behavior
+    .From<AccountOpened>(_ => _
+        .Set(m => m.Name).To(e => e.AccountName));  // Explicit mapping required
 ```
 
 ### 2. Per-event AutoMap
 
-Apply to specific event handlers:
+You can override the top-level AutoMap setting for specific event handlers:
 
 ```csharp
 public void Define(IProjectionBuilderFor<Account> builder) => builder
-    .From<AccountOpened>(_ => _.AutoMap())  // Only this event uses AutoMap
+    .From<AccountOpened>()  // Uses default AutoMap
     .From<AccountClosed>(_ => _
+        .NoAutoMap()  // Disables AutoMap for this event only
         .Set(m => m.IsActive).To(false)
         .Set(m => m.ClosedAt).ToEventContextProperty(c => c.Occurred));
 ```
 
-### 3. Children AutoMap
+### 3. Children AutoMap (Inherits by default)
 
-Apply to child collection projections. When using top-level `AutoMap()`, it automatically cascades to children:
+Child projections inherit AutoMap behavior from their parent by default:
 
 ```csharp
 public void Define(IProjectionBuilderFor<Order> builder) => builder
-    .AutoMap()  // Cascades to children
-    .From<OrderCreated>()
+    .From<OrderCreated>()  // AutoMap enabled by default
     .Children(m => m.Items, children => children
         .IdentifiedBy(e => e.ProductId)
-        // AutoMap is inherited from parent
+        // AutoMap is inherited from parent (enabled)
         .From<ItemAddedToOrder>(_ => _
             .UsingKey(e => e.ProductId)));
 ```
 
-Or apply AutoMap explicitly at the child level:
+You can explicitly control AutoMap for children:
 
 ```csharp
 public void Define(IProjectionBuilderFor<Order> builder) => builder
+    .NoAutoMap()  // Disabled at top level
     .From<OrderCreated>(_ => _
         .Set(m => m.OrderNumber).To(e => e.Number))
     .Children(m => m.Items, children => children
         .IdentifiedBy(e => e.ProductId)
-        .AutoMap()  // Explicit AutoMap for children only
+        .AutoMap()  // Explicitly enable AutoMap for children only
         .From<ItemAddedToOrder>(_ => _
             .UsingKey(e => e.ProductId)));
 ```

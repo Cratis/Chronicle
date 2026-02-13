@@ -8,10 +8,16 @@
 - Never change package.json or package-lock.json files unless explicitly asked to.
 - Never change NuGet.config files unless explicitly asked to.
 - Never leave unused using statements in the code.
-- Always ensure that the code compiles without warnings.
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
+- Review Directory.Build.props and .editorconfig for all warnings configured as errors
+- Never generate code that would violate these warning settings
+- Always respect the project's nullable reference type settings
+- Add `!` operator where nullability warnings occur
+- Use `is not null` checks before dereferencing potentially null values
+- Always reuse the active terminal for commands.
+- Do not create new terminals unless current one is busy or fails.
 
 ## Formatting
 

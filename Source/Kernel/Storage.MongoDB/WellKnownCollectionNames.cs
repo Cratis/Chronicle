@@ -79,9 +79,14 @@ public static class WellKnownCollectionNames
     public const string Recommendations = "recommendations";
 
     /// <summary>
-    /// The collection that holds reducer definitions.
+    /// The collection that holds reactor definitions.
     /// </summary>
     public const string ReactorDefinitions = "reactors";
+
+    /// <summary>
+    /// The collection that holds webhook definitions.
+    /// </summary>
+    public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
     /// The collection that holds reducer definitions.
@@ -122,4 +127,39 @@ public static class WellKnownCollectionNames
     /// The collection that holds projection futures.
     /// </summary>
     public const string ProjectionFutures = "projection-futures";
+
+    /// <summary>
+    /// The collection that holds users.
+    /// </summary>
+    public const string Users = "users";
+
+    /// <summary>
+    /// The collection that holds clients.
+    /// </summary>
+    public const string Applications = "applications";
+
+    /// <summary>
+    /// The collection that holds clients.
+    /// </summary>
+    public const string Clients = "clients";
+
+    /// <summary>
+    /// The collection that holds authorizations.
+    /// </summary>
+    public const string Authorizations = "authorizations";
+
+    /// <summary>
+    /// The collection that holds scopes.
+    /// </summary>
+    public const string Scopes = "scopes";
+
+    /// <summary>
+    /// The collection that holds tokens.
+    /// </summary>
+    public const string Tokens = "tokens";
+
+    /// <summary>
+    /// The collection that holds data protection keys.
+    /// </summary>
+    public const string DataProtectionKeys = "data-protection-keys";
 }

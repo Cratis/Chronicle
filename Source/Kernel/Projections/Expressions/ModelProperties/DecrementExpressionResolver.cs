@@ -26,6 +26,6 @@ public partial class DecrementExpressionResolver(ITypeFormats typeFormats) : IRe
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Decrement(_typeFormats, targetProperty, targetPropertySchema);
 
-    [GeneratedRegex($"\\{WellKnownExpressions.Decrement}\\(\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"\\{WellKnownExpressions.Decrement}", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex IncrementRegEx();
 }

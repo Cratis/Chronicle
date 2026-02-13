@@ -22,7 +22,8 @@ public static class EventTypeConverters
         new()
         {
             Id = schema.Type.Id,
-            Owner = EventTypeOwner.Client,
+            Owner = schema.Owner,
+            Source = schema.Source,
             Tombstone = schema.Type.Tombstone,
             Schemas = new Dictionary<uint, string>
             {
@@ -45,6 +46,8 @@ public static class EventTypeConverters
                schema.Id,
                EventTypeGeneration.First,
                schema.Tombstone),
+            schema.Owner,
+            schema.Source,
             result);
     }
 }

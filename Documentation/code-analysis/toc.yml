@@ -1,0 +1,16 @@
+- name: Code Analysis Rules
+  href: index.md
+- name: CHR0001 - Event type must have [EventType] attribute
+  href: CHR0001.md
+- name: CHR0002 - Declarative projection event type must have [EventType] attribute
+  href: CHR0002.md
+- name: CHR0003 - Model bound projection attribute must reference event type
+  href: CHR0003.md
+- name: CHR0004 - Reactor method signature must match allowed signatures
+  href: CHR0004.md
+- name: CHR0005 - Reactor event parameter must have [EventType] attribute
+  href: CHR0005.md
+- name: CHR0006 - Reducer method signature must match allowed signatures
+  href: CHR0006.md
+- name: CHR0007 - Reducer event parameter must have [EventType] attribute
+  href: CHR0007.md

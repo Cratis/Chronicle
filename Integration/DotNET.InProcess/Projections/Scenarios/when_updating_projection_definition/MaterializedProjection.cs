@@ -9,6 +9,7 @@ public class MaterializedProjection : IProjectionFor<TestReadModel>
 
     public void Define(IProjectionBuilderFor<TestReadModel> builder)
     {
+        builder.NoAutoMap();
         if (MapBothProperties)
         {
             builder.From<TestEvent>(e => e

@@ -24,8 +24,8 @@ public static class ReducerDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             ReadModel = definition.ReadModel,
-            SinkType = definition.Sink.TypeId,
-            SinkConfigurationId = definition.Sink.ConfigurationId
+            SinkType = definition.Sink.Type,
+            SinkConfigurationId = definition.Sink.Configuration
         };
 
     /// <summary>
@@ -39,5 +39,7 @@ public static class ReducerDefinitionConverters
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.ReadModel,
-            new SinkDefinition(schema.SinkConfigurationId, schema.SinkType));
+            true,
+            new SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
+            []);
 }

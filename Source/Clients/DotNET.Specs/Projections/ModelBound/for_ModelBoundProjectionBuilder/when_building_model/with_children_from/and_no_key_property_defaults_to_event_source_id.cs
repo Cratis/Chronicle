@@ -24,7 +24,8 @@ public class and_no_key_property_defaults_to_event_source_id : given.a_model_bou
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_children_definition() => _result.Children.Count.ShouldEqual(1);
 
-    [Fact] void should_default_to_event_source_id()
+    [Fact]
+    void should_default_to_event_source_id()
     {
         var childrenDef = _result.Children[nameof(OrderWithChildHavingNoKey.Items)];
         childrenDef.IdentifiedBy.ShouldEqual(WellKnownExpressions.EventSourceId);

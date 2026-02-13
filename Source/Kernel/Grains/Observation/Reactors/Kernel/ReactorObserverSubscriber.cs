@@ -1,41 +1,46 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Grains.EventTypes.Kernel;
-using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Grains.EventSequences;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReactorObserverSubscriber{TReactor}"/> for kernel reactors.
 /// </summary>
-/// <param name="eventTypes">The <see cref="IEventTypes"/> for working with event types.</param>
-/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between expando objects to and from json.</param>
-/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
+/// <param name="eventSerializer">The <see cref="IEventSerializer"/> for serializing and deserializing events.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <typeparam name="TReactor">The type of reactor that will be used.</typeparam>
-public class ReactorObserverSubscriber<TReactor>(
-    IEventTypes eventTypes,
-    IExpandoObjectConverter expandoObjectConverter,
-    JsonSerializerOptions jsonSerializerOptions) : Grain, IReactorObserverSubscriber<TReactor>
+public class ReactorObserverSubscriber<TReactor>(IEventSerializer eventSerializer, ILoggerFactory loggerFactory) : Grain, IReactorObserverSubscriber<TReactor>
     where TReactor : IReactor
 {
+    readonly ILogger _logger = loggerFactory.CreateLogger<ReactorObserverSubscriber<TReactor>>();
     TReactor? _reactor;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _reactor = ServiceProvider.GetRequiredService<TReactor>();
-        _reactor.Initialize(eventTypes, expandoObjectConverter, jsonSerializerOptions);
+        try
+        {
+            _logger.ReactorObserverSubscriberActivating(typeof(TReactor).Name);
+            _reactor = ServiceProvider.GetRequiredService<TReactor>();
+            _reactor.Initialize(eventSerializer);
+            _logger.ReactorObserverSubscriberActivated(typeof(TReactor).Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.FailedToActivateReactorObserverSubscriber(typeof(TReactor).Name, ex);
+            throw;
+        }
+
         return base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
-    {
-        return _reactor?.OnNext(events) ?? Task.FromResult(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Reactor not initialized."));
-    }
+    public Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        _reactor?.OnNext(events) ?? Task.FromResult(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Reactor not initialized."));
 }

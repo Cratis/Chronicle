@@ -21,7 +21,7 @@ public class ReadModelDefinition
     /// <summary>
     /// Gets or sets the name of the read model.
     /// </summary>
-    public ReadModelName Name { get; set; } = ReadModelName.NotSet;
+    public ReadModelContainerName Name { get; set; } = ReadModelContainerName.NotSet;
 
     /// <summary>
     /// Gets or sets the owner identifier for the read model.

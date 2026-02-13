@@ -25,10 +25,14 @@ public class Database : IDatabase
     /// </summary>
     /// <param name="clientManager"><see cref="IMongoDBClientManager"/> for working with MongoDB.</param>
     /// <param name="mongoDBOptions"><see cref="Storage"/> configuration.</param>
+    /// <param name="customSerializers"><see cref="ICustomSerializers"/> for registering custom serializers.</param>
     public Database(
         IMongoDBClientManager clientManager,
-        IOptions<MongoDBOptions> mongoDBOptions)
+        IOptions<MongoDBOptions> mongoDBOptions,
+        ICustomSerializers customSerializers)
     {
+        customSerializers.Register();
+
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
         settings.DirectConnection = mongoDBOptions.Value.DirectConnection;

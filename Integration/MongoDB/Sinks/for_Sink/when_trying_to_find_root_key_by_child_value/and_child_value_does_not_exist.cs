@@ -5,34 +5,38 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Monads;
 using MongoDB.Bson;
+using context = Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value.and_child_value_does_not_exist.context;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value;
 
 [Collection(MongoDBCollection.Name)]
-public class and_child_value_does_not_exist(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
+public class and_child_value_does_not_exist(context context) : Given<context>(context)
 {
-    Guid _rootKey;
-    Guid _nonExistentId;
-    Option<Key> _result;
-
-    void Establish()
+    public class context(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
     {
-        _rootKey = Guid.NewGuid();
-        _nonExistentId = Guid.NewGuid();
+        public Guid RootKey;
+        public Guid NonExistentId;
+        public Option<Key> Result;
 
-        // Insert a document but search for a non-existent child
-        var document = new BsonDocument
+        void Establish()
         {
-            ["name"] = "Root Document",
-            ["children"] = new BsonArray
+            RootKey = Guid.NewGuid();
+            NonExistentId = Guid.NewGuid();
+
+            // Insert a document but search for a non-existent child
+            var document = new BsonDocument
             {
-                new BsonDocument { ["childId"] = Guid.NewGuid().ToString(), ["name"] = "Child 1" }
-            }
-        };
-        InsertDocument(_rootKey, document);
+                ["name"] = "Root Document",
+                ["children"] = new BsonArray
+                {
+                    new BsonDocument { ["childId"] = Guid.NewGuid().ToString(), ["name"] = "Child 1" }
+                }
+            };
+            InsertDocument(RootKey, document);
+        }
+
+        async Task Because() => Result = await _sink.TryFindRootKeyByChildValue(new PropertyPath("children.childId"), NonExistentId.ToString());
     }
 
-    async Task Because() => _result = await _sink.TryFindRootKeyByChildValue(new PropertyPath("children.childId"), _nonExistentId.ToString());
-
-    [Fact] void should_return_no_value() => _result.HasValue.ShouldBeFalse();
+    [Fact] void should_return_no_value() => Context.Result.HasValue.ShouldBeFalse();
 }

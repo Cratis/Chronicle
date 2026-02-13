@@ -7,7 +7,6 @@
     <ItemGroup>
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
-        <ProjectReference Include="../../Source/Clients/Orleans/Orleans.csproj" />
         <ProjectReference Include="../../Source/Clients/DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../../Source/Kernel/Projections/Projections.csproj" />

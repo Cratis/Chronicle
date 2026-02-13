@@ -32,7 +32,9 @@ public class when_getting_boolean_false_value_from_event_content : Specification
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                [],
+                EventHash.NotSet),
             content);
         _valueProvider = EventValueProviders.EventContent("PropertySet");
     }

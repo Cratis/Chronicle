@@ -19,7 +19,7 @@ var assemblyPath = args[0];
 var outputAssemblyName = args[1];
 var outputAssemblyPath = $"{Path.GetDirectoryName(assemblyPath)}/{outputAssemblyName}.dll";
 var assembly = Assembly.LoadFrom(assemblyPath);
-var services = assembly.ExportedTypes.Where(_ => _.IsInterface).ToArray();
+var services = assembly.ExportedTypes.Where(_ => _.IsInterface && Attribute.IsDefined(_, typeof(ServiceAttribute))).ToArray();
 
 var assemblyBuilder = new PersistedAssemblyBuilder(new(outputAssemblyName), typeof(void).Assembly);
 var moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
@@ -50,7 +50,7 @@ foreach (var serviceType in services)
     var module = implementationType.Assembly.Modules.First();
     foreach (var constructor in implementationType.DeclaredConstructors)
     {
-        var constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, constructor.CallingConvention, [..constructor.GetParameters().Select(_ => _.ParameterType)]);
+        var constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, constructor.CallingConvention, [.. constructor.GetParameters().Select(_ => _.ParameterType)]);
         var ilGenerator = constructorBuilder.GetILGenerator();
         var ilBytes = constructor.GetMethodBody()!.GetILAsByteArray() ?? [];
         var reader = new MethodBodyReader(module, fields, ilBytes);
@@ -69,7 +69,7 @@ foreach (var serviceType in services)
             attributes = MethodAttributes.HideBySig | MethodAttributes.Final | MethodAttributes.NewSlot | MethodAttributes.Private | MethodAttributes.Virtual;
         }
 
-        var methodBuilder = typeBuilder.DefineMethod(method.Name, attributes, method.CallingConvention, method.ReturnType, [..method.GetParameters().Select(_ => _.ParameterType)]);
+        var methodBuilder = typeBuilder.DefineMethod(method.Name, attributes, method.CallingConvention, method.ReturnType, [.. method.GetParameters().Select(_ => _.ParameterType)]);
         var ilGenerator = methodBuilder.GetILGenerator();
         var ilBytes = method.GetMethodBody()!.GetILAsByteArray() ?? [];
 

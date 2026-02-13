@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Grains.Projections;
 
@@ -47,11 +48,36 @@ public interface IProjection : IGrainWithStringKey
     Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>
-    /// Process a set of events through the projection.
+    /// Get the event types for a preview scenario with a provided read model definition.
+    /// </summary>
+    /// <param name="readModelDefinition">The read model definition to use for preview.</param>
+    /// <returns>The event types.</returns>
+    Task<IEnumerable<EventType>> GetEventTypesForPreview(ReadModelDefinition readModelDefinition);
+
+    /// <summary>
+    /// Process a set of events through the projection for a single read-model instance.
     /// </summary>
     /// <param name="eventStoreNamespace">The namespace the events are from.</param>
     /// <param name="initialState">The initial projected state.</param>
     /// <param name="events">The events to process.</param>
     /// <returns>The resulting projected state.</returns>
-    Task<ExpandoObject> Process(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
+    Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Process a set of events through the projection and return resulting read-model instances grouped by key.
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The resulting projected states for all keys encountered.</returns>
+    Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Process a set of events through the projection for preview with a provided read model definition.
+    /// This is used when the read model hasn't been persisted yet (e.g., draft read models).
+    /// </summary>
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="events">The events to process.</param>
+    /// <param name="readModelDefinition">The read model definition to use for preview.</param>
+    /// <returns>The resulting projected states for all keys encountered.</returns>
+    Task<IEnumerable<ExpandoObject>> ProcessForPreview(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events, ReadModelDefinition readModelDefinition);
 }

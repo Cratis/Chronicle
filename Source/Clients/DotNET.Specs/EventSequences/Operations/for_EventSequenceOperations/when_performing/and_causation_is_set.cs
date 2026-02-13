@@ -35,7 +35,8 @@ public class and_causation_is_set : given.event_sequence_operations_without_any_
 
     Task Because() => _operations.Perform();
 
-    [Fact] void should_use_causation_for_event() => _eventSequence.Received().AppendMany(Arg.Is<IEnumerable<EventForEventSourceId>>(events => events.All(e =>
+    [Fact]
+    void should_use_causation_for_event() => _eventSequence.Received().AppendMany(Arg.Is<IEnumerable<EventForEventSourceId>>(events => events.All(e =>
         e.Causation == _causation &&
         e.EventStreamType == _eventStreamType &&
         e.EventStreamId == _eventStreamId &&

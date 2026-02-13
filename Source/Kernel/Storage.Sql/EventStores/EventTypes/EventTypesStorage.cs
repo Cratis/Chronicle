@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Reactive;
 using Microsoft.EntityFrameworkCore;
 using NJsonSchema;
 
@@ -19,9 +21,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
 {
     ConcurrentBag<EventType> _eventTypes = new();
+    readonly ReplaySubject<IEnumerable<EventTypeSchema>> _eventTypesSubject = new(1);
 
     /// <inheritdoc/>
-    public async Task Register(Concepts.Events.EventType type, JsonSchema schema)
+    public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
     {
         await using var scope = await database.EventStore(eventStore);
 
@@ -37,7 +40,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
             }
         }
 
-        var eventSchema = new EventTypeSchema(type, schema);
+        var eventSchema = new EventTypeSchema(type, owner, source, schema);
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
@@ -47,7 +50,20 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
+
+        _eventTypesSubject.OnNext(await GetLatestForAllEventTypes());
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
+        return eventTypes.Select(_ => _.ToKernel());
+    }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => _eventTypesSubject;
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType) => throw new NotImplementedException();
@@ -71,9 +87,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         return eventType.ToKernel();
     }
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = null)

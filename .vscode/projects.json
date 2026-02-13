@@ -47,5 +47,15 @@
         "name": "GrpcClients",
         "path": "${workspaceFolder}/Source/Tools/GrpcClients",
         "outputPath": "${workspaceFolder}/Source/Tools/GrpcClients/bin/Debug/net10.0/GrpcClients.dll"
+    },
+    {
+        "name": "SimpleConsole",
+        "path": "${workspaceFolder}/TestApps/SimpleConsole",
+        "outputPath": "${workspaceFolder}/TestApps/SimpleConsole/bin/Debug/net10.0/SimpleConsole.dll"
+    },
+    {
+        "name": "AspNetCore TestApp",
+        "path": "${workspaceFolder}/TestApps/AspNetCore",
+        "outputPath": "${workspaceFolder}/TestApps/AspNetCore/bin/Debug/net10.0/AspNetCore.dll"
     }
 ]

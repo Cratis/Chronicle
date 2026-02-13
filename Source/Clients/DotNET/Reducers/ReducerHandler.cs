@@ -17,22 +17,27 @@ namespace Cratis.Chronicle.Reducers;
 /// </remarks>
 /// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
 /// <param name="reducerId">The identifier of the reducer.</param>
+/// <param name="reducerType">The type of the reducer.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="invoker">The actual invoker.</param>
-/// <param name="eventSerializer">The event serializer to use.</param>
 /// <param name="isActive">Whether or not reducer should be actively running on the Kernel.</param>
+/// <param name="reducerObservers"><see cref="IReducerObservers"/> for notifying observers of changes.</param>
 public class ReducerHandler(
     IEventStore eventStore,
     ReducerId reducerId,
+    Type reducerType,
     EventSequenceId eventSequenceId,
     IReducerInvoker invoker,
-    IEventSerializer eventSerializer,
-    bool isActive) : IReducerHandler, IDisposable
+    bool isActive,
+    IReducerObservers reducerObservers) : IReducerHandler, IDisposable
 {
     readonly CancellationTokenSource _cancellationTokenSource = new();
 
     /// <inheritdoc/>
     public ReducerId Id { get; } = reducerId;
+
+    /// <inheritdoc/>
+    public Type ReducerType { get; } = reducerType;
 
     /// <inheritdoc/>
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;
@@ -44,7 +49,7 @@ public class ReducerHandler(
     public Type ReadModelType => invoker.ReadModelType;
 
     /// <inheritdoc/>
-    public ReadModelName ReadModelName => invoker.ReadModelName;
+    public ReadModelContainerName ContainerName => invoker.ContainerName;
 
     /// <inheritdoc/>
     public bool IsActive { get; } = isActive;
@@ -58,13 +63,18 @@ public class ReducerHandler(
     /// <inheritdoc/>
     public async Task<ReduceResult> OnNext(IEnumerable<AppendedEvent> events, object? initial, IServiceProvider serviceProvider)
     {
-        var tasks = events.Select(async @event =>
-        {
-            var content = await eventSerializer.Deserialize(@event);
-            return new EventAndContext(content, @event.Context);
-        });
-        var eventAndContexts = await Task.WhenAll(tasks.ToArray()!);
-        return await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+        var eventAndContexts = events.Select(@event => new EventAndContext(@event.Content, @event.Context));
+        var result = await invoker.Invoke(serviceProvider, eventAndContexts, initial);
+
+        var modelKey = new ReadModelKey(events.First().Context.EventSourceId.Value);
+        var @namespace = eventStore.Namespace;
+        var removed = result.ReadModelState == null;
+
+        var notifyMethod = typeof(IReducerObservers).GetMethod(nameof(IReducerObservers.NotifyChange))!
+            .MakeGenericMethod(ReadModelType);
+        notifyMethod.Invoke(reducerObservers, [@namespace, modelKey, result.ReadModelState, removed]);
+
+        return result;
     }
 
     /// <inheritdoc/>

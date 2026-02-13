@@ -17,7 +17,19 @@ public interface IProjectionBuilder<TReadModel, TBuilder>
     /// Automatically map event properties to model properties on the events added.
     /// </summary>
     /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// AutoMap is enabled by default. This method is for explicitly enabling it if needed.
+    /// </remarks>
     IProjectionBuilder<TReadModel, TBuilder> AutoMap();
+
+    /// <summary>
+    /// Disable automatic mapping of event properties to model properties.
+    /// </summary>
+    /// <returns>Builder continuation.</returns>
+    /// <remarks>
+    /// Use this to disable the default AutoMap behavior when you need explicit control over all mappings.
+    /// </remarks>
+    IProjectionBuilder<TReadModel, TBuilder> NoAutoMap();
 
     /// <summary>
     /// Sets the initial values to use for a new read model instance.

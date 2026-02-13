@@ -17,6 +17,11 @@ public class ReplayContextEntry
     public string ReadModelIdentifier { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the read model generation.
+    /// </summary>
+    public uint Generation { get; set; }
+
+    /// <summary>
     /// Gets or sets the read model name.
     /// </summary>
     public string ReadModel { get; set; } = string.Empty;

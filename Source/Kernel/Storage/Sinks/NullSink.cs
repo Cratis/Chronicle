@@ -5,8 +5,10 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.Sinks;
@@ -28,7 +30,14 @@ public class NullSink : ISink
     public SinkTypeName Name => "Null sink";
 
     /// <inheritdoc/>
-    public Task ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) => Task.CompletedTask;
+    public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
+        Task.FromResult<IEnumerable<FailedPartition>>([]);
+
+    /// <inheritdoc/>
+    public Task BeginBulk() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task BeginReplay(ReplayContext context) => Task.CompletedTask;
@@ -50,4 +59,8 @@ public class NullSink : ISink
 
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        Task.FromResult(new ReadModelInstances([], 0));
 }

@@ -10,6 +10,6 @@ namespace Cratis.Chronicle.Grains.StateMachines;
 
 internal static partial class StateMachineLogMessages
 {
-    [LoggerMessage(0, LogLevel.Trace, "Transitioning to {StateType}")]
+    [LoggerMessage(LogLevel.Trace, "Transitioning to {StateType}")]
     internal static partial void TransitioningTo(this ILogger<StateMachine<StateMachineState>> logger, Type stateType);
 }

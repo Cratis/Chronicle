@@ -1,8 +1,12 @@
-/*---------------------------------------------------------------------------------------------
- *  **DO NOT EDIT** - This file is an automatically generated file.
- *--------------------------------------------------------------------------------------------*/
-
-/* eslint-disable sort-imports */
-// eslint-disable-next-line header/header
 export * from './AllProjections';
+export * from './AllProjectionsWithDeclarations';
+export * from './DraftReadModel';
+export * from './GeneratedCodeResult';
+export * from './GenerateDeclarativeCode';
+export * from './GenerateModelBoundCode';
+export * from './PreviewProjection';
 export * from './Projection';
+export * from './ProjectionDeclarationSyntaxError';
+export * from './ProjectionPreview';
+export * from './ProjectionWithDeclaration';
+export * from './SaveProjection';

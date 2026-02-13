@@ -39,7 +39,9 @@ public class when_next_event_is_not_of_interest : given.a_projection
                 "41f18595-4748-4b01-88f7-4c0d0907aa90",
                 CorrelationId.New(),
                 [],
-                Identity.System),
+                Identity.System,
+                [],
+                EventHash.NotSet),
             new ExpandoObject());
 
         _objectsComparer = Substitute.For<IObjectComparer>();

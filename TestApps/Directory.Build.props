@@ -1,0 +1,16 @@
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
+        <NoWarn>$(NoWarn);MA0048,SA1649,SA1600,SA1402;SA0001</NoWarn>
+    </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cratis.Fundamentals" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+</Project>

@@ -29,7 +29,7 @@ public class JobCommands : ControllerBase
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId">Identifier of the job to resume.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{jobId}/resume/")]
+    [HttpPost("{jobId}/resume")]
     public Task ResumeJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
@@ -43,7 +43,7 @@ public class JobCommands : ControllerBase
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId">Identifier of the job to stop.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{jobId}/stop/")]
+    [HttpPost("{jobId}/stop")]
     public Task StopJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
@@ -57,7 +57,7 @@ public class JobCommands : ControllerBase
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="jobId">Identifier of the job to delete.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("{jobId}/delete/")]
+    [HttpPost("{jobId}/delete")]
     public Task DeleteJob(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,

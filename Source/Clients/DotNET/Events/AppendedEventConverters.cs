@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Dynamic;
 using System.Text.Json;
 
 namespace Cratis.Chronicle.Events;
@@ -28,18 +27,25 @@ internal static class AppendedEventConverters
     /// Convert to client version of <see cref="AppendedEvent"/>.
     /// </summary>
     /// <param name="event"><see cref="Contracts.Events.AppendedEvent"/> to convert.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>Converted Chronicle version.</returns>
-    internal static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new(
-            @event.Context.ToClient(),
-            JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
+    internal static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event, IEventTypes eventTypes, JsonSerializerOptions jsonSerializerOptions)
+    {
+        var context = @event.Context.ToClient();
+        var clrType = eventTypes.GetClrTypeFor(context.EventType.Id);
+        var content = JsonSerializer.Deserialize(@event.Content, clrType, jsonSerializerOptions)!;
+
+        return new(context, content);
+    }
 
     /// <summary>
     /// Convert to a client version of a collection of <see cref="Contracts.Events.AppendedEvent"/>.
     /// </summary>
     /// <param name="events">Collection of <see cref="Contracts.Events.AppendedEvent"/> to convert from.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
     /// <returns>An immutable collection of <see cref="AppendedEvent"/>.</returns>
-    internal static IImmutableList<AppendedEvent> ToClient(this IEnumerable<Contracts.Events.AppendedEvent> events, JsonSerializerOptions jsonSerializerOptions) =>
-        events.Select(_ => _.ToClient(jsonSerializerOptions)).ToImmutableList();
+    internal static IImmutableList<AppendedEvent> ToClient(this IEnumerable<Contracts.Events.AppendedEvent> events, IEventTypes eventTypes, JsonSerializerOptions jsonSerializerOptions) =>
+        events.Select(_ => _.ToClient(eventTypes, jsonSerializerOptions)).ToImmutableList();
 }

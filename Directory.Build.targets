@@ -1,0 +1,8 @@
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- Define DEVELOPMENT compile symbol automatically for Debug configuration -->
+    <!-- This must be in .targets file to run after SDK sets the initial DefineConstants -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
+    </PropertyGroup>
+</Project>

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayContexts;
 
@@ -20,9 +20,10 @@ public static class ReplayContextEntryConverter
     {
         return new ReplayContextEntry
         {
-            ReadModelIdentifier = context.ReadModelIdentifier.Value,
-            ReadModel = context.ReadModel.Value,
-            RevertModel = context.RevertModel.Value,
+            ReadModelIdentifier = context.Type.Identifier.Value,
+            Generation = context.Type.Generation,
+            ReadModel = context.ContainerName.Value,
+            RevertModel = context.RevertContainerName.Value,
             Started = context.Started
         };
     }
@@ -35,9 +36,11 @@ public static class ReplayContextEntryConverter
     public static ReplayContext ToReplayContext(ReplayContextEntry entry)
     {
         return new ReplayContext(
-            new ReadModelIdentifier(entry.ReadModelIdentifier),
-            new ReadModelName(entry.ReadModel),
-            new ReadModelName(entry.RevertModel),
+            new ReadModelType(
+                new ReadModelIdentifier(entry.ReadModelIdentifier),
+                new ReadModelGeneration(entry.Generation)),
+            new ReadModelContainerName(entry.ReadModel),
+            new ReadModelContainerName(entry.RevertModel),
             entry.Started);
     }
 }

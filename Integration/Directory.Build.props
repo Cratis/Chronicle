@@ -12,11 +12,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit\XUnit.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\Testing\Testing.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration\XUnit.Integration.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Cratis.Fundamentals" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio">

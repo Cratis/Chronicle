@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
@@ -12,15 +13,30 @@ namespace Cratis.Chronicle.Storage;
 /// Represents an implementation of <see cref="IStorage"/> for MongoDB.
 /// </summary>
 /// <param name="clusterStorage">The <see cref="IClusterStorage"/> instance.</param>
+/// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
 public class Storage(
     IClusterStorage clusterStorage,
+    ISystemStorage systemStorage,
     IInstancesOf<ISinkFactory> sinkFactories) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = [];
 
     /// <inheritdoc/>
-    public IClusterStorage Cluster => clusterStorage;
+    public ISystemStorage System => systemStorage;
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EventStoreName>> GetEventStores() => clusterStorage.GetEventStores();
+
+    /// <inheritdoc/>
+    public async Task<bool> HasEventStore(EventStoreName eventStore)
+    {
+        var eventStores = await clusterStorage.GetEventStores();
+        return eventStores.Any(es => es == eventStore);
+    }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => clusterStorage.ObserveEventStores();
 
     /// <inheritdoc/>
     public IEventStoreStorage GetEventStore(EventStoreName eventStore)
