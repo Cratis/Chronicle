@@ -21,5 +21,10 @@ public enum ConstraintType
     /// <summary>
     /// Represents a unique event type constraint.
     /// </summary>
-    UniqueEventType = 2
+    UniqueEventType = 2,
+
+    /// <summary>
+    /// Represents a schema validation constraint.
+    /// </summary>
+    Schema = 3
 }
