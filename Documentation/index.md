@@ -84,6 +84,7 @@ Explore Chronicle's comprehensive documentation organized by topic:
 | ------- | ----------- |
 | **[Get Started](./get-started/toc.yml)** | Quick start guides for console and ASP.NET Core applications |
 | **[Concepts](./concepts/toc.yml)** | Core concepts including events, projections, observers, and constraints |
+| **[Dynamic Consistency Boundary](./Dynamic%20Consistency%20Boundary/toc.yml)** | Decision-scoped consistency and how Chronicle supports it |
 | **[Clients](./clients/toc.yml)** | .NET client SDK documentation and application model guidance |
 | **[Projections](./projections/index.md)** | How to create read models from events using projections |
 | **[Hosting](./hosting/toc.yml)** | Deployment options including production and development environments |
