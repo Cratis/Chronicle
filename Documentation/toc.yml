@@ -10,6 +10,8 @@
   href: connection-strings/toc.yml
 - name: Namespaces
   href: namespaces/toc.yml
+- name: Constraints
+  href: constraints/toc.yml
 - name: Clients
   href: clients/toc.yml
 - name: Recipes
@@ -22,6 +24,8 @@
   href: reactors/toc.yml
 - name: Reducers
   href: reducers/toc.yml
+- name: Code Analysis
+  href: code-analysis/toc.yml
 - name: Hosting
   href: hosting/toc.yml
 - name: Contributing
