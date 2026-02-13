@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
 
@@ -17,12 +17,24 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
 public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IReplayedReadModelsStorage
 {
     /// <inheritdoc/>
-    public async Task Replayed(ObserverId observer, ReplayContext context)
+    public async Task Replayed(ReadModelOccurrence occurrence)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var occurrence = ReplayedModelsConverters.ToReplayedModelOccurrence(observer, context);
-        scope.DbContext.ReplayedModels.Add(occurrence);
+        var entry = ReplayedModelsConverters.ToReplayedModelOccurrence(occurrence);
+        scope.DbContext.ReplayedModels.Add(entry);
         await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ReadModelOccurrence>> GetOccurrences(ReadModelIdentifier readModel)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var occurrences = await scope.DbContext.ReplayedModels
+            .Where(r => r.ReadModelIdentifier == readModel.Value)
+            .ToListAsync();
+
+        return occurrences.Select(o => ReplayedModelsConverters.ToReadModelOccurrence(o));
     }
 }

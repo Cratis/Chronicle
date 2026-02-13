@@ -89,8 +89,10 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventHash hash)
     {
         try
         {
@@ -134,13 +136,84 @@ public class EventSequenceStorage(
                 @namespace,
                 correlationId,
                 causation,
-                await identityStorage.GetFor(causedByChain));
+                await identityStorage.GetFor(causedByChain),
+                tags,
+                hash);
 
             return new AppendedEvent(eventContext, content);
         }
         catch (Exception ex)
         {
             logger.FailedToAppendEvent(ex, sequenceNumber, eventSequenceId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
+    {
+        var eventsArray = events.ToArray();
+        if (eventsArray.Length == 0)
+        {
+            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success([]);
+        }
+
+        try
+        {
+            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+            var appendedEvents = new List<AppendedEvent>();
+
+            foreach (var eventToAppend in eventsArray)
+            {
+                // Check if sequence number already exists
+                var existingEvent = await scope.DbContext.Events
+                    .FirstOrDefaultAsync(e => e.SequenceNumber == eventToAppend.SequenceNumber);
+
+                if (existingEvent is not null)
+                {
+                    return new DuplicateEventSequenceNumber(eventToAppend.SequenceNumber);
+                }
+
+                var eventEntry = EventEntryConverter.ToEventEntry(
+                    eventToAppend.SequenceNumber,
+                    eventToAppend.EventSourceType,
+                    eventToAppend.EventSourceId,
+                    eventToAppend.EventStreamType,
+                    eventToAppend.EventStreamId,
+                    eventToAppend.EventType,
+                    eventToAppend.CorrelationId,
+                    eventToAppend.Causation,
+                    eventToAppend.CausedByChain,
+                    eventToAppend.Occurred,
+                    eventToAppend.Content);
+
+                scope.DbContext.Events.Add(eventEntry);
+
+                var eventContext = new EventContext(
+                    eventToAppend.EventType,
+                    eventToAppend.EventSourceType,
+                    eventToAppend.EventSourceId,
+                    eventToAppend.EventStreamType,
+                    eventToAppend.EventStreamId,
+                    eventToAppend.SequenceNumber,
+                    eventToAppend.Occurred,
+                    eventStore,
+                    @namespace,
+                    eventToAppend.CorrelationId,
+                    eventToAppend.Causation,
+                    await identityStorage.GetFor(eventToAppend.CausedByChain),
+                    eventToAppend.Tags,
+                    eventToAppend.Hash);
+
+                appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.Content));
+            }
+
+            await scope.DbContext.SaveChangesAsync();
+            return Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>.Success(appendedEvents);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToAppendEvent(ex, EventSequenceNumber.Unavailable, eventSequenceId);
             throw;
         }
     }
@@ -593,6 +666,46 @@ public class EventSequenceStorage(
             var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
+
+        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEventCursor> GetEventsWithLimit(
+        EventSequenceNumber start,
+        int limit,
+        EventSourceId? eventSourceId = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default,
+        IEnumerable<EventType>? eventTypes = default,
+        CancellationToken cancellationToken = default)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= start);
+
+        if (eventSourceId?.IsSpecified == true)
+        {
+            query = query.Where(e => e.EventSourceId == eventSourceId);
+        }
+
+        if (eventStreamType?.IsAll == false)
+        {
+            query = query.Where(e => e.EventStreamType == eventStreamType);
+        }
+
+        if (eventStreamId?.IsDefault == false)
+        {
+            query = query.Where(e => e.EventStreamId == eventStreamId);
+        }
+
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        query = query.Take(limit);
 
         return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }

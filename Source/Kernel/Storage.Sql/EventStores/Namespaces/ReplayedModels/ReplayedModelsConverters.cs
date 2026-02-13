@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Storage.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
 
@@ -12,18 +12,30 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
 public static class ReplayedModelsConverters
 {
     /// <summary>
-    /// Convert a <see cref="ReplayContext"/> to a <see cref="ReplayedModelOccurrence"/>.
+    /// Convert a <see cref="ReadModelOccurrence"/> to a <see cref="ReplayedModelOccurrence"/>.
     /// </summary>
-    /// <param name="observer">The <see cref="ObserverId"/> for the observer.</param>
-    /// <param name="context">The <see cref="ReplayContext"/> to convert.</param>
+    /// <param name="occurrence">The <see cref="ReadModelOccurrence"/> to convert.</param>
     /// <returns>The converted <see cref="ReplayedModelOccurrence"/>.</returns>
-    public static ReplayedModelOccurrence ToReplayedModelOccurrence(ObserverId observer, ReplayContext context) =>
+    public static ReplayedModelOccurrence ToReplayedModelOccurrence(ReadModelOccurrence occurrence) =>
         new()
         {
-            ObserverId = observer.Value,
-            ReadModelIdentifier = context.ReadModelIdentifier.Value,
-            ReadModelName = context.ReadModel.Value,
-            RevertModelName = context.RevertModel.Value,
-            Started = context.Started
+            ObserverId = occurrence.ObserverId.Value,
+            ReadModelIdentifier = occurrence.Type.Identifier.Value,
+            ReadModelName = occurrence.ContainerName.Value,
+            RevertModelName = occurrence.RevertContainerName.Value,
+            Started = occurrence.Occurred
         };
+
+    /// <summary>
+    /// Convert a <see cref="ReplayedModelOccurrence"/> to a <see cref="ReadModelOccurrence"/>.
+    /// </summary>
+    /// <param name="occurrence">The <see cref="ReplayedModelOccurrence"/> to convert.</param>
+    /// <returns>The converted <see cref="ReadModelOccurrence"/>.</returns>
+    public static ReadModelOccurrence ToReadModelOccurrence(ReplayedModelOccurrence occurrence) =>
+        new(
+            new(Guid.Parse(occurrence.ObserverId)),
+            occurrence.Started,
+            new ReadModelType(new ReadModelIdentifier(occurrence.ReadModelIdentifier), ReadModelGeneration.First),
+            new(occurrence.ReadModelName),
+            new(occurrence.RevertModelName));
 }

@@ -19,7 +19,7 @@ using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging.Abstractions;
-using SinksReplayContexts = Cratis.Chronicle.Storage.Sinks.ReplayContexts;
+using ReadModelsReplayContexts = Cratis.Chronicle.Storage.ReadModels.ReplayContexts;
 using SinksSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -61,7 +61,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IObserverKeyIndexes ObserverKeyIndexes { get; } = new ObserverKeyIndexes.ObserverKeyIndexes(eventStore, @namespace, database, observerDefinitionsStorage);
 
     /// <inheritdoc/>
-    public IReplayContexts ReplayContexts { get; } = new SinksReplayContexts(new ReplayContexts.ReplayContextsStorage(eventStore, @namespace, database));
+    public IReplayContexts ReplayContexts { get; } = new ReadModelsReplayContexts(new ReplayContexts.ReplayContextsStorage(eventStore, @namespace, database));
 
     /// <inheritdoc/>
     public ISinks Sinks { get; } = new SinksSinks(eventStore, @namespace, sinkFactories);
