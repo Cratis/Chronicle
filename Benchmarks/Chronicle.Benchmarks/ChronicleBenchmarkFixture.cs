@@ -37,7 +37,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     /// <summary>
     /// Gets the Chronicle URL for connecting.
     /// </summary>
-    public string ChronicleUrl => $"http://localhost:{ChroniclePort}";
+    public string ChronicleUrl => $"chronicle://localhost:{ChroniclePort}";
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()

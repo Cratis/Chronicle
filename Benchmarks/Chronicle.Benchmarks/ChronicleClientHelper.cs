@@ -21,7 +21,7 @@ public class ChronicleClientHelper : IDisposable
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
         var options = new ChronicleOptions(
-            url: new ChronicleUrl(_fixture.ChronicleUrl),
+            connectionString: new ChronicleConnectionString(_fixture.ChronicleUrl),
             connectTimeout: 30,
             loggerFactory: _loggerFactory);
 
