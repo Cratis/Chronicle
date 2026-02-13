@@ -2,6 +2,9 @@
 
 Appending adds a single event to an event sequence. The event log is the default sequence, but you can also append to any custom sequence your system defines.
 
+> [!NOTE]
+> With Cratis Arc and the Chronicle extension, you can append events as state changes coming out of a command using a more functional approach. See <xref:Arc.Chronicle.Commands>.
+
 ## How it works
 
 When you append an event, Chronicle:
