@@ -65,7 +65,8 @@ public class EventSeeding(
         {
             foreach (var entry in entriesList)
             {
-                var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, entry.IsGlobal, entry.TargetNamespace);
+                var tags = entry.Tags?.Select(t => t.Value) ?? [];
+                var seededEntry = new SeededEventEntry(entry.EventSourceId, entry.EventTypeId, entry.Content, tags, entry.IsGlobal, entry.TargetNamespace);
                 if (!IsAlreadySeeded(seededEntry))
                 {
                     TrackSeededEvent(seededEntry);
@@ -117,7 +118,7 @@ public class EventSeeding(
         var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
             .Concat(state.State.ByEventSource.Values.SelectMany(e => e))
             .Distinct()
-            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.IsGlobal, e.TargetNamespace));
+            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.Tags?.Select(t => new Tag(t)).ToArray(), e.IsGlobal, e.TargetNamespace));
 
         return Task.FromResult(allEntries);
     }
