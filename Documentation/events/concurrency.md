@@ -232,7 +232,7 @@ public class SafeAccountService(IEventLog eventLog)
             concurrencyScope: concurrencyScope
         );
 
-        if (result.HasConcurrencyViolation)
+        if (!result.IsSuccess)
         {
             // Handle the violation - maybe retry or return false
             return false;

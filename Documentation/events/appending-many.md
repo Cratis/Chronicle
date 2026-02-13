@@ -6,9 +6,40 @@ Batch appends preserve ordering and reduce per-event overhead compared to append
 
 AppendMany is transactional all the way to storage. Either all events in the batch are committed, or none are. Chronicle assigns sequence numbers in order, persists the events and metadata atomically, and updates the sequence state once the batch succeeds.
 
-Use this approach when you already have a set of events that should be appended together.
+## How it works
 
-Related reading:
+- Each item in the batch pairs an event with the event source it belongs to.
+- The batch is validated as a unit and written atomically.
+- Sequence numbers are assigned in the order provided.
+- The event sequence state is updated once the batch commits.
 
-- [Appending an event to the event log](../recipes/appending-an-event-to-event-log.md)
+## When to use
+
+Use this approach when you already have a set of events that should be appended together. Each event can still target different event sources, and you can include concurrency scopes to validate the boundary across streams. See [Concurrency](concurrency.md) for details.
+
+## Example
+
+```csharp
+using Cratis.Chronicle.Events;
+
+[EventType]
+public record MoneyWithdrawn(decimal Amount);
+
+[EventType]
+public record MoneyDeposited(decimal Amount);
+
+public class TransferService(IEventLog eventLog)
+{
+    public Task Transfer(AccountId fromAccount, AccountId toAccount, decimal amount)
+    {
+        var events = new[]
+        {
+            new EventForEventSourceId(fromAccount, new MoneyWithdrawn(amount)),
+            new EventForEventSourceId(toAccount, new MoneyDeposited(amount))
+        };
+
+        return eventLog.AppendMany(events);
+    }
+}
+```
 
