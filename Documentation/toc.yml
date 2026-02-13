@@ -5,7 +5,7 @@
 - name: Concepts
   href: concepts/toc.yml
 - name: Dynamic Consistency Boundary
-  href: Dynamic Consistency Boundary/toc.yml
+  href: dynamic-consistency-boundary/toc.yml
 - name: Events
   href: events/toc.yml
 - name: Connection Strings
