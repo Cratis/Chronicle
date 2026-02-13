@@ -14,3 +14,68 @@ Related reading:
 
 - [Getting a Collection of Instances](../read-models/getting-collection-instances.md)
 
+## Examples
+
+### Capture the tail for a checkpoint
+
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+
+public class CheckpointStore(IEventLog eventLog)
+{
+    public async Task<EventSequenceNumber> CaptureTail()
+    {
+        // Persists the current tail so processing can resume later.
+        return await eventLog.GetTailSequenceNumber();
+    }
+}
+```
+
+### Capture the tail for a specific event source and event types
+
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+
+[EventType]
+public record InventoryAdjusted(string Sku, int Delta);
+
+[EventType]
+public record InventoryReserved(string Sku, int Quantity);
+
+public class InventoryCheckpoint(IEventLog eventLog)
+{
+    public async Task<EventSequenceNumber> CaptureFor(EventSourceId inventoryId)
+    {
+        // Scopes the tail to a specific stream of inventory events.
+        var eventTypes = new[]
+        {
+            typeof(InventoryAdjusted).GetEventType(),
+            typeof(InventoryReserved).GetEventType()
+        };
+
+        return await eventLog.GetTailSequenceNumber(
+            eventSourceId: inventoryId,
+            filterEventTypes: eventTypes
+        );
+    }
+}
+```
+
+### Check whether an observer is caught up
+
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
+
+public class ObserverProgress(IEventSequence eventSequence)
+{
+    public async Task<EventSequenceNumber> GetRelevantTail(Type observerType)
+    {
+        // Uses the observer's event type filters to compute the relevant tail.
+        return await eventSequence.GetTailSequenceNumberForObserver(observerType);
+    }
+}
+```
+
