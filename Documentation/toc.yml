@@ -8,6 +8,8 @@
   href: dynamic-consistency-boundary/toc.yml
 - name: Events
   href: events/toc.yml
+- name: Event Seeding
+  href: event-seeding/toc.yml
 - name: Connection Strings
   href: connection-strings/toc.yml
 - name: Namespaces
