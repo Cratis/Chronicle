@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayContexts;
 
@@ -21,7 +20,8 @@ public static class ReplayContextEntryConverter
     {
         return new ReplayContextEntry
         {
-            ReadModelIdentifier = context.Type.Value,
+            ReadModelIdentifier = context.Type.Identifier.Value,
+            Generation = context.Type.Generation,
             ReadModel = context.ContainerName.Value,
             RevertModel = context.RevertContainerName.Value,
             Started = context.Started
@@ -36,7 +36,9 @@ public static class ReplayContextEntryConverter
     public static ReplayContext ToReplayContext(ReplayContextEntry entry)
     {
         return new ReplayContext(
-            new ReadModelType(entry.ReadModelIdentifier),
+            new ReadModelType(
+                new ReadModelIdentifier(entry.ReadModelIdentifier),
+                new ReadModelGeneration(entry.Generation)),
             new ReadModelContainerName(entry.ReadModel),
             new ReadModelContainerName(entry.RevertModel),
             entry.Started);
