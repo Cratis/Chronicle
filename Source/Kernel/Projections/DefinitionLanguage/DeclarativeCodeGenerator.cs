@@ -116,7 +116,7 @@ public class DeclarativeCodeGenerator
             var result = new List<string> { $".UsingCompositeKey<{typeName}>(_ => _" };
             foreach (var mapping in propMappings)
             {
-                var keyValue = mapping.Split('=');
+                var keyValue = mapping.Split('=', 2);
                 var prop = keyValue[0];
                 var expr = keyValue[1];
                 result.Add($"    .Set(k => k.{prop}).To({ConvertExpression(expr)})");
@@ -146,7 +146,7 @@ public class DeclarativeCodeGenerator
             var result = new List<string> { $".UsingParentCompositeKey<{typeName}>(_ => _" };
             foreach (var mapping in propMappings)
             {
-                var keyValue = mapping.Split('=');
+                var keyValue = mapping.Split('=', 2);
                 var prop = keyValue[0];
                 var expr = keyValue[1];
                 result.Add($"    .Set(k => k.{prop}).To({ConvertExpression(expr)})");

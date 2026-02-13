@@ -108,25 +108,21 @@ public class ModelBoundCodeGenerator
         return recordDecl;
     }
 
-    List<AttributeListSyntax> CreateClassLevelAttributes(ProjectionDefinition definition)
-    {
-        var attributeLists = new List<AttributeListSyntax>();
+    List<AttributeListSyntax> CreateClassLevelAttributes(ProjectionDefinition definition) =>
+        definition.From
+            .Select(from =>
+            {
+                var eventTypeName = from.Key.Id.Value;
+                var attribute = Attribute(
+                    GenericName("FromEvent")
+                        .WithTypeArgumentList(
+                            TypeArgumentList(
+                                SingletonSeparatedList<TypeSyntax>(
+                                    IdentifierName(eventTypeName)))));
 
-        foreach (var from in definition.From)
-        {
-            var eventTypeName = from.Key.Id.Value;
-            var attribute = Attribute(
-                GenericName("FromEvent")
-                    .WithTypeArgumentList(
-                        TypeArgumentList(
-                            SingletonSeparatedList<TypeSyntax>(
-                                IdentifierName(eventTypeName)))));
-
-            attributeLists.Add(AttributeList(SingletonSeparatedList(attribute)));
-        }
-
-        return attributeLists;
-    }
+                return AttributeList(SingletonSeparatedList(attribute));
+            })
+            .ToList();
 
     List<ParameterSyntax> CreateRecordParameters(JsonSchema schema, ProjectionDefinition definition)
     {
