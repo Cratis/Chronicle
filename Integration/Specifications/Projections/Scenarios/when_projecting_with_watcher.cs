@@ -5,7 +5,7 @@ using Cratis.Chronicle.Integration.Specifications.Projections.Events;
 using Cratis.Chronicle.Integration.Specifications.Projections.ProjectionTypes;
 using Cratis.Chronicle.Integration.Specifications.Projections.ReadModels;
 using Cratis.Chronicle.ReadModels;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_watcher.context;
+using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_watcher.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios;
 

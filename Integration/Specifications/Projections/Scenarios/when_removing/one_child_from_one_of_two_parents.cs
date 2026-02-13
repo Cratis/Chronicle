@@ -5,7 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Specifications.Projections.Concepts;
 using Cratis.Chronicle.Integration.Specifications.Projections.Events;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_removing.one_child_from_one_of_two_parents.context;
+using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing.one_child_from_one_of_two_parents.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_removing;
 

@@ -7,7 +7,7 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.ReadModels;
 using Cratis.Chronicle.Observation;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children.and_parent_key_is_explicitly_provided.context;
+using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_children_within_children.and_parent_key_is_explicitly_provided.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children;
 
