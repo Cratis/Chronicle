@@ -1,19 +1,5 @@
-- name: Connection Strings
-  href: connection-strings.md
 - name: Namespaces
-  href: namespaces.md
-- name: Events
-  href: events/events.md
-- name: Concurrency
-  href: events/concurrency.md
-- name: Reactors
-  href: events/reactors.md
-- name: OnceOnly
-  href: events/once-only.md
-- name: Reducers
-  href: events/reducers.md
-- name: Projections
-  href: events/projections.md
+  href: ../../namespaces/dotnet-client.md
 - name: Constraints
   href: constraints.md
 - name: Code Analysis

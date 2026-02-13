@@ -283,6 +283,10 @@ public async Task RecalculateAllProjections()
         await ProcessOrderForAnalytics(order);
     }
 }
+
+### Time Travel and Point-in-Time Reads
+
+Rebuild a read model collection up to a known point in time by pairing the event count limit with a captured sequence position from the event sequence state. This is useful for audits, back-testing, and historical reporting. See [Getting state](../events/getting-state.md) for how to capture the sequence position.
 ```
 
 ### Data Validation
@@ -313,3 +317,4 @@ public async Task ValidateDataIntegrity()
 - [Watching Read Models](watching-read-models.md) - Real-time notifications for read model changes
 - [Projections](../projections/index.md) - Learn more about defining projections
 - [Reducers](../recipes/reducers.md) - Learn more about defining reducers
+- [Events - Getting state](../events/getting-state.md) - Capture sequence position for point-in-time reads

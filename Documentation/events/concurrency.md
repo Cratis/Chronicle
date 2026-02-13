@@ -4,7 +4,7 @@ Concurrency control in Chronicle ensures that multiple operations don't interfer
 
 ## Understanding ConcurrencyScope
 
-A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses the [event metadata tags](../../../concepts/event-metadata-tags.md) to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected.
+A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses the [event metadata tags](../concepts/event-metadata-tags.md) to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected.
 
 ### Event Metadata Tags for Concurrency
 

@@ -4,6 +4,12 @@
   href: get-started/toc.yml
 - name: Concepts
   href: concepts/toc.yml
+- name: Events
+  href: events/toc.yml
+- name: Connection Strings
+  href: connection-strings/toc.yml
+- name: Namespaces
+  href: namespaces/toc.yml
 - name: Clients
   href: clients/toc.yml
 - name: Recipes
