@@ -5,7 +5,7 @@ import { IDetailsComponentProps } from 'Components/DataPage/DataPage';
 import { SeedEntry } from 'Api/Seeding/SeedEntry';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { ObjectContent } from 'Components/ObjectContent';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 

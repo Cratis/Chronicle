@@ -8,16 +8,23 @@ import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { ObjectNavigationalBar } from 'Components';
 import { JsonSchema, JsonSchemaProperty } from 'Components/JsonSchema';
+import { InputText } from 'primereact/inputtext';
+import { InputNumber } from 'primereact/inputnumber';
+import { Checkbox } from 'primereact/checkbox';
+import { Calendar } from 'primereact/calendar';
+import { InputTextarea } from 'primereact/inputtextarea';
 
-
-export interface ObjectContentViewerProps {
+export interface ObjectContentProps {
     object: Json;
     timestamp?: Date;
     schema: JsonSchema;
+    editMode?: boolean;
+    onChange?: (object: Json) => void;
 }
 
-export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContentViewerProps) => {
+export const ObjectContent = ({ object, timestamp, schema, editMode = false, onChange }: ObjectContentProps) => {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
         let current: Json = data;
@@ -111,6 +118,171 @@ export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContent
         cursor: 'help',
     };
 
+    const updateValue = useCallback((propertyName: string, newValue: Json) => {
+        if (!onChange) return;
+
+        const updatedObject = { ...(object as Record<string, Json>) };
+        updatedObject[propertyName] = newValue;
+        onChange(updatedObject);
+    }, [object, onChange]);
+
+    const validateValue = useCallback((propertyName: string, value: Json, property: JsonSchemaProperty): string | undefined => {
+        const isRequired = schema.required?.includes(propertyName);
+        
+        if (isRequired && (value === null || value === undefined || value === '')) {
+            return 'This field is required';
+        }
+
+        if (property.type === 'string' && typeof value === 'string') {
+            if (property.format === 'email' && value && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                return 'Invalid email format';
+            }
+            if (property.format === 'uri' && value && !value.match(/^https?:\/\/.+/)) {
+                return 'Invalid URI format';
+            }
+        }
+
+        if (property.type === 'number' || property.type === 'integer') {
+            if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
+                return 'Must be a valid number';
+            }
+        }
+
+        return undefined;
+    }, [schema]);
+
+    const renderEditField = (propertyName: string, property: JsonSchemaProperty, value: Json) => {
+        const error = validationErrors[propertyName];
+        const isRequired = schema.required?.includes(propertyName);
+
+        const handleChange = (newValue: Json) => {
+            updateValue(propertyName, newValue);
+            const validationError = validateValue(propertyName, newValue, property);
+            setValidationErrors(prev => {
+                const newErrors = { ...prev };
+                if (validationError) {
+                    newErrors[propertyName] = validationError;
+                } else {
+                    delete newErrors[propertyName];
+                }
+                return newErrors;
+            });
+        };
+
+        const inputStyle = {
+            width: '100%',
+            ...(error ? { borderColor: 'var(--red-500)' } : {})
+        };
+
+        if (property.type === 'boolean') {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Checkbox
+                        checked={Boolean(value)}
+                        onChange={(e) => handleChange(e.checked)}
+                    />
+                    {error && <small className="p-error">{error}</small>}
+                </div>
+            );
+        }
+
+        if (property.type === 'number' || property.type === 'integer') {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <InputNumber
+                        value={value as number ?? null}
+                        onValueChange={(e) => handleChange(e.value)}
+                        mode="decimal"
+                        useGrouping={false}
+                        style={inputStyle}
+                    />
+                    {error && <small className="p-error">{error}</small>}
+                </div>
+            );
+        }
+
+        if (property.type === 'string' && property.format === 'date-time') {
+            const dateValue = value ? new Date(value as string) : null;
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Calendar
+                        value={dateValue}
+                        onChange={(e) => handleChange(e.value instanceof Date ? e.value.toISOString() : null)}
+                        showTime
+                        showIcon
+                        style={inputStyle}
+                    />
+                    {error && <small className="p-error">{error}</small>}
+                </div>
+            );
+        }
+
+        if (property.type === 'string' && property.format === 'date') {
+            const dateValue = value ? new Date(value as string) : null;
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Calendar
+                        value={dateValue}
+                        onChange={(e) => handleChange(e.value instanceof Date ? e.value.toISOString().split('T')[0] : null)}
+                        showIcon
+                        style={inputStyle}
+                    />
+                    {error && <small className="p-error">{error}</small>}
+                </div>
+            );
+        }
+
+        if (property.type === 'array') {
+            return (
+                <div
+                    className="flex align-items-center gap-2"
+                    style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}
+                >
+                    <span>Array editing not yet supported</span>
+                </div>
+            );
+        }
+
+        if (property.type === 'object') {
+            return (
+                <div
+                    className="flex align-items-center gap-2"
+                    style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}
+                >
+                    <span>Object editing not yet supported</span>
+                </div>
+            );
+        }
+
+        // Default to text input (for strings and unknown types)
+        const isLongText = (value as string)?.length > 50;
+        
+        if (isLongText) {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <InputTextarea
+                        value={String(value ?? '')}
+                        onChange={(e) => handleChange(e.target.value)}
+                        rows={3}
+                        style={inputStyle}
+                    />
+                    {error && <small className="p-error">{error}</small>}
+                </div>
+            );
+        }
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <InputText
+                    value={String(value ?? '')}
+                    onChange={(e) => handleChange(e.target.value)}
+                    style={inputStyle}
+                />
+                {error && <small className="p-error">{error}</small>}
+            </div>
+        );
+    };
+
     const renderValue = (value: Json, propertyName: string) => {
         if (value === null || value === undefined) return '';
 
@@ -199,9 +371,10 @@ export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContent
                         const value = (currentData as Record<string, Json>)[propertyName];
 
                         const isSchemaProperty = navigationPath.length === 0;
-                        const description = isSchemaProperty && typeof propertyDef === 'object' && propertyDef !== null && 'description' in propertyDef
-                            ? (propertyDef as JsonSchemaProperty).description
-                            : undefined;
+                        const property = isSchemaProperty && typeof propertyDef === 'object' && propertyDef !== null && 'type' in propertyDef
+                            ? (propertyDef as JsonSchemaProperty)
+                            : null;
+                        const description = property?.description;
 
                         return (
                             <tr key={propertyName} style={rowStyle}>
@@ -214,7 +387,12 @@ export const ObjectContentViewer = ({ object, timestamp, schema }: ObjectContent
                                             data-pr-tooltip={description} />
                                     )}
                                 </td>
-                                <td style={valueStyle}>{renderValue(value as Json, propertyName)}</td>
+                                <td style={valueStyle}>
+                                    {editMode && property ? 
+                                        renderEditField(propertyName, property, value) : 
+                                        renderValue(value as Json, propertyName)
+                                    }
+                                </td>
                             </tr>
                         );
                     })}

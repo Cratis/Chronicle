@@ -6,7 +6,7 @@ import { AppendedEvent } from 'Api/Events';
 import { IDetailsComponentProps } from 'Components';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { ObjectContent } from 'Components/ObjectContent';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 
@@ -82,7 +82,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
             <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <TabPanel header="Context">
                     <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContentViewer
+                        <ObjectContent
                             object={contextObject}
                             schema={contextSchema}
                             timestamp={item.context.occurred}
@@ -91,7 +91,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                 </TabPanel>
                 <TabPanel header="Content">
                     <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContentViewer
+                        <ObjectContent
                             object={content}
                             schema={schema}
                             timestamp={item.context.occurred}
