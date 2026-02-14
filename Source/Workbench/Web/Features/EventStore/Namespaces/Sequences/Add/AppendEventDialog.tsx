@@ -26,6 +26,7 @@ export const AppendEventDialog = () => {
 
     const [selectedEventType, setSelectedEventType] = useState<EventTypeRegistration | null>(null);
     const [eventSourceId, setEventSourceId] = useState('');
+    const [eventSourceType, setEventSourceType] = useState('Default');
     const [eventStreamType, setEventStreamType] = useState('All');
     const [eventStreamId, setEventStreamId] = useState('Default');
     const [eventContent, setEventContent] = useState<Json>({});
@@ -90,6 +91,7 @@ export const AppendEventDialog = () => {
         appendEvent.namespace = params.namespace!;
         appendEvent.eventSequenceId = 'event-log';
         appendEvent.eventSourceId = eventSourceId;
+        appendEvent.eventSourceType = eventSourceType;
         appendEvent.eventStreamType = eventStreamType;
         appendEvent.eventStreamId = eventStreamId;
         appendEvent.eventType = selectedEventType.type;
@@ -140,6 +142,16 @@ export const AppendEventDialog = () => {
                             tooltipOptions={{ position: 'top' }}
                         />
                     </div>
+                </div>
+
+                <div className="field mb-3">
+                    <label htmlFor="eventSourceType">Event Source Type</label>
+                    <InputText
+                        id="eventSourceType"
+                        value={eventSourceType}
+                        onChange={(e) => setEventSourceType(e.target.value)}
+                        className="w-full"
+                    />
                 </div>
 
                 <div className="field mb-3">

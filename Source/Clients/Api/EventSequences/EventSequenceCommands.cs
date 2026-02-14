@@ -38,16 +38,23 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
             EventSequenceId = eventSequenceId,
             CorrelationId = Guid.NewGuid(),
             EventSourceId = eventToAppend.EventSourceId,
-
-            // AppendEvent model doesn't include EventSourceType, so we use EventStreamType as a default
-            EventSourceType = eventToAppend.EventStreamType,
+            EventSourceType = eventToAppend.EventSourceType,
             EventStreamType = eventToAppend.EventStreamType,
             EventStreamId = eventToAppend.EventStreamId,
             EventType = eventToAppend.EventType.ToContract(),
             Content = JsonSerializer.Serialize(eventToAppend.Content),
             Causation = eventToAppend.Causation?.Select(c => c.ToContract()).ToList() ?? [],
             CausedBy = eventToAppend.CausedBy?.ToContract() ?? new Contracts.Identities.Identity(),
-            Tags = []
+            Tags = [],
+            ConcurrencyScope = new Contracts.EventSequences.Concurrency.ConcurrencyScope
+            {
+                SequenceNumber = ulong.MaxValue,
+                EventSourceId = false,
+                EventStreamType = null,
+                EventStreamId = null,
+                EventSourceType = null,
+                EventTypes = null
+            }
         };
 
         var response = await eventSequences.Append(request);

@@ -44,6 +44,11 @@ export interface IAppend {
     eventSourceId?: string;
 
     /**
+     * The event source type.
+     */
+    eventSourceType?: string;
+
+    /**
      * The event store to append for.
      */
     eventStore?: string;
@@ -87,6 +92,7 @@ export class Append extends Command<IAppend> implements IAppend {
         new PropertyDescriptor('content', Object, false),
         new PropertyDescriptor('eventSequenceId', String, false),
         new PropertyDescriptor('eventSourceId', String, false),
+        new PropertyDescriptor('eventSourceType', String, false),
         new PropertyDescriptor('eventStore', String, false),
         new PropertyDescriptor('eventStreamId', String, false),
         new PropertyDescriptor('eventStreamType', String, false),
@@ -99,6 +105,7 @@ export class Append extends Command<IAppend> implements IAppend {
     private _content!: Record<string, unknown>;
     private _eventSequenceId!: string;
     private _eventSourceId!: string;
+    private _eventSourceType!: string;
     private _eventStore!: string;
     private _eventStreamId!: string;
     private _eventStreamType!: string;
@@ -171,6 +178,17 @@ export class Append extends Command<IAppend> implements IAppend {
     set eventSourceId(value: string) {
         this._eventSourceId = value;
         this.propertyChanged('eventSourceId');
+    }
+    /**
+     * The event source type.
+     */
+    get eventSourceType(): string {
+        return this._eventSourceType;
+    }
+
+    set eventSourceType(value: string) {
+        this._eventSourceType = value;
+        this.propertyChanged('eventSourceType');
     }
     /**
      * The event store to append for.
