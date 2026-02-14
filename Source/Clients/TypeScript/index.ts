@@ -23,3 +23,4 @@ export * from './generated/protobuf-net/bcl';
 export * from './ChronicleConnection';
 export * from './ChronicleConnectionString';
 export * from './ChronicleServices';
+export * from './TokenProvider';

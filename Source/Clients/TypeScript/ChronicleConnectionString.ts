@@ -454,40 +454,6 @@ export class ChronicleConnectionString {
     }
 
     /**
-     * Creates gRPC call credentials for authentication
-     * @returns gRPC call credentials or undefined if no authentication is configured
-     */
-    createCallCredentials(): grpc.CallCredentials | undefined {
-        try {
-            const mode = this.authenticationMode;
-
-            if (mode === AuthenticationMode.ClientCredentials && this.username && this.password) {
-                // For client credentials, we add the credentials as metadata
-                return grpc.credentials.createFromMetadataGenerator((params, callback) => {
-                    const metadata = new grpc.Metadata();
-                    metadata.add('client-id', this.username!);
-                    metadata.add('client-secret', this.password!);
-                    callback(null, metadata);
-                });
-            }
-
-            if (mode === AuthenticationMode.ApiKey && this.apiKey) {
-                // For API key, we add it as a bearer token or api key header
-                return grpc.credentials.createFromMetadataGenerator((params, callback) => {
-                    const metadata = new grpc.Metadata();
-                    metadata.add('api-key', this.apiKey!);
-                    callback(null, metadata);
-                });
-            }
-        } catch {
-            // No authentication configured
-            return undefined;
-        }
-
-        return undefined;
-    }
-
-    /**
      * Returns the connection string representation
      */
     toString(): string {

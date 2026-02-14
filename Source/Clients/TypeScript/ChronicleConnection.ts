@@ -20,7 +20,8 @@ import { EventSeedingClient } from './generated/seeding';
 import { ServerClient } from './generated/host';
 import { ConnectionServiceClient } from './generated/clients';
 import type { ChronicleServices } from './ChronicleServices';
-import { ChronicleConnectionString } from './ChronicleConnectionString';
+import { ChronicleConnectionString, AuthenticationMode } from './ChronicleConnectionString';
+import { ITokenProvider, OAuthTokenProvider, NoOpTokenProvider } from './TokenProvider';
 
 /**
  * Configuration options for Chronicle connection
@@ -33,9 +34,8 @@ export interface ChronicleConnectionOptions {
     connectionString?: string | ChronicleConnectionString;
 
     /**
-     * The host and port of the Chronicle server (e.g., 'localhost:5000')
+     * The host and port of the Chronicle server (e.g., 'localhost:35000')
      * This is used if connectionString is not provided
-     * @deprecated Use connectionString instead
      */
     serverAddress?: string;
 
@@ -63,6 +63,16 @@ export interface ChronicleConnectionOptions {
      * Optional correlation ID for tracking requests
      */
     correlationId?: string;
+
+    /**
+     * Optional authentication authority URL. If not set, uses the Chronicle server itself as the authority
+     */
+    authority?: string;
+
+    /**
+     * Optional management port for authentication endpoint (defaults to 8080)
+     */
+    managementPort?: number;
 }
 
 /**
@@ -72,6 +82,7 @@ export class ChronicleConnection implements ChronicleServices {
     private readonly channel: grpc.Channel;
     private readonly services: ChronicleServices;
     private readonly _connectionString: ChronicleConnectionString;
+    private readonly tokenProvider: ITokenProvider;
     private _isConnected = false;
 
     /**
@@ -220,11 +231,16 @@ export class ChronicleConnection implements ChronicleServices {
         // Create server address string
         const serverAddress = `${this._connectionString.serverAddress.host}:${this._connectionString.serverAddress.port}`;
 
+        // Create token provider for authentication
+        this.tokenProvider = this.createTokenProvider(options);
+
         // Create credentials
         let channelCredentials = options.credentials;
         if (!channelCredentials) {
             channelCredentials = this._connectionString.createCredentials();
-            const callCredentials = this._connectionString.createCallCredentials();
+            
+            // Add call credentials with token provider
+            const callCredentials = this.createAuthCallCredentials();
             if (callCredentials) {
                 channelCredentials = grpc.credentials.combineChannelCredentials(
                     channelCredentials,
@@ -266,6 +282,81 @@ export class ChronicleConnection implements ChronicleServices {
             eventSeeding: new EventSeedingClient(serverAddress, channelCredentials),
             server: new ServerClient(serverAddress, channelCredentials),
         };
+    }
+
+    /**
+     * Creates a token provider based on connection configuration
+     */
+    private createTokenProvider(options: ChronicleConnectionOptions): ITokenProvider {
+        try {
+            const authMode = this._connectionString.authenticationMode;
+
+            if (authMode === AuthenticationMode.ClientCredentials) {
+                const username = this._connectionString.username;
+                const password = this._connectionString.password;
+
+                if (!username || !password) {
+                    return new NoOpTokenProvider();
+                }
+
+                // Determine the authority URL
+                const managementPort = options.managementPort || 8080;
+                let authorityHost: string;
+                let authorityPort: number;
+
+                if (options.authority) {
+                    // Parse custom authority URL
+                    const authorityUrl = new URL(options.authority);
+                    authorityHost = authorityUrl.hostname;
+                    authorityPort = authorityUrl.port ? parseInt(authorityUrl.port, 10) : managementPort;
+                } else {
+                    // Use Chronicle server as authority
+                    authorityHost = this._connectionString.serverAddress.host;
+                    authorityPort = managementPort;
+                }
+
+                const scheme = this._connectionString.disableTls ? 'http' : 'https';
+                const tokenEndpoint = `${scheme}://${authorityHost}:${authorityPort}/connect/token`;
+
+                return new OAuthTokenProvider(tokenEndpoint, username, password);
+            }
+
+            // For API key or other modes, no token provider needed (handled by connection string)
+            return new NoOpTokenProvider();
+        } catch {
+            // If authentication mode check fails (no auth configured), use no-op provider
+            return new NoOpTokenProvider();
+        }
+    }
+
+    /**
+     * Creates call credentials with bearer token from token provider
+     */
+    private createAuthCallCredentials(): grpc.CallCredentials | undefined {
+        return grpc.credentials.createFromMetadataGenerator(async (params, callback) => {
+            try {
+                const token = await this.tokenProvider.getAccessToken();
+                const metadata = new grpc.Metadata();
+
+                if (token) {
+                    metadata.add('authorization', `Bearer ${token}`);
+                } else {
+                    // Check for API key authentication
+                    try {
+                        const authMode = this._connectionString.authenticationMode;
+                        if (authMode === AuthenticationMode.ApiKey && this._connectionString.apiKey) {
+                            metadata.add('api-key', this._connectionString.apiKey);
+                        }
+                    } catch {
+                        // No API key configured
+                    }
+                }
+
+                callback(null, metadata);
+            } catch (error) {
+                callback(error as Error, new grpc.Metadata());
+            }
+        });
     }
 
     /**

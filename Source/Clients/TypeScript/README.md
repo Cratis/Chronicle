@@ -102,15 +102,26 @@ console.log(withCreds.toString()); // chronicle://myuser:mypassword@localhost:35
 
 ### Authentication
 
-Chronicle supports two authentication modes:
+Chronicle supports two authentication modes. When using Client Credentials, the TypeScript client automatically obtains a bearer token from the authentication authority using OAuth 2.0 client_credentials flow.
 
 #### Client Credentials (OAuth2 client_credentials flow)
+
+The client automatically obtains and refreshes bearer tokens from the Chronicle server (or a custom authority):
 
 ```typescript
 const connection = new ChronicleConnection({
     connectionString: 'chronicle://client-id:client-secret@localhost:35000'
 });
+
+// With custom authority
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://client-id:client-secret@localhost:35000',
+    authority: 'https://my-auth-server.com',
+    managementPort: 8080 // Optional, defaults to 8080
+});
 ```
+
+The token is automatically included as a Bearer token in the authorization header for all gRPC calls.
 
 #### API Key
 
@@ -154,17 +165,24 @@ const connection = new ChronicleConnection({
     maxSendMessageSize: 1024 * 1024 * 10, // 10MB
     
     // Optional: for request tracking
-    correlationId: 'my-correlation-id'
+    correlationId: 'my-correlation-id',
+    
+    // Optional: Custom authentication authority URL
+    // If not set, uses Chronicle server as the authority
+    authority: 'https://my-auth-server.com',
+    
+    // Optional: Management port for authentication endpoint (defaults to 8080)
+    managementPort: 8080
 });
 ```
 
-### Legacy Server Address (Deprecated)
+### Legacy Server Address
 
 For backward compatibility, you can still use `serverAddress`:
 
 ```typescript
 const connection = new ChronicleConnection({
-    serverAddress: 'localhost:35000' // Deprecated: use connectionString instead
+    serverAddress: 'localhost:35000'
 });
 ```
 
