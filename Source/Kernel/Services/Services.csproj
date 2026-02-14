@@ -11,16 +11,14 @@
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Setup" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
-        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\Infrastructure\Infrastructure.csproj" />
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
-        <ProjectReference Include="..\Grains.Interfaces\Grains.Interfaces.csproj" />
-        <ProjectReference Include="..\Grains\Grains.csproj" />
+        <ProjectReference Include="..\Core\Core.csproj" />
         <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
-        <ProjectReference Include="..\Projections\Projections.csproj" />
 
         <ProjectReference Include="..\Storage\Storage.csproj" />
 
