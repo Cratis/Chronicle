@@ -30,6 +30,7 @@ import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
+import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
 // import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
@@ -45,6 +46,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.failedPartitions, url: ':namespace/failed-partitions', icon: mdIcons.MdErrorOutline },
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
+                { label: strings.mainMenu.general.seedData, url: ':namespace/seed-data', icon: mdIcons.MdGrain },
             ]
         },
         {
@@ -107,6 +109,7 @@ export const EventStore = () => {
                     <Route path={'read-models/*'} element={<ReadModels />} />
                     <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />
+                    <Route path={'seed-data'} element={<NamespacedEventsSeeding />} />
                 </Route>
             </Route>
         </Routes>

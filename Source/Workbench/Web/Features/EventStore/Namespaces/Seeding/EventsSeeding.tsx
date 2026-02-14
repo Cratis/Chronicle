@@ -5,7 +5,7 @@ import { EventsSeeding as EventsSeedingComponent } from '../../EventsSeeding';
 import { useParams } from 'react-router-dom';
 
 export const EventsSeeding = () => {
-    const { eventStore } = useParams();
+    const { eventStore, namespace } = useParams();
 
-    return <EventsSeedingComponent eventStore={eventStore!} />;
+    return <EventsSeedingComponent eventStore={eventStore!} namespace={namespace} />;
 };
