@@ -34,7 +34,21 @@ public class EventConverter(
     public async Task<AppendedEvent> ToAppendedEvent(Event @event)
     {
         var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
-        var content = (JsonNode.Parse(@event.Content[EventTypeGeneration.First.ToString()].ToString()) as JsonObject)!;
+        var generationKey = EventTypeGeneration.First.ToString();
+
+        JsonObject content;
+        if (@event.Compensations.Any())
+        {
+            var latestCompensation = @event.Compensations.Last();
+            generationKey = latestCompensation.EventTypeGeneration.ToString();
+            eventType = new EventType(@event.Type, latestCompensation.EventTypeGeneration, false);
+            content = (JsonNode.Parse(latestCompensation.Content[generationKey].ToString()) as JsonObject)!;
+        }
+        else
+        {
+            content = (JsonNode.Parse(@event.Content[generationKey].ToString()) as JsonObject)!;
+        }
+
         var eventSchema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var releasedContent = await jsonComplianceManager.Release(
             eventStoreName,

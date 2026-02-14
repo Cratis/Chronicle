@@ -113,6 +113,19 @@ internal sealed class EventSequences(
     }
 
     /// <inheritdoc/>
+    public async Task Compensate(CompensateRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        await eventSequence.Compensate(
+            request.SequenceNumber,
+            request.EventType.ToChronicle(),
+            JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
+            request.CorrelationId,
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+    }
+
+    /// <inheritdoc/>
     public async Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(
         GetFromEventSequenceNumberRequest request,
         CallContext context = default)

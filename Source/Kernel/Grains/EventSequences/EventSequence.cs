@@ -351,7 +351,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task Compensate(
+    public async Task Compensate(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         JsonObject content,
@@ -366,7 +366,25 @@ public class EventSequence(
             _eventSequenceId,
             sequenceNumber);
 
-        return Task.CompletedTask;
+        var @event = await EventSequenceStorage.GetEventAt(sequenceNumber);
+        if (@event.Context.EventType.Id != eventType.Id)
+        {
+            throw new InvalidCompensationEventType(sequenceNumber, @event.Context.EventType.Id, eventType.Id);
+        }
+
+        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+
+        await EventSequenceStorage.Compensate(
+            sequenceNumber,
+            eventType,
+            correlationId,
+            causation,
+            await IdentityStorage.GetFor(causedBy),
+            DateTimeOffset.UtcNow,
+            contentAsExpandoObject);
+
+        await RewindPartitionForAffectedObservers(@event.Context.EventSourceId, [@event.Context.EventType]);
     }
 
     /// <inheritdoc/>
