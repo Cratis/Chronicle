@@ -28,10 +28,17 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     const validateValue = useCallback((propertyName: string, value: Json, property: JsonSchemaProperty): string | undefined => {
-        const isRequired = schema.required?.includes(propertyName);
-
-        if (isRequired && (value === null || value === undefined || value === '')) {
-            return 'This field is required';
+        // In edit mode, all fields must have a value
+        if (editMode) {
+            if (value === null || value === undefined || value === '') {
+                return 'This field is required';
+            }
+        } else {
+            // In view mode, only check schema-defined required fields
+            const isRequired = schema.required?.includes(propertyName);
+            if (isRequired && (value === null || value === undefined || value === '')) {
+                return 'This field is required';
+            }
         }
 
         if (property.type === 'string' && typeof value === 'string') {
@@ -50,7 +57,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
         }
 
         return undefined;
-    }, [schema]);
+    }, [schema, editMode]);
 
     // Validate all properties whenever object or schema changes in edit mode
     useEffect(() => {
@@ -215,8 +222,8 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <InputNumber
-                        value={value as number ?? null}
-                        onValueChange={(e) => handleChange(e.value ?? 0)}
+                        value={(value === null || value === undefined) ? null : Number(value)}
+                        onValueChange={(e) => handleChange(e.value ?? null)}
                         mode="decimal"
                         useGrouping={false}
                         style={inputStyle}

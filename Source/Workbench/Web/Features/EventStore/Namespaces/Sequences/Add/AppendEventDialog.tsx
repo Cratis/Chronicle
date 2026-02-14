@@ -45,9 +45,9 @@ export const AppendEventDialog = () => {
                 if (parsedSchema.properties) {
                     Object.entries(parsedSchema.properties).forEach(([key, prop]) => {
                         if (prop.type === 'string') {
-                            initialContent[key] = '';
+                            initialContent[key] = null;
                         } else if (prop.type === 'number' || prop.type === 'integer') {
-                            initialContent[key] = 0;
+                            initialContent[key] = null;
                         } else if (prop.type === 'boolean') {
                             initialContent[key] = false;
                         } else if (prop.type === 'array') {
