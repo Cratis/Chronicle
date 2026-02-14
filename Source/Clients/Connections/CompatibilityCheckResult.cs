@@ -6,6 +6,11 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Represents the result of a compatibility check.
 /// </summary>
-/// <param name="IsCompatible">Whether the client is compatible with the server.</param>
 /// <param name="Errors">List of incompatibility errors, if any.</param>
-public record CompatibilityCheckResult(bool IsCompatible, IEnumerable<string> Errors);
+public record CompatibilityCheckResult(IEnumerable<string> Errors)
+{
+    /// <summary>
+    /// Gets a value indicating whether the client is compatible with the server.
+    /// </summary>
+    public bool IsCompatible => !Errors.Any();
+}

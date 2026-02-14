@@ -177,12 +177,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             {
                 var errorMessage = string.Join("; ", compatibilityResult.Errors);
                 _logger.IncompatibleWithServer(errorMessage);
-                throw new InvalidOperationException($"Client is incompatible with server: {errorMessage}");
+                throw new IncompatibleServerException($"Client is incompatible with server: {errorMessage}");
             }
 
             _logger.CompatibilityCheckPassed();
         }
-        catch (InvalidOperationException)
+        catch (IncompatibleServerException)
         {
             throw;
         }

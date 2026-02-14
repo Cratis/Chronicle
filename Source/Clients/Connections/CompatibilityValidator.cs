@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc.Reflection;
 using ProtoBuf.Meta;
@@ -10,8 +11,14 @@ namespace Cratis.Chronicle.Connections;
 /// <summary>
 /// Validates compatibility between client and server gRPC contracts.
 /// </summary>
-internal static class CompatibilityValidator
+internal static partial class CompatibilityValidator
 {
+    [GeneratedRegex(@"^\s*service\s+(\w+)\s*\{?", RegexOptions.ExplicitCapture)]
+    private static partial Regex ServicePattern();
+
+    [GeneratedRegex(@"^\s*rpc\s+(\w+)\s*\(", RegexOptions.ExplicitCapture)]
+    private static partial Regex RpcPattern();
+
     /// <summary>
     /// Validates that the client's schema is compatible with the server's schema.
     /// </summary>
@@ -63,7 +70,7 @@ internal static class CompatibilityValidator
             errors.Add($"Failed to parse schemas: {ex.Message}");
         }
 
-        return new CompatibilityCheckResult(errors.Count == 0, errors);
+        return new CompatibilityCheckResult(errors);
     }
 
     /// <summary>
@@ -87,12 +94,16 @@ internal static class CompatibilityValidator
         string? currentService = null;
         var currentServiceMethods = new Dictionary<string, string>();
 
+        var servicePattern = ServicePattern();
+        var rpcPattern = RpcPattern();
+
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
 
-            // Detect service definition
-            if (trimmedLine.StartsWith("service ", StringComparison.Ordinal))
+            // Detect service definition using regex
+            var serviceMatch = servicePattern.Match(trimmedLine);
+            if (serviceMatch.Success)
             {
                 // Save previous service if any
                 if (currentService is not null)
@@ -100,30 +111,21 @@ internal static class CompatibilityValidator
                     services[currentService] = currentServiceMethods;
                 }
 
-                // Extract service name
-                var parts = trimmedLine.Split([' ', '{'], StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length >= 2)
-                {
-                    currentService = parts[1];
-                    currentServiceMethods = [];
-                }
+                currentService = serviceMatch.Groups[1].Value;
+                currentServiceMethods = [];
+                continue;
             }
 
-            // Detect RPC method definition
-            else if (trimmedLine.StartsWith("rpc ", StringComparison.Ordinal) && currentService is not null)
+            // Detect RPC method definition using regex
+            if (currentService is not null)
             {
-                // Keep the entire method signature for comparison
-                // This includes stream keywords and complete type information
-                var methodSignature = trimmedLine.TrimEnd(';', ' ');
-
-                // Extract method name from: rpc MethodName(...) or rpc MethodName (...)
-                var methodNameStart = 4; // After "rpc "
-                var openParenIndex = methodSignature.IndexOf('(', methodNameStart);
-
-                if (openParenIndex > methodNameStart)
+                var rpcMatch = rpcPattern.Match(trimmedLine);
+                if (rpcMatch.Success)
                 {
-                    var methodName = methodSignature.Substring(methodNameStart, openParenIndex - methodNameStart).Trim();
-                    currentServiceMethods[methodName] = methodSignature;
+                    var methodName = rpcMatch.Groups[1].Value;
+
+                    // Store the full normalized signature (trimmed and semicolon removed)
+                    currentServiceMethods[methodName] = trimmedLine.TrimEnd(';', ' ');
                 }
             }
         }
