@@ -13,7 +13,7 @@
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.6.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.5.1" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.6.0" />
     <PackageVersion Include="Cratis.Arc" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.2.0" />
@@ -95,7 +95,7 @@
     <PackageVersion Include="Grpc.Net.Client" Version="2.76.0" />
     <PackageVersion Include="mongodb.driver" Version="3.6.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.2" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="handlebars.net" Version="2.1.6" />
