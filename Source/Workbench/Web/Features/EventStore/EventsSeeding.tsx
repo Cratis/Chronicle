@@ -60,63 +60,85 @@ export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentP
                     <Allotment.Pane className="flex-grow">
                         <TabView style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <TabPanel header="Per Event Source">
-                                <DataTable
-                                    value={dataWithKeys}
-                                    rowGroupMode="subheader"
-                                    groupRowsBy="eventSourceId"
-                                    sortMode="single"
-                                    sortField="eventSourceId"
-                                    sortOrder={1}
-                                    expandableRowGroups
-                                    expandedRows={expandedRowsBySource}
-                                    onRowToggle={(e) => setExpandedRowsBySource(e.data)}
-                                    rowGroupHeaderTemplate={rowGroupHeaderTemplateBySource}
-                                    selectionMode="single"
-                                    selection={selectedItem}
-                                    onSelectionChange={onSelectionChange}
-                                    dataKey="_uniqueKey"
-                                    emptyMessage="No seed data found"
-                                    scrollable
-                                    scrollHeight="flex"
-                                    style={{ height: '100%' }}>
-                                    <Column field="eventTypeId" header="Event Type" sortable />
-                                    <Column field="content" header="Content Preview" body={(rowData: SeedEntry) => {
-                                        const content = typeof rowData.content === 'string'
-                                            ? rowData.content
-                                            : JSON.stringify(rowData.content);
-                                        return content.length > 50 ? content.substring(0, 50) + '...' : content;
-                                    }} />
-                                </DataTable>
+                                <div style={{ padding: '1rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        height: '100%',
+                                        border: '1px solid var(--surface-border)',
+                                        borderRadius: 'var(--border-radius)',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <DataTable
+                                            value={dataWithKeys}
+                                            rowGroupMode="subheader"
+                                            groupRowsBy="eventSourceId"
+                                            sortMode="single"
+                                            sortField="eventSourceId"
+                                            sortOrder={1}
+                                            expandableRowGroups
+                                            expandedRows={expandedRowsBySource}
+                                            onRowToggle={(e) => setExpandedRowsBySource(e.data)}
+                                            rowGroupHeaderTemplate={rowGroupHeaderTemplateBySource}
+                                            selectionMode="single"
+                                            selection={selectedItem}
+                                            onSelectionChange={onSelectionChange}
+                                            dataKey="_uniqueKey"
+                                            emptyMessage="No seed data found"
+                                            scrollable
+                                            scrollHeight="flex"
+                                            style={{ height: '100%' }}>
+                                            <Column field="eventTypeId" header="Event Type" sortable />
+                                            <Column field="content" header="Content Preview" body={(rowData: SeedEntry) => {
+                                                const content = typeof rowData.content === 'string'
+                                                    ? rowData.content
+                                                    : JSON.stringify(rowData.content);
+                                                return content.length > 50 ? content.substring(0, 50) + '...' : content;
+                                            }} />
+                                        </DataTable>
+                                    </div>
+                                </div>
                             </TabPanel>
                             <TabPanel header="Per Event Type">
-                                <DataTable
-                                    value={dataWithKeys}
-                                    rowGroupMode="subheader"
-                                    groupRowsBy="eventTypeId"
-                                    sortMode="single"
-                                    sortField="eventTypeId"
-                                    sortOrder={1}
-                                    expandableRowGroups
-                                    expandedRows={expandedRowsByType}
-                                    onRowToggle={(e) => setExpandedRowsByType(e.data)}
-                                    rowGroupHeaderTemplate={rowGroupHeaderTemplateByType}
-                                    selectionMode="single"
-                                    selection={selectedItem}
-                                    onSelectionChange={onSelectionChange}
-                                    dataKey="_uniqueKey"
-                                    emptyMessage="No seed data found"
-                                    scrollable
-                                    scrollHeight="flex"
-                                    style={{ height: '100%' }}>
-                                    <Column field="eventTypeId" header="Event Type" sortable />
-                                    <Column field="eventSourceId" header="Event Source" sortable />
-                                    <Column field="content" header="Content Preview" body={(rowData: SeedEntry) => {
-                                        const content = typeof rowData.content === 'string'
-                                            ? rowData.content
-                                            : JSON.stringify(rowData.content);
-                                        return content.length > 50 ? content.substring(0, 50) + '...' : content;
-                                    }} />
-                                </DataTable>
+                                <div style={{ padding: '1rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        height: '100%',
+                                        border: '1px solid var(--surface-border)',
+                                        borderRadius: 'var(--border-radius)',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <DataTable
+                                            value={dataWithKeys}
+                                            rowGroupMode="subheader"
+                                            groupRowsBy="eventTypeId"
+                                            sortMode="single"
+                                            sortField="eventTypeId"
+                                            sortOrder={1}
+                                            expandableRowGroups
+                                            expandedRows={expandedRowsByType}
+                                            onRowToggle={(e) => setExpandedRowsByType(e.data)}
+                                            rowGroupHeaderTemplate={rowGroupHeaderTemplateByType}
+                                            selectionMode="single"
+                                            selection={selectedItem}
+                                            onSelectionChange={onSelectionChange}
+                                            dataKey="_uniqueKey"
+                                            emptyMessage="No seed data found"
+                                            scrollable
+                                            scrollHeight="flex"
+                                            style={{ height: '100%' }}>
+                                            <Column field="eventTypeId" header="Event Type" sortable />
+                                            <Column field="eventSourceId" header="Event Source" sortable />
+                                            <Column field="content" header="Content Preview" body={(rowData: SeedEntry) => {
+                                                const content = typeof rowData.content === 'string'
+                                                    ? rowData.content
+                                                    : JSON.stringify(rowData.content);
+                                                return content.length > 50 ? content.substring(0, 50) + '...' : content;
+                                            }} />
+                                        </DataTable>
+                                    </div>
+                                </div>
                             </TabPanel>
                         </TabView>
                     </Allotment.Pane>
