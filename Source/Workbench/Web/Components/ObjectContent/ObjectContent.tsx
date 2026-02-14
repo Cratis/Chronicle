@@ -3,7 +3,7 @@
 
 import { Json } from 'Features/index';
 import { Tooltip } from 'primereact/tooltip';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import * as faIcons from 'react-icons/fa6';
 import strings from 'Strings';
 import { ObjectNavigationalBar } from 'Components';
@@ -20,11 +20,18 @@ export interface ObjectContentProps {
     schema: JsonSchema;
     editMode?: boolean;
     onChange?: (object: Json) => void;
+    onValidationChange?: (hasErrors: boolean) => void;
 }
 
-export const ObjectContent = ({ object, timestamp, schema, editMode = false, onChange }: ObjectContentProps) => {
+export const ObjectContent = ({ object, timestamp, schema, editMode = false, onChange, onValidationChange }: ObjectContentProps) => {
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (editMode && onValidationChange) {
+            onValidationChange(Object.keys(validationErrors).length > 0);
+        }
+    }, [validationErrors, editMode, onValidationChange]);
 
     const getValueAtPath = useCallback((data: Json, path: string[]): Json | null => {
         let current: Json = data;
@@ -113,9 +120,8 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
 
     const infoIconStyle: React.CSSProperties = {
         marginLeft: '6px',
-        fontSize: '12px',
-        color: 'rgba(100, 150, 255, 0.6)',
-        cursor: 'help',
+        fontSize: '0.875rem',
+        color: 'var(--text-color-secondary)',
     };
 
     const updateValue = useCallback((propertyName: string, newValue: Json) => {
@@ -128,7 +134,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
 
     const validateValue = useCallback((propertyName: string, value: Json, property: JsonSchemaProperty): string | undefined => {
         const isRequired = schema.required?.includes(propertyName);
-        
+
         if (isRequired && (value === null || value === undefined || value === '')) {
             return 'This field is required';
         }
@@ -256,7 +262,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
 
         // Default to text input (for strings and unknown types)
         const isLongText = (value as string)?.length > 50;
-        
+
         if (isLongText) {
             return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -381,15 +387,16 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
                                 <td style={labelStyle}>
                                     {propertyName}
                                     {description && (
-                                        <i
-                                            className="pi pi-info-circle property-info-icon"
+                                        <faIcons.FaCircleInfo
+                                            className="property-info-icon"
                                             style={infoIconStyle}
-                                            data-pr-tooltip={description} />
+                                            data-pr-tooltip={description}
+                                            data-pr-position="right" />
                                     )}
                                 </td>
                                 <td style={valueStyle}>
-                                    {editMode && property ? 
-                                        renderEditField(propertyName, property, value) : 
+                                    {editMode && property ?
+                                        renderEditField(propertyName, property, value) :
                                         renderValue(value as Json, propertyName)
                                     }
                                 </td>

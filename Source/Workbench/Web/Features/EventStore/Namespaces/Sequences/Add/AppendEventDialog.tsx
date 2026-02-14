@@ -18,7 +18,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Json } from 'Features/index';
 import { JsonSchema } from 'Components/JsonSchema';
 
-export const AddEventDialog = () => {
+export const AppendEventDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [appendEvent] = Append.use();
 
@@ -28,13 +28,14 @@ export const AddEventDialog = () => {
     const [eventSourceId, setEventSourceId] = useState('');
     const [eventContent, setEventContent] = useState<Json>({});
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
+    const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
     useEffect(() => {
         if (selectedEventType) {
             try {
                 const parsedSchema = JSON.parse(selectedEventType.schema) as JsonSchema;
                 setSchema(parsedSchema);
-                
+
                 // Initialize eventContent with default values based on schema
                 const initialContent: Record<string, Json> = {};
                 if (parsedSchema.properties) {
@@ -92,37 +93,38 @@ export const AddEventDialog = () => {
         return executeResult.isSuccess;
     };
 
-    const isValid = selectedEventType !== null && eventSourceId.trim() !== '';
+    const isValid = selectedEventType !== null && eventSourceId.trim() !== '' && !hasValidationErrors;
 
     return (
         <Dialog
-            title={strings.eventStore.namespaces.sequences.dialogs.addEvent.title}
+            title={strings.eventStore.namespaces.sequences.dialogs.appendEvent.title}
             onClose={handleClose}
             isValid={isValid}
             width="600px"
-            resizable={true}>
+            resizable={true}
+            okLabel="Append">
             <div className="card flex flex-column gap-3 mb-3">
                 <div className="field mb-3">
-                    <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.addEvent.eventType}</label>
+                    <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventType}</label>
                     <Dropdown
                         id="eventType"
                         value={selectedEventType}
                         options={allEventTypes.data}
                         onChange={(e) => setSelectedEventType(e.value)}
                         optionLabel="type.id"
-                        placeholder={strings.eventStore.namespaces.sequences.dialogs.addEvent.selectEventType}
+                        placeholder={strings.eventStore.namespaces.sequences.dialogs.appendEvent.selectEventType}
                         className="w-full"
                     />
                 </div>
 
                 <div className="field mb-3">
-                    <label htmlFor="eventSourceId">{strings.eventStore.namespaces.sequences.dialogs.addEvent.eventSourceId}</label>
+                    <label htmlFor="eventSourceId">{strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventSourceId}</label>
                     <div className="p-inputgroup">
                         <InputText
                             id="eventSourceId"
                             value={eventSourceId}
                             onChange={(e) => setEventSourceId(e.target.value)}
-                            placeholder={strings.eventStore.namespaces.sequences.dialogs.addEvent.eventSourceIdPlaceholder}
+                            placeholder={strings.eventStore.namespaces.sequences.dialogs.appendEvent.eventSourceIdPlaceholder}
                             className="w-full"
                         />
                         <Button
@@ -136,10 +138,10 @@ export const AddEventDialog = () => {
 
                 {selectedEventType && (
                     <div className="field mb-3">
-                        <label>{strings.eventStore.namespaces.sequences.dialogs.addEvent.content}</label>
-                        <div style={{ 
-                            border: '1px solid var(--surface-border)', 
-                            borderRadius: '4px', 
+                        <label>{strings.eventStore.namespaces.sequences.dialogs.appendEvent.content}</label>
+                        <div style={{
+                            border: '1px solid var(--surface-border)',
+                            borderRadius: '4px',
                             padding: '1rem',
                             maxHeight: '400px',
                             overflow: 'auto'
@@ -149,6 +151,7 @@ export const AddEventDialog = () => {
                                 schema={schema}
                                 editMode={true}
                                 onChange={setEventContent}
+                                onValidationChange={setHasValidationErrors}
                             />
                         </div>
                     </div>

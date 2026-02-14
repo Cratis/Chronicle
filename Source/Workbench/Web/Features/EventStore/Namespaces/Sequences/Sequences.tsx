@@ -14,7 +14,7 @@ import { MultiSelect } from 'primereact/multiselect';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
-import { AddEventDialog } from './Add/AddEventDialog';
+import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import * as faIcons from 'react-icons/fa6';
@@ -40,7 +40,7 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddEventWrapper, showAddEvent] = useDialog(AddEventDialog);
+    const [AppendEventWrapper, showAppendEvent] = useDialog(AppendEventDialog);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
@@ -82,8 +82,8 @@ export const Sequences = () => {
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
 
-    const handleAddEvent = async () => {
-        const [result] = await showAddEvent();
+    const handleAppendEvent = async () => {
+        const [result] = await showAppendEvent();
         if (result === DialogResult.Ok) {
             setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
         }
@@ -118,10 +118,10 @@ export const Sequences = () => {
 
                 <DataPage.MenuItems>
                     <MenuItem
-                        id='addEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.addEvent}
+                        id='appendEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.appendEvent}
                         icon={faIcons.FaPlus}
-                        command={handleAddEvent} />
+                        command={handleAppendEvent} />
                     <MenuItem
                         id='redactEvent'
                         label={strings.eventStore.namespaces.sequences.actions.redact}
@@ -162,7 +162,7 @@ export const Sequences = () => {
                         filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
                 </DataPage.Columns>
             </DataPage>
-            <AddEventWrapper />
+            <AppendEventWrapper />
             <RedactEventWrapper />
         </>
     );

@@ -268,7 +268,7 @@
                 "title": "Sequences",
                 "empty": "No events found",
                 "actions": {
-                    "addEvent": "Add Event",
+                    "appendEvent": "Append Event",
                     "redact": "Redact"
                 },
                 "columns": {
@@ -285,13 +285,13 @@
                     }
                 },
                 "dialogs": {
-                    "addEvent": {
-                        "title": "Add Event",
+                    "appendEvent": {
+                        "title": "Append Event",
                         "eventType": "Event Type",
                         "selectEventType": "Select event type",
                         "eventSourceId": "Event Source ID",
                         "eventSourceIdPlaceholder": "Enter event source ID",
-                        "content": "Event Content (JSON)",
+                        "content": "Event Content",
                         "contentPlaceholder": "Enter event content as JSON",
                         "viewSchema": "View Schema"
                     },
