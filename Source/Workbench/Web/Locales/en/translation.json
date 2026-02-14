@@ -268,7 +268,7 @@
                 "title": "Sequences",
                 "empty": "No events found",
                 "actions": {
-                    "addEvent": "Add Event"
+                    "addEvent": "Add Event",
                     "redact": "Redact"
                 },
                 "columns": {

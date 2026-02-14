@@ -44,7 +44,7 @@ export const Sequences = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
-  
+
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
@@ -113,7 +113,8 @@ export const Sequences = () => {
                 dataKey={sequenceNumberPath}
                 defaultFilters={filters}
                 globalFilterFields={['context.eventType.id']}
-                detailsComponent={EventDetails}>
+                detailsComponent={EventDetails}
+                onSelectionChange={(e) => setSelectedEvent(e.value as AppendedEvent | null)}>
 
                 <DataPage.MenuItems>
                     <MenuItem
@@ -121,6 +122,12 @@ export const Sequences = () => {
                         label={strings.eventStore.namespaces.sequences.actions.addEvent}
                         icon={faIcons.FaPlus}
                         command={handleAddEvent} />
+                    <MenuItem
+                        id='redactEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.redact}
+                        icon={faIcons.FaEraser}
+                        disableOnUnselected
+                        command={handleRedactEvent} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
