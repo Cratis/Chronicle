@@ -7,7 +7,7 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.ReadModels;
 using Cratis.Chronicle.Observation;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.and_resolves_through_second_event_type.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.and_resolves_through_second_event_type.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution;
 

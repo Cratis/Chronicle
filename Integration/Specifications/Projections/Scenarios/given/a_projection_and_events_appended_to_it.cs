@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Integration.Specifications.AggregateRoots;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;

@@ -1,7 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_updating_projection_definition.for_materialized_projection.context;
+using given = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition.for_immediate_projection.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition;
 
