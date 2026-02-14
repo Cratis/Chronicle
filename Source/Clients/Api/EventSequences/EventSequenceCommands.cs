@@ -1,6 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using Cratis.Chronicle.Api.Auditing;
+using Cratis.Chronicle.Api.Events;
+using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Contracts.EventSequences;
+
 namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
@@ -9,8 +15,9 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
 /// </remarks>
+/// <param name="eventSequences"><see cref="IEventSequences"/> service for working with event sequences.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceCommands : ControllerBase
+public class EventSequenceCommands(IEventSequences eventSequences) : ControllerBase
 {
     /// <summary>
     /// Appends an event to the event log.
@@ -63,7 +70,18 @@ public class EventSequenceCommands : ControllerBase
         [FromRoute] string eventSequenceId,
         [FromBody] CompensateEvent compensation)
     {
-        throw new NotImplementedException();
+        await eventSequences.Compensate(new CompensateRequest
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = compensation.SequenceNumber,
+            EventType = compensation.EventType.ToContract(),
+            Content = JsonSerializer.Serialize(compensation.Content),
+            CorrelationId = Guid.NewGuid(),
+            Causation = compensation.Causation?.ToContract().ToList() ?? [],
+            CausedBy = compensation.CausedBy?.ToContract() ?? new()
+        });
     }
 
     /// <summary>
