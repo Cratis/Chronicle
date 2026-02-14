@@ -28,7 +28,11 @@ export const AppendEventDialog = () => {
     const [eventSourceId, setEventSourceId] = useState('');
     const [eventContent, setEventContent] = useState<Json>({});
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
-    const [hasValidationErrors, setHasValidationErrors] = useState(false);
+    const [hasValidationErrors, setHasValidationErrors] = useState(true);
+
+    const handleValidationChange = (hasErrors: boolean) => {
+        setHasValidationErrors(hasErrors);
+    };
 
     useEffect(() => {
         if (selectedEventType) {
@@ -151,7 +155,7 @@ export const AppendEventDialog = () => {
                                 schema={schema}
                                 editMode={true}
                                 onChange={setEventContent}
-                                onValidationChange={setHasValidationErrors}
+                                onValidationChange={handleValidationChange}
                             />
                         </div>
                     </div>

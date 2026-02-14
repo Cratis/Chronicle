@@ -27,9 +27,53 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
     const [navigationPath, setNavigationPath] = useState<string[]>([]);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
+    const validateValue = useCallback((propertyName: string, value: Json, property: JsonSchemaProperty): string | undefined => {
+        const isRequired = schema.required?.includes(propertyName);
+
+        if (isRequired && (value === null || value === undefined || value === '')) {
+            return 'This field is required';
+        }
+
+        if (property.type === 'string' && typeof value === 'string') {
+            if (property.format === 'email' && value && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                return 'Invalid email format';
+            }
+            if (property.format === 'uri' && value && !value.match(/^https?:\/\/.+/)) {
+                return 'Invalid URI format';
+            }
+        }
+
+        if (property.type === 'number' || property.type === 'integer') {
+            if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
+                return 'Must be a valid number';
+            }
+        }
+
+        return undefined;
+    }, [schema]);
+
+    // Validate all properties whenever object or schema changes in edit mode
+    useEffect(() => {
+        if (!editMode || navigationPath.length > 0) return;
+
+        const errors: Record<string, string> = {};
+        const properties = schema.properties || {};
+
+        Object.entries(properties).forEach(([propertyName, property]) => {
+            const value = (object as Record<string, Json>)[propertyName];
+            const error = validateValue(propertyName, value, property as JsonSchemaProperty);
+            if (error) {
+                errors[propertyName] = error;
+            }
+        });
+
+        setValidationErrors(errors);
+    }, [object, schema, editMode, navigationPath, validateValue]);
+
     useEffect(() => {
         if (editMode && onValidationChange) {
-            onValidationChange(Object.keys(validationErrors).length > 0);
+            const hasErrors = Object.keys(validationErrors).length > 0;
+            onValidationChange(hasErrors);
         }
     }, [validationErrors, editMode, onValidationChange]);
 
@@ -110,6 +154,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
         textAlign: 'left',
         fontWeight: 500,
         width: '140px',
+        whiteSpace: 'nowrap',
     };
 
     const valueStyle: React.CSSProperties = {
@@ -119,9 +164,9 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
     };
 
     const infoIconStyle: React.CSSProperties = {
-        marginLeft: '6px',
         fontSize: '0.875rem',
         color: 'var(--text-color-secondary)',
+        flexShrink: 0,
     };
 
     const updateValue = useCallback((propertyName: string, newValue: Json) => {
@@ -132,34 +177,8 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
         onChange(updatedObject);
     }, [object, onChange]);
 
-    const validateValue = useCallback((propertyName: string, value: Json, property: JsonSchemaProperty): string | undefined => {
-        const isRequired = schema.required?.includes(propertyName);
-
-        if (isRequired && (value === null || value === undefined || value === '')) {
-            return 'This field is required';
-        }
-
-        if (property.type === 'string' && typeof value === 'string') {
-            if (property.format === 'email' && value && !value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-                return 'Invalid email format';
-            }
-            if (property.format === 'uri' && value && !value.match(/^https?:\/\/.+/)) {
-                return 'Invalid URI format';
-            }
-        }
-
-        if (property.type === 'number' || property.type === 'integer') {
-            if (value !== null && value !== undefined && value !== '' && isNaN(Number(value))) {
-                return 'Must be a valid number';
-            }
-        }
-
-        return undefined;
-    }, [schema]);
-
     const renderEditField = (propertyName: string, property: JsonSchemaProperty, value: Json) => {
         const error = validationErrors[propertyName];
-        const isRequired = schema.required?.includes(propertyName);
 
         const handleChange = (newValue: Json) => {
             updateValue(propertyName, newValue);
@@ -185,7 +204,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <Checkbox
                         checked={Boolean(value)}
-                        onChange={(e) => handleChange(e.checked)}
+                        onChange={(e) => handleChange(e.checked ?? false)}
                     />
                     {error && <small className="p-error">{error}</small>}
                 </div>
@@ -197,7 +216,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <InputNumber
                         value={value as number ?? null}
-                        onValueChange={(e) => handleChange(e.value)}
+                        onValueChange={(e) => handleChange(e.value ?? 0)}
                         mode="decimal"
                         useGrouping={false}
                         style={inputStyle}
@@ -385,14 +404,16 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
                         return (
                             <tr key={propertyName} style={rowStyle}>
                                 <td style={labelStyle}>
-                                    {propertyName}
-                                    {description && (
-                                        <faIcons.FaCircleInfo
-                                            className="property-info-icon"
-                                            style={infoIconStyle}
-                                            data-pr-tooltip={description}
-                                            data-pr-position="right" />
-                                    )}
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        {propertyName}
+                                        {description && (
+                                            <faIcons.FaCircleInfo
+                                                className="property-info-icon"
+                                                style={infoIconStyle}
+                                                data-pr-tooltip={description}
+                                                data-pr-position="right" />
+                                        )}
+                                    </span>
                                 </td>
                                 <td style={valueStyle}>
                                     {editMode && property ?
@@ -410,7 +431,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
 
     return (
         <div className="order-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Tooltip target=".property-info-icon" />
+            <Tooltip target="[data-pr-tooltip]" />
             <ObjectNavigationalBar
                 navigationPath={navigationPath}
                 onNavigate={navigateToBreadcrumb}
@@ -425,7 +446,7 @@ export const ObjectContent = ({ object, timestamp, schema, editMode = false, onC
                     fontSize: '12px',
                     color: 'rgba(255,255,255,0.6)'
                 }}>
-                    Snapshot captured: {timestamp.toLocaleString()}
+                    Timestamp: {timestamp.toLocaleString()}
                 </div>
             )}
         </div>
