@@ -277,11 +277,11 @@ public class EventSequenceStorage(
         var collection = _collection;
 
         var @event = await GetEventAt(sequenceNumber);
-        
+
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
         var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
-        
+
         var compensation = new EventCompensation(
             eventType.Generation,
             correlationId,
@@ -295,7 +295,7 @@ public class EventSequenceStorage(
 
         var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
         var update = Builders<Event>.Update.Push(e => e.Compensations, compensation);
-        
+
         await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
     }
 

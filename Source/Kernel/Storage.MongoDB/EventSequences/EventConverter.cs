@@ -35,7 +35,7 @@ public class EventConverter(
     {
         var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
         var generationKey = EventTypeGeneration.First.ToString();
-        
+
         JsonObject content;
         if (@event.Compensations.Any())
         {
@@ -48,7 +48,7 @@ public class EventConverter(
         {
             content = (JsonNode.Parse(@event.Content[generationKey].ToString()) as JsonObject)!;
         }
-        
+
         var eventSchema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var releasedContent = await jsonComplianceManager.Release(
             eventStoreName,

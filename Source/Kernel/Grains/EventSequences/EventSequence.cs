@@ -372,7 +372,8 @@ public class EventSequence(
             throw new InvalidCompensationEventType(sequenceNumber, @event.Context.EventType.Id, eventType.Id);
         }
 
-        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content);
+        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
 
         await EventSequenceStorage.Compensate(
             sequenceNumber,
