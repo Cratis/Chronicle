@@ -6,34 +6,25 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Seeding;
 
 /// <summary>
-/// Defines a builder for seeding events in the event store.
+/// Defines a scoped builder for seeding events with namespace targeting.
 /// </summary>
-public interface IEventSeedingBuilder
+public interface IEventSeedingScopeBuilder
 {
     /// <summary>
     /// Seed events for a specific event type and event source id.
-    /// By default, seed data applies to all namespaces globally.
     /// </summary>
     /// <typeparam name="TEvent">Type of event to seed.</typeparam>
     /// <param name="eventSourceId">The event source id to seed for.</param>
     /// <param name="events">Collection of events to seed.</param>
     /// <returns>The builder for continuation.</returns>
-    IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
+    IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
         where TEvent : class;
 
     /// <summary>
     /// Seed events for a specific event source id with multiple event types.
-    /// By default, seed data applies to all namespaces globally.
     /// </summary>
     /// <param name="eventSourceId">The event source id to seed for.</param>
     /// <param name="events">Collection of events to seed.</param>
     /// <returns>The builder for continuation.</returns>
-    IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events);
-
-    /// <summary>
-    /// Configure seed data to be specific to a namespace.
-    /// </summary>
-    /// <param name="namespace">The namespace to seed for.</param>
-    /// <returns>A scoped builder for namespace-specific seed data.</returns>
-    IEventSeedingScopeBuilder ForNamespace(EventStoreNamespaceName @namespace);
+    IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events);
 }

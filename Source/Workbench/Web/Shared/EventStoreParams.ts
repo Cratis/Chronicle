@@ -1,5 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-export * from './EventStoreAndNamespaceParams';
-export * from './EventStoreParams';
+export interface EventStoreParams extends Record<string, string> {
+    eventStore: string;
+}
