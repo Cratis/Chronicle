@@ -13,16 +13,21 @@ import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { MultiSelect } from 'primereact/multiselect';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { AddEventDialog } from './Add/AddEventDialog';
 import { useState } from 'react';
-import { useDialog } from '@cratis/arc.react/dialogs';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import * as faIcons from 'react-icons/fa6';
 
-import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
+import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
 
 const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();
 };
+
+// Delay in milliseconds to wait before refreshing data after adding an event
+// This allows the backend to process and persist the event before re-querying
+const REFRESH_DELAY_MS = 200;
 
 type Lambda<T> = (target: T) => unknown;
 
@@ -35,8 +40,11 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [AddEventWrapper, showAddEvent] = useDialog(AddEventDialog);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
+  
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
@@ -74,6 +82,13 @@ export const Sequences = () => {
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
 
+    const handleAddEvent = async () => {
+        const [result] = await showAddEvent();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
+        }
+    };
+
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (
             <MultiSelect
@@ -90,6 +105,7 @@ export const Sequences = () => {
     return (
         <>
             <DataPage
+                key={refreshTrigger}
                 title={strings.eventStore.namespaces.sequences.title}
                 query={AppendedEvents}
                 queryArguments={queryArgs}
@@ -97,17 +113,16 @@ export const Sequences = () => {
                 dataKey={sequenceNumberPath}
                 defaultFilters={filters}
                 globalFilterFields={['context.eventType.id']}
-                detailsComponent={EventDetails}
-                selection={selectedEvent}
-                onSelectionChange={(e) => setSelectedEvent(e.value as AppendedEvent)}>
+                detailsComponent={EventDetails}>
+
                 <DataPage.MenuItems>
                     <MenuItem
-                        id="redact"
-                        label={strings.eventStore.namespaces.sequences.actions.redact}
-                        icon={faIcons.FaBan}
-                        disableOnUnselected
-                        command={handleRedactEvent} />
+                        id='addEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.addEvent}
+                        icon={faIcons.FaPlus}
+                        command={handleAddEvent} />
                 </DataPage.MenuItems>
+
                 <DataPage.Columns>
                     <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
 
@@ -140,6 +155,7 @@ export const Sequences = () => {
                         filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
                 </DataPage.Columns>
             </DataPage>
+            <AddEventWrapper />
             <RedactEventWrapper />
         </>
     );

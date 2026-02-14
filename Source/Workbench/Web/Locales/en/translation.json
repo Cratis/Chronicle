@@ -268,6 +268,7 @@
                 "title": "Sequences",
                 "empty": "No events found",
                 "actions": {
+                    "addEvent": "Add Event"
                     "redact": "Redact"
                 },
                 "columns": {
@@ -284,6 +285,16 @@
                     }
                 },
                 "dialogs": {
+                    "addEvent": {
+                        "title": "Add Event",
+                        "eventType": "Event Type",
+                        "selectEventType": "Select event type",
+                        "eventSourceId": "Event Source ID",
+                        "eventSourceIdPlaceholder": "Enter event source ID",
+                        "content": "Event Content (JSON)",
+                        "contentPlaceholder": "Enter event content as JSON",
+                        "viewSchema": "View Schema"
+                    },
                     "redact": {
                         "title": "Redact Event",
                         "reason": "Reason for redaction",
