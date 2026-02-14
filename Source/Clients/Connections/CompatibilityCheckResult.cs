@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Connections;
 public record CompatibilityCheckResult(IEnumerable<string> Errors)
 {
     /// <summary>
+    /// Gets the materialized list of errors.
+    /// </summary>
+    public IEnumerable<string> Errors { get; } = Errors.ToList();
+
+    /// <summary>
     /// Gets a value indicating whether the client is compatible with the server.
     /// </summary>
     public bool IsCompatible => !Errors.Any();

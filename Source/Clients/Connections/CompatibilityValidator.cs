@@ -13,12 +13,6 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 internal static partial class CompatibilityValidator
 {
-    [GeneratedRegex(@"^\s*service\s+(\w+)\s*\{?", RegexOptions.ExplicitCapture)]
-    private static partial Regex ServicePattern();
-
-    [GeneratedRegex(@"^\s*rpc\s+(\w+)\s*\(", RegexOptions.ExplicitCapture)]
-    private static partial Regex RpcPattern();
-
     /// <summary>
     /// Validates that the client's schema is compatible with the server's schema.
     /// </summary>
@@ -86,6 +80,12 @@ internal static partial class CompatibilityValidator
 
         return generator.GetSchema(Contracts.RegisteredServiceTypes.All);
     }
+
+    [GeneratedRegex(@"^\s*service\s+(\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ServicePattern();
+
+    [GeneratedRegex(@"^\s*rpc\s+(\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcPattern();
 
     static Dictionary<string, Dictionary<string, string>> ParseSchemaToServices(string schema)
     {
