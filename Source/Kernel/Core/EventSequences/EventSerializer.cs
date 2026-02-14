@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.EventTypes;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 
 namespace Cratis.Chronicle.EventSequences;

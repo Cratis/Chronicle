@@ -4,8 +4,8 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
-using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.States;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Utilities;

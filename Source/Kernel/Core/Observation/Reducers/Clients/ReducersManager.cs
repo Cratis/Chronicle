@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Namespaces;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 

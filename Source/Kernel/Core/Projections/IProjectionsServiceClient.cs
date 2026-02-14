@@ -3,7 +3,7 @@
 
 using Orleans.Services;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a client for <see cref="IProjectionsService"/>.

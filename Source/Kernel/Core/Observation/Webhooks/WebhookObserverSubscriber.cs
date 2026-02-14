@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
-using Cratis.Chronicle.Grains.Security;
+using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Orleans.Providers;

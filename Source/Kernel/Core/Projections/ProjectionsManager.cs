@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Storage;
@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionsManager"/>.

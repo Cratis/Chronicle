@@ -3,12 +3,12 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Projections.Pipelines;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionsService"/>.

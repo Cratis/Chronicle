@@ -12,9 +12,9 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Events.Constraints;
-using Cratis.Chronicle.Grains.EventSequences.Concurrency;
-using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
-using IObserver = Cratis.Chronicle.Grains.Observation.IObserver;
+using IObserver = Cratis.Chronicle.Observation.IObserver;
 
 namespace Cratis.Chronicle.EventSequences;
 

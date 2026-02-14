@@ -8,8 +8,8 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Grains.Observation;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
@@ -19,7 +19,7 @@ using NJsonSchema;
 using Orleans.Providers;
 using Orleans.Streams;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IProjectionObserverSubscriber"/>.

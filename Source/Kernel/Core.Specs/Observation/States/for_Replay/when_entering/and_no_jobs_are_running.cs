@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.States.for_Replay.when_entering;
 

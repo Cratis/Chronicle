@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Observation.Reactors.Kernel;
 
 namespace Cratis.Chronicle.Namespaces;
 

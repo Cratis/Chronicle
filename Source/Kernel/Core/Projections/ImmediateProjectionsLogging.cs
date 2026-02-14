@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Projections;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 #pragma warning disable SA1600 // Elements should be documented
 #pragma warning disable MA0048 // File name must match type name

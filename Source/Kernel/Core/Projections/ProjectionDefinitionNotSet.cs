@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// The exception that is thrown when a projection grain is accessed before its definition has been set.

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines an internal grain observer that lets you get notified when definitions change on a projection.

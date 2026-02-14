@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the state for projection futures.

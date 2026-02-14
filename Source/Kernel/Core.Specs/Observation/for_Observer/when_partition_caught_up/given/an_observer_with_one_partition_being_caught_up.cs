@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Grains.Observation.for_Observer.given;
+using Cratis.Chronicle.Observation.for_Observer.given;
 namespace Cratis.Chronicle.Observation.for_Observer.when_partition_caught_up.given;
 
 public class an_observer_with_one_partition_being_caught_up : an_observer

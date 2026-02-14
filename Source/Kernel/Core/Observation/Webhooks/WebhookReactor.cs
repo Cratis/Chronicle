@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Webhooks;

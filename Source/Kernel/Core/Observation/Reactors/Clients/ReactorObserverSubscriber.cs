@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Grains.Observation.Placement;
+using Cratis.Chronicle.Observation.Placement;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;

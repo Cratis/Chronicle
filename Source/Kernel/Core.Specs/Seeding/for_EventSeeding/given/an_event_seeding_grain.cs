@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Seeding;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
 

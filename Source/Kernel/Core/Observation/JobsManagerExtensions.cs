@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 

@@ -7,15 +7,15 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IImmediateProjection"/>.

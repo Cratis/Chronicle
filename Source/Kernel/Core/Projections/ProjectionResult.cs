@@ -4,7 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the result of an <see cref="IImmediateProjection"/>.
