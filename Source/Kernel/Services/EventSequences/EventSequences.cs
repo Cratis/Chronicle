@@ -153,6 +153,20 @@ internal sealed class EventSequences(
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<RedactResponse> Redact(RedactRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        await eventSequence.Redact(
+            request.SequenceNumber,
+            request.Reason,
+            request.CorrelationId,
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+
+        return new RedactResponse();
+    }
+
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>
         storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).GetEventSequence(request.EventSequenceId);
 

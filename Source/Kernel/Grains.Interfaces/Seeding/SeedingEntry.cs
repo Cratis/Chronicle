@@ -12,4 +12,4 @@ namespace Cratis.Chronicle.Grains.Seeding;
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Content">The JSON content.</param>
 /// <param name="Tags">The collection of tags associated with the event.</param>
-public record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<Tag>? Tags = null);
+public record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<Tag>? Tags);

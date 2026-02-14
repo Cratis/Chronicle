@@ -25,7 +25,6 @@ public class when_adding_events_with_for_event_source : Specification
 
         _seeding = new EventSeeding(
             "TestEventStore",
-            "TestNamespace",
             connection,
             eventTypes,
             eventSerializer,
