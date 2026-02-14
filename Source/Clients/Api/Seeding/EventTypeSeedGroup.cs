@@ -4,13 +4,10 @@
 namespace Cratis.Chronicle.Api.Seeding;
 
 /// <summary>
-/// Represents a seeded event entry for API usage.
+/// Represents a group of seed entries for a specific event type.
 /// </summary>
-/// <param name="EventSourceId">The event source identifier.</param>
 /// <param name="EventTypeId">The event type identifier.</param>
-/// <param name="Content">The JSON content of the event.</param>
-public record SeedEntry(
-    string EventSourceId,
+/// <param name="Entries">The seed entries for this event type.</param>
+public record EventTypeSeedGroup(
     string EventTypeId,
-    string Content);
-
+    IEnumerable<SeedEntry> Entries);

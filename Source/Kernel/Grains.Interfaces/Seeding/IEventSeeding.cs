@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Seeding;
+
 namespace Cratis.Chronicle.Grains.Seeding;
 
 /// <summary>
@@ -16,8 +18,8 @@ public interface IEventSeeding : IGrainWithStringKey
     Task Seed(IEnumerable<SeedingEntry> entries);
 
     /// <summary>
-    /// Get all seeded events.
+    /// Get all seeded events organized by event type and event source.
     /// </summary>
-    /// <returns>Collection of seeded event entries.</returns>
-    Task<IEnumerable<SeedingEntry>> GetSeededEvents();
+    /// <returns>The <see cref="EventSeeds"/> containing entries organized by event type and event source.</returns>
+    Task<EventSeeds> GetSeededEvents();
 }

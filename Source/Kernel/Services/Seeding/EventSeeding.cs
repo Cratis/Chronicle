@@ -93,17 +93,9 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     {
         var key = EventSeedingKey.ForGlobal(request.EventStore);
         var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
-        var entries = await grain.GetSeededEvents();
+        var seeds = await grain.GetSeededEvents();
 
-        return new SeedDataResponse
-        {
-            Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
-            {
-                EventSourceId = e.EventSourceId.Value,
-                EventTypeId = e.EventTypeId.Value,
-                Content = e.Content
-            }).ToList()
-        };
+        return MapToResponse(seeds);
     }
 
     /// <inheritdoc/>
@@ -111,16 +103,43 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     {
         var key = EventSeedingKey.ForNamespace(request.EventStore, request.Namespace);
         var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
-        var entries = await grain.GetSeededEvents();
+        var seeds = await grain.GetSeededEvents();
 
-        return new SeedDataResponse
+        return MapToResponse(seeds);
+    }
+
+    static SeedDataResponse MapToResponse(Storage.Seeding.EventSeeds seeds)
+    {
+        var response = new SeedDataResponse();
+
+        foreach (var (eventTypeId, entries) in seeds.ByEventType)
         {
-            Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+            response.ByEventType.Add(new EventTypeSeedEntries
             {
-                EventSourceId = e.EventSourceId.Value,
-                EventTypeId = e.EventTypeId.Value,
-                Content = e.Content
-            }).ToList()
-        };
+                EventTypeId = eventTypeId.Value,
+                Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+                {
+                    EventSourceId = e.EventSourceId.Value,
+                    EventTypeId = e.EventTypeId.Value,
+                    Content = e.Content
+                }).ToList()
+            });
+        }
+
+        foreach (var (eventSourceId, entries) in seeds.ByEventSource)
+        {
+            response.ByEventSource.Add(new EventSourceSeedEntries
+            {
+                EventSourceId = eventSourceId.Value,
+                Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+                {
+                    EventSourceId = e.EventSourceId.Value,
+                    EventTypeId = e.EventTypeId.Value,
+                    Content = e.Content
+                }).ToList()
+            });
+        }
+
+        return response;
     }
 }

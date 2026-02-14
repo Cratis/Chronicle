@@ -10,8 +10,14 @@ namespace Cratis.Chronicle.Contracts.Seeding;
 public class SeedDataResponse
 {
     /// <summary>
-    /// Gets or sets the collection of seeding entries.
+    /// Gets or sets the collection of seeding entries grouped by event type.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IList<SeedingEntry> Entries { get; set; } = [];
+    public IList<EventTypeSeedEntries> ByEventType { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the collection of seeding entries grouped by event source.
+    /// </summary>
+    [ProtoMember(2, IsRequired = true)]
+    public IList<EventSourceSeedEntries> ByEventSource { get; set; } = [];
 }

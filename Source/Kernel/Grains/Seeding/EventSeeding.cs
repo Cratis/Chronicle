@@ -106,19 +106,13 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<SeedingEntry>> GetSeededEvents()
+    public Task<EventSeeds> GetSeededEvents()
     {
         state.State ??= new EventSeeds(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
-        // Collect all unique entries from both dictionaries
-        var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
-            .Concat(state.State.ByEventSource.Values.SelectMany(e => e))
-            .Distinct()
-            .Select(e => new SeedingEntry(e.EventSourceId, e.EventTypeId, e.Content, e.Tags?.Select(t => new Tag(t)).ToArray()));
-
-        return Task.FromResult(allEntries);
+        return Task.FromResult(state.State);
     }
 
     List<EventToAppend> GetEventsToSeed(List<SeedingEntry> entriesList)
