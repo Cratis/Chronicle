@@ -3,21 +3,22 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 128 days, 13:45:53 | 3 days, 22:09:24 | 308 days, 13:38:35 |
-| Time to close | 281 days, 16:06:16 | 124 days, 8:58:58 | 823 days, 9:49:33 |
+| Time to close | 280 days, 19:13:26 | 124 days, 8:55:27 | 821 days, 19:57:40 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 247 |
-| Number of items closed | 633 |
-| Total number of items created | 880 |
+| Number of items that remain open | 246 |
+| Number of items closed | 635 |
+| Total number of items created | 881 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Code generators not working as expected | https://github.com/Cratis/Chronicle/issues/2622 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Consolidate projects in Kernel | https://github.com/Cratis/Chronicle/issues/2632 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Code generators not working as expected | https://github.com/Cratis/Chronicle/issues/2622 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 1 day, 12:27:32 | None |
 | Agentic Event Sourcing | https://github.com/Cratis/Chronicle/issues/2600 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Handle Keys properly with metadata and make ExpandoObjectConverter honor this | https://github.com/Cratis/Chronicle/issues/2586 | None | [einari](https://github.com/einari) | None | None | None |
-| Authorization + Workbench for Webhooks | https://github.com/Cratis/Chronicle/issues/2573 | None | [einari](https://github.com/einari) | None | None | None |
+| Authorization + Workbench for Webhooks | https://github.com/Cratis/Chronicle/issues/2573 | None | [einari](https://github.com/einari) | None | 9 days, 8:31:59 | None |
 | Cratis.Chronicle 15.0.0 not published in NuGet Gallery | https://github.com/Cratis/Chronicle/issues/2572 | None | [leicht-io](https://github.com/leicht-io) | 10:36:35 | 10:36:35 | None |
 | Add static code analysis | https://github.com/Cratis/Chronicle/issues/2558 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 5 days, 5:58:08 | None |
 | Add events for user and applications authenticated | https://github.com/Cratis/Chronicle/issues/2556 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 6 days, 7:11:53 | None |
@@ -122,7 +123,7 @@
 | Self healing of partitions in catch up and replaying partitions | https://github.com/Cratis/Chronicle/issues/1688 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | None | 24 days, 6:10:02 | None |
 | Ensure that resuming of jobs work as intended | https://github.com/Cratis/Chronicle/issues/1687 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | None | 45 days, 9:12:03 | None |
 | Jobs RequestType discriminator seems to not work every | https://github.com/Cratis/Chronicle/issues/1686 | [woksin](https://github.com/woksin) | [einari](https://github.com/einari) | 4:38:34 | 11 days, 0:19:35 | None |
-| Job system should clean up jobs that are "dead in the water" | https://github.com/Cratis/Chronicle/issues/1685 | None | [einari](https://github.com/einari) | None | None | None |
+| Job system should clean up jobs that are "dead in the water" | https://github.com/Cratis/Chronicle/issues/1685 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Add the capability of changing name of an identity | https://github.com/Cratis/Chronicle/issues/1684 | None | [einari](https://github.com/einari) | None | None | None |
 | When catching up all partitions, the Observer should just register all partitions itself as catching up | https://github.com/Cratis/Chronicle/issues/1683 | None | [einari](https://github.com/einari) | None | None | None |
 | Improve state consistency around observers and next/handled event sequence number for when multiple partitions are working and for some reason the server goes down | https://github.com/Cratis/Chronicle/issues/1682 | None | [einari](https://github.com/einari) | None | None | None |
@@ -330,6 +331,4 @@
 | Consistent use of term Model vs ReadModel | https://github.com/Cratis/Chronicle/issues/1257 | None | [einari](https://github.com/einari) | None | 48 days, 9:36:15 | None |
 | Separate Reducer server parts into the "engine" specific and Orleans specific. | https://github.com/Cratis/Chronicle/issues/1256 | None | [einari](https://github.com/einari) | None | None | None |
 | Look into recommendation reasons and cohesion | https://github.com/Cratis/Chronicle/issues/1255 | None | [einari](https://github.com/einari) | None | None | None |
-| Add Reactor definition comparison and add replay recommendation on change | https://github.com/Cratis/Chronicle/issues/1254 | None | [einari](https://github.com/einari) | None | 60 days, 10:47:03 | None |
-| Move Grain Key types into Grains.Interfaces | https://github.com/Cratis/Chronicle/issues/1253 | None | [einari](https://github.com/einari) | None | None | None |
-| Implement AppendMany on Storage provider and hook up in EventSequence grain | https://github.com/Cratis/Chronicle/issue
+| Add Reactor definition comparison and add replay recommendation on change | https://github.com/Cratis/Chronicle/issues/1254 | None | [einari](https://github.com/einari) | None 
