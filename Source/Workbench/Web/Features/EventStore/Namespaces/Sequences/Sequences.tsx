@@ -31,6 +31,9 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [AddEventWrapper, showAddEvent] = useDialog(AddEventDialog);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
@@ -57,6 +60,13 @@ export const Sequences = () => {
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
     accessor(proxy);
 
+    const handleAddEvent = async () => {
+        const [result] = await showAddEvent();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+        }
+    };
+
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (
             <MultiSelect
@@ -71,46 +81,59 @@ export const Sequences = () => {
     };
 
     return (
-        <DataPage
-            title={strings.eventStore.namespaces.sequences.title}
-            query={AppendedEvents}
-            queryArguments={queryArgs}
-            emptyMessage={strings.eventStore.namespaces.sequences.empty}
-            dataKey={sequenceNumberPath}
-            defaultFilters={filters}
-            globalFilterFields={['context.eventType.id']}
-            detailsComponent={EventDetails}>
-            <DataPage.Columns>
-                <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+        <>
+            <DataPage
+                key={refreshTrigger}
+                title={strings.eventStore.namespaces.sequences.title}
+                query={AppendedEvents}
+                queryArguments={queryArgs}
+                emptyMessage={strings.eventStore.namespaces.sequences.empty}
+                dataKey={sequenceNumberPath}
+                defaultFilters={filters}
+                globalFilterFields={['context.eventType.id']}
+                detailsComponent={EventDetails}>
 
-                <Column
-                    field={typePath}
-                    header={strings.eventStore.namespaces.sequences.columns.eventType}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={typePath}
-                    filterElement={eventTypeFilterTemplate}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
+                <DataPage.MenuItems>
+                    <MenuItem
+                        id='addEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.addEvent}
+                        icon={faIcons.FaPlus}
+                        command={handleAddEvent} />
+                </DataPage.MenuItems>
 
-                <Column
-                    field={eventSourceIdPath}
-                    header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={eventSourceIdPath}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
+                <DataPage.Columns>
+                    <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
 
-                <Column
-                    field={occurredPath}
-                    header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={occurredPath}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
-            </DataPage.Columns>
-        </DataPage>
+                    <Column
+                        field={typePath}
+                        header={strings.eventStore.namespaces.sequences.columns.eventType}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={typePath}
+                        filterElement={eventTypeFilterTemplate}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
+
+                    <Column
+                        field={eventSourceIdPath}
+                        header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={eventSourceIdPath}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
+
+                    <Column
+                        field={occurredPath}
+                        header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={occurredPath}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
+                </DataPage.Columns>
+            </DataPage>
+            <AddEventWrapper />
+        </>
     );
 };
