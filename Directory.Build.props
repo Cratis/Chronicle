@@ -20,7 +20,7 @@
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
 
-        <NoWarn>NU1507;NU1510;NU1605;NU1608;MSB3277;CA1873;CA1874;CA2024;IDE0330;IDE0048;MA0158;MA0036;IDE0032;IDE0340;SA1500</NoWarn>
+        <NoWarn>NU1507;NU1510;NU1605;MSB3277;CA1873;CA1874;CA2024;IDE0330;IDE0048;MA0158;MA0036;IDE0032;IDE0340;SA1500</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
