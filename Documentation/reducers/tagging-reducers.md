@@ -2,8 +2,6 @@
 
 Tags provide a way to organize and categorize your reducers for better discoverability and management. By applying the `[Tag]` attribute to your reducer classes, you can assign one or more tags that describe the purpose or domain of the reducer.
 
-> **Note**: Tags replaced the previous `[Category]` attribute. Use `[Tag]` for all new code.
-
 ## Adding Tags
 
 You can tag reducers in multiple ways:
