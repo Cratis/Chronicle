@@ -83,7 +83,7 @@ internal static class CompatibilityValidator
     static Dictionary<string, Dictionary<string, string>> ParseSchemaToServices(string schema)
     {
         var services = new Dictionary<string, Dictionary<string, string>>();
-        var lines = schema.Split('\n');
+        var lines = schema.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         string? currentService = null;
         var currentServiceMethods = new Dictionary<string, string>();
 
@@ -112,13 +112,17 @@ internal static class CompatibilityValidator
             // Detect RPC method definition
             else if (trimmedLine.StartsWith("rpc ", StringComparison.Ordinal) && currentService is not null)
             {
-                // Extract method signature: rpc MethodName(RequestType) returns (ResponseType);
-                var methodSignature = trimmedLine.TrimEnd(';');
-                var rpcParts = methodSignature.Split([' ', '(', ')'], StringSplitOptions.RemoveEmptyEntries);
+                // Keep the entire method signature for comparison
+                // This includes stream keywords and complete type information
+                var methodSignature = trimmedLine.TrimEnd(';', ' ');
 
-                if (rpcParts.Length >= 3)
+                // Extract method name from: rpc MethodName(...) or rpc MethodName (...)
+                var methodNameStart = 4; // After "rpc "
+                var openParenIndex = methodSignature.IndexOf('(', methodNameStart);
+
+                if (openParenIndex > methodNameStart)
                 {
-                    var methodName = rpcParts[1];
+                    var methodName = methodSignature.Substring(methodNameStart, openParenIndex - methodNameStart).Trim();
                     currentServiceMethods[methodName] = methodSignature;
                 }
             }
