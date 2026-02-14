@@ -46,7 +46,8 @@
             "projections": "Projections",
             "reducers": "Reducers",
             "reactors": "Reactors",
-            "sinks": "Sinks"
+            "sinks": "Sinks",
+            "seedData": "Seed Data"
         },
         "system": {
             "groupLabel": "System",
@@ -268,6 +269,7 @@
                 "empty": "No events found",
                 "actions": {
                     "addEvent": "Add Event"
+                    "redact": "Redact"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -292,6 +294,11 @@
                         "content": "Event Content (JSON)",
                         "contentPlaceholder": "Enter event content as JSON",
                         "viewSchema": "View Schema"
+                    },
+                    "redact": {
+                        "title": "Redact Event",
+                        "reason": "Reason for redaction",
+                        "reasonPlaceholder": "Enter the reason for redacting this event"
                     }
                 }
             },

@@ -12,10 +12,7 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
-/// </remarks>
-/// <param name="eventSequences"><see cref="IEventSequences"/> service for working with the event log.</param>
+/// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
 public class EventSequenceCommands(IEventSequences eventSequences) : ControllerBase
 {
@@ -122,7 +119,17 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
         [FromRoute] string eventSequenceId,
         [FromBody] RedactEvent redaction)
     {
-        throw new NotImplementedException();
+        await eventSequences.Redact(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = redaction.SequenceNumber,
+            Reason = redaction.Reason,
+            CorrelationId = Guid.NewGuid(),
+            Causation = redaction.Causation?.ToContract() ?? [],
+            CausedBy = redaction.CausedBy?.ToContract() ?? new()
+        });
     }
 
     /// <summary>

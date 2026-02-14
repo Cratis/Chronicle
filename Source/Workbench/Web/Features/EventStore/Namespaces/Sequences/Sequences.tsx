@@ -16,6 +16,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AddEventDialog } from './Add/AddEventDialog';
 import { useState } from 'react';
+import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
@@ -41,11 +42,24 @@ export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [AddEventWrapper, showAddEvent] = useDialog(AddEventDialog);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-
+    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
+    const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
+  
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: 'event-log'
+    };
+
+    const handleRedactEvent = () => {
+        if (selectedEvent) {
+            showRedactEvent({
+                eventStore: params.eventStore!,
+                namespace: params.namespace!,
+                eventSequenceId: 'event-log',
+                sequenceNumber: selectedEvent.context.sequenceNumber
+            });
+        }
     };
 
     const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
@@ -142,6 +156,7 @@ export const Sequences = () => {
                 </DataPage.Columns>
             </DataPage>
             <AddEventWrapper />
+            <RedactEventWrapper />
         </>
     );
 };

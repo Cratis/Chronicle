@@ -7,9 +7,9 @@ using Orleans.Serialization.Cloning;
 namespace Cratis.Chronicle.Setup.Serialization;
 
 /// <summary>
-/// A generalized deep copier for LINQ's internal collection types like ReadOnlySingleElementList.
+/// A generalized deep copier for LINQ's internal collection types.
 /// This is needed because Orleans doesn't know how to copy these internal LINQ types that are
-/// created when using collection expressions like [item] or LINQ methods like .Take(1).
+/// created when using collection expressions like [item] or LINQ methods like .Select(), .Where(), .Take() etc.
 /// </summary>
 public sealed class LinqCollectionCopier : IGeneralizedCopier, ITypeFilter
 {
@@ -25,6 +25,13 @@ public sealed class LinqCollectionCopier : IGeneralizedCopier, ITypeFilter
 
         // Handle collection expression types (e.g., when using [item] syntax)
         if (type.FullName?.Contains("<>z__") == true)
+        {
+            return true;
+        }
+
+        // Handle LINQ iterator types (e.g., IteratorSelectIterator, WhereEnumerableIterator)
+        // These are nested classes in System.Linq.Enumerable
+        if (type.Namespace == "System.Linq" && type.DeclaringType?.Name == "Enumerable")
         {
             return true;
         }
