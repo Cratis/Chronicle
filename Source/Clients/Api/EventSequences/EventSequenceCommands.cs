@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Api.Auditing;
+using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Contracts.EventSequences;
+
 namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
-/// </remarks>
+/// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceCommands : ControllerBase
+public class EventSequenceCommands(IEventSequences eventSequences) : ControllerBase
 {
     /// <summary>
     /// Appends an event to the event log.
@@ -63,7 +65,17 @@ public class EventSequenceCommands : ControllerBase
         [FromRoute] string eventSequenceId,
         [FromBody] RedactEvent redaction)
     {
-        throw new NotImplementedException();
+        await eventSequences.Redact(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = redaction.SequenceNumber,
+            Reason = redaction.Reason,
+            CorrelationId = Guid.NewGuid(),
+            Causation = redaction.Causation?.ToContract() ?? [],
+            CausedBy = redaction.CausedBy?.ToContract() ?? new()
+        });
     }
 
     /// <summary>
