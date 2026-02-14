@@ -2,173 +2,82 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Properties;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Defines a projection.
 /// </summary>
-public interface IProjection
+public interface IProjection : IGrainWithStringKey
 {
     /// <summary>
-    /// Gets the <see cref="EventSequenceId"/> the projection is for.
+    /// Set the projection definition and subscribe as an observer.
     /// </summary>
-    EventSequenceId EventSequenceId { get; }
+    /// <param name="definition"><see cref="ProjectionDefinition"/> to refresh with.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetDefinition(ProjectionDefinition definition);
 
     /// <summary>
-    /// Gets the unique identifier of the <see cref="IProjection"/>.
+    /// Get the projection definition.
     /// </summary>
-    ProjectionId Identifier { get; }
+    /// <returns>The current <see cref="ProjectionDefinition"/>.</returns>
+    Task<ProjectionDefinition> GetDefinition();
 
     /// <summary>
-    /// Gets the initial state used for each model instance.
+    /// Subscribe to changes in projection or pipeline definition changes.
     /// </summary>
-    ExpandoObject InitialModelState { get; }
+    /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 
     /// <summary>
-    /// Gets the fully qualified path for the projection. Typically for child relationships, this will show the full path it applies to.
+    /// Unsubscribe to changes in projection or pipeline definition changes.
     /// </summary>
-    ProjectionPath Path { get; }
+    /// <param name="subscriber"><see cref="INotifyProjectionDefinitionsChanged"/> to subscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task UnsubscribeDefinitionsChanged(INotifyProjectionDefinitionsChanged subscriber);
 
     /// <summary>
-    /// Gets the fully qualified <see cref="PropertyPath"/> that represents the array that children will be operated on. Only applies to child projections.
+    /// Get the event types the projection is interested in.
     /// </summary>
-    PropertyPath ChildrenPropertyPath { get; }
+    /// <returns>The event types.</returns>
+    Task<IEnumerable<EventType>> GetEventTypes();
 
     /// <summary>
-    /// Gets the <see cref="PropertyPath"/> that identifies items in the children collection. Only applies to child projections.
+    /// Get the event types for a preview scenario with a provided read model definition.
     /// </summary>
-    PropertyPath IdentifiedByProperty { get; }
+    /// <param name="readModelDefinition">The read model definition to use for preview.</param>
+    /// <returns>The event types.</returns>
+    Task<IEnumerable<EventType>> GetEventTypesForPreview(ReadModelDefinition readModelDefinition);
 
     /// <summary>
-    /// Gets whether or not there is a parent.
+    /// Process a set of events through the projection for a single read-model instance.
     /// </summary>
-    bool HasParent { get; }
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="initialState">The initial projected state.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The resulting projected state.</returns>
+    Task<ExpandoObject> ProcessForSingleReadModel(EventStoreNamespaceName eventStoreNamespace, ExpandoObject initialState, IEnumerable<AppendedEvent> events);
 
     /// <summary>
-    /// Gets the parent projection - if any.
+    /// Process a set of events through the projection and return resulting read-model instances grouped by key.
     /// </summary>
-    IProjection? Parent { get; }
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="events">The events to process.</param>
+    /// <returns>The resulting projected states for all keys encountered.</returns>
+    Task<IEnumerable<ExpandoObject>> Process(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events);
 
     /// <summary>
-    /// Gets the <see cref="ReadModelDefinition"/> for the root read model.
+    /// Process a set of events through the projection for preview with a provided read model definition.
+    /// This is used when the read model hasn't been persisted yet (e.g., draft read models).
     /// </summary>
-    ReadModelDefinition ReadModel { get; }
-
-    /// <summary>
-    /// Gets the <see cref="JsonSchema"/> representing the target for this projection.
-    /// </summary>
-    JsonSchema TargetReadModelSchema { get; }
-
-    /// <summary>
-    /// Gets whether or not the projection is rewindable.
-    /// </summary>
-    bool IsRewindable { get; }
-
-    /// <summary>
-    /// Gets whether properties should be auto-mapped from events at the projection level.
-    /// </summary>
-    AutoMap AutoMap { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IObservable{T}">observable</see> <see cref="ProjectionEventContext">event</see>.
-    /// </summary>
-    IObservable<ProjectionEventContext> Event { get; }
-
-    /// <summary>
-    /// Gets the <see cref="IDictionary{TKey,TValue}"/> of <see cref="EventType"/> to <see cref="ProjectionOperationType"/> mapping.
-    /// </summary>
-    IDictionary<EventType, ProjectionOperationType> OperationTypes { get; }
-
-    /// <summary>
-    /// Gets the <see cref="EventType">event types</see> the projection can handle.
-    /// </summary>
-    IEnumerable<EventType> EventTypes { get; }
-
-    /// <summary>
-    /// Gets the <see cref="EventType">event types</see> that are exclusive to this projection and not including any of the child projections.
-    /// </summary>
-    IEnumerable<EventType> OwnEventTypes { get; }
-
-    /// <summary>
-    /// Gets the <see cref="EventTypeWithKeyResolver"/> collection.
-    /// </summary>
-    IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; }
-
-    /// <summary>
-    /// Gets the collection of <see cref="IProjection">child projections</see>.
-    /// </summary>
-    IEnumerable<IProjection> ChildProjections { get; }
-
-    /// <summary>
-    /// Apply a filter to an <see cref="IObservable{EventContext}"/> with the event types the <see cref="Projection"/> is interested in.
-    /// </summary>
-    /// <param name="observable"><see cref="IObservable{EventContext}"/> to filter.</param>
-    /// <returns>Filtered <see cref="IObservable{EventContext}"/>.</returns>
-    IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable);
-
-    /// <summary>
-    /// Apply a filter to an <see cref="IObservable{Event}"/> with the event types the <see cref="Projection"/> is interested in.
-    /// </summary>
-    /// <param name="observable"><see cref="IObservable{Event}"/> to filter.</param>
-    /// <returns>Filtered <see cref="IObservable{Event}"/>.</returns>
-    IObservable<AppendedEvent> FilterEventTypes(IObservable<AppendedEvent> observable);
-
-    /// <summary>
-    /// Provides the projection with a new <see cref="AppendedEvent"/>.
-    /// </summary>
-    /// <param name="context"><see cref="ProjectionEventContext"/> to work with.</param>
-    void OnNext(ProjectionEventContext context);
-
-    /// <summary>
-    /// Checks whether the projection will accept a specific event type.
-    /// </summary>
-    /// <param name="eventType"><see cref="EventType"/> to check.</param>
-    /// <returns>True if it does, false if not.</returns>
-    bool Accepts(EventType eventType);
-
-    /// <summary>
-    /// Get whether there is a key resolver for a specific <see cref="EventType"/>.
-    /// </summary>
-    /// <param name="eventType"><see cref="EventType"/> to check.</param>
-    /// <returns>True if there is, false if not.</returns>
-    bool HasKeyResolverFor(EventType eventType);
-
-    /// <summary>
-    /// Get the <see cref="ValueProvider{Event}"/> associated with a given <see cref="EventType"/>.
-    /// </summary>
-    /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-    /// <returns>The <see cref="KeyResolver"/>.</returns>
-    KeyResolver GetKeyResolverFor(EventType eventType);
-
-    /// <summary>
-    /// Gets the <see cref="ProjectionOperationType"/> for a given <see cref="EventType"/> affecting the projection.
-    /// </summary>
-    /// <param name="eventType"><see cref="EventType"/> to get for.</param>
-    /// <returns><see cref="ProjectionOperationType"/>.</returns>
-    ProjectionOperationType GetOperationTypeFor(EventType eventType);
-
-    /// <summary>
-    /// Set event types with key resolvers for the projection.
-    /// </summary>
-    /// <param name="eventTypesWithKeyResolver">Collection of <see cref="EventTypeWithKeyResolver"/>.</param>
-    /// <param name="ownEventTypes">Collection of <see cref="EventType"/> that is only for this projection without not any children.</param>
-    /// <param name="operationTypes">Dictionary mapping <see cref="EventType"/> to <see cref="ProjectionOperationType"/>.</param>
-    void SetEventTypesWithKeyResolvers(
-        IEnumerable<EventTypeWithKeyResolver> eventTypesWithKeyResolver,
-        IEnumerable<EventType> ownEventTypes,
-        IDictionary<EventType, ProjectionOperationType> operationTypes);
-
-    /// <summary>
-    /// Set the parent <see cref="IProjection"/>.
-    /// </summary>
-    /// <param name="projection">The parent <see cref="IProjection"/>.</param>
-    void SetParent(IProjection projection);
+    /// <param name="eventStoreNamespace">The namespace the events are from.</param>
+    /// <param name="events">The events to process.</param>
+    /// <param name="readModelDefinition">The read model definition to use for preview.</param>
+    /// <returns>The resulting projected states for all keys encountered.</returns>
+    Task<IEnumerable<ExpandoObject>> ProcessForPreview(EventStoreNamespaceName eventStoreNamespace, IEnumerable<AppendedEvent> events, ReadModelDefinition readModelDefinition);
 }

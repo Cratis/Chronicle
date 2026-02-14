@@ -1,83 +1,196 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Grains.Namespaces;
+using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.DefinitionLanguage;
 using Cratis.Chronicle.Storage;
-using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Orleans.BroadcastChannel;
+using Orleans.Providers;
 
-namespace Cratis.Chronicle.Projections;
+namespace Cratis.Chronicle.Grains.Projections;
 
 /// <summary>
-/// Represents the implementation of <see cref="IProjectionsManager"/>.
+/// Represents an implementation of <see cref="IProjectionsManager"/>.
 /// </summary>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
+/// <param name="projectionsService"><see cref="IProjectionsServiceClient"/> for managing projections.</param>
+/// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
-[Singleton]
-public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage) : IProjectionsManager
+/// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
+/// <param name="logger">The logger.</param>
+[ImplicitChannelSubscription]
+[StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
+public class ProjectionsManager(
+    IProjectionFactory projectionFactory,
+    IProjectionsServiceClient projectionsService,
+    ILanguageService languageService,
+    IStorage storage,
+    ILocalSiloDetails localSiloDetails,
+    ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
-    readonly ConcurrentDictionary<string, ProjectionDefinition> _definitions = new();
-    readonly ConcurrentDictionary<string, IProjection> _projections = new();
+    EventStoreName _eventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
-    public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
+    public Task Ensure() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        foreach (var definition in definitions)
+        _eventStoreName = this.GetPrimaryKeyString();
+        await SetDefinitionAndSubscribeForAllProjections();
+    }
+
+    /// <inheritdoc/>
+    public async Task Register(IEnumerable<ProjectionDefinition> definitions)
+    {
+        await projectionsService.Register(_eventStoreName, definitions);
+
+        // Merge new definitions with existing ones, replacing any with the same identifier
+        var existingProjections = State.Projections.ToList();
+        foreach (var newDefinition in definitions)
         {
-            var definitionKey = GetKeyFor(eventStore, definition.Identifier);
-            _definitions[definitionKey] = definition;
+            var existingIndex = existingProjections.FindIndex(p => p.Identifier == newDefinition.Identifier);
+            if (existingIndex >= 0)
+            {
+                existingProjections[existingIndex] = newDefinition;
+            }
+            else
+            {
+                existingProjections.Add(newDefinition);
+            }
+        }
+
+        State.Projections = existingProjections;
+        await WriteStateAsync();
+        await SetDefinitionAndSubscribeForAllProjections();
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
+    {
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+        return State.Projections
+            .Select(definition =>
+            {
+                var readModel = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
+                if (readModel is null)
+                {
+                    logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                    return null;
+                }
+
+                return new ProjectionWithDeclaration(
+                    definition.Identifier,
+                    readModel.ContainerName,
+                    languageService.Generate(definition, readModel));
+            })
+            .Where(_ => _ is not null)
+            .Select(_ => _!)
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
+    {
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_eventStoreName != eventStore) return Task.CompletedTask;
+
+        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
+        return Task.CompletedTask;
+    }
+
+    async Task OnNamespaceAdded(NamespaceAdded added)
+    {
+        await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+
+        foreach (var projectionDefinition in State.Projections)
+        {
+            var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
+            var projection = GrainFactory.GetGrain<IProjection>(key);
+            await projection.SetDefinition(projectionDefinition);
+            var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == projectionDefinition.ReadModel);
+            if (readModelDefinition is null)
+            {
+                logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
+                continue;
+            }
+
+            await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
+        }
+    }
+
+    async Task SetDefinitionAndSubscribeForAllProjections()
+    {
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+
+        foreach (var definition in State.Projections)
+        {
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
             if (readModelDefinition is null)
             {
-                var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
-                throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
+                logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
+                continue;
             }
-            var readModel = readModelDefinition;
-            var eventStoreStorage = storage.GetEventStore(eventStore);
+
+            await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
+        }
+    }
+
+    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
+    {
+        logger.SettingDefinition(definition.Identifier);
+        var key = new ProjectionKey(definition.Identifier, _eventStoreName);
+        var projection = GrainFactory.GetGrain<IProjection>(key);
+        await projection.SetDefinition(definition);
+
+        if (!definition.IsActive)
+        {
+            return;
+        }
+
+        foreach (var namespaceName in namespaces)
+        {
+            await SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName);
+        }
+    }
+
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)
+    {
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
+        var subscribed = await observer.IsSubscribed();
+
+        if (!subscribed && definition.IsActive)
+        {
+            logger.Subscribing(definition.Identifier, namespaceName);
+            var eventStoreStorage = storage.GetEventStore(_eventStoreName);
             var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-            foreach (var @namespace in namespaces)
-            {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
-                var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
-                _projections[key] = projection;
-            }
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
+
+            logger.SubscribingWithEventTypes(
+                definition.Identifier,
+                projection.EventTypes.Count(),
+                string.Join(", ", projection.EventTypes.Select(et => et.Id)));
+
+            await observer.Subscribe<IProjectionObserverSubscriber>(
+                ObserverType.Projection,
+                projection.EventTypes,
+                localSiloDetails.SiloAddress);
         }
     }
 
-    /// <inheritdoc/>
-    public async Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions)
-    {
-        var eventStoreStorage = storage.GetEventStore(eventStore);
-        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        foreach (var definition in _definitions.Where(kvp => kvp.Key.StartsWith($"{eventStore}{KeyHelper.Separator}")).Select(kvp => kvp.Value))
-        {
-            var key = KeyHelper.Combine(eventStore, @namespace, definition.Identifier);
-            var readModel = readModelDefinitions.Single(rm => rm.Identifier == definition.ReadModel);
-            if (!_projections.ContainsKey(key))
-            {
-                _projections[key] = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection) =>
-        _projections.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out projection);
-
-    /// <inheritdoc/>
-    public void Evict(EventStoreName eventStore, ProjectionId id)
-    {
-        _definitions.TryRemove(GetKeyFor(eventStore, id), out _);
-
-        foreach (var key in _projections.Keys.Where(k => k.Contains($"{KeyHelper.Separator}{id}")).ToList())
-        {
-            _projections.TryRemove(key, out _);
-        }
-    }
-
-    string GetKeyFor(EventStoreName eventStore, ProjectionId id) => KeyHelper.Combine(eventStore, id);
+    Task OnError(Exception exception) => Task.CompletedTask;
 }
