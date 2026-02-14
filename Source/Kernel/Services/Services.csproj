@@ -33,6 +33,7 @@
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
 
 </Project>
