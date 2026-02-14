@@ -182,7 +182,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
             _logger.CompatibilityCheckPassed();
         }
-        catch (Exception ex) when (ex is not InvalidOperationException)
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (RpcException ex)
         {
             _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
 

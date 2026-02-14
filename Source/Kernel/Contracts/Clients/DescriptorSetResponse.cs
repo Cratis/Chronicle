@@ -12,6 +12,6 @@ public record DescriptorSetResponse
     /// <summary>
     /// Gets the schema definition as a string.
     /// </summary>
-    [ProtoMember(1, IsRequired = true)]
+    [ProtoMember(1)]
     public string SchemaDefinition { get; init; } = string.Empty;
 }

@@ -96,31 +96,6 @@ internal sealed class ConnectionService(
             ProtoSyntax = ProtoSyntax.Proto3
         };
 
-        // Add all service types that are registered
-        var serviceTypes = new[]
-        {
-            typeof(Contracts.IEventStores),
-            typeof(Contracts.INamespaces),
-            typeof(Contracts.Recommendations.IRecommendations),
-            typeof(Contracts.Identities.IIdentities),
-            typeof(Contracts.EventSequences.IEventSequences),
-            typeof(Contracts.Events.IEventTypes),
-            typeof(Contracts.Events.Constraints.IConstraints),
-            typeof(Contracts.Clients.IConnectionService),
-            typeof(Contracts.Observation.IObservers),
-            typeof(Contracts.Observation.IFailedPartitions),
-            typeof(Contracts.Observation.Reactors.IReactors),
-            typeof(Contracts.Observation.Reducers.IReducers),
-            typeof(Contracts.Observation.Webhooks.IWebhooks),
-            typeof(Contracts.Projections.IProjections),
-            typeof(Contracts.ReadModels.IReadModels),
-            typeof(Contracts.Jobs.IJobs),
-            typeof(Contracts.Seeding.IEventSeeding),
-            typeof(Contracts.Security.IUsers),
-            typeof(Contracts.Security.IApplications),
-            typeof(Contracts.Host.IServer)
-        };
-
-        return generator.GetSchema(serviceTypes);
+        return generator.GetSchema(Contracts.RegisteredServiceTypes.All);
     }
 }
