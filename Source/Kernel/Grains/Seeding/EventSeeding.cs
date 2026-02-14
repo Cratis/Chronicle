@@ -112,8 +112,6 @@ public class EventSeeding(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
             new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
-        var entries = new List<SeedingEntry>();
-
         // Collect all unique entries from both dictionaries
         var allEntries = state.State.ByEventType.Values.SelectMany(e => e)
             .Concat(state.State.ByEventSource.Values.SelectMany(e => e))
