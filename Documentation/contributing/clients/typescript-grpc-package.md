@@ -1,42 +1,17 @@
 # TypeScript gRPC Package Generation
 
-This document explains the TypeScript gRPC package generation setup for Chronicle.
+This document explains the TypeScript gRPC package generation and publishing setup for Chronicle.
 
 ## Overview
 
-The Chronicle TypeScript gRPC package (`@cratis/chronicle.contracts`) provides TypeScript bindings for Chronicle's gRPC services. The package generation process consists of two main steps:
+The Chronicle TypeScript gRPC package (`@cratis/chronicle.contracts`) provides strongly-typed TypeScript bindings for Chronicle's gRPC services. The package generation process consists of two main steps:
 
-1. **Generate .proto files** from C# gRPC service definitions
-2. **Build and publish** the TypeScript npm package
+1. **Generate .proto files** from C# gRPC service definitions (see [Protobuf Extraction](protobuf-extraction.md))
+2. **Generate TypeScript code** from proto files and publish the npm package
 
 ## Components
 
-### 1. ProtoGenerator Tool (`Source/Tools/ProtoGenerator`)
-
-A .NET console application that generates `.proto` files from the Chronicle C# gRPC contracts.
-
-**How it works:**
-- Loads the `Cratis.Chronicle.Contracts.dll` assembly
-- Finds all interfaces decorated with `[Service]` attribute
-- Uses `protobuf-net.Grpc.Reflection` to generate proto files
-- Groups services by namespace to handle multiple packages
-- Outputs separate `.proto` files for each service namespace
-
-**Usage:**
-```bash
-dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  <path-to-contracts-dll> \
-  <output-directory>
-```
-
-**Example:**
-```bash
-dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
-  Source/Kernel/Protobuf
-```
-
-### 2. TypeScript Package (`Source/Clients/TypeScript`)
+### 1. TypeScript Package (`Source/Clients/TypeScript`)
 
 An npm package that provides strongly-typed TypeScript bindings for the Chronicle gRPC services.
 
@@ -52,48 +27,65 @@ An npm package that provides strongly-typed TypeScript bindings for the Chronicl
 
 **How it works:**
 - Uses `ts-proto` to generate TypeScript files from proto definitions
-- Generates strongly-typed clients with full IDE support
+- Generates strongly-typed clients with full IDE support and IntelliSense
 - Provides `ChronicleConnection` class for easy connection management
+- Provides `ChronicleConnectionString` class for connection string parsing
+- Implements OAuth 2.0 client credentials flow for authentication
 - Exports all service clients and types
 - Builds both ESM and CJS versions using Rollup
 
-### 3. GitHub Workflow (`.github/workflows/typescript-protobuf-build.yml`)
+**Key classes:**
+- `ChronicleConnection` - Main connection manager with service access
+- `ChronicleConnectionString` - Connection string parser supporting `chronicle://` URI scheme
+- `ChronicleServices` - Interface defining all available services
+- `TokenProvider` - OAuth token management (client credentials and API key)
 
-Automates the build and publish process.
+### 2. GitHub Workflows
+
+#### Build Workflow (`.github/workflows/typescript-build.yml`)
+
+Validates the TypeScript package on every PR and push to main.
 
 **Triggers:**
-- Manual dispatch with version input
 - Push to main branch
+- Pull requests to any branch
+- Changes to TypeScript client, Contracts, Protobuf, or ProtoGenerator
 
 **Steps:**
 1. Setup .NET 10 and Node.js 23
-2. Build the Contracts assembly
-3. Run ProtoGenerator to generate .proto files
-4. Install TypeScript dependencies
-5. Generate TypeScript files from proto definitions using ts-proto
-6. Build TypeScript package
-7. Set package version (if manual dispatch)
-8. Publish to NPM (if manual dispatch)
-9. Commit and push proto and TypeScript files back to repository
+2. Install protoc (Protocol Buffer Compiler)
+3. Build the Contracts assembly
+4. Run ProtoGenerator to generate .proto files
+5. Install TypeScript dependencies
+6. Generate TypeScript files from proto definitions using ts-proto
+7. Build TypeScript package
+
+#### Publish Workflow (`.github/workflows/publish.yml`)
+
+Publishes the TypeScript package to NPM alongside .NET packages during releases.
+
+**Triggers:**
+- Release published
+
+**Steps:**
+1. Setup .NET 10 and Node.js 23
+2. Install protoc
+3. Build the Contracts assembly
+4. Run ProtoGenerator to generate .proto files
+5. Install TypeScript dependencies
+6. Generate TypeScript files using ts-proto
+7. Build TypeScript package
+8. Publish to NPM
+9. Commit and push updated proto and TypeScript files back to repository
 
 **Required Secrets:**
 - `NPM_TOKEN` - NPM authentication token for publishing
 
 ## Usage
 
-### Generating Proto Files Locally
+### Prerequisites
 
-```bash
-# Build the Contracts assembly
-cd Source/Kernel/Contracts
-dotnet build -c Release
-
-# Generate proto files
-cd ../../..
-dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
-  Source/Kernel/Protobuf
-```
+Proto files must be generated first. See [Protobuf Extraction](protobuf-extraction.md) for details on generating proto files from C# contracts.
 
 ### Building TypeScript Package Locally
 
@@ -114,9 +106,19 @@ yarn add @cratis/chronicle.contracts
 
 Use in your TypeScript code:
 ```typescript
-import { ChronicleConnection } from '@cratis/chronicle.contracts';
+import { ChronicleConnection, ChronicleConnectionString } from '@cratis/chronicle.contracts';
 
-// Create a connection
+// Using the Development connection string (includes default dev credentials)
+const connection = new ChronicleConnection({
+    connectionString: ChronicleConnectionString.Development
+});
+
+// Or using a custom connection string
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://my-client:my-secret@localhost:5000'
+});
+
+// Or using the legacy serverAddress (still supported)
 const connection = new ChronicleConnection({
     serverAddress: 'localhost:5000'
 });
@@ -135,49 +137,97 @@ const namespaces = await connection.namespaces.GetNamespaces({ EventStore: 'my-s
 connection.dispose();
 ```
 
+### Authentication
+
+The package supports two authentication methods:
+
+**Client Credentials (OAuth 2.0):**
+```typescript
+// Connection string with credentials
+const connStr = new ChronicleConnectionString('chronicle://client-id:client-secret@localhost:5000');
+
+// Or using helper method
+const connStr = ChronicleConnectionString.Default.withCredentials('client-id', 'client-secret');
+
+const connection = new ChronicleConnection({ connectionString: connStr });
+```
+
+**API Key:**
+```typescript
+// Connection string with API key query parameter
+const connStr = new ChronicleConnectionString('chronicle://localhost:5000?apiKey=my-api-key');
+
+// Or using helper method
+const connStr = ChronicleConnectionString.Default.withApiKey('my-api-key');
+
+const connection = new ChronicleConnection({ connectionString: connStr });
+```
+
+**Custom Authority:**
+```typescript
+// If using an external OAuth server
+const connection = new ChronicleConnection({
+    connectionString: connStr,
+    authority: 'https://auth.example.com'  // Defaults to Chronicle server if not specified
+});
+```
+
 ## Publishing a New Version
 
-1. Go to GitHub Actions
-2. Run "TypeScript Protobuf Build" workflow
-3. Enter the version number (e.g., `1.0.0`)
-4. The workflow will:
-   - Generate proto files
-   - Build the TypeScript package
-   - Publish to NPM with the specified version
-   - Commit updated proto files to the repository
+The TypeScript package is automatically published to NPM when a new GitHub release is created. The publish workflow will:
+
+1. Generate fresh proto files from C# contracts
+2. Generate TypeScript code from proto files
+3. Build the TypeScript package
+4. Publish to NPM with the release version tag
+5. Commit updated proto and TypeScript files back to the repository
 
 ## Generated Files
 
-**Proto files location:**
-- `Source/Kernel/Protobuf/*.proto` - Source proto files
+**Proto files:** `Source/Kernel/Protobuf/*.proto`
 
-**TypeScript files location:**
-- `Source/Clients/TypeScript/generated/*.ts` - Generated TypeScript service clients
+See [Protobuf Extraction](protobuf-extraction.md) for the complete list of generated proto files.
 
-**Proto files:**
-- `clients.proto` - Client connection services
-- `cratis_chronicle_contracts.proto` - Event stores and namespaces
-- `events.proto` - Event type services
-- `events_constraints.proto` - Event constraint services
-- `eventsequences.proto` - Event sequence services
-- `host.proto` - Host/server information
-- `identities.proto` - Identity services
-- `jobs.proto` - Job management
-- `observation.proto` - Observer services
-- `observation_reactors.proto` - Reactor services
-- `observation_reducers.proto` - Reducer services
-- `projections.proto` - Projection services
-- `readmodels.proto` - Read model services
-- `recommendations.proto` - Recommendation services
-- `seeding.proto` - Event seeding services
+**TypeScript files:** `Source/Clients/TypeScript/generated/*.ts`
+
+The TypeScript generation creates:
+- Service client interfaces and implementations
+- Request and response message types
+- Enum definitions
+- Type definitions for all Chronicle concepts
 
 ## Maintenance
 
 When adding new gRPC services to the C# Contracts:
 
-1. The services should be decorated with `[Service]` attribute
-2. Methods should be decorated with `[Operation]` attribute
-3. Run the ProtoGenerator to update proto files
+1. Ensure services are decorated with `[Service]` attribute
+2. Ensure methods are decorated with `[Operation]` attribute
+3. Regenerate proto files (see [Protobuf Extraction](protobuf-extraction.md))
 4. Run the TypeScript generation to create new TypeScript clients
 5. The TypeScript package will automatically include the new services with full type safety
-6. Publish a new version of the npm package
+6. Publish a new version of the npm package by creating a GitHub release
+
+## Package Structure
+
+The published npm package includes:
+
+- **ESM build** (`dist/esm/`) - ES modules for modern bundlers
+- **CJS build** (`dist/cjs/`) - CommonJS for Node.js compatibility
+- **Type definitions** (`dist/types/`) - TypeScript .d.ts files for IntelliSense
+- **Source maps** - For debugging support
+- **README.md** - Package documentation
+
+## Dependencies
+
+The TypeScript package has the following runtime dependencies:
+
+- `@grpc/grpc-js` - gRPC client for Node.js
+- `@grpc/proto-loader` - Protocol buffer loading (for metadata)
+
+Development dependencies include:
+
+- `ts-proto` - TypeScript code generation from proto files
+- `typescript` - TypeScript compiler
+- `rollup` - Module bundler for builds
+- Various Rollup plugins for TypeScript and module resolution
+
