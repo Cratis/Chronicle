@@ -264,14 +264,40 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task Compensate(
+    public async Task Compensate(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content) => throw new NotImplementedException();
+        ExpandoObject content)
+    {
+        logger.Compensating(eventSequenceId, sequenceNumber);
+        var collection = _collection;
+
+        var @event = await GetEventAt(sequenceNumber);
+        
+        var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
+        var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        
+        var compensation = new EventCompensation(
+            eventType.Generation,
+            correlationId,
+            causation,
+            causedByChain.First(),
+            occurred,
+            new Dictionary<string, BsonDocument>
+            {
+                { eventType.Generation.ToString(), document }
+            });
+
+        var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
+        var update = Builders<Event>.Update.Push(e => e.Compensations, compensation);
+        
+        await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+    }
 
     /// <inheritdoc/>
     public async Task<AppendedEvent> Redact(

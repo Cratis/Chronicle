@@ -49,6 +49,24 @@ public class EventSequenceCommands : ControllerBase
     }
 
     /// <summary>
+    /// Compensate a specific single event by its sequence number.
+    /// </summary>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
+    /// <param name="eventSequenceId">The event sequence to compensate for.</param>
+    /// <param name="compensation">The <see cref="CompensateEvent"/> to compensate.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("compensate-event")]
+    public async Task Compensate(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
+        [FromBody] CompensateEvent compensation)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
     /// Redact a specific single event by its sequence number.
     /// </summary>
     /// <param name="eventStore">The event store to append for.</param>
