@@ -37,6 +37,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - uses: actions/cache@v3
@@ -106,23 +108,78 @@ jobs:
       - name: Run tests
         run: dotnet test --no-build --configuration Release --settings specs.runsettings
 
+  discover-integration-namespaces:
+    runs-on: ubuntu-latest
+    outputs:
+      test-matrix: ${{ steps.create-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create test matrix
+        id: create-matrix
+        run: |
+          # Function to discover namespaces in a directory
+          discover_namespaces() {
+            local dir=$1
+            find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name 'bin' ! -name 'obj' -exec basename {} \; 2>/dev/null || echo ""
+          }
+
+          # Function to add namespaces to matrix
+          add_to_matrix() {
+            local project=$1
+            local path=$2
+            local namespace_prefix=$3
+            local needs_docker=$4
+            local namespaces=$5
+
+            for ns in $namespaces; do
+              [ -z "$ns" ] && continue
+              matrix+="{\"project\":\"$project\",\"path\":\"$path\",\"namespace\":\"${namespace_prefix}${ns}\",\"needs-docker\":$needs_docker},"
+            done
+          }
+
+          # Project configuration
+          # Format: "ProjectName|Path|NamespacePrefix|NeedsDocker|IncludeShared|SpecificNamespacePrefix"
+          declare -a projects=(
+            "DotNET.InProcess|./Integration/DotNET.InProcess|Cratis.Chronicle.Integration.|false|true|Cratis.Chronicle.Integration.Specifications."
+            "DotNET|./Integration/DotNET|Cratis.Chronicle.Integration.|true|true|Cratis.Chronicle.Integration.Specifications."
+            "Kernel|./Integration/Kernel|Cratis.Chronicle.Kernel.Integration.|false|false|"
+          )
+
+          # Discover shared namespaces
+          shared_namespaces=$(ls -d Integration/Specifications/*/ 2>/dev/null | xargs -n1 basename || echo "")
+
+          # Build JSON matrix
+          matrix='{"include":['
+
+          # Process each project configuration
+          for project_config in "${projects[@]}"; do
+            IFS='|' read -r project path ns_prefix needs_docker include_shared shared_ns_prefix <<< "$project_config"
+
+            # Add shared specs if configured
+            if [ "$include_shared" = "true" ]; then
+              add_to_matrix "$project" "$path" "$shared_ns_prefix" "$needs_docker" "$shared_namespaces"
+            fi
+
+            # Add project-specific namespaces
+            project_dir="${path#./}"
+            project_namespaces=$(discover_namespaces "$project_dir")
+            add_to_matrix "$project" "$path" "$ns_prefix" "$needs_docker" "$project_namespaces"
+          done
+
+          # Remove trailing comma and close JSON
+          matrix="${matrix%,}]}"
+
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $matrix"
+
   integration-specs:
     runs-on: ubuntu-latest
-    needs: [dotnet-build]
+    needs: [dotnet-build, discover-integration-namespaces]
     strategy:
-      matrix:
-        namespace:
-          - 'for_EventSequence'
-          - 'for_JobsManager'
-          - 'for_Reactors'
-          - 'for_Reducers'
-          - 'for_ReadModels'
-          - 'for_Webhooks'
-          - 'Jobs'
-          - 'Projections'
+      matrix: ${{ fromJson(needs.discover-integration-namespaces.outputs.test-matrix) }}
     continue-on-error: true
-    env:
-      NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,9 +198,17 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run integration tests
-        working-directory: ./Integration/DotNET.InProcess
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release
+      - name: Login to GitHub Docker Registry
+        if: matrix.needs-docker == true
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run integration tests for ${{ matrix.project }} - ${{ matrix.namespace }}
+        working-directory: ${{ matrix.path }}
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ matrix.namespace }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
 
   integration-api:
     runs-on: ubuntu-latest
@@ -173,37 +238,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run API integration tests
+      - name: Run API integration tests for .Net 9
         working-directory: ./Integration/Api
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
-  mongodb:
-    runs-on: ubuntu-latest
-    needs: [dotnet-build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        id: dotnet-x64-output
-        with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
-
-      - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run MongoDB integration tests
-        working-directory: ./Integration/MongoDB
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net9.0

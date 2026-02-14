@@ -14,6 +14,12 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.5.1" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.5.1" />
+    <PackageVersion Include="Cratis.Applications" Version="17.22.18" />
+    <PackageVersion Include="Cratis.Applications.MongoDB" Version="17.22.18" />
+    <PackageVersion Include="Cratis.Applications.Orleans" Version="17.22.18" />
+    <PackageVersion Include="Cratis.Applications.Orleans.MongoDB" Version="17.22.18" />
+    <PackageVersion Include="Cratis.Applications.ProxyGenerator.Build" Version="17.22.18" />
+    <PackageVersion Include="Cratis.Applications.Swagger" Version="17.22.18" />
     <PackageVersion Include="Cratis.Arc" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.2.0" />

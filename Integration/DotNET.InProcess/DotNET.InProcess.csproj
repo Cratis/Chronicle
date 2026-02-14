@@ -26,4 +26,8 @@
         <PackageReference Include="OneOf" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="../Specifications/**/*.cs" LinkBase="Specifications" />
+    </ItemGroup>
 </Project>

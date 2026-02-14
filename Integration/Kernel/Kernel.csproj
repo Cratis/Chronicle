@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Kernel.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Kernel.Integration</RootNamespace>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
+        <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+        <ProjectReference Include="../../Source/Clients/Orleans/Orleans.csproj" />
+        <ProjectReference Include="../../Source/Clients/DotNET.InProcess/DotNET.InProcess.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Projections/Projections.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Grains/Grains.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Diagnostics/Diagnostics.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Cratis.Applications" />
+        <PackageReference Include="Cratis.Applications.MongoDB" />
+        <PackageReference Include="Cratis.Applications.Orleans" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Polly.Core" />
+        <PackageReference Include="OneOf" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+    </ItemGroup>
+</Project>
