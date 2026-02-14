@@ -266,6 +266,9 @@
             "sequences": {
                 "title": "Sequences",
                 "empty": "No events found",
+                "actions": {
+                    "redact": "Redact"
+                },
                 "columns": {
                     "sequenceNumber": "Sequence number",
                     "eventSourceId": "Event Source Id",
@@ -277,6 +280,13 @@
                         "eventType": "Event type",
                         "eventSourceId": "Event source",
                         "occurred": "Occurred"
+                    }
+                },
+                "dialogs": {
+                    "redact": {
+                        "title": "Redact Event",
+                        "reason": "Reason for redaction",
+                        "reasonPlaceholder": "Enter the reason for redacting this event"
                     }
                 }
             },

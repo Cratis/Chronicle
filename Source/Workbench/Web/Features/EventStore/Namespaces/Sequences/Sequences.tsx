@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DataPage } from 'Components';
+import { DataPage, MenuItem } from 'Components';
 import strings from 'Strings';
 import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -13,6 +13,10 @@ import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { MultiSelect } from 'primereact/multiselect';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
+import { useState } from 'react';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
+import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
 
@@ -31,10 +35,23 @@ function GetPathFor<T>(lambda: Lambda<T>): string {
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
+    const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: 'event-log'
+    };
+
+    const handleRedactEvent = () => {
+        if (selectedEvent) {
+            showRedactEvent({
+                eventStore: params.eventStore!,
+                namespace: params.namespace!,
+                eventSequenceId: 'event-log',
+                sequenceNumber: selectedEvent.context.sequenceNumber
+            });
+        }
     };
 
     const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
@@ -71,46 +88,59 @@ export const Sequences = () => {
     };
 
     return (
-        <DataPage
-            title={strings.eventStore.namespaces.sequences.title}
-            query={AppendedEvents}
-            queryArguments={queryArgs}
-            emptyMessage={strings.eventStore.namespaces.sequences.empty}
-            dataKey={sequenceNumberPath}
-            defaultFilters={filters}
-            globalFilterFields={['context.eventType.id']}
-            detailsComponent={EventDetails}>
-            <DataPage.Columns>
-                <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+        <>
+            <DataPage
+                title={strings.eventStore.namespaces.sequences.title}
+                query={AppendedEvents}
+                queryArguments={queryArgs}
+                emptyMessage={strings.eventStore.namespaces.sequences.empty}
+                dataKey={sequenceNumberPath}
+                defaultFilters={filters}
+                globalFilterFields={['context.eventType.id']}
+                detailsComponent={EventDetails}
+                selection={selectedEvent}
+                onSelectionChange={(e) => setSelectedEvent(e.value as AppendedEvent)}>
+                <DataPage.MenuItems>
+                    <MenuItem
+                        id="redact"
+                        label={strings.eventStore.namespaces.sequences.actions.redact}
+                        icon={faIcons.FaBan}
+                        disableOnUnselected
+                        command={handleRedactEvent} />
+                </DataPage.MenuItems>
+                <DataPage.Columns>
+                    <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
 
-                <Column
-                    field={typePath}
-                    header={strings.eventStore.namespaces.sequences.columns.eventType}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={typePath}
-                    filterElement={eventTypeFilterTemplate}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
+                    <Column
+                        field={typePath}
+                        header={strings.eventStore.namespaces.sequences.columns.eventType}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={typePath}
+                        filterElement={eventTypeFilterTemplate}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
 
-                <Column
-                    field={eventSourceIdPath}
-                    header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={eventSourceIdPath}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
+                    <Column
+                        field={eventSourceIdPath}
+                        header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={eventSourceIdPath}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
 
-                <Column
-                    field={occurredPath}
-                    header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField={occurredPath}
-                    filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
-            </DataPage.Columns>
-        </DataPage>
+                    <Column
+                        field={occurredPath}
+                        header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField={occurredPath}
+                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
+                </DataPage.Columns>
+            </DataPage>
+            <RedactEventWrapper />
+        </>
     );
 };
