@@ -11,15 +11,11 @@ namespace Cratis.Chronicle.Api.Seeding;
 /// <param name="EventSourceId">The event source identifier.</param>
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Content">The JSON content of the event.</param>
-/// <param name="IsGlobal">Whether this seed data is global (applies to all namespaces).</param>
-/// <param name="TargetNamespace">The specific namespace this seed data applies to, if not global.</param>
 [ReadModel]
 public record SeedEntry(
     string EventSourceId,
     string EventTypeId,
-    string Content,
-    bool IsGlobal,
-    string TargetNamespace)
+    string Content)
 {
     /// <summary>
     /// Gets all global seed data for an event store.
@@ -37,9 +33,7 @@ public record SeedEntry(
         return response.Entries.Select(e => new SeedEntry(
             e.EventSourceId,
             e.EventTypeId,
-            e.Content,
-            e.IsGlobal,
-            e.TargetNamespace));
+            e.Content));
     }
 
     /// <summary>
@@ -60,8 +54,6 @@ public record SeedEntry(
         return response.Entries.Select(e => new SeedEntry(
             e.EventSourceId,
             e.EventTypeId,
-            e.Content,
-            e.IsGlobal,
-            e.TargetNamespace));
+            e.Content));
     }
 }

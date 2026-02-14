@@ -34,16 +34,63 @@ public record AddSeedEntry(
         {
             EventSourceId = EventSourceId,
             EventTypeId = EventTypeId,
-            Content = Content,
-            IsGlobal = IsGlobal,
-            TargetNamespace = IsGlobal ? string.Empty : Namespace
+            Content = Content
         };
 
-        await eventSeeding.Seed(new SeedRequest
+        var request = new SeedRequest
         {
-            EventStore = EventStore,
-            Namespace = Namespace,
-            Entries = [entry]
-        });
+            EventStore = EventStore
+        };
+
+        if (IsGlobal)
+        {
+            // Add to global entries
+            request.GlobalByEventType =
+            [
+                new EventTypeSeedEntries
+                {
+                    EventTypeId = EventTypeId,
+                    Entries = [entry]
+                }
+            ];
+
+            request.GlobalByEventSource =
+            [
+                new EventSourceSeedEntries
+                {
+                    EventSourceId = EventSourceId,
+                    Entries = [entry]
+                }
+            ];
+        }
+        else
+        {
+            // Add to namespaced entries
+            request.NamespacedEntries =
+            [
+                new NamespacedSeedEntries
+                {
+                    Namespace = Namespace,
+                    ByEventType =
+                    [
+                        new EventTypeSeedEntries
+                        {
+                            EventTypeId = EventTypeId,
+                            Entries = [entry]
+                        }
+                    ],
+                    ByEventSource =
+                    [
+                        new EventSourceSeedEntries
+                        {
+                            EventSourceId = EventSourceId,
+                            Entries = [entry]
+                        }
+                    ]
+                }
+            ];
+        }
+
+        await eventSeeding.Seed(request);
     }
 }

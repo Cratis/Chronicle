@@ -16,11 +16,26 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     /// <inheritdoc/>
     public async Task Seed(SeedRequest request, CallContext context = default)
     {
-        // Group entries by whether they are global or namespace-specific
-        var globalEntries = request.Entries.Where(e => e.IsGlobal).ToList();
-        var namespaceEntries = request.Entries.Where(e => !e.IsGlobal).ToList();
-
         // Seed global entries to the global grain
+        var globalEntries = new List<Contracts.Seeding.SeedingEntry>();
+
+        // Collect all global entries from both ByEventType and ByEventSource
+        foreach (var eventTypeGroup in request.GlobalByEventType)
+        {
+            globalEntries.AddRange(eventTypeGroup.Entries);
+        }
+
+        foreach (var eventSourceGroup in request.GlobalByEventSource)
+        {
+            globalEntries.AddRange(eventSourceGroup.Entries);
+        }
+
+        // Deduplicate global entries (same entry might be in both ByEventType and ByEventSource)
+        globalEntries = globalEntries
+            .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
+            .Select(g => g.First())
+            .ToList();
+
         if (globalEntries.Count > 0)
         {
             var globalKey = EventSeedingKey.ForGlobal(request.EventStore);
@@ -30,29 +45,46 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
                 e.EventSourceId,
                 e.EventTypeId,
                 e.Content,
-                e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray(),
-                e.IsGlobal,
-                e.TargetNamespace)).ToArray();
+                e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray())).ToArray();
 
             await globalGrain.Seed(entries);
         }
 
-        // Seed namespace-specific entries grouped by target namespace
-        foreach (var group in namespaceEntries.GroupBy(e => e.TargetNamespace))
+        // Seed namespace-specific entries
+        foreach (var namespacedGroup in request.NamespacedEntries)
         {
-            var targetNamespace = string.IsNullOrEmpty(group.Key) ? request.Namespace : group.Key;
-            var key = EventSeedingKey.ForNamespace(request.EventStore, targetNamespace);
-            var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
+            var namespacedEntries = new List<Contracts.Seeding.SeedingEntry>();
 
-            var entries = group.Select(e => new Grains.Seeding.SeedingEntry(
-                e.EventSourceId,
-                e.EventTypeId,
-                e.Content,
-                e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray(),
-                e.IsGlobal,
-                targetNamespace)).ToArray();
+            // Collect all entries from both ByEventType and ByEventSource
+            foreach (var eventTypeGroup in namespacedGroup.ByEventType)
+            {
+                namespacedEntries.AddRange(eventTypeGroup.Entries);
+            }
 
-            await grain.Seed(entries);
+            foreach (var eventSourceGroup in namespacedGroup.ByEventSource)
+            {
+                namespacedEntries.AddRange(eventSourceGroup.Entries);
+            }
+
+            // Deduplicate entries
+            namespacedEntries = namespacedEntries
+                .GroupBy(e => new { e.EventSourceId, e.EventTypeId, e.Content })
+                .Select(g => g.First())
+                .ToList();
+
+            if (namespacedEntries.Count > 0)
+            {
+                var key = EventSeedingKey.ForNamespace(request.EventStore, namespacedGroup.Namespace);
+                var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
+
+                var entries = namespacedEntries.Select(e => new Grains.Seeding.SeedingEntry(
+                    e.EventSourceId,
+                    e.EventTypeId,
+                    e.Content,
+                    e.Tags?.Select(t => new Concepts.Events.Tag(t)).ToArray())).ToArray();
+
+                await grain.Seed(entries);
+            }
         }
     }
 
@@ -69,9 +101,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             {
                 EventSourceId = e.EventSourceId.Value,
                 EventTypeId = e.EventTypeId.Value,
-                Content = e.Content,
-                IsGlobal = e.IsGlobal,
-                TargetNamespace = e.TargetNamespace.Value
+                Content = e.Content
             }).ToList()
         };
     }
@@ -89,9 +119,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             {
                 EventSourceId = e.EventSourceId.Value,
                 EventTypeId = e.EventTypeId.Value,
-                Content = e.Content,
-                IsGlobal = e.IsGlobal,
-                TargetNamespace = e.TargetNamespace.Value
+                Content = e.Content
             }).ToList()
         };
     }

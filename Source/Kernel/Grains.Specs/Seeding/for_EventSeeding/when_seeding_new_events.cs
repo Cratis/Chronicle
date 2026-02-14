@@ -12,8 +12,8 @@ public class when_seeding_new_events : given.an_event_seeding_grain
     void Establish()
     {
         _entries = [
-            new SeedingEntry("event-source-1", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test1\"}", null, false, "default"),
-            new SeedingEntry("event-source-2", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test2\"}", null, false, "default")
+            new SeedingEntry("event-source-1", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test1\"}", null),
+            new SeedingEntry("event-source-2", "test-event-type", /*lang=json,strict*/ "{\"value\":\"test2\"}", null)
         ];
     }
 

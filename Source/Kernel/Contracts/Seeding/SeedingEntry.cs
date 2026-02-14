@@ -32,16 +32,4 @@ public class SeedingEntry
     /// </summary>
     [ProtoMember(4, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets a value indicating whether this seed data is global (applies to all namespaces).
-    /// </summary>
-    [ProtoMember(5)]
-    public bool IsGlobal { get; set; }
-
-    /// <summary>
-    /// Gets or sets the specific namespace this seed data applies to, if not global.
-    /// </summary>
-    [ProtoMember(6)]
-    public string TargetNamespace { get; set; } = string.Empty;
 }

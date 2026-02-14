@@ -15,7 +15,6 @@ namespace Cratis.Chronicle.Seeding;
 /// Initializes a new instance of the <see cref="EventSeeding"/> class.
 /// </remarks>
 /// <param name="eventStoreName">The event store name.</param>
-/// <param name="namespace">The namespace.</param>
 /// <param name="connection">The Chronicle connection.</param>
 /// <param name="eventTypes">The event types.</param>
 /// <param name="eventSerializer">The event serializer.</param>
@@ -23,7 +22,6 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="serviceProvider">The service provider.</param>
 public class EventSeeding(
     EventStoreName eventStoreName,
-    EventStoreNamespaceName @namespace,
     IChronicleConnection connection,
     IEventTypes eventTypes,
     IEventSerializer eventSerializer,
@@ -31,7 +29,6 @@ public class EventSeeding(
     IServiceProvider serviceProvider) : IEventSeeding
 {
     readonly EventStoreName _eventStoreName = eventStoreName;
-    readonly EventStoreNamespaceName _namespace = @namespace;
     readonly IChronicleConnection _connection = connection;
     readonly IEventTypes _eventTypes = eventTypes;
     readonly IEventSerializer _eventSerializer = eventSerializer;
@@ -91,36 +88,113 @@ public class EventSeeding(
         }
 
         var servicesAccessor = (IChronicleServicesAccessor)_connection;
-        var serializedEntries = new List<SerializedSeedingEntry>();
 
-        foreach (var entry in _entries)
+        // Organize entries into global and namespaced groups
+        var globalEntries = _entries.Where(e => e.IsGlobal).ToList();
+        var namespacedEntries = _entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
+
+        // Build the seed request
+        var request = new Contracts.Seeding.SeedRequest
         {
-            var content = await _eventSerializer.Serialize(entry.Event);
-            var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
-            serializedEntries.Add(new SerializedSeedingEntry(
-                entry.EventSourceId.Value,
-                entry.EventTypeId.Value,
-                JsonSerializer.Serialize(content),
-                tags,
-                entry.IsGlobal,
-                entry.TargetNamespace.Value));
+            EventStore = _eventStoreName
+        };
+
+        // Process global entries
+        if (globalEntries.Count > 0)
+        {
+            var globalByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
+            var globalByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
+
+            foreach (var entry in globalEntries)
+            {
+                var content = await _eventSerializer.Serialize(entry.Event);
+                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
+                var contractEntry = new Contracts.Seeding.SeedingEntry
+                {
+                    EventSourceId = entry.EventSourceId.Value,
+                    EventTypeId = entry.EventTypeId.Value,
+                    Content = JsonSerializer.Serialize(content),
+                    Tags = tags
+                };
+
+                if (!globalByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
+                {
+                    eventTypeList = [];
+                    globalByEventType[entry.EventTypeId] = eventTypeList;
+                }
+                eventTypeList.Add(contractEntry);
+
+                if (!globalByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
+                {
+                    eventSourceList = [];
+                    globalByEventSource[entry.EventSourceId] = eventSourceList;
+                }
+                eventSourceList.Add(contractEntry);
+            }
+
+            request.GlobalByEventType = globalByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
+            {
+                EventTypeId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList();
+
+            request.GlobalByEventSource = globalByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
+            {
+                EventSourceId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList();
         }
 
-        await servicesAccessor.Services.Seeding.Seed(
-            new Contracts.Seeding.SeedRequest
+        // Process namespaced entries
+        foreach (var namespaceGroup in namespacedEntries)
+        {
+            var namespacedByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
+            var namespacedByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
+
+            foreach (var entry in namespaceGroup)
             {
-                EventStore = _eventStoreName,
-                Namespace = _namespace,
-                Entries = serializedEntries.ConvertAll(e => new Contracts.Seeding.SeedingEntry
+                var content = await _eventSerializer.Serialize(entry.Event);
+                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
+                var contractEntry = new Contracts.Seeding.SeedingEntry
                 {
-                    EventSourceId = e.EventSourceId,
-                    EventTypeId = e.EventTypeId,
-                    Content = e.Content,
-                    Tags = e.Tags,
-                    IsGlobal = e.IsGlobal,
-                    TargetNamespace = e.TargetNamespace
-                })
+                    EventSourceId = entry.EventSourceId.Value,
+                    EventTypeId = entry.EventTypeId.Value,
+                    Content = JsonSerializer.Serialize(content),
+                    Tags = tags
+                };
+
+                if (!namespacedByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
+                {
+                    eventTypeList = [];
+                    namespacedByEventType[entry.EventTypeId] = eventTypeList;
+                }
+                eventTypeList.Add(contractEntry);
+
+                if (!namespacedByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
+                {
+                    eventSourceList = [];
+                    namespacedByEventSource[entry.EventSourceId] = eventSourceList;
+                }
+                eventSourceList.Add(contractEntry);
+            }
+
+            request.NamespacedEntries.Add(new Contracts.Seeding.NamespacedSeedEntries
+            {
+                Namespace = namespaceGroup.Key.Value,
+                ByEventType = namespacedByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
+                {
+                    EventTypeId = kvp.Key.Value,
+                    Entries = kvp.Value
+                }).ToList(),
+                ByEventSource = namespacedByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
+                {
+                    EventSourceId = kvp.Key.Value,
+                    Entries = kvp.Value
+                }).ToList()
             });
+        }
+
+        await servicesAccessor.Services.Seeding.Seed(request);
 
         _entries.Clear();
     }
@@ -131,7 +205,6 @@ public class EventSeeding(
     }
 
     record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags, bool IsGlobal, EventStoreNamespaceName TargetNamespace);
-    record SerializedSeedingEntry(string EventSourceId, string EventTypeId, string Content, IList<string> Tags, bool IsGlobal, string TargetNamespace);
 
     class EventSeedingScopeBuilder(EventSeeding parent, bool isGlobal, EventStoreNamespaceName targetNamespace) : IEventSeedingScopeBuilder
     {
