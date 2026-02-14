@@ -38,8 +38,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         }
 
         // Seed namespace-specific entries grouped by target namespace
-        var entriesByNamespace = namespaceEntries.GroupBy(e => e.TargetNamespace);
-        foreach (var group in entriesByNamespace)
+        foreach (var group in namespaceEntries.GroupBy(e => e.TargetNamespace))
         {
             var targetNamespace = string.IsNullOrEmpty(group.Key) ? request.Namespace : group.Key;
             var key = EventSeedingKey.ForNamespace(request.EventStore, targetNamespace);
