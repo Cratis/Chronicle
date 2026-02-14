@@ -8,8 +8,10 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grains.Events.Constraints;
@@ -496,7 +498,13 @@ public class EventSequence(
     {
         try
         {
-            var compliantEventAsExpandoObject = await MakeEventCompliant(eventSourceId, eventType, content);
+            var (compliantEventAsExpandoObject, compliantContent, eventSchema) = await MakeEventCompliant(eventSourceId, eventType, content);
+            var schemaValidationResult = ValidateAgainstSchema(eventType, compliantContent, eventSchema, correlationId);
+            if (schemaValidationResult.TryGetError(out var schemaError))
+            {
+                return schemaError;
+            }
+
             var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject);
             if (checkConstraintViolation.TryGetError(out var error))
             {
@@ -533,12 +541,13 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, [ex.Message]);
     }
 
-    async Task<ExpandoObject> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent, EventTypeSchema EventTypeSchema)> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content)
     {
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
 
         var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
-        return expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+        return (expandoObject, compliantEvent, eventSchema);
     }
 
     async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(
@@ -555,6 +564,38 @@ public class EventSequence(
         }
         _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
+    }
+
+    Result<bool, AppendResult> ValidateAgainstSchema(
+        EventType eventType,
+        JsonObject content,
+        EventTypeSchema eventSchema,
+        CorrelationId correlationId)
+    {
+        var validationErrors = eventSchema.Schema.Validate(content.ToJsonString());
+        if (validationErrors.Count == 0)
+        {
+            return true;
+        }
+
+        var violations = validationErrors.Select(error =>
+        {
+            var details = new ConstraintViolationDetails
+            {
+                ["path"] = error.Path ?? string.Empty,
+                ["kind"] = error.Kind.ToString()
+            };
+
+            return new ConstraintViolation(
+                eventType.Id,
+                EventSequenceNumber.Unavailable,
+                ConstraintType.Schema,
+                new ConstraintName("SchemaValidation"),
+                new ConstraintViolationMessage(error.ToString()),
+                details);
+        }).ToList();
+
+        return AppendResult.Failed(correlationId, violations);
     }
 
     async Task HandleFailedAppendResult(
