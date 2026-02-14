@@ -1,52 +1,37 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Defines a system for managing <see cref="IProjection">projections</see>.
+/// Defines a system that is responsible for supervises projections in the system.
 /// </summary>
-public interface IProjectionsManager
+public interface IProjectionsManager : IGrainWithStringKey
 {
     /// <summary>
-    /// Register a <see cref="IProjection"/>.
+    /// Ensure the existence of the projections manager.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
-    /// <param name="definitions"><see cref="IEnumerable{T}"/> of <see cref="ProjectionDefinition"/> to register.</param>
-    /// <param name="readModelDefinitions"><see cref="IEnumerable{T}"/> of <see cref="ReadModelDefinition"/> for the projections.</param>
-    /// <param name="namespaces"><see cref="IEnumerable{T}"/> of <see cref="EventStoreNamespaceName"/> the projection is for.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces);
+    /// <returns>Awaitable task.</returns>
+    Task Ensure();
 
     /// <summary>
-    /// Add a namespace to the system.
+    /// Get all the <see cref="ProjectionDefinition">projection definitions</see> available.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the namespace is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to add.</param>
-    /// <param name="readModelDefinitions"><see cref="IEnumerable{T}"/> of <see cref="ReadModelDefinition"/> for the projections.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task AddNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> readModelDefinitions);
+    /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
+    Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
 
     /// <summary>
-    /// Try to get a <see cref="IProjection"/> by <see cref="ProjectionId"/>.
+    /// Get all the projections with their declaration representation.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
-    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the projection is for.</param>
-    /// <param name="id"><see cref="ProjectionId"/> of the projection.</param>
-    /// <param name="projection">The <see cref="IProjection"/> if it was found, null if not.</param>
-    /// <returns>True if it was found, false if not.</returns>
-    bool TryGet(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out IProjection? projection);
+    /// <returns>A collection of <see cref="ProjectionWithDeclaration"/>.</returns>
+    Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations();
 
     /// <summary>
-    /// Evict any projection for a specific projection identifier.
+    /// Register a set of <see cref="ProjectionDefinition"/> for the event store it belongs to.
     /// </summary>
-    /// <param name="eventStore"><see cref="EventStoreName"/> the projection is for.</param>
-    /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
-    void Evict(EventStoreName eventStore, ProjectionId id);
+    /// <param name="definitions">A collection of <see cref="ProjectionDefinition"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Register(IEnumerable<ProjectionDefinition> definitions);
 }
