@@ -236,7 +236,7 @@ public class JobsManager(
         if (deadJobs.Count > 0)
         {
             logger.FoundDeadJobs(deadJobs.Count);
-            var deleteTasks = deadJobs.Select(job => Delete(job.Id)).ToList();
+            var deleteTasks = deadJobs.ConvertAll(job => Delete(job.Id));
             await Task.WhenAll(deleteTasks);
         }
         else
