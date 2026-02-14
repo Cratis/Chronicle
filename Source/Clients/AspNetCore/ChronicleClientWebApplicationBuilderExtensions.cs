@@ -37,6 +37,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         Action<IChronicleBuilder>? configure = default,
         ILoggerFactory? loggerFactory = default)
     {
+        ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleClientWebApplicationBuilderExtensions).Assembly);
+        ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
         builder.Services
             .AddOptions(configureOptions)
             .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
