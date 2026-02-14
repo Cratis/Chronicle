@@ -90,6 +90,9 @@ public static class ChronicleClientSiloBuilderExtensions
 
     static void ConfigureChronicle(this ISiloBuilder builder, Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? configureChronicle = default)
     {
+        ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleClientSiloBuilderExtensions).Assembly);
+        ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
         // Add Chronicle to the silo as the first thing we do, order matters - this is especially important for the different call filters.
         builder.AddChronicleToSilo(configureChronicle);
         builder.AddActivityPropagation();
