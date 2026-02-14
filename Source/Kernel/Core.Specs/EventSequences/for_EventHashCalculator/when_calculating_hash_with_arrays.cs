@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventHashCalculator;
 

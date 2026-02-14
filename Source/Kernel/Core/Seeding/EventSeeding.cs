@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Seeding;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;

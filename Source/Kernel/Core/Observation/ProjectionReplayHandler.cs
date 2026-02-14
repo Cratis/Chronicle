@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;

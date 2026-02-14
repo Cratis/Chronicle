@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_replaying_partition_to_specific_event_sequence_number : given.an_observer

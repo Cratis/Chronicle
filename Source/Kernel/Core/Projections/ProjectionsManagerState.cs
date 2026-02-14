@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents the state of the <see cref="ProjectionsManager"/>.

@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
 using Microsoft.Extensions.DependencyInjection;

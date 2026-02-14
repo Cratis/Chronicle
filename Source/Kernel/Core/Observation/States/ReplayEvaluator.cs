@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
-using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Recommendations;
 
 namespace Cratis.Chronicle.Observation.States;
 

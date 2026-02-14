@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Grains.Projections;
+using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.DependencyInjection;
 
 #pragma warning disable SA1600
@@ -23,7 +23,7 @@ public static class ProjectionsServiceExtensions
         siloBuilder.ConfigureServices(_ =>
         {
             _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>();
-            _.AddSingleton<Projections.IProjectionFutures, ProjectionFuturesBridge>();
+            // _.AddSingleton<Projections.IProjectionFutures, ProjectionFuturesBridge>(); // Removed after project consolidation - bridge no longer needed
         });
         return siloBuilder;
     }

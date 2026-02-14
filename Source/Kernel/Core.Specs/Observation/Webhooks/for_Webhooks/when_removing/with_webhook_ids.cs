@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_Webhooks.when_removing;
 

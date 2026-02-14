@@ -4,8 +4,8 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.States;
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer

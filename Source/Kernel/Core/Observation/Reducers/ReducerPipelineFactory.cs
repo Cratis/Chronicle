@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Reducers;

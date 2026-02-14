@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 
-namespace Cratis.Chronicle.Grains.Compliance.GDPR;
+namespace Cratis.Chronicle.Compliance.GDPR;
 
 /// <summary>
 /// Represents the key for <see cref="IPIIManager"/>.

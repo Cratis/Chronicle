@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.Events.Constraints;
-using Cratis.Chronicle.Grains.EventSequences.Concurrency;
+using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences;
 

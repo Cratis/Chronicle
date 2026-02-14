@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
 

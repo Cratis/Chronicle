@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Observation.Jobs;
-using Cratis.Chronicle.Grains.Observation.States;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.States;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation;

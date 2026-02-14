@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.StateMachines;
+using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.Concurrency;
 

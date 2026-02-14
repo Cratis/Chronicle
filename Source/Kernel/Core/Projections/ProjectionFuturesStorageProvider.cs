@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage;
 using Orleans.Storage;
 
-namespace Cratis.Chronicle.Grains.Projections;
+namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling projection futures storage.

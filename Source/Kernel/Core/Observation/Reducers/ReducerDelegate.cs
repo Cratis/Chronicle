@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 
 namespace Cratis.Chronicle.Observation.Reducers;
 
