@@ -17,11 +17,11 @@ This package provides strongly-typed Chronicle gRPC service clients generated fr
 ### Quick Start
 
 ```typescript
-import { ChronicleConnection } from '@cratis/chronicle.contracts';
+import { ChronicleConnection, ChronicleConnectionString } from '@cratis/chronicle.contracts';
 
-// Create a connection
+// Create a connection using a connection string
 const connection = new ChronicleConnection({
-    serverAddress: 'localhost:5000'
+    connectionString: 'chronicle://localhost:35000'
 });
 
 // Connect to Chronicle
@@ -35,6 +35,91 @@ console.log('Event stores:', eventStores.items);
 connection.dispose();
 ```
 
+### Connection Strings
+
+Chronicle supports connection strings similar to database connection strings, providing a consistent way to configure connections:
+
+```typescript
+// Basic connection
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://localhost:35000'
+});
+
+// With client credentials (username:password)
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://myuser:mypassword@localhost:35000'
+});
+
+// With API key authentication
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://localhost:35000?apiKey=your-api-key-here'
+});
+
+// With TLS disabled (for development)
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://localhost:35000?disableTls=true'
+});
+```
+
+### Development Connection
+
+For local development, use the built-in development connection with default credentials:
+
+```typescript
+import { ChronicleConnectionString } from '@cratis/chronicle.contracts';
+
+const connection = new ChronicleConnection({
+    connectionString: ChronicleConnectionString.Development
+});
+```
+
+The development connection string uses:
+- **Client ID**: `chronicle-dev-client`
+- **Client Secret**: `chronicle-dev-secret`
+- **Host**: `localhost:35000`
+
+These are the default development credentials that Chronicle Kernel accepts when running in development mode.
+
+### Working with Connection Strings
+
+```typescript
+import { ChronicleConnectionString } from '@cratis/chronicle.contracts';
+
+// Parse a connection string
+const connStr = new ChronicleConnectionString('chronicle://localhost:35000');
+
+// Access connection details
+console.log(connStr.serverAddress.host); // 'localhost'
+console.log(connStr.serverAddress.port); // 35000
+
+// Create new connection strings with modifications
+const withCreds = connStr.withCredentials('myuser', 'mypassword');
+const withApiKey = connStr.withApiKey('my-api-key');
+
+// Convert to string
+console.log(withCreds.toString()); // chronicle://myuser:mypassword@localhost:35000
+```
+
+### Authentication
+
+Chronicle supports two authentication modes:
+
+#### Client Credentials (OAuth2 client_credentials flow)
+
+```typescript
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://client-id:client-secret@localhost:35000'
+});
+```
+
+#### API Key
+
+```typescript
+const connection = new ChronicleConnection({
+    connectionString: 'chronicle://localhost:35000?apiKey=your-api-key'
+});
+```
+
 ### Using Individual Services
 
 You can also import and use services directly:
@@ -44,7 +129,7 @@ import { EventStoresClient } from '@cratis/chronicle.contracts';
 import * as grpc from '@grpc/grpc-js';
 
 const client = new EventStoresClient(
-    'localhost:5000',
+    'localhost:35000',
     grpc.credentials.createInsecure()
 );
 
@@ -56,12 +141,30 @@ console.log('Event stores:', response.items);
 
 ```typescript
 const connection = new ChronicleConnection({
-    serverAddress: 'localhost:5000',
-    credentials: grpc.credentials.createSsl(), // Optional: use SSL
-    connectTimeout: 10000, // Optional: connection timeout in ms
-    maxReceiveMessageSize: 1024 * 1024 * 10, // Optional: 10MB
-    maxSendMessageSize: 1024 * 1024 * 10, // Optional: 10MB
-    correlationId: 'my-correlation-id' // Optional: for request tracking
+    connectionString: 'chronicle://localhost:35000',
+    
+    // Optional: Override credentials from connection string
+    credentials: grpc.credentials.createSsl(),
+    
+    // Optional: connection timeout in ms
+    connectTimeout: 10000,
+    
+    // Optional: message size limits
+    maxReceiveMessageSize: 1024 * 1024 * 10, // 10MB
+    maxSendMessageSize: 1024 * 1024 * 10, // 10MB
+    
+    // Optional: for request tracking
+    correlationId: 'my-correlation-id'
+});
+```
+
+### Legacy Server Address (Deprecated)
+
+For backward compatibility, you can still use `serverAddress`:
+
+```typescript
+const connection = new ChronicleConnection({
+    serverAddress: 'localhost:35000' // Deprecated: use connectionString instead
 });
 ```
 

@@ -20,18 +20,27 @@ import { EventSeedingClient } from './generated/seeding';
 import { ServerClient } from './generated/host';
 import { ConnectionServiceClient } from './generated/clients';
 import type { ChronicleServices } from './ChronicleServices';
+import { ChronicleConnectionString } from './ChronicleConnectionString';
 
 /**
  * Configuration options for Chronicle connection
  */
 export interface ChronicleConnectionOptions {
     /**
-     * The host and port of the Chronicle server (e.g., 'localhost:5000')
+     * The connection string (e.g., 'chronicle://localhost:35000' or 'chronicle://user:pass@localhost:35000')
+     * Can also be a ChronicleConnectionString instance
      */
-    serverAddress: string;
+    connectionString?: string | ChronicleConnectionString;
 
     /**
-     * Optional gRPC credentials (defaults to insecure credentials)
+     * The host and port of the Chronicle server (e.g., 'localhost:5000')
+     * This is used if connectionString is not provided
+     * @deprecated Use connectionString instead
+     */
+    serverAddress?: string;
+
+    /**
+     * Optional gRPC credentials (defaults to credentials based on connection string)
      */
     credentials?: grpc.ChannelCredentials;
 
@@ -62,6 +71,7 @@ export interface ChronicleConnectionOptions {
 export class ChronicleConnection implements ChronicleServices {
     private readonly channel: grpc.Channel;
     private readonly services: ChronicleServices;
+    private readonly _connectionString: ChronicleConnectionString;
     private _isConnected = false;
 
     /**
@@ -182,44 +192,79 @@ export class ChronicleConnection implements ChronicleServices {
     private connectionService: ConnectionServiceClient;
 
     /**
+     * Gets the connection string used for this connection
+     */
+    get connectionString(): ChronicleConnectionString {
+        return this._connectionString;
+    }
+
+    /**
      * Creates a new Chronicle connection
      * @param options Connection configuration options
      */
     constructor(options: ChronicleConnectionOptions) {
-        const credentials = options.credentials ?? grpc.credentials.createInsecure();
-        
+        // Parse connection string or create from serverAddress
+        if (options.connectionString) {
+            this._connectionString =
+                typeof options.connectionString === 'string'
+                    ? new ChronicleConnectionString(options.connectionString)
+                    : options.connectionString;
+        } else if (options.serverAddress) {
+            this._connectionString = new ChronicleConnectionString(
+                `chronicle://${options.serverAddress}`
+            );
+        } else {
+            this._connectionString = ChronicleConnectionString.Default;
+        }
+
+        // Create server address string
+        const serverAddress = `${this._connectionString.serverAddress.host}:${this._connectionString.serverAddress.port}`;
+
+        // Create credentials
+        let channelCredentials = options.credentials;
+        if (!channelCredentials) {
+            channelCredentials = this._connectionString.createCredentials();
+            const callCredentials = this._connectionString.createCallCredentials();
+            if (callCredentials) {
+                channelCredentials = grpc.credentials.combineChannelCredentials(
+                    channelCredentials,
+                    callCredentials
+                );
+            }
+        }
+
         const channelOptions: grpc.ChannelOptions = {};
-        
+
         if (options.maxReceiveMessageSize) {
             channelOptions['grpc.max_receive_message_length'] = options.maxReceiveMessageSize;
         }
-        
+
         if (options.maxSendMessageSize) {
             channelOptions['grpc.max_send_message_length'] = options.maxSendMessageSize;
         }
 
-        this.channel = new grpc.Channel(options.serverAddress, credentials, channelOptions);
+        this.channel = new grpc.Channel(serverAddress, channelCredentials, channelOptions);
 
         // Initialize all service clients
-        this.connectionService = new ConnectionServiceClient(options.serverAddress, credentials);
-        
+        this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials);
+
         this.services = {
-            eventStores: new EventStoresClient(options.serverAddress, credentials),
-            namespaces: new NamespacesClient(options.serverAddress, credentials),
-            recommendations: new RecommendationsClient(options.serverAddress, credentials),
-            identities: new IdentitiesClient(options.serverAddress, credentials),
-            eventSequences: new EventSequencesClient(options.serverAddress, credentials),
-            eventTypes: new EventTypesClient(options.serverAddress, credentials),
-            constraints: new ConstraintsClient(options.serverAddress, credentials),
-            observers: new ObserversClient(options.serverAddress, credentials),
-            failedPartitions: new FailedPartitionsClient(options.serverAddress, credentials),
-            reactors: new ReactorsClient(options.serverAddress, credentials),
-            reducers: new ReducersClient(options.serverAddress, credentials),
-            projections: new ProjectionsClient(options.serverAddress, credentials),
-            readModels: new ReadModelsClient(options.serverAddress, credentials),
-            jobs: new JobsClient(options.serverAddress, credentials),
-            eventSeeding: new EventSeedingClient(options.serverAddress, credentials),
-            server: new ServerClient(options.serverAddress, credentials),
+            eventStores: new EventStoresClient(serverAddress, channelCredentials),
+            namespaces: new NamespacesClient(serverAddress, channelCredentials),
+            recommendations: new RecommendationsClient(serverAddress, channelCredentials),
+            identities: new IdentitiesClient(serverAddress, channelCredentials),
+            eventSequences: new EventSequencesClient(serverAddress, channelCredentials),
+            eventTypes: new EventTypesClient(serverAddress, channelCredentials),
+            constraints: new ConstraintsClient(serverAddress, channelCredentials),
+            observers: new ObserversClient(serverAddress, channelCredentials),
+            failedPartitions: new FailedPartitionsClient(serverAddress, channelCredentials),
+            reactors: new ReactorsClient(serverAddress, channelCredentials),
+            reducers: new ReducersClient(serverAddress, channelCredentials),
+            projections: new ProjectionsClient(serverAddress, channelCredentials),
+            readModels: new ReadModelsClient(serverAddress, channelCredentials),
+            jobs: new JobsClient(serverAddress, channelCredentials),
+            eventSeeding: new EventSeedingClient(serverAddress, channelCredentials),
+            server: new ServerClient(serverAddress, channelCredentials),
         };
     }
 
@@ -280,3 +325,4 @@ export class ChronicleConnection implements ChronicleServices {
         this.disconnect();
     }
 }
+

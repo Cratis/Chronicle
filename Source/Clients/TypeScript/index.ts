@@ -21,4 +21,5 @@ export * from './generated/protobuf-net/bcl';
 
 // Export connection utilities
 export * from './ChronicleConnection';
+export * from './ChronicleConnectionString';
 export * from './ChronicleServices';
