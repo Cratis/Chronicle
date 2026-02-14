@@ -31,7 +31,8 @@ export const AddEventDialog = () => {
             setContentError('');
             return true;
         } catch (error) {
-            setContentError('Invalid JSON format');
+            const message = error instanceof Error ? error.message : 'Invalid JSON format';
+            setContentError(`Invalid JSON: ${message}`);
             return false;
         }
     };
@@ -54,6 +55,7 @@ export const AddEventDialog = () => {
         appendEvent.namespace = params.namespace!;
         appendEvent.eventSequenceId = 'event-log';
         appendEvent.eventSourceId = eventSourceId;
+        // EventStreamType and EventStreamId are optional and not used for basic event appending
         appendEvent.eventStreamType = '';
         appendEvent.eventStreamId = '';
         appendEvent.eventType = selectedEventType.type;
@@ -118,9 +120,17 @@ export const AddEventDialog = () => {
                             icon="pi pi-eye"
                             className="p-button-text"
                             onClick={() => {
-                                const schemaWindow = window.open('', '_blank');
-                                if (schemaWindow) {
-                                    schemaWindow.document.write(`<pre>${JSON.stringify(JSON.parse(selectedEventType.schema), null, 2)}</pre>`);
+                                try {
+                                    const schema = JSON.parse(selectedEventType.schema);
+                                    const formattedSchema = JSON.stringify(schema, null, 2);
+                                    const blob = new Blob([formattedSchema], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const newWindow = window.open(url, '_blank');
+                                    if (newWindow) {
+                                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to parse schema:', error);
                                 }
                             }}
                         />

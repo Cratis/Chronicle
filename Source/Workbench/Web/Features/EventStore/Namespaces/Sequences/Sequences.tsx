@@ -63,7 +63,7 @@ export const Sequences = () => {
     const handleAddEvent = async () => {
         const [result] = await showAddEvent();
         if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
         }
     };
 
