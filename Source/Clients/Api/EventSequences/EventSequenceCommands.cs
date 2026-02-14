@@ -41,7 +41,9 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
             EventSequenceId = eventSequenceId,
             CorrelationId = Guid.NewGuid(),
             EventSourceId = eventToAppend.EventSourceId,
-            EventSourceType = eventToAppend.EventStreamType,  // EventStreamType is used as EventSourceType for this context
+
+            // AppendEvent model doesn't include EventSourceType, so we use EventStreamType as a default
+            EventSourceType = eventToAppend.EventStreamType,
             EventStreamType = eventToAppend.EventStreamType,
             EventStreamId = eventToAppend.EventStreamId,
             EventType = eventToAppend.EventType.ToContract(),
@@ -82,7 +84,8 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
             CorrelationId = Guid.NewGuid(),
             Events = eventsToAppend.Events.Select(e => new Contracts.Events.EventToAppend
             {
-                // EventSourceType, EventStreamType, and EventStreamId are optional and left empty for basic event appending
+                // AppendManyEvents model doesn't include per-event EventSourceType/EventStreamType/EventStreamId
+                // These are left empty as they're not available in the API model
                 EventSourceType = string.Empty,
                 EventSourceId = eventsToAppend.EventSourceId,
                 EventStreamType = string.Empty,

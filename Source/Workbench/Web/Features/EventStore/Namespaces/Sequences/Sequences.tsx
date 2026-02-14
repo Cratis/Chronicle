@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DataPage } from 'Components';
+import { DataPage, MenuItem } from 'Components';
 import strings from 'Strings';
 import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -13,12 +13,20 @@ import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { MultiSelect } from 'primereact/multiselect';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { AddEventDialog } from './Add/AddEventDialog';
+import { useState } from 'react';
+import * as faIcons from 'react-icons/fa6';
 
-import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
+import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
 
 const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();
 };
+
+// Delay in milliseconds to wait before refreshing data after adding an event
+// This allows the backend to process and persist the event before re-querying
+const REFRESH_DELAY_MS = 200;
 
 type Lambda<T> = (target: T) => unknown;
 
