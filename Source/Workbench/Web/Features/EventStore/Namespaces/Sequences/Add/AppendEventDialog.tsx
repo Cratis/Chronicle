@@ -26,6 +26,8 @@ export const AppendEventDialog = () => {
 
     const [selectedEventType, setSelectedEventType] = useState<EventTypeRegistration | null>(null);
     const [eventSourceId, setEventSourceId] = useState('');
+    const [eventStreamType, setEventStreamType] = useState('All');
+    const [eventStreamId, setEventStreamId] = useState('Default');
     const [eventContent, setEventContent] = useState<Json>({});
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(true);
@@ -88,10 +90,10 @@ export const AppendEventDialog = () => {
         appendEvent.namespace = params.namespace!;
         appendEvent.eventSequenceId = 'event-log';
         appendEvent.eventSourceId = eventSourceId;
-        appendEvent.eventStreamType = '';
-        appendEvent.eventStreamId = '';
+        appendEvent.eventStreamType = eventStreamType;
+        appendEvent.eventStreamId = eventStreamId;
         appendEvent.eventType = selectedEventType.type;
-        appendEvent.content = eventContent;
+        appendEvent.content = eventContent as Record<string, unknown>;
 
         const executeResult = await appendEvent.execute();
         return executeResult.isSuccess;
@@ -138,6 +140,26 @@ export const AppendEventDialog = () => {
                             tooltipOptions={{ position: 'top' }}
                         />
                     </div>
+                </div>
+
+                <div className="field mb-3">
+                    <label htmlFor="eventStreamType">Event Stream Type</label>
+                    <InputText
+                        id="eventStreamType"
+                        value={eventStreamType}
+                        onChange={(e) => setEventStreamType(e.target.value)}
+                        className="w-full"
+                    />
+                </div>
+
+                <div className="field mb-3">
+                    <label htmlFor="eventStreamId">Event Stream ID</label>
+                    <InputText
+                        id="eventStreamId"
+                        value={eventStreamId}
+                        onChange={(e) => setEventStreamId(e.target.value)}
+                        className="w-full"
+                    />
                 </div>
 
                 {selectedEventType && (
