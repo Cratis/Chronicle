@@ -86,7 +86,7 @@ public class JobTypes : IJobTypes
     {
         foreach (var jobClrType in types.FindMultiple<IJob>()
                      .Where(type => type is { IsClass: true, IsAbstract: false, IsInterface: false, IsGenericType: false }
-                                    && !type.HasAttribute<GeneratedCodeAttribute>() && type != typeof(NullJob) && type.Assembly.FullName != typeof(IJob).Assembly.FullName))
+                                    && !type.HasAttribute<GeneratedCodeAttribute>() && type != typeof(NullJob)))
         {
             var jobTypeAttribute = jobClrType.GetCustomAttribute<JobTypeAttribute>();
             var jobType = jobTypeAttribute?.JobType ?? jobClrType;
