@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.Configuration;
@@ -42,9 +43,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         var configSectionPath = configSection ?? ConfigurationPath.Combine(DefaultSectionPaths);
 
-        builder.Services
-            .AddOptions(configureOptions, configSectionPath)
-            .BindConfiguration(configSectionPath);
+        builder.Services.AddOptions(configureOptions, configSectionPath);
 
         builder.Services
             .AddUnitOfWork()
@@ -52,17 +51,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddCausation()
             .AddCratisChronicleClient();
 
-        var options = new ChronicleOptions();
-        builder.Configuration.GetSection(configSectionPath).Bind(options);
-
-        if (configureOptions is not null)
-        {
-            var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
-            builder.Configuration.GetSection(configSectionPath).Bind(aspNetCoreOptions);
-            configureOptions(aspNetCoreOptions);
-            CopyValues(options, aspNetCoreOptions);
-        }
-
+        var options = BuildChronicleOptions(builder.Configuration, configSectionPath, configureOptions);
         builder.Services.AddCratisChronicleArtifacts(options);
 
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, options.ArtifactsProvider);
@@ -121,6 +110,23 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         }
 
         return builder;
+    }
+
+    [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "IConfiguration is the appropriate abstraction for flexibility")]
+    static ChronicleOptions BuildChronicleOptions(IConfiguration configuration, string configSectionPath, Action<ChronicleAspNetCoreOptions>? configure = default)
+    {
+        var options = new ChronicleOptions();
+        configuration.GetSection(configSectionPath).Bind(options);
+
+        if (configure is not null)
+        {
+            var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
+            configuration.GetSection(configSectionPath).Bind(aspNetCoreOptions);
+            configure(aspNetCoreOptions);
+            CopyValues(options, aspNetCoreOptions);
+        }
+
+        return options;
     }
 
     static void CopyValues(object target, object source)
