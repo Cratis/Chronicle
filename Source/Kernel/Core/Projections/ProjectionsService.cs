@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
