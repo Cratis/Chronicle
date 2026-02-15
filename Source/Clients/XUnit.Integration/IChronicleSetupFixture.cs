@@ -4,7 +4,6 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
-using Cratis.Chronicle;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
