@@ -46,13 +46,21 @@
         <PackageReference Include="NJsonSchema" />
     </ItemGroup>
 
-    <!-- Package runtime-only assemblies in runtimes folder -->
+    <!--
+        Use ref/lib split to hide private assemblies from intellisense:
+        - ref/{tfm}/ contains only the main assembly (compile-time/intellisense)
+        - lib/{tfm}/ contains all assemblies (runtime)
+    -->
     <ItemGroup>
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
-        <None Include="$(OutputPath)$(ContractsImplementationAssembly).dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)$(ContractsImplementationAssembly).pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)$(ContractsImplementationAssembly).pdb')" />
+        <!-- Compile-time reference: only the main assembly is visible to consumers -->
+        <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
+
+        <!-- Runtime-only: bundled private assemblies, hidden from intellisense -->
+        <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
+        <None Include="$(OutputPath)$(ContractsImplementationAssembly).dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)$(ContractsImplementationAssembly).pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)$(ContractsImplementationAssembly).pdb')" />
     </ItemGroup>
 </Project>
