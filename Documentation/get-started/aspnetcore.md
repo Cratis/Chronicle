@@ -121,8 +121,24 @@ builder.Services.AddCratisChronicleArtifacts(client);
 
 ### Additional Service Registrations
 
-In order for your artifacts to work with dependencies, you would add service registrations for those dependencies.
-For example:
+> **Note:** With the automatic registration mentioned above, you typically don't need to explicitly register
+> your artifact types anymore (Reactors, Reducers, Projections, etc. are automatically registered).
+> However, you may still need to register other dependencies your artifacts require.
+
+#### Example: Dependencies of Artifacts
+
+If your artifacts have dependencies, register those dependencies:
+
+```csharp
+// Register services that your artifacts depend on
+builder.Services.AddTransient<IEmailService, EmailService>();
+builder.Services.AddTransient<IUserRepository, UserRepository>();
+builder.Services.AddTransient<IBookRepository, BookRepository>();
+```
+
+#### Example: Manual Registration (when automatic is disabled)
+
+If you've disabled automatic registration (`AutoDiscoverAndRegister = false`), you would register artifacts manually:
 
 ```csharp
         builder.Services.AddTransient<UsersReactor>();
@@ -134,8 +150,7 @@ For example:
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/CommonServices.cs#L14-L18)
 
-> **Note:** With the automatic registration mentioned above, you typically don't need to explicitly register
-> your artifact types anymore. However, you may still need to register other dependencies your artifacts require.
+#### Automatic Service Registration with Cratis Fundamentals
 
 This can become very tedious to do as your solution grows. Cratis Fundamentals offers a couple of extension methods
 that will automatically hook this up:
