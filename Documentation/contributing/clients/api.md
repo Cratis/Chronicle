@@ -7,17 +7,17 @@ In addition to this, the Workbench can also be embedded into a client project, i
 
 ## Internal constructors
 
-When we repack assemblies we do an [internalization](./internalization.md) of types from assemblies
-being merged in. Some of these types, such as gRPC service contracts are typically things we would like to use
+When we package assemblies using runtime-only strategy, we perform an [internalization](./internalization.md) of types from assemblies
+that should not be exposed at compile-time. Some of these types, such as gRPC service contracts are typically things we would like to use
 as dependencies on constructors of the controllers.
 
-The problem with this is that we can't have public constructors with dependencies to these types that
-will become internal during build of a repacked assembly.
+The problem with this is that we can't have public constructors with dependencies to these types that are runtime-only.
 
 To make this work, the constructors are internal as a consequence.
 
 ## Custom Controller Activation
 
 The default activation of controllers is not capable of resolving controllers with internal constructors.
-In the `API` client project you'll therefor find a type called `CustomControllerActivator` that is capable of
+In the `API` client project you'll therefore find a type called `CustomControllerActivator` that is capable of
 resolving these.
+
