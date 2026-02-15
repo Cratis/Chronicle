@@ -4,13 +4,15 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
-        <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
+        <NoWarn>$(NoWarn);ORLEANS0010;CS8618;MA0182</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
     </ItemGroup>
 
     <ItemGroup>
@@ -18,6 +20,8 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../Contracts/Contracts.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>

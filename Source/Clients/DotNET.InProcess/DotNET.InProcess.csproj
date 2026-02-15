@@ -28,12 +28,6 @@
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-        <ProjectReference Include="../../Kernel/Services/Services.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -65,10 +59,6 @@
         <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Setup.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Setup.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Setup.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Services.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Services.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Services.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
     </ItemGroup>

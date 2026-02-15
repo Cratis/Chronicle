@@ -44,12 +44,6 @@
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
-        <ProjectReference Include="../Setup/Setup.csproj" />
-    </ItemGroup>
-
-    <!-- General -->
-    <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
-        <ProjectReference Include="..\Services\Services.csproj" />
     </ItemGroup>
 </Project>
