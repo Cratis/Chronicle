@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.Configuration;
@@ -43,7 +42,19 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         var configSectionPath = configSection ?? ConfigurationPath.Combine(DefaultSectionPaths);
 
-        builder.Services.AddOptions(configureOptions, configSectionPath);
+        // Determine the ArtifactsProvider eagerly by applying config binding + user callback.
+        // Artifact types must be registered in DI before the container is built, so the provider
+        // must be known at this point. This is the same pattern as AddDbContext (where the DB
+        // provider must be set in the callback — you can't switch it via post-configuration).
+        // All other options (EventStore, ConnectionString, etc.) remain fully configurable
+        // through the standard options pipeline after this call.
+        var artifactsProvider = ResolveArtifactsProvider(builder.Configuration, configSectionPath, configureOptions);
+
+        // Register via the standard options pipeline for runtime resolution.
+        builder.Services.AddChronicleOptions(configureOptions, configSectionPath, artifactsProvider);
+
+        // Register artifact types into DI using the resolved provider.
+        builder.Services.AddCratisChronicleArtifacts(artifactsProvider);
 
         builder.Services
             .AddUnitOfWork()
@@ -51,10 +62,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddCausation()
             .AddCratisChronicleClient();
 
-        var options = BuildChronicleOptions(builder.Configuration, configSectionPath, configureOptions);
-        builder.Services.AddCratisChronicleArtifacts(options);
-
-        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, options.ArtifactsProvider);
+        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, artifactsProvider);
         configure?.Invoke(chronicleBuilder);
 
         builder.Host.AddCratisChronicle(loggerFactory);
@@ -68,65 +76,83 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <returns><see cref="IApplicationBuilder"/> for continuation.</returns>
     public static IApplicationBuilder UseCratisChronicle(this IApplicationBuilder app)
     {
+        GlobalInstances.ServiceProvider = app.ApplicationServices;
         var appLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
         appLifetime.ApplicationStarted.Register(() =>
         {
-            GlobalInstances.ServiceProvider = app.ApplicationServices;
             var client = app.ApplicationServices.GetRequiredService<IChronicleClient>();
-            var options = app.ApplicationServices.GetService<IOptions<ChronicleAspNetCoreOptions>>()!;
-            var eventStore = client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
-            eventStore.Connection.Connect().Wait();
+            var options = app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>();
+            client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
         });
 
         return app;
     }
 
-    static OptionsBuilder<ChronicleAspNetCoreOptions> AddOptions(this IServiceCollection services, Action<ChronicleAspNetCoreOptions>? configure = default, string? configSectionPath = default)
+    /// <summary>
+    /// Resolves the <see cref="IClientArtifactsProvider"/> by binding configuration and applying the user callback.
+    /// The provider must be determined at registration time because artifact types are registered in DI
+    /// before the container is built.
+    /// </summary>
+    /// <param name="configuration"><see cref="ConfigurationManager"/> to bind from.</param>
+    /// <param name="configSectionPath">Configuration section path to bind.</param>
+    /// <param name="configureOptions">Optional user callback for configuring options.</param>
+    /// <returns>The resolved <see cref="IClientArtifactsProvider"/>.</returns>
+    static IClientArtifactsProvider ResolveArtifactsProvider(
+        ConfigurationManager configuration,
+        string configSectionPath,
+        Action<ChronicleAspNetCoreOptions>? configureOptions)
     {
-        var sectionPath = configSectionPath ?? ConfigurationPath.Combine(DefaultSectionPaths);
+        var options = new ChronicleAspNetCoreOptions();
+        configuration.GetSection(configSectionPath).Bind(options);
+        configureOptions?.Invoke(options);
+        return options.ArtifactsProvider;
+    }
 
-        var builder = services
+    /// <summary>
+    /// Registers <see cref="ChronicleAspNetCoreOptions"/> and <see cref="ChronicleOptions"/> in the options pipeline.
+    /// </summary>
+    /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="configure">Optional user callback for configuring options.</param>
+    /// <param name="configSectionPath">Configuration section path to bind.</param>
+    /// <param name="artifactsProvider">The <see cref="IClientArtifactsProvider"/> resolved at registration time.</param>
+    static void AddChronicleOptions(
+        this IServiceCollection services,
+        Action<ChronicleAspNetCoreOptions>? configure,
+        string configSectionPath,
+        IClientArtifactsProvider artifactsProvider)
+    {
+        services
             .AddOptions<ChronicleAspNetCoreOptions>()
-            .BindConfiguration(sectionPath)
+            .BindConfiguration(configSectionPath)
+            .Configure(options =>
+            {
+                configure?.Invoke(options);
+
+                // Ensure the options always use the same provider that was used for DI registration.
+                options.ArtifactsProvider = artifactsProvider;
+            })
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
         var baseBuilder = services
             .AddOptions<ChronicleOptions>()
-            .BindConfiguration(sectionPath)
+            .BindConfiguration(configSectionPath)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        baseBuilder.Configure(options => options.ArtifactsProvider = artifactsProvider);
+
         if (configure is not null)
         {
-            builder.Configure(configure);
             baseBuilder.Configure(options =>
             {
                 var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
                 CopyValues(aspNetCoreOptions, options);
                 configure(aspNetCoreOptions);
                 CopyValues(options, aspNetCoreOptions);
+                options.ArtifactsProvider = artifactsProvider;
             });
         }
-
-        return builder;
-    }
-
-    [SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "IConfiguration is the appropriate abstraction for flexibility")]
-    static ChronicleOptions BuildChronicleOptions(IConfiguration configuration, string configSectionPath, Action<ChronicleAspNetCoreOptions>? configure = default)
-    {
-        var options = new ChronicleOptions();
-        configuration.GetSection(configSectionPath).Bind(options);
-
-        if (configure is not null)
-        {
-            var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
-            configuration.GetSection(configSectionPath).Bind(aspNetCoreOptions);
-            configure(aspNetCoreOptions);
-            CopyValues(options, aspNetCoreOptions);
-        }
-
-        return options;
     }
 
     static void CopyValues(object target, object source)
@@ -134,7 +160,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         foreach (var property in target.GetType().GetProperties())
         {
             var value = source.GetType().GetProperty(property.Name)?.GetValue(source);
-            if (property?.CanWrite == true)
+            if (property.CanWrite)
             {
                 property.SetValue(target, value);
             }
