@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.InProcess.Integration.for_Reactors.when_handling_event.and_it_fails.and_needs_to_catch_up.context;
 

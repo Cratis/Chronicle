@@ -17,9 +17,9 @@ public class with_constraint_value_added_and_then_removed(context context) : Giv
         UserOnboardingStarted _event;
         UserRemoved _removedEvent;
 
-        public AppendResult FirstResult { get; private set; }
-        public AppendResult RemovedResult { get; private set; }
-        public AppendResult SecondResult { get; private set; }
+        public IAppendResult FirstResult { get; private set; }
+        public IAppendResult RemovedResult { get; private set; }
+        public IAppendResult SecondResult { get; private set; }
 
         public void Establish()
         {
