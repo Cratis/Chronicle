@@ -10,14 +10,14 @@ namespace Cratis.Chronicle.Projections.for_ProjectionReplayHandler.given;
 
 public class a_projection_replay_handler_with_projection : a_projection_replay_handler
 {
-    protected Chronicle.Projections.IProjection _projection;
+    protected Engine.IProjection _projection;
     protected ReadModelDefinition _readModel;
     protected ReadModelType _readModelType = new("TheReadModelType", ReadModelGeneration.First);
     protected ReadModelContainerName _readModelName = "TheReadModel";
 
     void Establish()
     {
-        _projection = Substitute.For<Chronicle.Projections.IProjection>();
+        _projection = Substitute.For<Engine.IProjection>();
         _readModel = new ReadModelDefinition(
             _readModelType.Identifier,
             _readModelName,

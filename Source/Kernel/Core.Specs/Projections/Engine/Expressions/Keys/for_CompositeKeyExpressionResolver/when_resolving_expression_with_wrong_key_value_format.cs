@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 
-namespace Cratis.Chronicle.Projections.Expressions.Keys.for_CompositeKeyExpressionResolver;
+namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys.for_CompositeKeyExpressionResolver;
 
 public class when_resolving_expression_with_wrong_key_value_format : given.a_resolver
 {

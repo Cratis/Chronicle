@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
-namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties.for_IncrementExpressionResolver;
+namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties.for_IncrementExpressionResolver;
 
 public class when_trying_to_resolve_valid_increment_expression_against_model_with_count_value_set : Specification
 {

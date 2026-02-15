@@ -5,8 +5,8 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Projections.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionReplayHandler.given;
 
 public class a_projection_replay_handler : Specification
 {
-    protected Chronicle.Projections.IProjectionsManager _projections;
+    protected Engine.IProjectionsManager _projections;
     protected IStorage _storage;
     protected IProjectionPipelineManager _projectionPipelineManager;
     protected ProjectionReplayHandler _handler;
@@ -34,7 +34,7 @@ public class a_projection_replay_handler : Specification
             new("TheObserver", "TheEventStore", "TheNamespace", EventSequenceId.Log),
             ObserverType.Projection);
 
-        _projections = Substitute.For<Chronicle.Projections.IProjectionsManager>();
+        _projections = Substitute.For<Engine.IProjectionsManager>();
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
@@ -53,7 +53,7 @@ public class a_projection_replay_handler : Specification
         _projectionPipelineManager.GetFor(
             _observerDetails.Key.EventStore,
             _observerDetails.Key.Namespace,
-            Arg.Any<Chronicle.Projections.IProjection>()).Returns(_projectionPipeline);
+            Arg.Any<Engine.IProjection>()).Returns(_projectionPipeline);
 
         _handler = new ProjectionReplayHandler(
             _projections,
