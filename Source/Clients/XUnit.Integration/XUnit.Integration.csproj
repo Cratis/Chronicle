@@ -14,7 +14,7 @@
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
-        
+
         <!-- Kernel assemblies as runtime-only with aliases -->
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
             <Aliases>KernelConcepts</Aliases>
