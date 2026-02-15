@@ -82,7 +82,8 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         {
             var client = app.ApplicationServices.GetRequiredService<IChronicleClient>();
             var options = app.ApplicationServices.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>();
-            client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
+            var eventStore = client.GetEventStore(options.Value.EventStore).GetAwaiter().GetResult();
+            eventStore.Connection.Connect().GetAwaiter().GetResult();
         });
 
         return app;
