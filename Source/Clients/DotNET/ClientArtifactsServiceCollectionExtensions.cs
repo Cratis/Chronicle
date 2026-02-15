@@ -37,10 +37,8 @@ public static class ClientArtifactsServiceCollectionExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="chronicleOptions"><see cref="ChronicleOptions"/> containing the artifacts provider.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleArtifacts(this IServiceCollection services, ChronicleOptions chronicleOptions)
-    {
-        return services.AddCratisChronicleArtifacts(chronicleOptions.ArtifactsProvider);
-    }
+    public static IServiceCollection AddCratisChronicleArtifacts(this IServiceCollection services, ChronicleOptions chronicleOptions) =>
+        services.AddCratisChronicleArtifacts(chronicleOptions.ArtifactsProvider);
 
     /// <summary>
     /// Add Chronicle client artifacts to the service collection.
@@ -48,8 +46,6 @@ public static class ClientArtifactsServiceCollectionExtensions
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="chronicleClient"><see cref="IChronicleClient"/> to get the artifacts provider from.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleArtifacts(this IServiceCollection services, IChronicleClient chronicleClient)
-    {
-        return services.AddCratisChronicleArtifacts(chronicleClient.Options.ArtifactsProvider);
-    }
+    public static IServiceCollection AddCratisChronicleArtifacts(this IServiceCollection services, IChronicleClient chronicleClient) =>
+        services.AddCratisChronicleArtifacts(chronicleClient.Options.ArtifactsProvider);
 }
