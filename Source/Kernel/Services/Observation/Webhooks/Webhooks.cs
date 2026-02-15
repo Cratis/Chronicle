@@ -5,9 +5,9 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Observation.Webhooks;
-using Cratis.Chronicle.Grains.Security;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -35,7 +35,7 @@ internal sealed class Webhooks(
     public async Task Add(AddWebhooks request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-        var webhooksManager = grainFactory.GetGrain<Grains.Observation.Webhooks.IWebhooks>(request.EventStore);
+        var webhooksManager = grainFactory.GetGrain<Chronicle.Observation.Webhooks.IWebhooks>(request.EventStore);
 
         foreach (var webhook in request.Webhooks)
         {
@@ -170,7 +170,7 @@ internal sealed class Webhooks(
         return definition with { Target = encryptedTarget };
     }
 
-    async Task AppendAuthorizationEvent(IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
+    async Task AppendAuthorizationEvent(Chronicle.EventSequences.IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
     {
         await authorization.Match(
             async basic => await eventSequence.Append(webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),

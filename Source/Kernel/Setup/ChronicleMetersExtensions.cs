@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
-using Cratis.Chronicle.Grains.Clients;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 

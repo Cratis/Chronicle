@@ -19,7 +19,7 @@ internal sealed class Namespaces(IGrainFactory grainFactory, IStorage storage) :
     /// <inheritdoc/>
     public async Task Ensure(EnsureNamespace command)
     {
-        var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(command.EventStore);
+        var namespaces = grainFactory.GetGrain<Chronicle.Namespaces.INamespaces>(command.EventStore);
         await namespaces.Ensure(command.Name);
     }
 

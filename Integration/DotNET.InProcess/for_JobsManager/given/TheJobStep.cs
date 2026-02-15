@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;

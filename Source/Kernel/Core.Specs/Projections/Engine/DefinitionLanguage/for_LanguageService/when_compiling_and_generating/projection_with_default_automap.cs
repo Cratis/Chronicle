@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using EventTypes = Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
+using EventTypes = Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
@@ -29,3 +29,4 @@ public class projection_with_default_automap : EventTypes.a_language_service_wit
     [Fact] void should_not_generate_source_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("sourceHubId = sourceHubId");
     [Fact] void should_not_generate_destination_hub_id_mapping() => _compilerResult.GeneratedDefinition.ShouldNotContain("destinationHubId = destinationHubId");
 }
+

@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 using context = Cratis.Chronicle.InProcess.Integration.Jobs.for_JobGrainStorageProvider.when_writing_and_reading_catch_up_observer_job_state.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Jobs.for_JobGrainStorageProvider;

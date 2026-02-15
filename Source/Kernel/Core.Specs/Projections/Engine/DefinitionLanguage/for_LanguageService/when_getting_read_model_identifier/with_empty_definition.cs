@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
+using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_getting_read_model_identifier;
 

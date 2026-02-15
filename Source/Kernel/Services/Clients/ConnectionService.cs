@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Contracts.Clients;
-using Cratis.Chronicle.Grains.Clients;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 

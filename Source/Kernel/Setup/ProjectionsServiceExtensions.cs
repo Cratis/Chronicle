@@ -20,11 +20,7 @@ public static class ProjectionsServiceExtensions
     public static ISiloBuilder AddProjectionsService(this ISiloBuilder siloBuilder)
     {
         siloBuilder.AddGrainService<ProjectionsService>();
-        siloBuilder.ConfigureServices(_ =>
-        {
-            _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>();
-            // _.AddSingleton<Projections.IProjectionFutures, ProjectionFuturesBridge>(); // Removed after project consolidation - bridge no longer needed
-        });
+        siloBuilder.ConfigureServices(_ => _.AddSingleton<IProjectionsServiceClient, ProjectionsServiceClient>());
         return siloBuilder;
     }
 }

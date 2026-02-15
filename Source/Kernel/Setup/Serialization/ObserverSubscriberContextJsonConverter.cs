@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Serialization;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Json;
 
 namespace Cratis.Chronicle.Setup.Serialization;

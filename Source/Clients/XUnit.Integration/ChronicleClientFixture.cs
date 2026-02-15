@@ -3,7 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Types;

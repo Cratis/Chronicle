@@ -13,12 +13,11 @@
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Arc" />
-      <PackageReference Include="Cratis.Arc.Core" />
-      <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />

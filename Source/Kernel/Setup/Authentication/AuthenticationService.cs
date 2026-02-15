@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Grains.EventSequences;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage.Security;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
@@ -59,7 +59,7 @@ internal sealed class AuthenticationService(
         logger.CreatingDefaultAdminUser();
 
         var userId = Guid.NewGuid();
-        var @event = new Grains.Security.InitialAdminUserAdded(
+        var @event = new Security.InitialAdminUserAdded(
             _options.Authentication.DefaultAdminUsername,
             string.Empty);
 
@@ -90,7 +90,7 @@ internal sealed class AuthenticationService(
         // Hash the secret to match how other application secrets are stored
         var hashedSecret = _passwordHasher.HashPassword(null!, defaultClientSecret);
         var applicationId = Guid.NewGuid().ToString();
-        var @event = new Grains.Security.ApplicationAdded(
+        var @event = new Security.ApplicationAdded(
             defaultClientId,
             hashedSecret);
 

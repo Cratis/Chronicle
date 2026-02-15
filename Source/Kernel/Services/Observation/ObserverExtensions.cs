@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Services.Observation;
 
