@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink, ILogger<HandleEvent> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         logger.HandlingEvent(context.Event.Context.SequenceNumber);
         var eventType = context.Event.Context.EventType;

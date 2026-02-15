@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -24,7 +23,7 @@ public class StoreFutures(
     ILogger<StoreFutures> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // Store any deferred futures that were created during processing
         foreach (var future in context.DeferredFutures)

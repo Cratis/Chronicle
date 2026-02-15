@@ -8,7 +8,6 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -22,7 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, ITypeFormats typeFormats, ILogger<ResolveKey> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         logger.ResolvingKey(context.Event.Context.SequenceNumber);
         var keyResolver = projection.GetKeyResolverFor(context.Event.Context.EventType);
@@ -41,7 +40,7 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
         return context with { Key = key };
     }
 
-    Key EnsureCorrectTypeForArrayIndexersOnKey(EngineProjection projection, Key key) =>
+    Key EnsureCorrectTypeForArrayIndexersOnKey(IProjection projection, Key key) =>
         key with
         {
             ArrayIndexers = new ArrayIndexers(

@@ -10,7 +10,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 

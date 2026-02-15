@@ -8,7 +8,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -20,7 +19,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // Don't set initial state if the event was deferred (key is undefined)
         if (context.IsDeferred)
@@ -82,7 +81,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     bool HasBeenInitialized(ExpandoObject initialState) =>
         ((IDictionary<string, object?>)initialState).TryGetValue(WellKnownProperties.ReadModelInstanceInitialized, out var initialized) && initialized is bool initializedBool && initializedBool;
 
-    void SetKeyForInitialState(EngineProjection projection, ExpandoObject initialState, Key key)
+    void SetKeyForInitialState(IProjection projection, ExpandoObject initialState, Key key)
     {
         // TODO: We should improve how we work with Keys and not just "magic strings" like id or _id (MongoDB):
         // https://github.com/Cratis/Chronicle/issues/1387
