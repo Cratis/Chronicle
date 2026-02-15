@@ -19,8 +19,32 @@ on:
       - ".github/workflows/**"
 
 jobs:
+  grpc-compatibility:
+    uses: ./.github/workflows/grpc-compatibility.yml
+    with:
+      base-ref: ${{ github.event.pull_request.base.ref }}
+
+  update-pr-with-breaking-changes:
+    runs-on: ubuntu-latest
+    needs: [grpc-compatibility]
+    if: needs.grpc-compatibility.outputs.has-breaking-changes == 'true'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update PR description
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .github/scripts/update-pr-description.sh \
+            "${{ github.event.pull_request.number }}" \
+            "${{ needs.grpc-compatibility.outputs.breaking-changes }}"
+
   release:
     runs-on: ubuntu-latest
+    needs: [grpc-compatibility]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
