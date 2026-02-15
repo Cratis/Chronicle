@@ -3,18 +3,17 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using EventTypes = Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
-public class projection_with_default_automap : EventTypes.a_language_service_with_schemas<EventTypes.TransportRouteReadModel>
+public class projection_with_default_automap : given.a_language_service_with_schemas<given.TransportRouteReadModel>
 {
     const string Declaration = """
         projection TransportRoute => TransportRouteReadModel
             from HubRouteAdded key id
         """;
 
-    protected override IEnumerable<Type> EventTypes => [typeof(EventTypes.HubRouteAdded)];
+    protected override IEnumerable<Type> EventTypes => [typeof(given.HubRouteAdded)];
 
     given.CompilerResult _compilerResult;
 

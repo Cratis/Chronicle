@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.for_Projection.given;
+namespace Cratis.Chronicle.Projections.Engine.for_Projection.given;
 
 public class a_projection : Specification
 {

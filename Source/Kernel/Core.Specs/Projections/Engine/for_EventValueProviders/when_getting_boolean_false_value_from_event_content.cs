@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.for_EventValueProviders;
+namespace Cratis.Chronicle.Projections.Engine.for_EventValueProviders;
 
 public class when_getting_boolean_false_value_from_event_content : Specification
 {
