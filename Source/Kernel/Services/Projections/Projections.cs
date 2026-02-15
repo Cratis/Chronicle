@@ -7,10 +7,10 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Grains.Projections;
-using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections.DefinitionLanguage;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
@@ -25,7 +25,7 @@ using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
 namespace Cratis.Chronicle.Services.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjections"/>.
+/// Represents an implementation of <see cref="Contracts.Projections.IProjections"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
@@ -35,7 +35,7 @@ internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
     ILanguageService languageService,
-    IServiceProvider serviceProvider) : IProjections
+    IServiceProvider serviceProvider) : Contracts.Projections.IProjections
 {
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
@@ -387,7 +387,7 @@ internal sealed class Projections(
             schema.Title = displayName;
         }
 
-        var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
+        var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
         {
             { Concepts.ReadModels.ReadModelGeneration.First, schema }
         };

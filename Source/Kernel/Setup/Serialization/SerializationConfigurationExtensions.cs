@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Json;
-using Cratis.Chronicle.Grains.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;

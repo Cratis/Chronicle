@@ -3,9 +3,8 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.EventTypes;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -50,7 +49,7 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, 
             await systemEventSequence.Append(eventStoreName.Value, eventStoreAdded);
         }
 
-        var namespaces = grainFactory.GetGrain<Grains.Namespaces.INamespaces>(eventStoreName);
+        var namespaces = grainFactory.GetGrain<Chronicle.Namespaces.INamespaces>(eventStoreName);
         await namespaces.EnsureDefault();
     }
 }

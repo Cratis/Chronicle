@@ -7,22 +7,22 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Grains.Projections;
-using Cratis.Chronicle.Grains.ReadModels;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using NJsonSchema;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using ProjectionChangeset = Cratis.Chronicle.Grains.Projections.ProjectionChangeset;
+using ProjectionChangeset = Cratis.Chronicle.Projections.ProjectionChangeset;
 using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
 
 namespace Cratis.Chronicle.Services.ReadModels;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReadModels"/>.
+/// Represents an implementation of <see cref="Contracts.ReadModels.IReadModels"/>.
 /// </summary>
 /// <param name="clusterClient">The cluster client.</param>
 /// <param name="grainFactory">The grain factory.</param>
@@ -34,7 +34,7 @@ internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
-    JsonSerializerOptions jsonSerializerOptions) : IReadModels
+    JsonSerializerOptions jsonSerializerOptions) : Contracts.ReadModels.IReadModels
 {
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)
@@ -281,7 +281,7 @@ internal sealed class ReadModels(
 
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
-                var streamProvider = clusterClient.GetStreamProvider(Grains.WellKnownStreamProviders.ProjectionChangesets);
+                var streamProvider = clusterClient.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
                 var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
 
                 var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);

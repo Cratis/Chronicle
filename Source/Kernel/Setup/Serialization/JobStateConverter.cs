@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Strings;
 

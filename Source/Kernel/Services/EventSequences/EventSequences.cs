@@ -156,6 +156,6 @@ internal sealed class EventSequences(
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>
         storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).GetEventSequence(request.EventSequenceId);
 
-    Grains.EventSequences.IEventSequence GetEventSequenceGrain(IEventSequenceRequest request) =>
-        grainFactory.GetGrain<Grains.EventSequences.IEventSequence>(new EventSequenceKey(request.EventSequenceId, request.EventStore, request.Namespace));
+    Chronicle.EventSequences.IEventSequence GetEventSequenceGrain(IEventSequenceRequest request) =>
+        grainFactory.GetGrain<Chronicle.EventSequences.IEventSequence>(new EventSequenceKey(request.EventSequenceId, request.EventStore, request.Namespace));
 }

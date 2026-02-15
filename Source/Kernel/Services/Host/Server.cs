@@ -2,8 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.Host;
+using Cratis.Chronicle.Host;
 using Orleans.BroadcastChannel;
 
 namespace Cratis.Chronicle.Services.Host;

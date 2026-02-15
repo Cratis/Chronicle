@@ -17,9 +17,9 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     public async Task Seed(SeedRequest request, CallContext context = default)
     {
         var key = new EventSeedingKey(request.EventStore, request.Namespace);
-        var grain = grainFactory.GetGrain<Grains.Seeding.IEventSeeding>(key.ToString());
+        var grain = grainFactory.GetGrain<Chronicle.Seeding.IEventSeeding>(key.ToString());
 
-        var entries = request.Entries.Select(e => new Grains.Seeding.SeedingEntry(
+        var entries = request.Entries.Select(e => new Chronicle.Seeding.SeedingEntry(
             e.EventSourceId,
             e.EventTypeId,
             e.Content,

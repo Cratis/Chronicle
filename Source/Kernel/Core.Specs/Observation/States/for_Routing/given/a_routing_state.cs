@@ -11,7 +11,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
-using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Observation.States.for_Routing.given;
 

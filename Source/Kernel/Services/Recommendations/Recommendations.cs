@@ -3,7 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Grains.Recommendations;
+using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;

@@ -5,7 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 
-namespace Cratis.Chronicle.Grains.Specs.EventSequences.for_EventHashCalculator;
+namespace Cratis.Chronicle.Specs.EventSequences.for_EventHashCalculator;
 
 public class when_calculating_hash_with_empty_content : Specification
 {

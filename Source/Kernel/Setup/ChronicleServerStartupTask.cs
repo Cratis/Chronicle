@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Grains.EventTypes;
-using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Namespaces;
-using Cratis.Chronicle.Grains.Observation.Reactors.Kernel;
-using Cratis.Chronicle.Grains.Observation.Webhooks;
-using Cratis.Chronicle.Grains.Projections;
-using Cratis.Chronicle.Grains.ReadModels;
+using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 

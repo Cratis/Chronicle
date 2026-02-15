@@ -16,7 +16,7 @@ using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
-using IEventSequence = Cratis.Chronicle.Grains.EventSequences.IEventSequence;
+using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 

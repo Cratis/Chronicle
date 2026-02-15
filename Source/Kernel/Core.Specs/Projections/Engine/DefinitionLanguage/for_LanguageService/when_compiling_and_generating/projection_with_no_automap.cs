@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using EventTypes = Cratis.Chronicle.Projections.DefinitionLanguage.for_LanguageService.given;
+using EventTypes = Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
 
