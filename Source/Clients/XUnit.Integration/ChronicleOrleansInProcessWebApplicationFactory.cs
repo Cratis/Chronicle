@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
+using KernelCore::Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Orleans.TestingHost.Logging;
+using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
