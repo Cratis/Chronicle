@@ -42,6 +42,8 @@ permissions:
 
 jobs:
   grpc-compatibility:
+    permissions:
+      contents: read
     uses: ./.github/workflows/grpc-compatibility.yml
     with:
       base-ref: 'main'

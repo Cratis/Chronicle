@@ -20,6 +20,8 @@ on:
 
 jobs:
   grpc-compatibility:
+    permissions:
+      contents: read
     uses: ./.github/workflows/grpc-compatibility.yml
     with:
       base-ref: ${{ github.event.pull_request.base.ref }}

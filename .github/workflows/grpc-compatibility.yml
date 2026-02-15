@@ -21,6 +21,8 @@ env:
 jobs:
   check-compatibility:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       has-breaking-changes: ${{ steps.compare.outputs.has-breaking-changes }}
       breaking-changes: ${{ steps.compare.outputs.breaking-changes }}
