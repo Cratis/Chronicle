@@ -25,16 +25,6 @@
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
-    <PropertyGroup>
-        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <Compile Include="**/*.cs" Exclude="obj/**/*.cs" />
-        <Compile Include="../../Kernel/Setup/**/*.cs" Exclude="../../Kernel/Setup/obj/**/*.cs" />
-        <Compile Include="../../Kernel/Services/**/*.cs" Exclude="../../Kernel/Services/obj/**/*.cs" />
-    </ItemGroup>
-
     <ItemGroup Condition="'$(Repack)' == 'true'">
         <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
         <Reference Include="$(OutDir)/Cratis.Chronicle.dll" />
@@ -62,6 +52,14 @@
         </ProjectReference>
 
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+
+        <ProjectReference Include="../../Kernel/Services/Services.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
 
