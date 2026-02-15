@@ -4,7 +4,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 

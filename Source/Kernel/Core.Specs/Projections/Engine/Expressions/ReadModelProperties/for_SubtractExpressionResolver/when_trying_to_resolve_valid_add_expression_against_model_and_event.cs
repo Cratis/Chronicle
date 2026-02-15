@@ -5,12 +5,12 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Expressions.ReadModelProperties.for_SubtractExpressionResolver;
+namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties.for_SubtractExpressionResolver;
 
 public class when_trying_to_resolve_valid_add_expression_against_model_and_event : Specification
 {

@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties.for_SubtractExpressionResolver;
