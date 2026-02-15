@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
-        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
     </PropertyGroup>
 
@@ -20,27 +19,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Connections/Connections.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
-    </ItemGroup>
-    <ItemGroup>
-        <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Contracts.dll" />
-    </ItemGroup>
-    <ItemGroup>
-        <AssemblyToExcludeFromMerge Include="Cratis.Chronicle.DotNET.CodeAnalysis.dll" />
-    </ItemGroup>
-
-    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging" Condition=" '$(TargetFramework)' != '' ">
+    <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' ">
         <Message Text="Generating gRPC clients" Importance="high" />
         <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
@@ -50,10 +34,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
