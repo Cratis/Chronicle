@@ -8,7 +8,7 @@ using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 

@@ -13,21 +13,20 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Utilities;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="IProjection"/>.
+/// Represents an implementation of <see cref="EngineProjection"/>.
 /// </summary>
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing projection definitions.</param>
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>

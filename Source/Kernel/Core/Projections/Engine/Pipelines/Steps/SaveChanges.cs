@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -17,7 +16,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger<SaveChanges> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // Don't save if the event was deferred (waiting for parent data)
         if (context.IsDeferred)

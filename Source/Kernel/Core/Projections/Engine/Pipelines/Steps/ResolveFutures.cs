@@ -10,7 +10,6 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -33,7 +32,7 @@ public class ResolveFutures(
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
-    public async ValueTask<ProjectionEventContext> Perform(EngineProjection projection, ProjectionEventContext context)
+    public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         // If this event was deferred, don't try to resolve futures (we have no valid data yet)
         if (context.IsDeferred)
@@ -152,7 +151,7 @@ public class ResolveFutures(
         return context;
     }
 
-    static EngineProjection? FindChildProjectionByPath(EngineProjection projection, PropertyPath childPath)
+    static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)
     {
         // Check if this projection's ChildrenPropertyPath matches the target path
         if (projection.ChildrenPropertyPath.Path == childPath.Path)

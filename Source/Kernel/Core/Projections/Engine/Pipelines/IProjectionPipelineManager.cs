@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
-using EngineProjection = Cratis.Chronicle.Projections.IProjection;
+using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 
