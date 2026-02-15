@@ -10,7 +10,6 @@
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
-        <ProjectReference Include="../Services/Services.csproj" />
     </ItemGroup>
 
     <ItemGroup>
