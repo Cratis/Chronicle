@@ -46,6 +46,12 @@ var eventStore = await client.GetEventStore("Quickstart");
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Console/Program.cs#L11-L15)
 
+> **Note:** By default, Chronicle will discover and register all client artifacts (Reactors, Reducers, Projections, etc.) with the Chronicle server.
+> However, the artifact types themselves are **not automatically registered** in any dependency injection container.
+> In a barebones console application without a Host or DI container, only Reactors and Reducers with **parameterless constructors**
+> (no dependencies) will work. If your Reactors or Reducers require dependencies, you will need to set up a Host with dependency
+> injection or manually provide instances through a custom `IServiceProvider`.
+
 [!INCLUDE [common](./common.md)]
 
 [!INCLUDE [common](./mongodb.md)]
