@@ -40,9 +40,11 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleClientWebApplicationBuilderExtensions).Assembly);
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
 
+        var configSectionPath = configSection ?? ConfigurationPath.Combine(DefaultSectionPaths);
+
         builder.Services
-            .AddOptions(configureOptions)
-            .BindConfiguration(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths));
+            .AddOptions(configureOptions, configSectionPath)
+            .BindConfiguration(configSectionPath);
 
         builder.Services
             .AddUnitOfWork()
@@ -51,12 +53,12 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddCratisChronicleClient();
 
         var options = new ChronicleOptions();
-        builder.Configuration.GetSection(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)).Bind(options);
+        builder.Configuration.GetSection(configSectionPath).Bind(options);
 
         if (configureOptions is not null)
         {
             var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
-            builder.Configuration.GetSection(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)).Bind(aspNetCoreOptions);
+            builder.Configuration.GetSection(configSectionPath).Bind(aspNetCoreOptions);
             configureOptions(aspNetCoreOptions);
             CopyValues(options, aspNetCoreOptions);
         }
@@ -90,17 +92,19 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         return app;
     }
 
-    static OptionsBuilder<ChronicleAspNetCoreOptions> AddOptions(this IServiceCollection services, Action<ChronicleAspNetCoreOptions>? configure = default)
+    static OptionsBuilder<ChronicleAspNetCoreOptions> AddOptions(this IServiceCollection services, Action<ChronicleAspNetCoreOptions>? configure = default, string? configSectionPath = default)
     {
+        var sectionPath = configSectionPath ?? ConfigurationPath.Combine(DefaultSectionPaths);
+
         var builder = services
             .AddOptions<ChronicleAspNetCoreOptions>()
-            .BindConfiguration(ConfigurationPath.Combine(DefaultSectionPaths))
+            .BindConfiguration(sectionPath)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
         var baseBuilder = services
             .AddOptions<ChronicleOptions>()
-            .BindConfiguration(ConfigurationPath.Combine(DefaultSectionPaths))
+            .BindConfiguration(sectionPath)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
