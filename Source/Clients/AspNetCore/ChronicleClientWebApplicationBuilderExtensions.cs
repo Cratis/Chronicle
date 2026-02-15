@@ -53,6 +53,14 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         var options = new ChronicleOptions();
         builder.Configuration.GetSection(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)).Bind(options);
 
+        if (configureOptions is not null)
+        {
+            var aspNetCoreOptions = new ChronicleAspNetCoreOptions();
+            builder.Configuration.GetSection(configSection ?? ConfigurationPath.Combine(DefaultSectionPaths)).Bind(aspNetCoreOptions);
+            configureOptions(aspNetCoreOptions);
+            CopyValues(options, aspNetCoreOptions);
+        }
+
         builder.Services.AddCratisChronicleArtifacts(options);
 
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, options.ArtifactsProvider);
