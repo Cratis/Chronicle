@@ -3,6 +3,7 @@
         <AssemblyName>Cratis.Chronicle.InProcess</AssemblyName>
         <RootNamespace>Cratis.Chronicle.InProcess</RootNamespace>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
+        <IncludeBuildOutput>true</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,14 +17,32 @@
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../../Kernel/Storage/Storage.csproj" />
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
-        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
-        <ProjectReference Include="../../Kernel/Core/Core.csproj" />
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj" />
-        <ProjectReference Include="../../Kernel/Services/Services.csproj" />
-        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj" />
-        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
+        
+        <!-- Kernel assemblies as runtime-only -->
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Services/Services.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
@@ -42,5 +61,25 @@
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="Polly.Core" />
+    </ItemGroup>
+
+    <!-- Package kernel assemblies in runtimes folder -->
+    <ItemGroup>
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Configuration.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Configuration.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Configuration.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Setup.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Setup.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Setup.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Services.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Services.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Services.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Diagnostics.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Diagnostics.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Diagnostics.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
     </ItemGroup>
 </Project>
