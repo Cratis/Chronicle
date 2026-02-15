@@ -18,14 +18,14 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// Represents an implementation of <see cref="IProjectionPipelineManager"/>.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
-/// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing projection futures.</param>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
 public class ProjectionPipelineManager(
     IStorage storage,
-    IProjectionFutures projectionFutures,
+    IGrainFactory grainFactory,
     IObjectComparer objectComparer,
     ITypeFormats typeFormats,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
@@ -48,14 +48,15 @@ public class ProjectionPipelineManager(
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
         var sink = namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
-        var resolveFuturesStep = new ResolveFutures(eventStore, @namespace, projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
+        var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
             new ResolveKey(eventSequenceStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
-            new StoreFutures(eventStore, @namespace, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
+            new StoreFutures(projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
         ];

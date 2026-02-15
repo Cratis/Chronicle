@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -16,17 +15,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// <summary>
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that resolves pending futures.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="ResolveFutures"/> class.
-/// </remarks>
-/// <param name="eventStore">The <see cref="EventStoreName"/> for the event store.</param>
-/// <param name="namespace">The <see cref="EventStoreNamespaceName"/> for the namespace.</param>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ResolveFutures(
-    EventStoreName eventStore,
-    EventStoreNamespaceName @namespace,
     IProjectionFutures projectionFutures,
     ITypeFormats typeFormats,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
@@ -41,7 +33,7 @@ public class ResolveFutures(
         }
 
         // Attempt to resolve any pending futures now that we've processed a new event
-        var futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
+        var futures = await projectionFutures.GetFutures();
 
         if (!futures.Any())
         {
@@ -56,7 +48,7 @@ public class ResolveFutures(
         while (resolvedAny)
         {
             resolvedAny = false;
-            futures = await projectionFutures.GetFutures(eventStore, @namespace, projection.Identifier);
+            futures = await projectionFutures.GetFutures();
 
             foreach (var future in futures)
             {
@@ -137,7 +129,7 @@ public class ResolveFutures(
                     futureContext.Changeset.Incoming = contextEvent;
 
                     // Successfully resolved the future
-                    await projectionFutures.ResolveFuture(eventStore, @namespace, projection.Identifier, future.Id);
+                    await projectionFutures.ResolveFuture(future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
                 }
