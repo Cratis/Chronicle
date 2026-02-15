@@ -1,22 +1,8 @@
-<Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.InProcess</AssemblyName>
         <RootNamespace>Cratis.Chronicle.InProcess</RootNamespace>
         <NoWarn>$(NoWarn);ORLEANS0010</NoWarn>
-        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
-    </PropertyGroup>
-
-    <Target Name="BuildDependencies">
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,65 +11,23 @@
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
-        <Reference Include="$(OutDir)/Cratis.Chronicle.dll" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(Repack)' != 'true'">
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-
-        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Core/Core.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Setup/Setup.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Services/Services.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-
-        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj" />
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Kernel/Configuration/Configuration.csproj" />
+        <ProjectReference Include="../../Kernel/Core/Core.csproj" />
+        <ProjectReference Include="../../Kernel/Setup/Setup.csproj" />
+        <ProjectReference Include="../../Kernel/Services/Services.csproj" />
+        <ProjectReference Include="../../Kernel/Diagnostics/Diagnostics.csproj" />
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <DoNotInternalize Include="Cratis.Chronicle.Orleans.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Configuration.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Setup.MongoDBChronicleBuilderExtensions" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Cratis.Arc.MongoDB" />
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
+        <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
