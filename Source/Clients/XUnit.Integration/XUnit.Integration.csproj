@@ -1,46 +1,32 @@
-<Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>false</IsTestProject>
+        <IncludeBuildOutput>true</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
     </ItemGroup>
 
-    <Target Name="BuildDependencies">
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
-        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.dll" DestinationFolder="$(OutDir)"/>
-        <Copy SourceFiles="../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET.InProcess/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.InProcess.pdb')"/>
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
-    </PropertyGroup>
-
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" ReferenceOutputAssembly="false"/>
-        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
-        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
-        <Reference Include="$(OutDir)/Cratis.Chronicle.InProcess.dll"/>
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(Repack)' != 'true'">
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
-        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj"/>
-        <ProjectReference Include="../../Kernel/Core/Core.csproj"/>
-        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
+        
+        <!-- Kernel assemblies as runtime-only with aliases -->
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
+            <Aliases>KernelConcepts</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <Aliases>KernelCore</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage.MongoDB/Storage.MongoDB.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
@@ -53,5 +39,15 @@
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
+    </ItemGroup>
+
+    <!-- Package kernel assemblies in runtimes folder -->
+    <ItemGroup>
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
     </ItemGroup>
 </Project>
