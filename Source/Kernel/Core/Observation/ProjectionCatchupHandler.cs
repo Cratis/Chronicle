@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 

@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Pipelines;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;

@@ -1,0 +1,32 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Dynamic;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Projections.Expressions.EventValues;
+using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
+using NJsonSchema;
+
+namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties.for_AddExpressionResolver;
+
+public class when_trying_to_resolve_valid_add_expression_against_model_and_event : given.an_appended_event
+{
+    IEventValueProviderExpressionResolvers _eventValueResolvers;
+    ITypeFormats _typeFormats;
+    AddExpressionResolver _resolver;
+    ExpandoObject _target;
+
+    void Establish()
+    {
+        _target = new();
+        _eventValueResolvers = Substitute.For<IEventValueProviderExpressionResolvers>();
+        _eventValueResolvers.Resolve(Arg.Any<JsonSchemaProperty>(), Arg.Any<string>()).Returns(_ => my_event.Something);
+        _typeFormats = new TypeFormats();
+        _resolver = new(_eventValueResolvers, _typeFormats);
+    }
+
+    void Because() => _resolver.Resolve("targetProperty", new JsonSchemaProperty { Type = JsonObjectType.Integer }, $"{WellKnownExpressions.Add}({nameof(my_event.Something)})")(@event, _target, ArrayIndexers.NoIndexers);
+
+    [Fact] void should_resolve_to_a_propertymapper_that_can_add_to_the_property() => ((int)((dynamic)_target).targetProperty).ShouldEqual(my_event.Something);
+}

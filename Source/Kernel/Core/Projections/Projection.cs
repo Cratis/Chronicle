@@ -16,6 +16,7 @@ using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
