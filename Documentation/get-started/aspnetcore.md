@@ -115,9 +115,9 @@ builder.Services.AddCratisChronicleArtifacts(client);
 ```
 
 > **Important:** If you disable automatic discovery and registration in `ChronicleOptions` by setting
-> `AutoDiscoverAndRegister = false`, you must manually call both:
-> 1. `eventStore.Discover()` - to register artifacts with Chronicle server
-> 2. `services.AddCratisChronicleArtifacts()` - to register artifact types in the DI container
+> `AutoDiscoverAndRegister = false`, you must manually:
+> 1. Call discovery methods on the event store (e.g., `eventStore.Reactors.Discover()`, `eventStore.Reducers.Discover()`) to register artifacts with Chronicle server
+> 2. Call `services.AddCratisChronicleArtifacts()` to register artifact types in the DI container
 
 ### Additional Service Registrations
 
