@@ -47,7 +47,7 @@ public class JobsManager(
         _jobStorage = _namespaceStorage.Jobs;
         _jobStepStorage = _namespaceStorage.JobSteps;
 
-        var cleanupCadence = options.Value.Jobs.GetEffectiveCleanupCadence();
+        var cleanupCadence = options.Value.Jobs.CleanupCadence;
         _cleanupTimer = this.RegisterGrainTimer(
             async _ => await CleanupDeadJobs(),
             new GrainTimerCreationOptions
@@ -198,7 +198,7 @@ public class JobsManager(
 
         logger.CleaningUpDeadJobs();
 
-        var threshold = options.Value.Jobs.GetEffectiveDeadJobThreshold();
+        var threshold = options.Value.Jobs.DeadJobThreshold;
         var cutoffTime = DateTimeOffset.UtcNow - threshold;
 
         var getPreparingJobs = await _jobStorage!.GetJobs(JobStatus.PreparingJob, JobStatus.PreparingSteps);
