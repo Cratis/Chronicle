@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Driver;
 using NSubstitute;
+using JobType = Cratis.Chronicle.Concepts.Jobs.JobType;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage.given;
 
