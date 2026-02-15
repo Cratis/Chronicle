@@ -5,7 +5,9 @@ using System.Text.Json;
 using Cratis.Chronicle.Api.Auditing;
 using Cratis.Chronicle.Api.Events;
 using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Api.EventSequences;
 
@@ -13,8 +15,11 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// Represents the API for working with the event log.
 /// </summary>
 /// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
+/// <param name="causationManager"><see cref="ICausationManager"/> for managing causation chains.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceCommands(IEventSequences eventSequences) : ControllerBase
+public class EventSequenceCommands(
+    IEventSequences eventSequences,
+    ICausationManager causationManager) : ControllerBase
 {
     /// <summary>
     /// Appends an event to the event log.
@@ -43,8 +48,8 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
             EventStreamId = eventToAppend.EventStreamId,
             EventType = eventToAppend.EventType.ToContract(),
             Content = JsonSerializer.Serialize(eventToAppend.Content),
-            Causation = eventToAppend.Causation?.Select(c => c.ToContract()).ToList() ?? [],
-            CausedBy = eventToAppend.CausedBy?.ToContract() ?? new Contracts.Identities.Identity(),
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract(),
             Tags = [],
             ConcurrencyScope = new Contracts.EventSequences.Concurrency.ConcurrencyScope
             {
@@ -98,8 +103,8 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
                 Content = JsonSerializer.Serialize(e.Content),
                 Tags = []
             }).ToList(),
-            Causation = eventsToAppend.Causation?.Select(c => c.ToContract()).ToList() ?? [],
-            CausedBy = eventsToAppend.CausedBy?.ToContract() ?? new Contracts.Identities.Identity(),
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract(),
             ConcurrencyScopes = new Dictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope>()
         };
 
