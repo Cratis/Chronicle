@@ -19,7 +19,6 @@
         <ProjectReference Include="..\..\Infrastructure\Infrastructure.csproj" />
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
         <ProjectReference Include="..\Core\Core.csproj" />
-        <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
 
         <ProjectReference Include="..\Storage\Storage.csproj" />
 

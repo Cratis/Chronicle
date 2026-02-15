@@ -19,7 +19,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">

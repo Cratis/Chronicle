@@ -41,12 +41,10 @@
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
         <ProjectReference Include="../Core/Core.csproj" />
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Setup/Setup.csproj" />
-        <ProjectReference Include="../Diagnostics/Diagnostics.csproj" />
     </ItemGroup>
 
     <!-- General -->

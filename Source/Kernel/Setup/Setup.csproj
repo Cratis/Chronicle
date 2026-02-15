@@ -31,8 +31,5 @@
         <ProjectReference Include="../../Clients/Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../Diagnostics/Diagnostics.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
     </ItemGroup>
 </Project>

@@ -9,6 +9,8 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
     </ItemGroup>
 
     <ItemGroup>
@@ -17,8 +19,10 @@
 
     <ItemGroup>
         <ProjectReference Include="../Storage/Storage.csproj" />
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Clients/Connections/Connections.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
@@ -30,10 +34,23 @@
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+        <PackageReference Include="Microsoft.Extensions.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
         <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="NJsonSchema" />
+        <PackageReference Include="OpenTelemetry" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>
