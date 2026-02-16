@@ -1,4 +1,8 @@
+- name: Overview
+  href: index.md
 - name: Contracts
-  href: ./contracts.md
+  href: contracts.md
 - name: Services
-  href: ./services.md
+  href: services.md
+- name: Patches
+  href: patches/toc.yml

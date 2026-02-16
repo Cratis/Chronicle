@@ -22,6 +22,48 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
     public static readonly SemanticVersion NotSet = new(0, 0, 0);
 
     /// <summary>
+    /// Implicit conversion from string to <see cref="SemanticVersion"/>.
+    /// </summary>
+    /// <param name="version">Version string.</param>
+    public static implicit operator SemanticVersion(string version) => Parse(version);
+
+    /// <summary>
+    /// Greater than operator.
+    /// </summary>
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left is greater than right.</returns>
+    public static bool operator >(SemanticVersion left, SemanticVersion right) =>
+        left.CompareTo(right) > 0;
+
+    /// <summary>
+    /// Less than operator.
+    /// </summary>
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left is less than right.</returns>
+    public static bool operator <(SemanticVersion left, SemanticVersion right) =>
+        left.CompareTo(right) < 0;
+
+    /// <summary>
+    /// Greater than or equal operator.
+    /// </summary>
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left is greater than or equal to right.</returns>
+    public static bool operator >=(SemanticVersion left, SemanticVersion right) =>
+        left.CompareTo(right) >= 0;
+
+    /// <summary>
+    /// Less than or equal operator.
+    /// </summary>
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left is less than or equal to right.</returns>
+    public static bool operator <=(SemanticVersion left, SemanticVersion right) =>
+        left.CompareTo(right) <= 0;
+
+    /// <summary>
     /// Parse a semantic version string.
     /// </summary>
     /// <param name="version">Version string to parse.</param>
@@ -135,48 +177,6 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
 
         return version;
     }
-
-    /// <summary>
-    /// Implicit conversion from string to <see cref="SemanticVersion"/>.
-    /// </summary>
-    /// <param name="version">Version string.</param>
-    public static implicit operator SemanticVersion(string version) => Parse(version);
-
-    /// <summary>
-    /// Greater than operator.
-    /// </summary>
-    /// <param name="left">Left operand.</param>
-    /// <param name="right">Right operand.</param>
-    /// <returns>True if left is greater than right.</returns>
-    public static bool operator >(SemanticVersion left, SemanticVersion right) =>
-        left.CompareTo(right) > 0;
-
-    /// <summary>
-    /// Less than operator.
-    /// </summary>
-    /// <param name="left">Left operand.</param>
-    /// <param name="right">Right operand.</param>
-    /// <returns>True if left is less than right.</returns>
-    public static bool operator <(SemanticVersion left, SemanticVersion right) =>
-        left.CompareTo(right) < 0;
-
-    /// <summary>
-    /// Greater than or equal operator.
-    /// </summary>
-    /// <param name="left">Left operand.</param>
-    /// <param name="right">Right operand.</param>
-    /// <returns>True if left is greater than or equal to right.</returns>
-    public static bool operator >=(SemanticVersion left, SemanticVersion right) =>
-        left.CompareTo(right) >= 0;
-
-    /// <summary>
-    /// Less than or equal operator.
-    /// </summary>
-    /// <param name="left">Left operand.</param>
-    /// <param name="right">Right operand.</param>
-    /// <returns>True if left is less than or equal to right.</returns>
-    public static bool operator <=(SemanticVersion left, SemanticVersion right) =>
-        left.CompareTo(right) <= 0;
 
     [GeneratedRegex(@"^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$", RegexOptions.None, 1000)]
     private static partial Regex SemanticVersionRegex();
