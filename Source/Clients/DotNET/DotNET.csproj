@@ -51,14 +51,15 @@
         Use ref/lib split to hide private assemblies from intellisense:
         - ref/{tfm}/ contains only the main assembly → compile-time/intellisense
         - lib/{tfm}/ contains ALL assemblies → deployed at runtime
-        IncludeBuildOutput=true auto-places main DLL + PDB in lib/.
-        ref/ overrides compile-time resolution so only main assembly is visible.
+        IncludeBuildOutput=true auto-places main DLL + PDB in lib/, which is correct.
+        ref/ overrides compile-time resolution so only main assembly is visible to IntelliSense.
     -->
     <ItemGroup>
-        <!-- Compile-time reference: only the main assembly is visible to consumers -->
+        <!-- Compile-time reference: only the main assembly is visible to consumers for IntelliSense -->
         <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Private assemblies: deployed at runtime but hidden from IntelliSense via ref/ -->
+        <!-- Runtime assemblies: ALL assemblies needed at runtime go in lib/ -->
+        <!-- Main assembly already in lib/ via IncludeBuildOutput=true, so we only add the private ones -->
         <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
