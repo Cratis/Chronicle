@@ -55,7 +55,9 @@
         <!-- Compile-time reference: only the main assembly is visible to consumers -->
         <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Runtime-only: bundled private assemblies, hidden from intellisense -->
+        <!-- Runtime assemblies: main assembly plus bundled private assemblies -->
+        <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />

@@ -50,7 +50,9 @@
         <!-- Compile-time reference: only the main assembly is visible to consumers -->
         <None Include="$(OutputPath)Cratis.Chronicle.XUnit.Integration.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Runtime-only: bundled private assemblies, hidden from intellisense -->
+        <!-- Runtime assemblies: main assembly plus bundled private assemblies -->
+        <None Include="$(OutputPath)Cratis.Chronicle.XUnit.Integration.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.XUnit.Integration.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.XUnit.Integration.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
         <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
