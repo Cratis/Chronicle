@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Patching;
 
-namespace Cratis.Chronicle.Grains.Patching;
+namespace Cratis.Chronicle.Patching;
 
 /// <summary>
 /// Represents the state for the <see cref="PatchManager"/>.

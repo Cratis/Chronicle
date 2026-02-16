@@ -8,7 +8,7 @@ using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
-namespace Cratis.Chronicle.Grains.Patching;
+namespace Cratis.Chronicle.Patching;
 
 /// <summary>
 /// Represents an implementation of <see cref="IPatchManager"/>.

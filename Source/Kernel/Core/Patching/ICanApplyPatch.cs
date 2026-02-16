@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.System;
 
-namespace Cratis.Chronicle.Grains.Patching;
+namespace Cratis.Chronicle.Patching;
 
 /// <summary>
 /// Defines a system that can apply a patch.
