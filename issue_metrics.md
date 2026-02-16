@@ -8,12 +8,14 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 250 |
+| Number of items that remain open | 252 |
 | Number of items closed | 635 |
-| Total number of items created | 885 |
+| Total number of items created | 887 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Validate gRPC API surface for breaking changes | https://github.com/Cratis/Chronicle/issues/2651 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Make the Chronicle Artifacts registration story more consistent | https://github.com/Cratis/Chronicle/issues/2649 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
 | Add the ability to add events directly in the Event Sequence editor / page in Workbench | https://github.com/Cratis/Chronicle/issues/2644 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Implement compensation support | https://github.com/Cratis/Chronicle/issues/2642 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Hook up redaction from Workbench | https://github.com/Cratis/Chronicle/issues/2640 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -328,6 +330,4 @@
 | Make replay work again (ProjectionReplayHandler, ReducerReplayHandler) | https://github.com/Cratis/Chronicle/issues/1264 | None | [einari](https://github.com/einari) | None | 60 days, 1:23:36 | None |
 | Fix the nextEventSequenceNumberForEventTypes on observer state - it is always holding -3 | https://github.com/Cratis/Chronicle/issues/1263 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:37 | None |
 | Fix last handled sequence number on observer state - it shows wrong number | https://github.com/Cratis/Chronicle/issues/1262 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:54 | None |
-| Investigate whether or not we need a notification when reducer definitions change | https://github.com/Cratis/Chronicle/issues/1261 | None | [einari](https://github.com/einari) | None | None | None |
-| Automatically hook up existing reducers to connected clients in ReducersManager when a namespace is added | https://github.com/Cratis/Chronicle/issues/1260 | None | [einari](https://github.com/einari) | None | None | None |
-| Fix the use of static methods for working with identity in the client (BaseIdentityProvider) | https://github.com/Cratis/Chronicle/issues/1259 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 352 days, 23:47:0
+| Investigate whether or not we need a notification when reducer definitions change | https://github.com/Cratis/Chronicle/issues/1261 | None | [einari](https://github.com/einari) | None 
