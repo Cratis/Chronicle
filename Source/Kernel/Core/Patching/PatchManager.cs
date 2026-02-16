@@ -25,10 +25,10 @@ public class PatchManager(
     /// <inheritdoc/>
     public async Task ApplyPatches()
     {
-        logger.LogInformation("Starting patch application process");
+        logger.StartingPatchApplication();
 
         var currentVersion = await storage.System.GetVersion() ?? SemanticVersion.NotSet;
-        logger.LogInformation("Current system version: {Version}", currentVersion);
+        logger.CurrentSystemVersion(currentVersion);
 
         var allPatches = patches.ToList();
         var patchesToApply = allPatches
@@ -38,11 +38,11 @@ public class PatchManager(
 
         if (patchesToApply.Count == 0)
         {
-            logger.LogInformation("No patches to apply");
+            logger.NoPatchesToApply();
             return;
         }
 
-        logger.LogInformation("Found {Count} patches to apply", patchesToApply.Count);
+        logger.FoundPatchesToApply(patchesToApply.Count);
 
         SemanticVersion? latestVersion = null;
 
@@ -52,13 +52,13 @@ public class PatchManager(
 
             if (await storage.System.Patches.Has(patchName))
             {
-                logger.LogInformation("Patch {PatchName} already applied, skipping", patchName);
+                logger.PatchAlreadyApplied(patchName);
                 continue;
             }
 
             try
             {
-                logger.LogInformation("Applying patch {PatchName} for version {Version}", patchName, patch.Version);
+                logger.ApplyingPatch(patchName, patch.Version);
                 await patch.Up();
 
                 var patchRecord = new Patch(patchName, patch.Version, DateTimeOffset.UtcNow);
@@ -72,11 +72,11 @@ public class PatchManager(
                 await WriteStateAsync();
 
                 latestVersion = patch.Version;
-                logger.LogInformation("Successfully applied patch {PatchName}", patchName);
+                logger.PatchAppliedSuccessfully(patchName);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to apply patch {PatchName}", patchName);
+                logger.PatchApplicationFailed(patchName, ex);
                 throw;
             }
         }
@@ -84,10 +84,10 @@ public class PatchManager(
         if (latestVersion is not null)
         {
             await storage.System.SetVersion(latestVersion);
-            logger.LogInformation("Updated system version to {Version}", latestVersion);
+            logger.UpdatedSystemVersion(latestVersion);
         }
 
-        logger.LogInformation("Patch application process completed");
+        logger.PatchApplicationCompleted();
     }
 
     /// <inheritdoc/>

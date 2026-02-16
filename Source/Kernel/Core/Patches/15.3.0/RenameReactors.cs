@@ -23,14 +23,14 @@ public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : 
     /// <inheritdoc/>
     public async Task Up()
     {
-        logger.LogInformation("Starting RenameReactors patch - removing 'Grains' from reactor names");
+        logger.StartingPatch();
 
         var systemEventStore = storage.GetEventStore(EventStoreName.System);
         var reactors = await systemEventStore.Reactors.GetAll();
 
         var reactorsToRename = reactors.Where(r => r.Identifier.Value.Contains("Grains", StringComparison.OrdinalIgnoreCase)).ToList();
 
-        logger.LogInformation("Found {Count} reactors to rename", reactorsToRename.Count);
+        logger.FoundReactorsToRename(reactorsToRename.Count);
 
         foreach (var reactor in reactorsToRename)
         {
@@ -38,17 +38,17 @@ public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : 
             var newIdValue = currentId.Value.Replace("Grains", string.Empty, StringComparison.OrdinalIgnoreCase);
             var newId = new ReactorId(newIdValue);
 
-            logger.LogInformation("Renaming reactor from {OldId} to {NewId}", currentId, newId);
+            logger.RenamingReactor(currentId, newId);
             await systemEventStore.Reactors.Rename(currentId, newId);
         }
 
-        logger.LogInformation("Completed RenameReactors patch");
+        logger.PatchCompleted();
     }
 
     /// <inheritdoc/>
     public async Task Down()
     {
-        logger.LogInformation("Starting RenameReactors patch rollback - adding 'Grains' back to reactor names");
+        logger.StartingRollback();
 
         var systemEventStore = storage.GetEventStore(EventStoreName.System);
         var reactors = await systemEventStore.Reactors.GetAll();
@@ -66,13 +66,13 @@ public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : 
                     var newIdValue = string.Join('.', parts);
                     var newId = new ReactorId(newIdValue);
 
-                    logger.LogInformation("Restoring reactor name from {OldId} to {NewId}", currentId, newId);
+                    logger.RestoringReactorName(currentId, newId);
                     await systemEventStore.Reactors.Rename(currentId, newId);
                 }
             }
         }
 
-        logger.LogInformation("Completed RenameReactors patch rollback");
+        logger.RollbackCompleted();
         await Task.CompletedTask;
     }
 }
