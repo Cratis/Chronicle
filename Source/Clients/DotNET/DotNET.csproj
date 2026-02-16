@@ -4,6 +4,7 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
         <IncludeBuildOutput>true</IncludeBuildOutput>
+        <NoWarn>$(NoWarn);NU5131</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -47,25 +48,22 @@
     </ItemGroup>
 
     <!--
-        Use ref/lib/runtimes split to hide private assemblies from intellisense:
-        - ref/{tfm}/ contains only the main assembly (compile-time/intellisense)
-        - lib/{tfm}/ contains the main runtime assembly
-        - runtimes/any/lib/{tfm}/ contains private runtime-only assemblies (hidden from compile)
+        Use ref/lib split to hide private assemblies from intellisense:
+        - ref/{tfm}/ contains only the main assembly → compile-time/intellisense
+        - lib/{tfm}/ contains ALL assemblies → deployed at runtime
+        IncludeBuildOutput=true auto-places main DLL + PDB in lib/.
+        ref/ overrides compile-time resolution so only main assembly is visible.
     -->
     <ItemGroup>
         <!-- Compile-time reference: only the main assembly is visible to consumers -->
         <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Main runtime assembly -->
-        <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.pdb')" />
-
-        <!-- Private runtime-only assemblies (deployed but hidden from IntelliSense) -->
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
-        <None Include="$(OutputPath)$(ContractsImplementationAssembly).dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)$(ContractsImplementationAssembly).pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)$(ContractsImplementationAssembly).pdb')" />
+        <!-- Private assemblies: deployed at runtime but hidden from IntelliSense via ref/ -->
+        <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
+        <None Include="$(OutputPath)$(ContractsImplementationAssembly).dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)$(ContractsImplementationAssembly).pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)$(ContractsImplementationAssembly).pdb')" />
     </ItemGroup>
 </Project>
