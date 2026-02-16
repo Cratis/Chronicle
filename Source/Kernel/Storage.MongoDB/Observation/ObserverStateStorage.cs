@@ -49,4 +49,23 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             os => os.Id == state.Identifier,
             state!.ToMongoDB(),
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+
+    /// <inheritdoc/>
+    public async Task Rename(ObserverId currentId, ObserverId newId)
+    {
+        var cursor = await _collection
+            .Aggregate()
+            .Match(_ => _.Id == currentId)
+            .JoinWithFailedPartitions()
+            .FirstOrDefaultAsync();
+
+        if (cursor is null)
+        {
+            return;
+        }
+
+        var state = cursor.ToKernel();
+        await _collection.DeleteOneAsync(os => os.Id == currentId);
+        await Save(state with { Identifier = newId });
+    }
 }
