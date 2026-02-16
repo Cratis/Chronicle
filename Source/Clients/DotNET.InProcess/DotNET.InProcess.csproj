@@ -52,24 +52,27 @@
     </ItemGroup>
 
     <!--
-        Use ref/lib split to hide private assemblies from intellisense:
+        Use ref/lib/runtimes split to hide private assemblies from intellisense:
         - ref/{tfm}/ contains only the main assembly (compile-time/intellisense)
-        - lib/{tfm}/ contains all assemblies (runtime)
+        - lib/{tfm}/ contains the main runtime assembly
+        - runtimes/any/lib/{tfm}/ contains private runtime-only assemblies (hidden from compile)
     -->
     <ItemGroup>
         <!-- Compile-time reference: only the main assembly is visible to consumers -->
         <None Include="$(OutputPath)Cratis.Chronicle.InProcess.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Runtime assemblies: main assembly plus bundled private assemblies -->
+        <!-- Main runtime assembly -->
         <None Include="$(OutputPath)Cratis.Chronicle.InProcess.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.InProcess.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.InProcess.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
+
+        <!-- Private runtime-only assemblies (deployed but hidden from IntelliSense) -->
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.dll" Pack="true" PackagePath="runtimes/any/runtimes/any/lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" />
+        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="runtimes/any/lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
     </ItemGroup>
 </Project>
