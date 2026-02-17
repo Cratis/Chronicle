@@ -35,7 +35,7 @@ public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : 
         foreach (var reactor in reactorsToRename)
         {
             var currentId = reactor.Identifier;
-            var newIdValue = currentId.Value.Replace("Grains", string.Empty, StringComparison.OrdinalIgnoreCase);
+            var newIdValue = currentId.Value.Replace("Grains.", string.Empty, StringComparison.OrdinalIgnoreCase);
             var newId = new ReactorId(newIdValue);
 
             logger.RenamingReactor(currentId, newId);
@@ -73,6 +73,5 @@ public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : 
         }
 
         logger.RollbackCompleted();
-        await Task.CompletedTask;
     }
 }
