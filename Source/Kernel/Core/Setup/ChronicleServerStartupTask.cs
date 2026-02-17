@@ -7,6 +7,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
@@ -42,6 +43,10 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        // Apply patches first before anything else starts
+        var patchManager = grainFactory.GetGrain<IPatchManager>(0);
+        await patchManager.ApplyPatches();
+
         await grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault();
 
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
