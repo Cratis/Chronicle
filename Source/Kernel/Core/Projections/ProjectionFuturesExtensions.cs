@@ -20,5 +20,5 @@ public static class ProjectionFuturesExtensions
     /// <param name="projectionId">The projection identifier.</param>
     /// <returns>The <see cref="IProjectionFutures"/> grain instance.</returns>
     public static IProjectionFutures GetProjectionFutures(this IGrainFactory grainFactory, EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId projectionId) =>
-        grainFactory.GetGrain<IProjectionFutures>($"{eventStore}:{@namespace}:{projectionId}");
+        grainFactory.GetGrain<IProjectionFutures>(new ProjectionFuturesKey(projectionId, eventStore, @namespace));
 }
