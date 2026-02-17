@@ -8,6 +8,13 @@
         "ilrepack"
       ],
       "rollForward": false
+    },
+    "dotnet-ef": {
+      "version": "9.0.8",
+      "commands": [
+        "dotnet-ef"
+      ],
+      "rollForward": false
     }
   }
 }

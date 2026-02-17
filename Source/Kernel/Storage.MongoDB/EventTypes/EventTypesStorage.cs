@@ -68,9 +68,9 @@ public class EventTypesStorage(
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
-        _eventTypes.Add(eventSchema.ToMongoDB());
-
         var mongoEventSchema = eventSchema.ToMongoDB();
+        _eventTypes.Add(mongoEventSchema);
+
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,

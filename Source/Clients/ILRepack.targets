@@ -36,6 +36,8 @@
         <ExplicitPublicTypesArgument Condition="'$(ExplicitPublicTypes)' == ''"></ExplicitPublicTypesArgument>
     </PropertyGroup>
 
+    <Message Text="Repacking assemblies into $(TargetPath)" Importance="High" />
+
     <ILRepack AllowDuplicateResources="false" DebugInfo="true" CopyAttributes="false" ExcludeInternalizeSerializable="false" InputAssemblies="@(InputAssemblies)" InternalizeAssembly="@(InternalizeAssemblies)" Internalize="true" InternalizeExclude="@(DoNotInternalize)" OutputFile="$(TargetPath)" Parallel="true" LibraryPath="@(LibraryPath)" Verbose="false" XmlDocumentation="true" Union="true" AllowedDuplicateNamespaces="Cratis.Chronicle.Projections" LogFile="$(OutputPath)/ILRepack.log" TargetKind="SameAsPrimaryAssembly" />
 
     <Exec Command="dotnet run $(TargetPath) &quot;$(AssemblyNamesToFix)&quot; &quot;$(RemoveReferences)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)../Tools/AssemblyFixer" />

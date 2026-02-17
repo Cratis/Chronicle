@@ -46,6 +46,7 @@
         <ProjectReference Include="../Grains/Grains.csproj" />
         <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../Setup/Setup.csproj" />

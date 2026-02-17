@@ -7,7 +7,7 @@ using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
 
-namespace Cratis.Chronicle.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage.MongoDB.Serialization;
 
 /// <summary>
 /// Represents an implementation of <see cref="ICustomSerializers"/> that registers custom BSON serializers.

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -48,7 +49,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IDatabase, Database>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
-            services.AddSingleton<IStorage, Storage.MongoDB.Storage>();
+            services.AddSingleton<IClusterStorage, ClusterStorage>();
         });
 
         return builder;

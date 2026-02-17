@@ -19,4 +19,10 @@ public record ObserverId(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <param name="id">String to convert from.</param>
     public static implicit operator ObserverId(string id) => new(id);
+
+    /// <summary>
+    /// Implicitly convert to a string from <see cref="ObserverId"/>.
+    /// </summary>
+    /// <param name="id">ObserverId to convert from.</param>
+    public static implicit operator string(ObserverId id) => id.Value;
 }
