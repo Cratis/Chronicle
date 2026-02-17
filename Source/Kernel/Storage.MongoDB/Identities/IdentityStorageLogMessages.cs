@@ -25,4 +25,7 @@ internal static partial class IdentityStorageLogMessages
 
     [LoggerMessage(LogLevel.Trace, "User not found for {UserName} and {Subject}")]
     internal static partial void UserNotFound(this ILogger<IdentityStorage> logger, string userName, string subject);
+
+    [LoggerMessage(LogLevel.Trace, "Identity has no user name for subject {Subject}")]
+    internal static partial void IdentityHasNoUserName(this ILogger<IdentityStorage> logger, string subject);
 }

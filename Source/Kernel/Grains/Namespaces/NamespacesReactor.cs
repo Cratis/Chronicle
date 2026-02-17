@@ -23,8 +23,11 @@ public class NamespacesReactor : Reactor
     /// <returns>Await Task.</returns>
     public Task Added(NamespaceAdded @event, EventContext eventContext)
     {
-        // Handle the namespace added event
-        // This could involve registering the namespace with reactors or other components
+        // TODO: In the future, we need to retrieve global seed data and apply it to the new namespace
+        // When implemented, we will need to use IGrainFactory to:
+        // 1. Get the global seed grain using EventSeedingKey.ForGlobal(@event.EventStore)
+        // 2. Get the namespace-specific seed grain using EventSeedingKey.ForNamespace(@event.EventStore, @event.Namespace)
+        // 3. Retrieve global seed data and apply it to the new namespace
         return Task.CompletedTask;
     }
 }

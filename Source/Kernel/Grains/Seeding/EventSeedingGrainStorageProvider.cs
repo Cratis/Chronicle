@@ -27,7 +27,7 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
         var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
-        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
+        var eventSeedingStorage = GetEventSeedingStorage(key);
         actualGrainState.State = await eventSeedingStorage.Get();
     }
 
@@ -37,7 +37,19 @@ public class EventSeedingGrainStorageProvider(IStorage storage) : IGrainStorage
         var key = EventSeedingKey.Parse(grainId.Key.ToString()!);
         var actualGrainState = (grainState as IGrainState<EventSeeds>)!;
 
-        var eventSeedingStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
+        var eventSeedingStorage = GetEventSeedingStorage(key);
         await eventSeedingStorage.Save(actualGrainState.State);
+    }
+
+    IEventSeedingStorage GetEventSeedingStorage(EventSeedingKey key)
+    {
+        if (key.IsGlobal)
+        {
+            // Global seeds are stored at event store level
+            return storage.GetEventStore(key.EventStore).EventSeeding;
+        }
+
+        // Namespace-specific seeds are stored in the namespace database
+        return storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).EventSeeding;
     }
 }

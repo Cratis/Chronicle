@@ -12,4 +12,4 @@ namespace Cratis.Chronicle.Storage.Seeding;
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Content">The JSON content of the event.</param>
 /// <param name="Tags">The collection of tags associated with the event.</param>
-public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<string>? Tags = null);
+public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<string>? Tags);

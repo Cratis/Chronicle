@@ -13,19 +13,19 @@ public class SeedingEntry
     /// Gets or sets the event source identifier.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSourceId { get; set; }
+    public string EventSourceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the event type identifier.
     /// </summary>
     [ProtoMember(2)]
-    public string EventTypeId { get; set; }
+    public string EventTypeId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the JSON content of the event.
     /// </summary>
     [ProtoMember(3)]
-    public string Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the tags associated with the event.

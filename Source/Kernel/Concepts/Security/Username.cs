@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Concepts.Security;
 public record Username(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Represents an unknown username.
+    /// </summary>
+    public static readonly Username Unknown = new("unknown");
+
+    /// <summary>
     /// Implicitly converts from <see cref="string"/> to <see cref="Username"/>.
     /// </summary>
     /// <param name="value">The <see cref="string"/> to convert.</param>
