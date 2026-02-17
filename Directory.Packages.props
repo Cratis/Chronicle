@@ -36,6 +36,7 @@
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.3.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.3" />
     <!-- Orleans -->

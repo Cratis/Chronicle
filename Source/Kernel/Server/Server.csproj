@@ -31,6 +31,7 @@
         <PackageReference Include="Polly.Core" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
         <PackageReference Include="OpenIddict.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
