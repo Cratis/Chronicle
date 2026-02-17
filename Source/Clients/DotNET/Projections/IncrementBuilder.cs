@@ -18,5 +18,5 @@ public class IncrementBuilder<TReadModel, TEvent, TProperty>(PropertyPath target
     public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
-    public string Build() => $"{WellKnownExpressions.Increment}()";
+    public string Build() => WellKnownExpressions.Increment;
 }

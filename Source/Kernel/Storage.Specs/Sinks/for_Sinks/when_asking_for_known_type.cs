@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
@@ -17,7 +18,17 @@ public class when_asking_for_known_type : Specification
 
     void Establish()
     {
-        _model = new("SomethingId", "Something", ReadModelOwner.None, null!);
+        _model = new(
+            "SomethingId",
+            "Something",
+            "Something",
+            ReadModelOwner.None,
+            ReadModelSource.Code,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema>(),
+            []);
         _store = Substitute.For<ISink>();
         _factory = Substitute.For<ISinkFactory>();
         _factory.TypeId.Returns(_type);

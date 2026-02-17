@@ -36,8 +36,20 @@ public class ReducerDefinition
     public string ReadModel { get; set; }
 
     /// <summary>
-    /// Gets or sets the projection sink definition.
+    /// Gets or sets whether or not the reducer is an actively observing reducer.
     /// </summary>
     [ProtoMember(5)]
+    public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the projection sink definition.
+    /// </summary>
+    [ProtoMember(6)]
     public SinkDefinition Sink { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tags the reducer belongs to.
+    /// </summary>
+    [ProtoMember(7, IsRequired = true)]
+    public IList<string> Tags { get; set; } = [];
 }

@@ -14,10 +14,14 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="EventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
 /// <param name="EventTypes">The type of events the observer is interested in.</param>
 /// <param name="ReadModel">The read model to use.</param>
+/// <param name="IsActive">Whether or not the reducer is an actively observing reducer.</param>
 /// <param name="Sink">Target sink.</param>
+/// <param name="Tags">Collection of tags the reducer belongs to.</param>
 public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     ReadModelIdentifier ReadModel,
-    SinkDefinition Sink);
+    bool IsActive,
+    SinkDefinition Sink,
+    IEnumerable<string> Tags);

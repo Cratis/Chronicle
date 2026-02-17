@@ -147,4 +147,14 @@ public static class WellKnownTableNames
     /// The table that holds sinks.
     /// </summary>
     public const string Sinks = "Sinks";
+
+    /// <summary>
+    /// The table that holds event seeding data.
+    /// </summary>
+    public const string EventSeeds = "EventSeeds";
+
+    /// <summary>
+    /// The table that holds projection futures.
+    /// </summary>
+    public const string ProjectionFutures = "ProjectionFutures";
 }

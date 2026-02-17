@@ -25,7 +25,7 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                         <EventStoreCard
                             key={eventStore}
                             title={eventStore}
-                            path={`${basePath}/${eventStore}/Default`}
+                            path={`${basePath}/${eventStore}`}
                             footer={<CardFooter />}
                             description=''
                         />

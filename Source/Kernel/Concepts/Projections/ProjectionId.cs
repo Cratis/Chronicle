@@ -17,6 +17,11 @@ public record ProjectionId(string Value) : ConceptAs<string>(Value)
     public static readonly ProjectionId Unspecified = ObserverId.Unspecified;
 
     /// <summary>
+    /// Indicates whether the projection identifier represents a preview projection.
+    /// </summary>
+    public bool IsPreview => Value.StartsWith("preview");
+
+    /// <summary>
     /// Implicitly convert from <see cref="Guid"/> to <see cref="ProjectionId"/>.
     /// </summary>
     /// <param name="value"><see cref="Guid"/> to convert from.</param>
@@ -33,4 +38,10 @@ public record ProjectionId(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <param name="id"><see cref="ObserverId"/> to convert from.</param>
     public static implicit operator ProjectionId(ObserverId id) => new(id.Value);
+
+    /// <summary>
+    /// Creates a new preview projection identifier.
+    /// </summary>
+    /// <returns>New preview <see cref="ProjectionId"/>.</returns>
+    public static ProjectionId CreatePreviewId() => new($"preview-{Guid.NewGuid()}");
 }

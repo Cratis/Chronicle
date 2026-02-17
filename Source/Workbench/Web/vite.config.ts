@@ -10,6 +10,7 @@ import { EmitMetadataPlugin } from '@cratis/arc.vite';
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+    envPrefix: 'CHRONICLE_',
     optimizeDeps: {
         exclude: ['tslib'],
     },
@@ -66,6 +67,10 @@ export default defineConfig({
                 target: 'http://localhost:8080',
                 ws: true
             },
+            '/identity': {
+                target: 'http://localhost:8080',
+                ws: true
+            },
             '/swagger': {
                 target: 'http://localhost:8080'
             }
@@ -78,10 +83,12 @@ export default defineConfig({
             'Shared': path.resolve('./Shared'),
             'State': path.resolve('./State'),
             'Components': path.resolve('./Components'),
+            'Icons': path.resolve('./Icons'),
             'Browser': path.resolve('./Infrastructure/Browser'),
             'Layout': path.resolve('./Layout'),
             'Features': path.resolve('./Features'),
             'Strings': path.resolve('./Strings'),
+            'Utilities': path.resolve('./Utilities'),
             'given': path.resolve('./given.ts'),
         }
     }

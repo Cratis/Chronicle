@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Changesets;
 public class ChangesetStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IChangesetStorage
 {
     /// <inheritdoc/>
-    public async Task BeginReplay(ReadModelName readModel)
+    public async Task BeginReplay(ReadModelContainerName readModel)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var changesets = scope.DbContext.Changesets.Where(changeset => changeset.ReadModelName == readModel);
@@ -29,15 +29,11 @@ public class ChangesetStorage(EventStoreName eventStore, EventStoreNamespaceName
     }
 
     /// <inheritdoc/>
-    public async Task EndReplay(ReadModelName readModel)
-    {
-        // No specific action needed for end of replay in this implementation
-        await Task.CompletedTask;
-    }
+    public Task EndReplay(ReadModelContainerName readModel) => Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task Save(
-        ReadModelName readModel,
+        ReadModelContainerName readModel,
         Key readModelKey,
         EventType eventType,
         EventSequenceNumber sequenceNumber,

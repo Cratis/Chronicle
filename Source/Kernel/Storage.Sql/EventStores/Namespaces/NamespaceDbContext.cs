@@ -61,4 +61,14 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// Gets or sets the event sequence states DbSet.
     /// </summary>
     public DbSet<EventSequences.EventSequenceState> EventSequences { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the event seeding data DbSet.
+    /// </summary>
+    public DbSet<Seeding.EventSeedsEntity> EventSeeds { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the projection futures DbSet.
+    /// </summary>
+    public DbSet<Projections.ProjectionFutureEntity> ProjectionFutures { get; set; } = null!;
 }

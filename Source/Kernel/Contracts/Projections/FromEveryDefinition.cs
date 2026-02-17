@@ -20,4 +20,10 @@ public class FromEveryDefinition
     /// </summary>
     [ProtoMember(2)]
     public bool IncludeChildren { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether properties should be auto-mapped from events.
+    /// </summary>
+    [ProtoMember(3)]
+    public AutoMap AutoMap { get; set; }
 }

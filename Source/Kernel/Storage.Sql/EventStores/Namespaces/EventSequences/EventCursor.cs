@@ -79,7 +79,9 @@ public class EventCursor(
                 _namespace,
                 new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
                 causation,
-                await _identityStorage.GetFor(causedBy));
+                await _identityStorage.GetFor(causedBy),
+                [],
+                EventHash.NotSet);
 
             appendedEvents.Add(new AppendedEvent(eventMetadata, content));
         }

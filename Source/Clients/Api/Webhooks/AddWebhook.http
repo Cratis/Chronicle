@@ -1,0 +1,30 @@
+###
+GET http://localhost:8080/.well-known/openid-configuration
+
+###
+POST http://localhost:8080/connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=chronicle-dev-client&client_secret=chronicle-dev-secret
+
+###
+POST http://localhost:8080/api/event-store/System/webhooks/add
+Authorization: Bearer
+Content-Type: application/json
+
+{
+    "eventStore": "System",
+    "name": "My Webhook",
+    "url": "https://example.com/webhook",
+    "eventSequenceId": "event-log",
+    "eventTypes": [
+        { "id": "ApplicationAdded", "generation": 1 },
+        { "id": "UserPasswordChanged", "generation": 1 }
+    ],
+    "authorizationType": "OAuth",
+    "OAuthAuthority": "http://localhost:8080",
+    "OAuthClientId": "chronicle-dev-client",
+    "OAuthClientSecret": "chronicle-dev-secret",
+    "isActive": true,
+    "isReplayable": true
+}

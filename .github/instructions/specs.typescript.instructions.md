@@ -48,7 +48,7 @@ describe("when adding", () => {
         events.Add(event);
     });
 
-    it("should_hold_the_added_event", () => {
+    it("should hold the added event", () => {
         events[0].should.equal(event);
     });
 });
@@ -87,7 +87,7 @@ describe("when checking can handle with valid events collection", given(an_event
         result = context.handler.CanHandle(context.commandContext, events);
     });
 
-    it("should_return_true", () => {
+    it("should return true", () => {
         result.should.be.true;
     });
 }));
@@ -108,6 +108,14 @@ export class an_events_command_response_value_handler {
     }
 }
 ```
+
+## Test Naming Conventions
+
+- **IMPORTANT**: Use spaces (not underscores) in `it()` statement descriptions.
+  - ✅ Correct: `it("should return invalid result", () => ...)`
+  - ❌ Incorrect: `it("should_return_invalid_result", () => ...)`
+- Test descriptions should be readable as natural language.
+- Start with "should" followed by the expected behavior.
 
 ## Reusable Context
 

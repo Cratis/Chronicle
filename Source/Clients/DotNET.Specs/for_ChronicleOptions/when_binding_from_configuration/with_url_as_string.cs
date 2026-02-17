@@ -13,7 +13,7 @@ public class with_url_as_string : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:Url"] = "chronicle://my-server:8080"
+            ["Chronicle:ConnectionString"] = "chronicle://my-server:8080"
         };
 
         var configurationRoot = new ConfigurationBuilder()
@@ -24,7 +24,7 @@ public class with_url_as_string : Specification
         configurationRoot.GetSection("Chronicle").Bind(_result);
     }
 
-    [Fact] void should_bind_url_property() => _result.Url.ShouldNotBeNull();
-    [Fact] void should_have_correct_host() => _result.Url.ServerAddress.Host.ShouldEqual("my-server");
-    [Fact] void should_have_correct_port() => _result.Url.ServerAddress.Port.ShouldEqual(8080);
+    [Fact] void should_bind_url_property() => _result.ConnectionString.ShouldNotBeNull();
+    [Fact] void should_have_correct_host() => _result.ConnectionString.ServerAddress.Host.ShouldEqual("my-server");
+    [Fact] void should_have_correct_port() => _result.ConnectionString.ServerAddress.Port.ShouldEqual(8080);
 }

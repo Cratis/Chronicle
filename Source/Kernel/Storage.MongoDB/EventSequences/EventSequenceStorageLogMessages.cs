@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
 internal static partial class EventSequenceStorageLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "EventSequenceStorage.AppendMany inserting {Count} events for {Sequence}")]
+    internal static partial void AppendingInserting(this ILogger<EventSequenceStorage> logger, int count, EventSequenceId sequence);
+
+    [LoggerMessage(LogLevel.Debug, "EventSequenceStorage.AppendMany inserted {Count} events and prepared {AppendedCount} appended events for {Sequence}")]
+    internal static partial void AppendingInserted(this ILogger<EventSequenceStorage> logger, int count, int appendedCount, EventSequenceId sequence);
+
     [LoggerMessage(LogLevel.Debug, "Getting head sequence number for event sequence {EventSequenceId}")]
     internal static partial void GettingHeadSequenceNumber(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId);
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Auditing;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using MongoDB.Bson;
 
@@ -21,4 +20,4 @@ public record EventCompensation(
     IEnumerable<Causation> Causation,
     IdentityId CausedBy,
     DateTimeOffset Occurred,
-    IDictionary<EventTypeGeneration, BsonDocument> Content);
+    IDictionary<string, BsonDocument> Content);

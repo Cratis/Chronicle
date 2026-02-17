@@ -23,20 +23,23 @@ public class from_same_event : given.a_model_bound_projection_builder
 
     [Fact] void should_have_single_from_definition() => _result.From.Count.ShouldEqual(1);
 
-    [Fact] void should_have_from_definition_for_order_placed()
+    [Fact]
+    void should_have_from_definition_for_order_placed()
     {
         var eventType = event_types.GetEventTypeFor(typeof(OrderPlaced)).ToContract();
         _result.From.Keys.Count(et => et.Id == eventType.Id && et.Generation == eventType.Generation).ShouldEqual(1);
     }
 
-    [Fact] void should_have_three_properties_in_definition()
+    [Fact]
+    void should_have_three_properties_in_definition()
     {
         var eventType = event_types.GetEventTypeFor(typeof(OrderPlaced)).ToContract();
         var entry = _result.From.First(kvp => kvp.Key.Id == eventType.Id && kvp.Key.Generation == eventType.Generation);
         entry.Value.Properties.Count.ShouldEqual(3);
     }
 
-    [Fact] void should_map_customer_name_with_set()
+    [Fact]
+    void should_map_customer_name_with_set()
     {
         var eventType = event_types.GetEventTypeFor(typeof(OrderPlaced)).ToContract();
         var properties = _result.From.First(kvp => kvp.Key.Id == eventType.Id && kvp.Key.Generation == eventType.Generation).Value.Properties;
@@ -44,7 +47,8 @@ public class from_same_event : given.a_model_bound_projection_builder
         properties[nameof(OrderSummary.CustomerName)].ShouldNotContain(WellKnownExpressions.Add);
     }
 
-    [Fact] void should_map_total_quantity_with_add()
+    [Fact]
+    void should_map_total_quantity_with_add()
     {
         var eventType = event_types.GetEventTypeFor(typeof(OrderPlaced)).ToContract();
         var properties = _result.From.First(kvp => kvp.Key.Id == eventType.Id && kvp.Key.Generation == eventType.Generation).Value.Properties;
@@ -52,7 +56,8 @@ public class from_same_event : given.a_model_bound_projection_builder
         properties[nameof(OrderSummary.TotalQuantity)].ShouldContain(WellKnownExpressions.Add);
     }
 
-    [Fact] void should_map_total_revenue_with_add()
+    [Fact]
+    void should_map_total_revenue_with_add()
     {
         var eventType = event_types.GetEventTypeFor(typeof(OrderPlaced)).ToContract();
         var properties = _result.From.First(kvp => kvp.Key.Id == eventType.Id && kvp.Key.Generation == eventType.Generation).Value.Properties;

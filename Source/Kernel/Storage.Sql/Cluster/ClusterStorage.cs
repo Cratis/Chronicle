@@ -32,7 +32,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes, new System.Text.Json.JsonSerializerOptions());
     }
 
     /// <inheritdoc/>

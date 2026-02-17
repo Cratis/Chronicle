@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,17 +11,15 @@ namespace Cratis.Chronicle.Projections;
 /// Represents the result of an projection.
 /// </summary>
 /// <param name="ReadModel">The instance of the read model.</param>
-/// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResult(object ReadModel, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);
+public record ProjectionResult(object ReadModel, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);
 
 /// <summary>
 /// Represents the result of an projection.
 /// </summary>
 /// <typeparam name="T">Type of read model.</typeparam>
 /// <param name="ReadModel">The instance of the read model.</param>
-/// <param name="AffectedProperties">Collection of properties that was set.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResult<T>(T ReadModel, IEnumerable<PropertyPath> AffectedProperties, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);
+public record ProjectionResult<T>(T ReadModel, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber);

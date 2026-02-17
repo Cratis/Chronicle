@@ -18,5 +18,5 @@ public class CountBuilder<TReadModel, TEvent, TProperty>(PropertyPath targetProp
     public PropertyPath TargetProperty { get; } = targetProperty;
 
     /// <inheritdoc/>
-    public string Build() => $"{WellKnownExpressions.Count}()";
+    public string Build() => WellKnownExpressions.Count;
 }

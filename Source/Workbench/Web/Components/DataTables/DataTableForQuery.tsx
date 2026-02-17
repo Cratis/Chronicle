@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DataTable, DataTableFilterMeta, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import { Paginator } from 'primereact/paginator';
 import { Constructor } from '@cratis/fundamentals';
 import { IQueryFor, Paging } from '@cratis/arc/queries';
 import { useQueryWithPaging } from '@cratis/arc.react/queries';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useRef } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -57,6 +58,11 @@ export interface DataTableForQueryProps<TQuery extends IQueryFor<TDataType>, TDa
      * Default filters to use
      */
     defaultFilters?: DataTableFilterMeta;
+
+    /**
+     * Enable client-side filtering for the data table
+     */
+    clientFiltering?: boolean;
 }
 
 const paging = new Paging(0, 20);
@@ -68,30 +74,60 @@ const paging = new Paging(0, 20);
  */
 export const DataTableForQuery = <TQuery extends IQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataTableForQueryProps<TQuery, TDataType, TArguments>) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(props.defaultFilters ?? {});
+    const [filteredTotal, setFilteredTotal] = useState<number | undefined>(undefined);
     const [result, , , setPage] = useQueryWithPaging(props.query, paging, props.queryArguments);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isClientFiltering = props.clientFiltering === true;
+    const totalRecords = isClientFiltering && filteredTotal !== undefined ? filteredTotal : result.paging.totalItems;
 
     return (
-        <DataTable
-            value={result.data as any}
-            lazy
-            rows={paging.pageSize}
-            totalRecords={result.paging.totalItems}
-            paginator
-            alwaysShowPaginator={false}
-            first={result.paging.page * paging.pageSize}
-            onPage={(e) => setPage(e.page ?? 0)}
-            scrollable
-            scrollHeight={'flex'}
-            selectionMode='single'
-            selection={props.selection}
-            onSelectionChange={props.onSelectionChange}
-            dataKey={props.dataKey}
-            filters={filters}
-            filterDisplay='menu'
-            onFilter={(e) => setFilters(e.filters)}
-            globalFilterFields={props.globalFilterFields}
-            emptyMessage={props.emptyMessage} >
-            {props.children}
-        </DataTable >
+        <div
+            ref={containerRef}
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                border: '1px solid var(--surface-border)',
+                borderRadius: 'var(--border-radius)',
+                overflow: 'hidden'
+            }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                <DataTable
+                    value={result.data as any}
+                    lazy={!isClientFiltering}
+                    rows={paging.pageSize}
+                    totalRecords={totalRecords}
+                    selectionMode='single'
+                    selection={props.selection}
+                    onSelectionChange={props.onSelectionChange}
+                    dataKey={props.dataKey}
+                    filters={filters}
+                    filterDisplay='menu'
+                    onFilter={(e) => {
+                        setFilters(e.filters);
+                        if (isClientFiltering) {
+                            const filteredValue = e.filteredValue as unknown[] | undefined;
+                            setFilteredTotal(filteredValue ? filteredValue.length : undefined);
+                        }
+                    }}
+                    globalFilterFields={props.globalFilterFields}
+                    emptyMessage={props.emptyMessage}
+                    style={{ minWidth: '100%' }}
+                >
+                    {props.children}
+                </DataTable>
+            </div>
+
+            {result.paging.totalItems > 0 && (
+                <div style={{ borderTop: '1px solid var(--surface-border)', flexShrink: 0 }}>
+                    <Paginator
+                        first={result.paging.page * paging.pageSize}
+                        rows={paging.pageSize}
+                        totalRecords={result.paging.totalItems}
+                        onPageChange={(e) => setPage(e.page)}
+                    />
+                </div>
+            )}
+        </div>
     );
 };
