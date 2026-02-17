@@ -17,7 +17,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj"/>
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
@@ -27,4 +29,5 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
+
 </Project>

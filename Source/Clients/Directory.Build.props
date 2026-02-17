@@ -1,0 +1,77 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+
+    <PropertyGroup>
+        <IncludeBuildOutput>true</IncludeBuildOutput>
+        <NoWarn>$(NoWarn);NU5131</NoWarn>
+    </PropertyGroup>
+
+    <!--
+        Automatic ref/lib split for NuGet packaging of private project references.
+
+        Convention: any ProjectReference marked with <PrivateAssets>all</PrivateAssets>
+        is treated as a runtime-only dependency hidden from consumers' IntelliSense.
+
+        This target automatically:
+        1. Places the main assembly in ref/{tfm}/ so only it is visible at compile time.
+        2. Places each private reference assembly (DLL + PDB) in lib/{tfm}/ for runtime.
+
+        For non-ProjectReference assemblies that should also be runtime-only (e.g. build-time
+        generated assemblies), add a <PrivatePackageAssembly> item with the assembly name
+        (without extension):
+
+            <ItemGroup>
+                <PrivatePackageAssembly Include="My.Generated.Assembly" />
+            </ItemGroup>
+
+        Requirements:
+        - The project must NOT be an Exe (OutputType != Exe).
+        - At least one ProjectReference must have PrivateAssets=all.
+        - IncludeBuildOutput must be true (set above; analyzers override to false locally).
+    -->
+    <Target Name="_SetupPrivateRefPackaging"
+            BeforeTargets="_GetPackageFiles"
+            Condition="'$(OutputType)' != 'Exe' AND '@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
+
+        <!-- Resolve output assembly paths of private project references -->
+        <MSBuild Projects="@(ProjectReference->WithMetadataValue('PrivateAssets','all'))"
+                 Targets="GetTargetPath"
+                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+            <Output TaskParameter="TargetOutputs" ItemName="_PrivateRefTargetPath" />
+        </MSBuild>
+
+        <!-- Main assembly → ref/ (compile-time-only visibility for consumers) -->
+        <ItemGroup>
+            <None Include="$(OutputPath)$(AssemblyName).dll"
+                  Pack="true"
+                  PackagePath="ref/$(TargetFramework)/"
+                  Visible="false" />
+        </ItemGroup>
+
+        <!-- Private project-reference assemblies → lib/ (runtime-only) -->
+        <ItemGroup>
+            <None Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).dll"
+                  Pack="true"
+                  PackagePath="lib/$(TargetFramework)/"
+                  Visible="false" />
+            <None Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb"
+                  Pack="true"
+                  PackagePath="lib/$(TargetFramework)/"
+                  Visible="false"
+                  Condition="Exists('$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb')" />
+        </ItemGroup>
+
+        <!-- Extra private assemblies declared via PrivatePackageAssembly → lib/ -->
+        <ItemGroup Condition="'@(PrivatePackageAssembly)' != ''">
+            <None Include="$(OutputPath)%(PrivatePackageAssembly.Identity).dll"
+                  Pack="true"
+                  PackagePath="lib/$(TargetFramework)/"
+                  Visible="false" />
+            <None Include="$(OutputPath)%(PrivatePackageAssembly.Identity).pdb"
+                  Pack="true"
+                  PackagePath="lib/$(TargetFramework)/"
+                  Visible="false"
+                  Condition="Exists('$(OutputPath)%(PrivatePackageAssembly.Identity).pdb')" />
+        </ItemGroup>
+    </Target>
+</Project>

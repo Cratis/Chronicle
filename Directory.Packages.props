@@ -36,6 +36,7 @@
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.3.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.3" />
     <!-- Orleans -->
@@ -79,10 +80,6 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="humanizer" Version="3.0.1" />
-    <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.44.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
     <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
     <PackageVersion Include="NJsonSchema" Version="11.5.2" />
     <PackageVersion Include="Polly.Core" Version="8.6.5" />

@@ -5,11 +5,12 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Grains.Observation.Reactors.Clients;
-using Cratis.Chronicle.Grains.Observation.Reducers.Clients;
 using Cratis.Chronicle.InProcess;
+using Cratis.Chronicle.Observation.Reactors.Clients;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.DependencyInjection;
 using Cratis.Json;
+using Cratis.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,6 +115,7 @@ public static class ChronicleClientSiloBuilderExtensions
                 var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                 options.ServiceProvider = sp;
                 options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
+                options.NamingPolicy = sp.GetRequiredService<INamingPolicy>();
                 options.IdentityProvider = new IdentityProvider(
                     sp.GetRequiredService<IHttpContextAccessor>(),
                     sp.GetRequiredService<ILogger<IdentityProvider>>());
