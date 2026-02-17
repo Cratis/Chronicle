@@ -43,7 +43,7 @@ flowchart TB
             Others["Other kernel assemblies..."]
         end
     end
-    
+
     Consumer["Consumer Application"]
     Consumer -->|"Compiles against"| lib
     Consumer -->|"Runs with"| runtimes
@@ -51,64 +51,56 @@ flowchart TB
 
 ## Configuring runtime-only packaging
 
-To configure a project for runtime-only packaging, you need to:
+Runtime-only packaging is handled **automatically** by the shared `Source/Clients/Directory.Build.props`.
+The only thing you need to do in your `.csproj` is mark the dependency with `<PrivateAssets>all</PrivateAssets>`.
 
-1. Mark dependencies as `PrivateAssets="all"` to prevent them from becoming transitive compile-time dependencies
-2. Use `<None>` items with `Pack="true"` and appropriate `PackagePath` to include assemblies in the `runtimes/` folder of the NuGet package
+### Convention
 
-### Example: DotNET.csproj
+Any `ProjectReference` with `<PrivateAssets>all</PrivateAssets>` is treated as a runtime-only dependency.
+When at least one such reference exists in a library project, the build infrastructure automatically:
 
-The `DotNET.csproj` packages the SDK assembly (Cratis.Chronicle.dll) for compile-time use while hiding Connections and Contracts as runtime-only:
+1. Places the **main assembly** in `ref/{tfm}/` — this is the only assembly visible to consumers at compile time and in IntelliSense.
+2. Places each **private reference assembly** (DLL + PDB) in `lib/{tfm}/` — available at runtime but hidden from consumers.
+
+`IncludeBuildOutput` is set to `true` by the shared props file so the main assembly is also placed in `lib/` for runtime.
+Projects that need a different value (e.g. Roslyn analyzers) can override it locally.
+
+### Example: marking a dependency as private
 
 ```xml
 <ItemGroup>
-    <!-- Mark these as private so they don't become transitive compile-time dependencies -->
-    <ProjectReference Include="../Connections/Connections.csproj">
-        <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
     <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
         <PrivateAssets>all</PrivateAssets>
     </ProjectReference>
 </ItemGroup>
-
-<!-- Package runtime-only assemblies in runtimes folder -->
-<ItemGroup>
-    <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Contracts.Implementations.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Contracts.Implementations.pdb" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.Implementations.pdb')" />
-</ItemGroup>
 ```
 
-### Example: DotNET.InProcess.csproj
+That single annotation is all that is needed. The `ref/lib` split, `<None>` items, and NuGet packaging are generated
+automatically — no manual `<None Include="..." Pack="true" PackagePath="..." />` entries required.
 
-The `DotNET.InProcess.csproj` packages the InProcess assembly for compile-time use while hiding all kernel assemblies as runtime-only:
+### Non-ProjectReference private assemblies
+
+Some assemblies are generated at build time and are not represented by a `ProjectReference`.
+For these, add a `<PrivatePackageAssembly>` item with the assembly name (without file extension):
 
 ```xml
 <ItemGroup>
-    <!-- Mark kernel assemblies as private so they're runtime-only -->
-    <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
-        <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
-    <ProjectReference Include="../../Kernel/Core/Core.csproj">
-        <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
-    <ProjectReference Include="../../Kernel/Services/Services.csproj">
-        <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
-    <!-- Additional kernel projects... -->
-</ItemGroup>
-
-<!-- Package kernel assemblies in runtimes folder -->
-<ItemGroup>
-    <None Include="$(OutputPath)Cratis.Chronicle.Storage.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <None Include="$(OutputPath)Cratis.Chronicle.Services.dll" Pack="true" PackagePath="runtimes/$(TargetFramework)/" Visible="false" />
-    <!-- Additional kernel assemblies... -->
+    <PrivatePackageAssembly Include="Cratis.Chronicle.Contracts.Implementations" />
 </ItemGroup>
 ```
+
+These assemblies are packaged in `lib/{tfm}/` alongside the private project-reference assemblies.
+
+### How it works
+
+The `_SetupPrivateRefPackaging` MSBuild target in `Source/Clients/Directory.Build.props` runs before
+NuGet's `_GetPackageFiles` target. It:
+
+1. Filters `ProjectReference` items for those with `PrivateAssets=all`.
+2. Invokes `GetTargetPath` on each to resolve the output assembly name.
+3. Adds the main assembly to `ref/` and all private assemblies to `lib/` as `<None Pack="true">` items.
+
+The target only fires for library projects (`OutputType != Exe`) that have at least one private `ProjectReference`.
 
 ## Grpc Client Factory
 

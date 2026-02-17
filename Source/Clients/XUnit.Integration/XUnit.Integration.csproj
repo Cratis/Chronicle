@@ -3,8 +3,6 @@
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>false</IsTestProject>
-        <IncludeBuildOutput>true</IncludeBuildOutput>
-        <NoWarn>$(NoWarn);NU5131</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -42,23 +40,4 @@
         <PackageReference Include="Cratis.Arc.MongoDB" />
     </ItemGroup>
 
-    <!--
-        Use ref/lib split to hide private assemblies from intellisense:
-        - ref/{tfm}/ contains only the main assembly → compile-time/intellisense
-        - lib/{tfm}/ contains ALL assemblies → deployed at runtime
-        IncludeBuildOutput=true auto-places main DLL + PDB in lib/.
-        ref/ overrides compile-time resolution so only main assembly is visible.
-    -->
-    <ItemGroup>
-        <!-- Compile-time reference: only the main assembly is visible to consumers -->
-        <None Include="$(OutputPath)Cratis.Chronicle.XUnit.Integration.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
-
-        <!-- Private assemblies: deployed at runtime but hidden from IntelliSense via ref/ -->
-        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Concepts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Concepts.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Core.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Core.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Core.pdb')" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Storage.MongoDB.pdb')" />
-    </ItemGroup>
 </Project>
