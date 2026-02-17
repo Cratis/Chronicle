@@ -129,7 +129,8 @@ public class SetBuilder<TReadModel, TEvent, TProperty, TParentBuilder>(TParentBu
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
             DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
             TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
-            _ => $"{actualValue}"
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => actualValue.ToString()!
         };
 
         _expression = new ValueExpression(invariantString);
