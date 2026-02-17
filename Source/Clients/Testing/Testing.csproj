@@ -3,6 +3,7 @@
         <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
         <IsTestProject>false</IsTestProject>
+        <IncludeBuildOutput>true</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>

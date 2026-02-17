@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Connections</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Connections</RootNamespace>
+        <IncludeBuildOutput>true</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
