@@ -21,9 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Connections/Connections.csproj"/>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -58,10 +56,7 @@
         <!-- Compile-time reference: only the main assembly is visible to consumers for IntelliSense -->
         <None Include="$(OutputPath)Cratis.Chronicle.dll" Pack="true" PackagePath="ref/$(TargetFramework)/" Visible="false" />
 
-        <!-- Runtime assemblies: ALL assemblies needed at runtime go in lib/ -->
-        <!-- Main assembly already in lib/ via IncludeBuildOutput=true, so we only add the private ones -->
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
-        <None Include="$(OutputPath)Cratis.Chronicle.Connections.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Connections.pdb')" />
+        <!-- Private assemblies: deployed at runtime but hidden from IntelliSense via ref/ -->
         <None Include="$(OutputPath)Cratis.Chronicle.Contracts.dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
         <None Include="$(OutputPath)Cratis.Chronicle.Contracts.pdb" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" Condition="Exists('$(OutputPath)Cratis.Chronicle.Contracts.pdb')" />
         <None Include="$(OutputPath)$(ContractsImplementationAssembly).dll" Pack="true" PackagePath="lib/$(TargetFramework)/" Visible="false" />
