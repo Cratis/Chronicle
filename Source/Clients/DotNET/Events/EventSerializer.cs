@@ -38,8 +38,8 @@ public class EventSerializer : IEventSerializer
             }
         };
         _additionalEventInformationProviders = clientArtifacts.AdditionalEventInformationProviders
-            .Select(type => serviceProvider.GetRequiredService(type) as ICanProvideAdditionalEventInformation)
-            .Where(provider => provider != null)!;
+            .Select(type => ActivatorUtilities.CreateInstance(serviceProvider, type) as ICanProvideAdditionalEventInformation)
+            .Where(provider => provider is not null)!;
     }
 
     /// <inheritdoc/>

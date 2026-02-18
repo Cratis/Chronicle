@@ -47,11 +47,14 @@ public class ReactorInvoker : IReactorInvoker
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
-    public async Task Invoke(IServiceProvider serviceProvider, object content, EventContext eventContext)
+    public object CreateInstance(IServiceProvider serviceProvider) =>
+        ActivatorUtilities.CreateInstance(serviceProvider, _targetType);
+
+    /// <inheritdoc/>
+    public async Task Invoke(object reactorInstance, object content, EventContext eventContext)
     {
         try
         {
-            var actualReactor = serviceProvider.GetRequiredService(_targetType);
             var eventType = content.GetType();
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
@@ -63,11 +66,11 @@ public class ReactorInvoker : IReactorInvoker
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(actualReactor, [content, eventContext])!;
+                    returnValue = (Task)method.Invoke(reactorInstance, [content, eventContext])!;
                 }
                 else
                 {
-                    returnValue = (Task)method.Invoke(actualReactor, [content])!;
+                    returnValue = (Task)method.Invoke(reactorInstance, [content])!;
                 }
 
                 await returnValue;

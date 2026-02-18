@@ -15,5 +15,8 @@ public class NullReactorInvoker : IReactorInvoker
     public IImmutableList<EventType> EventTypes => ImmutableList<EventType>.Empty;
 
     /// <inheritdoc/>
-    public Task Invoke(IServiceProvider serviceProvider, object content, EventContext eventContext) => Task.CompletedTask;
+    public object CreateInstance(IServiceProvider serviceProvider) => new();
+
+    /// <inheritdoc/>
+    public Task Invoke(object reactorInstance, object content, EventContext eventContext) => Task.CompletedTask;
 }

@@ -80,7 +80,11 @@ public class ReactorHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public async Task OnNext(EventContext context, object content, IServiceProvider serviceProvider)
+    public object CreateReactorInstance(IServiceProvider serviceProvider) =>
+        reactorInvoker.CreateInstance(serviceProvider);
+
+    /// <inheritdoc/>
+    public async Task OnNext(EventContext context, object content, object reactorInstance)
     {
         identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
 
@@ -93,7 +97,7 @@ public class ReactorHandler(
             { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
         });
 
-        await reactorInvoker.Invoke(serviceProvider, content, context);
+        await reactorInvoker.Invoke(reactorInstance, content, context);
 
         identityProvider.ClearCurrentIdentity();
     }

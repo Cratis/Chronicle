@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -66,14 +67,27 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public Task Discover()
+    public async Task Discover()
     {
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
-            seeder?.Seed(this);
+            var seeder = ActivatorUtilities.CreateInstance(_serviceProvider, seederType) as ICanSeedEvents;
+            try
+            {
+                seeder?.Seed(this);
+            }
+            finally
+            {
+                if (seeder is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else if (seeder is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

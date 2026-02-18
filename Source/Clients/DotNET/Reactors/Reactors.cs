@@ -279,27 +279,42 @@ public class Reactors : IReactors
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        foreach (var @event in events.Events)
+        var reactorInstance = handler.CreateReactorInstance(serviceProviderScope.ServiceProvider);
+        try
         {
-            _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
-
-            try
+            foreach (var @event in events.Events)
             {
-                var context = @event.Context.ToClient();
+                _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
 
-                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
-                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
+                try
+                {
+                    var context = @event.Context.ToClient();
 
-                await handler.OnNext(context, content, serviceProviderScope.ServiceProvider);
-                lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+                    var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
+                    var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
+
+                    await handler.OnNext(context, content, reactorInstance);
+                    lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
+                    exceptionMessages = ex.GetAllMessages();
+                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
+                    state = ObservationState.Failed;
+                    break;
+                }
             }
-            catch (Exception ex)
+        }
+        finally
+        {
+            if (reactorInstance is IAsyncDisposable asyncDisposable)
             {
-                _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
-                exceptionMessages = ex.GetAllMessages();
-                exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                state = ObservationState.Failed;
-                break;
+                await asyncDisposable.DisposeAsync();
+            }
+            else if (reactorInstance is IDisposable disposable)
+            {
+                disposable.Dispose();
             }
         }
 

@@ -17,11 +17,18 @@ public interface IReactorInvoker
     IImmutableList<EventType> EventTypes { get; }
 
     /// <summary>
+    /// Creates an instance of the reactor using the given service provider.
+    /// </summary>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
+    /// <returns>The created reactor instance.</returns>
+    object CreateInstance(IServiceProvider serviceProvider);
+
+    /// <summary>
     /// Invoke the Reactor.
     /// </summary>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the reactor.</param>
+    /// <param name="reactorInstance">The reactor instance to invoke on.</param>
     /// <param name="content">Event content to invoke with.</param>
     /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Invoke(IServiceProvider serviceProvider, object content, EventContext eventContext);
+    Task Invoke(object reactorInstance, object content, EventContext eventContext);
 }

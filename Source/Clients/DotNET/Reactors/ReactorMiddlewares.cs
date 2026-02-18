@@ -19,7 +19,8 @@ public class ReactorMiddlewares(
     IClientArtifactsProvider clientArtifacts,
     IServiceProvider serviceProvider) : IReactorMiddlewares
 {
-    readonly IEnumerable<IReactorMiddleware> _all = clientArtifacts.ReactorMiddlewares.Select(_ => (serviceProvider.GetRequiredService(_) as IReactorMiddleware)!).ToArray();
+    readonly IEnumerable<IReactorMiddleware> _all = clientArtifacts.ReactorMiddlewares
+        .Select(_ => (ActivatorUtilities.CreateInstance(serviceProvider, _) as IReactorMiddleware)!).ToArray();
 
     /// <inheritdoc/>
     public Task BeforeInvoke(EventContext eventContext, object @event) => Task.WhenAll(_all.Select(_ => _.BeforeInvoke(eventContext, @event)));
