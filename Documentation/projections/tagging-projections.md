@@ -1,6 +1,6 @@
 # Tagging Projections
 
-Tags provide a way to organize and categorize your projections for better discoverability and management. By applying the `[Tag]` attribute to your projection classes or read models, you can assign one or more tags that describe the purpose or domain of the projection.
+Tags provide a way to organize and tag your projections for better discoverability and management. By applying the `[Tag]` attribute to your projection classes, you can assign one or more tags that describe the purpose or domain of the projection.
 
 ## Adding Tags
 
@@ -11,21 +11,21 @@ You can tag projections in multiple ways:
 Apply a single tag to your projection:
 
 ```csharp
-using Cratis.Chronicle;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 
-[Tag("CustomerDashboard")]
-public class CustomerOrdersProjection : IProjectionFor<CustomerOrders>
+[Tag("Analytics")]
+public class OrderAnalyticsProjection : IProjectionFor<OrderAnalytics>
 {
-    public ProjectionBuilder<CustomerOrders> For { get; init; }
+    public ProjectionId Identifier => "order-analytics";
 
-    public CustomerOrdersProjection()
+    public void Define(IProjectionBuilderFor<OrderAnalytics> builder)
     {
-        For
+        builder
             .From<OrderPlaced>(_ => _
-                .Set(m => m.TotalOrders).To(ctx => ctx.State.TotalOrders + 1))
-            .From<OrderCompleted>(_ => _
-                .Set(m => m.CompletedOrders).To(ctx => ctx.State.CompletedOrders + 1));
+                .Set(m => m.OrderId).To(e => e.OrderId))
+            .From<ItemAddedToOrder>(_ => _
+                .Add(m => m.TotalAmount).With(e => e.Price * e.Quantity));
     }
 }
 ```
@@ -35,10 +35,15 @@ public class CustomerOrdersProjection : IProjectionFor<CustomerOrders>
 Use the params feature to specify multiple tags in a single attribute:
 
 ```csharp
-[Tag("Reporting", "Analytics", "Executive")]
-public class SalesDashboardProjection : IProjectionFor<SalesDashboard>
+[Tag("Analytics", "Reporting", "Dashboard")]
+public class SalesReportProjection : IProjectionFor<SalesReport>
 {
-    // Projection implementation
+    public ProjectionId Identifier => "sales-report";
+
+    public void Define(IProjectionBuilderFor<SalesReport> builder)
+    {
+        // Projection definition
+    }
 }
 ```
 
@@ -47,12 +52,17 @@ public class SalesDashboardProjection : IProjectionFor<SalesDashboard>
 Apply multiple `[Tag]` attributes:
 
 ```csharp
+[Tag("Analytics")]
 [Tag("Compliance")]
 [Tag("Auditing")]
-[Tag("Reporting")]
-public class AuditTrailProjection : IProjectionFor<AuditTrail>
+public class ComplianceReportProjection : IProjectionFor<ComplianceReport>
 {
-    // Projection implementation
+    public ProjectionId Identifier => "compliance-report";
+
+    public void Define(IProjectionBuilderFor<ComplianceReport> builder)
+    {
+        // Projection definition
+    }
 }
 ```
 
@@ -61,30 +71,32 @@ public class AuditTrailProjection : IProjectionFor<AuditTrail>
 Combine both approaches:
 
 ```csharp
-[Tag("Inventory", "RealTime")]
-[Tag("Operations")]
-public class StockLevelsProjection : IProjectionFor<StockLevels>
+[Tag("Analytics", "Reporting")]
+[Tag("Executive")]
+public class ExecutiveDashboardProjection : IProjectionFor<ExecutiveDashboard>
 {
-    // Projection implementation
+    public ProjectionId Identifier => "executive-dashboard";
+
+    public void Define(IProjectionBuilderFor<ExecutiveDashboard> builder)
+    {
+        // Projection definition
+    }
 }
 ```
 
-## Tagging Model-Bound Projections
+## Model-Bound Projections
 
-For model-bound projections (read models that use attributes), apply tags directly to the read model class:
+Tags also work with model-bound projections:
 
 ```csharp
-[Tag("Reporting", "Sales")]
-public class MonthlySalesReport
-{
-    public string Id { get; set; }
-    
-    [FromEvent<OrderPlaced>("TotalAmount")]
-    public decimal Revenue { get; set; }
-    
-    [FromEvent<OrderPlaced>]
-    public int OrderCount { get; set; }
-}
+using Cratis.Chronicle.Projections;
+
+[Tag("Inventory", "Operations")]
+public record ProductInventory(
+    Guid ProductId,
+    string Name,
+    int QuantityInStock,
+    decimal UnitPrice);
 ```
 
 ## Best Practices
@@ -93,42 +105,36 @@ public class MonthlySalesReport
 - **Be consistent**: Establish tag naming conventions across your organization
 - **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
 - **Group related projections**: Use tags to group projections that serve similar purposes
-- **Consider read model purpose**: Tag based on how the data will be consumed
 
 ## Common Tag Examples
 
 Here are some common patterns for tagging projections:
 
 ```csharp
-// By purpose
-[Tag("Dashboard")]
-[Tag("Reporting")]
-[Tag("Analytics")]
-[Tag("Search")]
-
 // By domain
 [Tag("Sales")]
 [Tag("Inventory")]
 [Tag("Customer")]
-[Tag("Orders")]
+
+// By purpose
+[Tag("Analytics")]
+[Tag("Reporting")]
+[Tag("Dashboard")]
+[Tag("Search")]
 
 // By stakeholder
 [Tag("Executive")]
 [Tag("Operations")]
-[Tag("CustomerService")]
 [Tag("Finance")]
 
-// By update frequency
-[Tag("RealTime")]
-[Tag("Batch")]
-[Tag("Hourly")]
-[Tag("Daily")]
+// By consistency model
+[Tag("Immediate")]
+[Tag("Eventual")]
 
 // By data type
-[Tag("Summary")]
-[Tag("Detail")]
-[Tag("Aggregate")]
-[Tag("Snapshot")]
+[Tag("Aggregates")]
+[Tag("Lists")]
+[Tag("Details")]
 ```
 
 ## Querying by Tag
@@ -139,7 +145,7 @@ Tags stored in the event store definition can be used for:
 - Organizing projections in administrative interfaces
 - Generating documentation
 - Managing projection deployments by tag
-- Controlling projection activation by tag
+- Grouping projections for rebuild operations
 
 Note: The specific querying capabilities depend on your Chronicle setup and tooling.
 

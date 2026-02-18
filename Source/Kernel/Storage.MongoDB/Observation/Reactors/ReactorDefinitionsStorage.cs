@@ -49,4 +49,13 @@ public class ReactorDefinitionsStorage(
             filter: def => def.Id == definition.Identifier,
             replacement: definition.ToMongoDB(),
             options: new ReplaceOptions { IsUpsert = true });
+
+    /// <inheritdoc/>
+    public async Task Rename(ReactorId currentId, ReactorId newId)
+    {
+        var update = Builders<ReactorDefinition>.Update.Set(d => d.Id, newId);
+        await Collection.UpdateOneAsync(
+            definition => definition.Id == currentId,
+            update);
+    }
 }
