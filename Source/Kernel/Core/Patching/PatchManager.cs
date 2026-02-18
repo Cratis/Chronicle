@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Patching;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Sys;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -13,11 +14,13 @@ namespace Cratis.Chronicle.Patching;
 /// <summary>
 /// Represents an implementation of <see cref="IPatchManager"/>.
 /// </summary>
+/// <param name="grainFactory"><see cref="IGrainFactory"/> for getting grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="patches">All available <see cref="ICanApplyPatch"/> instances.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.PatchManager)]
 public class PatchManager(
+    IGrainFactory grainFactory,
     IStorage storage,
     IInstancesOf<ICanApplyPatch> patches,
     ILogger<PatchManager> logger) : Grain<PatchManagerState>, IPatchManager
@@ -27,7 +30,8 @@ public class PatchManager(
     {
         logger.StartingPatchApplication();
 
-        var currentVersion = await storage.System.GetVersion() ?? SemanticVersion.NotSet;
+        var system = grainFactory.GetSystem();
+        var currentVersion = await system.GetVersion() ?? SemanticVersion.NotSet;
         logger.CurrentSystemVersion(currentVersion);
 
         var allPatches = patches.ToList();
@@ -83,7 +87,7 @@ public class PatchManager(
 
         if (latestVersion is not null)
         {
-            await storage.System.SetVersion(latestVersion);
+            await system.SetVersion(latestVersion);
             logger.UpdatedSystemVersion(latestVersion);
         }
 

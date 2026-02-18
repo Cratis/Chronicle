@@ -53,15 +53,9 @@ public class ReactorDefinitionsStorage(
     /// <inheritdoc/>
     public async Task Rename(ReactorId currentId, ReactorId newId)
     {
-        using var result = await Collection.FindAsync(definition => definition.Id == currentId);
-        var definition = await result.FirstOrDefaultAsync();
-        if (definition is null)
-        {
-            return;
-        }
-
-        await Collection.DeleteOneAsync(def => def.Id == currentId);
-        var kernelDefinition = definition.ToKernel();
-        await Save(kernelDefinition with { Identifier = newId });
+        var update = Builders<ReactorDefinition>.Update.Set(d => d.Id, newId);
+        await Collection.UpdateOneAsync(
+            definition => definition.Id == currentId,
+            update);
     }
 }

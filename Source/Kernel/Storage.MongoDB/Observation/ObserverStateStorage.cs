@@ -53,19 +53,9 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     /// <inheritdoc/>
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
-        var cursor = await _collection
-            .Aggregate()
-            .Match(_ => _.Id == currentId)
-            .JoinWithFailedPartitions()
-            .FirstOrDefaultAsync();
-
-        if (cursor is null)
-        {
-            return;
-        }
-
-        var state = cursor.ToKernel();
-        await _collection.DeleteOneAsync(os => os.Id == currentId);
-        await Save(state with { Identifier = newId });
+        var update = Builders<ObserverState>.Update.Set(os => os.Id, newId);
+        await _collection.UpdateOneAsync(
+            os => os.Id == currentId,
+            update);
     }
 }

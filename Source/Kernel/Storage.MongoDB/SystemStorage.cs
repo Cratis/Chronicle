@@ -16,8 +16,8 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 public class SystemStorage(IDatabase database) : ISystemStorage
 {
-    const string VersionCollectionName = "system-version";
-    const string VersionDocumentId = "current";
+    const string SystemInformationCollectionName = "system-information";
+    const int SystemInformationId = 0;
 
     /// <inheritdoc/>
     public IUserStorage Users { get; } = new UserStorage(database);
@@ -34,20 +34,30 @@ public class SystemStorage(IDatabase database) : ISystemStorage
     /// <inheritdoc/>
     public async Task<SemanticVersion?> GetVersion()
     {
-        var collection = database.GetCollection<VersionDocument>(VersionCollectionName);
-        var cursor = await collection.FindAsync(v => v.Id == VersionDocumentId);
-        var document = await cursor.FirstOrDefaultAsync();
-        return document?.Version;
+        var systemInfo = await GetSystemInformation();
+        return systemInfo?.Version;
     }
 
     /// <inheritdoc/>
     public async Task SetVersion(SemanticVersion version)
     {
-        var collection = database.GetCollection<VersionDocument>(VersionCollectionName);
-        var document = new VersionDocument(VersionDocumentId, version);
+        var systemInfo = new SystemInformation(SystemInformationId, version);
+        await SetSystemInformation(systemInfo);
+    }
+
+    async Task<SystemInformation?> GetSystemInformation()
+    {
+        var collection = database.GetCollection<SystemInformation>(SystemInformationCollectionName);
+        var cursor = await collection.FindAsync(si => si.Id == SystemInformationId);
+        return await cursor.FirstOrDefaultAsync();
+    }
+
+    async Task SetSystemInformation(SystemInformation systemInformation)
+    {
+        var collection = database.GetCollection<SystemInformation>(SystemInformationCollectionName);
         await collection.ReplaceOneAsync(
-            v => v.Id == VersionDocumentId,
-            document,
+            si => si.Id == SystemInformationId,
+            systemInformation,
             new ReplaceOptions { IsUpsert = true });
     }
 }
