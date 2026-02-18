@@ -53,9 +53,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         // Register via the standard options pipeline for runtime resolution.
         builder.Services.AddChronicleOptions(configureOptions, configSectionPath, artifactsProvider);
 
-        // Register artifact types into DI using the resolved provider.
-        builder.Services.AddCratisChronicleArtifacts(artifactsProvider);
-
         builder.Services
             .AddUnitOfWork()
             .AddCompliance()
