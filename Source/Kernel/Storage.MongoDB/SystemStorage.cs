@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.MongoDB.Patching;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Patching;
@@ -49,18 +48,5 @@ public class SystemStorage(IDatabase database) : ISystemStorage
             si => si.Id == SystemInformationId,
             document,
             new ReplaceOptions { IsUpsert = true });
-    }
-
-    /// <inheritdoc/>
-    public async Task<SemanticVersion?> GetVersion()
-    {
-        var systemInfo = await GetSystemInformation();
-        return systemInfo?.Version;
-    }
-
-    /// <inheritdoc/>
-    public async Task SetVersion(SemanticVersion version)
-    {
-        await SetSystemInformation(new SystemInformation(version));
     }
 }

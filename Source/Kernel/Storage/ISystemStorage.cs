@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Storage.Patching;
 using Cratis.Chronicle.Storage.Security;
 
@@ -44,17 +43,4 @@ public interface ISystemStorage
     /// <param name="systemInformation">The <see cref="SystemInformation"/> to set.</param>
     /// <returns>Awaitable task.</returns>
     Task SetSystemInformation(SystemInformation systemInformation);
-
-    /// <summary>
-    /// Get the current system version.
-    /// </summary>
-    /// <returns>The current <see cref="SemanticVersion"/> or null if not set.</returns>
-    Task<SemanticVersion?> GetVersion();
-
-    /// <summary>
-    /// Set the current system version.
-    /// </summary>
-    /// <param name="version">The <see cref="SemanticVersion"/> to set.</param>
-    /// <returns>Awaitable task.</returns>
-    Task SetVersion(SemanticVersion version);
 }

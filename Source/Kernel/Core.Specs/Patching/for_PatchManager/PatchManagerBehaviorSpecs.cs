@@ -34,7 +34,7 @@ public class PatchManagerBehaviorSpecs : Specification
 
         storage.System.Returns(systemStorage);
         systemStorage.Patches.Returns(patchStorage);
-        systemStorage.GetVersion().Returns(Task.FromResult<SemanticVersion?>(new SemanticVersion(1, 0, 0)));
+        systemStorage.GetSystemInformation().Returns(Task.FromResult<SystemInformation?>(new SystemInformation(new SemanticVersion(1, 0, 0))));
 
         var newerPatch = new TestPatch(new SemanticVersion(1, 1, 0), "NewerPatch");
         var patches = new List<ICanApplyPatch> { newerPatch };
