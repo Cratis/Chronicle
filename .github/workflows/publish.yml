@@ -123,6 +123,7 @@ jobs:
             echo "No coverage statistics changes to commit"
           else
             git commit -m "Update coverage statistics [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
             git push
           fi
 
