@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Patches;
 public class RenameReactors(IStorage storage, ILogger<RenameReactors> logger) : ICanApplyPatch
 {
     /// <inheritdoc/>
-    public SemanticVersion Version => new(15, 3, 0);
+    public SemanticVersion Version => new(15, 2, 4);
 
     /// <inheritdoc/>
     public async Task Up()
