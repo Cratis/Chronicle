@@ -79,66 +79,8 @@ the `userId` is part of the event.
 
 Chronicle will leverage the IOC container to get instances of any artifacts it discovers and will create instances of,
 such as **Reactors**, **Reducers** and **Projections**.
-
-### Automatic Artifact Discovery and Registration
-
-By default, when you call `AddCratisChronicle()`, Chronicle will:
-1. **Discover** all client artifacts (Reactors, Reducers, Projections, etc.) and register them with the Chronicle server
-2. **Register** the artifact types in the DI container with the following lifetimes:
-   - **Projections**: Transient
-   - **Reactors**: Scoped
-   - **Reducers**: Scoped
-   - **ReactorMiddlewares**: Transient
-   - **ConstraintTypes**: Transient
-   - **EventSeeders**: Transient
-
-This means your artifacts can have dependencies injected through their constructors, and Chronicle will resolve them
-from the service provider when needed.
-
-### Manual Artifact Registration
-
-If you want to disable automatic discovery and registration, or if you need to register artifacts manually,
-you can use the `AddCratisChronicleArtifacts()` extension method:
-
-```csharp
-// Example 1: Register artifacts from ChronicleOptions
-var options = new ChronicleOptions();
-builder.Services.AddCratisChronicleArtifacts(options);
-
-// Example 2: Register artifacts from IClientArtifactsProvider
-var artifactsProvider = new DefaultClientArtifactsProvider(assemblyProvider);
-builder.Services.AddCratisChronicleArtifacts(artifactsProvider);
-
-// Example 3: Register artifacts from IChronicleClient
-var client = app.Services.GetRequiredService<IChronicleClient>();
-builder.Services.AddCratisChronicleArtifacts(client);
-```
-
-> **Important:** If you disable automatic discovery and registration in `ChronicleOptions` by setting
-> `AutoDiscoverAndRegister = false`, you must manually:
-> 1. Call discovery methods on the event store (e.g., `eventStore.Reactors.Discover()`, `eventStore.Reducers.Discover()`) to register artifacts with Chronicle server
-> 2. Call `services.AddCratisChronicleArtifacts()` to register artifact types in the DI container
-
-### Additional Service Registrations
-
-> **Note:** With the automatic registration mentioned above, you typically don't need to explicitly register
-> your artifact types anymore (Reactors, Reducers, Projections, etc. are automatically registered).
-> However, you may still need to register other dependencies your artifacts require.
-
-#### Example: Dependencies of Artifacts
-
-If your artifacts have dependencies, register those dependencies:
-
-```csharp
-// Register services that your artifacts depend on
-builder.Services.AddTransient<IEmailService, EmailService>();
-builder.Services.AddTransient<IUserRepository, UserRepository>();
-builder.Services.AddTransient<IBookRepository, BookRepository>();
-```
-
-#### Example: Manual Registration (when automatic is disabled)
-
-If you've disabled automatic registration (`AutoDiscoverAndRegister = false`), you would register artifacts manually:
+In order for this to work, the artifacts needs to be registered as services. In your `Program.cs` file you would add
+service registrations for the artifacts you have:
 
 ```csharp
         builder.Services.AddTransient<UsersReactor>();
@@ -150,9 +92,7 @@ If you've disabled automatic registration (`AutoDiscoverAndRegister = false`), y
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/CommonServices.cs#L14-L18)
 
-#### Automatic Service Registration with Cratis Fundamentals
-
-This can become very tedious to do as your solution grows. Cratis Fundamentals offers a couple of extension methods
+This can become very tedious to do as your solution grows, Cratis Fundamentals offers a way couple of extension methods
 that will automatically hook this up:
 
 ```csharp
