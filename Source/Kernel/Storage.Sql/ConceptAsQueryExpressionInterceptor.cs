@@ -16,11 +16,9 @@ public class ConceptAsQueryExpressionInterceptor : IQueryExpressionInterceptor
     {
         // FIRST: Evaluate ConceptAs closure variables to constants
         // This prevents EF Core from creating ConceptAs parameters
-        var evaluated = ConceptAsParameterEvaluator.Evaluate(queryExpression);
-
+        // FIRST: Evaluate ConceptAs closure parameters to constants
+        // This must happen before EF Core tries to parameterize them
         // SECOND: Rewrite the expression to handle any remaining ConceptAs types
-        var rewritten = ConceptAsExpressionRewriter.Rewrite(evaluated);
-
-        return rewritten;
+        return ConceptAsExpressionRewriter.Rewrite(ConceptAsParameterEvaluator.Evaluate(queryExpression));
     }
 }

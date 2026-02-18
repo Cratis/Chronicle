@@ -8,6 +8,8 @@
         <!-- Explicitly set TargetFramework to net10.0 to override Directory.Build.props -->
         <TargetFramework>net10.0</TargetFramework>
         <TargetFrameworks></TargetFrameworks>
+        <!-- Suppress warnings from integration test configuration -->
+        <NoWarn>$(NoWarn);CS0436;CS7022</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

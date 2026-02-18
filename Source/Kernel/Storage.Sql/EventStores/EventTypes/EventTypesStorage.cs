@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
+public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage, IDisposable
 {
     readonly ReplaySubject<IEnumerable<EventTypeSchema>> _eventTypesSubject = new(1);
     ConcurrentBag<EventType> _eventTypes = new();
@@ -98,6 +98,13 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         var eventType = await GetSpecificEventType(type);
         return eventType?.Schemas.ContainsKey(generation) ?? false;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventTypesSubject?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)

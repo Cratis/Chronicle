@@ -15,7 +15,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Serialization;
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="types">The <see cref="ITypes"/>.</param>
 [Singleton]
+#pragma warning disable MA0048, SA1649 // File name must match type name - class name matches interface naming convention
 public class CustomSerializers(IServiceProvider serviceProvider, ITypes types) : ICustomSerializers
+#pragma warning restore MA0048, SA1649
 {
     static bool _isRegistered;
 

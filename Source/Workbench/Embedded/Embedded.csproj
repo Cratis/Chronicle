@@ -13,6 +13,9 @@
         <EmbedFiles Condition="!Exists($(FrontendBuildDir))">false</EmbedFiles>
 
         <GenerateEmbeddedFilesManifest Condition="$(EmbedFiles) == 'true'">true</GenerateEmbeddedFilesManifest>
+        
+        <!-- Suppress frontend build warnings when yarn is not available -->
+        <NoWarn>$(NoWarn);MSB3073</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

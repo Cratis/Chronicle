@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable IDE0005 // Using directive is unnecessary - false positive, all directives are needed
+#pragma warning disable IDE0290 // Use primary constructor - cannot use primary constructor with base class parameter passing
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -37,7 +39,7 @@ public class ConceptAsModelCustomizer : RelationalModelCustomizer
                 {
                     var valueType = propertyType.GetConceptValueType();
                     var converterType = typeof(ConceptAsValueConverter<,>).MakeGenericType(propertyType, valueType);
-                    var converter = (ValueConverter)Activator.CreateInstance(converterType, new object?[] { null })!;
+                    var converter = (ValueConverter)Activator.CreateInstance(converterType, [null])!;
 
                     property.SetValueConverter(converter);
                 }

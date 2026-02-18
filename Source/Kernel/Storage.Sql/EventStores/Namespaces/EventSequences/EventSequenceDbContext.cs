@@ -20,6 +20,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="migrator">The <see cref="IEventSequenceMigrator"/> for managing table migrations.</param>
 public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> options, string tableName, IEventSequenceMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
+    /// <summary>
+    /// Gets the table name for this event sequence.
+    /// </summary>
     internal readonly string _tableName = tableName;
 
     /// <summary>

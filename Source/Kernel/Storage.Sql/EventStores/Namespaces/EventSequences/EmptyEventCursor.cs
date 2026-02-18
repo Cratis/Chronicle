@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <summary>
 /// Represents an empty event cursor for methods not yet implemented.
 /// </summary>
+#pragma warning disable MA0182 // Internal type is apparently never used - reserved for future implementation
 internal sealed class EmptyEventCursor : IEventCursor
+#pragma warning restore MA0182
 {
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; } = [];
