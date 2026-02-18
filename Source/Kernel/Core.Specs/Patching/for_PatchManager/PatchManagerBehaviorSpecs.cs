@@ -1,28 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Patching;
 using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Patching;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Core.Specs.Patching.for_PatchManager;
 
 public class PatchManagerBehaviorSpecs : Specification
 {
-    class TestPatch : ICanApplyPatch
+    class TestPatch(SemanticVersion version, string name) : ICanApplyPatch
     {
-        public SemanticVersion Version { get; }
-        public string Name { get; }
+        public SemanticVersion Version { get; } = version;
+        public string Name { get; } = name;
         public bool UpCalled { get; private set; }
-
-        public TestPatch(SemanticVersion version, string name)
-        {
-            Version = version;
-            Name = name;
-        }
 
         public Task Up()
         {
@@ -101,8 +93,7 @@ public class PatchManagerBehaviorSpecs : Specification
     [Fact]
     public async Task should_apply_all_patches_when_no_current_version()
     {
-        SemanticVersion? currentVersion = null;
-        var effectiveVersion = currentVersion ?? SemanticVersion.NotSet;
+        var effectiveVersion = SemanticVersion.NotSet;
 
         var patches = new List<ICanApplyPatch>
         {
@@ -130,7 +121,7 @@ public class PatchManagerBehaviorSpecs : Specification
         var patchesToApply = patches.Where(p => p.Version > currentVersion).ToList();
 
         patchesToApply.Count.ShouldEqual(2);
-        patchesToApply.All(p => p.Version > currentVersion).ShouldBeTrue();
+        patchesToApply.TrueForAll(p => p.Version > currentVersion).ShouldBeTrue();
     }
 
     [Fact]

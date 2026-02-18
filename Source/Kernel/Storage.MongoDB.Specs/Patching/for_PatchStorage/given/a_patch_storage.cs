@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Patching;
-using Cratis.Chronicle.Concepts.System;
-using Cratis.Chronicle.Storage.MongoDB.Patching;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Patching.for_PatchStorage.given;
