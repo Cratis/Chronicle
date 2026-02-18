@@ -7,6 +7,7 @@ env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
+  DOTNET_BUILD_CACHE: "dotnet-build-cache-${{ github.sha }}"
   DOTNET_NUGET_CACHE: "dotnet-nuget-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
@@ -225,14 +226,51 @@ jobs:
           CHRONICLE_VERSION: ${{ needs.release.outputs.version }}
           CHRONICLE_COMMIT_SHA: ${{ github.sha }}
 
-  dotnet:
+  dotnet-build:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, workbench]
+    needs: [release]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Build
+        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+
+      - uses: actions/cache@v3
+        id: dotnet-build-output
+        with:
+          path: |
+            **/bin/Release
+            **/obj
+          key: ${{ env.DOTNET_BUILD_CACHE }}
+
+  dotnet-pack:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release, dotnet-build, workbench]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        id: dotnet-build-output
+        with:
+          path: |
+            **/bin/Release
+            **/obj
+          key: ${{ env.DOTNET_BUILD_CACHE }}
+          fail-on-cache-miss: true
 
       - uses: actions/cache@v3
         id: workbench-output
@@ -250,9 +288,6 @@ jobs:
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
-
-      - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
@@ -322,7 +357,7 @@ jobs:
   publish-nuget-packages:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet]
+    needs: [release, dotnet-pack]
     permissions:
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
