@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Webhooks;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IWebhookDefinitionsStorage
+public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IWebhookDefinitionsStorage, IDisposable
 {
     readonly ReplaySubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> _subject = new(1);
 
@@ -64,6 +64,13 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await scope.DbContext.WebhookDefinitions.Upsert(definition.ToSql());
         await scope.DbContext.SaveChangesAsync();
         await NotifyChange();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _subject.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     async Task NotifyChange()

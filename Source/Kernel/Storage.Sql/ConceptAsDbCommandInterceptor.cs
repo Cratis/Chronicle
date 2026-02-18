@@ -85,8 +85,7 @@ public class ConceptAsDbCommandInterceptor : DbCommandInterceptor
 
                 if (valueProperty is not null)
                 {
-                    var unwrappedValue = valueProperty.GetValue(parameter.Value);
-                    parameter.Value = unwrappedValue;
+                    parameter.Value = valueProperty.GetValue(parameter.Value);
                 }
             }
         }

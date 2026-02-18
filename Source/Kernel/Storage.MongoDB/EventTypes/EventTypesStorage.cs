@@ -31,7 +31,10 @@ public class EventTypesStorage(
 {
     ConcurrentBag<EventType> _eventTypes = new();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Populates the event types storage with existing event types from the database.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task Populate()
     {
         logger.Populating(eventStore);

@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Recommendations;
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IRecommendationStorage
+public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IRecommendationStorage, IDisposable
 {
     readonly RecommendationConverter _converter = new();
     readonly Subject<IEnumerable<RecommendationState>> _recommendationsSubject = new();
@@ -62,6 +62,13 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
     public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations()
     {
         return _recommendationsSubject;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _recommendationsSubject.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     async Task<IEnumerable<RecommendationState>> GetAllInternal()

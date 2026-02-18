@@ -3,7 +3,6 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -11,17 +10,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <summary>
 /// Model customizer that configures value converters for ConceptAs types.
 /// </summary>
-public class ConceptAsModelCustomizer : RelationalModelCustomizer
+/// <param name="dependencies">The model customizer dependencies.</param>
+public class ConceptAsModelCustomizer(ModelCustomizerDependencies dependencies) : RelationalModelCustomizer(dependencies)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConceptAsModelCustomizer"/> class.
-    /// </summary>
-    /// <param name="dependencies">The model customizer dependencies.</param>
-    public ConceptAsModelCustomizer(ModelCustomizerDependencies dependencies)
-        : base(dependencies)
-    {
-    }
-
     /// <inheritdoc/>
     public override void Customize(ModelBuilder modelBuilder, DbContext context)
     {
@@ -37,7 +28,7 @@ public class ConceptAsModelCustomizer : RelationalModelCustomizer
                 {
                     var valueType = propertyType.GetConceptValueType();
                     var converterType = typeof(ConceptAsValueConverter<,>).MakeGenericType(propertyType, valueType);
-                    var converter = (ValueConverter)Activator.CreateInstance(converterType, new object?[] { null })!;
+                    var converter = (ValueConverter)Activator.CreateInstance(converterType, [null])!;
 
                     property.SetValueConverter(converter);
                 }

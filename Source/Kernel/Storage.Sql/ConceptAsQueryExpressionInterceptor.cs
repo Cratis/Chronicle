@@ -19,8 +19,6 @@ public class ConceptAsQueryExpressionInterceptor : IQueryExpressionInterceptor
         var evaluated = ConceptAsParameterEvaluator.Evaluate(queryExpression);
 
         // SECOND: Rewrite the expression to handle any remaining ConceptAs types
-        var rewritten = ConceptAsExpressionRewriter.Rewrite(evaluated);
-
-        return rewritten;
+        return ConceptAsExpressionRewriter.Rewrite(evaluated);
     }
 }

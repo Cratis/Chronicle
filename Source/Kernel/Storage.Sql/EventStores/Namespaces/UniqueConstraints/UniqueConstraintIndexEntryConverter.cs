@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 
@@ -26,9 +25,8 @@ public static class UniqueConstraintIndexEntryConverter
     /// Convert from <see cref="UniqueConstraintIndex"/> to <see cref="UniqueConstraintIndexEntry"/>.
     /// </summary>
     /// <param name="index">Source <see cref="UniqueConstraintIndex"/>.</param>
-    /// <param name="constraintName">The <see cref="ConstraintName"/> for the entry.</param>
     /// <returns>Converted <see cref="UniqueConstraintIndexEntry"/>.</returns>
-    public static UniqueConstraintIndexEntry ToUniqueConstraintIndexEntry(this UniqueConstraintIndex index, ConstraintName constraintName) =>
+    public static UniqueConstraintIndexEntry ToUniqueConstraintIndexEntry(this UniqueConstraintIndex index) =>
         new()
         {
             EventSourceId = index.EventSourceId.Value,

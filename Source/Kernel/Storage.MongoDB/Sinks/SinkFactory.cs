@@ -20,12 +20,21 @@ public class SinkFactory(
     IDatabase database,
     ITypeFormats typeFormats,
     IExpandoObjectConverter expandoObjectConverter)
+
     // : ISinkFactory
 {
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets the type ID for this sink factory.
+    /// </summary>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Creates a sink for the specified event store, namespace, and read model.
+    /// </summary>
+    /// <param name="eventStore">The event store name.</param>
+    /// <param name="namespace">The namespace name.</param>
+    /// <param name="readModel">The read model definition.</param>
+    /// <returns>A sink instance.</returns>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)
     {
         var mongoDBConverter = new MongoDBConverter(

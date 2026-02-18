@@ -44,19 +44,6 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         return base.VisitBinary(node);
     }
 
-    static Expression UnwrapConvertToConceptAs(Expression expression)
-    {
-        // Check for Convert expressions that convert to ConceptAs types
-        while (expression is UnaryExpression unary &&
-               unary.NodeType == ExpressionType.Convert &&
-               unary.Type.IsConcept())
-        {
-            expression = unary.Operand;
-        }
-
-        return expression;
-    }
-
     /// <inheritdoc/>
     protected override Expression VisitMember(MemberExpression node)
     {
@@ -101,9 +88,9 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Failed to extract value - fall through to base implementation
+                        _ = ex; // Failed to extract value - fall through to base implementation
                     }
                 }
             }
@@ -145,9 +132,9 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Failed to evaluate - fall through to base implementation
+                _ = ex; // Failed to evaluate - fall through to base implementation
             }
         }
 
@@ -197,5 +184,18 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         }
 
         return base.VisitUnary(node);
+    }
+
+    static Expression UnwrapConvertToConceptAs(Expression expression)
+    {
+        // Check for Convert expressions that convert to ConceptAs types
+        while (expression is UnaryExpression unary &&
+               unary.NodeType == ExpressionType.Convert &&
+               unary.Type.IsConcept())
+        {
+            expression = unary.Operand;
+        }
+
+        return expression;
     }
 }

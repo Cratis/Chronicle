@@ -5,7 +5,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 
