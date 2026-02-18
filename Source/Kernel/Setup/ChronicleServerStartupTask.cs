@@ -47,7 +47,7 @@ internal sealed class ChronicleServerStartupTask(
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
         await reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default);
 
-        var allEventStores = await storage.Cluster.GetEventStores();
+        var allEventStores = await storage.GetEventStores();
         foreach (var eventStore in allEventStores)
         {
             await eventTypes.DiscoverAndRegister(eventStore);
