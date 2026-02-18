@@ -3,11 +3,10 @@
 
 using Cratis.Chronicle.Concepts.System;
 
-namespace Cratis.Chronicle.Storage.MongoDB;
+namespace Cratis.Chronicle.Storage;
 
 /// <summary>
-/// Represents system information stored in MongoDB.
+/// Represents system information.
 /// </summary>
-/// <param name="Id">The document identifier (always 0).</param>
 /// <param name="Version">The semantic version.</param>
-public sealed record SystemInformation(int Id, SemanticVersion Version);
+public sealed record SystemInformation(SemanticVersion Version);

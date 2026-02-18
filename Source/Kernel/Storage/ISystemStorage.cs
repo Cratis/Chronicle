@@ -33,6 +33,19 @@ public interface ISystemStorage
     IPatchStorage Patches { get; }
 
     /// <summary>
+    /// Get the system information.
+    /// </summary>
+    /// <returns>The <see cref="SystemInformation"/> or null if not set.</returns>
+    Task<SystemInformation?> GetSystemInformation();
+
+    /// <summary>
+    /// Set the system information.
+    /// </summary>
+    /// <param name="systemInformation">The <see cref="SystemInformation"/> to set.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SetSystemInformation(SystemInformation systemInformation);
+
+    /// <summary>
     /// Get the current system version.
     /// </summary>
     /// <returns>The current <see cref="SemanticVersion"/> or null if not set.</returns>

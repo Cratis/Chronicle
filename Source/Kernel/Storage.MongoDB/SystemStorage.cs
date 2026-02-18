@@ -32,6 +32,26 @@ public class SystemStorage(IDatabase database) : ISystemStorage
     public IPatchStorage Patches { get; } = new PatchStorage(database);
 
     /// <inheritdoc/>
+    public async Task<SystemInformation?> GetSystemInformation()
+    {
+        var collection = database.GetCollection<MongoDBSystemInformation>(SystemInformationCollectionName);
+        var cursor = await collection.FindAsync(si => si.Id == SystemInformationId);
+        var document = await cursor.FirstOrDefaultAsync();
+        return document is not null ? new SystemInformation(document.Version) : null;
+    }
+
+    /// <inheritdoc/>
+    public async Task SetSystemInformation(SystemInformation systemInformation)
+    {
+        var collection = database.GetCollection<MongoDBSystemInformation>(SystemInformationCollectionName);
+        var document = new MongoDBSystemInformation(SystemInformationId, systemInformation.Version);
+        await collection.ReplaceOneAsync(
+            si => si.Id == SystemInformationId,
+            document,
+            new ReplaceOptions { IsUpsert = true });
+    }
+
+    /// <inheritdoc/>
     public async Task<SemanticVersion?> GetVersion()
     {
         var systemInfo = await GetSystemInformation();
@@ -41,23 +61,6 @@ public class SystemStorage(IDatabase database) : ISystemStorage
     /// <inheritdoc/>
     public async Task SetVersion(SemanticVersion version)
     {
-        var systemInfo = new SystemInformation(SystemInformationId, version);
-        await SetSystemInformation(systemInfo);
-    }
-
-    async Task<SystemInformation?> GetSystemInformation()
-    {
-        var collection = database.GetCollection<SystemInformation>(SystemInformationCollectionName);
-        var cursor = await collection.FindAsync(si => si.Id == SystemInformationId);
-        return await cursor.FirstOrDefaultAsync();
-    }
-
-    async Task SetSystemInformation(SystemInformation systemInformation)
-    {
-        var collection = database.GetCollection<SystemInformation>(SystemInformationCollectionName);
-        await collection.ReplaceOneAsync(
-            si => si.Id == SystemInformationId,
-            systemInformation,
-            new ReplaceOptions { IsUpsert = true });
+        await SetSystemInformation(new SystemInformation(version));
     }
 }
