@@ -32,7 +32,7 @@ public class EventTypesStorage(
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <summary>
-    /// Populates the event types cache from the MongoDB collection.
+    /// Populates the event types storage with existing event types from the database.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task Populate()

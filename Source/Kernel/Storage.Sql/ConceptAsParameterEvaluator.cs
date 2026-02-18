@@ -88,11 +88,9 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                             }
                         }
                     }
-#pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception - intentional fallback to base implementation
-                    catch (Exception)
-#pragma warning restore RCS1075
+                    catch (Exception ex)
                     {
-                        // Failed to extract value - fall through to base implementation
+                        _ = ex; // Failed to extract value - fall through to base implementation
                     }
                 }
             }
@@ -134,11 +132,9 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
                     }
                 }
             }
-#pragma warning disable RCS1075 // Avoid empty catch clause that catches System.Exception - intentional fallback to base implementation
-            catch (Exception)
-#pragma warning restore RCS1075
+            catch (Exception ex)
             {
-                // Failed to evaluate - fall through to base implementation
+                _ = ex; // Failed to evaluate - fall through to base implementation
             }
         }
 

@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#pragma warning disable IDE0005 // Using directive is unnecessary - false positive, all directives are needed
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 

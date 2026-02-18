@@ -67,7 +67,7 @@ public class RecommendationStorage(EventStoreName eventStore, EventStoreNamespac
     /// <inheritdoc/>
     public void Dispose()
     {
-        _recommendationsSubject?.Dispose();
+        _recommendationsSubject.Dispose();
         GC.SuppressFinalize(this);
     }
 

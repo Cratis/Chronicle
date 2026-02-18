@@ -103,7 +103,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     /// <inheritdoc/>
     public void Dispose()
     {
-        _eventTypesSubject?.Dispose();
+        _eventTypesSubject.Dispose();
         GC.SuppressFinalize(this);
     }
 

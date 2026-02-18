@@ -5,9 +5,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
-#pragma warning disable IDE0005 // Using directive is unnecessary - Cratis.Compliance.MongoDB is needed for EncryptionKeyStorage
 using Cratis.Compliance.MongoDB;
-#pragma warning restore IDE0005
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Setup;

@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> options, string tableName, IEventSequenceMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
     /// <summary>
-    /// Gets the table name for this event sequence.
+    /// Gets the name of the table for the event sequence.
     /// </summary>
     internal readonly string _tableName = tableName;
 
