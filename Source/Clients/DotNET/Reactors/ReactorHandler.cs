@@ -80,7 +80,7 @@ public class ReactorHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public object CreateReactorInstance(IServiceProvider serviceProvider) =>
+    public ActivatedArtifact CreateReactorInstance(IServiceProvider serviceProvider) =>
         reactorInvoker.CreateInstance(serviceProvider);
 
     /// <inheritdoc/>

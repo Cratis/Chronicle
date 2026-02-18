@@ -5,7 +5,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -22,6 +21,7 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="eventSerializer">The event serializer.</param>
 /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
 /// <param name="serviceProvider">The service provider.</param>
+/// <param name="artifactActivator">The artifact activator.</param>
 public class EventSeeding(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -29,7 +29,8 @@ public class EventSeeding(
     IEventTypes eventTypes,
     IEventSerializer eventSerializer,
     IClientArtifactsProvider clientArtifactsProvider,
-    IServiceProvider serviceProvider) : IEventSeeding
+    IServiceProvider serviceProvider,
+    IArtifactActivator artifactActivator) : IEventSeeding
 {
     readonly EventStoreName _eventStoreName = eventStoreName;
     readonly EventStoreNamespaceName _namespace = @namespace;
@@ -38,6 +39,7 @@ public class EventSeeding(
     readonly IEventSerializer _eventSerializer = eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider = clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider = serviceProvider;
+    readonly IArtifactActivator _artifactActivator = artifactActivator;
     readonly List<SeedingEntry> _entries = [];
 
     /// <inheritdoc/>
@@ -71,22 +73,8 @@ public class EventSeeding(
     {
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            var seeder = ActivatorUtilities.CreateInstance(_serviceProvider, seederType) as ICanSeedEvents;
-            try
-            {
-                seeder?.Seed(this);
-            }
-            finally
-            {
-                if (seeder is IAsyncDisposable asyncDisposable)
-                {
-                    await asyncDisposable.DisposeAsync();
-                }
-                else if (seeder is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
+            await using var activatedSeeder = _artifactActivator.CreateInstance(_serviceProvider, seederType);
+            (activatedSeeder.Instance as ICanSeedEvents)?.Seed(this);
         }
     }
 

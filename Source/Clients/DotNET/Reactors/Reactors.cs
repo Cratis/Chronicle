@@ -30,6 +30,7 @@ public class Reactors : IReactors
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider;
+    readonly IArtifactActivator _artifactActivator;
     readonly IReactorMiddlewares _middlewares;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
@@ -48,6 +49,7 @@ public class Reactors : IReactors
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
+    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating artifact instances.</param>
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
@@ -59,6 +61,7 @@ public class Reactors : IReactors
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifactsProvider,
         IServiceProvider serviceProvider,
+        IArtifactActivator artifactActivator,
         IReactorMiddlewares middlewares,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
@@ -71,6 +74,7 @@ public class Reactors : IReactors
         _eventTypes = eventTypes;
         _clientArtifactsProvider = clientArtifactsProvider;
         _serviceProvider = serviceProvider;
+        _artifactActivator = artifactActivator;
         _middlewares = middlewares;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
@@ -226,7 +230,7 @@ public class Reactors : IReactors
             reactorType.GetReactorId(),
             reactorType,
             reactorType.GetEventSequenceId(),
-            new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
+            new ReactorInvoker(_eventStore.EventTypes, _middlewares, _artifactActivator, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
             _causationManager,
             _identityProvider);
 
@@ -279,42 +283,28 @@ public class Reactors : IReactors
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        var reactorInstance = handler.CreateReactorInstance(serviceProviderScope.ServiceProvider);
-        try
+        await using var activatedReactor = handler.CreateReactorInstance(serviceProviderScope.ServiceProvider);
+        foreach (var @event in events.Events)
         {
-            foreach (var @event in events.Events)
+            _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
+
+            try
             {
-                _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
+                var context = @event.Context.ToClient();
 
-                try
-                {
-                    var context = @event.Context.ToClient();
+                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
+                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
-                    var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
-                    var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
-
-                    await handler.OnNext(context, content, reactorInstance);
-                    lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
-                }
-                catch (Exception ex)
-                {
-                    _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
-                    exceptionMessages = ex.GetAllMessages();
-                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                    state = ObservationState.Failed;
-                    break;
-                }
+                await handler.OnNext(context, content, activatedReactor.Instance);
+                lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
-        }
-        finally
-        {
-            if (reactorInstance is IAsyncDisposable asyncDisposable)
+            catch (Exception ex)
             {
-                await asyncDisposable.DisposeAsync();
-            }
-            else if (reactorInstance is IDisposable disposable)
-            {
-                disposable.Dispose();
+                _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
+                exceptionMessages = ex.GetAllMessages();
+                exceptionStackTrace = ex.StackTrace ?? string.Empty;
+                state = ObservationState.Failed;
+                break;
             }
         }
 

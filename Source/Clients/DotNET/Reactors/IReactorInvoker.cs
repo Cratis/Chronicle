@@ -20,8 +20,8 @@ public interface IReactorInvoker
     /// Creates an instance of the reactor using the given service provider.
     /// </summary>
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
-    /// <returns>The created reactor instance.</returns>
-    object CreateInstance(IServiceProvider serviceProvider);
+    /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created reactor instance.</returns>
+    ActivatedArtifact CreateInstance(IServiceProvider serviceProvider);
 
     /// <summary>
     /// Invoke the Reactor.

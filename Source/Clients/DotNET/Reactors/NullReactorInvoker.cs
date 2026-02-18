@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -15,7 +16,8 @@ public class NullReactorInvoker : IReactorInvoker
     public IImmutableList<EventType> EventTypes => ImmutableList<EventType>.Empty;
 
     /// <inheritdoc/>
-    public object CreateInstance(IServiceProvider serviceProvider) => new();
+    public ActivatedArtifact CreateInstance(IServiceProvider serviceProvider) =>
+        new(new(), typeof(object), NullLoggerFactory.Instance);
 
     /// <inheritdoc/>
     public Task Invoke(object reactorInstance, object content, EventContext eventContext) => Task.CompletedTask;

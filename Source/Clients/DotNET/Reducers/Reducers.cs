@@ -34,6 +34,7 @@ public class Reducers : IReducers
     readonly IEventStore _eventStore;
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IServiceProvider _serviceProvider;
+    readonly IArtifactActivator _artifactActivator;
     readonly IReducerValidator _reducerValidator;
     readonly IEventTypes _eventTypes;
     readonly INamingPolicy _namingPolicy;
@@ -52,6 +53,7 @@ public class Reducers : IReducers
     /// <param name="eventStore"><see cref="IEventStore"/> the reducers belong to.</param>
     /// <param name="clientArtifacts"><see cref="IClientArtifactsProvider"/> for discovery.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
+    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating artifact instances.</param>
     /// <param name="reducerValidator"><see cref="IReducerValidator"/> for validating reducer types.</param>
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
@@ -63,6 +65,7 @@ public class Reducers : IReducers
         IEventStore eventStore,
         IClientArtifactsProvider clientArtifacts,
         IServiceProvider serviceProvider,
+        IArtifactActivator artifactActivator,
         IReducerValidator reducerValidator,
         IEventTypes eventTypes,
         INamingPolicy namingPolicy,
@@ -80,6 +83,7 @@ public class Reducers : IReducers
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _clientArtifacts = clientArtifacts;
         _serviceProvider = serviceProvider;
+        _artifactActivator = artifactActivator;
         _reducerValidator = reducerValidator;
         _eventTypes = eventTypes;
         _namingPolicy = namingPolicy;
@@ -280,6 +284,7 @@ public class Reducers : IReducers
             reducerType.GetEventSequenceId(),
             new ReducerInvoker(
                 _eventTypes,
+                _artifactActivator,
                 reducerType,
                 readModelType,
                 _namingPolicy.GetReadModelName(readModelType)),
