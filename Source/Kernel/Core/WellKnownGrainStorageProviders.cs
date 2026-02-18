@@ -117,4 +117,14 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for data protection keys.
     /// </summary>
     public const string DataProtectionKeys = "data-protection-keys";
+
+    /// <summary>
+    /// The name of the storage provider used for patch manager.
+    /// </summary>
+    public const string PatchManager = "patch-manager";
+
+    /// <summary>
+    /// The name of the storage provider used for system grain.
+    /// </summary>
+    public const string System = "system";
 }

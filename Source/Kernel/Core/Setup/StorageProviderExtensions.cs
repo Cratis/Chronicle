@@ -74,6 +74,8 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ReadModelReplayManager, CreateResilientStorageFor<Cratis.Chronicle.ReadModels.ReadModelReplayManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSeeding, CreateResilientStorageFor<Cratis.Chronicle.Seeding.EventSeedingGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.DataProtectionKeys, CreateResilientStorageFor<Cratis.Chronicle.Security.DataProtectionKeysStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.PatchManager, CreateResilientStorageFor<Cratis.Chronicle.Patching.PatchManagerStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.System, CreateResilientStorageFor<Cratis.Chronicle.Sys.SystemStorageProvider>);
         });
 
         return builder;

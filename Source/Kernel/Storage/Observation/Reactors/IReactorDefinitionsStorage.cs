@@ -43,4 +43,12 @@ public interface IReactorDefinitionsStorage
     /// <param name="definition">Definition to save.</param>
     /// <returns>Async task.</returns>
     Task Save(ReactorDefinition definition);
+
+    /// <summary>
+    /// Rename a reactor by its current identifier.
+    /// </summary>
+    /// <param name="currentId">The current <see cref="ReactorId"/>.</param>
+    /// <param name="newId">The new <see cref="ReactorId"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Rename(ReactorId currentId, ReactorId newId);
 }
