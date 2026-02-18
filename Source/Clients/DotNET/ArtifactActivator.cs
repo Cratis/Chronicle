@@ -21,7 +21,7 @@ public class ArtifactActivator(ILoggerFactory loggerFactory) : IArtifactActivato
         _logger.ActivatingArtifact(artifactType);
         try
         {
-            var instance = ActivatorUtilities.CreateInstance(serviceProvider, artifactType);
+            var instance = serviceProvider.GetService(artifactType) ?? ActivatorUtilities.CreateInstance(serviceProvider, artifactType);
             return new ActivatedArtifact(instance, artifactType, loggerFactory);
         }
         catch (Exception ex)
