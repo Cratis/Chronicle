@@ -11,14 +11,11 @@ public class a_reducer_invoker_for<TReducer> : Specification
     protected ReducerInvoker _invoker;
     protected IServiceProvider _serviceProvider;
     protected IEventTypes _eventTypes;
-    protected TReducer _reducer;
     protected EventType _eventType;
 
     void Establish()
     {
-        _reducer = new();
         _serviceProvider = Substitute.For<IServiceProvider>();
-        _serviceProvider.GetService(typeof(TReducer)).Returns(_reducer);
         _eventTypes = new EventTypesForSpecifications(GetEventTypes());
         _eventType = new("d22efe41-41c6-408e-b5d2-c0d54757cbf8", 1);
         _invoker = new ReducerInvoker(

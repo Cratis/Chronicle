@@ -12,12 +12,14 @@ public class when_handling_on_next : given.a_reactor_handler
     EventContext _eventContext;
     IDictionary<string, string> _causationProperties;
     SomeEvent _eventContent;
+    object _reactorInstance;
 
     void Establish()
     {
         _eventSequenceNumber = 42;
 
         _eventContent = new("Forty two");
+        _reactorInstance = new object();
 
         _eventContext = EventContext.Empty with
         {
@@ -30,7 +32,7 @@ public class when_handling_on_next : given.a_reactor_handler
             .Do(callInfo => _causationProperties = callInfo.Arg<IDictionary<string, string>>());
     }
 
-    async Task Because() => await handler.OnNext(_eventContext, _eventContent, _serviceProvider);
+    async Task Because() => await handler.OnNext(_eventContext, _eventContent, _reactorInstance);
 
     [Fact] void should_add_causation() => _causationManager.Received(1).Add(ReactorHandler.CausationType, Arg.Any<IDictionary<string, string>>());
     [Fact] void should_add_causation_with_observer_id() => _causationProperties[ReactorHandler.CausationReactorIdProperty].ShouldEqual(_reactorId.ToString());
@@ -38,7 +40,7 @@ public class when_handling_on_next : given.a_reactor_handler
     [Fact] void should_add_causation_with_event_type_generation() => _causationProperties[ReactorHandler.CausationEventTypeGenerationProperty].ShouldEqual(_eventContext.EventType.Generation.ToString());
     [Fact] void should_add_causation_with_event_sequence_id() => _causationProperties[ReactorHandler.CausationEventSequenceIdProperty].ShouldEqual(_eventSequenceId.ToString());
     [Fact] void should_add_causation_with_event_sequence_number() => _causationProperties[ReactorHandler.CausationEventSequenceNumberProperty].ShouldEqual(_eventContext.SequenceNumber.Value.ToString());
-    [Fact] void should_invoke_observer_invoker() => _reactorInvoker.Received(1).Invoke(_serviceProvider, _eventContent, _eventContext);
+    [Fact] void should_invoke_observer_invoker() => _reactorInvoker.Received(1).Invoke(_reactorInstance, _eventContent, _eventContext);
     [Fact] void should_set_current_identity() => _identityProvider.Received(1).SetCurrentIdentity(Arg.Is<Identity>(i => i.Subject == Identity.System.Subject && i.OnBehalfOf == _eventContext.CausedBy));
     [Fact] void should_clear_current_identity() => _identityProvider.Received(1).ClearCurrentIdentity();
 }
