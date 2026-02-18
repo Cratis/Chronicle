@@ -8,7 +8,6 @@ env:
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
   DOTNET_BUILD_CACHE: "dotnet-build-cache-${{ github.sha }}"
-  DOTNET_NUGET_CACHE: "dotnet-nuget-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
@@ -124,6 +123,7 @@ jobs:
             echo "No coverage statistics changes to commit"
           else
             git commit -m "Update coverage statistics [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
             git push
           fi
 
@@ -254,10 +254,13 @@ jobs:
             **/obj
           key: ${{ env.DOTNET_BUILD_CACHE }}
 
-  dotnet-pack:
+  dotnet-pack-and-publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet-build, workbench]
+    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    permissions:
+      # Required for NuGet trusted publishing using OIDC tokens
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -286,17 +289,19 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
+      - name: Restore NuGet packages
+        run: dotnet restore
+
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Create NuGet packages
         run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
-      - uses: actions/cache@v3
-        id: nuget-packages-output
-        with:
-          path: ${{ env.NUGET_OUTPUT }}
-          key: ${{ env.DOTNET_NUGET_CACHE }}
+      # Uses NuGet trusted publishing with OIDC authentication
+      # No API key needed - authentication is handled via OIDC token
+      - name: Push NuGet packages
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
@@ -354,42 +359,10 @@ jobs:
         run: |
           dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/arm64
 
-  publish-nuget-packages:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release, dotnet-pack]
-    permissions:
-      # Required for NuGet trusted publishing using OIDC tokens
-      id-token: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: nuget-packages-output
-        with:
-          path: ${{ env.NUGET_OUTPUT }}
-          key: ${{ env.DOTNET_NUGET_CACHE }}
-          fail-on-cache-miss: true
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      # Uses NuGet trusted publishing with OIDC authentication
-      # No API key needed - authentication is handled via OIDC token
-      - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [dotnet-arm64, dotnet-x64, workbench, release]
+    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -455,7 +428,7 @@ jobs:
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [workbench, release]
+    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -508,7 +481,7 @@ jobs:
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [dotnet-arm64-development, dotnet-x64-development, workbench, release]
+    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
