@@ -50,6 +50,4 @@ public class SystemStorage(IDatabase database) : ISystemStorage
             document,
             new ReplaceOptions { IsUpsert = true });
     }
-
-    sealed record VersionDocument(string Id, SemanticVersion Version);
 }
