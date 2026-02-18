@@ -255,7 +255,7 @@ jobs:
         run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
       - name: Create NuGet packages
-        run: dotnet pack -p:IsPackaging=true --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
       - uses: actions/cache@v3
         id: nuget-packages-output
