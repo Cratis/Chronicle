@@ -1,0 +1,55 @@
+<Solution>
+  <Folder Name="/Source/Clients/">
+    <Project Path="Source/Clients/Api/Api.csproj" />
+    <Project Path="Source/Clients/AspNetCore/AspNetCore.csproj" />
+    <Project Path="Source/Clients/AspNetCore.Specs/AspNetCore.Specs.csproj" />
+    <Project Path="Source/Clients/Connections/Connections.csproj" />
+    <Project Path="Source/Clients/DotNET/DotNET.csproj" />
+    <Project Path="Source/Clients/DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" />
+    <Project Path="Source/Clients/DotNET.CodeAnalysis.Specs/DotNET.CodeAnalysis.Specs.csproj" />
+    <Project Path="Source/Clients/DotNET.InProcess/DotNET.InProcess.csproj" />
+    <Project Path="Source/Clients/DotNET.InProcess.Specs/DotNET.InProcess.Specs.csproj" />
+    <Project Path="Source/Clients/DotNET.Specs/DotNET.Specs.csproj" />
+    <Project Path="Source/Clients/Testing/Testing.csproj" />
+    <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
+  </Folder>
+  <Folder Name="/Source/Kernel/">
+    <Project Path="Source/Kernel/Concepts/Concepts.csproj" />
+    <Project Path="Source/Kernel/Concepts.Specs/Concepts.Specs.csproj" />
+    <Project Path="Source/Kernel/Contracts/Contracts.csproj" />
+    <Project Path="Source/Kernel/Core/Core.csproj" />
+    <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
+    <Project Path="Source/Kernel/Server/Server.csproj" />
+    <Project Path="Source/Kernel/Storage/Storage.csproj" />
+    <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+    <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
+    <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
+  </Folder>
+  <Folder Name="/Source/Tools/">
+    <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+    <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
+    <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
+    <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
+  </Folder>
+  <Folder Name="/Source/Workbench/">
+    <Project Path="Source/Workbench/Embedded/Embedded.csproj" />
+  </Folder>
+  <Folder Name="/Source/">
+    <Project Path="Source/Infrastructure/Infrastructure.csproj" />
+    <Project Path="Source/Infrastructure.Specs/Infrastructure.Specs.csproj" />
+  </Folder>
+  <Folder Name="/Integration/">
+    <Project Path="Integration/Api/Api.csproj" />
+    <Project Path="Integration/DotNET.InProcess/DotNET.InProcess.csproj" />
+    <Project Path="Integration/MongoDB/MongoDB.csproj" />
+  </Folder>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+</Solution>
+
+
