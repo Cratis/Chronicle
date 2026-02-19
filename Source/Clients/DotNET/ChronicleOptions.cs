@@ -100,7 +100,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
-    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? DefaultClientArtifactsProvider.Create();
+    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
 
     /// <summary>
     /// Gets the <see cref="ICorrelationIdAccessor"/> to use.
