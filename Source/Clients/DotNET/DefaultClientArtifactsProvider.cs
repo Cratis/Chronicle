@@ -67,6 +67,12 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventSeeders { get; private set; } = [];
 
+    /// <summary>
+    /// Creates a new instance of the <see cref="DefaultClientArtifactsProvider"/> class with a default assembly provider that includes project and package referenced assemblies.
+    /// </summary>
+    /// <returns>The default <see cref="DefaultClientArtifactsProvider"/>.</returns>
+    public static DefaultClientArtifactsProvider Create() => new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+
     /// <inheritdoc/>
     public void Initialize()
     {
