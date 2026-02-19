@@ -4,7 +4,7 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents a file provider that serves static files.

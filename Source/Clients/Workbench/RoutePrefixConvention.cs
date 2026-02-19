@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Routing;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents an implementation of <see cref="IApplicationModelConvention"/> for giving route prefixes to API controllers.

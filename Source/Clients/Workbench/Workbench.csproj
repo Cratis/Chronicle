@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Chronicle.Workbench.Embedded</AssemblyName>
-        <RootNamespace>Cratis.Chronicle.Workbench.Embedded</RootNamespace>
+        <AssemblyName>Cratis.Chronicle.Workbench</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Workbench</RootNamespace>
         <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>
 
-        <FrontendSourceDir>$(MSBuildThisFileDirectory)../Web</FrontendSourceDir>
-        <FrontendBuildDir>$(MSBuildThisFileDirectory)../Web/wwwroot</FrontendBuildDir>
+        <FrontendSourceDir>$(MSBuildThisFileDirectory)../../Workbench</FrontendSourceDir>
+        <FrontendBuildDir>$(MSBuildThisFileDirectory)../../Workbench/wwwroot</FrontendBuildDir>
         <FrontendSourcePattern>["**/*.tsx", "**/*.ts"]</FrontendSourcePattern>
         <FrontendHashFile>$(MSBuildThisFileDirectory)/.frontend_hash</FrontendHashFile>
 
@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Clients/Api/Api.csproj" />
+        <ProjectReference Include="../Api/Api.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

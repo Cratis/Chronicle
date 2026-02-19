@@ -11,7 +11,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents the WebServer that is hosting the Chronicle Workbench.

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Defines the extension methods for configuring the workbench for the <see cref="IApplicationBuilder"/> type.

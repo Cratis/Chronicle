@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents a factory for creating an embedded <see cref="IServiceProvider"/>.

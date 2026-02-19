@@ -3,7 +3,7 @@
 
 using Cratis.Arc;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents the options for the workbench.

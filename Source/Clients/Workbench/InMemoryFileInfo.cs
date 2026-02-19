@@ -4,7 +4,7 @@
 using System.Text;
 using Microsoft.Extensions.FileProviders;
 
-namespace Cratis.Chronicle.Workbench.Embedded;
+namespace Cratis.Chronicle.Workbench;
 
 /// <summary>
 /// Represents an in-memory file.
