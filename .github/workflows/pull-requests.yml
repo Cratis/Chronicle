@@ -76,7 +76,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Get yarn cache directory path
@@ -102,11 +102,11 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Yarn install
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: yarn
 
       - name: Build JS/TS
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn build
@@ -160,7 +160,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup .Net
@@ -218,7 +218,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
