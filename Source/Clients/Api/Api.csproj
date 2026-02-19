@@ -42,7 +42,7 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Web/Api</CratisProxiesOutputPath>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
         <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
     </PropertyGroup>
