@@ -2,6 +2,7 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
 
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);NU5104</NoWarn>

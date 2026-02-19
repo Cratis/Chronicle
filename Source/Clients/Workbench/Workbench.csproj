@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Workbench</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Workbench</RootNamespace>
         <ResourceNamespace>$(RootNamespace).Files</ResourceNamespace>

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework Condition="'$(IsPackaging)' != 'true'">net10.0</TargetFramework>
+        <TargetFramework Condition="'$(IsPackaging)' == 'true'"></TargetFramework>
+        <TargetFrameworks Condition="'$(IsPackaging)' == 'true'">net8.0;net9.0;net10.0</TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
         <NoWarn>$(NoWarn);CS8618;PBN2008</NoWarn>
