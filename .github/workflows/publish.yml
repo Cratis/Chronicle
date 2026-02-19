@@ -290,7 +290,7 @@ jobs:
             ${{ env.DOTNET_VERSION }}
 
       - name: Restore NuGet packages
-        run: dotnet restore
+        run: dotnet restore -p:IsPackaging=true
 
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
