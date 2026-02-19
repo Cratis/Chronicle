@@ -8,11 +8,19 @@ namespace Cratis.Chronicle;
 /// </summary>
 public interface IArtifactActivator
 {
+
+    /// <summary>
+    /// Creates an instance of the specified artifact type using the root service provider.
+    /// </summary>
+    /// <param name="artifactType">The <see cref="Type"/> of the artifact to create.</param>
+    /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created instance.</returns>
+    ActivatedArtifact CreateInstance(Type artifactType);
+
     /// <summary>
     /// Creates an instance of the specified artifact type using the given service provider.
     /// </summary>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
+    /// <param name="scopedServiceProvider">The scoped <see cref="IServiceProvider"/> for resolving dependencies.</param>
     /// <param name="artifactType">The <see cref="Type"/> of the artifact to create.</param>
     /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created instance.</returns>
-    ActivatedArtifact CreateInstance(IServiceProvider serviceProvider, Type artifactType);
+    ActivatedArtifact CreateInstance(IServiceProvider scopedServiceProvider, Type artifactType);
 }

@@ -9,19 +9,23 @@ namespace Cratis.Chronicle;
 /// <summary>
 /// Represents an implementation of <see cref="IArtifactActivator"/>.
 /// </summary>
+/// <param name="rootServiceProvider">The root <see cref="IServiceProvider"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-[Singleton]
-public class ArtifactActivator(ILoggerFactory loggerFactory) : IArtifactActivator
+[IgnoreConvention]
+public class ArtifactActivator(IServiceProvider rootServiceProvider, ILoggerFactory loggerFactory) : IArtifactActivator
 {
     readonly ILogger _logger = loggerFactory.CreateLogger<ArtifactActivator>();
 
     /// <inheritdoc/>
-    public ActivatedArtifact CreateInstance(IServiceProvider serviceProvider, Type artifactType)
+    public ActivatedArtifact CreateInstance(Type artifactType) => CreateInstance(rootServiceProvider, artifactType);
+
+    /// <inheritdoc/>
+    public ActivatedArtifact CreateInstance(IServiceProvider scopedServiceProvider, Type artifactType)
     {
         _logger.ActivatingArtifact(artifactType);
         try
         {
-            var instance = ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, artifactType);
+            var instance = ActivatorUtilities.GetServiceOrCreateInstance(scopedServiceProvider, artifactType);
             return new ActivatedArtifact(instance, artifactType, loggerFactory);
         }
         catch (Exception ex)
