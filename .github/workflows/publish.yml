@@ -254,6 +254,12 @@ jobs:
             **/obj
           key: ${{ env.DOTNET_BUILD_CACHE }}
 
+      - uses: actions/cache@v3
+        id: dotnet-nuget-packages
+        with:
+          path: ~/.nuget/packages
+          key: ${{ env.DOTNET_BUILD_CACHE }}-nuget
+
   dotnet-pack-and-publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -280,6 +286,13 @@ jobs:
         with:
           path: ./Source/Workbench/Web/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
+
+      - uses: actions/cache@v3
+        id: dotnet-nuget-packages
+        with:
+          path: ~/.nuget/packages
+          key: ${{ env.DOTNET_BUILD_CACHE }}-nuget
+          fail-on-cache-miss: true
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
