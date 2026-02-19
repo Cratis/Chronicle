@@ -2,18 +2,19 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 128 days, 13:45:53 | 3 days, 22:09:24 | 308 days, 13:38:35 |
-| Time to close | 282 days, 1:01:35 | 124 days, 8:55:27 | 825 days, 8:34:59 |
+| Time to first response | 125 days, 12:17:55 | 2 days, 19:57:57 | 300 days, 17:44:52 |
+| Time to close | 283 days, 8:45:29 | 124 days, 8:55:27 | 826 days, 7:55:29 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 250 |
-| Number of items closed | 637 |
-| Total number of items created | 887 |
+| Number of items that remain open | 249 |
+| Number of items closed | 639 |
+| Total number of items created | 888 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Version 15.2.4 not published to NuGet Gallery | https://github.com/Cratis/Chronicle/issues/2660 | None | [CLE-ChristianLeicht](https://github.com/CLE-ChristianLeicht) | 0:11:36 | 0:11:41 | None |
 | Validate gRPC API surface for breaking changes | https://github.com/Cratis/Chronicle/issues/2651 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Make the Chronicle Artifacts registration story more consistent | https://github.com/Cratis/Chronicle/issues/2649 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
 | Add the ability to add events directly in the Event Sequence editor / page in Workbench | https://github.com/Cratis/Chronicle/issues/2644 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -329,5 +330,4 @@
 | Formalize ConnectedClient as its own grain and let Reactions and Reducers work with this | https://github.com/Cratis/Chronicle/issues/1265 | None | [einari](https://github.com/einari) | None | None | None |
 | Make replay work again (ProjectionReplayHandler, ReducerReplayHandler) | https://github.com/Cratis/Chronicle/issues/1264 | None | [einari](https://github.com/einari) | None | 60 days, 1:23:36 | None |
 | Fix the nextEventSequenceNumberForEventTypes on observer state - it is always holding -3 | https://github.com/Cratis/Chronicle/issues/1263 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:37 | None |
-| Fix last handled sequence number on observer state - it shows wrong number | https://github.com/Cratis/Chronicle/issues/1262 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:54 | None |
-| Investigate whether or not we need a notification when reducer definitions change | https://github.com/Cratis/Chronicle/issues/1261 | None | [einari](https://github.com/einar
+| Fix last handled sequence number on observer state - it shows wrong number | https://github.com/Cratis/Chronicle/issues/1262 | None | [einari](https://github.com/einari) | None | 144 da
