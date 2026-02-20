@@ -17,6 +17,7 @@ public class all_dependencies : Specification
     protected IEventStore _eventStore;
     protected IClientArtifactsProvider _clientArtifacts;
     protected IServiceProvider _serviceProvider;
+    protected IArtifactActivator _artifactActivator;
     protected IReducerValidator _reducerValidator;
     protected IEventTypes _eventTypes;
     protected IEventSerializer _eventSerializer;
@@ -40,6 +41,7 @@ public class all_dependencies : Specification
 
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _serviceProvider = Substitute.For<IServiceProvider>();
+        _artifactActivator = Substitute.For<IArtifactActivator>();
         _reducerValidator = Substitute.For<IReducerValidator>();
         _eventTypes = Substitute.For<IEventTypes>();
         _eventSerializer = Substitute.For<IEventSerializer>();
@@ -66,6 +68,7 @@ public class all_dependencies : Specification
             _eventStore,
             _clientArtifacts,
             _serviceProvider,
+            _artifactActivator,
             _reducerValidator,
             _eventTypes,
             _namingPolicy,

@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -15,21 +14,25 @@ namespace Cratis.Chronicle.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
+    readonly IArtifactActivator _artifactActivator;
     readonly Type _targetType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating reducer instances.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
     /// <param name="containerName">Container name of the read model for the reducer.</param>
     public ReducerInvoker(
         IEventTypes eventTypes,
+        IArtifactActivator artifactActivator,
         Type targetType,
         Type readModelType,
         ReadModelContainerName containerName)
     {
+        _artifactActivator = artifactActivator;
         _targetType = targetType;
         ReadModelType = readModelType;
         ContainerName = containerName;
@@ -53,8 +56,7 @@ public class ReducerInvoker : IReducerInvoker
     /// <inheritdoc/>
     public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
-        var actualReducer = serviceProvider.GetRequiredService(_targetType);
-
+        await using var activatedReducer = _artifactActivator.CreateInstance(serviceProvider, _targetType);
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
         var currentModelState = initialReadModelContent;
 
@@ -71,11 +73,11 @@ public class ReducerInvoker : IReducerInvoker
 
                     if (parameters.Length == 3)
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState, eventAndContext.Context])!;
+                        returnValue = method.Invoke(activatedReducer.Instance, [eventAndContext.Event, currentModelState, eventAndContext.Context])!;
                     }
                     else
                     {
-                        returnValue = method.Invoke(actualReducer, [eventAndContext.Event, currentModelState])!;
+                        returnValue = method.Invoke(activatedReducer.Instance, [eventAndContext.Event, currentModelState])!;
                     }
 
                     if (returnValue == null)

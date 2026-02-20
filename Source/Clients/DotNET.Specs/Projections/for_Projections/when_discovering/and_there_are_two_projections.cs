@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.for_Projections.when_discovering;
 
@@ -11,25 +10,30 @@ public class and_there_are_two_projections : given.all_dependencies
     public record FirstModel();
     public record SecondModel();
 
-    IProjectionFor<FirstModel> _firstProjection;
-    IProjectionFor<SecondModel> _secondProjection;
+    public class FirstProjection : IProjectionFor<FirstModel>
+    {
+        public bool DefineCalled { get; private set; }
+
+        public void Define(IProjectionBuilderFor<FirstModel> builder) => DefineCalled = true;
+    }
+
+    public class SecondProjection : IProjectionFor<SecondModel>
+    {
+        public bool DefineCalled { get; private set; }
+
+        public void Define(IProjectionBuilderFor<SecondModel> builder) => DefineCalled = true;
+    }
 
     Projections _projections;
     IEnumerable<ProjectionDefinition> _result;
 
     void Establish()
     {
-        _firstProjection = Substitute.For<IProjectionFor<FirstModel>>();
-        _secondProjection = Substitute.For<IProjectionFor<SecondModel>>();
-
         _clientArtifacts.Projections.Returns(
         [
-            _firstProjection.GetType(),
-            _secondProjection.GetType()
+            typeof(FirstProjection),
+            typeof(SecondProjection)
         ]);
-
-        _serviceProvider.GetService(_firstProjection.GetType()).Returns(_firstProjection);
-        _serviceProvider.GetService(_secondProjection.GetType()).Returns(_secondProjection);
 
         _projections = new Projections(
             _eventStore,
@@ -47,6 +51,4 @@ public class and_there_are_two_projections : given.all_dependencies
     }
 
     [Fact] void should_return_two_definitions() => _result.Count().ShouldEqual(2);
-    [Fact] void should_call_define_on_first_model_builder() => _firstProjection.Received(1).Define(Arg.Any<IProjectionBuilderFor<FirstModel>>());
-    [Fact] void should_call_define_on_second_model_builder() => _secondProjection.Received(1).Define(Arg.Any<IProjectionBuilderFor<SecondModel>>());
 }

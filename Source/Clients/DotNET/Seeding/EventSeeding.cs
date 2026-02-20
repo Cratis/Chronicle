@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="eventSerializer">The event serializer.</param>
 /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
 /// <param name="serviceProvider">The service provider.</param>
+/// <param name="artifactActivator">The artifact activator.</param>
 public class EventSeeding(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -28,7 +29,8 @@ public class EventSeeding(
     IEventTypes eventTypes,
     IEventSerializer eventSerializer,
     IClientArtifactsProvider clientArtifactsProvider,
-    IServiceProvider serviceProvider) : IEventSeeding
+    IServiceProvider serviceProvider,
+    IArtifactActivator artifactActivator) : IEventSeeding
 {
     readonly EventStoreName _eventStoreName = eventStoreName;
     readonly EventStoreNamespaceName _namespace = @namespace;
@@ -37,6 +39,7 @@ public class EventSeeding(
     readonly IEventSerializer _eventSerializer = eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider = clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider = serviceProvider;
+    readonly IArtifactActivator _artifactActivator = artifactActivator;
     readonly List<SeedingEntry> _entries = [];
 
     /// <inheritdoc/>
@@ -66,14 +69,13 @@ public class EventSeeding(
     }
 
     /// <inheritdoc/>
-    public Task Discover()
+    public async Task Discover()
     {
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            var seeder = _serviceProvider.GetService(seederType) as ICanSeedEvents;
-            seeder?.Seed(this);
+            await using var activatedSeeder = _artifactActivator.CreateInstance(_serviceProvider, seederType);
+            (activatedSeeder.Instance as ICanSeedEvents)?.Seed(this);
         }
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

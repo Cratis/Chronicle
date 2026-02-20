@@ -54,6 +54,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -69,6 +70,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        IArtifactActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
@@ -123,6 +125,7 @@ public class EventStore : IEventStore
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
+            artifactActivator,
             new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
             _eventSerializer,
             causationManager,
@@ -136,6 +139,7 @@ public class EventStore : IEventStore
             this,
             clientArtifactsProvider,
             serviceProvider,
+            artifactActivator,
             new ReducerValidator(),
             EventTypes,
             namingPolicy,
@@ -176,7 +180,8 @@ public class EventStore : IEventStore
             EventTypes,
             _eventSerializer,
             clientArtifactsProvider,
-            serviceProvider);
+            serviceProvider,
+            artifactActivator);
 
         if (autoDiscoverAndRegister)
         {

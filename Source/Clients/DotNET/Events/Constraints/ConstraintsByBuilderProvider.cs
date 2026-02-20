@@ -24,7 +24,7 @@ public class ConstraintsByBuilderProvider(
     public IImmutableList<IConstraintDefinition> Provide()
     {
         var constraints = clientArtifactsProvider.ConstraintTypes
-            .Select(type => (serviceProvider.GetRequiredService(type) as IConstraint)!);
+            .Select(type => (ActivatorUtilities.CreateInstance(serviceProvider, type) as IConstraint)!);
 
         return constraints
             .SelectMany(constraint =>
