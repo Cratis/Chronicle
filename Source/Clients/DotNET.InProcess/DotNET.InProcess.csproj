@@ -18,7 +18,9 @@
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../Connections/Connections.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
 
         <!-- Kernel assemblies as runtime-only -->
         <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
