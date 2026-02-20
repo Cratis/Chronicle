@@ -11,7 +11,7 @@ public class an_reactor_invoker_for<TReactor> : Specification
     protected IServiceProvider _serviceProvider;
     protected IEventTypes _eventTypes;
     protected IReactorMiddlewares _middlewares;
-    protected IArtifactActivator _artifactActivator;
+    protected IClientArtifactsActivator _artifactActivator;
     protected ReactorInvoker _invoker;
 
     void Establish()
@@ -19,7 +19,7 @@ public class an_reactor_invoker_for<TReactor> : Specification
         _serviceProvider = Substitute.For<IServiceProvider>();
         _eventTypes = new EventTypesForSpecifications(GetEventTypes());
         _middlewares = Substitute.For<IReactorMiddlewares>();
-        _artifactActivator = Substitute.For<IArtifactActivator>();
+        _artifactActivator = Substitute.For<IClientArtifactsActivator>();
 
         _invoker = new ReactorInvoker(
             _eventTypes,

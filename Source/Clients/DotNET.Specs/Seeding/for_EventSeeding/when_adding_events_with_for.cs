@@ -30,7 +30,7 @@ public class when_adding_events_with_for : Specification
             eventSerializer,
             clientArtifactsProvider,
             serviceProvider,
-            Substitute.For<IArtifactActivator>());
+            Substitute.For<IClientArtifactsActivator>());
 
         _event_source_id = "test-source-id";
         _first_event = new TestEvent("first");

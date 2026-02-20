@@ -11,15 +11,15 @@ public class a_reducer_invoker_for<TReducer> : Specification
 {
     protected ReducerInvoker _invoker;
     protected IServiceProvider _serviceProvider;
-    protected IArtifactActivator _artifactActivator;
+    protected IClientArtifactsActivator _artifactActivator;
     protected IEventTypes _eventTypes;
     protected EventType _eventType;
 
     void Establish()
     {
         _serviceProvider = Substitute.For<IServiceProvider>();
-        _artifactActivator = Substitute.For<IArtifactActivator>();
-        _artifactActivator.CreateInstance(Arg.Any<IServiceProvider>(), typeof(TReducer))
+        _artifactActivator = Substitute.For<IClientArtifactsActivator>();
+        _artifactActivator.Activate(Arg.Any<IServiceProvider>(), typeof(TReducer))
             .Returns(callInfo => new ActivatedArtifact(
                 new TReducer(),
                 typeof(TReducer),

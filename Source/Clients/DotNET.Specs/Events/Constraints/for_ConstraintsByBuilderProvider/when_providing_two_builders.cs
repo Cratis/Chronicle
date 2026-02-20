@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Events.Constraints.for_ConstraintsByBuilderProvider;
 
@@ -21,8 +22,10 @@ public class when_providing_two_builders : Specification
         _clientArtifactsProvider.ConstraintTypes.Returns([typeof(FirstTestConstraint), typeof(SecondTestConstraint)]);
         _serviceProvider = Substitute.For<IServiceProvider>();
         _eventTypes = Substitute.For<IEventTypes>();
+        var artifactActivator = new ClientArtifactActivator(_serviceProvider, new NullLoggerFactory());
+        var logger = new NullLogger<ConstraintsByBuilderProvider>();
 
-        _provider = new ConstraintsByBuilderProvider(_clientArtifactsProvider, _eventTypes, new DefaultNamingPolicy(), _serviceProvider);
+        _provider = new ConstraintsByBuilderProvider(_clientArtifactsProvider, _eventTypes, new DefaultNamingPolicy(), artifactActivator, logger);
     }
 
     void Because() => _result = _provider.Provide();
