@@ -2,7 +2,11 @@
     <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <!-- Override global multi-targeting for Kernel projects (except Contracts which needs to multi-target) -->
+        <TargetFramework Condition="'$(MSBuildProjectName)' != 'Contracts'">net10.0</TargetFramework>
+        <TargetFrameworks Condition="'$(MSBuildProjectName)' != 'Contracts'"></TargetFrameworks>
+        <!-- Kernel projects should not be packaged -->
+        <IsPackable>false</IsPackable>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);NU5104</NoWarn>

@@ -254,19 +254,10 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-      - name: Restore
-        run: dotnet restore -p:IsPackaging=true
-
-      - name: Build Client packages
+      - name: Build and Create NuGet packages
         run: |
           for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
-            dotnet build "$project" --configuration Release -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
-          done
-
-      - name: Create NuGet packages
-        run: |
-          for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
-            dotnet pack "$project" --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }}
+            dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
           done
 
       - name: Push NuGet packages
