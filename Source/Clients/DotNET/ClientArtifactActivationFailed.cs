@@ -8,5 +8,5 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <param name="artifactType">The <see cref="Type"/> of the artifact that failed to activate.</param>
 /// <param name="innerException">Optional inner exception.</param>
-public class ArtifactActivationFailed(Type artifactType, Exception? innerException = null)
+public class ClientArtifactActivationFailed(Type artifactType, Exception? innerException = null)
     : Exception($"Failed to activate artifact of type '{artifactType.FullName}'.", innerException);
