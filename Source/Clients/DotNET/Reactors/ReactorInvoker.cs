@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -15,7 +16,7 @@ public class ReactorInvoker : IReactorInvoker
 {
     readonly Dictionary<Type, MethodInfo> _methodsByEventType;
     readonly IReactorMiddlewares _middlewares;
-    readonly IArtifactActivator _artifactActivator;
+    readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
     readonly ILogger<ReactorInvoker> _logger;
 
@@ -24,13 +25,13 @@ public class ReactorInvoker : IReactorInvoker
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
-    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating reactor instances.</param>
+    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating reactor instances.</param>
     /// <param name="targetType">Type of Reactor.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public ReactorInvoker(
         IEventTypes eventTypes,
         IReactorMiddlewares middlewares,
-        IArtifactActivator artifactActivator,
+        IClientArtifactsActivator artifactActivator,
         Type targetType,
         ILogger<ReactorInvoker> logger)
     {
@@ -50,8 +51,8 @@ public class ReactorInvoker : IReactorInvoker
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
-    public ActivatedArtifact CreateInstance(IServiceProvider serviceProvider) =>
-        _artifactActivator.CreateInstance(serviceProvider, _targetType);
+    public Catch<ActivatedArtifact> CreateInstance(IServiceProvider serviceProvider) =>
+        _artifactActivator.Activate(serviceProvider, _targetType);
 
     /// <inheritdoc/>
     public async Task Invoke(object reactorInstance, object content, EventContext eventContext)

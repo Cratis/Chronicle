@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -42,7 +43,7 @@ public interface IReactorHandler
     /// </summary>
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
     /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created reactor instance.</returns>
-    ActivatedArtifact CreateReactorInstance(IServiceProvider serviceProvider);
+    Catch<ActivatedArtifact> CreateReactorInstance(IServiceProvider serviceProvider);
 
     /// <summary>
     /// Handle next event.

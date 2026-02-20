@@ -30,7 +30,7 @@ public class Reactors : IReactors
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider;
-    readonly IArtifactActivator _artifactActivator;
+    readonly IClientArtifactsActivator _artifactActivator;
     readonly IReactorMiddlewares _middlewares;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
@@ -49,7 +49,7 @@ public class Reactors : IReactors
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
-    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating artifact instances.</param>
+    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
@@ -61,7 +61,7 @@ public class Reactors : IReactors
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifactsProvider,
         IServiceProvider serviceProvider,
-        IArtifactActivator artifactActivator,
+        IClientArtifactsActivator artifactActivator,
         IReactorMiddlewares middlewares,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
@@ -283,7 +283,26 @@ public class Reactors : IReactors
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        await using var activatedReactor = handler.CreateReactorInstance(serviceProviderScope.ServiceProvider);
+        var activatedReactorResult = handler.CreateReactorInstance(serviceProviderScope.ServiceProvider);
+        if (activatedReactorResult.TryGetException(out var exception))
+        {
+            exceptionMessages = exception.GetAllMessages();
+            exceptionStackTrace = exception.StackTrace ?? string.Empty;
+            state = ObservationState.Failed;
+
+            var failedResult = new ReactorResult
+            {
+                Partition = events.Partition,
+                State = state,
+                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
+                ExceptionMessages = exceptionMessages.ToList(),
+                ExceptionStackTrace = exceptionStackTrace
+            };
+            messages.OnNext(new(new(failedResult)));
+            return;
+        }
+
+        await using var activatedReactor = activatedReactorResult.AsT0;
         foreach (var @event in events.Events)
         {
             _logger.EventReceived(@event.Context.EventType.Id, handler.Id);

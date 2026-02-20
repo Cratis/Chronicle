@@ -7,6 +7,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -80,7 +81,7 @@ public class ReactorHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public ActivatedArtifact CreateReactorInstance(IServiceProvider serviceProvider) =>
+    public Catch<ActivatedArtifact> CreateReactorInstance(IServiceProvider serviceProvider) =>
         reactorInvoker.CreateInstance(serviceProvider);
 
     /// <inheritdoc/>

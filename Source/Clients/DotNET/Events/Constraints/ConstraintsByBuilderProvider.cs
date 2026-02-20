@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -12,12 +13,14 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for providing client artifacts.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event types.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-/// <param name="artifactActivator">The <see cref="IArtifactActivator"/> for activating artifacts.</param>
+/// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/> for activating artifacts.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ConstraintsByBuilderProvider(
     IClientArtifactsProvider clientArtifactsProvider,
     IEventTypes eventTypes,
     INamingPolicy namingPolicy,
-    IArtifactActivator artifactActivator) : ICanProvideConstraints
+    IClientArtifactsActivator artifactActivator,
+    ILogger<ConstraintsByBuilderProvider> logger) : ICanProvideConstraints
 {
     readonly object _sync = new();
     IImmutableList<IConstraintDefinition>? _cachedDefinitions;
@@ -41,22 +44,17 @@ public class ConstraintsByBuilderProvider(
 
             foreach (var constraintType in clientArtifactsProvider.ConstraintTypes)
             {
-                var activatedArtifact = artifactActivator.CreateInstance(constraintType);
-                try
+                var activatedArtifactResult = artifactActivator.ActivateNonDisposable<IConstraint>(constraintType);
+                if (activatedArtifactResult.TryGetException(out var exception))
                 {
-                    if (activatedArtifact.Instance is not IConstraint constraint)
-                    {
-                        throw new InvalidOperationException($"Type '{constraintType.FullName}' does not implement IConstraint");
-                    }
+                    logger.FailedToActivateConstraint(constraintType, exception);
+                    continue;
+                }
 
-                    var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
-                    constraint.Define(builder);
-                    definitions.AddRange(builder.Build());
-                }
-                finally
-                {
-                    activatedArtifact.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                }
+                var constraint = activatedArtifactResult.AsT0;
+                var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
+                constraint.Define(builder);
+                definitions.AddRange(builder.Build());
             }
 
             _cachedDefinitions = definitions.ToImmutable();

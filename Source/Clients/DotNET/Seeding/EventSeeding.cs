@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="clientArtifactsProvider">The client artifacts provider.</param>
 /// <param name="serviceProvider">The service provider.</param>
 /// <param name="artifactActivator">The artifact activator.</param>
+/// <param name="logger">The logger.</param>
 public class EventSeeding(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -30,7 +32,8 @@ public class EventSeeding(
     IEventSerializer eventSerializer,
     IClientArtifactsProvider clientArtifactsProvider,
     IServiceProvider serviceProvider,
-    IArtifactActivator artifactActivator) : IEventSeeding
+    IClientArtifactsActivator artifactActivator,
+    ILogger<EventSeeding> logger) : IEventSeeding
 {
     readonly EventStoreName _eventStoreName = eventStoreName;
     readonly EventStoreNamespaceName _namespace = @namespace;
@@ -39,7 +42,7 @@ public class EventSeeding(
     readonly IEventSerializer _eventSerializer = eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider = clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider = serviceProvider;
-    readonly IArtifactActivator _artifactActivator = artifactActivator;
+    readonly IClientArtifactsActivator _artifactActivator = artifactActivator;
     readonly List<SeedingEntry> _entries = [];
 
     /// <inheritdoc/>
@@ -73,8 +76,15 @@ public class EventSeeding(
     {
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
-            await using var activatedSeeder = _artifactActivator.CreateInstance(_serviceProvider, seederType);
-            (activatedSeeder.Instance as ICanSeedEvents)?.Seed(this);
+            var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
+            if (activatedSeederResult.TryGetException(out var exception))
+            {
+                logger.FailedToActivateSeeder(seederType, exception);
+                continue;
+            }
+
+            await using var activatedSeeder = activatedSeederResult.AsT0;
+            activatedSeeder.Instance.Seed(this);
         }
     }
 

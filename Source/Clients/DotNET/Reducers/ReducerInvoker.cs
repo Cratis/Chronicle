@@ -14,20 +14,20 @@ namespace Cratis.Chronicle.Reducers;
 public class ReducerInvoker : IReducerInvoker
 {
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
-    readonly IArtifactActivator _artifactActivator;
+    readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReducerInvoker"/> class.
     /// </summary>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
-    /// <param name="artifactActivator"><see cref="IArtifactActivator"/> for creating reducer instances.</param>
+    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating reducer instances.</param>
     /// <param name="targetType">Type of reducer.</param>
     /// <param name="readModelType">Type of read model for the reducer.</param>
     /// <param name="containerName">Container name of the read model for the reducer.</param>
     public ReducerInvoker(
         IEventTypes eventTypes,
-        IArtifactActivator artifactActivator,
+        IClientArtifactsActivator artifactActivator,
         Type targetType,
         Type readModelType,
         ReadModelContainerName containerName)
@@ -56,7 +56,17 @@ public class ReducerInvoker : IReducerInvoker
     /// <inheritdoc/>
     public async Task<ReduceResult> Invoke(IServiceProvider serviceProvider, IEnumerable<EventAndContext> eventsAndContexts, object? initialReadModelContent)
     {
-        await using var activatedReducer = _artifactActivator.CreateInstance(serviceProvider, _targetType);
+        var activatedReducerResult = _artifactActivator.Activate(serviceProvider, _targetType);
+        if (activatedReducerResult.TryGetException(out var exception))
+        {
+            return new ReduceResult(
+                initialReadModelContent,
+                EventSequenceNumber.Unavailable,
+                exception.GetAllMessages(),
+                exception.StackTrace ?? string.Empty);
+        }
+
+        await using var activatedReducer = activatedReducerResult.AsT0;
         EventAndContext? lastSuccessfulObservedEventAndContext = default;
         var currentModelState = initialReadModelContent;
 

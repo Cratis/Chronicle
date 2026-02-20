@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -21,7 +22,7 @@ public interface IReactorInvoker
     /// </summary>
     /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
     /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created reactor instance.</returns>
-    ActivatedArtifact CreateInstance(IServiceProvider serviceProvider);
+    Catch<ActivatedArtifact> CreateInstance(IServiceProvider serviceProvider);
 
     /// <summary>
     /// Invoke the Reactor.
