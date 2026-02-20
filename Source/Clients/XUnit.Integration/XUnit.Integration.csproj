@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.XUnit.Integration</AssemblyName>
         <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
         <IsTestProject>false</IsTestProject>
