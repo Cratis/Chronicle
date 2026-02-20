@@ -254,6 +254,9 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
+      - name: Restore
+        run: dotnet restore -p:IsPackaging=true
+
       - name: Build Client packages
         run: |
           for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
