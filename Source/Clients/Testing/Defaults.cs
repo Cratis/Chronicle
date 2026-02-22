@@ -46,7 +46,7 @@ public class Defaults
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var serviceProvider = new DefaultServiceProvider();
-        var artifactActivator = new ClientArtifactActivator(serviceProvider, new NullLoggerFactory());
+        var artifactActivator = new ClientArtifactsActivator(serviceProvider, new NullLoggerFactory());
         EventSerializer = new EventSerializer(
             ClientArtifactsProvider,
             artifactActivator,

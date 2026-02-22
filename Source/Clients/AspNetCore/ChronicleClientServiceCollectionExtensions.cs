@@ -34,11 +34,6 @@ public static class ChronicleClientServiceCollectionExtensions
     public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        services.AddSingleton<IClientArtifactsActivator>(sp =>
-        {
-            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-            return new ClientArtifactActivator(sp, loggerFactory);
-        });
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;

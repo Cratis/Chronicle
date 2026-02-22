@@ -203,7 +203,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
-        var artifactActivator = new ClientArtifactActivator(Options.ServiceProvider, Options.LoggerFactory);
+        var artifactActivator = new ClientArtifactsActivator(Options.ServiceProvider, Options.LoggerFactory);
 
         InitializeJsonSerializationOptions();
 

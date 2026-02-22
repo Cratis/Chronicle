@@ -22,7 +22,7 @@ public class when_providing_two_builders : Specification
         _clientArtifactsProvider.ConstraintTypes.Returns([typeof(FirstTestConstraint), typeof(SecondTestConstraint)]);
         _serviceProvider = Substitute.For<IServiceProvider>();
         _eventTypes = Substitute.For<IEventTypes>();
-        var artifactActivator = new ClientArtifactActivator(_serviceProvider, new NullLoggerFactory());
+        var artifactActivator = new ClientArtifactsActivator(_serviceProvider, new NullLoggerFactory());
         var logger = new NullLogger<ConstraintsByBuilderProvider>();
 
         _provider = new ConstraintsByBuilderProvider(_clientArtifactsProvider, _eventTypes, new DefaultNamingPolicy(), artifactActivator, logger);
