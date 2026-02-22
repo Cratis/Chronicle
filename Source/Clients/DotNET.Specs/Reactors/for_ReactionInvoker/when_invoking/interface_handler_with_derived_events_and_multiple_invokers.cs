@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
@@ -29,14 +28,14 @@ public class interface_handler_with_derived_events_and_multiple_invokers : Speci
             eventTypes,
             _middlewares,
             typeof(TrackingReactor),
-            new ActivatedArtifact(_firstReactor, typeof(TrackingReactor), NullLoggerFactory.Instance),
+            new ActivatedArtifact(_firstReactor, typeof(TrackingReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>());
 
         _secondInvoker = new ReactorInvoker(
             eventTypes,
             _middlewares,
             typeof(TrackingReactor),
-            new ActivatedArtifact(_secondReactor, typeof(TrackingReactor), NullLoggerFactory.Instance),
+            new ActivatedArtifact(_secondReactor, typeof(TrackingReactor), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>());
     }
 
@@ -53,7 +52,7 @@ public class interface_handler_with_derived_events_and_multiple_invokers : Speci
     [Fact] void should_call_before_invoke_for_each_event() => _middlewares.Received(2).BeforeInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
     [Fact] void should_call_after_invoke_for_each_event() => _middlewares.Received(2).AfterInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
 
-    class TrackingReactor
+    class TrackingReactor : IReactor
     {
         readonly List<Type> _handledEventTypes = [];
 

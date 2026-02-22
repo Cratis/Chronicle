@@ -18,6 +18,7 @@ public class all_dependencies : Specification
     protected IClientArtifactsProvider _clientArtifactsProvider;
     protected IServiceProvider _serviceProvider;
     protected IClientArtifactsActivator _artifactActivator;
+    protected IActivateReactorMiddlewares _middlewaresActivator;
     protected IReactorMiddlewares _middlewares;
     protected IEventSerializer _eventSerializer;
     protected ICausationManager _causationManager;
@@ -41,7 +42,9 @@ public class all_dependencies : Specification
         _clientArtifactsProvider = Substitute.For<IClientArtifactsProvider>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _artifactActivator = Substitute.For<IClientArtifactsActivator>();
+        _middlewaresActivator = Substitute.For<IActivateReactorMiddlewares>();
         _middlewares = Substitute.For<IReactorMiddlewares>();
+        _middlewaresActivator.Activate(Arg.Any<IServiceProvider>()).Returns(_middlewares);
         _eventSerializer = Substitute.For<IEventSerializer>();
         _causationManager = Substitute.For<ICausationManager>();
         _logger = Substitute.For<ILogger<Reactors>>();
@@ -71,7 +74,7 @@ public class all_dependencies : Specification
             _clientArtifactsProvider,
             _serviceProvider,
             _artifactActivator,
-            _middlewares,
+            _middlewaresActivator,
             _eventSerializer,
             _causationManager,
             _identityProvider,
