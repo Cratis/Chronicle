@@ -126,7 +126,7 @@ public class EventStore : IEventStore
             clientArtifactsProvider,
             serviceProvider,
             artifactActivator,
-            new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
+            new ReactorMiddlewaresActivator(clientArtifactsProvider, artifactActivator, loggerFactory.CreateLogger<ReactorMiddlewaresActivator>()),
             _eventSerializer,
             causationManager,
             identityProvider,

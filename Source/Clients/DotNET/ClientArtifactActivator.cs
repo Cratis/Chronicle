@@ -16,7 +16,8 @@ namespace Cratis.Chronicle;
 public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILoggerFactory loggerFactory)
     : IClientArtifactsActivator
 {
-    readonly ILogger _logger = loggerFactory.CreateLogger<ClientArtifactActivator>();
+    readonly ILogger<ClientArtifactActivator> _logger = loggerFactory.CreateLogger<ClientArtifactActivator>();
+    readonly ILogger<ActivatedArtifact> _activatedArtifactLogger = loggerFactory.CreateLogger<ActivatedArtifact>();
 
     /// <inheritdoc/>
     public Catch<ActivatedArtifact> Activate(Type artifactType) => Activate(rootServiceProvider, artifactType);
@@ -26,7 +27,7 @@ public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILogg
         ActivateWithLogging<ActivatedArtifact>(artifactType, () =>
         {
             var instance = ActivatorUtilities.GetServiceOrCreateInstance(scopedServiceProvider, artifactType);
-            return new ActivatedArtifact(instance, artifactType, loggerFactory);
+            return new ActivatedArtifact(instance, artifactType, _activatedArtifactLogger);
         });
 
     /// <inheritdoc/>
@@ -38,11 +39,15 @@ public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILogg
         where T : class =>
         ActivateWithLogging<ActivatedArtifact<T>>(artifactType, () =>
         {
-            if (ActivatorUtilities.GetServiceOrCreateInstance(scopedServiceProvider, artifactType) is T instance)
+            var instance = ActivatorUtilities.GetServiceOrCreateInstance(scopedServiceProvider, artifactType);
+            if (instance is T typedInstance)
             {
-                return new ActivatedArtifact<T>(instance, loggerFactory);
+                return new ActivatedArtifact<T>(typedInstance, _activatedArtifactLogger);
             }
 
+            // If the instance cannot be cast to T, we should dispose it if it's disposable to avoid resource leaks.
+            var activatedArtifact = new ActivatedArtifact(instance, artifactType, _activatedArtifactLogger);
+            activatedArtifact.DisposeAsync().AsTask().GetAwaiter().GetResult();
             var message = $"Failed to activate artifact of type {artifactType.FullName} as {typeof(T).FullName}.";
             return new ClientArtifactActivationFailed(artifactType, new InvalidCastException(message));
         });
@@ -51,10 +56,11 @@ public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILogg
     public Catch<object> ActivateNonDisposable(Type artifactType) =>
         ActivateWithLogging<object>(artifactType, () =>
         {
-            var instance = ActivatorUtilities.GetServiceOrCreateInstance(rootServiceProvider, artifactType);
-            return instance is IDisposable or IAsyncDisposable
-                ? new ClientArtifactIsDisposable(artifactType)
-                : instance;
+            if (typeof(IDisposable).IsAssignableFrom(artifactType) || typeof(IAsyncDisposable).IsAssignableFrom(artifactType))
+            {
+                return new ClientArtifactIsDisposable(artifactType);
+            }
+            return ActivatorUtilities.GetServiceOrCreateInstance(rootServiceProvider, artifactType);
         });
 
     /// <inheritdoc/>
@@ -62,11 +68,13 @@ public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILogg
         where T : class =>
         ActivateWithLogging<T>(artifactType, () =>
         {
+            if (typeof(IDisposable).IsAssignableFrom(artifactType) || typeof(IAsyncDisposable).IsAssignableFrom(artifactType))
+            {
+                return new ClientArtifactIsDisposable(artifactType);
+            }
             if (ActivatorUtilities.GetServiceOrCreateInstance(rootServiceProvider, artifactType) is T instance)
             {
-                return instance is IDisposable or IAsyncDisposable
-                    ? new ClientArtifactIsDisposable(artifactType)
-                    : instance;
+                return instance;
             }
 
             var message = $"Failed to activate artifact of type {artifactType.FullName} as {typeof(T).FullName}.";

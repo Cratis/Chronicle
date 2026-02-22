@@ -39,20 +39,13 @@ public interface IReactorHandler
     CancellationToken CancellationToken { get; }
 
     /// <summary>
-    /// Creates an instance of the reactor using the given service provider.
-    /// </summary>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for resolving dependencies.</param>
-    /// <returns>An <see cref="ActivatedArtifact"/> wrapping the created reactor instance.</returns>
-    Catch<ActivatedArtifact> CreateReactorInstance(IServiceProvider serviceProvider);
-
-    /// <summary>
     /// Handle next event.
     /// </summary>
     /// <param name="context"><see cref="EventContext"/> for the event.</param>
     /// <param name="content">Actual content.</param>
-    /// <param name="reactorInstance">The reactor instance to invoke on.</param>
+    /// <param name="reactorInvoker">The <see cref="IReactorInvoker"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnNext(EventContext context, object content, object reactorInstance);
+    Task<Catch> OnNext(EventContext context, object content, IReactorInvoker reactorInvoker);
 
     /// <summary>
     /// Get the current state of the Reactor.

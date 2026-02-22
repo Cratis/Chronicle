@@ -10,9 +10,9 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <typeparam name="T">The type of the activated artifact.</typeparam>
 /// <param name="instance">The activated artifact instance.</param>
-/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for creating loggers.</param>
-public class ActivatedArtifact<T>(T instance, ILoggerFactory loggerFactory)
-    : ActivatedArtifact(instance, typeof(T), loggerFactory)
+/// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+public class ActivatedArtifact<T>(T instance, ILogger<ActivatedArtifact> logger)
+    : ActivatedArtifact(instance, typeof(T), logger)
     where T : class
 {
     /// <summary>

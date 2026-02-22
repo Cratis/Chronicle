@@ -10,11 +10,9 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <param name="instance">The activated artifact instance.</param>
 /// <param name="artifactType">The <see cref="Type"/> of the artifact.</param>
-/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for creating loggers.</param>
-public class ActivatedArtifact(object instance, Type artifactType, ILoggerFactory loggerFactory) : IAsyncDisposable
+/// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+public class ActivatedArtifact(object instance, Type artifactType, ILogger<ActivatedArtifact> logger) : IAsyncDisposable
 {
-    readonly ILogger _logger = loggerFactory.CreateLogger(artifactType);
-
     /// <summary>
     /// Gets the activated artifact instance.
     /// </summary>
@@ -23,7 +21,7 @@ public class ActivatedArtifact(object instance, Type artifactType, ILoggerFactor
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        _logger.DisposingArtifact(artifactType);
+        logger.DisposingArtifact(artifactType);
         try
         {
             if (Instance is IAsyncDisposable asyncDisposable)
@@ -37,7 +35,7 @@ public class ActivatedArtifact(object instance, Type artifactType, ILoggerFactor
         }
         catch (Exception ex)
         {
-            _logger.FailedDisposingArtifact(artifactType, ex);
+            logger.FailedDisposingArtifact(artifactType, ex);
         }
     }
 }

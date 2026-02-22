@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -12,19 +11,40 @@ namespace Cratis.Chronicle.Reactors;
 /// <remarks>
 /// Initializes a new instance of the <see cref="ReactorMiddlewares"/> class.
 /// </remarks>
-/// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> for resolving instances.</param>
-[Singleton]
-public class ReactorMiddlewares(
-    IClientArtifactsProvider clientArtifacts,
-    IServiceProvider serviceProvider) : IReactorMiddlewares
+/// <param name="activatedMiddlewares">The <see cref="ActivatedArtifact{Middleware}"/> of <see cref="IReactorMiddleware"/>.</param>
+[IgnoreConvention]
+public class ReactorMiddlewares(ActivatedArtifact<IReactorMiddleware>[] activatedMiddlewares) : IReactorMiddlewares
 {
-    readonly IEnumerable<IReactorMiddleware> _all = clientArtifacts.ReactorMiddlewares
-        .Select(_ => (ActivatorUtilities.CreateInstance(serviceProvider, _) as IReactorMiddleware)!).ToArray();
+    /// <inheritdoc/>
+    public Task BeforeInvoke(EventContext eventContext, object @event)
+    {
+        if (activatedMiddlewares.Length == 0)
+        {
+            return Task.CompletedTask;
+        }
+        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.BeforeInvoke(eventContext, @event)));
+    }
 
     /// <inheritdoc/>
-    public Task BeforeInvoke(EventContext eventContext, object @event) => Task.WhenAll(_all.Select(_ => _.BeforeInvoke(eventContext, @event)));
+    public Task AfterInvoke(EventContext eventContext, object @event)
+    {
+        if (activatedMiddlewares.Length == 0)
+        {
+            return Task.CompletedTask;
+        }
+        return Task.WhenAll(activatedMiddlewares.Select(_ => _.Instance.AfterInvoke(eventContext, @event)));
+    }
 
     /// <inheritdoc/>
-    public Task AfterInvoke(EventContext eventContext, object @event) => Task.WhenAll(_all.Select(_ => _.AfterInvoke(eventContext, @event)));
+    public async ValueTask DisposeAsync()
+    {
+        if (activatedMiddlewares.Length == 0)
+        {
+            return;
+        }
+        foreach (var middleware in activatedMiddlewares)
+        {
+            await middleware.DisposeAsync();
+        }
+    }
 }

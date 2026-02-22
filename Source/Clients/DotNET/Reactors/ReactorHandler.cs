@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="reactorId">Unique identifier.</param>
 /// <param name="reactorType">The type of the reactor.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the Reactor is for.</param>
-/// <param name="reactorInvoker">The actual invoker.</param>
+/// <param name="eventTypes">The <see cref="IEnumerable{T}"/> of <see cref="EventType"/>.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
 public class ReactorHandler(
@@ -29,7 +29,7 @@ public class ReactorHandler(
     ReactorId reactorId,
     Type reactorType,
     EventSequenceId eventSequenceId,
-    IReactorInvoker reactorInvoker,
+    IEnumerable<EventType> eventTypes,
     ICausationManager causationManager,
     IIdentityProvider identityProvider) : IDisposable, IReactorHandler
 {
@@ -75,32 +75,35 @@ public class ReactorHandler(
     public EventSequenceId EventSequenceId { get; } = eventSequenceId;
 
     /// <inheritdoc/>
-    public IEnumerable<EventType> EventTypes => reactorInvoker.EventTypes;
+    public IEnumerable<EventType> EventTypes => eventTypes;
 
     /// <inheritdoc/>
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public Catch<ActivatedArtifact> CreateReactorInstance(IServiceProvider serviceProvider) =>
-        reactorInvoker.CreateInstance(serviceProvider);
-
-    /// <inheritdoc/>
-    public async Task OnNext(EventContext context, object content, object reactorInstance)
+    public async Task<Catch> OnNext(EventContext context, object content, IReactorInvoker reactorInvoker)
     {
-        identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
-
-        causationManager.Add(CausationType, new Dictionary<string, string>
+        try
         {
-            { CausationReactorIdProperty, Id.ToString() },
-            { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
-            { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
-            { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
-            { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
-        });
+            identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+            causationManager.Add(CausationType, new Dictionary<string, string>
+            {
+                { CausationReactorIdProperty, Id.ToString() },
+                { CausationEventTypeIdProperty, context.EventType.Id.ToString() },
+                { CausationEventTypeGenerationProperty, context.EventType.Generation.ToString() },
+                { CausationEventSequenceIdProperty, EventSequenceId.ToString() },
+                { CausationEventSequenceNumberProperty, context.SequenceNumber.ToString() }
+            });
 
-        await reactorInvoker.Invoke(reactorInstance, content, context);
+            var invocationResult = await reactorInvoker.Invoke(content, context);
 
-        identityProvider.ClearCurrentIdentity();
+            identityProvider.ClearCurrentIdentity();
+            return invocationResult;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     /// <summary>
