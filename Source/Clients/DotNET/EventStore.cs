@@ -153,8 +153,9 @@ public class EventStore : IEventStore
             EventTypes,
             clientArtifactsProvider,
             namingPolicy,
-            serviceProvider,
-            jsonSerializerOptions);
+            artifactActivator,
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<Projections.Projections>());
 
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());

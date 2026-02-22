@@ -9,8 +9,9 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Monads;
 using Cratis.Serialization;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -24,15 +25,17 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="eventTypes">All the <see cref="IEventTypes"/>.</param>
 /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of projections.</param>
+/// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for activating instances of projections.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for any JSON serialization.</param>
+/// <param name="logger"><see cref="ILogger{Projections}"/> for logging.</param>
 public class Projections(
     IEventStore eventStore,
     IEventTypes eventTypes,
     IClientArtifactsProvider clientArtifacts,
     INamingPolicy namingPolicy,
-    IServiceProvider serviceProvider,
-    JsonSerializerOptions jsonSerializerOptions) : IProjections
+    IClientArtifactsActivator artifactsActivator,
+    JsonSerializerOptions jsonSerializerOptions,
+    ILogger<Projections> logger) : IProjections
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
@@ -124,7 +127,7 @@ public class Projections(
         _definitionsByType = FindAllProjectionDefinitions(
             eventTypes,
             clientArtifacts,
-            serviceProvider,
+            artifactsActivator,
             jsonSerializerOptions);
 
         _handlersByType = _definitionsByType.ToDictionary(
@@ -159,41 +162,61 @@ public class Projections(
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,
-        IServiceProvider serviceProvider,
-        JsonSerializerOptions jsonSerializerOptions) =>
-        clientArtifacts.Projections
-                .ToDictionary(
-                    _ => _,
-                    _ =>
-                    {
-                        var modelType = _.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
-                        var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
-                        var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
-                        return (method.Invoke(
-                            null,
-                            [
-                                _,
-                                namingPolicy,
-                                eventTypes,
-                                serviceProvider,
-                                jsonSerializerOptions
-                            ]) as ProjectionDefinition)!;
-                    });
+        IClientArtifactsActivator artifactsActivator,
+        JsonSerializerOptions jsonSerializerOptions)
+    {
+        var result = new Dictionary<Type, ProjectionDefinition>();
+        foreach (var projectionType in clientArtifacts.Projections)
+        {
+            var modelType = projectionType.GetInterface(typeof(IProjectionFor<>).Name)!.GetGenericArguments()[0]!;
+            var creatorType = typeof(ProjectionDefinitionCreator<>).MakeGenericType(modelType);
+            var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<object>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)!;
+            var createProjectionDefinitionResult = (method.Invoke(
+                null,
+                [
+                    projectionType,
+                    namingPolicy,
+                    eventTypes,
+                    artifactsActivator,
+                    jsonSerializerOptions
+                ]) as Catch<ProjectionDefinition>)!;
+            if (createProjectionDefinitionResult.TryGetException(out var exception))
+            {
+                logger.FailedToCreateProjectionDefinition(projectionType, exception);
+                continue;
+            }
+            result.Add(projectionType, createProjectionDefinitionResult.AsT0);
+        }
+
+        return result;
+    }
 
     static class ProjectionDefinitionCreator<TReadModel>
         where TReadModel : class
     {
-        public static ProjectionDefinition CreateAndDefine(
+        public static Catch<ProjectionDefinition> CreateAndDefine(
             Type type,
             INamingPolicy namingPolicy,
             IEventTypes eventTypes,
-            IServiceProvider serviceProvider,
+            IClientArtifactsActivator artifactsActivator,
             JsonSerializerOptions jsonSerializerOptions)
         {
-            var instance = (ActivatorUtilities.CreateInstance(serviceProvider, type) as IProjectionFor<TReadModel>)!;
-            var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
-            instance.Define(builder);
-            return builder.Build();
+            try
+            {
+                var activateArtifactResult = artifactsActivator.ActivateNonDisposable<IProjectionFor<TReadModel>>(type);
+                if (activateArtifactResult.TryGetException(out var exception))
+                {
+                    return exception;
+                }
+
+                var builder = new ProjectionBuilderFor<TReadModel>(type.GetProjectionId(), type, namingPolicy, eventTypes, jsonSerializerOptions);
+                activateArtifactResult.AsT0.Define(builder);
+                return builder.Build();
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
         }
     }
 }
