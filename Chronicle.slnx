@@ -12,6 +12,7 @@
         <Project Path="Source/Clients/DotNET.InProcess.Specs/DotNET.InProcess.Specs.csproj" />
         <Project Path="Source/Clients/DotNET.Specs/DotNET.Specs.csproj" />
         <Project Path="Source/Clients/Testing/Testing.csproj" />
+        <Project Path="Source/Clients/Workbench/Workbench.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
     </Folder>
     <Folder Name="/Source/Kernel/">
@@ -31,9 +32,6 @@
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
-    </Folder>
-    <Folder Name="/Source/Workbench/">
-        <Project Path="Source/Workbench/Embedded/Embedded.csproj" />
     </Folder>
     <Folder Name="/Source/">
         <Project Path="Source/Infrastructure/Infrastructure.csproj" />

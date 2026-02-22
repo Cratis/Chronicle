@@ -31,7 +31,7 @@
     -->
     <Target Name="_SetupPrivateRefPackaging"
             BeforeTargets="_GetPackageFiles"
-            Condition="'$(OutputType)' != 'Exe' AND '@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
+            Condition="'$(OutputType)' != 'Exe' AND '@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != '' AND '$(TargetFramework)' != '' AND '$(TargetFrameworks)' == ''">
 
         <!-- Resolve output assembly paths of private project references -->
         <MSBuild Projects="@(ProjectReference->WithMetadataValue('PrivateAssets','all'))"

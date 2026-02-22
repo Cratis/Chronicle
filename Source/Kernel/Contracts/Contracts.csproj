@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+        <TargetsForTfmSpecificContentInPackage></TargetsForTfmSpecificContentInPackage>
         <AssemblyName>Cratis.Chronicle.Contracts</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Contracts</RootNamespace>
         <NoWarn>$(NoWarn);CS8618;PBN2008</NoWarn>
@@ -14,4 +17,13 @@
         </PackageReference>
         <PackageReference Include="protobuf-net.Grpc" />
     </ItemGroup>
+
+    <!-- Workaround for MSBuild GetTargetPath issue with multi-targeted projects referenced with PrivateAssets=all -->
+    <Target Name="GetTargetPath" Returns="@(TargetPathWithTargetPlatformMoniker)">
+        <ItemGroup>
+            <TargetPathWithTargetPlatformMoniker Include="$(TargetPath)">
+                <TargetFrameworkMoniker>$(TargetFrameworkMoniker)</TargetFrameworkMoniker>
+            </TargetPathWithTargetPlatformMoniker>
+        </ItemGroup>
+    </Target>
 </Project>

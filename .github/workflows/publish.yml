@@ -7,7 +7,6 @@ env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
   DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
-  DOTNET_BUILD_CACHE: "dotnet-build-cache-${{ github.sha }}"
   WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
@@ -195,7 +194,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup node
@@ -215,49 +214,21 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
 
       - name: Yarn install
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: yarn install
 
       - name: Build Workbench
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: |
           yarn build
         env:
           CHRONICLE_VERSION: ${{ needs.release.outputs.version }}
           CHRONICLE_COMMIT_SHA: ${{ github.sha }}
 
-  dotnet-build:
-    if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - name: Build
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
-
-      - uses: actions/cache@v3
-        id: dotnet-build-output
-        with:
-          path: |
-            **/bin/Release
-            **/obj
-          key: ${{ env.DOTNET_BUILD_CACHE }}
-
   dotnet-pack-and-publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
     permissions:
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
@@ -267,18 +238,9 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: actions/cache@v3
-        id: dotnet-build-output
-        with:
-          path: |
-            **/bin/Release
-            **/obj
-          key: ${{ env.DOTNET_BUILD_CACHE }}
-          fail-on-cache-miss: true
-
-      - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup .Net
@@ -289,17 +251,15 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - name: Restore NuGet packages
-        run: dotnet restore
-
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-      - name: Create NuGet packages
-        run: dotnet pack --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+      - name: Build and Create NuGet packages
+        run: |
+          for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
+            dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+          done
 
-      # Uses NuGet trusted publishing with OIDC authentication
-      # No API key needed - authentication is handled via OIDC token
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
@@ -362,7 +322,7 @@ jobs:
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -384,7 +344,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
@@ -428,7 +388,7 @@ jobs:
   publish-docker-workbench:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -437,7 +397,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
           fail-on-cache-miss: true
 
@@ -481,7 +441,7 @@ jobs:
   publish-docker-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
-    needs: [release, dotnet-build, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
 
     steps:
       - name: Checkout code
@@ -504,7 +464,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
