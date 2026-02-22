@@ -104,16 +104,6 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);
-        services.AddSingleton<IEventSerializer>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
-            var artifactsActivator = sp.GetRequiredService<IClientArtifactsActivator>();
-            return new EventSerializer(
-                options.ArtifactsProvider,
-                artifactsActivator,
-                sp.GetRequiredService<IEventStore>().EventTypes,
-                options.JsonSerializerOptions);
-        });
 
         return services;
     }
