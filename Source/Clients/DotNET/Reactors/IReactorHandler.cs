@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -42,9 +43,9 @@ public interface IReactorHandler
     /// </summary>
     /// <param name="context"><see cref="EventContext"/> for the event.</param>
     /// <param name="content">Actual content.</param>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> for creating the actual instance of the reactor.</param>
+    /// <param name="reactorInvoker">The <see cref="IReactorInvoker"/>.</param>
     /// <returns>Awaitable task.</returns>
-    Task OnNext(EventContext context, object content, IServiceProvider serviceProvider);
+    Task<Catch> OnNext(EventContext context, object content, IReactorInvoker reactorInvoker);
 
     /// <summary>
     /// Get the current state of the Reactor.

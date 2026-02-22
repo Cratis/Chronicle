@@ -7,7 +7,6 @@ extern alias KernelConcepts;
 using System.Reflection;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Types;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -28,7 +27,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 #pragma warning disable CA2213, SA1600, CA1051
     protected IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051
-    static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+    static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
     static MethodInfo _createClientWithOptionsMethod = null!;
