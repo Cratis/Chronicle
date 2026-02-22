@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
