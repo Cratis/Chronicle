@@ -12,7 +12,7 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <param name="rootServiceProvider">The root <see cref="IServiceProvider"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-[IgnoreConvention]
+[Singleton]
 public class ClientArtifactActivator(IServiceProvider rootServiceProvider, ILoggerFactory loggerFactory)
     : IClientArtifactsActivator
 {
