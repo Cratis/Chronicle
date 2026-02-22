@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Reducers;
 /// </summary>
 public class ReducerInvoker : IReducerInvoker
 {
+    static readonly ConcurrentDictionary<(Type TargetType, Type ReadModelType), Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = [];
     readonly IClientArtifactsActivator _artifactActivator;
     readonly Type _targetType;
@@ -36,10 +38,10 @@ public class ReducerInvoker : IReducerInvoker
         _targetType = targetType;
         ReadModelType = readModelType;
         ContainerName = containerName;
-        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                                        .Where(_ => _.IsReducerMethod(readModelType, eventTypes.AllClrTypes))
-                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
-                                        .ToDictionary(_ => _.eventType, _ => _.method);
+        _methodsByEventType = _methodsByEventTypeCache.GetOrAdd(
+            (targetType, readModelType),
+            static (key, eventTypes) => BuildMethodsByEventType(key.TargetType, key.ReadModelType, eventTypes),
+            eventTypes.AllClrTypes);
 
         EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
@@ -133,5 +135,26 @@ public class ReducerInvoker : IReducerInvoker
                 lastSuccessfulObservedEventAndContext?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable,
                 [],
                 string.Empty);
+    }
+
+    static Dictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
+    {
+        var methodsByEventType = new Dictionary<Type, MethodInfo>();
+
+        foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (!method.IsReducerMethod(readModelType, eventTypes))
+            {
+                continue;
+            }
+
+            var eventParameterType = method.GetParameters()[0].ParameterType;
+            foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
+            {
+                methodsByEventType[eventType] = method;
+            }
+        }
+
+        return methodsByEventType;
     }
 }
