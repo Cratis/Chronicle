@@ -14,9 +14,9 @@ internal static partial class WebhookLogging
     [LoggerMessage(LogLevel.Debug, "Setting webhook definition and subscribing for webhook '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<Webhook> logger, WebhookId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Webhook '{Identifier}' is a new webhook")]
+    [LoggerMessage(LogLevel.Debug, "Webhook '{Identifier}' is a new webhook")]
     internal static partial void WebhookIsNew(this ILogger<Webhook> logger, WebhookId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Registering webhook '{Identifier}' has changed its definition")]
+    [LoggerMessage(LogLevel.Debug, "Registering webhook '{Identifier}' has changed its definition")]
     internal static partial void WebhookHasChanged(this ILogger<Webhook> logger, WebhookId identifier);
 }

@@ -8,13 +8,13 @@ namespace Cratis.Chronicle.Security;
 
 internal static partial class UsersReactorLogging
 {
-    [LoggerMessage(LogLevel.Debug, "Adding user with EventSourceId: {EventSourceId}, Username: {Username}")]
+    [LoggerMessage(LogLevel.Trace, "Adding user with EventSourceId: {EventSourceId}, Username: {Username}")]
     internal static partial void AddingUser(this ILogger<UsersReactor> logger, EventSourceId eventSourceId, string username);
 
     [LoggerMessage(LogLevel.Debug, "User added with EventSourceId: {EventSourceId}")]
     internal static partial void UserAdded(this ILogger<UsersReactor> logger, EventSourceId eventSourceId);
 
-    [LoggerMessage(LogLevel.Debug, "Adding initial admin user with EventSourceId: {EventSourceId}, Username: {Username}")]
+    [LoggerMessage(LogLevel.Trace, "Adding initial admin user with EventSourceId: {EventSourceId}, Username: {Username}")]
     internal static partial void AddingInitialAdminUser(this ILogger<UsersReactor> logger, EventSourceId eventSourceId, string username);
 
     [LoggerMessage(LogLevel.Debug, "Initial admin user added with EventSourceId: {EventSourceId}")]

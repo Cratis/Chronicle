@@ -14,12 +14,12 @@ internal static partial class ProjectionLogging
     [LoggerMessage(LogLevel.Debug, "Setting projection definition and subscribing for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Projection '{Identifier}' is a new projection")]
+    [LoggerMessage(LogLevel.Debug, "Projection '{Identifier}' is a new projection")]
     internal static partial void ProjectionIsNew(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Registering projection '{Identifier}' has changed its definition")]
+    [LoggerMessage(LogLevel.Debug, "Registering projection '{Identifier}' has changed its definition")]
     internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Rehydrating projections and pipelines")]
+    [LoggerMessage(LogLevel.Debug, "Rehydrating projections and pipelines")]
     internal static partial void Rehydrate(this ILogger<Projection> logger);
 }

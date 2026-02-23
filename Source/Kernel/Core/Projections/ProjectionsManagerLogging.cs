@@ -19,7 +19,7 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Debug, "Subscribing projection '{Identifier}' in namespace '{Namespace}'")]
     internal static partial void Subscribing(this ILogger<ProjectionsManager> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 
-    [LoggerMessage(LogLevel.Debug, "Subscribing projection '{Identifier}' with {Count} event types: {EventTypes}")]
+    [LoggerMessage(LogLevel.Trace, "Subscribing projection '{Identifier}' with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<ProjectionsManager> logger, ProjectionId identifier, int count, string eventTypes);
 
     [LoggerMessage(LogLevel.Warning, "Read model definition '{ReadModel}' not found for projection '{Identifier}'")]
