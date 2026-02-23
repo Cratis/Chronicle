@@ -17,7 +17,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Subscribing observer")]
     internal static partial void Subscribing(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Subscribing observer with {Count} event types: {EventTypes}")]
+    [LoggerMessage(LogLevel.Debug, "Subscribing observer with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<Observer> logger, int count, string eventTypes);
 
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
@@ -92,10 +92,10 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Critical, "Observer failed for unknown reasons after handling events")]
     internal static partial void ObserverFailedForUnknownReasonsAfterHandlingEvents(this ILogger<Observer> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Information, "Observer is replaying. Transitioning to replay state.")]
+    [LoggerMessage(LogLevel.Debug, "Observer is replaying. Transitioning to replay state.")]
     internal static partial void Replaying(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Observer needs to replay. Transitioning to replay state.")]
+    [LoggerMessage(LogLevel.Debug, "Observer needs to replay. Transitioning to replay state.")]
     internal static partial void NeedsToReplay(this ILogger<Observer> logger);
 }
 
