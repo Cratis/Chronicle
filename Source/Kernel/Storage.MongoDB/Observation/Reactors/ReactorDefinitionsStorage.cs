@@ -53,9 +53,28 @@ public class ReactorDefinitionsStorage(
     /// <inheritdoc/>
     public async Task Rename(ReactorId currentId, ReactorId newId)
     {
-        var update = Builders<ReactorDefinition>.Update.Set(d => d.Id, newId);
-        await Collection.UpdateOneAsync(
-            definition => definition.Id == currentId,
-            update);
+        using var session = await Collection.Database.Client.StartSessionAsync();
+
+        try
+        {
+            session.StartTransaction();
+            using var result = await Collection.FindAsync(session, definition => definition.Id == currentId);
+            var existing = await result.FirstOrDefaultAsync();
+            if (existing is null)
+            {
+                await session.AbortTransactionAsync();
+                return;
+            }
+
+            existing.Id = newId;
+            await Collection.DeleteOneAsync(session, definition => definition.Id == currentId);
+            await Collection.InsertOneAsync(session, existing);
+            await session.CommitTransactionAsync();
+        }
+        catch
+        {
+            await session.AbortTransactionAsync();
+            throw;
+        }
     }
 }
