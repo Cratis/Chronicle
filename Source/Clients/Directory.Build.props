@@ -28,10 +28,17 @@
         - The project must NOT be an Exe (OutputType != Exe).
         - At least one ProjectReference must have PrivateAssets=all.
         - IncludeBuildOutput must be true (set above; analyzers override to false locally).
+
+        Implementation note:
+        Uses TargetsForTfmSpecificContentInPackage so NuGet's _WalkEachTargetPerFramework
+        invokes this target per TFM in inner builds, where $(TargetFramework) is set.
     -->
+    <PropertyGroup Condition="'$(OutputType)' != 'Exe'">
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_SetupPrivateRefPackaging</TargetsForTfmSpecificContentInPackage>
+    </PropertyGroup>
+
     <Target Name="_SetupPrivateRefPackaging"
-            BeforeTargets="_GetPackageFiles"
-            Condition="'$(OutputType)' != 'Exe' AND '@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != '' AND '$(TargetFramework)' != '' AND '$(TargetFrameworks)' == ''">
+            Condition="'@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
 
         <!-- Resolve output assembly paths of private project references -->
         <MSBuild Projects="@(ProjectReference->WithMetadataValue('PrivateAssets','all'))"
@@ -42,36 +49,26 @@
 
         <!-- Main assembly → ref/ (compile-time-only visibility for consumers) -->
         <ItemGroup>
-            <None Include="$(OutputPath)$(AssemblyName).dll"
-                  Pack="true"
-                  PackagePath="ref/$(TargetFramework)/"
-                  Visible="false" />
+            <TfmSpecificPackageFile Include="$(OutputPath)$(AssemblyName).dll"
+                                    PackagePath="ref/$(TargetFramework)/" />
         </ItemGroup>
 
         <!-- Private project-reference assemblies → lib/ (runtime-only) -->
         <ItemGroup>
-            <None Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).dll"
-                  Pack="true"
-                  PackagePath="lib/$(TargetFramework)/"
-                  Visible="false" />
-            <None Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb"
-                  Pack="true"
-                  PackagePath="lib/$(TargetFramework)/"
-                  Visible="false"
-                  Condition="Exists('$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb')" />
+            <TfmSpecificPackageFile Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).dll"
+                                    PackagePath="lib/$(TargetFramework)/" />
+            <TfmSpecificPackageFile Include="$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb"
+                                    PackagePath="lib/$(TargetFramework)/"
+                                    Condition="Exists('$(OutputPath)%(_PrivateRefTargetPath.Filename).pdb')" />
         </ItemGroup>
 
         <!-- Extra private assemblies declared via PrivatePackageAssembly → lib/ -->
         <ItemGroup Condition="'@(PrivatePackageAssembly)' != ''">
-            <None Include="$(OutputPath)%(PrivatePackageAssembly.Identity).dll"
-                  Pack="true"
-                  PackagePath="lib/$(TargetFramework)/"
-                  Visible="false" />
-            <None Include="$(OutputPath)%(PrivatePackageAssembly.Identity).pdb"
-                  Pack="true"
-                  PackagePath="lib/$(TargetFramework)/"
-                  Visible="false"
-                  Condition="Exists('$(OutputPath)%(PrivatePackageAssembly.Identity).pdb')" />
+            <TfmSpecificPackageFile Include="$(OutputPath)%(PrivatePackageAssembly.Identity).dll"
+                                    PackagePath="lib/$(TargetFramework)/" />
+            <TfmSpecificPackageFile Include="$(OutputPath)%(PrivatePackageAssembly.Identity).pdb"
+                                    PackagePath="lib/$(TargetFramework)/"
+                                    Condition="Exists('$(OutputPath)%(PrivatePackageAssembly.Identity).pdb')" />
         </ItemGroup>
     </Target>
 </Project>

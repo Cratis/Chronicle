@@ -93,12 +93,16 @@ These assemblies are packaged in `lib/{tfm}/` alongside the private project-refe
 
 ### How it works
 
-The `_SetupPrivateRefPackaging` MSBuild target in `Source/Clients/Directory.Build.props` runs before
-NuGet's `_GetPackageFiles` target. It:
+The `_SetupPrivateRefPackaging` MSBuild target in `Source/Clients/Directory.Build.props` is registered
+via `TargetsForTfmSpecificContentInPackage`, which is the official NuGet SDK extension point for
+adding per-TFM content to packages. During `dotnet pack`, NuGet's `_WalkEachTargetPerFramework`
+invokes this target once per target framework in an inner build where `$(TargetFramework)` is set.
+
+The target:
 
 1. Filters `ProjectReference` items for those with `PrivateAssets=all`.
 2. Invokes `GetTargetPath` on each to resolve the output assembly name.
-3. Adds the main assembly to `ref/` and all private assemblies to `lib/` as `<None Pack="true">` items.
+3. Adds the main assembly to `ref/{tfm}/` and all private assemblies to `lib/{tfm}/` as `TfmSpecificPackageFile` items.
 
 The target only fires for library projects (`OutputType != Exe`) that have at least one private `ProjectReference`.
 
