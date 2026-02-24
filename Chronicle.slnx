@@ -8,8 +8,6 @@
         <Project Path="Source/Clients/DotNET/DotNET.csproj" />
         <Project Path="Source/Clients/DotNET.CodeAnalysis/DotNET.CodeAnalysis.csproj" />
         <Project Path="Source/Clients/DotNET.CodeAnalysis.Specs/DotNET.CodeAnalysis.Specs.csproj" />
-        <Project Path="Source/Clients/DotNET.InProcess/DotNET.InProcess.csproj" />
-        <Project Path="Source/Clients/DotNET.InProcess.Specs/DotNET.InProcess.Specs.csproj" />
         <Project Path="Source/Clients/DotNET.Specs/DotNET.Specs.csproj" />
         <Project Path="Source/Clients/Testing/Testing.csproj" />
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
