@@ -17,7 +17,7 @@
     <PackageVersion Include="Cratis.Arc" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.2.0" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="19.2.0" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="19.6.1" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="19.2.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.103" />
