@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -61,8 +62,8 @@ public interface IReadModels
     /// Observe changes for a specific read model.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
-    /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
-    IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
+    /// <returns>A subject of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
+    ISubject<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
 
     /// <summary>
     /// Dehydrate a session.

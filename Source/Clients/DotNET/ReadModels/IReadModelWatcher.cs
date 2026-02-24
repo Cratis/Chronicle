@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
+
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
@@ -26,7 +28,7 @@ public interface IReadModelWatcher
 public interface IReadModelWatcher<TReadModel> : IReadModelWatcher
 {
     /// <summary>
-    /// Gets the observable for the read model.
+    /// Gets the subject for the read model.
     /// </summary>
-    IObservable<ReadModelChangeset<TReadModel>> Observable { get; }
+    ISubject<ReadModelChangeset<TReadModel>> Observable { get; }
 }

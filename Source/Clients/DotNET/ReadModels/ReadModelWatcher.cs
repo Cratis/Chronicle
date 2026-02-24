@@ -39,7 +39,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset<TReadModel>> Observable => _observable;
+    public ISubject<ReadModelChangeset<TReadModel>> Observable => _observable;
 
     /// <inheritdoc/>
     public void Dispose()

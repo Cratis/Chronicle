@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
@@ -38,9 +40,10 @@ public class ReadModels(
     IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
     IReadModelWatcherManager readModelWatcherManager,
-    IReducerObservers reducerObservers) : IReadModels
+    IReducerObservers reducerObservers) : IReadModels, IDisposable
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+    readonly ConcurrentDictionary<Type, Lazy<(object Subject, IDisposable Subscription)>> _reducerSubjects = [];
 
     /// <inheritdoc/>
     public async Task Register()
@@ -292,16 +295,23 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
-    public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
+    public ISubject<ReadModelChangeset<TReadModel>> Watch<TReadModel>()
     {
         if (reducers.HasFor<TReadModel>())
         {
-            return reducerObservers.GetWatcher<TReadModel>().Observable
-                .Select(changeset => new ReadModelChangeset<TReadModel>(
-                    changeset.Namespace,
-                    changeset.ModelKey,
-                    changeset.ReadModel,
-                    changeset.Removed));
+            var lazy = _reducerSubjects.GetOrAdd(typeof(TReadModel), _ => new Lazy<(object, IDisposable)>(() =>
+            {
+                var subject = new Subject<ReadModelChangeset<TReadModel>>();
+                var subscription = reducerObservers.GetWatcher<TReadModel>().Observable
+                    .Select(changeset => new ReadModelChangeset<TReadModel>(
+                        changeset.Namespace,
+                        changeset.ModelKey,
+                        changeset.ReadModel,
+                        changeset.Removed))
+                    .Subscribe(subject);
+                return (subject, subscription);
+            }));
+            return (ISubject<ReadModelChangeset<TReadModel>>)lazy.Value.Subject;
         }
 
         if (!projections.HasFor<TReadModel>())
@@ -310,6 +320,18 @@ public class ReadModels(
         }
 
         return readModelWatcherManager.GetWatcher<TReadModel>().Observable;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        foreach (var lazy in _reducerSubjects.Values)
+        {
+            if (lazy.IsValueCreated)
+            {
+                lazy.Value.Subscription.Dispose();
+            }
+        }
     }
 
     /// <inheritdoc/>
