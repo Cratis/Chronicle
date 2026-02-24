@@ -8,7 +8,9 @@
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj"/>
         <ProjectReference Include="../Connections/Connections.csproj" />
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

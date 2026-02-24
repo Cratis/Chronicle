@@ -22,7 +22,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
