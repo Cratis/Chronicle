@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Configuration;
 /// <summary>
 /// Defines a builder for configuring Chronicle.
 /// </summary>
-public interface IChronicleCoreBuilder
+public interface IChronicleBuilder
 {
     /// <summary>
     /// Gets the <see cref="ISiloBuilder"/> for the builder.
