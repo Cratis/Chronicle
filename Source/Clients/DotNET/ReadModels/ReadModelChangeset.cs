@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="ModelKey">The <see cref="ModelKey"/> for the model.</param>
 /// <param name="ReadModel">The instance of the read model.</param>
 /// <param name="Removed">Whether the read model was removed.</param>
-public record ReadModelChangeset<TReadModel>(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, TReadModel? ReadModel, bool Removed)
+public record ReadModelChangeset<TReadModel>(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, TReadModel? ReadModel, bool Removed);
