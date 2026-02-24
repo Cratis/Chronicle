@@ -10,7 +10,7 @@ import { SidebarMenu } from './Sidebar/SidebarMenu';
 import css from './DefaultLayout.module.css';
 import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
-import { ErrorBoundary } from 'Components/Common/ErrorBoundary';
+import { ErrorBoundary } from 'Components/Common';
 import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as Shared from 'Shared';
