@@ -3,21 +3,22 @@
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
 | Time to first response | 125 days, 12:17:55 | 2 days, 19:57:57 | 300 days, 17:44:52 |
-| Time to close | 283 days, 8:45:29 | 124 days, 8:55:27 | 826 days, 7:55:29 |
+| Time to close | 282 days, 11:51:20 | 124 days, 8:40:41 | 825 days, 21:55:18 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 250 |
-| Number of items closed | 639 |
-| Total number of items created | 889 |
+| Number of items that remain open | 249 |
+| Number of items closed | 641 |
+| Total number of items created | 890 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Error starting up version 15.2.18 after having previouly been running previous versions (before migration patch system) | https://github.com/Cratis/Chronicle/issues/2668 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | None | None |
+| Information Logging Chroincle | https://github.com/Cratis/Chronicle/issues/2670 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
+| Error starting up version 15.2.18 after having previouly been running previous versions (before migration patch system) | https://github.com/Cratis/Chronicle/issues/2668 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 9:09:06 | None |
 | Version 15.2.4 not published to NuGet Gallery | https://github.com/Cratis/Chronicle/issues/2660 | None | [CLE-ChristianLeicht](https://github.com/CLE-ChristianLeicht) | 0:11:36 | 0:11:41 | None |
 | Validate gRPC API surface for breaking changes | https://github.com/Cratis/Chronicle/issues/2651 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Make the Chronicle Artifacts registration story more consistent | https://github.com/Cratis/Chronicle/issues/2649 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
+| Make the Chronicle Artifacts registration story more consistent | https://github.com/Cratis/Chronicle/issues/2649 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | 8 days, 1:51:20 | None |
 | Add the ability to add events directly in the Event Sequence editor / page in Workbench | https://github.com/Cratis/Chronicle/issues/2644 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Implement compensation support | https://github.com/Cratis/Chronicle/issues/2642 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Hook up redaction from Workbench | https://github.com/Cratis/Chronicle/issues/2640 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -329,5 +330,4 @@
 | Reactions & Reducer timeouts should be configurable | https://github.com/Cratis/Chronicle/issues/1270 | None | [einari](https://github.com/einari) | None | 210 days, 1:42:19 | None |
 | Eliminate ClientBuilder in DotNET in favor of new builders that will build the ChronicleClient | https://github.com/Cratis/Chronicle/issues/1269 | None | [einari](https://github.com/einari) | None | 39 days, 21:51:25 | None |
 | Formalize ConnectedClient as its own grain and let Reactions and Reducers work with this | https://github.com/Cratis/Chronicle/issues/1265 | None | [einari](https://github.com/einari) | None | None | None |
-| Make replay work again (ProjectionReplayHandler, ReducerReplayHandler) | https://github.com/Cratis/Chronicle/issues/1264 | None | [einari](https://github.com/einari) | None | 60 days, 1:23:36 | None |
-| Fix the nextEventSequenceNumberForEventTypes on observer state - it is always holding -3 | https://github.com/Cratis/Chronicle/issues/126
+| Make replay work again (ProjectionReplayHandler, ReducerReplayHandler) | https://github.com/Cratis/Chron
