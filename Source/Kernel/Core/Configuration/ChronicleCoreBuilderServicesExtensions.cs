@@ -6,17 +6,17 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
-/// Extension methods for <see cref="IChronicleBuilder"/>.
+/// Extension methods for <see cref="IChronicleCoreBuilder"/>.
 /// </summary>
-public static class ChronicleBuilderServicesExtensions
+public static class ChronicleCoreBuilderServicesExtensions
 {
     /// <summary>
     /// Configure services for the builder.
     /// </summary>
-    /// <param name="builder"><see cref="IChronicleBuilder"/> to configure services for.</param>
+    /// <param name="builder"><see cref="IChronicleCoreBuilder"/> to configure services for.</param>
     /// <param name="configureDelegate">Delegate for working with services.</param>
-    /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder ConfigureServices(this IChronicleBuilder builder, Action<IServiceCollection> configureDelegate)
+    /// <returns><see cref="IChronicleCoreBuilder"/> for continuation.</returns>
+    public static IChronicleCoreBuilder ConfigureServices(this IChronicleCoreBuilder builder, Action<IServiceCollection> configureDelegate)
     {
         configureDelegate(builder.Services);
         return builder;

@@ -7,12 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
-/// Represents an implementation of <see cref="IChronicleBuilder"/>.
+/// Represents an implementation of <see cref="IChronicleCoreBuilder"/>.
 /// </summary>
 /// <param name="siloBuilder"><see cref="ISiloBuilder"/> to use.</param>
 /// <param name="services"><see cref="IServiceCollection"/> to use.</param>
 /// <param name="configuration"><see cref="IConfiguration"/> to use.</param>
-public class ChronicleBuilder(ISiloBuilder siloBuilder, IServiceCollection services, IConfiguration configuration) : IChronicleBuilder
+public class ChronicleCoreBuilder(ISiloBuilder siloBuilder, IServiceCollection services, IConfiguration configuration) : IChronicleCoreBuilder
 {
     /// <inheritdoc/>
     public ISiloBuilder SiloBuilder { get; } = siloBuilder;
