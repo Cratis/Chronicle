@@ -5,6 +5,7 @@ extern alias KernelCore;
 
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.InProcess;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using KernelCore::Cratis.Chronicle.Diagnostics.OpenTelemetry;
