@@ -1,13 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
+using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
 
-namespace Cratis.Chronicle.InProcess;
+namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for Orleans in-process.
@@ -24,7 +27,7 @@ internal class ChronicleConnection(
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
     IServices? _services;
-    Services.Clients.ConnectionService? _connectionService;
+    ConnectionService? _connectionService;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -67,7 +70,7 @@ internal class ChronicleConnection(
 
     async Task Connect()
     {
-        _connectionService = new Services.Clients.ConnectionService(grainFactory, loggerFactory.CreateLogger<Services.Clients.ConnectionService>());
+        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

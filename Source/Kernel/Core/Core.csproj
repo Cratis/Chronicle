@@ -13,6 +13,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
     </ItemGroup>
 
     <ItemGroup>

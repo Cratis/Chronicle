@@ -13,7 +13,6 @@
 
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
-        <ProjectReference Include="../DotNET.InProcess/DotNET.InProcess.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
 
         <!-- Kernel assemblies as runtime-only with aliases -->
@@ -39,6 +38,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
     </ItemGroup>
 
