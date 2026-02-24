@@ -15,8 +15,8 @@
     <PackageVersion Include="Cratis.Fundamentals" Version="7.6.0" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.6.0" />
     <PackageVersion Include="Cratis.Arc" Version="19.2.0" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="19.2.0" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.2.0" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="19.5.7" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.5.7" />
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="19.2.0" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="19.2.0" />
     <!-- Microsoft -->
