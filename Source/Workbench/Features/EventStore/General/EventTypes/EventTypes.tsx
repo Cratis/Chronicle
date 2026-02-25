@@ -8,14 +8,14 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
-import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
-import { AddEventTypeDialog } from './Add/AddEventTypeDialog';
 import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
-import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
+import { EventTypeOwner, EventTypeRegistration, EventTypeSource, CreateEventType } from 'Api/Events';
 import { useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField } from '@cratis/components/CommandForm';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -83,7 +83,7 @@ const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddEventTypeWrapper, showAddEventType] = useDialog(AddEventTypeDialog);
+    const [showAddEventType, setShowAddEventType] = useState(false);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -91,11 +91,8 @@ export const EventTypes = () => {
         eventStore: params.eventStore!
     };
 
-    const handleAddEventType = async () => {
-        const [result] = await showAddEventType();
-        if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
-        }
+    const handleAddEventType = () => {
+        setShowAddEventType(true);
     };
 
     return (
@@ -154,7 +151,25 @@ export const EventTypes = () => {
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
-            <AddEventTypeWrapper />
+            <CommandDialog
+                command={CreateEventType}
+                initialValues={{ eventStore: params.eventStore }}
+                visible={showAddEventType}
+                header={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
+                onConfirm={result => {
+                    if (result.isSuccess) {
+                        setShowAddEventType(false);
+                        setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+                    }
+                }}
+                onCancel={() => setShowAddEventType(false)}>
+                <CommandDialog.Fields>
+                    <InputTextField<CreateEventType>
+                        value={c => c.name}
+                        title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
+                        icon={<i className="pi pi-code" />} />
+                </CommandDialog.Fields>
+            </CommandDialog>
         </>
     );
 };

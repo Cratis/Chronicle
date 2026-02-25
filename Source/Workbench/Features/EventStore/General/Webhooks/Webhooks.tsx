@@ -6,7 +6,7 @@ import strings from 'Strings';
 import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
@@ -21,18 +21,11 @@ const renderBoolean = (value: boolean) => {
 export const Webhooks = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [selectedWebhook, setSelectedWebhook] = useState<WebhookDefinition | null>(null);
-    const [AddWebhookWrapper, showAddWebhook] = useDialog(AddWebhookDialog);
+    const [showAddWebhook, setShowAddWebhook] = useState(false);
     const [showConfirmation] = useConfirmationDialog();
     const [removeWebhook] = RemoveWebHook.use();
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-    const handleAddWebhook = async () => {
-        const [result] = await showAddWebhook();
-        if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
-        }
-    };
 
     const handleRemoveWebhook = async () => {
         if (selectedWebhook) {
@@ -69,7 +62,7 @@ export const Webhooks = () => {
                         id='create'
                         label={strings.eventStore.general.webhooks.actions.add}
                         icon={faIcons.FaPlus}
-                        command={handleAddWebhook} />
+                        command={() => setShowAddWebhook(true)} />
                     <MenuItem
                         id='remove'
                         label={strings.eventStore.general.webhooks.actions.remove}
@@ -103,7 +96,12 @@ export const Webhooks = () => {
                         body={(rowData: WebhookDefinition) => renderBoolean(rowData.isReplayable)} />
                 </DataPage.Columns>
             </DataPage>
-            <AddWebhookWrapper />
+            <AddWebhookDialog
+                visible={showAddWebhook}
+                onClose={() => {
+                    setShowAddWebhook(false);
+                    setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+                }} />
         </>
     );
 };
