@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 250 |
+| Number of items that remain open | 251 |
 | Number of items closed | 641 |
-| Total number of items created | 891 |
+| Total number of items created | 892 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Swap out custom components for our standardized ones | https://github.com/Cratis/Chronicle/issues/2694 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Switch out components in Workbench | https://github.com/Cratis/Chronicle/issues/2681 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Information Logging Chroincle | https://github.com/Cratis/Chronicle/issues/2670 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
 | Error starting up version 15.2.18 after having previouly been running previous versions (before migration patch system) | https://github.com/Cratis/Chronicle/issues/2668 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 9:09:06 | None |
@@ -329,5 +330,4 @@
 | Orleans client SiloBuilder should not rely on type discovery, conventions and self binding registrations but explicitly add all types it needs | https://github.com/Cratis/Chronicle/issues/1272 | None | [einari](https://github.com/einari) | None | None | None |
 | Do not create recommendations if there already is one that is the same | https://github.com/Cratis/Chronicle/issues/1271 | None | [einari](https://github.com/einari) | None | None | None |
 | Reactions & Reducer timeouts should be configurable | https://github.com/Cratis/Chronicle/issues/1270 | None | [einari](https://github.com/einari) | None | 210 days, 1:42:19 | None |
-| Eliminate ClientBuilder in DotNET in favor of new builders that will build the ChronicleClient | https://github.com/Cratis/Chronicle/issues/1269 | None | [einari](https://github.com/einari) | None | 39 days, 21:51:25 | None |
-| Formalize ConnectedClient as its own grain and let Reactions and Reducers work with this
+| Eliminate ClientBuilder in DotNET in favor of new builders that will buil
