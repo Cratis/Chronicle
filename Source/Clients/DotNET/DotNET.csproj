@@ -48,4 +48,18 @@
     <ItemGroup>
         <PrivatePackageAssembly Include="$(ContractsImplementationAssembly)" />
     </ItemGroup>
+
+    <!--
+        Packaging fix: Cratis.Chronicle.Infrastructure.dll ships in lib/ because of the PrivateAssets=all
+        ProjectReference above, but the SDK only emits Cratis.Chronicle.dll in ref/. Consumers that compile
+        against the ref assembly fail with CS0012 when the compiler encounters types from Infrastructure
+        (e.g. PropertyPath used on IReadModelPropertiesBuilder.Set). Including the dll in ref/ as well fixes
+        this without changing the runtime behaviour.
+    -->
+    <Target Name="IncludeInfrastructureInRefFolder" BeforeTargets="_GetTfmSpecificContentForPackage">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(TargetDir)Cratis.Chronicle.Infrastructure.dll"
+                                    PackagePath="ref/$(TargetFramework)/" />
+        </ItemGroup>
+    </Target>
 </Project>
