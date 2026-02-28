@@ -6,10 +6,11 @@ import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security'
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
-import { ChangePasswordDialog, ChangePasswordDialogProps } from './ChangePassword';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { ChangePasswordDialog } from './ChangePassword';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
+import { Guid } from '@cratis/fundamentals';
 
 const formatDate = (date: Date) => {
     if (!date) return '';
@@ -18,15 +19,15 @@ const formatDate = (date: Date) => {
 
 export const Users = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [AddUserWrapper, showAddUser] = useDialog(AddUserDialog);
-    const [ChangePasswordWrapper, showChangePassword] = useDialog<ChangePasswordDialogProps>(ChangePasswordDialog);
+    const [showAddUser, setShowAddUser] = useState(false);
+    const [showChangePassword, setShowChangePassword] = useState(false);
     const [showConfirmation] = useConfirmationDialog();
     const [removeUser] = RemoveUser.use();
     const [requirePasswordChange] = RequirePasswordChange.use();
 
     const handleChangePassword = () => {
         if (selectedUser) {
-            showChangePassword({ userId: selectedUser.id });
+            setShowChangePassword(true);
         }
     };
 
@@ -74,7 +75,7 @@ export const Users = () => {
                         id="add"
                         label={strings.eventStore.system.users.actions.add}
                         icon={faIcons.FaPlus}
-                        command={() => showAddUser()} />
+                        command={() => setShowAddUser(true)} />
                     <MenuItem
                         id="changePassword"
                         label={strings.eventStore.system.users.actions.changePassword}
@@ -114,8 +115,11 @@ export const Users = () => {
                         body={(user: User) => formatDate(user.lastModifiedAt || new Date())} />
                 </DataPage.Columns>
             </DataPage>
-            <AddUserWrapper />
-            <ChangePasswordWrapper />
+            <AddUserDialog visible={showAddUser} onClose={() => setShowAddUser(false)} />
+            <ChangePasswordDialog
+                visible={showChangePassword}
+                userId={selectedUser?.id ?? Guid.empty}
+                onClose={() => setShowChangePassword(false)} />
         </>
     );
 };

@@ -6,7 +6,6 @@ import strings from 'Strings';
 import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AddReadModelDialog } from './Add/AddReadModelDialog';
 import { DataPage, MenuItem } from 'Components';
 import { ReadModelDetails } from './ReadModelDetails';
@@ -38,7 +37,7 @@ const renderOwner = (readModel: ReadModelDefinition) => {
 
 export const ReadModelTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddReadModelWrapper, showAddReadModel] = useDialog(AddReadModelDialog);
+    const [showAddReadModel, setShowAddReadModel] = useState(false);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -85,13 +84,6 @@ export const ReadModelTypes = () => {
         />
     );
 
-    const handleAddReadModel = async () => {
-        const [result] = await showAddReadModel();
-        if (result === DialogResult.Ok) {
-            handleRefresh();
-        }
-    };
-
     return (
         <>
             <DataPage
@@ -111,7 +103,7 @@ export const ReadModelTypes = () => {
                         id='create'
                         label={strings.eventStore.general.readModels.actions.create}
                         icon={faIcons.FaPlus}
-                        command={handleAddReadModel} />
+                        command={() => setShowAddReadModel(true)} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
@@ -152,7 +144,12 @@ export const ReadModelTypes = () => {
                         header={strings.eventStore.general.readModels.columns.generation} />
                 </DataPage.Columns>
             </DataPage>
-            <AddReadModelWrapper />
+            <AddReadModelDialog
+                visible={showAddReadModel}
+                onClose={() => {
+                    setShowAddReadModel(false);
+                    handleRefresh();
+                }} />
         </>
     );
 };

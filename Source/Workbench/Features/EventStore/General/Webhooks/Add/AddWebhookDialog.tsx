@@ -1,26 +1,28 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
 import { AuthorizationType } from 'Api/Security';
-import { Dialog } from 'Components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
 import { InputSwitch } from 'primereact/inputswitch';
-import { Message } from 'primereact/message';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { CommandDialog } from '@cratis/components/CommandDialog';
 
-export const AddWebhookDialog = () => {
+export interface AddWebhookDialogProps {
+    visible: boolean;
+    onClose: () => void;
+}
+
+export const AddWebhookDialog = ({ visible, onClose }: AddWebhookDialogProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [addWebhook] = AddWebHook.use();
 
     const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
     const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
@@ -38,7 +40,6 @@ export const AddWebhookDialog = () => {
     const [oauthClientSecret, setOauthClientSecret] = useState('');
     const [isActive, setIsActive] = useState(true);
     const [isReplayable, setIsReplayable] = useState(true);
-    const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     const authTypes = [
         { label: strings.eventStore.general.webhooks.authTypes.none, value: AuthorizationType.none },
@@ -49,92 +50,33 @@ export const AddWebhookDialog = () => {
 
     const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
 
-    const isUrlValid = (urlString: string): boolean => {
-        try {
-            new URL(urlString);
-            return true;
-        } catch {
-            return false;
-        }
-    };
-
-    const isValid = name.trim() !== '' &&
-                    url.trim() !== '' &&
-                    isUrlValid(url) &&
-                    eventSequence.trim() !== '' &&
-                    selectedEventTypes.length > 0;
-
-    const extractErrors = (result: { isValid: boolean; validationResults: { message: string }[]; hasExceptions: boolean; exceptionMessages: string[]; isAuthorized: boolean; authorizationFailureReason: string }) => {
-        const errors: string[] = [];
-
-        if (!result.isValid) {
-            errors.push(...result.validationResults.map(vr => vr.message));
-        }
-
-        if (result.hasExceptions) {
-            errors.push(...result.exceptionMessages);
-        }
-
-        if (!result.isAuthorized && result.authorizationFailureReason) {
-            errors.push(result.authorizationFailureReason);
-        }
-
-        if (errors.length === 0) {
-            errors.push('An unexpected error occurred while adding the webhook.');
-        }
-
-        return errors;
-    };
-
-    const handleClose = async (result: DialogResult) => {
-        if (result !== DialogResult.Ok) {
-            return true;
-        }
-
-        if (name && url && eventSequence && params.eventStore) {
-            setValidationErrors([]);
-
-            addWebhook.eventStore = params.eventStore;
-            addWebhook.name = name;
-            addWebhook.url = url;
-            addWebhook.eventSequenceId = eventSequence;
-            addWebhook.eventTypes = selectedEventTypes;
-            addWebhook.authorizationType = authType;
-            addWebhook.basicUsername = basicUsername;
-            addWebhook.basicPassword = basicPassword;
-            addWebhook.bearerToken = bearerToken;
-            addWebhook.OAuthAuthority = oauthAuthority;
-            addWebhook.OAuthClientId = oauthClientId;
-            addWebhook.OAuthClientSecret = oauthClientSecret;
-            addWebhook.isActive = isActive;
-            addWebhook.isReplayable = isReplayable;
-            addWebhook.headers = {};
-
-            const validationResult = await addWebhook.validate();
-            if (!validationResult.isSuccess) {
-                setValidationErrors(extractErrors(validationResult));
-                return false;
-            }
-
-            const executeResult = await addWebhook.execute();
-            if (executeResult.isSuccess) {
-                return true;
-            } else {
-                setValidationErrors(extractErrors(executeResult));
-                return false;
-            }
-        }
-
-        return false;
+    const currentValues = {
+        eventStore: params.eventStore,
+        name,
+        url,
+        eventSequenceId: eventSequence,
+        eventTypes: selectedEventTypes,
+        authorizationType: authType,
+        basicUsername,
+        basicPassword,
+        bearerToken,
+        OAuthAuthority: oauthAuthority,
+        OAuthClientId: oauthClientId,
+        OAuthClientSecret: oauthClientSecret,
+        isActive,
+        isReplayable,
+        headers: {} as Record<string, unknown>
     };
 
     return (
-        <Dialog
-            title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
-            onClose={handleClose}
+        <CommandDialog
+            command={AddWebHook}
+            currentValues={currentValues}
+            visible={visible}
+            header={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
             width="600px"
-            resizable={true}
-            isValid={isValid}>
+            onConfirm={result => { if (result.isSuccess) onClose(); }}
+            onCancel={onClose}>
             <div className="p-fluid">
                 <div className="field mb-3">
                     <label htmlFor="name">{strings.eventStore.general.webhooks.dialogs.addWebhook.name}</label>
@@ -153,7 +95,7 @@ export const AddWebhookDialog = () => {
                         value={eventSequence}
                         options={eventSequenceOptions}
                         onChange={(e) => setEventSequence(e.value)}
-                    placeholder="Select event sequence"
+                        placeholder="Select event sequence"
                     />
                 </div>
 
@@ -219,14 +161,6 @@ export const AddWebhookDialog = () => {
                     </>
                 )}
 
-                {validationErrors.length > 0 && (
-                    <div className="field mb-3">
-                        {validationErrors.map((error, index) => (
-                            <Message key={index} severity="error" text={error} className="mb-2" />
-                        ))}
-                    </div>
-                )}
-
                 <div className="field flex align-items-center mb-3">
                     <label htmlFor="isActive" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
                     <InputSwitch inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.value)} />
@@ -237,6 +171,6 @@ export const AddWebhookDialog = () => {
                     <InputSwitch inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.value)} />
                 </div>
             </div>
-        </Dialog>
+        </CommandDialog>
     );
 };
