@@ -14,11 +14,11 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.7.1" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.7.1" />
-    <PackageVersion Include="Cratis.Arc" Version="19.6.6" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="19.6.6" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.6.6" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="19.6.6" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="19.6.6" />
+    <PackageVersion Include="Cratis.Arc" Version="19.6.7" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="19.6.7" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="19.6.7" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="19.6.7" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="19.6.7" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.103" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
