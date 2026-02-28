@@ -36,4 +36,12 @@ public interface IObserverStateStorage
     /// <param name="state"><see cref="ObserverState"/> to save.</param>
     /// <returns>Awaitable task.</returns>
     Task Save(ObserverState state);
+
+    /// <summary>
+    /// Rename an observer by its current identifier.
+    /// </summary>
+    /// <param name="currentId">The current <see cref="ObserverId"/>.</param>
+    /// <param name="newId">The new <see cref="ObserverId"/>.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Rename(ObserverId currentId, ObserverId newId);
 }

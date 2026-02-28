@@ -30,7 +30,8 @@ public class Reactors : IReactors
     readonly IEventTypes _eventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IServiceProvider _serviceProvider;
-    readonly IReactorMiddlewares _middlewares;
+    readonly IClientArtifactsActivator _artifactActivator;
+    readonly IActivateReactorMiddlewares _middlewaresActivator;
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
@@ -48,7 +49,8 @@ public class Reactors : IReactors
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> to get instances of types.</param>
-    /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
+    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
+    /// <param name="middlewaresActivator"><see cref="IReactorMiddlewares"/> to call.</param>
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
@@ -59,7 +61,8 @@ public class Reactors : IReactors
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifactsProvider,
         IServiceProvider serviceProvider,
-        IReactorMiddlewares middlewares,
+        IClientArtifactsActivator artifactActivator,
+        IActivateReactorMiddlewares middlewaresActivator,
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
@@ -71,7 +74,8 @@ public class Reactors : IReactors
         _eventTypes = eventTypes;
         _clientArtifactsProvider = clientArtifactsProvider;
         _serviceProvider = serviceProvider;
-        _middlewares = middlewares;
+        _artifactActivator = artifactActivator;
+        _middlewaresActivator = middlewaresActivator;
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
@@ -83,7 +87,6 @@ public class Reactors : IReactors
     public Task Discover()
     {
         _logger.DiscoverAllReactors();
-        var logger = _loggerFactory.CreateLogger<ReactorInvoker>();
         var handlers = _clientArtifactsProvider.Reactors
                             .ToDictionary(
                                 _ => _,
@@ -165,7 +168,7 @@ public class Reactors : IReactors
             id,
             typeof(object),
             new(response.EventSequenceId!),
-            new NullReactorInvoker(),
+            [],
             _causationManager,
             _identityProvider);
     }
@@ -221,12 +224,13 @@ public class Reactors : IReactors
 
     IReactorHandler CreateHandlerFor(Type reactorType)
     {
+        var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType);
         var handler = new ReactorHandler(
             _eventStore,
             reactorType.GetReactorId(),
             reactorType,
             reactorType.GetEventSequenceId(),
-            new ReactorInvoker(_eventStore.EventTypes, _middlewares, reactorType, _loggerFactory.CreateLogger<ReactorInvoker>()),
+            eventTypes,
             _causationManager,
             _identityProvider);
 
@@ -278,7 +282,25 @@ public class Reactors : IReactors
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
+
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
+        var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
+        if (activatedReactorResult.TryGetException(out var exception))
+        {
+            FailedActivatingReactor(exception);
+            PublishResult();
+            return;
+        }
+
+        await using var activatedReactor = activatedReactorResult.AsT0;
+        await using var middlewares = _middlewaresActivator.Activate(serviceProviderScope.ServiceProvider);
+        var reactorInvoker = new ReactorInvoker(
+            _eventTypes,
+            middlewares,
+            handler.ReactorType,
+            activatedReactor,
+            _loggerFactory.CreateLogger<ReactorInvoker>());
+
         foreach (var @event in events.Events)
         {
             _logger.EventReceived(@event.Context.EventType.Id, handler.Id);
@@ -290,27 +312,51 @@ public class Reactors : IReactors
                 var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
 
-                await handler.OnNext(context, content, serviceProviderScope.ServiceProvider);
+                var handleResult = await handler.OnNext(context, content, reactorInvoker);
+                if (handleResult.TryGetException(out var ex))
+                {
+                    FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                    break;
+                }
+
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)
             {
-                _logger.ErrorWhileHandlingEvent(ex, @event.Context.EventType.Id, handler.Id);
-                exceptionMessages = ex.GetAllMessages();
-                exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                state = ObservationState.Failed;
+                FailedToHandleEvent(ex, @event.Context.EventType.Id);
                 break;
             }
         }
 
-        var result = new ReactorResult
+        PublishResult();
+
+        void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
         {
-            Partition = events.Partition,
-            State = state,
-            LastSuccessfulObservation = lastSuccessfullyObservedEvent,
-            ExceptionMessages = exceptionMessages.ToList(),
-            ExceptionStackTrace = exceptionStackTrace
-        };
-        messages.OnNext(new(new(result)));
+            _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+            exceptionMessages = ex.GetAllMessages();
+            exceptionStackTrace = ex.StackTrace ?? string.Empty;
+            state = ObservationState.Failed;
+        }
+
+        void FailedActivatingReactor(Exception ex)
+        {
+            exceptionMessages = ex.GetAllMessages();
+            exceptionStackTrace = ex.StackTrace ?? string.Empty;
+            state = ObservationState.Failed;
+        }
+
+        void PublishResult()
+        {
+            var result = new ReactorResult
+            {
+                Partition = events.Partition,
+                State = state,
+                LastSuccessfulObservation = lastSuccessfullyObservedEvent,
+                ExceptionMessages = exceptionMessages.ToList(),
+                ExceptionStackTrace = exceptionStackTrace
+            };
+
+            messages.OnNext(new(new(result)));
+        }
     }
 }

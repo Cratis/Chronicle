@@ -19,7 +19,7 @@ public class webhook_states_after_registering(ChronicleInProcessFixture chronicl
             await Webhooks.Register(id, targetUrl, configure);
         }
 
-        var webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Grains.Observation.Webhooks.WebhookReactor");
+        var webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor");
         await webhookReactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
 
         StoredWebhooks = await EventStoreStorage.Webhooks.GetAll();

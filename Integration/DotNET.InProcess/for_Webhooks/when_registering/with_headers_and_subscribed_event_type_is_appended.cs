@@ -22,7 +22,7 @@ public class with_headers_and_subscribed_event_type_is_appended(context context)
             await Register(
                 (WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>().WithHeader("some-header", "some-value")));
 
-            var webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Grains.Observation.Webhooks.WebhookReactor");
+            var webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor");
             await webhookReactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
         }
 

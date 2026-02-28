@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.Jobs;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 namespace Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
@@ -60,7 +58,7 @@ public class TheJobStep(
                 throw new Exception("Should fail");
             }
 
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.CompletedSuccessfully);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.CompletedSuccessfully);
             return JobStepResult.Succeeded(new TheJobStepResult());
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
@@ -69,14 +67,14 @@ public class TheJobStep(
         }
         catch (Exception ex)
         {
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.CompletedWithFailure);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.CompletedWithFailure);
             return JobStepResult.Failed(PerformJobStepError.Failed(ex));
         }
 
         async Task<Catch<JobStepResult>> HandleStopped()
         {
             await _selfGrainReference.IncrementStopped();
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, JobStepStatus.Stopped);
+            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Concepts.Jobs.JobStepStatus.Stopped);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
         }
     }

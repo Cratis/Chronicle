@@ -8,8 +8,6 @@
         <ServerGarbageCollection>true</ServerGarbageCollection>
         <NoWarn>$(NoWarn);RCS1093</NoWarn>
         <IsPackable>false</IsPackable>
-        <TargetFramework>net10.0</TargetFramework>
-        <TargetFrameworks></TargetFrameworks>
     </PropertyGroup>
 
     <!-- 3rd party package references -->
@@ -31,6 +29,7 @@
         <PackageReference Include="Polly.Core" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
         <PackageReference Include="OpenIddict.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
@@ -40,21 +39,10 @@
         <ProjectReference Include="../../Clients/Api/Api.csproj" />
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Compliance/Compliance.csproj" />
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
-        <ProjectReference Include="../Projections/Projections.csproj" />
-        <ProjectReference Include="../Grains/Grains.csproj" />
-        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
+        <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
-        <ProjectReference Include="../Setup/Setup.csproj" />
-        <ProjectReference Include="../Diagnostics/Diagnostics.csproj" />
-    </ItemGroup>
-
-    <!-- General -->
-    <ItemGroup>
         <ProjectReference Include="..\Contracts\Contracts.csproj" />
-        <ProjectReference Include="..\Services\Services.csproj" />
     </ItemGroup>
 </Project>

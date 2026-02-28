@@ -43,20 +43,22 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
         Projection = EventStore.Projections.GetHandlerFor<TProjection>();
         await Projection.WaitTillActive();
 
-        AppendResult appendResult = null;
+        IAppendResult appendResult = null;
         foreach (var @event in EventsToAppend)
         {
-            appendResult = await EventStore.EventLog.Append(EventSourceId, @event);
-            LastEventSequenceNumber = appendResult.SequenceNumber;
+            var result = await EventStore.EventLog.Append(EventSourceId, @event);
+            LastEventSequenceNumber = result.SequenceNumber;
+            appendResult = result;
         }
 
         foreach (var @event in EventsWithEventSourceIdToAppend)
         {
-            appendResult = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
-            LastEventSequenceNumber = appendResult.SequenceNumber;
+            var result = await EventStore.EventLog.Append(@event.EventSourceId, @event.Event);
+            LastEventSequenceNumber = result.SequenceNumber;
+            appendResult = result;
             if (WaitForEachEvent)
             {
-                await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
+                await WaitForProjectionAndSetResult(result.SequenceNumber);
             }
         }
 
@@ -65,7 +67,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
 
         if (appendResult is not null)
         {
-            await WaitForProjectionAndSetResult(appendResult.SequenceNumber);
+            await WaitForProjectionAndSetResult(LastEventSequenceNumber);
         }
     }
 

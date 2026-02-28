@@ -54,6 +54,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -69,6 +70,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         ILoggerFactory loggerFactory)
@@ -90,14 +92,14 @@ public class EventStore : IEventStore
 
         _eventSerializer = new EventSerializer(
             clientArtifactsProvider,
-            serviceProvider,
+            artifactActivator,
             EventTypes,
             jsonSerializerOptions);
 
         Constraints = new Constraints(
             this,
             [
-                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, serviceProvider),
+                new ConstraintsByBuilderProvider(clientArtifactsProvider, EventTypes, namingPolicy, artifactActivator, loggerFactory.CreateLogger<ConstraintsByBuilderProvider>()),
                 new UniqueConstraintProvider(clientArtifactsProvider, EventTypes, namingPolicy),
                 new UniqueEventTypeConstraintsProvider(clientArtifactsProvider, EventTypes)
             ]);
@@ -123,7 +125,8 @@ public class EventStore : IEventStore
             EventTypes,
             clientArtifactsProvider,
             serviceProvider,
-            new ReactorMiddlewares(clientArtifactsProvider, serviceProvider),
+            artifactActivator,
+            new ReactorMiddlewaresActivator(clientArtifactsProvider, artifactActivator, loggerFactory.CreateLogger<ReactorMiddlewaresActivator>()),
             _eventSerializer,
             causationManager,
             identityProvider,
@@ -136,6 +139,7 @@ public class EventStore : IEventStore
             this,
             clientArtifactsProvider,
             serviceProvider,
+            artifactActivator,
             new ReducerValidator(),
             EventTypes,
             namingPolicy,
@@ -149,8 +153,9 @@ public class EventStore : IEventStore
             EventTypes,
             clientArtifactsProvider,
             namingPolicy,
-            serviceProvider,
-            jsonSerializerOptions);
+            artifactActivator,
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<Projections.Projections>());
 
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
@@ -175,7 +180,9 @@ public class EventStore : IEventStore
             EventTypes,
             _eventSerializer,
             clientArtifactsProvider,
-            serviceProvider);
+            serviceProvider,
+            artifactActivator,
+            loggerFactory.CreateLogger<EventSeeding>());
 
         if (autoDiscoverAndRegister)
         {

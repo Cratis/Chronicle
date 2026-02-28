@@ -2,6 +2,9 @@
 
 The `IReadModels` API provides the `Watch<TReadModel>()` method to observe real-time changes to read models. This is useful for building reactive user interfaces, triggering background jobs, or maintaining synchronized caches based on read model updates.
 
+> [!TIP]
+> For information on how to define and configure read models in Arc, see <xref:Arc.Chronicle.ReadModels>.
+
 ## Overview
 
 When you watch a read model using `Watch<T>`, Chronicle:
@@ -241,6 +244,43 @@ public class AuditLogger
 ```
 
 ## Filtering and Transforming
+
+### Simplifying with ToObservableReadModel()
+
+When you only need the read model instances themselves and don't care about the changeset metadata (like the key, previous state, or events), use the `.ToObservableReadModel()` extension method to simplify your subscription:
+
+```csharp
+public class SimpleWatcher
+{
+    readonly IEventStore _eventStore;
+
+    public void WatchOrders()
+    {
+        // ToObservableReadModel() filters out removed items and emits only the read model instances
+        var observable = _eventStore.ReadModels.Watch<Order>()
+            .ToObservableReadModel();
+
+        observable.Subscribe(
+            order =>
+            {
+                // Receive the Order instance directly, not the full changeset
+                Console.WriteLine($"Order status: {order.Status}");
+                Console.WriteLine($"Amount: {order.TotalAmount}");
+            },
+            error => Console.WriteLine($"Error: {error}"),
+            () => Console.WriteLine("Watch completed")
+        );
+    }
+}
+```
+
+This extension method:
+- Automatically filters out removed read models
+- Skips null read model instances
+- Returns an `ISubject<TReadModel>` instead of `IObservable<ReadModelChangeset<TReadModel>>`
+- Propagates errors and completion signals
+
+This is particularly useful when building reactive UIs where you want to bind directly to the read model state without dealing with changeset structures.
 
 ### Using LINQ Operators
 

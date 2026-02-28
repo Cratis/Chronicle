@@ -9,5 +9,5 @@ public class reactor_with_handler_method_for_interface_event_type_with_derivativ
 {
     protected override IEnumerable<Type> GetEventTypes() => [typeof(MyFirstDerivedEventFromInterface), typeof(MySecondDerivedEventFromInterface)];
 
-    [Fact] void should_have_the_event_type() => _invoker.EventTypes.ShouldContainOnly(MyFirstDerivedEventFromInterface.EventType, MySecondDerivedEventFromInterface.EventType);
+    [Fact] void should_have_the_event_type() => _reactorEventTypes.ShouldContainOnly(MyFirstDerivedEventFromInterface.EventType, MySecondDerivedEventFromInterface.EventType);
 }
