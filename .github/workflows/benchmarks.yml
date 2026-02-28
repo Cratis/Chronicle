@@ -20,24 +20,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Run Mongo container
-        run: docker run -p 27017:27017 -d cratis/mongodb
-
       - name: Run Benchmarks
-        working-directory: ./Benchmarks
-        run: ./run.sh
+        working-directory: ./Benchmarks/Chronicle.Benchmarks
+        run: |
+          dotnet build -c Release /p:TreatWarningsAsErrors=false
+          dotnet run -c Release --no-build -- --exporters json
+
+      - name: Find and Copy Results
+        run: |
+          mkdir -p Benchmarks/results
+          find Benchmarks/Chronicle.Benchmarks/BenchmarkDotNet.Artifacts -name "*.json" -type f -exec cp {} Benchmarks/results/ \;
+          ls -la Benchmarks/results/
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cratis Benchmarks
           tool: 'benchmarkdotnet'
-          output-file-path: Benchmarks/results/results.json
+          output-file-path: Benchmarks/results/*.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           # Show alert with commit comment on detecting possible performance regression
@@ -48,4 +53,3 @@ jobs:
           gh-pages-branch: 'main'
           skip-fetch-gh-pages: true
           benchmark-data-dir-path: 'Documentation/benchmarks'
-
