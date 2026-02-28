@@ -13,13 +13,13 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static partial class ProjectionsManagerLogging
 {
-    [LoggerMessage(LogLevel.Information, "Setting definition for projection '{Identifier}'")]
+    [LoggerMessage(LogLevel.Debug, "Setting definition for projection '{Identifier}'")]
     internal static partial void SettingDefinition(this ILogger<ProjectionsManager> logger, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Information, "Subscribing projection '{Identifier}' in namespace '{Namespace}'")]
+    [LoggerMessage(LogLevel.Debug, "Subscribing projection '{Identifier}' in namespace '{Namespace}'")]
     internal static partial void Subscribing(this ILogger<ProjectionsManager> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 
-    [LoggerMessage(LogLevel.Information, "Subscribing projection '{Identifier}' with {Count} event types: {EventTypes}")]
+    [LoggerMessage(LogLevel.Trace, "Subscribing projection '{Identifier}' with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<ProjectionsManager> logger, ProjectionId identifier, int count, string eventTypes);
 
     [LoggerMessage(LogLevel.Warning, "Read model definition '{ReadModel}' not found for projection '{Identifier}'")]

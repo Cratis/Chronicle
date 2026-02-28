@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Jobs;
 
 internal static partial class JobsManagerLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Rehydrating jobs system")]
+    [LoggerMessage(LogLevel.Debug, "Rehydrating jobs system")]
     internal static partial void Rehydrating(this ILogger<JobsManager> logger);
 
     [LoggerMessage(LogLevel.Debug, "Starting job {JobId}")]

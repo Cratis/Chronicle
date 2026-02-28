@@ -16,13 +16,13 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Information, "Disconnected from Chronicle")]
     internal static partial void Disconnected(this ILogger<ChronicleConnection> logger);
 
-    [LoggerMessage(LogLevel.Information, "Reconnecting to Chronicle")]
+    [LoggerMessage(LogLevel.Debug, "Reconnecting to Chronicle")]
     internal static partial void Reconnecting(this ILogger<ChronicleConnection> logger);
 
     [LoggerMessage(LogLevel.Error, "Timed out during connecting to Chronicle")]
     internal static partial void TimedOut(this ILogger<ChronicleConnection> logger);
 
-    [LoggerMessage(LogLevel.Information, "Using client certificate from {Path}")]
+    [LoggerMessage(LogLevel.Debug, "Using client certificate from {Path}")]
     internal static partial void UsingClientCertificate(this ILogger<ChronicleConnection> logger, string path);
 
     [LoggerMessage(LogLevel.Debug, "Grpc channel created for address {Address}")]

@@ -15,16 +15,16 @@ internal static partial class JobLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while writing state")]
     internal static partial void FailedWritingState(this ILogger<IJob> logger, Exception ex);
 
-    [LoggerMessage(LogLevel.Information, "Starting job")]
+    [LoggerMessage(LogLevel.Debug, "Starting job")]
     internal static partial void Starting(this ILogger<IJob> logger);
 
-    [LoggerMessage(LogLevel.Information, "Resuming job")]
+    [LoggerMessage(LogLevel.Debug, "Resuming job")]
     internal static partial void Resuming(this ILogger<IJob> logger);
 
-    [LoggerMessage(LogLevel.Information, "Stopping job")]
+    [LoggerMessage(LogLevel.Debug, "Stopping job")]
     internal static partial void Stopping(this ILogger<IJob> logger);
 
-    [LoggerMessage(LogLevel.Information, "Removing job")]
+    [LoggerMessage(LogLevel.Debug, "Removing job")]
     internal static partial void Removing(this ILogger<IJob> logger);
 
     [LoggerMessage(LogLevel.Debug, "Job changing status to {Status}")]

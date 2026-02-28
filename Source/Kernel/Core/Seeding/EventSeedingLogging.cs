@@ -11,12 +11,12 @@ namespace Cratis.Chronicle.Seeding;
 
 internal static partial class EventSeedingLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Seeding events for event store '{EventStore}' in namespace '{Namespace}'")]
+    [LoggerMessage(LogLevel.Debug, "Seeding events for event store '{EventStore}' in namespace '{Namespace}'")]
     internal static partial void SeedingEvents(this ILogger<EventSeeding> logger, string eventStore, string @namespace);
 
-    [LoggerMessage(LogLevel.Information, "Appending {Count} new seeded events")]
+    [LoggerMessage(LogLevel.Debug, "Appending {Count} new seeded events")]
     internal static partial void AppendingSeededEvents(this ILogger<EventSeeding> logger, int count);
 
-    [LoggerMessage(LogLevel.Information, "All events have already been seeded, skipping")]
+    [LoggerMessage(LogLevel.Debug, "All events have already been seeded, skipping")]
     internal static partial void AllEventsAlreadySeeded(this ILogger<EventSeeding> logger);
 }

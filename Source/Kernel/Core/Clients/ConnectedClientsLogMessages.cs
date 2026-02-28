@@ -10,9 +10,9 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 internal static partial class ConnectedClientsLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Connected client with connection identifier '{ConnectionId}'.")]
+    [LoggerMessage(LogLevel.Debug, "Connected client with connection identifier '{ConnectionId}'.")]
     internal static partial void ClientConnected(this ILogger<ConnectedClients> logger, string connectionId);
 
-    [LoggerMessage(LogLevel.Information, "Disconnected client with connection identifier '{ConnectionId}'. Reason: {Reason}")]
+    [LoggerMessage(LogLevel.Debug, "Disconnected client with connection identifier '{ConnectionId}'. Reason: {Reason}")]
     internal static partial void ClientDisconnected(this ILogger<ConnectedClients> logger, string connectionId, string reason);
 }

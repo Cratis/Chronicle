@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Registering Reactor '{Id}'")]
+    [LoggerMessage(LogLevel.Debug, "Registering Reactor '{Id}'")]
     internal static partial void RegisteringReactor(this ILogger<Reactors> logger, ReactorId id);
 
     [LoggerMessage(LogLevel.Trace, "Discover all Reactors")]

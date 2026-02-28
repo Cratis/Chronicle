@@ -14,6 +14,6 @@ internal static partial class ResolveKeyLogging
     [LoggerMessage(LogLevel.Debug, "Resolving key for event with sequence number {SequenceNumber}")]
     internal static partial void ResolvingKey(this ILogger<ResolveKey> logger, ulong sequenceNumber);
 
-    [LoggerMessage(LogLevel.Information, "Key resolution deferred for event {SequenceNumber} - projection '{ProjectionId}' at path '{Path}' - creating future")]
+    [LoggerMessage(LogLevel.Debug, "Key resolution deferred for event {SequenceNumber} - projection '{ProjectionId}' at path '{Path}' - creating future")]
     internal static partial void KeyResolutionDeferred(this ILogger<ResolveKey> logger, ulong sequenceNumber, string projectionId, string path);
 }
