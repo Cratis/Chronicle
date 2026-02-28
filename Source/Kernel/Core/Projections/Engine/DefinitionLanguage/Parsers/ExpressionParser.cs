@@ -1,0 +1,233 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+
+namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Parsers;
+
+/// <summary>
+/// Handles parsing of expressions.
+/// </summary>
+public class ExpressionParser
+{
+    /// <summary>
+    /// Parses an expression.
+    /// </summary>
+    /// <param name="context">The parsing context.</param>
+    /// <returns>The parsed expression or null.</returns>
+    public Expression? Parse(IParsingContext context)
+    {
+        // Template literal
+        if (context.Check(TokenType.TemplateLiteral))
+        {
+            var template = context.Current.Value;
+            context.Advance();
+            return ParseTemplate(context, template);
+        }
+
+        // $eventSourceId or $eventContext.property
+        if (context.Check(TokenType.Dollar))
+        {
+            context.Advance();
+            var nameToken = context.Expect(TokenType.Identifier);
+            if (nameToken is null) return null;
+            var name = nameToken.Value;
+
+            if (name.Equals("eventSourceId", StringComparison.OrdinalIgnoreCase))
+            {
+                return new EventSourceIdExpression();
+            }
+
+            if (name.Equals("eventContext", StringComparison.OrdinalIgnoreCase))
+            {
+                if (context.Expect(TokenType.Dot) is null) return null;
+                var propertyToken = context.Expect(TokenType.Identifier);
+                if (propertyToken is null) return null;
+                return new EventContextExpression(propertyToken.Value);
+            }
+
+            if (name.Equals("causedBy", StringComparison.OrdinalIgnoreCase))
+            {
+                // causedBy without property means the entire Identity object
+                if (!context.Check(TokenType.Dot))
+                {
+                    return new CausedByExpression(null);
+                }
+
+                context.Advance(); // Skip dot
+                var propertyToken = context.Expect(TokenType.Identifier);
+                if (propertyToken is null) return null;
+
+                var property = propertyToken.Value.ToLowerInvariant();
+                if (property != "subject" && property != "name" && property != "username")
+                {
+                    context.ReportError($"Unknown causedBy property '{propertyToken.Value}'. Valid properties are: subject, name, userName");
+                    return null;
+                }
+
+                return new CausedByExpression(propertyToken.Value);
+            }
+
+            context.ReportError($"Unknown expression '${name}'");
+            return null;
+        }
+
+        // Literals
+        if (context.Check(TokenType.True))
+        {
+            context.Advance();
+            return new LiteralExpression(true);
+        }
+
+        if (context.Check(TokenType.False))
+        {
+            context.Advance();
+            return new LiteralExpression(false);
+        }
+
+        if (context.Check(TokenType.Null))
+        {
+            context.Advance();
+            return new LiteralExpression(null);
+        }
+
+        if (context.Check(TokenType.NumberLiteral))
+        {
+            var value = context.Current.Value;
+            context.Advance();
+            return new LiteralExpression(double.Parse(value));
+        }
+
+        if (context.Check(TokenType.StringLiteral))
+        {
+            var value = context.Current.Value;
+            context.Advance();
+            return new LiteralExpression(value);
+        }
+
+        // Plain identifier or property path (event data)
+        if (context.Check(TokenType.Identifier) || context.Check(TokenType.Id))
+        {
+            var path = ParsePropertyPath(context);
+            return path is not null ? new EventDataExpression(path) : null;
+        }
+
+        context.ReportError("Expected expression");
+        return null;
+    }
+
+    TemplateExpression? ParseTemplate(IParsingContext context, string template)
+    {
+        var parts = new List<TemplatePart>();
+        var i = 0;
+
+        while (i < template.Length)
+        {
+            var dollarIndex = template.IndexOf("${", i);
+            if (dollarIndex == -1)
+            {
+                // No more interpolations
+                if (i < template.Length)
+                {
+                    parts.Add(new TemplateTextPart(template.Substring(i)));
+                }
+                break;
+            }
+
+            // Add text before interpolation
+            if (dollarIndex > i)
+            {
+                parts.Add(new TemplateTextPart(template.Substring(i, dollarIndex - i)));
+            }
+
+            // Find closing brace
+            var closeIndex = template.IndexOf('}', dollarIndex + 2);
+            if (closeIndex == -1)
+            {
+                context.ReportError("Unterminated template expression");
+                return null;
+            }
+
+            // Parse the expression inside ${}
+            var exprText = template.Substring(dollarIndex + 2, closeIndex - dollarIndex - 2);
+            var expr = ParseTemplateExpression(exprText);
+            if (expr is null) return null;
+            parts.Add(new TemplateExpressionPart(expr));
+
+            i = closeIndex + 1;
+        }
+
+        return new TemplateExpression(parts);
+    }
+
+    Expression? ParseTemplateExpression(string exprText)
+    {
+        // Simple parser for expressions within template
+        exprText = exprText.Trim();
+
+        if (exprText.StartsWith($"{WellKnownExpressions.EventContext}."))
+        {
+            return new EventContextExpression(exprText.Substring(14));
+        }
+
+        if (exprText == WellKnownExpressions.EventSourceId)
+        {
+            return new EventSourceIdExpression();
+        }
+
+        if (exprText.StartsWith(WellKnownExpressions.CausedBy))
+        {
+            if (exprText == WellKnownExpressions.CausedBy)
+            {
+                return new CausedByExpression(null);
+            }
+            if (exprText.StartsWith($"{WellKnownExpressions.CausedBy}."))
+            {
+                var property = exprText.Substring(10);
+                return new CausedByExpression(property);
+            }
+        }
+
+        // Treat plain identifiers as event data property paths
+        return new EventDataExpression(exprText);
+    }
+
+    string? ParsePropertyPath(IParsingContext context)
+    {
+        // Accept both Identifier and Id tokens (since 'id' is a keyword but can also be a property name)
+        Token? identifierToken = null;
+        if (context.Check(TokenType.Identifier))
+        {
+            identifierToken = context.Expect(TokenType.Identifier);
+        }
+        else if (context.Check(TokenType.Id))
+        {
+            identifierToken = context.Expect(TokenType.Id);
+        }
+
+        if (identifierToken is null) return null;
+
+        var parts = new List<string> { identifierToken.Value };
+
+        while (context.Check(TokenType.Dot))
+        {
+            context.Advance();
+            Token? nextToken = null;
+            if (context.Check(TokenType.Identifier))
+            {
+                nextToken = context.Expect(TokenType.Identifier);
+            }
+            else if (context.Check(TokenType.Id))
+            {
+                nextToken = context.Expect(TokenType.Id);
+            }
+
+            if (nextToken is null) return null;
+            parts.Add(nextToken.Value);
+        }
+
+        return string.Join('.', parts);
+    }
+}

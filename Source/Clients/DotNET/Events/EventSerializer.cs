@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Events;
 
@@ -13,19 +12,19 @@ namespace Cratis.Chronicle.Events;
 [Singleton]
 public class EventSerializer : IEventSerializer
 {
-    readonly IEnumerable<ICanProvideAdditionalEventInformation> _additionalEventInformationProviders;
+    readonly ICanProvideAdditionalEventInformation[] _additionalEventInformationProviders;
     readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventSerializer"/> class.
     /// </summary>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for resolving instances.</param>
+    /// <param name="artifactActivator"><see cref="IServiceProvider"/> for resolving instances.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
     public EventSerializer(
         IClientArtifactsProvider clientArtifacts,
-        IServiceProvider serviceProvider,
+        IClientArtifactsActivator artifactActivator,
         IEventTypes eventTypes,
         JsonSerializerOptions serializerOptions)
     {
@@ -37,25 +36,34 @@ public class EventSerializer : IEventSerializer
                 new EventRedactedConverters(eventTypes)
             }
         };
-        _additionalEventInformationProviders = clientArtifacts.AdditionalEventInformationProviders
-            .Select(type => serviceProvider.GetRequiredService(type) as ICanProvideAdditionalEventInformation)
-            .Where(provider => provider != null)!;
+
+        var providers = new List<ICanProvideAdditionalEventInformation>();
+        foreach (var providerType in clientArtifacts.AdditionalEventInformationProviders)
+        {
+            var activated = artifactActivator.ActivateNonDisposable<ICanProvideAdditionalEventInformation>(providerType);
+            if (activated.IsT0 && activated.AsT0 is not null)
+            {
+                providers.Add(activated.AsT0);
+            }
+        }
+
+        _additionalEventInformationProviders = [.. providers];
     }
 
     /// <inheritdoc/>
     public Task<object> Deserialize(Type type, JsonObject json) => Task.FromResult(json.Deserialize(type, _serializerOptions)!);
 
     /// <inheritdoc/>
-    public async Task<JsonObject> Serialize(object @event)
+    public Task<JsonObject> Serialize(object @event)
     {
         var eventAsJson = (JsonSerializer.SerializeToNode(@event, _serializerOptions) as JsonObject)!;
 
-        foreach (var provider in _additionalEventInformationProviders)
+        if (_additionalEventInformationProviders.Length == 0)
         {
-            await provider.ProvideFor(eventAsJson);
+            return Task.FromResult(eventAsJson);
         }
 
-        return eventAsJson;
+        return ProvideAdditionalInformationFor(eventAsJson);
     }
 
     /// <inheritdoc/>
@@ -63,5 +71,15 @@ public class EventSerializer : IEventSerializer
     {
         // Content is already deserialized to the correct type
         return Task.FromResult(@event.Content);
+    }
+
+    async Task<JsonObject> ProvideAdditionalInformationFor(JsonObject eventAsJson)
+    {
+        foreach (var provider in _additionalEventInformationProviders)
+        {
+            await provider.ProvideFor(eventAsJson).ConfigureAwait(false);
+        }
+
+        return eventAsJson;
     }
 }

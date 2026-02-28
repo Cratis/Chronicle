@@ -3,8 +3,8 @@
 
 using System.Security.Claims;
 using Cratis.Arc;
-using Cratis.Chronicle.Grains.EventSequences;
-using Cratis.Chronicle.Grains.Security;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;

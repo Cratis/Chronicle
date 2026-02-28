@@ -100,6 +100,8 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reactors);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Reducers);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
+        services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
+
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);

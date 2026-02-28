@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Serialization;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -13,25 +13,52 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for providing client artifacts.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event types.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> for providing services.</param>
+/// <param name="artifactActivator">The <see cref="IClientArtifactsActivator"/> for activating artifacts.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ConstraintsByBuilderProvider(
     IClientArtifactsProvider clientArtifactsProvider,
     IEventTypes eventTypes,
     INamingPolicy namingPolicy,
-    IServiceProvider serviceProvider) : ICanProvideConstraints
+    IClientArtifactsActivator artifactActivator,
+    ILogger<ConstraintsByBuilderProvider> logger) : ICanProvideConstraints
 {
+    readonly object _sync = new();
+    IImmutableList<IConstraintDefinition>? _cachedDefinitions;
+
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Provide()
     {
-        var constraints = clientArtifactsProvider.ConstraintTypes
-            .Select(type => (serviceProvider.GetRequiredService(type) as IConstraint)!);
+        if (_cachedDefinitions is not null)
+        {
+            return _cachedDefinitions;
+        }
 
-        return constraints
-            .SelectMany(constraint =>
+        lock (_sync)
+        {
+            if (_cachedDefinitions is not null)
             {
-                var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraint.GetType());
+                return _cachedDefinitions;
+            }
+
+            var definitions = ImmutableList.CreateBuilder<IConstraintDefinition>();
+
+            foreach (var constraintType in clientArtifactsProvider.ConstraintTypes)
+            {
+                var activatedArtifactResult = artifactActivator.ActivateNonDisposable<IConstraint>(constraintType);
+                if (activatedArtifactResult.TryGetException(out var exception))
+                {
+                    logger.FailedToActivateConstraint(constraintType, exception);
+                    continue;
+                }
+
+                var constraint = activatedArtifactResult.AsT0;
+                var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
                 constraint.Define(builder);
-                return builder.Build();
-            }).ToImmutableList();
+                definitions.AddRange(builder.Build());
+            }
+
+            _cachedDefinitions = definitions.ToImmutable();
+            return _cachedDefinitions;
+        }
     }
 }

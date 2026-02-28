@@ -2,8 +2,6 @@
 
 Tags provide a way to organize and categorize your reactors for better discoverability and management. By applying the `[Tag]` attribute to your reactor classes, you can assign one or more tags that describe the purpose or domain of the reactor.
 
-> **Note**: Tags replaced the previous `[Category]` attribute. Use `[Tag]` for all new code.
-
 ## Adding Tags
 
 You can tag reactors in multiple ways:

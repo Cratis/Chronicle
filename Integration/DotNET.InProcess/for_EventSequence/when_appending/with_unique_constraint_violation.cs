@@ -16,8 +16,8 @@ public class with_unique_constraint_violation(context context) : Given<context>(
 
         public UserOnboardingStarted Event { get; private set; }
 
-        public AppendResult FirstResult { get; private set; }
-        public AppendResult SecondResult { get; private set; }
+        public IAppendResult FirstResult { get; private set; }
+        public IAppendResult SecondResult { get; private set; }
 
         public void Establish()
         {
