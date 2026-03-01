@@ -26,6 +26,12 @@ namespace Cratis.Chronicle;
 /// <param name="assembliesProvider"><see cref="ICanProvideAssembliesForDiscovery"/> for discovering types.</param>
 public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery assembliesProvider) : IClientArtifactsProvider
 {
+    /// <summary>
+    ///  The singleton default of the <see cref="DefaultClientArtifactsProvider"/> class with a default assembly provider that includes project and package referenced assemblies.
+    /// </summary>
+    /// <returns>The default <see cref="DefaultClientArtifactsProvider"/>.</returns>
+    public static readonly DefaultClientArtifactsProvider Default = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+
     bool _initialized;
 
     /// <inheritdoc/>

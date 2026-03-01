@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle</AssemblyName>
         <RootNamespace>Cratis.Chronicle</RootNamespace>
-        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
         <ContractsImplementationAssembly>Cratis.Chronicle.Contracts.Implementations</ContractsImplementationAssembly>
     </PropertyGroup>
 
@@ -20,27 +19,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
+        <ProjectReference Include="../Connections/Connections.csproj"/>
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
-    <ItemGroup>
-        <InternalAssembly Include="$(OutputPath)$(ContractsImplementationAssembly).dll" />
-    </ItemGroup>
-    <ItemGroup>
-        <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
-        <DoNotInternalize Include="Cratis.Chronicle.Contracts.dll" />
-    </ItemGroup>
-    <ItemGroup>
-        <AssemblyToExcludeFromMerge Include="Cratis.Chronicle.DotNET.CodeAnalysis.dll" />
-    </ItemGroup>
-
-    <Target Name="GrpcClients" BeforeTargets="PerformRepackaging" Condition=" '$(TargetFramework)' != '' ">
+    <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' ">
         <Message Text="Generating gRPC clients" Importance="high" />
         <Exec Command="dotnet run &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />
     </Target>
@@ -50,14 +38,28 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="NJsonSchema" />
     </ItemGroup>
+
+    <ItemGroup>
+        <PrivatePackageAssembly Include="$(ContractsImplementationAssembly)" />
+    </ItemGroup>
+
+    <!--
+        Packaging fix: Cratis.Chronicle.Infrastructure.dll ships in lib/ because of the PrivateAssets=all
+        ProjectReference above, but the SDK only emits Cratis.Chronicle.dll in ref/. Consumers that compile
+        against the ref assembly fail with CS0012 when the compiler encounters types from Infrastructure
+        (e.g. PropertyPath used on IReadModelPropertiesBuilder.Set). Including the dll in ref/ as well fixes
+        this without changing the runtime behaviour.
+    -->
+    <Target Name="IncludeInfrastructureInRefFolder" BeforeTargets="_GetTfmSpecificContentForPackage">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(TargetDir)Cratis.Chronicle.Infrastructure.dll"
+                                    PackagePath="ref/$(TargetFramework)/" />
+        </ItemGroup>
+    </Target>
 </Project>

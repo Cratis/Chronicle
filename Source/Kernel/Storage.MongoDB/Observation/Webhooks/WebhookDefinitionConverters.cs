@@ -6,7 +6,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
-using Cratis.Chronicle.Grains.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;

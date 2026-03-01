@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
-using Microsoft.Extensions.DependencyInjection;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -12,46 +13,43 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Represents an implementation of <see cref="IReactorInvoker"/>.
 /// </summary>
-public class ReactorInvoker : IReactorInvoker
+/// <remarks>
+/// Initializes a new instance of the <see cref="ReactorInvoker"/> class.
+/// </remarks>
+/// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
+/// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
+/// <param name="targetType">Type of Reactor.</param>
+/// <param name="activatedReactor">The <see cref="ActivatedArtifact"/> activated reactor.</param>
+/// <param name="logger"><see cref="ILogger"/> for logging.</param>
+public class ReactorInvoker(
+    IEventTypes eventTypes,
+    IReactorMiddlewares middlewares,
+    Type targetType,
+    ActivatedArtifact activatedReactor,
+    ILogger<ReactorInvoker> logger) : IReactorInvoker
 {
-    readonly Dictionary<Type, MethodInfo> _methodsByEventType;
-    readonly IReactorMiddlewares _middlewares;
-    readonly Type _targetType;
-    readonly ILogger<ReactorInvoker> _logger;
+    static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType = GetMethodsByEventType(targetType, eventTypes.AllClrTypes);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReactorInvoker"/> class.
+    /// Gets all <see cref="EventType"/> for a specific reactor type.
     /// </summary>
-    /// <param name="eventTypes"><see cref="IEventTypes"/> for mapping types.</param>
-    /// <param name="middlewares"><see cref="IReactorMiddlewares"/> to call.</param>
-    /// <param name="targetType">Type of Reactor.</param>
-    /// <param name="logger"><see cref="ILogger"/> for logging.</param>
-    public ReactorInvoker(
-        IEventTypes eventTypes,
-        IReactorMiddlewares middlewares,
-        Type targetType,
-        ILogger<ReactorInvoker> logger)
-    {
-        _middlewares = middlewares;
-        _targetType = targetType;
-        _logger = logger;
-        _methodsByEventType = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                                        .Where(_ => _.IsEventHandlerMethod(eventTypes.AllClrTypes))
-                                        .SelectMany(_ => _.GetParameters()[0].ParameterType.GetEventTypes(eventTypes.AllClrTypes).Select(eventType => (eventType, method: _)))
-                                        .ToDictionary(_ => _.eventType, _ => _.method);
-
-        EventTypes = _methodsByEventType.Keys.Select(eventTypes.GetEventTypeFor).ToImmutableList();
-    }
+    /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event types.</param>
+    /// <param name="reactorType">The reactor <see cref="Type"/> to get event types for.</param>
+    /// <returns>Collection of discovered <see cref="EventType"/>.</returns>
+    public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType) =>
+        GetMethodsByEventType(reactorType, eventTypes.AllClrTypes)
+            .Keys
+            .Select(eventTypes.GetEventTypeFor)
+            .ToImmutableList();
 
     /// <inheritdoc/>
-    public IImmutableList<EventType> EventTypes { get; }
-
-    /// <inheritdoc/>
-    public async Task Invoke(IServiceProvider serviceProvider, object content, EventContext eventContext)
+    public async Task<Catch> Invoke(object content, EventContext eventContext)
     {
+        var reactorId = targetType.GetReactorId();
+        var eventTypeName = content.GetType().Name;
         try
         {
-            var actualReactor = serviceProvider.GetRequiredService(_targetType);
             var eventType = content.GetType();
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
@@ -59,25 +57,70 @@ public class ReactorInvoker : IReactorInvoker
                 Task returnValue;
                 var parameters = method.GetParameters();
 
-                await _middlewares.BeforeInvoke(eventContext, content);
+                await middlewares.BeforeInvoke(eventContext, content);
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(actualReactor, [content, eventContext])!;
+                    returnValue = (Task)method.Invoke(activatedReactor.Instance, [content, eventContext])!;
                 }
                 else
                 {
-                    returnValue = (Task)method.Invoke(actualReactor, [content])!;
+                    returnValue = (Task)method.Invoke(activatedReactor.Instance, [content])!;
                 }
 
                 await returnValue;
-                await _middlewares.AfterInvoke(eventContext, content);
             }
+            else
+            {
+                logger.ReactorNoHandlerFound(reactorId, eventTypeName);
+            }
+
+            return Catch.Success();
         }
         catch (Exception ex)
         {
-            _logger.ReactorFailed(_targetType.GetReactorId(), content.GetType().Name, ex);
-            throw;
+            logger.ReactorFailed(reactorId, eventTypeName, ex);
+            return ex;
+        }
+        finally
+        {
+            // We cannot fail the whole reactor if the middlewares fail, because the event has been successfully reacted to.
+            // So we catch and log any exceptions from the middlewares.
+            try
+            {
+                await middlewares.AfterInvoke(eventContext, content);
+            }
+            catch (Exception ex)
+            {
+                logger.ReactorMiddlewareAfterInvokeFailed(reactorId, eventTypeName, ex);
+            }
         }
     }
+
+    static Dictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, IEnumerable<Type> eventTypes)
+    {
+        var methodsByEventType = new Dictionary<Type, MethodInfo>();
+
+        foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (!method.IsEventHandlerMethod(eventTypes))
+            {
+                continue;
+            }
+
+            var eventParameterType = method.GetParameters()[0].ParameterType;
+            foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
+            {
+                methodsByEventType[eventType] = method;
+            }
+        }
+
+        return methodsByEventType;
+    }
+
+    static Dictionary<Type, MethodInfo> GetMethodsByEventType(Type targetType, IEnumerable<Type> eventTypes) =>
+        _methodsByEventTypeCache.GetOrAdd(
+            targetType,
+            static (key, keyEventTypes) => BuildMethodsByEventType(key, keyEventTypes),
+            eventTypes);
 }
