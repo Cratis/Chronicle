@@ -3,14 +3,10 @@ package Cratis.Chronicle.Contracts.Projections;
 import "google/protobuf/empty.proto";
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
-message AppendedEvent {
-   EventContext Context = 1;
-   string Content = 2;
-}
-message Causation {
-   SerializableDateTimeOffset Occurred = 1;
-   string Type = 2;
-   map<string,string> Properties = 3;
+enum AutoMap {
+   Inherit = 0;
+   Disabled = 1;
+   Enabled = 2;
 }
 message ChildrenDefinition {
    string IdentifiedBy = 1;
@@ -21,41 +17,13 @@ message ChildrenDefinition {
    FromEventPropertyDefinition FromEventProperty = 6;
    repeated KeyValuePair_EventType_RemovedWithDefinition RemovedWith = 7;
    repeated KeyValuePair_EventType_RemovedWithJoinDefinition RemovedWithJoin = 8;
+   AutoMap AutoMap = 9;
 }
-message DehydrateSessionRequest {
-   string EventStore = 1;
-   string Namespace = 2;
-   string EventSequenceId = 3;
-   string ProjectionId = 4;
-   string ReadModelKey = 5;
-   .bcl.Guid SessionId = 6;
-}
-message EventContext {
-   EventType EventType = 1;
-   string EventSourceType = 2;
-   string EventSourceId = 3;
-   uint64 SequenceNumber = 4;
-   string EventStreamType = 5;
-   string EventStreamId = 6;
-   SerializableDateTimeOffset Occurred = 7;
-   string EventStore = 8;
-   string Namespace = 9;
-   .bcl.Guid CorrelationId = 10; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   repeated Causation Causation = 11;
-   Identity CausedBy = 12;
-   EventObservationState ObservationState = 13;
-}
-enum EventObservationState {
-   // this is a composite/flags enumeration
-   None = 0;
-   Initial = 1;
-   HeadOfReplay = 2;
-   Replay = 4;
-   TailOfReplay = 8;
-}
-message EventToApply {
-   EventType EventType = 1;
-   string Content = 2;
+message DraftReadModelDefinition {
+   string ContainerName = 1;
+   string Schema = 2;
+   string Identifier = 3;
+   string DisplayName = 4;
 }
 message EventType {
    string Id = 1;
@@ -78,46 +46,37 @@ message FromEventPropertyDefinition {
 message FromEveryDefinition {
    map<string,string> Properties = 1;
    bool IncludeChildren = 2;
+   AutoMap AutoMap = 3;
 }
-message GetInstanceByIdForSessionRequest {
+message GenerateDeclarativeCodeRequest {
    string EventStore = 1;
    string Namespace = 2;
-   string EventSequenceId = 3;
-   string ProjectionId = 4;
-   string ReadModelKey = 5;
-   .bcl.Guid SessionId = 6;
+   string Declaration = 3;
+   DraftReadModelDefinition DraftReadModel = 4;
 }
-message GetInstanceByIdForSessionWithEventsAppliedRequest {
+message GenerateModelBoundCodeRequest {
    string EventStore = 1;
    string Namespace = 2;
-   string EventSequenceId = 3;
-   string ProjectionId = 4;
-   string ReadModelKey = 5;
-   .bcl.Guid SessionId = 6;
-   repeated EventToApply Events = 7;
+   string Declaration = 3;
+   DraftReadModelDefinition DraftReadModel = 4;
 }
-message GetInstanceByIdRequest {
+message GeneratedCode {
+   string Code = 1;
+}
+message GetAllDeclarationsRequest {
    string EventStore = 1;
-   string Namespace = 2;
-   string EventSequenceId = 3;
-   string ProjectionId = 4;
-   string ReadModelKey = 5;
 }
-message GetSnapshotsByIdRequest {
-   string ProjectionId = 1;
-   string EventStore = 2;
-   string Namespace = 3;
-   string EventSequenceId = 4;
-   string ReadModelKey = 5;
+message GetAllDefinitionsRequest {
+   string EventStore = 1;
 }
-message GetSnapshotsByIdResponse {
-   repeated ProjectionSnapshot Snapshots = 1;
+message IEnumerable_ProjectionDefinition {
+   repeated ProjectionDefinition items = 1;
 }
-message Identity {
-   string Subject = 1;
-   string Name = 2;
-   string UserName = 3;
-   Identity OnBehalfOf = 4;
+message IEnumerable_ProjectionWithDeclaration {
+   repeated ProjectionWithDeclaration items = 1;
+}
+message IndexDefinition {
+   string PropertyPath = 1;
 }
 message JoinDefinition {
    string On = 1;
@@ -140,10 +99,28 @@ message KeyValuePair_EventType_RemovedWithJoinDefinition {
    EventType Key = 1;
    RemovedWithJoinDefinition Value = 2;
 }
-message ProjectionChangeset {
-   string Namespace = 1;
-   string ReadModelKey = 2;
-   string ReadModel = 3;
+message OneOf_GeneratedCode_ProjectionDeclarationParsingErrors {
+   GeneratedCode Value0 = 1;
+   ProjectionDeclarationParsingErrors Value1 = 2;
+}
+message OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors {
+   ProjectionPreview Value0 = 1;
+   ProjectionDeclarationParsingErrors Value1 = 2;
+}
+message PreviewProjectionRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3; // default value could not be applied: event-log
+   string Declaration = 4;
+   DraftReadModelDefinition DraftReadModel = 5;
+}
+message ProjectionDeclarationParsingErrors {
+   repeated ProjectionDeclarationSyntaxError Errors = 1;
+}
+message ProjectionDeclarationSyntaxError {
+   string Message = 1;
+   int32 Line = 2;
+   int32 Column = 3;
 }
 message ProjectionDefinition {
    string EventSequenceId = 1;
@@ -161,28 +138,53 @@ message ProjectionDefinition {
    repeated KeyValuePair_EventType_RemovedWithDefinition RemovedWith = 13;
    repeated KeyValuePair_EventType_RemovedWithJoinDefinition RemovedWithJoin = 14;
    SerializableDateTimeOffset LastUpdated = 15;
-   SinkDefinition Sink = 16;
+   repeated string Tags = 16;
+   AutoMap AutoMap = 17;
 }
 enum ProjectionOwner {
    None = 0;
    Client = 1;
    Server = 2;
 }
-message ProjectionResult {
-   string ReadModel = 1;
-   repeated string AffectedProperties = 2;
-   int32 ProjectedEventsCount = 3;
-   uint64 LastHandledEventSequenceNumber = 4;
+message ProjectionPreview {
+   repeated string ReadModelEntries = 1;
+   ReadModelDefinition ReadModel = 2;
 }
-message ProjectionSnapshot {
-   string ReadModel = 1;
-   repeated AppendedEvent Events = 2;
-   SerializableDateTimeOffset Occurred = 3;
-   .bcl.Guid CorrelationId = 4; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+message ProjectionWithDeclaration {
+   string Identifier = 1;
+   string ContainerName = 2;
+   string Declaration = 3;
 }
-message ProjectionWatchRequest {
-   string EventStore = 1;
-   string ProjectionId = 2;
+message ReadModelDefinition {
+   ReadModelType Type = 1;
+   string ContainerName = 2;
+   string DisplayName = 3;
+   SinkDefinition Sink = 4;
+   string Schema = 5;
+   repeated IndexDefinition Indexes = 6;
+   ReadModelObserverType ObserverType = 7;
+   string ObserverIdentifier = 8;
+   ReadModelOwner Owner = 9;
+   ReadModelSource Source = 10;
+}
+enum ReadModelObserverType {
+   NotSet = 0;
+   Reducer = 1;
+   Projection = 2;
+}
+enum ReadModelOwner {
+   None = 0;
+   Client = 1;
+   Server = 2;
+}
+enum ReadModelSource {
+   Unknown = 0;
+   Code = 1;
+   User = 2;
+}
+message ReadModelType {
+   string Identifier = 1;
+   uint32 Generation = 2;
 }
 message RegisterRequest {
    string EventStore = 1;
@@ -196,6 +198,16 @@ message RemovedWithDefinition {
 message RemovedWithJoinDefinition {
    string Key = 1;
 }
+message SaveProjectionRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3; // default value could not be applied: event-log
+   string Declaration = 4;
+   DraftReadModelDefinition DraftReadModel = 5;
+}
+message SaveProjectionResult {
+   repeated ProjectionDeclarationSyntaxError Errors = 1;
+}
 message SerializableDateTimeOffset {
    int64 Ticks = 1;
    double OffsetMinutes = 2;
@@ -205,11 +217,11 @@ message SinkDefinition {
    .bcl.Guid TypeId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
 service Projections {
-   rpc DehydrateSession (DehydrateSessionRequest) returns (.google.protobuf.Empty);
-   rpc GetInstanceById (GetInstanceByIdRequest) returns (ProjectionResult);
-   rpc GetInstanceByIdForSession (GetInstanceByIdForSessionRequest) returns (ProjectionResult);
-   rpc GetInstanceByIdForSessionWithEventsApplied (GetInstanceByIdForSessionWithEventsAppliedRequest) returns (ProjectionResult);
-   rpc GetSnapshotsById (GetSnapshotsByIdRequest) returns (GetSnapshotsByIdResponse);
+   rpc GenerateDeclarativeCode (GenerateDeclarativeCodeRequest) returns (OneOf_GeneratedCode_ProjectionDeclarationParsingErrors);
+   rpc GenerateModelBoundCode (GenerateModelBoundCodeRequest) returns (OneOf_GeneratedCode_ProjectionDeclarationParsingErrors);
+   rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);
+   rpc GetAllDefinitions (GetAllDefinitionsRequest) returns (IEnumerable_ProjectionDefinition);
+   rpc Preview (PreviewProjectionRequest) returns (OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors);
    rpc Register (RegisterRequest) returns (.google.protobuf.Empty);
-   rpc Watch (ProjectionWatchRequest) returns (stream ProjectionChangeset);
+   rpc Save (SaveProjectionRequest) returns (SaveProjectionResult);
 }

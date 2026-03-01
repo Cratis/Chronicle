@@ -25,6 +25,8 @@ message EventContext {
    repeated Causation Causation = 11;
    Identity CausedBy = 12;
    EventObservationState ObservationState = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
 }
 enum EventObservationState {
    // this is a composite/flags enumeration
@@ -47,6 +49,15 @@ message EventsToObserve {
    string Partition = 1;
    repeated AppendedEvent Events = 2;
 }
+message HasReactorRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ReactorId = 3;
+}
+message HasReactorResponse {
+   bool Exists = 1;
+   string EventSequenceId = 2;
+}
 message Identity {
    string Subject = 1;
    string Name = 2;
@@ -67,6 +78,7 @@ message ReactorDefinition {
    string EventSequenceId = 2;
    repeated EventTypeWithKeyExpression EventTypes = 3;
    bool IsReplayable = 4; // default value could not be applied: True
+   repeated string Tags = 5;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;
@@ -89,5 +101,6 @@ message SerializableDateTimeOffset {
    double OffsetMinutes = 2;
 }
 service Reactors {
+   rpc HasReactor (HasReactorRequest) returns (HasReactorResponse);
    rpc Observe (stream ReactorMessage) returns (stream EventsToObserve);
 }

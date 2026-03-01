@@ -12,5 +12,5 @@ message ConnectionKeepAlive {
 }
 service ConnectionService {
    rpc Connect (ConnectRequest) returns (stream ConnectionKeepAlive);
-   rpc ConnectionKeepAlive (ConnectionKeepAlive) returns (.google.protobuf.Empty);
+   rpc SendConnectionKeepAlive (ConnectionKeepAlive) returns (.google.protobuf.Empty);
 }

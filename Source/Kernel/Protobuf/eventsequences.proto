@@ -33,6 +33,7 @@ message AppendRequest {
    repeated Causation Causation = 11;
    Identity CausedBy = 12;
    ConcurrencyScope ConcurrencyScope = 13;
+   repeated string Tags = 14;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1;
@@ -90,6 +91,8 @@ message EventContext {
    repeated Causation Causation = 11;
    Identity CausedBy = 12;
    EventObservationState ObservationState = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
 }
 enum EventObservationState {
    // this is a composite/flags enumeration
@@ -106,6 +109,7 @@ message EventToAppend {
    string EventStreamId = 4;
    EventType EventType = 5;
    string Content = 6;
+   repeated string Tags = 7;
 }
 message EventType {
    string Id = 1;

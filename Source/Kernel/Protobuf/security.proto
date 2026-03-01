@@ -1,0 +1,87 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Security;
+import "google/protobuf/empty.proto";
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AddApplication {
+   string Id = 1;
+   string ClientId = 2;
+   string ClientSecret = 3;
+}
+message AddUser {
+   .bcl.Guid UserId = 1;
+   string Username = 2;
+   string Email = 3;
+   string Password = 4;
+}
+message Application {
+   .bcl.Guid Id = 1;
+   string ClientId = 2;
+   bool IsActive = 3;
+   SerializableDateTimeOffset CreatedAt = 4;
+   SerializableDateTimeOffset LastModifiedAt = 5;
+}
+message ChangeApplicationSecret {
+   .bcl.Guid Id = 1;
+   string ClientSecret = 2;
+}
+message ChangeUserPassword {
+   .bcl.Guid UserId = 1;
+   string OldPassword = 2;
+   string Password = 3;
+   string ConfirmedPassword = 4;
+}
+message IList_Application {
+   repeated Application items = 1;
+}
+message IList_User {
+   repeated User items = 1;
+}
+message InitialAdminPasswordSetupStatus {
+   bool IsRequired = 1;
+   .bcl.Guid AdminUserId = 2;
+}
+message RemoveApplication {
+   .bcl.Guid Id = 1;
+}
+message RemoveUser {
+   .bcl.Guid UserId = 1;
+}
+message RequirePasswordChange {
+   .bcl.Guid UserId = 1;
+}
+message SerializableDateTimeOffset {
+   int64 Ticks = 1;
+   double OffsetMinutes = 2;
+}
+message SetInitialAdminPassword {
+   .bcl.Guid UserId = 1;
+   string Password = 2;
+   string ConfirmedPassword = 3;
+}
+message User {
+   .bcl.Guid Id = 1;
+   string Username = 2;
+   string Email = 3;
+   bool IsActive = 4;
+   SerializableDateTimeOffset CreatedAt = 5;
+   SerializableDateTimeOffset LastModifiedAt = 6;
+   bool HasLoggedIn = 7;
+}
+service Applications {
+   rpc Add (AddApplication) returns (.google.protobuf.Empty);
+   rpc ChangeSecret (ChangeApplicationSecret) returns (.google.protobuf.Empty);
+   rpc GetAll (.google.protobuf.Empty) returns (IList_Application);
+   rpc ObserveAll (.google.protobuf.Empty) returns (stream IList_Application);
+   rpc Remove (RemoveApplication) returns (.google.protobuf.Empty);
+}
+service Users {
+   rpc Add (AddUser) returns (.google.protobuf.Empty);
+   rpc ChangePassword (ChangeUserPassword) returns (.google.protobuf.Empty);
+   rpc GetAll (.google.protobuf.Empty) returns (IList_User);
+   rpc GetInitialAdminPasswordSetupStatus (.google.protobuf.Empty) returns (InitialAdminPasswordSetupStatus);
+   rpc ObserveAll (.google.protobuf.Empty) returns (stream IList_User);
+   rpc Remove (RemoveUser) returns (.google.protobuf.Empty);
+   rpc RequirePasswordChange (RequirePasswordChange) returns (.google.protobuf.Empty);
+   rpc SetInitialAdminPassword (SetInitialAdminPassword) returns (.google.protobuf.Empty);
+}

@@ -11,6 +11,7 @@ message SeedingEntry {
    string EventSourceId = 1;
    string EventTypeId = 2;
    string Content = 3;
+   repeated string Tags = 4;
 }
 service EventSeeding {
    rpc Seed (SeedRequest) returns (.google.protobuf.Empty);

@@ -46,6 +46,11 @@ foreach (var group in servicesByNamespace)
     try
     {
         var schema = generator.GetSchema(packageServices);
+
+        // Fix naming conflicts where RPC methods have the same name as message types
+        // This is a known issue with protobuf where method names cannot match message type names
+        schema = schema.Replace("rpc ConnectionKeepAlive (ConnectionKeepAlive)", "rpc SendConnectionKeepAlive (ConnectionKeepAlive)");
+
         var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))
         {

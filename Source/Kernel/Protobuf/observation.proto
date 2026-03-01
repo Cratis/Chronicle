@@ -69,6 +69,7 @@ enum ObserverType {
    Reactor = 1;
    Projection = 2;
    Reducer = 3;
+   External = 4;
 }
 message Replay {
    string EventStore = 1;

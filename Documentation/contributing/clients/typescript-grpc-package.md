@@ -98,6 +98,7 @@ yarn build
 ### Using the Published Package
 
 Install the package:
+
 ```bash
 npm install @cratis/chronicle.contracts
 # or
@@ -105,6 +106,7 @@ yarn add @cratis/chronicle.contracts
 ```
 
 Use in your TypeScript code:
+
 ```typescript
 import { ChronicleConnection, ChronicleConnectionString } from '@cratis/chronicle.contracts';
 
@@ -142,6 +144,7 @@ connection.dispose();
 The package supports two authentication methods:
 
 **Client Credentials (OAuth 2.0):**
+
 ```typescript
 // Connection string with credentials
 const connStr = new ChronicleConnectionString('chronicle://client-id:client-secret@localhost:5000');
@@ -153,6 +156,7 @@ const connection = new ChronicleConnection({ connectionString: connStr });
 ```
 
 **API Key:**
+
 ```typescript
 // Connection string with API key query parameter
 const connStr = new ChronicleConnectionString('chronicle://localhost:5000?apiKey=my-api-key');
@@ -164,6 +168,7 @@ const connection = new ChronicleConnection({ connectionString: connStr });
 ```
 
 **Custom Authority:**
+
 ```typescript
 // If using an external OAuth server
 const connection = new ChronicleConnection({

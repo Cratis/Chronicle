@@ -25,6 +25,8 @@ message EventContext {
    repeated Causation Causation = 11;
    Identity CausedBy = 12;
    EventObservationState ObservationState = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
 }
 enum EventObservationState {
    // this is a composite/flags enumeration
@@ -68,7 +70,9 @@ message ReducerDefinition {
    string EventSequenceId = 2;
    repeated EventTypeWithKeyExpression EventTypes = 3;
    string ReadModel = 4;
-   SinkDefinition Sink = 5;
+   bool IsActive = 5;
+   SinkDefinition Sink = 6;
+   repeated string Tags = 7;
 }
 message ReducerMessage {
    OneOf_RegisterReducer_ReducerResult Content = 1;
