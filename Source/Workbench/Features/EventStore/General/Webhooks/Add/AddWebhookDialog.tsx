@@ -74,6 +74,8 @@ export const AddWebhookDialog = ({ visible, onClose }: AddWebhookDialogProps) =>
             currentValues={currentValues}
             visible={visible}
             header={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             width="600px"
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>

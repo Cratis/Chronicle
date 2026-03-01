@@ -49,6 +49,8 @@ export const AddReadModelDialog = ({ visible, onClose }: AddReadModelDialogProps
             currentValues={currentValues}
             visible={visible}
             header={strings.eventStore.general.readModels.dialogs.addReadModel.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             width="800px"
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>

@@ -30,6 +30,8 @@ export const ChangeSecretDialog = ({ visible, applicationId, onClose }: ChangeSe
             currentValues={{ id: applicationId, clientSecret }}
             visible={visible}
             header={strings.eventStore.system.applications.dialogs.changeSecret.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>
             <div className="p-inputgroup flex-1">

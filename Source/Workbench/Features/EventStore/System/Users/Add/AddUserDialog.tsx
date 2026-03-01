@@ -31,19 +31,19 @@ export const AddUserDialog = ({ visible, onClose }: AddUserDialogProps) => {
             currentValues={{ userId, password }}
             visible={visible}
             header={strings.eventStore.system.users.dialogs.addUser.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>
-            <CommandDialog.Fields>
-                <InputTextField<AddUser>
-                    value={c => c.username}
-                    title={strings.eventStore.system.users.dialogs.addUser.username}
-                    icon={<i className="pi pi-user" />} />
-                <InputTextField<AddUser>
-                    value={c => c.email}
-                    title={strings.eventStore.system.users.dialogs.addUser.email}
-                    icon={<i className="pi pi-envelope" />}
-                    required={false} />
-            </CommandDialog.Fields>
+            <InputTextField<AddUser>
+                value={c => c.username}
+                title={strings.eventStore.system.users.dialogs.addUser.username}
+                icon={<i className="pi pi-user" />} />
+            <InputTextField<AddUser>
+                value={c => c.email}
+                title={strings.eventStore.system.users.dialogs.addUser.email}
+                icon={<i className="pi pi-envelope" />}
+                required={false} />
             <div className="p-inputgroup flex-1 mt-3">
                 <span className="p-inputgroup-addon">
                     <i className="pi pi-lock"></i>

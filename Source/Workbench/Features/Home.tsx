@@ -50,12 +50,10 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                 width="20vw"
                 onConfirm={result => { if (result.isSuccess) setShowAddEventStore(false); }}
                 onCancel={() => setShowAddEventStore(false)}>
-                <CommandDialog.Fields>
-                    <InputTextField<AddEventStoreCommand>
-                        value={c => c.name}
-                        title={strings.home.dialogs.addEventStore.name}
-                        icon={<i className="pi pi-pencil" />} />
-                </CommandDialog.Fields>
+                <InputTextField<AddEventStoreCommand>
+                    value={c => c.name}
+                    title={strings.home.dialogs.addEventStore.name}
+                    icon={<i className="pi pi-pencil" />} />
             </CommandDialog>
         </div>
     );

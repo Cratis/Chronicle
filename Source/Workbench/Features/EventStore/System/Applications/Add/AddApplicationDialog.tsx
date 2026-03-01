@@ -30,14 +30,14 @@ export const AddApplicationDialog = ({ visible, onClose }: AddApplicationDialogP
             currentValues={{ id, clientSecret }}
             visible={visible}
             header={strings.eventStore.system.applications.dialogs.addApplication.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>
-            <CommandDialog.Fields>
-                <InputTextField<AddApplication>
-                    value={c => c.clientId}
-                    title={strings.eventStore.system.applications.dialogs.addApplication.clientId}
-                    icon={<i className="pi pi-user" />} />
-            </CommandDialog.Fields>
+            <InputTextField<AddApplication>
+                value={c => c.clientId}
+                title={strings.eventStore.system.applications.dialogs.addApplication.clientId}
+                icon={<i className="pi pi-user" />} />
             <div className="p-inputgroup flex-1 mt-3">
                 <span className="p-inputgroup-addon">
                     <i className="pi pi-lock"></i>

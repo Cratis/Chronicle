@@ -156,6 +156,8 @@ export const EventTypes = () => {
                 initialValues={{ eventStore: params.eventStore }}
                 visible={showAddEventType}
                 header={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
+                confirmLabel={strings.general.buttons.ok}
+                cancelLabel={strings.general.buttons.cancel}
                 onConfirm={result => {
                     if (result.isSuccess) {
                         setShowAddEventType(false);
@@ -163,12 +165,10 @@ export const EventTypes = () => {
                     }
                 }}
                 onCancel={() => setShowAddEventType(false)}>
-                <CommandDialog.Fields>
-                    <InputTextField<CreateEventType>
-                        value={c => c.name}
-                        title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
-                        icon={<i className="pi pi-code" />} />
-                </CommandDialog.Fields>
+                <InputTextField<CreateEventType>
+                    value={c => c.name}
+                    title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
+                    icon={<i className="pi pi-code" />} />
             </CommandDialog>
         </>
     );

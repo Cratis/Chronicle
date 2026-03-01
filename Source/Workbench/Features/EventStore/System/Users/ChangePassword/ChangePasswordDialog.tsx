@@ -33,6 +33,8 @@ export const ChangePasswordDialog = ({ visible, userId, onClose }: ChangePasswor
             currentValues={{ userId, password, confirmedPassword: confirmPassword }}
             visible={visible}
             header={strings.eventStore.system.users.dialogs.changePassword.title}
+            confirmLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             width="30vw"
             onConfirm={result => { if (result.isSuccess) onClose(); }}
             onCancel={onClose}>
