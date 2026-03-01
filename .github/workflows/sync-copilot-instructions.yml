@@ -1,4 +1,7 @@
 name: Sync Copilot Instructions
+# This workflow requires PAT_DOCUMENTATION secret with permissions:
+# - contents: write (to checkout and modify files)
+# - pull-requests: write (to create pull requests)
 
 on:
   workflow_dispatch:
@@ -68,7 +71,7 @@ jobs:
         with:
           token: ${{ secrets.PAT_DOCUMENTATION }}
           commit-message: "Copilot Instructions synchronization from ${{ inputs.source_repository }}"
-          branch: "copilot-sync-from-${{ github.run_id }}"
+          branch: "copilot-sync/${{ github.run_id }}-${{ github.run_attempt }}"
           delete-branch: true
           title: "Sync Copilot Instructions from ${{ inputs.source_repository }}"
           body: |
@@ -81,6 +84,7 @@ jobs:
             
             **Source repository:** ${{ inputs.source_repository }}
             **Triggered by workflow run:** ${{ github.run_id }}
+            **Run attempt:** ${{ github.run_attempt }}
           labels: |
             automated
             copilot-sync
