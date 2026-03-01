@@ -35,6 +35,6 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
             .Where(r => r.ReadModelIdentifier == readModel.Value)
             .ToListAsync();
 
-        return occurrences.Select(o => ReplayedModelsConverters.ToReadModelOccurrence(o));
+        return occurrences.Select(ReplayedModelsConverters.ToReadModelOccurrence);
     }
 }

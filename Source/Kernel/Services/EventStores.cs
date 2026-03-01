@@ -23,13 +23,13 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, 
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetEventStores()
     {
-        var eventStores = await storage.Cluster.GetEventStores();
+        var eventStores = await storage.GetEventStores();
         return eventStores.Select(_ => _.Value).ToArray();
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default) =>
-        storage.Cluster
+        storage
             .ObserveEventStores()
             .CompletedBy(callContext.CancellationToken)
             .Select(_ => _.Select(e => e.Value).ToArray());

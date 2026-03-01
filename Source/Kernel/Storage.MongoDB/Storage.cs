@@ -92,7 +92,7 @@ public class Storage(
             complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
-            sinkFactories,
+            @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
             jobTypes,
             options,
             loggerFactory);

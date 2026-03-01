@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
 

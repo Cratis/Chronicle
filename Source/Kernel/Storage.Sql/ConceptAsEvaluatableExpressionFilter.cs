@@ -67,7 +67,7 @@ public class ConceptAsEvaluatableExpressionFilter(
             // For ParameterExpression, check if it's a lambda parameter (entity) or query parameter (closure)
             // Lambda parameters have names like "e", "o", etc. and should not be evaluated
             // Query parameters have names like "id", "sequenceNumber", etc. from closures
-            if (expression is ParameterExpression paramExpr)
+            if (expression is ParameterExpression)
             {
                 // Lambda parameters (e, o, x, etc.) are part of the query structure - don't evaluate
                 // But captured variables that become parameters should be evaluated

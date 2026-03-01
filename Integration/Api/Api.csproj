@@ -3,6 +3,7 @@
         <AssemblyName>Cratis.Chronicle.Integration.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Integration.Api</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <GenerateProgramFile>false</GenerateProgramFile>
         <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
         <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:local-development</LocalImageName>
         <!-- Explicitly set TargetFramework to net10.0 to override Directory.Build.props -->

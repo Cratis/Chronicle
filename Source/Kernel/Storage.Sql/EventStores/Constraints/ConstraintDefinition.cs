@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
 

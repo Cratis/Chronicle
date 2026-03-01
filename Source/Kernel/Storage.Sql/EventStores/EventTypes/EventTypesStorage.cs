@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Reactive;
 using Microsoft.EntityFrameworkCore;
 using NJsonSchema;
 
@@ -18,10 +17,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
+public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage, IDisposable
 {
-    ConcurrentBag<EventType> _eventTypes = new();
     readonly ReplaySubject<IEnumerable<EventTypeSchema>> _eventTypesSubject = new(1);
+    ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
     public async Task Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code)
@@ -99,6 +98,13 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         var eventType = await GetSpecificEventType(type);
         return eventType?.Schemas.ContainsKey(generation) ?? false;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventTypesSubject.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)

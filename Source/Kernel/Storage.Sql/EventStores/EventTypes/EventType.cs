@@ -4,7 +4,6 @@
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 

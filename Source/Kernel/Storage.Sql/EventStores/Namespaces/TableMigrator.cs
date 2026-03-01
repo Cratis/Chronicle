@@ -32,7 +32,9 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
         if (_migratedTables.ContainsKey(key))
         {
             return;
-        }        // Get or create a lock for this specific table
+        }
+
+        // Get or create a lock for this specific table
         var lockObject = _migrationLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
 
         await lockObject.WaitAsync();
