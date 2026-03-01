@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   sync-instructions:
@@ -20,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_DOCUMENTATION }}
       
       - name: Validate source repository input
         run: |
@@ -31,7 +32,7 @@ jobs:
       
       - name: Clone source repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_DOCUMENTATION }}
         run: |
           gh repo clone ${{ inputs.source_repository }} /tmp/source-repo
       
@@ -62,18 +63,24 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
-      - name: Commit and push changes
-        run: |
-          # Check if there are any changes to commit
-          if [ -f ".github/copilot-instructions.md" ] || [ -d ".github/instructions" ] || [ -d ".github/agents" ]; then
-            git add -A .github/
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          commit-message: "Copilot Instructions synchronization from ${{ inputs.source_repository }}"
+          branch: "copilot-sync-from-${{ github.run_id }}"
+          delete-branch: true
+          title: "Sync Copilot Instructions from ${{ inputs.source_repository }}"
+          body: |
+            This PR synchronizes Copilot instructions from [${{ inputs.source_repository }}](https://github.com/${{ inputs.source_repository }}).
             
-            if git diff --staged --quiet; then
-              echo "No changes to commit"
-            else
-              git commit -m "Copilot Instructions synchronization from ${{ inputs.source_repository }}"
-              git push origin main
-            fi
-          else
-            echo "No Copilot instructions found to synchronize"
-          fi
+            ### Changes include:
+            - Updated `.github/copilot-instructions.md` (if present)
+            - Updated `.github/instructions/` folder (if present)
+            - Updated `.github/agents/` folder (if present)
+            
+            **Source repository:** ${{ inputs.source_repository }}
+            **Triggered by workflow run:** ${{ github.run_id }}
+          labels: |
+            automated
+            copilot-sync
