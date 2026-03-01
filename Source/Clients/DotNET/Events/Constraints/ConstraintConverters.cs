@@ -32,7 +32,7 @@ internal static class ConstraintConverters
     internal static Constraint ToContract(this UniqueEventTypeConstraintDefinition definition) => new()
     {
         Name = definition.Name,
-        Type = ConstraintType.UniqueEventType,
+        Type = (Contracts.Events.Constraints.ConstraintType)ConstraintType.UniqueEventType,
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
             EventTypeId = definition.EventTypeId
@@ -47,7 +47,7 @@ internal static class ConstraintConverters
     internal static Constraint ToContract(this UniqueConstraintDefinition definition) => new()
     {
         Name = definition.Name,
-        Type = ConstraintType.Unique,
+        Type = (Contracts.Events.Constraints.ConstraintType)ConstraintType.Unique,
         RemovedWith = definition.RemovedWith?.Value,
         Definition = new(new Contracts.Events.Constraints.UniqueConstraintDefinition
         {

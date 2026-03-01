@@ -18,6 +18,7 @@ public class when_resolving_message_for_violation : given.two_constraints
         _violation = new ConstraintViolation(
             "SomeEvent",
             EventSequenceNumber.First,
+            ConstraintType.Unknown,
             _firstConstraintName,
             string.Empty,
             new()
