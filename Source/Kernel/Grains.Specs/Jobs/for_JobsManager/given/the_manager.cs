@@ -4,11 +4,13 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Orleans.TestKit;
 using Catch = Cratis.Monads.Catch;
@@ -51,9 +53,12 @@ public class the_manager : Specification
         _jobStorage.Remove(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
 
         _jobStepStorage.RemoveAllForJob(Arg.Any<JobId>()).Returns(Task.FromResult(Catch.Success()));
+
+        var options = Options.Create(new ChronicleOptions());
         _silo.AddService(_storage);
         _silo.AddService(NullLogger<JobsManager>.Instance);
         _silo.AddService(_jobTypes);
+        _silo.AddService(options);
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         _managerKey = new("event-store", "namespace");

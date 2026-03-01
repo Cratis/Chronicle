@@ -79,4 +79,10 @@ public interface IJobsManager : IGrainWithIntegerCompoundKey
     /// </summary>
     /// <returns>Collection of job states.</returns>
     Task<IImmutableList<JobState>> GetAllJobs();
+
+    /// <summary>
+    /// Clean up dead jobs that are stuck in preparation and have no steps.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task CleanupDeadJobs();
 }

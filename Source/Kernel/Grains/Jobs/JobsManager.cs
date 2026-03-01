@@ -3,10 +3,12 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OneOf.Types;
 using Orleans.Concurrency;
 
@@ -20,16 +22,20 @@ namespace Cratis.Chronicle.Grains.Jobs;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for working with underlying storage.</param>
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about job type associations.</param>
+/// <param name="options">Chronicle options.</param>
 /// <param name="logger">Logger for logging.</param>
 [Reentrant]
 public class JobsManager(
     IStorage storage,
     IJobTypes jobTypes,
+    IOptions<ChronicleOptions> options,
     ILogger<JobsManager> logger) : Grain, IJobsManager
 {
     IEventStoreNamespaceStorage? _namespaceStorage;
     IJobStorage? _jobStorage;
+    IJobStepStorage? _jobStepStorage;
     JobsManagerKey _key = JobsManagerKey.NotSet;
+    IGrainTimer? _cleanupTimer;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -39,7 +45,24 @@ public class JobsManager(
 
         _namespaceStorage = storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace);
         _jobStorage = _namespaceStorage.Jobs;
+        _jobStepStorage = _namespaceStorage.JobSteps;
 
+        var cleanupCadence = options.Value.Jobs.CleanupCadence;
+        _cleanupTimer = this.RegisterGrainTimer(
+            async _ => await CleanupDeadJobs(),
+            new GrainTimerCreationOptions
+            {
+                DueTime = cleanupCadence,
+                Period = cleanupCadence
+            });
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _cleanupTimer?.Dispose();
         return Task.CompletedTask;
     }
 
@@ -82,6 +105,9 @@ public class JobsManager(
         using var scope = logger.BeginJobsManagerScope(_key);
 
         logger.Rehydrating();
+
+        await CleanupDeadJobs();
+
         var getRunningJobs = await _jobStorage!.GetJobs(JobStatus.Running, JobStatus.PreparingJob, JobStatus.PreparingSteps, JobStatus.StartingSteps);
         await getRunningJobs.Match(RehydrateJobs, HandleUnknownFailure);
         return;
@@ -163,6 +189,60 @@ public class JobsManager(
                 logger.UnableToGetAllJobs(exception);
                 return Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty);
             });
+    }
+
+    /// <inheritdoc/>
+    public async Task CleanupDeadJobs()
+    {
+        using var scope = logger.BeginJobsManagerScope(_key);
+
+        logger.CleaningUpDeadJobs();
+
+        var threshold = options.Value.Jobs.DeadJobThreshold;
+        var cutoffTime = DateTimeOffset.UtcNow - threshold;
+
+        var getPreparingJobs = await _jobStorage!.GetJobs(JobStatus.PreparingJob, JobStatus.PreparingSteps);
+        await getPreparingJobs.Match(
+            async preparingJobs => await CleanupDeadJobsInternal(preparingJobs, cutoffTime),
+            exception =>
+            {
+                logger.FailedToGetJobsForCleanup(exception);
+                return Task.CompletedTask;
+            });
+    }
+
+    async Task CleanupDeadJobsInternal(IEnumerable<JobState> preparingJobs, DateTimeOffset cutoffTime)
+    {
+        var deadJobs = new List<JobState>();
+
+        foreach (var job in preparingJobs.Where(j => j.Created < cutoffTime))
+        {
+            var stepCountResult = await _jobStepStorage!.CountForJob(job.Id);
+            var shouldDelete = await stepCountResult.Match(
+                count => Task.FromResult(count == 0),
+                error =>
+                {
+                    logger.FailedToGetStepCountForJob(job.Id, error);
+                    logger.SkippingJobDueToStepCountError(job.Id);
+                    return Task.FromResult(false);
+                });
+
+            if (shouldDelete)
+            {
+                deadJobs.Add(job);
+            }
+        }
+
+        if (deadJobs.Count > 0)
+        {
+            logger.FoundDeadJobs(deadJobs.Count);
+            var deleteTasks = deadJobs.ConvertAll(job => Delete(job.Id));
+            await Task.WhenAll(deleteTasks);
+        }
+        else
+        {
+            logger.NoDeadJobsFound();
+        }
     }
 
     Result<IJob, IJobTypes.GetClrTypeForError> GetJobGrain(JobState jobState) => jobTypes.GetClrTypeFor(jobState.Type)
