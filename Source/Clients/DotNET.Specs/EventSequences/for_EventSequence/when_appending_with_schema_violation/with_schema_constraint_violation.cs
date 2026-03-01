@@ -75,9 +75,9 @@ public class with_schema_constraint_violation : given.an_event_sequence
     [Fact] void should_not_be_successful() => _result.IsSuccess.ShouldBeFalse();
     [Fact] void should_have_constraint_violations() => _result.HasConstraintViolations.ShouldBeTrue();
     [Fact] void should_have_one_violation() => _result.ConstraintViolations.Count().ShouldEqual(1);
-    [Fact] void should_have_schema_constraint_type() => _result.ConstraintViolations.First().ConstraintType.ShouldEqual(ConstraintType.Schema);
-    [Fact] void should_have_schema_validation_constraint_name() => _result.ConstraintViolations.First().ConstraintName.Value.ShouldEqual("SchemaValidation");
-    [Fact] void should_have_violation_message() => _result.ConstraintViolations.First().Message.Value.ShouldEqual("PropertyRequired: #/name");
-    [Fact] void should_have_violation_details_with_path() => _result.ConstraintViolations.First().Details["path"].ShouldEqual("#/name");
-    [Fact] void should_have_violation_details_with_kind() => _result.ConstraintViolations.First().Details["kind"].ShouldEqual("PropertyRequired");
+    [Fact] void should_have_schema_constraint_type() => _result.ConstraintViolations.FirstOrDefault()?.ConstraintType.ShouldEqual(ConstraintType.Schema);
+    [Fact] void should_have_schema_validation_constraint_name() => _result.ConstraintViolations.FirstOrDefault()?.ConstraintName.Value.ShouldEqual("SchemaValidation");
+    [Fact] void should_have_violation_message() => _result.ConstraintViolations.FirstOrDefault()?.Message.Value.ShouldEqual("PropertyRequired: #/name");
+    [Fact] void should_have_violation_details_with_path() => _result.ConstraintViolations.FirstOrDefault()?.Details["path"].ShouldEqual("#/name");
+    [Fact] void should_have_violation_details_with_kind() => _result.ConstraintViolations.FirstOrDefault()?.Details["kind"].ShouldEqual("PropertyRequired");
 }
