@@ -1,0 +1,16 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Clients;
+import "google/protobuf/empty.proto";
+
+message ConnectRequest {
+   string ConnectionId = 1;
+   string ClientVersion = 2;
+   bool IsRunningWithDebugger = 3;
+}
+message ConnectionKeepAlive {
+   string ConnectionId = 1;
+}
+service ConnectionService {
+   rpc Connect (ConnectRequest) returns (stream ConnectionKeepAlive);
+   rpc SendConnectionKeepAlive (ConnectionKeepAlive) returns (.google.protobuf.Empty);
+}

@@ -1,0 +1,75 @@
+---
+name: TypeScript Build
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+"on":
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "Source/Clients/TypeScript/**"
+      - "Source/Kernel/Contracts/**"
+      - "Source/Kernel/Protobuf/**"
+      - "Source/Tools/ProtoGenerator/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/Clients/TypeScript/**"
+      - "Source/Kernel/Contracts/**"
+      - "Source/Kernel/Protobuf/**"
+      - "Source/Tools/ProtoGenerator/**"
+
+jobs:
+  typescript-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23.x'
+
+      - name: Install protoc
+        run: |
+          PROTOC_VERSION="28.3"
+          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}
+          sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+          sudo unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
+          rm -f $PROTOC_ZIP
+          protoc --version
+
+      - name: Build Contracts
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate Proto Files
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            $CONTRACTS_DLL \
+            Source/Kernel/Protobuf
+
+      - name: Install TypeScript dependencies
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn install
+
+      - name: Generate TypeScript from Proto
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn generate
+
+      - name: Build TypeScript package
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn build

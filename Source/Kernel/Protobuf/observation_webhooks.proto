@@ -1,0 +1,75 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Observation.Webhooks;
+import "google/protobuf/empty.proto";
+
+message AddWebhooks {
+   string EventStore = 1;
+   ObserverOwner Owner = 2;
+   repeated WebhookDefinition Webhooks = 3;
+}
+message BasicAuthorization {
+   string Username = 1;
+   string Password = 2;
+}
+message BearerTokenAuthorization {
+   string Token = 1;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message GetWebhooksRequest {
+   string EventStore = 1;
+}
+message IEnumerable_WebhookDefinition {
+   repeated WebhookDefinition items = 1;
+}
+message OAuthAuthorization {
+   string Authority = 1;
+   string ClientId = 2;
+   string ClientSecret = 3;
+}
+enum ObserverOwner {
+   None = 0;
+   Client = 1;
+   Kernel = 2;
+}
+message OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization {
+   BasicAuthorization Value0 = 1;
+   BearerTokenAuthorization Value1 = 2;
+   OAuthAuthorization Value2 = 3;
+}
+message RemoveWebhooks {
+   string EventStore = 1;
+   repeated string Webhooks = 3;
+}
+message TestOAuthAuthorizationRequest {
+   string Authority = 1;
+   string ClientId = 2;
+   string ClientSecret = 3;
+}
+message TestOAuthAuthorizationResponse {
+   bool Success = 1;
+   string ErrorMessage = 2;
+}
+message WebhookDefinition {
+   string EventSequenceId = 1;
+   string Identifier = 2;
+   repeated EventType EventTypes = 3;
+   WebhookTarget Target = 4;
+   bool IsReplayable = 5; // default value could not be applied: True
+   bool IsActive = 6; // default value could not be applied: True
+}
+message WebhookTarget {
+   string Url = 1;
+   OneOf_BasicAuthorization_BearerTokenAuthorization_OAuthAuthorization Authorization = 2;
+   map<string,string> Headers = 3;
+}
+service Webhooks {
+   rpc Add (AddWebhooks) returns (.google.protobuf.Empty);
+   rpc GetWebhooks (GetWebhooksRequest) returns (IEnumerable_WebhookDefinition);
+   rpc ObserveWebhooks (GetWebhooksRequest) returns (stream IEnumerable_WebhookDefinition);
+   rpc Remove (RemoveWebhooks) returns (.google.protobuf.Empty);
+   rpc TestOAuthAuthorization (TestOAuthAuthorizationRequest) returns (TestOAuthAuthorizationResponse);
+}

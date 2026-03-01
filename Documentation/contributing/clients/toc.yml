@@ -8,3 +8,7 @@
   href: ./api.md
 - name: Internalization
   href: ./internalization.md
+- name: Protobuf Extraction
+  href: ./protobuf-extraction.md
+- name: TypeScript gRPC Client
+  href: ./typescript-grpc-package.md

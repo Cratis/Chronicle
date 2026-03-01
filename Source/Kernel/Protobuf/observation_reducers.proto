@@ -1,0 +1,104 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Observation.Reducers;
+import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message AppendedEvent {
+   EventContext Context = 1;
+   string Content = 2;
+}
+message Causation {
+   SerializableDateTimeOffset Occurred = 1;
+   string Type = 2;
+   map<string,string> Properties = 3;
+}
+message EventContext {
+   EventType EventType = 1;
+   string EventSourceType = 2;
+   string EventSourceId = 3;
+   uint64 SequenceNumber = 4;
+   string EventStreamType = 5;
+   string EventStreamId = 6;
+   SerializableDateTimeOffset Occurred = 7;
+   string EventStore = 8;
+   string Namespace = 9;
+   .bcl.Guid CorrelationId = 10; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated Causation Causation = 11;
+   Identity CausedBy = 12;
+   EventObservationState ObservationState = 13;
+   repeated string Tags = 14;
+   string Hash = 15;
+}
+enum EventObservationState {
+   // this is a composite/flags enumeration
+   None = 0;
+   Initial = 1;
+   HeadOfReplay = 2;
+   Replay = 4;
+   TailOfReplay = 8;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message EventTypeWithKeyExpression {
+   EventType EventType = 1;
+   string Key = 2;
+}
+message Identity {
+   string Subject = 1;
+   string Name = 2;
+   string UserName = 3;
+   Identity OnBehalfOf = 4;
+}
+enum ObservationState {
+   None = 0;
+   Success = 1;
+   Failed = 2;
+}
+message OneOf_RegisterReducer_ReducerResult {
+   RegisterReducer Value0 = 1;
+   ReducerResult Value1 = 2;
+}
+message ReduceOperationMessage {
+   string Partition = 1;
+   string InitialState = 2;
+   repeated AppendedEvent Events = 3;
+}
+message ReducerDefinition {
+   string ReducerId = 1;
+   string EventSequenceId = 2;
+   repeated EventTypeWithKeyExpression EventTypes = 3;
+   string ReadModel = 4;
+   bool IsActive = 5;
+   SinkDefinition Sink = 6;
+   repeated string Tags = 7;
+}
+message ReducerMessage {
+   OneOf_RegisterReducer_ReducerResult Content = 1;
+}
+message ReducerResult {
+   string Partition = 1;
+   ObservationState State = 2;
+   uint64 LastSuccessfulObservation = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string ReadModelState = 6;
+}
+message RegisterReducer {
+   string ConnectionId = 1;
+   string EventStore = 2;
+   string Namespace = 3;
+   ReducerDefinition Reducer = 4;
+}
+message SerializableDateTimeOffset {
+   int64 Ticks = 1;
+   double OffsetMinutes = 2;
+}
+message SinkDefinition {
+   .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   .bcl.Guid TypeId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+}
+service Reducers {
+   rpc Observe (stream ReducerMessage) returns (stream ReduceOperationMessage);
+}
