@@ -1,0 +1,55 @@
+name: Propagate Copilot Instructions
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/copilot-instructions.md"
+      - ".github/instructions/**"
+      - ".github/agents/**"
+
+permissions:
+  contents: read
+
+jobs:
+  propagate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Get all Cratis repositories
+        id: get-repos
+        env:
+          GH_TOKEN: ${{ secrets.PAT_DOCUMENTATION }}
+        run: |
+          # Get all repositories in the Cratis organization
+          repos=$(gh repo list Cratis --limit 1000 --json name --jq '.[].name')
+          
+          # Convert to JSON array for the matrix
+          echo "repos<<EOF" >> $GITHUB_OUTPUT
+          echo "$repos" | jq -R -s -c 'split("\n") | map(select(length > 0))' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Trigger sync workflow for each repository
+        env:
+          GH_TOKEN: ${{ secrets.PAT_DOCUMENTATION }}
+        run: |
+          repos='${{ steps.get-repos.outputs.repos }}'
+          current_repo="Chronicle"
+          
+          echo "Triggering sync for repositories in Cratis organization..."
+          echo "$repos" | jq -r '.[]' | while read -r repo; do
+            # Skip the current repository (Chronicle) to avoid infinite loop
+            if [ "$repo" = "$current_repo" ]; then
+              echo "Skipping $repo (current repository)"
+              continue
+            fi
+            
+            echo "Triggering sync for Cratis/$repo..."
+            if gh workflow run "sync-copilot-instructions.yml" \
+              --repo "Cratis/$repo" \
+              --field source_repository="Cratis/Chronicle" 2>&1; then
+              echo "  ✓ Successfully triggered workflow for $repo"
+            else
+              echo "  ⚠ Could not trigger workflow for $repo (workflow may not exist)"
+            fi
+          done

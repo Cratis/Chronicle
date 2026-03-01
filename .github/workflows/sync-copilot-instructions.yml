@@ -1,0 +1,90 @@
+name: Sync Copilot Instructions
+# This workflow requires PAT_DOCUMENTATION secret with permissions:
+# - contents: write (to checkout and modify files)
+# - pull-requests: write (to create pull requests)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repository:
+        description: 'Source repository (owner/repo format)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-instructions:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+      
+      - name: Validate source repository input
+        run: |
+          if ! echo "${{ inputs.source_repository }}" | grep -qE '^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$'; then
+            echo "Error: Invalid repository format. Expected 'owner/repo'"
+            exit 1
+          fi
+      
+      - name: Clone source repository
+        env:
+          GH_TOKEN: ${{ secrets.PAT_DOCUMENTATION }}
+        run: |
+          gh repo clone ${{ inputs.source_repository }} /tmp/source-repo
+      
+      - name: Extract and copy Copilot instructions
+        run: |
+          # Copy root Copilot instructions file if it exists
+          if [ -f "/tmp/source-repo/.github/copilot-instructions.md" ]; then
+            cp /tmp/source-repo/.github/copilot-instructions.md .github/copilot-instructions.md
+            echo "Copied copilot-instructions.md"
+          fi
+          
+          # Copy instructions folder if it exists in source
+          if [ -d "/tmp/source-repo/.github/instructions" ]; then
+            rm -rf .github/instructions
+            cp -r /tmp/source-repo/.github/instructions .github/instructions
+            echo "Copied instructions folder"
+          fi
+          
+          # Copy agents folder if it exists in source
+          if [ -d "/tmp/source-repo/.github/agents" ]; then
+            rm -rf .github/agents
+            cp -r /tmp/source-repo/.github/agents .github/agents
+            echo "Copied agents folder"
+          fi
+      
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          commit-message: "Copilot Instructions synchronization from ${{ inputs.source_repository }}"
+          branch: "copilot-sync/${{ github.run_id }}-${{ github.run_attempt }}"
+          delete-branch: true
+          title: "Sync Copilot Instructions from ${{ inputs.source_repository }}"
+          body: |
+            This PR synchronizes Copilot instructions from [${{ inputs.source_repository }}](https://github.com/${{ inputs.source_repository }}).
+            
+            ### Changes include:
+            - Updated `.github/copilot-instructions.md` (if present)
+            - Updated `.github/instructions/` folder (if present)
+            - Updated `.github/agents/` folder (if present)
+            
+            **Source repository:** ${{ inputs.source_repository }}
+            **Triggered by workflow run:** ${{ github.run_id }}
+            **Run attempt:** ${{ github.run_attempt }}
+          labels: |
+            automated
+            copilot-sync
