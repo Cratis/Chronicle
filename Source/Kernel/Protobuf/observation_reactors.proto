@@ -30,7 +30,7 @@ message EventContext {
 }
 enum EventObservationState {
    // this is a composite/flags enumeration
-   None = 0;
+   EVENT_OBSERVATION_STATE_None = 0;
    Initial = 1;
    HeadOfReplay = 2;
    Replay = 4;
@@ -65,7 +65,7 @@ message Identity {
    Identity OnBehalfOf = 4;
 }
 enum ObservationState {
-   None = 0;
+   OBSERVATION_STATE_None = 0;
    Success = 1;
    Failed = 2;
 }

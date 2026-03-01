@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Tools.ProtoGenerator;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Reflection;
 
@@ -50,6 +51,12 @@ foreach (var group in servicesByNamespace)
         // Fix naming conflicts where RPC methods have the same name as message types
         // This is a known issue with protobuf where method names cannot match message type names
         schema = schema.Replace("rpc ConnectionKeepAlive (ConnectionKeepAlive)", "rpc SendConnectionKeepAlive (ConnectionKeepAlive)");
+
+        // Fix enum value naming conflicts.
+        // In proto3, enum values use C++ scoping rules and must be unique within the package.
+        // When two enums in the same file share value names, prefix the conflicting values
+        // with an UPPER_SNAKE_CASE version of their parent enum name.
+        schema = ProtoSchemaHelper.FixEnumValueConflicts(schema);
 
         var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))

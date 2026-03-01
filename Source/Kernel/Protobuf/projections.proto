@@ -142,9 +142,9 @@ message ProjectionDefinition {
    AutoMap AutoMap = 17;
 }
 enum ProjectionOwner {
-   None = 0;
-   Client = 1;
-   Server = 2;
+   PROJECTION_OWNER_None = 0;
+   PROJECTION_OWNER_Client = 1;
+   PROJECTION_OWNER_Server = 2;
 }
 message ProjectionPreview {
    repeated string ReadModelEntries = 1;
@@ -173,9 +173,9 @@ enum ReadModelObserverType {
    Projection = 2;
 }
 enum ReadModelOwner {
-   None = 0;
-   Client = 1;
-   Server = 2;
+   READ_MODEL_OWNER_None = 0;
+   READ_MODEL_OWNER_Client = 1;
+   READ_MODEL_OWNER_Server = 2;
 }
 enum ReadModelSource {
    Unknown = 0;

@@ -58,14 +58,14 @@ enum ObserverOwner {
    Kernel = 2;
 }
 enum ObserverRunningState {
-   Unknown = 0;
+   OBSERVER_RUNNING_STATE_Unknown = 0;
    Active = 1;
    Suspended = 2;
    Replaying = 3;
    Disconnected = 4;
 }
 enum ObserverType {
-   Unknown = 0;
+   OBSERVER_TYPE_Unknown = 0;
    Reactor = 1;
    Projection = 2;
    Reducer = 3;

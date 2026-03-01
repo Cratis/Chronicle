@@ -39,7 +39,7 @@ message EventContext {
 }
 enum EventObservationState {
    // this is a composite/flags enumeration
-   None = 0;
+   EVENT_OBSERVATION_STATE_None = 0;
    Initial = 1;
    HeadOfReplay = 2;
    Replay = 4;
@@ -152,7 +152,7 @@ message ReadModelOccurrence {
    string RevertContainerName = 5;
 }
 enum ReadModelOwner {
-   None = 0;
+   READ_MODEL_OWNER_None = 0;
    Client = 1;
    Server = 2;
 }

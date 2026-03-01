@@ -57,12 +57,12 @@ enum JobStatus {
    PreparingJob = 1;
    PreparingSteps = 2;
    StartingSteps = 3;
-   Running = 4;
-   CompletedSuccessfully = 5;
+   JOB_STATUS_Running = 4;
+   JOB_STATUS_CompletedSuccessfully = 5;
    CompletedWithFailures = 6;
-   Stopped = 7;
-   Failed = 8;
-   Removing = 9;
+   JOB_STATUS_Stopped = 7;
+   JOB_STATUS_Failed = 8;
+   JOB_STATUS_Removing = 9;
 }
 message JobStatusChanged {
    JobStatus Status = 1;
@@ -85,12 +85,12 @@ message JobStepProgress {
 enum JobStepStatus {
    Unknown = 0;
    Scheduled = 1;
-   Running = 2;
-   CompletedSuccessfully = 3;
+   JOB_STEP_STATUS_Running = 2;
+   JOB_STEP_STATUS_CompletedSuccessfully = 3;
    CompletedWithFailure = 4;
-   Stopped = 5;
-   Failed = 6;
-   Removing = 7;
+   JOB_STEP_STATUS_Stopped = 5;
+   JOB_STEP_STATUS_Failed = 6;
+   JOB_STEP_STATUS_Removing = 7;
 }
 message JobStepStatusChanged {
    JobStepStatus Status = 1;
