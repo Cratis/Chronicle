@@ -103,7 +103,7 @@ service Observers {
    rpc GetObserverInformation (GetObserverInformationRequest) returns (ObserverInformation);
    rpc GetObservers (AllObserversRequest) returns (IEnumerable_ObserverInformation);
    rpc ObserveObservers (AllObserversRequest) returns (stream IEnumerable_ObserverInformation);
-   rpc Replay (Replay) returns (.google.protobuf.Empty);
-   rpc ReplayPartition (ReplayPartition) returns (.google.protobuf.Empty);
-   rpc RetryPartition (RetryPartition) returns (.google.protobuf.Empty);
+   rpc Replay (.Cratis.Chronicle.Contracts.Observation.Replay) returns (.google.protobuf.Empty);
+   rpc ReplayPartition (.Cratis.Chronicle.Contracts.Observation.ReplayPartition) returns (.google.protobuf.Empty);
+   rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (.google.protobuf.Empty);
 }

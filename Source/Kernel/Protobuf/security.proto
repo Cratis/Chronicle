@@ -82,6 +82,6 @@ service Users {
    rpc GetInitialAdminPasswordSetupStatus (.google.protobuf.Empty) returns (InitialAdminPasswordSetupStatus);
    rpc ObserveAll (.google.protobuf.Empty) returns (stream IList_User);
    rpc Remove (RemoveUser) returns (.google.protobuf.Empty);
-   rpc RequirePasswordChange (RequirePasswordChange) returns (.google.protobuf.Empty);
-   rpc SetInitialAdminPassword (SetInitialAdminPassword) returns (.google.protobuf.Empty);
+   rpc RequirePasswordChange (.Cratis.Chronicle.Contracts.Security.RequirePasswordChange) returns (.google.protobuf.Empty);
+   rpc SetInitialAdminPassword (.Cratis.Chronicle.Contracts.Security.SetInitialAdminPassword) returns (.google.protobuf.Empty);
 }

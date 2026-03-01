@@ -28,7 +28,7 @@ message SerializableDateTimeOffset {
 }
 service Recommendations {
    rpc GetRecommendations (GetRecommendationsRequest) returns (IEnumerable_Recommendation);
-   rpc Ignore (Perform) returns (.google.protobuf.Empty);
+   rpc Ignore (.Cratis.Chronicle.Contracts.Recommendations.Perform) returns (.google.protobuf.Empty);
    rpc ObserveRecommendations (GetRecommendationsRequest) returns (stream IEnumerable_Recommendation);
-   rpc Perform (Perform) returns (.google.protobuf.Empty);
+   rpc Perform (.Cratis.Chronicle.Contracts.Recommendations.Perform) returns (.google.protobuf.Empty);
 }

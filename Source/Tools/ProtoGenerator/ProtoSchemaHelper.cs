@@ -12,6 +12,69 @@ namespace Cratis.Chronicle.Tools.ProtoGenerator;
 internal static partial class ProtoSchemaHelper
 {
     /// <summary>
+    /// Fixes RPC method name conflicts in a proto3 schema.
+    /// In proto3, any message type that shares a name with an RPC method in the same service
+    /// becomes unresolvable — protoc resolves the identifier as the method, not the type.
+    /// The fix collects all such conflicting names and globally replaces every unqualified
+    /// <c>(TypeName)</c> and <c>(stream TypeName)</c> reference with the fully-qualified
+    /// package-prefixed form (e.g., <c>(stream ConnectionKeepAlive)</c> →
+    /// <c>(stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive)</c>).
+    /// </summary>
+    /// <param name="schema">The proto schema string to process.</param>
+    /// <returns>The schema with RPC method name conflicts resolved.</returns>
+    public static string FixRpcMethodNameConflicts(string schema)
+    {
+        var packageMatch = PackageDeclarationRegex().Match(schema);
+        if (!packageMatch.Success)
+        {
+            return schema;
+        }
+
+        var packageName = packageMatch.Groups["name"].Value;
+
+        var messageNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in MessageDeclarationRegex().Matches(schema))
+        {
+            messageNames.Add(m.Groups["name"].Value);
+        }
+
+        if (messageNames.Count == 0)
+        {
+            return schema;
+        }
+
+        // Collect all RPC method names in this file
+        var rpcMethodNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match m in RpcDeclarationRegex().Matches(schema))
+        {
+            rpcMethodNames.Add(m.Groups["method"].Value);
+        }
+
+        // Conflicting types: message types whose name is also used as an RPC method name
+        var conflictingTypes = messageNames
+            .Where(rpcMethodNames.Contains)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (conflictingTypes.Count == 0)
+        {
+            return schema;
+        }
+
+        // Replace all unqualified type references (in RPC parameter lists) for conflicting types.
+        // (TypeName) appears as input type; (stream TypeName) appears as streaming return type.
+        var result = schema;
+        foreach (var typeName in conflictingTypes)
+        {
+            var qualified = $".{packageName}.{typeName}";
+            result = result
+                .Replace($"(stream {typeName})", $"(stream {qualified})")
+                .Replace($"({typeName})", $"({qualified})");
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Fixes enum value naming conflicts in a proto3 schema.
     /// In proto3, enum values use C++ scoping rules and must be unique within the package.
     /// When conflicts are detected, the conflicting values are prefixed with
@@ -108,6 +171,15 @@ internal static partial class ProtoSchemaHelper
 
         return sb.ToString();
     }
+
+    [GeneratedRegex(@"^package\s+(?<name>[\w.]+)\s*;", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex PackageDeclarationRegex();
+
+    [GeneratedRegex(@"^message\s+(?<name>\w+)\s*\{", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex MessageDeclarationRegex();
+
+    [GeneratedRegex(@"rpc\s+(?<method>\w+)\s*\(\s*(?<input>\w+)\s*\)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcDeclarationRegex();
 
     [GeneratedRegex(@"enum\s+(?<name>\w+)\s*\{(?<body>[^{}]*)\}", RegexOptions.Singleline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EnumBlockRegex();

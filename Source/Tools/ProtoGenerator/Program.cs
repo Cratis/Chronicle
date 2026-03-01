@@ -48,9 +48,9 @@ foreach (var group in servicesByNamespace)
     {
         var schema = generator.GetSchema(packageServices);
 
-        // Fix naming conflicts where RPC methods have the same name as message types
-        // This is a known issue with protobuf where method names cannot match message type names
-        schema = schema.Replace("rpc ConnectionKeepAlive (ConnectionKeepAlive)", "rpc SendConnectionKeepAlive (ConnectionKeepAlive)");
+        // Fix RPC method name conflicts where method name == input message type name.
+        // In proto3 this causes a scoping ambiguity; fix by qualifying the input type with the package name.
+        schema = ProtoSchemaHelper.FixRpcMethodNameConflicts(schema);
 
         // Fix enum value naming conflicts.
         // In proto3, enum values use C++ scoping rules and must be unique within the package.
