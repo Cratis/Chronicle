@@ -28,4 +28,11 @@ public interface IConnectionService
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Operation]
     Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive);
+
+    /// <summary>
+    /// Get the FileDescriptorSet for all services exposed by the server.
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> containing the <see cref="DescriptorSetResponse"/>.</returns>
+    [Operation]
+    Task<DescriptorSetResponse> GetDescriptorSet();
 }
