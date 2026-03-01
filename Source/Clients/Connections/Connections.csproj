@@ -8,6 +8,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle" />
         <InternalsVisibleTo Include="Cratis.Chronicle.AspNetCore" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Connections.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess.Integration" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Api" />
@@ -22,6 +23,7 @@
 
     <ItemGroup>
         <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Grpc.Reflection" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Connections.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Connections</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Connections/Connections.csproj" />
+    </ItemGroup>
+</Project>
