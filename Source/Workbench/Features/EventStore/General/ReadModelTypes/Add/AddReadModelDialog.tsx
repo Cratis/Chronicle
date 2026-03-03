@@ -9,15 +9,12 @@ import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTyp
 import { type JsonSchema } from 'Components/JsonSchema';
 import { useState } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface AddReadModelDialogProps {
-    visible: boolean;
-    onClose: () => void;
-}
-
-export const AddReadModelDialog = ({ visible, onClose }: AddReadModelDialogProps) => {
+export const AddReadModelDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [readModelValues, setReadModelValues] = useState<{ displayName: string; identifier: string; containerName: string; schema: JsonSchema } | null>(null);
+    const { closeDialog } = useDialogContext<object>();
 
     const handleChanged = (displayName: string, identifier: string, containerName: string, schema: JsonSchema) => {
         const trimmedDisplayName = displayName.trim();
@@ -47,13 +44,12 @@ export const AddReadModelDialog = ({ visible, onClose }: AddReadModelDialogProps
         <CommandDialog
             command={CreateReadModel}
             currentValues={currentValues}
-            visible={visible}
-            header={strings.eventStore.general.readModels.dialogs.addReadModel.title}
-            confirmLabel={strings.general.buttons.ok}
+            title={strings.eventStore.general.readModels.dialogs.addReadModel.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="800px"
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <ReadModelTypeEditor onChanged={handleChanged} />
         </CommandDialog>
     );

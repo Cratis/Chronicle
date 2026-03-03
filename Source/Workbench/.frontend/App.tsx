@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { BlankLayout } from "./Layout/Blank/BlankLayout";
-import { Home } from "./Features/Home";
-import { EventStore } from "./Features/EventStore/EventStore";
-import { Login, AuthProvider, ProtectedRoute } from "./Features/Security";
-import { LayoutProvider } from './Layout/Default/context/LayoutContext';
+import { BlankLayout } from "../Layout/Blank/BlankLayout";
+import { Home } from "../Features/Home";
+import { EventStore } from "../Features/EventStore/EventStore";
+import { Login, AuthProvider, ProtectedRoute } from "../Features/Security";
+import { LayoutProvider } from '../Layout/Default/context/LayoutContext';
 import { DialogComponents } from '@cratis/arc.react/dialogs';
 import { BusyIndicatorDialog, ConfirmationDialog } from '@cratis/components/Dialogs';
 import { Arc } from '@cratis/arc.react';

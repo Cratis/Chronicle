@@ -10,16 +10,13 @@ import { Guid } from '@cratis/fundamentals';
 import { generatePassword } from '../../PasswordHelpers';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface AddUserDialogProps {
-    visible: boolean;
-    onClose: () => void;
-}
-
-export const AddUserDialog = ({ visible, onClose }: AddUserDialogProps) => {
+export const AddUserDialog = () => {
     const [userId] = useState(Guid.parse(crypto.randomUUID()));
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const { closeDialog } = useDialogContext<object>();
 
     const handleGeneratePassword = () => {
         setPassword(generatePassword());
@@ -29,12 +26,11 @@ export const AddUserDialog = ({ visible, onClose }: AddUserDialogProps) => {
         <CommandDialog
             command={AddUser}
             currentValues={{ userId, password }}
-            visible={visible}
-            header={strings.eventStore.system.users.dialogs.addUser.title}
-            confirmLabel={strings.general.buttons.ok}
+            title={strings.eventStore.system.users.dialogs.addUser.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <InputTextField<AddUser>
                 value={c => c.username}
                 title={strings.eventStore.system.users.dialogs.addUser.username}

@@ -9,14 +9,14 @@ import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
 import { generatePassword } from '../../PasswordHelpers';
 import { CommandDialog } from '@cratis/components/CommandDialog';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface ChangeSecretDialogProps {
-    visible: boolean;
+export interface ChangeSecretDialogRequest {
     applicationId: Guid;
-    onClose: () => void;
 }
 
-export const ChangeSecretDialog = ({ visible, applicationId, onClose }: ChangeSecretDialogProps) => {
+export const ChangeSecretDialog = () => {
+    const { request, closeDialog } = useDialogContext<ChangeSecretDialogRequest>();
     const [clientSecret, setClientSecret] = useState(generatePassword(32));
     const [showSecret, setShowSecret] = useState(false);
 
@@ -27,13 +27,12 @@ export const ChangeSecretDialog = ({ visible, applicationId, onClose }: ChangeSe
     return (
         <CommandDialog
             command={ChangeApplicationSecret}
-            currentValues={{ id: applicationId, clientSecret }}
-            visible={visible}
-            header={strings.eventStore.system.applications.dialogs.changeSecret.title}
-            confirmLabel={strings.general.buttons.ok}
+            currentValues={{ id: request.applicationId, clientSecret }}
+            title={strings.eventStore.system.applications.dialogs.changeSecret.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="p-inputgroup flex-1">
                 <span className="p-inputgroup-addon">
                     <i className="pi pi-lock"></i>

@@ -7,17 +7,41 @@ import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
-import { useState } from 'react';
 import { AddEventStore as AddEventStoreCommand } from 'Api/EventStores';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
 import { Button } from 'primereact/button';
 import { ImPlus } from "react-icons/im";
 import strings from 'Strings';
+import { DialogResult, useDialog, useDialogContext } from '@cratis/arc.react/dialogs';
+
+const AddEventStoreDialog = () => {
+    const { closeDialog } = useDialogContext<object>();
+
+    return (
+        <CommandDialog
+            command={AddEventStoreCommand}
+            title={strings.home.dialogs.addEventStore.title}
+            okLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
+            width="20vw"
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
+            <InputTextField<AddEventStoreCommand>
+                value={c => c.name}
+                title={strings.home.dialogs.addEventStore.name}
+                icon={<i className="pi pi-pencil" />} />
+        </CommandDialog>
+    );
+};
 
 export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     const basePath = useRelativePath('event-store');
-    const [showAddEventStore, setShowAddEventStore] = useState(false);
+    const [AddEventStoreDialogWrapper, showAddEventStoreDialog] = useDialog(AddEventStoreDialog);
+
+    const handleAddEventStore = async () => {
+        await showAddEventStoreDialog();
+    };
 
     return (
         <div style={{ top: 0, position: 'fixed' }} className='m-4'>
@@ -36,25 +60,12 @@ export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
                 })}
 
                 <div className='m-4 flex'>
-                    <Button className={css.addCard} onClick={() => setShowAddEventStore(true)}>
+                    <Button className={css.addCard} onClick={handleAddEventStore}>
                         <ImPlus />
                     </Button>
                 </div>
             </div>
-            <CommandDialog
-                command={AddEventStoreCommand}
-                visible={showAddEventStore}
-                header={strings.home.dialogs.addEventStore.title}
-                confirmLabel={strings.general.buttons.ok}
-                cancelLabel={strings.general.buttons.cancel}
-                width="20vw"
-                onConfirm={result => { if (result.isSuccess) setShowAddEventStore(false); }}
-                onCancel={() => setShowAddEventStore(false)}>
-                <InputTextField<AddEventStoreCommand>
-                    value={c => c.name}
-                    title={strings.home.dialogs.addEventStore.name}
-                    icon={<i className="pi pi-pencil" />} />
-            </CommandDialog>
+            <AddEventStoreDialogWrapper />
         </div>
     );
 });

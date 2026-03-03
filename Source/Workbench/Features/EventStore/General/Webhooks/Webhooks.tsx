@@ -13,6 +13,7 @@ import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
 import { WebhookDetails } from './WebhookDetails';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
+import { useDialog } from '@cratis/arc.react/dialogs';
 
 const renderBoolean = (value: boolean) => {
     return value ? 'Yes' : 'No';
@@ -21,8 +22,8 @@ const renderBoolean = (value: boolean) => {
 export const Webhooks = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [selectedWebhook, setSelectedWebhook] = useState<WebhookDefinition | null>(null);
-    const [showAddWebhook, setShowAddWebhook] = useState(false);
     const [showConfirmation] = useConfirmationDialog();
+    const [AddWebhookDialogWrapper, showAddWebhookDialog] = useDialog(AddWebhookDialog);
     const [removeWebhook] = RemoveWebHook.use();
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -44,6 +45,13 @@ export const Webhooks = () => {
         }
     };
 
+    const handleAddWebhook = async () => {
+        const [result] = await showAddWebhookDialog();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+        }
+    };
+
     return (
         <>
             <DataPage
@@ -62,7 +70,7 @@ export const Webhooks = () => {
                         id='create'
                         label={strings.eventStore.general.webhooks.actions.add}
                         icon={faIcons.FaPlus}
-                        command={() => setShowAddWebhook(true)} />
+                        command={handleAddWebhook} />
                     <MenuItem
                         id='remove'
                         label={strings.eventStore.general.webhooks.actions.remove}
@@ -96,12 +104,7 @@ export const Webhooks = () => {
                         body={(rowData: WebhookDefinition) => renderBoolean(rowData.isReplayable)} />
                 </DataPage.Columns>
             </DataPage>
-            <AddWebhookDialog
-                visible={showAddWebhook}
-                onClose={() => {
-                    setShowAddWebhook(false);
-                    setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
-                }} />
+            <AddWebhookDialogWrapper />
         </>
     );
 };

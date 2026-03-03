@@ -6,10 +6,11 @@ import { AllApplications, Application, RemoveApplication } from 'Api/Security';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
-import { ChangeSecretDialog } from './ChangeSecret';
+import { ChangeSecretDialog, ChangeSecretDialogRequest } from './ChangeSecret';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
+import { useDialog } from '@cratis/arc.react/dialogs';
 import { Guid } from '@cratis/fundamentals';
 
 const formatDate = (date: Date | string) => {
@@ -19,14 +20,18 @@ const formatDate = (date: Date | string) => {
 
 export const Applications = () => {
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-    const [showAddApplication, setShowAddApplication] = useState(false);
-    const [showChangeSecret, setShowChangeSecret] = useState(false);
     const [showConfirmation] = useConfirmationDialog();
+    const [AddApplicationDialogWrapper, showAddApplicationDialog] = useDialog(AddApplicationDialog);
+    const [ChangeSecretDialogWrapper, showChangeSecretDialog] = useDialog<object, ChangeSecretDialogRequest>(ChangeSecretDialog);
     const [removeApplication] = RemoveApplication.use();
 
-    const handleChangeSecret = () => {
+    const handleAddApplication = async () => {
+        await showAddApplicationDialog();
+    };
+
+    const handleChangeSecret = async () => {
         if (selectedApplication) {
-            setShowChangeSecret(true);
+            await showChangeSecretDialog({ applicationId: selectedApplication.id });
         }
     };
 
@@ -59,7 +64,7 @@ export const Applications = () => {
                         id="add"
                         label={strings.eventStore.system.applications.actions.add}
                         icon={faIcons.FaPlus}
-                        command={() => setShowAddApplication(true)} />
+                        command={handleAddApplication} />
                     <MenuItem
                         id="changeSecret"
                         label={strings.eventStore.system.applications.actions.changeSecret}
@@ -92,11 +97,8 @@ export const Applications = () => {
                         body={(application: Application) => formatDate(application.lastModifiedAt || '')} />
                 </DataPage.Columns>
             </DataPage>
-            <AddApplicationDialog visible={showAddApplication} onClose={() => setShowAddApplication(false)} />
-            <ChangeSecretDialog
-                visible={showChangeSecret}
-                applicationId={selectedApplication?.id ?? Guid.empty}
-                onClose={() => setShowChangeSecret(false)} />
+            <AddApplicationDialogWrapper />
+            <ChangeSecretDialogWrapper applicationId={Guid.empty} />
         </>
     );
 };

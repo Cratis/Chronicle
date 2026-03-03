@@ -15,14 +15,11 @@ import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { CommandDialog } from '@cratis/components/CommandDialog';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface AddWebhookDialogProps {
-    visible: boolean;
-    onClose: () => void;
-}
-
-export const AddWebhookDialog = ({ visible, onClose }: AddWebhookDialogProps) => {
+export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const { closeDialog } = useDialogContext<object>();
 
     const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
     const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
@@ -72,13 +69,12 @@ export const AddWebhookDialog = ({ visible, onClose }: AddWebhookDialogProps) =>
         <CommandDialog
             command={AddWebHook}
             currentValues={currentValues}
-            visible={visible}
-            header={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
-            confirmLabel={strings.general.buttons.ok}
+            title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="600px"
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="p-fluid">
                 <div className="field mb-3">
                     <label htmlFor="name">{strings.eventStore.general.webhooks.dialogs.addWebhook.name}</label>

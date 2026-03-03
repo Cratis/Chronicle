@@ -9,14 +9,14 @@ import strings from 'Strings';
 import { generatePassword } from '../../PasswordHelpers';
 import { Guid } from '@cratis/fundamentals';
 import { CommandDialog } from '@cratis/components/CommandDialog';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface ChangePasswordDialogProps {
-    visible: boolean;
+export interface ChangePasswordDialogRequest {
     userId: Guid;
-    onClose: () => void;
 }
 
-export const ChangePasswordDialog = ({ visible, userId, onClose }: ChangePasswordDialogProps) => {
+export const ChangePasswordDialog = () => {
+    const { request, closeDialog } = useDialogContext<ChangePasswordDialogRequest>();
     const [password, setPassword] = useState(generatePassword());
     const [confirmPassword, setConfirmPassword] = useState(generatePassword());
     const [showPassword, setShowPassword] = useState(false);
@@ -30,14 +30,13 @@ export const ChangePasswordDialog = ({ visible, userId, onClose }: ChangePasswor
     return (
         <CommandDialog
             command={ChangePasswordForUser}
-            currentValues={{ userId, password, confirmedPassword: confirmPassword }}
-            visible={visible}
-            header={strings.eventStore.system.users.dialogs.changePassword.title}
-            confirmLabel={strings.general.buttons.ok}
+            currentValues={{ userId: request.userId, password, confirmedPassword: confirmPassword }}
+            title={strings.eventStore.system.users.dialogs.changePassword.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="30vw"
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="flex flex-column gap-3">
                 <div className="p-inputgroup">
                     <span className="p-inputgroup-addon">

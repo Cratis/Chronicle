@@ -9,16 +9,13 @@ import strings from 'Strings';
 import { generatePassword } from '../../PasswordHelpers';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export interface AddApplicationDialogProps {
-    visible: boolean;
-    onClose: () => void;
-}
-
-export const AddApplicationDialog = ({ visible, onClose }: AddApplicationDialogProps) => {
+export const AddApplicationDialog = () => {
     const [id] = useState(crypto.randomUUID());
     const [clientSecret, setClientSecret] = useState('');
     const [showSecret, setShowSecret] = useState(false);
+    const { closeDialog } = useDialogContext<object>();
 
     const handleGenerateSecret = () => {
         setClientSecret(generatePassword(32));
@@ -28,12 +25,11 @@ export const AddApplicationDialog = ({ visible, onClose }: AddApplicationDialogP
         <CommandDialog
             command={AddApplication}
             currentValues={{ id, clientSecret }}
-            visible={visible}
-            header={strings.eventStore.system.applications.dialogs.addApplication.title}
-            confirmLabel={strings.general.buttons.ok}
+            title={strings.eventStore.system.applications.dialogs.addApplication.title}
+            okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
-            onConfirm={result => { if (result.isSuccess) onClose(); }}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <InputTextField<AddApplication>
                 value={c => c.clientId}
                 title={strings.eventStore.system.applications.dialogs.addApplication.clientId}

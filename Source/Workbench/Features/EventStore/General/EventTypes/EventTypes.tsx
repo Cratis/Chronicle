@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
+import { DialogResult, useDialog, useDialogContext } from '@cratis/arc.react/dialogs';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -81,9 +82,30 @@ const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
     />
 );
 
+const AddEventTypeDialog = () => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+    const { closeDialog } = useDialogContext<object>();
+
+    return (
+        <CommandDialog
+            command={CreateEventType}
+            initialValues={{ eventStore: params.eventStore }}
+            title={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
+            okLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
+            <InputTextField<CreateEventType>
+                value={c => c.name}
+                title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
+                icon={<i className="pi pi-code" />} />
+        </CommandDialog>
+    );
+};
+
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [showAddEventType, setShowAddEventType] = useState(false);
+    const [AddEventTypeDialogWrapper, showAddEventTypeDialog] = useDialog(AddEventTypeDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -91,8 +113,11 @@ export const EventTypes = () => {
         eventStore: params.eventStore!
     };
 
-    const handleAddEventType = () => {
-        setShowAddEventType(true);
+    const handleAddEventType = async () => {
+        const [result] = await showAddEventTypeDialog();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
+        }
     };
 
     return (
@@ -151,25 +176,7 @@ export const EventTypes = () => {
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
-            <CommandDialog
-                command={CreateEventType}
-                initialValues={{ eventStore: params.eventStore }}
-                visible={showAddEventType}
-                header={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
-                confirmLabel={strings.general.buttons.ok}
-                cancelLabel={strings.general.buttons.cancel}
-                onConfirm={result => {
-                    if (result.isSuccess) {
-                        setShowAddEventType(false);
-                        setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
-                    }
-                }}
-                onCancel={() => setShowAddEventType(false)}>
-                <InputTextField<CreateEventType>
-                    value={c => c.name}
-                    title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
-                    icon={<i className="pi pi-code" />} />
-            </CommandDialog>
+            <AddEventTypeDialogWrapper />
         </>
     );
 };

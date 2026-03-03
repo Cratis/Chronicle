@@ -14,6 +14,7 @@ import { useState, useCallback } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 
 const renderSource = (readModel: ReadModelDefinition) => {
     switch (readModel.source) {
@@ -37,13 +38,20 @@ const renderOwner = (readModel: ReadModelDefinition) => {
 
 export const ReadModelTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [showAddReadModel, setShowAddReadModel] = useState(false);
+    const [AddReadModelDialogWrapper, showAddReadModelDialog] = useDialog(AddReadModelDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleRefresh = useCallback(() => {
         setRefreshTrigger(prev => prev + 1);
     }, []);
+
+    const handleAddReadModel = async () => {
+        const [result] = await showAddReadModelDialog();
+        if (result === DialogResult.Ok) {
+            handleRefresh();
+        }
+    };
 
     const filters: DataTableFilterMeta = {
         owner: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -103,7 +111,7 @@ export const ReadModelTypes = () => {
                         id='create'
                         label={strings.eventStore.general.readModels.actions.create}
                         icon={faIcons.FaPlus}
-                        command={() => setShowAddReadModel(true)} />
+                        command={handleAddReadModel} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
@@ -144,12 +152,7 @@ export const ReadModelTypes = () => {
                         header={strings.eventStore.general.readModels.columns.generation} />
                 </DataPage.Columns>
             </DataPage>
-            <AddReadModelDialog
-                visible={showAddReadModel}
-                onClose={() => {
-                    setShowAddReadModel(false);
-                    handleRefresh();
-                }} />
+            <AddReadModelDialogWrapper />
         </>
     );
 };
