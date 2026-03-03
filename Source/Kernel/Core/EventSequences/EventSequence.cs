@@ -200,7 +200,8 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy,
         IEnumerable<Tag> tags,
-        ConcurrencyScope concurrencyScope)
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred = null)
     {
         try
         {
@@ -228,7 +229,8 @@ public class EventSequence(
                 causedBy,
                 tags,
                 compliantEvent,
-                constraintContext);
+                constraintContext,
+                occurred);
         }
         catch (Exception ex)
         {
@@ -292,7 +294,7 @@ public class EventSequence(
                     causation,
                     identity,
                     eventToAppend.Tags,
-                    DateTimeOffset.UtcNow,
+                    eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
                     compliantEvent,
                     eventHash));
 
@@ -431,7 +433,8 @@ public class EventSequence(
         Identity causedBy,
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
-        ConstraintValidationContext constraintContext)
+        ConstraintValidationContext constraintContext,
+        DateTimeOffset? occurred = null)
     {
         try
         {
@@ -442,7 +445,7 @@ public class EventSequence(
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
-                var occurred = DateTimeOffset.UtcNow;
+                var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
                 logger.Appending(
                     _eventSequenceKey.EventStore,
                     _eventSequenceKey.Namespace,
@@ -462,7 +465,7 @@ public class EventSequence(
                     causation,
                     identity,
                     tags,
-                    occurred,
+                    eventOccurred,
                     compliantEvent,
                     eventHash);
             }
