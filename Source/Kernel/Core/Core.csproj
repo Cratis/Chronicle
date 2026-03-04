@@ -56,6 +56,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+    <PackageReference Include="Polly.Core" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>
