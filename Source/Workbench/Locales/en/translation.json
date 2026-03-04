@@ -178,7 +178,9 @@
                         "oauthClientId": "Client ID",
                         "oauthClientSecret": "Client Secret",
                         "isActive": "Active",
-                        "isReplayable": "Replayable"
+                        "isReplayable": "Replayable",
+                        "test": "Test",
+                        "testSuccess": "Webhook configuration is valid"
                     },
                     "removeWebhook": {
                         "title": "Remove Webhook",
