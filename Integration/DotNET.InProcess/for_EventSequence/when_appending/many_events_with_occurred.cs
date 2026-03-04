@@ -32,9 +32,10 @@ public class many_events_with_occurred(context context) : Given<context>(context
     async Task should_have_the_correct_occurred_for_all_events()
     {
         var eventLog = Context.GetEventLogStorage();
-        foreach (var i in Enumerable.Range(0, Context.Events.Count))
+        var indices = Enumerable.Range(0, Context.Events.Count).Select(i => (ulong)i);
+        foreach (var index in indices)
         {
-            var @event = await eventLog.GetEventAt((ulong)i);
+            var @event = await eventLog.GetEventAt(index);
             @event.Context.Occurred.ShouldEqual(Context.Occurred);
         }
     }
