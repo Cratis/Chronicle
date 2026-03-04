@@ -35,6 +35,9 @@ internal sealed class Webhooks(
     IOAuthClient oauthClient,
     IWebhookMediator webhookMediator) : ContractIWebhooks
 {
+    const string WebhookTestPartitionKey = "test";
+    static readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(10);
+
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
     {
@@ -191,10 +194,10 @@ internal sealed class Webhooks(
         var target = request.Target.ToChronicle();
         var result = await webhookMediator.OnNext(
             target,
-            new Key("test", ArrayIndexers.NoIndexers),
+            new Key(WebhookTestPartitionKey, ArrayIndexers.NoIndexers),
             [],
             accessToken,
-            TimeSpan.FromSeconds(10));
+            _webhookTestTimeout);
 
         if (result.IsSuccess)
         {
