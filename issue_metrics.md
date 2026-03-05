@@ -8,12 +8,13 @@
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 254 |
+| Number of items that remain open | 255 |
 | Number of items closed | 642 |
-| Total number of items created | 896 |
+| Total number of items created | 897 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
+| Add test and verification validator for adding WebHook | https://github.com/Cratis/Chronicle/issues/2731 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Make it possible to override Occurred | https://github.com/Cratis/Chronicle/issues/2729 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | When removing WebHooks they don't really get removed from the storage | https://github.com/Cratis/Chronicle/issues/2727 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Adding a new event store does not carry over events marked as AllEventStores | https://github.com/Cratis/Chronicle/issues/2725 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
@@ -328,5 +329,4 @@
 | For our Orleans Clients it would be ideal to hide the of some of the referenced projects to avoid confusion on the consumer | https://github.com/Cratis/Chronicle/issues/1278 | None | [einari](https://github.com/einari) | None | 19:08:55 | None |
 | Add an overview on Docker hub for Chronicle images | https://github.com/Cratis/Chronicle/issues/1277 | None | [einari](https://github.com/einari) | None | None | None |
 | When publishing pre-release builds, Docker images should not have a latest tag version | https://github.com/Cratis/Chronicle/issues/1276 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 555 days, 2:46:16 | None |
-| Upgrade build tasks for Node to latest versions | https://github.com/Cratis/Chronicle/issues/1275 | None | [einari](https://github.com/einari) | None | 208 days, 20:11:12 | None |
-| Remove disabled NoWarn warnings from the API.csproj file | https://github.com/Cratis/Chronicle/issues/1274 | None | [einari](https://github.com/einari) 
+| Upgrade build tasks for Node to latest versions | https://github.com/Cratis/Chronicle/iss
