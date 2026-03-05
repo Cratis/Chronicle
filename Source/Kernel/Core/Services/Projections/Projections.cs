@@ -25,7 +25,7 @@ using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
 namespace Cratis.Chronicle.Services.Projections;
 
 /// <summary>
-/// Represents an implementation of <see cref="Contracts.Projections.IProjections"/>.
+/// Represents an implementation of <see cref="IProjections"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
@@ -35,7 +35,7 @@ internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
     ILanguageService languageService,
-    IServiceProvider serviceProvider) : Contracts.Projections.IProjections
+    IServiceProvider serviceProvider) : IProjections
 {
     /// <inheritdoc/>
     public async Task Register(RegisterRequest request, CallContext context = default)
@@ -387,7 +387,7 @@ internal sealed class Projections(
             schema.Title = displayName;
         }
 
-        var schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+        var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
         {
             { Concepts.ReadModels.ReadModelGeneration.First, schema }
         };
