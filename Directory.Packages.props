@@ -82,7 +82,6 @@
     <PackageVersion Include="humanizer" Version="3.0.1" />
     <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
     <PackageVersion Include="NJsonSchema" Version="11.5.2" />
-    <PackageVersion Include="Polly.Core" Version="8.6.6" />
     <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.52">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

@@ -25,7 +25,7 @@ public class ResilientStorageOptions
     public TimeoutStrategyOptions Timeout { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the value indicating whether to enable Polly recording telemetry for each "OnRetry" event.
+    /// Gets or sets the value indicating whether to enable recording telemetry for each "OnRetry" event.
     /// </summary>
 #pragma warning disable MA0016
     public Dictionary<string, ResilienceEventSeverity> ResilienceEventSeverities { get; set; } = new(StringComparer.InvariantCulture)
