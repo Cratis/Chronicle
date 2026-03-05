@@ -111,8 +111,14 @@ internal class ModelBoundProjectionBuilder(
     {
         foreach (var (attr, eventType) in attributesWithEventType)
         {
-            var constantKeyProperty = attr.GetType().GetProperty("ConstantKey");
-            var constantKey = constantKeyProperty?.GetValue(attr) as string;
+            var constantKey = attr switch
+            {
+                ICountAttribute countAttr => countAttr.ConstantKey,
+                IIncrementAttribute incrementAttr => incrementAttr.ConstantKey,
+                IDecrementAttribute decrementAttr => decrementAttr.ConstantKey,
+                _ => null
+            };
+
             if (!string.IsNullOrEmpty(constantKey))
             {
                 var eventTypeId = GetOrCreateEventType(eventType);
@@ -309,8 +315,7 @@ internal class ModelBoundProjectionBuilder(
                 fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
             }
 
-            var constantKeyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.ConstantKey));
-            var constantKey = constantKeyProperty?.GetValue(attr) as string;
+            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
             if (!string.IsNullOrEmpty(constantKey))
             {
                 var eventTypeId = GetOrCreateEventType(eventType);
@@ -434,8 +439,7 @@ internal class ModelBoundProjectionBuilder(
                 fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
             }
 
-            var constantKeyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.ConstantKey));
-            var constantKey = constantKeyProperty?.GetValue(attr) as string;
+            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
             if (!string.IsNullOrEmpty(constantKey))
             {
                 fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";

@@ -27,11 +27,10 @@ public class ExpressionParser
             return ParseTemplate(context, template);
         }
 
-        // 'literal "value"' for constant key expressions
+        // 'literal "value"' for constant key expressions - consume the keyword and continue to parse the literal below
         if (context.Check(TokenType.Literal))
         {
             context.Advance(); // Skip 'literal'
-            return Parse(context); // Parse the following literal expression
         }
 
         // $eventSourceId or $eventContext.property

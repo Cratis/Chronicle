@@ -28,7 +28,6 @@ public class using_constant_key(context context) : Given<context>(context)
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
-    [Fact] void should_use_constant_key_as_read_model_id() => Context.Result.ShouldNotBeNull();
     [Fact] void should_set_string_value_from_event() => Context.Result.StringValue.ShouldEqual(Context.ExpectedStringValue);
     [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }
