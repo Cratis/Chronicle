@@ -48,7 +48,8 @@ public static class Keywords
             { "by", TokenType.By },
             { "true", TokenType.True },
             { "false", TokenType.False },
-            { "null", TokenType.Null }
+            { "null", TokenType.Null },
+            { "literal", TokenType.Literal }
         };
 
         All = new HashSet<string>(TokenMapping.Keys, StringComparer.Ordinal);

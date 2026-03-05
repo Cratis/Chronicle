@@ -238,5 +238,10 @@ public enum TokenType
     /// <summary>
     /// A comment starting with #.
     /// </summary>
-    Comment = 47
+    Comment = 47,
+
+    /// <summary>
+    /// The keyword 'literal'.
+    /// </summary>
+    Literal = 48
 }

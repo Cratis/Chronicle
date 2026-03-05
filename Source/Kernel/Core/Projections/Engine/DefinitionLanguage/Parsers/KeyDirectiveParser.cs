@@ -56,8 +56,20 @@ internal sealed class KeyDirectiveParser
             };
         }
 
-        var keyExpr = _expressions.Parse(context);
-        return keyExpr is not null ? new KeyDirective(keyExpr)
+        // Handle 'key literal "value"' for constant key expressions
+        if (context.Check(TokenType.Literal))
+        {
+            context.Advance(); // Skip 'literal'
+            var keyExpr = _expressions.Parse(context);
+            return keyExpr is not null ? new KeyDirective(keyExpr)
+            {
+                Line = keyToken.Line,
+                Column = keyToken.Column
+            } : null;
+        }
+
+        var simpleKeyExpr = _expressions.Parse(context);
+        return simpleKeyExpr is not null ? new KeyDirective(simpleKeyExpr)
         {
             Line = keyToken.Line,
             Column = keyToken.Column

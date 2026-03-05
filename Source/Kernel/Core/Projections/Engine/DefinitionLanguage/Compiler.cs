@@ -481,6 +481,7 @@ public class Compiler
             EventContextExpression eventContext => new PropertyExpression($"{WellKnownExpressions.EventContext}({eventContext.Property})"),
             EventSourceIdExpression => new PropertyExpression(WellKnownExpressions.EventSourceId),
             CausedByExpression causedBy => new PropertyExpression(causedBy.Property == null ? WellKnownExpressions.CausedBy : $"{WellKnownExpressions.CausedBy}({causedBy.Property})"),
+            LiteralExpression { Value: string s } => new PropertyExpression($"{WellKnownExpressions.Value}({s})"),
             LiteralExpression literal => new PropertyExpression(FormatLiteralForStorage(literal.Value)),
             TemplateExpression template => new PropertyExpression(ConvertTemplateToString(template)),
             _ => throw new NotSupportedException($"Expression type {astExpression.GetType().Name} is not yet supported")

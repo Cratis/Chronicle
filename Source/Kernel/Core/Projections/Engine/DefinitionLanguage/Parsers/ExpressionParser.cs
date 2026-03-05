@@ -27,6 +27,13 @@ public class ExpressionParser
             return ParseTemplate(context, template);
         }
 
+        // 'literal "value"' for constant key expressions
+        if (context.Check(TokenType.Literal))
+        {
+            context.Advance(); // Skip 'literal'
+            return Parse(context); // Parse the following literal expression
+        }
+
         // $eventSourceId or $eventContext.property
         if (context.Check(TokenType.Dollar))
         {
