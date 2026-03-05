@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 
 /// <summary>
 /// Represents a children block.

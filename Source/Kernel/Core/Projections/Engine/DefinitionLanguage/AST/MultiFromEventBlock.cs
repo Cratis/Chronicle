@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 
 /// <summary>
 /// Represents multiple from event blocks that share the same body (parsed from comma-separated events).

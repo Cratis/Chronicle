@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Parsers;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
 /// <summary>
 /// Visitor for parsing from-event blocks.

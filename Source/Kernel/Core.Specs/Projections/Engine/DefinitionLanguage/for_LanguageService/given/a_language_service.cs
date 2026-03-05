@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
 public class a_language_service : Specification
 {

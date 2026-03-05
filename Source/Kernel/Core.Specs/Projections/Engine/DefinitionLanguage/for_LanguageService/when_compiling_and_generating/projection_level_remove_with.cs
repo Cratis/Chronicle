@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling_and_generating;
 
 public class projection_level_remove_with : given.a_language_service_with_schemas<given.GroupReadModel>
 {

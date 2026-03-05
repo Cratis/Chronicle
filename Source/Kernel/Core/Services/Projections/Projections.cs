@@ -9,7 +9,7 @@ using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;

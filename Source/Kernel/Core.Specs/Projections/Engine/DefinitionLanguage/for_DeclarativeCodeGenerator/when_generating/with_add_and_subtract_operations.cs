@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_DeclarativeCodeGenerator.when_generating;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_DeclarativeCodeGenerator.when_generating;
 
 public class with_add_and_subtract_operations : given.a_declarative_code_generator
 {

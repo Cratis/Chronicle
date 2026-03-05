@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
 public record CompilerResult(ProjectionDefinition Definition, string GeneratedDefinition)
 {

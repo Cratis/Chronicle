@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_getting_read_model_identifier;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_getting_read_model_identifier;
 
 public class with_qualified_read_model_name : a_language_service
 {
