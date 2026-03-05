@@ -18,7 +18,7 @@ public class CustomControllerActivator : IControllerActivator
         var type = context.ActionDescriptor.ControllerTypeInfo.AsType();
         try
         {
-            return ActivatorUtilities.CreateInstance(context.HttpContext.RequestServices, type);
+            return ActivatorUtilities.GetServiceOrCreateInstance(context.HttpContext.RequestServices, type);
         }
         catch
         {

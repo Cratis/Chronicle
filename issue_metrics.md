@@ -2,19 +2,35 @@
 
 | Metric | Average | Median | 90th percentile |
 | --- | --- | --- | ---: |
-| Time to first response | 128 days, 13:45:53 | 3 days, 22:09:24 | 308 days, 13:38:35 |
-| Time to close | 280 days, 19:13:26 | 124 days, 8:55:27 | 821 days, 19:57:40 |
+| Time to first response | 125 days, 12:17:55 | 2 days, 19:57:57 | 300 days, 17:44:52 |
+| Time to close | 282 days, 1:18:35 | 123 days, 17:56:37 | 825 days, 19:41:55 |
 | Time to answer | None | None | None |
 
 | Metric | Count |
 | --- | ---: |
-| Number of items that remain open | 246 |
-| Number of items closed | 635 |
-| Total number of items created | 881 |
+| Number of items that remain open | 255 |
+| Number of items closed | 642 |
+| Total number of items created | 897 |
 
 | Title | URL | Assignee | Author | Time to first response | Time to close | Time to answer |
 | --- | --- | --- | --- | --- | --- | --- |
-| Consolidate projects in Kernel | https://github.com/Cratis/Chronicle/issues/2632 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add test and verification validator for adding WebHook | https://github.com/Cratis/Chronicle/issues/2731 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Make it possible to override Occurred | https://github.com/Cratis/Chronicle/issues/2729 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| When removing WebHooks they don't really get removed from the storage | https://github.com/Cratis/Chronicle/issues/2727 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Adding a new event store does not carry over events marked as AllEventStores | https://github.com/Cratis/Chronicle/issues/2725 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Add more dimensions and filters | https://github.com/Cratis/Chronicle/issues/2723 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 9:28:46 | None |
+| Swap out custom components for our standardized ones | https://github.com/Cratis/Chronicle/issues/2694 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Switch out components in Workbench | https://github.com/Cratis/Chronicle/issues/2681 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Information Logging Chroincle | https://github.com/Cratis/Chronicle/issues/2670 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | None | None |
+| Error starting up version 15.2.18 after having previouly been running previous versions (before migration patch system) | https://github.com/Cratis/Chronicle/issues/2668 | [woksin](https://github.com/woksin) | [woksin](https://github.com/woksin) | None | 9:09:06 | None |
+| Version 15.2.4 not published to NuGet Gallery | https://github.com/Cratis/Chronicle/issues/2660 | None | [CLE-ChristianLeicht](https://github.com/CLE-ChristianLeicht) | 0:11:36 | 0:11:41 | None |
+| Validate gRPC API surface for breaking changes | https://github.com/Cratis/Chronicle/issues/2651 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Make the Chronicle Artifacts registration story more consistent | https://github.com/Cratis/Chronicle/issues/2649 | [woksin](https://github.com/woksin), [Copilot](https://github.com/Copilot) | [woksin](https://github.com/woksin) | None | 8 days, 1:51:20 | None |
+| Add the ability to add events directly in the Event Sequence editor / page in Workbench | https://github.com/Cratis/Chronicle/issues/2644 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Implement compensation support | https://github.com/Cratis/Chronicle/issues/2642 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Hook up redaction from Workbench | https://github.com/Cratis/Chronicle/issues/2640 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Compatibility checks for clients when connecting to server | https://github.com/Cratis/Chronicle/issues/2638 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
+| Consolidate projects in Kernel | https://github.com/Cratis/Chronicle/issues/2632 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 3 days, 19:00:49 | None |
 | Code generators not working as expected | https://github.com/Cratis/Chronicle/issues/2622 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 1 day, 12:27:32 | None |
 | Agentic Event Sourcing | https://github.com/Cratis/Chronicle/issues/2600 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
 | Handle Keys properly with metadata and make ExpandoObjectConverter honor this | https://github.com/Cratis/Chronicle/issues/2586 | None | [einari](https://github.com/einari) | None | None | None |
@@ -313,22 +329,4 @@
 | For our Orleans Clients it would be ideal to hide the of some of the referenced projects to avoid confusion on the consumer | https://github.com/Cratis/Chronicle/issues/1278 | None | [einari](https://github.com/einari) | None | 19:08:55 | None |
 | Add an overview on Docker hub for Chronicle images | https://github.com/Cratis/Chronicle/issues/1277 | None | [einari](https://github.com/einari) | None | None | None |
 | When publishing pre-release builds, Docker images should not have a latest tag version | https://github.com/Cratis/Chronicle/issues/1276 | [einari](https://github.com/einari), [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 555 days, 2:46:16 | None |
-| Upgrade build tasks for Node to latest versions | https://github.com/Cratis/Chronicle/issues/1275 | None | [einari](https://github.com/einari) | None | 208 days, 20:11:12 | None |
-| Remove disabled NoWarn warnings from the API.csproj file | https://github.com/Cratis/Chronicle/issues/1274 | None | [einari](https://github.com/einari) | None | 208 days, 20:44:13 | None |
-| Refactor how we create projection definition for the different types and use it in Projections | https://github.com/Cratis/Chronicle/issues/1273 | None | [einari](https://github.com/einari) | None | 208 days, 21:22:27 | None |
-| Orleans client SiloBuilder should not rely on type discovery, conventions and self binding registrations but explicitly add all types it needs | https://github.com/Cratis/Chronicle/issues/1272 | None | [einari](https://github.com/einari) | None | None | None |
-| Do not create recommendations if there already is one that is the same | https://github.com/Cratis/Chronicle/issues/1271 | None | [einari](https://github.com/einari) | None | None | None |
-| Reactions & Reducer timeouts should be configurable | https://github.com/Cratis/Chronicle/issues/1270 | None | [einari](https://github.com/einari) | None | 210 days, 1:42:19 | None |
-| Eliminate ClientBuilder in DotNET in favor of new builders that will build the ChronicleClient | https://github.com/Cratis/Chronicle/issues/1269 | None | [einari](https://github.com/einari) | None | 39 days, 21:51:25 | None |
-| Formalize ConnectedClient as its own grain and let Reactions and Reducers work with this | https://github.com/Cratis/Chronicle/issues/1265 | None | [einari](https://github.com/einari) | None | None | None |
-| Make replay work again (ProjectionReplayHandler, ReducerReplayHandler) | https://github.com/Cratis/Chronicle/issues/1264 | None | [einari](https://github.com/einari) | None | 60 days, 1:23:36 | None |
-| Fix the nextEventSequenceNumberForEventTypes on observer state - it is always holding -3 | https://github.com/Cratis/Chronicle/issues/1263 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:37 | None |
-| Fix last handled sequence number on observer state - it shows wrong number | https://github.com/Cratis/Chronicle/issues/1262 | None | [einari](https://github.com/einari) | None | 144 days, 21:41:54 | None |
-| Investigate whether or not we need a notification when reducer definitions change | https://github.com/Cratis/Chronicle/issues/1261 | None | [einari](https://github.com/einari) | None | None | None |
-| Automatically hook up existing reducers to connected clients in ReducersManager when a namespace is added | https://github.com/Cratis/Chronicle/issues/1260 | None | [einari](https://github.com/einari) | None | None | None |
-| Fix the use of static methods for working with identity in the client (BaseIdentityProvider) | https://github.com/Cratis/Chronicle/issues/1259 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | 352 days, 23:47:06 | None |
-| Change all places that uses JsonSerializer directly for events to use the EventSerializer | https://github.com/Cratis/Chronicle/issues/1258 | [Copilot](https://github.com/Copilot) | [einari](https://github.com/einari) | None | None | None |
-| Consistent use of term Model vs ReadModel | https://github.com/Cratis/Chronicle/issues/1257 | None | [einari](https://github.com/einari) | None | 48 days, 9:36:15 | None |
-| Separate Reducer server parts into the "engine" specific and Orleans specific. | https://github.com/Cratis/Chronicle/issues/1256 | None | [einari](https://github.com/einari) | None | None | None |
-| Look into recommendation reasons and cohesion | https://github.com/Cratis/Chronicle/issues/1255 | None | [einari](https://github.com/einari) | None | None | None |
-| Add Reactor definition comparison and add replay recommendation on change | https://github.com/Cratis/Chronicle/issues/1254 | None | [einari](https://github.com/einari) | None 
+| Upgrade build tasks for Node to latest versions | https://github.com/Cratis/Chronicle/iss

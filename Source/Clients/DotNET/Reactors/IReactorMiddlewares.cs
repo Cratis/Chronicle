@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Reactors;
 /// <summary>
 /// Defines a system for working with <see cref="IReactorMiddleware">middlewares</see> that can be called during the observing of events.
 /// </summary>
-public interface IReactorMiddlewares
+public interface IReactorMiddlewares : IAsyncDisposable
 {
     /// <summary>
     /// Invoked before the actual invoke.

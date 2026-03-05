@@ -12,6 +12,7 @@ public class all_dependencies : Specification
     protected IEventStore _eventStore;
     protected IEventTypes _eventTypes;
     protected IClientArtifactsProvider _clientArtifacts;
+    protected IClientArtifactsActivator _artifactsActivator;
     protected IEventSerializer _eventSerializer;
     protected IServiceProvider _serviceProvider;
     protected JsonSerializerOptions _jsonSerializerOptions;
@@ -22,6 +23,7 @@ public class all_dependencies : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventTypes = Substitute.For<IEventTypes>();
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
+        _artifactsActivator = Substitute.For<IClientArtifactsActivator>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _serviceProvider = Substitute.For<IServiceProvider>();
         _jsonSerializerOptions = new();

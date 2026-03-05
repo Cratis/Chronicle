@@ -76,7 +76,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Get yarn cache directory path
@@ -102,11 +102,11 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Yarn install
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: yarn
 
       - name: Build JS/TS
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn build
@@ -160,7 +160,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup .Net
@@ -178,14 +178,6 @@ jobs:
 
       - name: Build root
         run: dotnet build --configuration Debug
-
-      - name: Clean output for repackaged clients
-        run: dotnet clean
-        working-directory: ./Source/Clients
-
-      - name: Build repackaged clients
-        run: dotnet build --configuration Debug -p:Repack=true -maxcpucount:1
-        working-directory: ./Source/Clients
 
       - name: Add GitHub Package Registry to NuGet
         run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
@@ -226,7 +218,7 @@ jobs:
       - uses: actions/cache@v3
         id: workbench-output
         with:
-          path: ./Source/Workbench/Web/wwwroot
+          path: ./Source/Workbench/wwwroot
           key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU

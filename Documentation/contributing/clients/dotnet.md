@@ -13,10 +13,11 @@ discovery mechanism entirely by implementing your own `IClientArtifactsProvider`
 This approach ensures an easy entry point for new users, while also supporting advanced
 customization for those who need it.
 
-## Repack
+## Packaging
 
-The .NET client is repacked. It hides the [contracts](../kernel/contracts.md) and
-also includes the `Connection` project.
+The .NET client uses runtime-only packaging to hide internal implementation details. It includes the [contracts](../kernel/contracts.md) and
+the `Connection` project as runtime-only assemblies, ensuring they're not exposed in IntelliSense or available for direct compilation by consumers.
+See [internalization](./internalization.md) for details on how this works.
 
 ## Using statements
 
@@ -27,3 +28,4 @@ also includes the `Connection` project.
 ## Language
 
 - C# does not allow for multiple inheritance.
+

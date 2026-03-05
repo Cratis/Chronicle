@@ -13,6 +13,8 @@
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
+        <IncludeSymbols>false</IncludeSymbols>
+        <IncludeSource>false</IncludeSource>
         <NuGetAuditMode>direct</NuGetAuditMode>
         <NoWarn>$(NoWarn);NU5128;NU1507</NoWarn>
     </PropertyGroup>
