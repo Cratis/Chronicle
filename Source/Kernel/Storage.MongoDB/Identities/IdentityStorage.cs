@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Collections;
 using Cratis.Reactive;
@@ -86,6 +87,11 @@ public class IdentityStorage(
     public async Task<IdentityId> GetSingleFor(Identity identity)
     {
         var userName = identity.UserName.ToLowerInvariant();
+        if (string.IsNullOrEmpty(userName))
+        {
+            logger.IdentityHasNoUserName(identity.Subject);
+            userName = Username.Unknown;
+        }
 
         if (TryGetSingleFor(identity, out var identityId)) return identityId;
         await Populate();

@@ -22,7 +22,7 @@ using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapsho
 namespace Cratis.Chronicle.Services.ReadModels;
 
 /// <summary>
-/// Represents an implementation of <see cref="Contracts.ReadModels.IReadModels"/>.
+/// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
 /// <param name="clusterClient">The cluster client.</param>
 /// <param name="grainFactory">The grain factory.</param>
@@ -34,7 +34,7 @@ internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
-    JsonSerializerOptions jsonSerializerOptions) : Contracts.ReadModels.IReadModels
+    JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
     /// <inheritdoc/>
     public async Task RegisterMany(RegisterManyRequest request, CallContext context = default)

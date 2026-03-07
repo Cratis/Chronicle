@@ -176,7 +176,6 @@ public class EventStore : IEventStore
 
         Seeding = new EventSeeding(
             eventStoreName,
-            @namespace,
             connection,
             EventTypes,
             _eventSerializer,

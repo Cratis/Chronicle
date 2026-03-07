@@ -44,7 +44,7 @@ internal sealed class EventSequences(
             request.CorrelationId,
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle(),
-            request.Tags.Select(t => new Concepts.Events.Tag(t)).ToArray(),
+            request.Tags.Select(t => new Tag(t)).ToArray(),
             request.ConcurrencyScope.ToChronicle(),
             request.Occurred);
 
@@ -152,6 +152,20 @@ internal sealed class EventSequences(
         {
             Events = events
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<RedactResponse> Redact(RedactRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        await eventSequence.Redact(
+            request.SequenceNumber,
+            request.Reason,
+            request.CorrelationId,
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+
+        return new RedactResponse();
     }
 
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>

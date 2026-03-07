@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;

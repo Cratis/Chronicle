@@ -25,6 +25,20 @@ flowchart LR
 
 Constraints are the primary way to express decision correctness. They are evaluated at append time, so the decision is validated against the most recent events. Concurrency scopes complement this by defining which streams must be checked together to keep the decision consistent without forcing a single aggregate boundary.
 
+## Metadata tags
+
+Chronicle uses formalized metadata tags to scope concurrency control. These tags are indexed and used by Chronicle when evaluating concurrency scopes:
+
+- **EventSourceId**: Unique identifier for the event source
+- **EventSourceType**: Overarching, binding concept (e.g., Account)
+- **EventStreamType**: A concrete process related to event source type (e.g., Onboarding, Transactions)
+- **EventStreamId**: A marker to separate independent streams for a stream type (e.g., Monthly, Yearly)
+- **EventTypes**: Specific event types to scope concurrency to
+
+For more details, see [Formalized metadata tags for concurrency](../events/concurrency.md#formalized-metadata-tags-for-concurrency).
+
+You can also attach [custom tags](../events/appending-with-tags.md#custom-tags) to events when appending for categorization and filtering purposes.
+
 ## Aggregate roots
 
 If you prefer an aggregate root style, Chronicle supports it through Cratis.Arc. See [aggregate roots support](xref:Arc.Chronicle.AggregateRoots).
@@ -57,6 +71,7 @@ flowchart LR
 
 - [Constraints](../constraints/index.md)
 - [Appending events](../events/appending.md)
+- [Appending with tags](../events/appending-with-tags.md)
 - [Concurrency scopes](../events/concurrency.md)
 - [Projections](../projections/index.md)
 

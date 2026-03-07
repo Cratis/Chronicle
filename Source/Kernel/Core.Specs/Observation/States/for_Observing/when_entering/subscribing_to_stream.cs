@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Observation.States.for_Observing;
+namespace Cratis.Chronicle.Observation.States.for_Observing.when_entering;
 
-public class when_entering : given.an_observing_state
+public class subscribing_to_stream : given.an_observing_state
 {
     void Establish() => _storedState = _storedState with { NextEventSequenceNumber = 42UL };
 

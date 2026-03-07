@@ -170,7 +170,7 @@ internal sealed class Webhooks(
         return definition with { Target = encryptedTarget };
     }
 
-    async Task AppendAuthorizationEvent(Chronicle.EventSequences.IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
+    async Task AppendAuthorizationEvent(IEventSequence eventSequence, string webhookId, WebhookAuthorization authorization)
     {
         await authorization.Match(
             async basic => await eventSequence.Append(webhookId, new BasicAuthorizationSetForWebhook(basic.Username, basic.Password)),

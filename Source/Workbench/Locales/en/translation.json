@@ -46,7 +46,8 @@
             "projections": "Projections",
             "reducers": "Reducers",
             "reactors": "Reactors",
-            "sinks": "Sinks"
+            "sinks": "Sinks",
+            "seedData": "Seed Data"
         },
         "system": {
             "groupLabel": "System",
@@ -266,6 +267,10 @@
             "sequences": {
                 "title": "Sequences",
                 "empty": "No events found",
+                "actions": {
+                    "appendEvent": "Append Event",
+                    "redact": "Redact"
+                },
                 "columns": {
                     "sequenceNumber": "Sequence number",
                     "eventSourceId": "Event Source Id",
@@ -277,6 +282,23 @@
                         "eventType": "Event type",
                         "eventSourceId": "Event source",
                         "occurred": "Occurred"
+                    }
+                },
+                "dialogs": {
+                    "appendEvent": {
+                        "title": "Append Event",
+                        "eventType": "Event Type",
+                        "selectEventType": "Select event type",
+                        "eventSourceId": "Event Source ID",
+                        "eventSourceIdPlaceholder": "Enter event source ID",
+                        "content": "Event Content",
+                        "contentPlaceholder": "Enter event content as JSON",
+                        "viewSchema": "View Schema"
+                    },
+                    "redact": {
+                        "title": "Redact Event",
+                        "reason": "Reason for redaction",
+                        "reasonPlaceholder": "Enter the reason for redacting this event"
                     }
                 }
             },

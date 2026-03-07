@@ -17,6 +17,20 @@ public class Jobs
     public int? MaxParallelSteps { get; init; }
 
     /// <summary>
+    /// Gets the time threshold for considering a job as dead in the water.
+    /// Jobs in preparation state with no steps that were created before this threshold are candidates for cleanup.
+    /// Defaults to 1 hour.
+    /// </summary>
+    public TimeSpan DeadJobThreshold { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets the cleanup cadence for the scavenger process that removes dead jobs.
+    /// This determines how often the cleanup process runs to check for and remove jobs stuck in preparation.
+    /// Defaults to 1 hour.
+    /// </summary>
+    public TimeSpan CleanupCadence { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
     /// Gets the effective maximum parallel steps to use.
     /// </summary>
     /// <returns>The maximum parallel steps value.</returns>

@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NJsonSchema;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Generates model-bound C# read model code from a <see cref="ProjectionDefinition"/> using Roslyn Syntax Factory.

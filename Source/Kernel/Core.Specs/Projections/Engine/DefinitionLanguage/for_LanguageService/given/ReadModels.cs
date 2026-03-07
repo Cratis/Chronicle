@@ -5,7 +5,7 @@
 #pragma warning disable SA1649 // File name should match first type name
 #pragma warning disable CA1819 // Properties should not return arrays
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
 public class DefaultReadModel
 {
