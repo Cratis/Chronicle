@@ -77,6 +77,10 @@ public class Webhooks(
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         await Unsubscribe(namespaces, webhookId);
+
+        var key = new WebhookKey(webhookId, _eventStoreName);
+        var webhook = GrainFactory.GetGrain<IWebhook>(key);
+        await webhook.Remove();
     }
 
     /// <inheritdoc/>
@@ -218,7 +222,7 @@ public class Webhooks(
         await Task.WhenAll(tasks);
     }
 
-    async Task SubscribeIfNotSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
         var subscribed = await observer.IsSubscribed();
@@ -235,7 +239,7 @@ public class Webhooks(
         logger.AlreadySubscribed(definition.Identifier, namespaceName);
     }
 
-    async Task UnsubscribeIfSubscribed(WebhookDefinition definition,  EventStoreNamespaceName namespaceName)
+    async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
         var subscribed = await observer.IsSubscribed();

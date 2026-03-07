@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React, { useState } from 'react';
-import Editor from '@monaco-editor/react';
+import MonacoEditor from 'Components/MonacoEditor/MonacoEditor';
 import { SelectButton } from 'primereact/selectbutton';
 import { Button } from 'primereact/button';
 
@@ -62,7 +62,7 @@ export const ProjectionCodePanel: React.FC<ProjectionCodePanelProps> = ({ declar
                     overflow: 'hidden'
                 }}
             >
-                <Editor
+                <MonacoEditor
                     height="100%"
                     language="csharp"
                     value={currentCode || '// Loading...'}

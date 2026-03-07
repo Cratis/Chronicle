@@ -181,6 +181,53 @@ children orderLines identified by lineNumber
     Price = price
 ```
 
+## Literal (Constant) Keys
+
+Use `literal "value"` to fix the key to a constant string. All events matching the `from` block update the **same** read model instance regardless of event source:
+
+```pdl
+from OrderPlaced
+  key literal "global"
+  count TotalOrders
+```
+
+Every `OrderPlaced` event, from every event source, increments `TotalOrders` on the single document with key `"global"`.
+
+### Inline literal syntax
+
+Literal keys also work inline on the `from` statement:
+
+```pdl
+from UserLoggedIn key literal "site-stats"
+  count TotalLogins
+```
+
+### Combining literal keys with functions
+
+Literal keys are especially useful with counter and arithmetic operations for global aggregates:
+
+```pdl
+projection SiteMetrics => SiteMetricsReadModel
+  from UserRegistered
+    key literal "metrics"
+    count TotalUsers
+
+  from UserLoggedIn
+    key literal "metrics"
+    increment ActiveSessions
+
+  from UserLoggedOut
+    key literal "metrics"
+    decrement ActiveSessions
+
+  from OrderPlaced
+    key literal "metrics"
+    count TotalOrders
+    add TotalRevenue by amount
+```
+
+All events from all users accumulate into the single `SiteMetricsReadModel` document with key `"metrics"`.
+
 ## When to Use Each Approach
 
 **Simple Keys (inline):**
@@ -204,6 +251,11 @@ children orderLines identified by lineNumber
 - Aggregate-based event sourcing
 - One-to-one event stream to read model
 
+**Literal (Constant) Keys:**
+- All events update the same instance
+- Global counters and system-wide aggregates
+- Singleton read models
+
 ## Best Practices
 
 1. **Be Explicit**: Specify keys when not using event source ID
@@ -211,3 +263,4 @@ children orderLines identified by lineNumber
 3. **Composite for Complexity**: Use composite keys for multi-property identifiers
 4. **Consistent Naming**: Use consistent key property names across events
 5. **Document Composites**: Composite keys benefit from clear type names
+6. **Literal for Globals**: Use literal keys for system-wide or global aggregates

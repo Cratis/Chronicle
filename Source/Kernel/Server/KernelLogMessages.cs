@@ -17,10 +17,10 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Error, "No TLS certificate is configured. Server cannot start without HTTPS in non-development environments")]
     internal static partial void TlsCertificateMissingProduction(this ILogger<Kernel> logger);
 
-    [LoggerMessage(LogLevel.Information, "Configuring server to listen on management port {ManagementPort} (HTTP/1.1) and gRPC port {GrpcPort} (HTTP/2)")]
+    [LoggerMessage(LogLevel.Debug, "Configuring server to listen on management port {ManagementPort} (HTTP/1.1) and gRPC port {GrpcPort} (HTTP/2)")]
     internal static partial void ServerListening(this ILogger<Kernel> logger, int managementPort, int grpcPort);
 
-    [LoggerMessage(LogLevel.Information, "Cratis Chronicle Server configured successfully - starting services")]
+    [LoggerMessage(LogLevel.Debug, "Cratis Chronicle Server configured successfully - starting services")]
     internal static partial void ServerConfigured(this ILogger<Kernel> logger);
 
     [LoggerMessage(LogLevel.Information, "Cratis Chronicle Server started successfully - ready and listening on management port {ManagementPort} (HTTP/1.1) and gRPC port {GrpcPort} (HTTP/2)")]

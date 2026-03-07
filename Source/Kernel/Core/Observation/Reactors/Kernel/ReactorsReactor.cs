@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Namespaces;
 
 namespace Cratis.Chronicle.Observation.Reactors.Kernel;
@@ -14,8 +15,9 @@ namespace Cratis.Chronicle.Observation.Reactors.Kernel;
 /// Represents a reactor that handles EventStoreAdded and NamespaceAdded events to ensure reactors are discovered and registered.
 /// </summary>
 /// <param name="reactors">The <see cref="IReactors"/> to use for discovering and registering reactors.</param>
+/// <param name="eventTypes">The <see cref="IEventTypes"/> to use for discovering and registering event types.</param>
 [Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: true)]
-public class ReactorsReactor(IReactors reactors) : Reactor
+public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes) : Reactor
 {
     /// <summary>
     /// Handles the addition of an event store.
@@ -23,8 +25,11 @@ public class ReactorsReactor(IReactors reactors) : Reactor
     /// <param name="event">The event containing the event store information.</param>
     /// <param name="context">The context of the event.</param>
     /// <returns>Await Task.</returns>
-    public Task EventStoreAdded(EventStoreAdded @event, EventContext context)
-        => reactors.DiscoverAndRegister(@event.EventStore, EventStoreNamespaceName.Default);
+    public async Task EventStoreAdded(EventStoreAdded @event, EventContext context)
+    {
+        await eventTypes.DiscoverAndRegister(@event.EventStore);
+        await reactors.DiscoverAndRegister(@event.EventStore, EventStoreNamespaceName.Default);
+    }
 
     /// <summary>
     /// Handles the addition of a namespace.

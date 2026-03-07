@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// Represents the payload for appending an event.
 /// </summary>
 /// <param name="EventSourceId">The event source identifier.</param>
+/// <param name="EventSourceType">The event source type.</param>
 /// <param name="EventStreamType">The event stream type.</param>
 /// <param name="EventStreamId">The event stream identifier.</param>
 /// <param name="EventType">The <see cref="EventType"/> to append.</param>
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <param name="CausedBy">Optional <see cref="CausedBy"/> to identify the person, system or service that caused the event.</param>
 public record AppendEvent(
     string EventSourceId,
+    string EventSourceType,
     string EventStreamType,
     string EventStreamId,
     EventType EventType,

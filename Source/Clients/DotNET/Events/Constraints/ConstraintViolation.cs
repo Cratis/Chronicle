@@ -8,12 +8,14 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="EventTypeId">The <see cref="EventTypeId"/> where the violation occurred.</param>
 /// <param name="SequenceNumber">The <see cref="EventSequenceNumber"/> where the violation occurred.</param>
+/// <param name="ConstraintType">The <see cref="ConstraintType"/> that was violated.</param>
 /// <param name="ConstraintName"><see cref="ConstraintName"/> that was violated.</param>
 /// <param name="Message"><see cref="ConstraintViolationMessage"/> with more details.</param>
 /// <param name="Details"><see cref="ConstraintViolationDetails"/> with more details.</param>
 public record ConstraintViolation(
     EventTypeId EventTypeId,
     EventSequenceNumber SequenceNumber,
+    ConstraintType ConstraintType,
     ConstraintName ConstraintName,
     ConstraintViolationMessage Message,
     ConstraintViolationDetails Details);

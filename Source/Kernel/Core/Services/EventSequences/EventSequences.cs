@@ -45,7 +45,8 @@ internal sealed class EventSequences(
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle(),
             request.Tags.Select(t => new Tag(t)).ToArray(),
-            request.ConcurrencyScope.ToChronicle());
+            request.ConcurrencyScope.ToChronicle(),
+            request.Occurred);
 
         return result.ToContract();
     }
@@ -113,6 +114,19 @@ internal sealed class EventSequences(
     }
 
     /// <inheritdoc/>
+    public async Task Compensate(CompensateRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        await eventSequence.Compensate(
+            request.SequenceNumber,
+            request.EventType.ToChronicle(),
+            JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
+            request.CorrelationId,
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+    }
+
+    /// <inheritdoc/>
     public async Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(
         GetFromEventSequenceNumberRequest request,
         CallContext context = default)
@@ -151,6 +165,20 @@ internal sealed class EventSequences(
         {
             Events = events
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<RedactResponse> Redact(RedactRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        await eventSequence.Redact(
+            request.SequenceNumber,
+            request.Reason,
+            request.CorrelationId,
+            request.Causation.ToChronicle(),
+            request.CausedBy.ToChronicle());
+
+        return new RedactResponse();
     }
 
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>

@@ -8,8 +8,10 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events.Constraints;
@@ -200,7 +202,8 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy,
         IEnumerable<Tag> tags,
-        ConcurrencyScope concurrencyScope)
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred = null)
     {
         try
         {
@@ -228,7 +231,8 @@ public class EventSequence(
                 causedBy,
                 tags,
                 compliantEvent,
-                constraintContext);
+                constraintContext,
+                occurred);
         }
         catch (Exception ex)
         {
@@ -292,7 +296,7 @@ public class EventSequence(
                     causation,
                     identity,
                     eventToAppend.Tags,
-                    DateTimeOffset.UtcNow,
+                    eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
                     compliantEvent,
                     eventHash));
 
@@ -351,7 +355,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task Compensate(
+    public async Task Compensate(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         JsonObject content,
@@ -366,7 +370,25 @@ public class EventSequence(
             _eventSequenceId,
             sequenceNumber);
 
-        return Task.CompletedTask;
+        var @event = await EventSequenceStorage.GetEventAt(sequenceNumber);
+        if (@event.Context.EventType.Id != eventType.Id)
+        {
+            throw new InvalidCompensationEventType(sequenceNumber, @event.Context.EventType.Id, eventType.Id);
+        }
+
+        var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+
+        await EventSequenceStorage.Compensate(
+            sequenceNumber,
+            eventType,
+            correlationId,
+            causation,
+            await IdentityStorage.GetFor(causedBy),
+            DateTimeOffset.UtcNow,
+            contentAsExpandoObject);
+
+        await RewindPartitionForAffectedObservers(@event.Context.EventSourceId, [@event.Context.EventType]);
     }
 
     /// <inheritdoc/>
@@ -431,7 +453,8 @@ public class EventSequence(
         Identity causedBy,
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
-        ConstraintValidationContext constraintContext)
+        ConstraintValidationContext constraintContext,
+        DateTimeOffset? occurred = null)
     {
         try
         {
@@ -442,7 +465,7 @@ public class EventSequence(
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
-                var occurred = DateTimeOffset.UtcNow;
+                var eventOccurred = occurred ?? DateTimeOffset.UtcNow;
                 logger.Appending(
                     _eventSequenceKey.EventStore,
                     _eventSequenceKey.Namespace,
@@ -462,7 +485,7 @@ public class EventSequence(
                     causation,
                     identity,
                     tags,
-                    occurred,
+                    eventOccurred,
                     compliantEvent,
                     eventHash);
             }
@@ -496,7 +519,13 @@ public class EventSequence(
     {
         try
         {
-            var compliantEventAsExpandoObject = await MakeEventCompliant(eventSourceId, eventType, content);
+            var (compliantEventAsExpandoObject, compliantContent, eventSchema) = await MakeEventCompliant(eventSourceId, eventType, content);
+            var schemaValidationResult = ValidateAgainstSchema(eventType, compliantContent, eventSchema, correlationId);
+            if (schemaValidationResult.TryGetError(out var schemaError))
+            {
+                return schemaError;
+            }
+
             var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject);
             if (checkConstraintViolation.TryGetError(out var error))
             {
@@ -533,12 +562,13 @@ public class EventSequence(
         return AppendResult.Failed(correlationId, [ex.Message]);
     }
 
-    async Task<ExpandoObject> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content)
+    async Task<(ExpandoObject ExpandoObject, JsonObject CompliantContent, EventTypeSchema EventTypeSchema)> MakeEventCompliant(EventSourceId eventSourceId, EventType eventType, JsonObject content)
     {
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
 
         var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, eventSourceId, content);
-        return expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+        var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
+        return (expandoObject, compliantEvent, eventSchema);
     }
 
     async Task<Result<ConstraintValidationContext, AppendResult>> CheckConstraintViolation(
@@ -555,6 +585,38 @@ public class EventSequence(
         }
         _metrics?.ConstraintViolation(eventSourceId, eventType.Id);
         return AppendResult.Failed(correlationId, constraintValidationResult.Violations);
+    }
+
+    Result<bool, AppendResult> ValidateAgainstSchema(
+        EventType eventType,
+        JsonObject content,
+        EventTypeSchema eventSchema,
+        CorrelationId correlationId)
+    {
+        var validationErrors = eventSchema.Schema.Validate(content.ToJsonString());
+        if (validationErrors.Count == 0)
+        {
+            return true;
+        }
+
+        var violations = validationErrors.Select(error =>
+        {
+            var details = new ConstraintViolationDetails
+            {
+                ["path"] = error.Path ?? string.Empty,
+                ["kind"] = error.Kind.ToString()
+            };
+
+            return new ConstraintViolation(
+                eventType.Id,
+                EventSequenceNumber.Unavailable,
+                ConstraintType.Schema,
+                new ConstraintName("SchemaValidation"),
+                new ConstraintViolationMessage(error.ToString()),
+                details);
+        }).ToList();
+
+        return AppendResult.Failed(correlationId, violations);
     }
 
     async Task HandleFailedAppendResult(
