@@ -19,7 +19,6 @@
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
-        <PackageReference Include="Polly.Core" />
         <PackageReference Include="OneOf" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
