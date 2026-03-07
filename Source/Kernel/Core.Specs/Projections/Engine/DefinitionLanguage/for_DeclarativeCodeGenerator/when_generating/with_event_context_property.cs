@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_DeclarativeCodeGenerator.when_generating;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_DeclarativeCodeGenerator.when_generating;
 
 public class with_event_context_property : given.a_declarative_code_generator
 {

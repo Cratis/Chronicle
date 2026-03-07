@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling_and_generating;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling_and_generating;
 
 public class composite_key_escaped_keywords : given.a_language_service_with_schemas<given.KeywordKeyReadModel>
 {

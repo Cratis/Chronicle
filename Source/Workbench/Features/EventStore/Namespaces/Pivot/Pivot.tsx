@@ -34,6 +34,18 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
         sort: (a, b) => b.items.length - a.items.length,
     },
     {
+        key: 'eventSourceType',
+        label: 'Event Source Type',
+        getValue: (item) => item.context.eventSourceType,
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
+    {
+        key: 'eventStreamType',
+        label: 'Event Stream Type',
+        getValue: (item) => item.context.eventStreamType,
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
+    {
         key: 'correlation',
         label: 'Correlation',
         getValue: (item) => item.context.correlationId.toString(),
@@ -61,6 +73,12 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
         getValue: (item) => (item.context.causation.length > 0 ? item.context.causation[0].type : 'Origin'),
         sort: (a, b) => a.label.localeCompare(b.label),
     },
+    {
+        key: 'tags',
+        label: 'Tags',
+        getValue: (item) => (item.context.tags?.length > 0 ? item.context.tags.join(', ') : 'No Tags'),
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
 ];
 
 const filters: PivotFilter<AppendedEvent>[] = [
@@ -74,6 +92,24 @@ const filters: PivotFilter<AppendedEvent>[] = [
         key: 'type',
         label: 'Event Type',
         getValue: (item) => item.context.eventType.id,
+        multi: true,
+    },
+    {
+        key: 'eventSourceType',
+        label: 'Event Source Type',
+        getValue: (item) => item.context.eventSourceType,
+        multi: true,
+    },
+    {
+        key: 'eventStreamType',
+        label: 'Event Stream Type',
+        getValue: (item) => item.context.eventStreamType,
+        multi: true,
+    },
+    {
+        key: 'tags',
+        label: 'Tags',
+        getValue: (item) => item.context.tags?.join(', ') || 'No Tags',
         multi: true,
     },
     {

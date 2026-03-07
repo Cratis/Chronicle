@@ -9,11 +9,11 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Properties;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Compiles an AST Document representing the projection into a ProjectionDefinition.

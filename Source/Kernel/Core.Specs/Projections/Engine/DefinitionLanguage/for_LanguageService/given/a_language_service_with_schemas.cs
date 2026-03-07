@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
 public abstract class a_language_service_with_schemas<TReadModel> : Specification
     where TReadModel : class

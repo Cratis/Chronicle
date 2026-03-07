@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling;
 
 public class with_type_mismatch_in_assignment : for_LanguageService.given.a_language_service
 {

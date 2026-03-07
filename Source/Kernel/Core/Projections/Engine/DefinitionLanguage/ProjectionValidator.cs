@@ -4,11 +4,11 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Validates projection definitions against read models and event type schemas.

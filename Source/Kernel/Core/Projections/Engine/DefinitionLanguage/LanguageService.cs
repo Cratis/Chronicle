@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Represents an implementation of the <see cref="ILanguageService"/>.

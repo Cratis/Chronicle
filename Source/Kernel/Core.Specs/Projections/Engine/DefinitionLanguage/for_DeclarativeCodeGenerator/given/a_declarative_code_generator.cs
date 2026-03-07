@@ -10,7 +10,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_DeclarativeCodeGenerator.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_DeclarativeCodeGenerator.given;
 
 public class a_declarative_code_generator : Specification
 {

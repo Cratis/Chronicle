@@ -13,7 +13,7 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.Webhooks;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events.Constraints;
