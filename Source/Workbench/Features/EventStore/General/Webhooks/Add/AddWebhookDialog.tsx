@@ -13,6 +13,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Message } from 'primereact/message';
+import { Button } from 'primereact/button';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
@@ -39,6 +40,7 @@ export const AddWebhookDialog = () => {
     const [isActive, setIsActive] = useState(true);
     const [isReplayable, setIsReplayable] = useState(true);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [testSuccess, setTestSuccess] = useState(false);
 
     const authTypes = [
         { label: strings.eventStore.general.webhooks.authTypes.none, value: AuthorizationType.none },
@@ -86,6 +88,38 @@ export const AddWebhookDialog = () => {
         return errors;
     };
 
+    const populateCommand = () => {
+        addWebhook.eventStore = params.eventStore!;
+        addWebhook.name = name;
+        addWebhook.url = url;
+        addWebhook.eventSequenceId = eventSequence;
+        addWebhook.eventTypes = selectedEventTypes;
+        addWebhook.authorizationType = authType;
+        addWebhook.basicUsername = basicUsername;
+        addWebhook.basicPassword = basicPassword;
+        addWebhook.bearerToken = bearerToken;
+        addWebhook.OAuthAuthority = oauthAuthority;
+        addWebhook.OAuthClientId = oauthClientId;
+        addWebhook.OAuthClientSecret = oauthClientSecret;
+        addWebhook.isActive = isActive;
+        addWebhook.isReplayable = isReplayable;
+        addWebhook.headers = {};
+    };
+
+    const handleTest = async () => {
+        setValidationErrors([]);
+        setTestSuccess(false);
+
+        populateCommand();
+
+        const validationResult = await addWebhook.validate();
+        if (validationResult.isSuccess) {
+            setTestSuccess(true);
+        } else {
+            setValidationErrors(extractErrors(validationResult));
+        }
+    };
+
     const handleClose = async (result: DialogResult) => {
         if (result !== DialogResult.Ok) {
             return true;
@@ -93,22 +127,9 @@ export const AddWebhookDialog = () => {
 
         if (name && url && eventSequence && params.eventStore) {
             setValidationErrors([]);
+            setTestSuccess(false);
 
-            addWebhook.eventStore = params.eventStore;
-            addWebhook.name = name;
-            addWebhook.url = url;
-            addWebhook.eventSequenceId = eventSequence;
-            addWebhook.eventTypes = selectedEventTypes;
-            addWebhook.authorizationType = authType;
-            addWebhook.basicUsername = basicUsername;
-            addWebhook.basicPassword = basicPassword;
-            addWebhook.bearerToken = bearerToken;
-            addWebhook.OAuthAuthority = oauthAuthority;
-            addWebhook.OAuthClientId = oauthClientId;
-            addWebhook.OAuthClientSecret = oauthClientSecret;
-            addWebhook.isActive = isActive;
-            addWebhook.isReplayable = isReplayable;
-            addWebhook.headers = {};
+            populateCommand();
 
             const validationResult = await addWebhook.validate();
             if (!validationResult.isSuccess) {
@@ -227,14 +248,30 @@ export const AddWebhookDialog = () => {
                     </div>
                 )}
 
+                {testSuccess && (
+                    <div className="field mb-3">
+                        <Message severity="success" text={strings.eventStore.general.webhooks.dialogs.addWebhook.testSuccess} className="mb-2" />
+                    </div>
+                )}
+
                 <div className="field flex align-items-center mb-3">
                     <label htmlFor="isActive" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
                     <InputSwitch inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.value)} />
                 </div>
 
-                <div className="field flex align-items-center">
+                <div className="field flex align-items-center mb-3">
                     <label htmlFor="isReplayable" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}</label>
                     <InputSwitch inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.value)} />
+                </div>
+
+                <div className="field">
+                    <Button
+                        label={strings.eventStore.general.webhooks.dialogs.addWebhook.test}
+                        icon="pi pi-check-circle"
+                        severity="secondary"
+                        disabled={!isValid}
+                        onClick={handleTest}
+                    />
                 </div>
             </div>
         </Dialog>

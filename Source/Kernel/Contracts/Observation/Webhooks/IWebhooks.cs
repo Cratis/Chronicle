@@ -52,4 +52,13 @@ public interface IWebhooks
     /// <returns><see cref="TestOAuthAuthorizationResponse"/>.</returns>
     [Operation]
     Task<TestOAuthAuthorizationResponse> TestOAuthAuthorization(TestOAuthAuthorizationRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Test a webhook endpoint.
+    /// </summary>
+    /// <param name="request"><see cref="TestWebhookRequest"/>.</param>
+    /// <param name="context"><see cref="CallContext"/>.</param>
+    /// <returns><see cref="TestWebhookResponse"/>.</returns>
+    [Operation]
+    Task<TestWebhookResponse> TestWebhook(TestWebhookRequest request, CallContext context = default);
 }

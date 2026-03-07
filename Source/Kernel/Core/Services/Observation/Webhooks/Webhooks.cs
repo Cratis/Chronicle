@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
@@ -24,13 +26,18 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// <param name="webhookDefinitionComparer"><see cref="IWebhookDefinitionComparer"/> for comparing webhook definitions.</param>
 /// <param name="encryption"><see cref="IEncryption"/> for encrypting sensitive data.</param>
 /// <param name="oauthClient"><see cref="IOAuthClient"/> for testing OAuth authorization.</param>
+/// <param name="webhookMediator"><see cref="IWebhookMediator"/> for testing webhook endpoints.</param>
 internal sealed class Webhooks(
     IGrainFactory grainFactory,
     IStorage storage,
     IWebhookDefinitionComparer webhookDefinitionComparer,
     IEncryption encryption,
-    IOAuthClient oauthClient) : ContractIWebhooks
+    IOAuthClient oauthClient,
+    IWebhookMediator webhookMediator) : ContractIWebhooks
 {
+    const string WebhookTestPartitionKey = "test";
+    static readonly TimeSpan _webhookTestTimeout = TimeSpan.FromSeconds(10);
+
     /// <inheritdoc/>
     public async Task Add(AddWebhooks request, CallContext context = default)
     {
@@ -146,6 +153,63 @@ internal sealed class Webhooks(
                 ErrorMessage = ex.Message
             };
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<TestWebhookResponse> TestWebhook(TestWebhookRequest request, CallContext context = default)
+    {
+        string? accessToken = null;
+
+        if (request.Target.Authorization?.Value2 is { } oAuthContract)
+        {
+            var oAuth = new OAuthAuthorization(
+                new Authority(oAuthContract.Authority),
+                new ClientId(oAuthContract.ClientId),
+                new ClientSecret(oAuthContract.ClientSecret));
+
+            try
+            {
+                var tokenInfo = await oauthClient.AcquireToken(oAuth);
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken))
+                {
+                    return new TestWebhookResponse
+                    {
+                        Success = false,
+                        ErrorMessage = "Failed to acquire OAuth access token."
+                    };
+                }
+
+                accessToken = tokenInfo.AccessToken;
+            }
+            catch (Exception ex)
+            {
+                return new TestWebhookResponse
+                {
+                    Success = false,
+                    ErrorMessage = $"OAuth authorization failed: {ex.Message}"
+                };
+            }
+        }
+
+        var target = request.Target.ToChronicle();
+        var result = await webhookMediator.OnNext(
+            target,
+            new Key(WebhookTestPartitionKey, ArrayIndexers.NoIndexers),
+            [],
+            accessToken,
+            _webhookTestTimeout);
+
+        if (result.IsSuccess)
+        {
+            return new TestWebhookResponse { Success = true };
+        }
+
+        result.TryGetException(out var exception);
+        return new TestWebhookResponse
+        {
+            Success = false,
+            ErrorMessage = exception?.Message ?? "Unable to connect to webhook endpoint."
+        };
     }
 
     Concepts.Observation.Webhooks.WebhookDefinition EncryptWebhookSecrets(Concepts.Observation.Webhooks.WebhookDefinition definition)
