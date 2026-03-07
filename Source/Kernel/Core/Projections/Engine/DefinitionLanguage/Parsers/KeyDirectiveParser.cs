@@ -56,6 +56,12 @@ internal sealed class KeyDirectiveParser
             };
         }
 
+        // Skip optional 'literal' keyword before the key expression (for constant key support)
+        if (context.Check(TokenType.Literal))
+        {
+            context.Advance(); // Skip 'literal'
+        }
+
         var keyExpr = _expressions.Parse(context);
         return keyExpr is not null ? new KeyDirective(keyExpr)
         {
