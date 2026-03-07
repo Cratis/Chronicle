@@ -45,9 +45,11 @@ public class Defaults
         EventTypes.Discover().Wait();
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
+        var serviceProvider = new DefaultServiceProvider();
+        var artifactActivator = new ClientArtifactsActivator(serviceProvider, new NullLoggerFactory());
         EventSerializer = new EventSerializer(
             ClientArtifactsProvider,
-            new DefaultServiceProvider(),
+            artifactActivator,
             EventTypes,
             Globals.JsonSerializerOptions);
 #pragma warning restore CA2000 // Dispose objects before losing scope

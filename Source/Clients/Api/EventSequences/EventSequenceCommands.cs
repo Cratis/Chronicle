@@ -5,7 +5,9 @@ using System.Text.Json;
 using Cratis.Chronicle.Api.Auditing;
 using Cratis.Chronicle.Api.Events;
 using Cratis.Chronicle.Api.Identities;
+using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Api.EventSequences;
 
@@ -15,9 +17,12 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <remarks>
 /// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
 /// </remarks>
-/// <param name="eventSequences"><see cref="IEventSequences"/> service for working with event sequences.</param>
+/// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
+/// <param name="causationManager"><see cref="ICausationManager"/> for managing causation chains.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
-public class EventSequenceCommands(IEventSequences eventSequences) : ControllerBase
+public class EventSequenceCommands(
+    IEventSequences eventSequences,
+    ICausationManager causationManager) : ControllerBase
 {
     /// <summary>
     /// Appends an event to the event log.
@@ -34,7 +39,38 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
         [FromRoute] string eventSequenceId,
         [FromBody] AppendEvent eventToAppend)
     {
-        throw new NotImplementedException();
+        var request = new AppendRequest
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            CorrelationId = Guid.NewGuid(),
+            EventSourceId = eventToAppend.EventSourceId,
+            EventSourceType = eventToAppend.EventSourceType,
+            EventStreamType = eventToAppend.EventStreamType,
+            EventStreamId = eventToAppend.EventStreamId,
+            EventType = eventToAppend.EventType.ToContract(),
+            Content = JsonSerializer.Serialize(eventToAppend.Content),
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract(),
+            Tags = [],
+            ConcurrencyScope = new Contracts.EventSequences.Concurrency.ConcurrencyScope
+            {
+                SequenceNumber = ulong.MaxValue,
+                EventSourceId = false,
+                EventStreamType = null,
+                EventStreamId = null,
+                EventSourceType = null,
+                EventTypes = null
+            }
+        };
+
+        var response = await eventSequences.Append(request);
+
+        if (response.Errors.Count > 0 || response.ConstraintViolations.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(", ", response.Errors.Concat(response.ConstraintViolations.Select(v => v.Message))));
+        }
     }
 
     /// <summary>
@@ -52,7 +88,35 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
         [FromRoute] string eventSequenceId,
         [FromBody] AppendManyEvents eventsToAppend)
     {
-        throw new NotImplementedException();
+        var request = new AppendManyRequest
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            CorrelationId = Guid.NewGuid(),
+            Events = eventsToAppend.Events.Select(e => new Contracts.Events.EventToAppend
+            {
+                // AppendManyEvents model doesn't include per-event EventSourceType/EventStreamType/EventStreamId
+                // These are left empty as they're not available in the API model
+                EventSourceType = string.Empty,
+                EventSourceId = eventsToAppend.EventSourceId,
+                EventStreamType = string.Empty,
+                EventStreamId = string.Empty,
+                EventType = e.EventType.ToContract(),
+                Content = JsonSerializer.Serialize(e.Content),
+                Tags = []
+            }).ToList(),
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract(),
+            ConcurrencyScopes = new Dictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope>()
+        };
+
+        var response = await eventSequences.AppendMany(request);
+
+        if (response.Errors.Count > 0 || response.ConstraintViolations.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(", ", response.Errors.Concat(response.ConstraintViolations.Select(v => v.Message))));
+        }
     }
 
     /// <summary>
@@ -99,7 +163,17 @@ public class EventSequenceCommands(IEventSequences eventSequences) : ControllerB
         [FromRoute] string eventSequenceId,
         [FromBody] RedactEvent redaction)
     {
-        throw new NotImplementedException();
+        await eventSequences.Redact(new()
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = redaction.SequenceNumber,
+            Reason = redaction.Reason,
+            CorrelationId = Guid.NewGuid(),
+            Causation = redaction.Causation?.ToContract() ?? [],
+            CausedBy = redaction.CausedBy?.ToContract() ?? new()
+        });
     }
 
     /// <summary>

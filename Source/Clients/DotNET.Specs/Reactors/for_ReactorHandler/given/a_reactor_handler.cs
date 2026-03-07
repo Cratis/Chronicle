@@ -12,7 +12,7 @@ public class a_reactor_handler : all_dependencies
         _reactorId,
         typeof(object),
         _eventSequenceId,
-        _reactorInvoker,
+        [],
         _causationManager,
         _identityProvider);
 }

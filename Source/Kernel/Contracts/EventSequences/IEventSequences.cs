@@ -71,4 +71,12 @@ public interface IEventSequences
     /// <returns>An awaitable task.</returns>
     [Operation]
     Task Compensate(CompensateRequest request, CallContext context = default);
+
+    /// Redact a specific event by its sequence number.
+    /// </summary>
+    /// <param name="request">The <see cref="RedactRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="RedactResponse"/>.</returns>
+    [Operation]
+    Task<RedactResponse> Redact(RedactRequest request, CallContext context = default);
 }

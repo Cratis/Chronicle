@@ -1,7 +1,7 @@
-<Project>
-    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Web" />
-
+<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Api</RootNamespace>
@@ -9,45 +9,22 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001;MA0182</NoWarn>
-        <ILRepackTargetsFile>$(MSBuildThisFileDirectory)../ILRepack.targets</ILRepackTargetsFile>
     </PropertyGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Integration.Api" />
     </ItemGroup>
 
-    <Target Name="BuildDependencies">
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.dll" DestinationFolder="$(OutDir)"/>
-        <Copy SourceFiles="../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb" DestinationFolder="$(OutDir)" Condition="Exists('../DotNET/bin/$(Configuration)/$(TargetFramework)/Cratis.Chronicle.pdb')"/>
-    </Target>
-
-    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Web" />
-
-    <PropertyGroup Condition="'$(Repack)' == 'true'">
-        <BuildDependsOn>BuildDependencies;$(BuildDependsOn)</BuildDependsOn>
-    </PropertyGroup>
-
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <ProjectReference Include="../DotNET/DotNET.csproj" ReferenceOutputAssembly="false"/>
-        <Reference Include="$(OutDir)/Cratis.Chronicle.dll"/>
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(Repack)' != 'true'">
+    <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
-        <ProjectReference Include="../Connections/Connections.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
-            <PrivateAssets>all</PrivateAssets>
-        </ProjectReference>
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(Repack)' == 'true'">
-        <DoNotInternalize Include="Cratis.Chronicle.Connections.dll" />
+        <ProjectReference Include="../Connections/Connections.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
+        <ProjectReference Include="../../Infrastructure/Infrastructure.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="../../Tools/ResourceEmbedder/ResourceEmbedder.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
@@ -60,10 +37,6 @@
         <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
-        <PackageReference Include="ILRepack.Lib.MSBuild.Task">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
     </ItemGroup>
 
     <PropertyGroup>
@@ -73,7 +46,7 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Web/Api</CratisProxiesOutputPath>
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
         <CratisProxiesSegmentsToSkip>3</CratisProxiesSegmentsToSkip>
         <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
     </PropertyGroup>

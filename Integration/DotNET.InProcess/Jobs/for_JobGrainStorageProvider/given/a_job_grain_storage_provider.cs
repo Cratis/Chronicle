@@ -4,8 +4,8 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Grains.Observation.Jobs;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 using ConceptsEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using ConceptsEventStoreNamespaceName = Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 

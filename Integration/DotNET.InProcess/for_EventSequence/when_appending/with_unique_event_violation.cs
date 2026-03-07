@@ -14,8 +14,8 @@ public class with_unique_event_violation(context context) : Given<context>(conte
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueEventConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted)];
 
-        public AppendResult FirstResult { get; private set; }
-        public AppendResult SecondResult { get; private set; }
+        public IAppendResult FirstResult { get; private set; }
+        public IAppendResult SecondResult { get; private set; }
         UserOnboardingStarted _event;
 
         public void Establish() => _event = new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());

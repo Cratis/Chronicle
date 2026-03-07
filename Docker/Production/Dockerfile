@@ -19,7 +19,7 @@ COPY Docker/copy-server-files.sh ./copy-server-files.sh
 RUN chmod +x ./copy-server-files.sh
 
 COPY ./Source/Kernel/Server/out ./out
-COPY ./Source/Workbench/Web/wwwroot wwwroot
+COPY ./Source/Workbench/wwwroot wwwroot
 
 RUN echo $PWD
 RUN ./copy-server-files.sh
