@@ -77,6 +77,10 @@ public class Webhooks(
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         await Unsubscribe(namespaces, webhookId);
+
+        var key = new WebhookKey(webhookId, _eventStoreName);
+        var webhook = GrainFactory.GetGrain<IWebhook>(key);
+        await webhook.Remove();
     }
 
     /// <inheritdoc/>
