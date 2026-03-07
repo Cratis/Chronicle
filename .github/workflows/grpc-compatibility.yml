@@ -1,0 +1,88 @@
+name: gRPC Contract Compatibility
+
+on:
+  workflow_call:
+    inputs:
+      base-ref:
+        description: 'Base branch reference to compare against'
+        required: true
+        type: string
+    outputs:
+      has-breaking-changes:
+        description: 'Whether breaking changes were detected'
+        value: ${{ jobs.check-compatibility.outputs.has-breaking-changes }}
+      breaking-changes:
+        description: 'List of breaking changes detected'
+        value: ${{ jobs.check-compatibility.outputs.breaking-changes }}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  check-compatibility:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has-breaking-changes: ${{ steps.compare.outputs.has-breaking-changes }}
+      breaking-changes: ${{ steps.compare.outputs.breaking-changes }}
+    
+    steps:
+      - name: Checkout current code
+        uses: actions/checkout@v4
+        with:
+          path: current
+
+      - name: Checkout base code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base-ref }}
+          path: baseline
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Generate current schema
+        working-directory: current
+        run: |
+          .github/scripts/generate-grpc-schema.sh current-schema.proto
+          
+      - name: Generate baseline schema
+        working-directory: baseline
+        run: |
+          .github/scripts/generate-grpc-schema.sh baseline-schema.proto
+
+      - name: Compare schemas
+        id: compare
+        working-directory: current
+        run: |
+          set +e
+          
+          # Run the comparison
+          .github/scripts/compare-grpc-schemas.sh ../baseline/baseline-schema.proto current-schema.proto > comparison-output.txt 2>&1
+          RESULT=$?
+          
+          cat comparison-output.txt
+          
+          if [ $RESULT -eq 0 ]; then
+            echo "has-breaking-changes=false" >> $GITHUB_OUTPUT
+            echo "breaking-changes=" >> $GITHUB_OUTPUT
+          else
+            echo "has-breaking-changes=true" >> $GITHUB_OUTPUT
+            
+            # Extract breaking changes and format for output
+            CHANGES=$(grep "^  - " comparison-output.txt | sed 's/^  - //' | tr '\n' ';' | sed 's/;$//')
+            echo "breaking-changes=$CHANGES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload schemas for reference
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grpc-schemas
+          path: |
+            current/current-schema.proto
+            baseline/baseline-schema.proto
+            current/comparison-output.txt

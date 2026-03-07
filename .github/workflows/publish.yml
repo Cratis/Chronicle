@@ -40,8 +40,16 @@ permissions:
   deployments: write
 
 jobs:
+  grpc-compatibility:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/grpc-compatibility.yml
+    with:
+      base-ref: 'main'
+
   release:
     runs-on: ubuntu-latest
+    needs: [grpc-compatibility]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
