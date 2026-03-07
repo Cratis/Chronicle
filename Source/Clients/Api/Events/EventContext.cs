@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Api.Events;
 /// <param name="CorrelationId">The correlation id for the event.</param>
 /// <param name="Causation">A collection of causation for what caused the event.</param>
 /// <param name="CausedBy">A collection of Identities that caused the event.</param>
+/// <param name="Tags">A collection of tags associated with the event.</param>
 public record EventContext(
     EventType EventType,
     string EventSourceType,
@@ -29,4 +30,5 @@ public record EventContext(
     DateTimeOffset Occurred,
     Guid CorrelationId,
     IEnumerable<Causation> Causation,
-    Identity CausedBy);
+    Identity CausedBy,
+    IEnumerable<string> Tags);

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Seeding;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -68,6 +69,11 @@ public interface IEventStoreStorage
     /// Gets the <see cref="IReadModelDefinitionsStorage"/> for the event store.
     /// </summary>
     IReadModelDefinitionsStorage ReadModels { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventSeedingStorage"/> for global event seeding at the event store level.
+    /// </summary>
+    IEventSeedingStorage EventSeeding { get; }
 
     /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.

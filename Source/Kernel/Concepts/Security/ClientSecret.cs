@@ -10,6 +10,11 @@ namespace Cratis.Chronicle.Concepts.Security;
 public record ClientSecret(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
+    /// Gets the representation of an empty <see cref="ClientSecret"/>.
+    /// </summary>
+    public static readonly ClientSecret Empty = new(string.Empty);
+
+    /// <summary>
     /// Implicitly converts from <see cref="string"/> to <see cref="ClientSecret"/>.
     /// </summary>
     /// <param name="value">The <see cref="string"/> to convert.</param>

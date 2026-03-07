@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;

@@ -39,4 +39,11 @@ public interface IParentKeyBuilder<TEvent, TBuilder>
     /// <param name="keyAccessor">Accessor for the property to use.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor);
+
+    /// <summary>
+    /// Define a constant value to use as the parent key. All events of this type will update the same parent read model instance.
+    /// </summary>
+    /// <param name="value">The constant value to use as parent key.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder UsingConstantParentKey(string value);
 }

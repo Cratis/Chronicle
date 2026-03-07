@@ -17,7 +17,7 @@ public class many_with_first_event_violating_unique_constraint(context context) 
 
         public UserOnboardingStarted Event { get; private set; }
 
-        public AppendManyResult Result { get; private set; }
+        public IAppendResult Result { get; private set; }
 
         public async Task Establish()
         {

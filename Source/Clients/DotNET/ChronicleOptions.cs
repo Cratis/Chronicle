@@ -6,7 +6,6 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -101,7 +100,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
-    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? new DefaultClientArtifactsProvider(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
+    public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
 
     /// <summary>
     /// Gets the <see cref="ICorrelationIdAccessor"/> to use.

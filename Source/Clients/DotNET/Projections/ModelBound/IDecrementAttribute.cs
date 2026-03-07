@@ -6,4 +6,10 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// Defines an attribute that indicates that a property value should be decremented when an event occurs.
 /// </summary>
-public interface IDecrementAttribute : IEventBoundAttribute;
+public interface IDecrementAttribute : IEventBoundAttribute
+{
+    /// <summary>
+    /// Gets a constant value to use as the key. All events of this type will update the same read model instance.
+    /// </summary>
+    string? ConstantKey { get; }
+}

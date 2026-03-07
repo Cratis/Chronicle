@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
@@ -44,6 +44,13 @@ public class ParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IP
     public TBuilder UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
         _parentKeyExpression = new EventContextPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder UsingConstantParentKey(string value)
+    {
+        _parentKeyExpression = new ValueExpression(value).Build();
         return (this as TBuilder)!;
     }
 }

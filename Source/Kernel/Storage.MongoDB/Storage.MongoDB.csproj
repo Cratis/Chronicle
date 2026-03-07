@@ -8,22 +8,18 @@
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Serialization" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
-        <PackageReference Include="Polly.Core" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Cratis.Arc" />
-      <PackageReference Include="Cratis.Arc.Core" />
-      <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <ProjectReference Include="../../Infrastructure/Infrastructure.csproj" />
-        <ProjectReference Include="../Configuration/Configuration.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
-        <ProjectReference Include="../Grains.Interfaces/Grains.Interfaces.csproj" />
-        <ProjectReference Include="../Compliance/Compliance.csproj" />
+        <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

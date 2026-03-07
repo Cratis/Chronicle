@@ -7,8 +7,9 @@ Chronicle provides multiple deployment options to suit different environments an
 - **[Production](production.md)** - Docker-based production deployment with MongoDB
 - **[Configuration](configuration/index.md)** - Complete configuration reference
 - **[Local Certificates](local-certificates.md)** - Generate and configure TLS certificates for local development
-- **Development** - Local development setup with MongoDB
+- **[Data Protection Key Encryption](encryption-certificate.md)** - Encrypt data protection keys in production
 - **[Docker Compose](docker-compose.md)** - Multi-container setup for development and testing
+- **Development** - Local development setup with MongoDB
 
 ## Common Requirements
 
