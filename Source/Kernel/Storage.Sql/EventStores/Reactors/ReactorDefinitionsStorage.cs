@@ -61,4 +61,28 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await scope.DbContext.Reactors.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task Rename(ReactorId currentId, ReactorId newId)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var existing = await scope.DbContext.Reactors.FindAsync(currentId);
+        if (existing is null)
+        {
+            return;
+        }
+
+        var renamed = new ReactorDefinition
+        {
+            Id = newId,
+            Owner = existing.Owner,
+            EventSequenceId = existing.EventSequenceId,
+            EventTypes = existing.EventTypes,
+            IsReplayable = existing.IsReplayable
+        };
+
+        scope.DbContext.Reactors.Remove(existing);
+        await scope.DbContext.Reactors.AddAsync(renamed);
+        await scope.DbContext.SaveChangesAsync();
+    }
 }

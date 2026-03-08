@@ -48,4 +48,30 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         await scope.DbContext.Observers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task Rename(ObserverId currentId, ObserverId newId)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var existing = await scope.DbContext.Observers.FindAsync(currentId.Value);
+        if (existing is null)
+        {
+            return;
+        }
+
+        var renamed = new Observers.ObserverState
+        {
+            Id = newId,
+            LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,
+            RunningState = existing.RunningState,
+            ReplayingPartitions = existing.ReplayingPartitions,
+            CatchingUpPartitions = existing.CatchingUpPartitions,
+            FailedPartitions = existing.FailedPartitions,
+            IsReplaying = existing.IsReplaying
+        };
+
+        scope.DbContext.Observers.Remove(existing);
+        await scope.DbContext.Observers.AddAsync(renamed);
+        await scope.DbContext.SaveChangesAsync();
+    }
 }
