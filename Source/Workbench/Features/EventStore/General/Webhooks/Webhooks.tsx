@@ -6,13 +6,14 @@ import strings from 'Strings';
 import { GetWebhooks, RemoveWebHook, type WebhookDefinition } from 'Api/Webhooks';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
 import { DataPage, MenuItem } from 'Components';
 import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
 import { WebhookDetails } from './WebhookDetails';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
+import { useDialog } from '@cratis/arc.react/dialogs';
 
 const renderBoolean = (value: boolean) => {
     return value ? 'Yes' : 'No';
@@ -21,18 +22,11 @@ const renderBoolean = (value: boolean) => {
 export const Webhooks = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const [selectedWebhook, setSelectedWebhook] = useState<WebhookDefinition | null>(null);
-    const [AddWebhookWrapper, showAddWebhook] = useDialog(AddWebhookDialog);
     const [showConfirmation] = useConfirmationDialog();
+    const [AddWebhookDialogWrapper, showAddWebhookDialog] = useDialog(AddWebhookDialog);
     const [removeWebhook] = RemoveWebHook.use();
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-    const handleAddWebhook = async () => {
-        const [result] = await showAddWebhook();
-        if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
-        }
-    };
 
     const handleRemoveWebhook = async () => {
         if (selectedWebhook) {
@@ -48,6 +42,13 @@ export const Webhooks = () => {
                 await removeWebhook.execute();
                 setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
             }
+        }
+    };
+
+    const handleAddWebhook = async () => {
+        const [result] = await showAddWebhookDialog();
+        if (result === DialogResult.Ok) {
+            setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
         }
     };
 
@@ -103,7 +104,7 @@ export const Webhooks = () => {
                         body={(rowData: WebhookDefinition) => renderBoolean(rowData.isReplayable)} />
                 </DataPage.Columns>
             </DataPage>
-            <AddWebhookWrapper />
+            <AddWebhookDialogWrapper />
         </>
     );
 };

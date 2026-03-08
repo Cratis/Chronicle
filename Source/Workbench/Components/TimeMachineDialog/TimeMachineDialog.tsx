@@ -9,7 +9,7 @@ import { AllSnapshotsForReadModel } from 'Api/ReadModels/AllSnapshotsForReadMode
 import { EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
-import { ObjectContent } from 'Components/ObjectContent';
+import { ObjectContent } from 'Components/ObjectContentViewer';
 
 export interface TimeMachineDialogProps {
     readModel: ReadModelDefinition;

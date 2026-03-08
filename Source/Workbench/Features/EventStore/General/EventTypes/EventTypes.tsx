@@ -8,14 +8,14 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
-import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
-import { AddEventTypeDialog } from './Add/AddEventTypeDialog';
 import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
+import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
+import { AddEventTypeDialog } from './AddEventTypeDialog';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -83,7 +83,7 @@ const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddEventTypeWrapper, showAddEventType] = useDialog(AddEventTypeDialog);
+    const [AddEventTypeDialogWrapper, showAddEventTypeDialog] = useDialog(AddEventTypeDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -92,7 +92,7 @@ export const EventTypes = () => {
     };
 
     const handleAddEventType = async () => {
-        const [result] = await showAddEventType();
+        const [result] = await showAddEventTypeDialog();
         if (result === DialogResult.Ok) {
             setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
         }
@@ -154,7 +154,7 @@ export const EventTypes = () => {
                         body={renderTombstone} />
                 </DataPage.Columns>
             </DataPage>
-            <AddEventTypeWrapper />
+            <AddEventTypeDialogWrapper />
         </>
     );
 };

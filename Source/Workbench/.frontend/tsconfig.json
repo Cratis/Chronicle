@@ -24,7 +24,7 @@
         "noFallthroughCasesInSwitch": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "baseUrl": ".",
+        "baseUrl": "..",
         "paths": {
             "Api": [
                 "./Api"
@@ -83,8 +83,8 @@
         }
     },
     "include": [
-        "**/*.ts",
-        "**/*.tsx"
+        "../**/*.ts",
+        "../**/*.tsx"
     ],
     "exclude": [
         "vite.config.ts"
