@@ -138,12 +138,10 @@ export const AddWebhookDialog = () => {
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="600px"
-            style={{ maxHeight: '90vh' }}
             isValid={isValid}
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
-            {/* Allow content to scroll: 10rem accounts for dialog header, footer, and vertical padding */}
-            <div className="p-fluid" style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 10rem)', paddingRight: '0.25rem' }}>
+            <div className="p-fluid">
                 <div className="field mb-3">
                     <label htmlFor="name">{strings.eventStore.general.webhooks.dialogs.addWebhook.name}</label>
                     <InputText id="name" value={name} onChange={(e) => setName(e.target.value)} />

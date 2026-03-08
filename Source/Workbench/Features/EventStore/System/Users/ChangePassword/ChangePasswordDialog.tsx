@@ -34,12 +34,12 @@ export const ChangePasswordDialog = () => {
             title={strings.eventStore.system.users.dialogs.changePassword.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
-            width="400px"
+            width="450px"
             isValid={password === confirmPassword && password.trim() !== ''}
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
-            <div className="flex flex-column gap-3 w-full">
-                <div className="flex flex-column gap-1">
+            <div className="p-fluid">
+                <div className="field mb-3">
                     <label>{strings.eventStore.system.users.dialogs.changePassword.password}</label>
                     <div className="p-inputgroup">
                         <span className="p-inputgroup-addon">
@@ -66,7 +66,7 @@ export const ChangePasswordDialog = () => {
                         />
                     </div>
                 </div>
-                <div className="flex flex-column gap-1">
+                <div className="field mb-3">
                     <label>{strings.eventStore.system.users.dialogs.changePassword.confirmPassword}</label>
                     <div className="p-inputgroup">
                         <span className="p-inputgroup-addon">
