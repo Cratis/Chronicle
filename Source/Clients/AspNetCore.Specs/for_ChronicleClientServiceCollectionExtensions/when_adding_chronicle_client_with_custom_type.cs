@@ -24,7 +24,7 @@ public class when_adding_chronicle_client_with_custom_type : Specification
 
     void Because()
     {
-        _services.AddCratisChronicleClient(DefaultClientArtifactsProvider.Default);
+        _services.AddCratisChronicleClient();
         _serviceProvider = _services.BuildServiceProvider();
         _resolver = _serviceProvider.GetRequiredService<IEventStoreNamespaceResolver>();
     }
