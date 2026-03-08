@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// <summary>
 /// Represents the API for working with the event log.
 /// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="EventSequenceCommands"/> class.
+/// </remarks>
 /// <param name="eventSequences"><see cref="IEventSequences"/> for working with event sequences.</param>
 /// <param name="causationManager"><see cref="ICausationManager"/> for managing causation chains.</param>
 [Route("/api/event-store/{eventStore}/{namespace}/sequence/{eventSequenceId}")]
@@ -114,6 +117,35 @@ public class EventSequenceCommands(
         {
             throw new InvalidOperationException(string.Join(", ", response.Errors.Concat(response.ConstraintViolations.Select(v => v.Message))));
         }
+    }
+
+    /// <summary>
+    /// Compensate a specific single event by its sequence number.
+    /// </summary>
+    /// <param name="eventStore">The event store to append for.</param>
+    /// <param name="namespace">The namespace to append to.</param>
+    /// <param name="eventSequenceId">The event sequence to compensate for.</param>
+    /// <param name="compensation">The <see cref="CompensateEvent"/> to compensate.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("compensate-event")]
+    public async Task Compensate(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string eventSequenceId,
+        [FromBody] CompensateEvent compensation)
+    {
+        await eventSequences.Compensate(new CompensateRequest
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = compensation.SequenceNumber,
+            EventType = compensation.EventType.ToContract(),
+            Content = JsonSerializer.Serialize(compensation.Content),
+            CorrelationId = Guid.NewGuid(),
+            Causation = compensation.Causation?.ToContract().ToList() ?? [],
+            CausedBy = compensation.CausedBy?.ToContract() ?? new()
+        });
     }
 
     /// <summary>

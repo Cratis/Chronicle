@@ -3,4 +3,4 @@ FROM nginx:1.23.1
 
 WORKDIR /app
 
-COPY ./Source/Workbench/Web/wwwroot /usr/share/nginx/html
+COPY ./Source/Workbench/wwwroot /usr/share/nginx/html

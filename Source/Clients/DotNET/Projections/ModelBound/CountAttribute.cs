@@ -12,4 +12,7 @@ public sealed class CountAttribute<TEvent> : Attribute, IProjectionAnnotation, I
 {
     /// <inheritdoc/>
     public Type EventType => typeof(TEvent);
+
+    /// <inheritdoc/>
+    public string? ConstantKey { get; init; }
 }

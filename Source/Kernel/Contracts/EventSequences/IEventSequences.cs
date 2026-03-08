@@ -64,6 +64,14 @@ public interface IEventSequences
     Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(GetFromEventSequenceNumberRequest request, CallContext context = default);
 
     /// <summary>
+    /// Compensate an event in an event sequence.
+    /// </summary>
+    /// <param name="request">The <see cref="CompensateRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>An awaitable task.</returns>
+    [Operation]
+    Task Compensate(CompensateRequest request, CallContext context = default);
+
     /// Redact a specific event by its sequence number.
     /// </summary>
     /// <param name="request">The <see cref="RedactRequest"/>.</param>

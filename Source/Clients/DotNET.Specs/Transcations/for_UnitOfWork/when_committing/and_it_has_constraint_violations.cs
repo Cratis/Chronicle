@@ -14,8 +14,8 @@ public class and_it_has_constraint_violations : given.a_unit_of_work_with_two_ev
         CorrelationId = _correlationId,
         ConstraintViolations =
             [
-                new ConstraintViolation(EventTypeId.Unknown, EventSequenceNumber.First, "some constraint", "some message", []),
-                new ConstraintViolation(EventTypeId.Unknown, 42UL, "some other constraint", "some message", [])
+                new ConstraintViolation(EventTypeId.Unknown, EventSequenceNumber.First, ConstraintType.Unknown, "some constraint", "some message", []),
+                new ConstraintViolation(EventTypeId.Unknown, 42UL, ConstraintType.Unknown, "some other constraint", "some message", [])
             ]
     };
 

@@ -5,12 +5,12 @@ on:
     branches:
       - "main"
     paths:
-      - "Source/Workbench/Web/**"
+      - "Source/Workbench/**"
   pull_request:
     branches:
       - "**"
     paths:
-      - "Source/Workbench/Web/**"
+      - "Source/Workbench/**"
 
 jobs:
   node-build:
@@ -37,11 +37,11 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/package.json') }}
 
       - name: Yarn install
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: yarn install
 
       - name: Build JS/TS
-        working-directory: ./Source/Workbench/Web
+        working-directory: ./Source/Workbench
         run: |
           export NODE_OPTIONS="--max-old-space-size=4096"
           yarn ci
