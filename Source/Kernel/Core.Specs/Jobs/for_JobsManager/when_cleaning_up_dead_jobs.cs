@@ -6,7 +6,7 @@ using Cratis.Monads;
 using Moq;
 using Catch = Cratis.Monads.Catch;
 
-namespace Cratis.Chronicle.Grains.Jobs.for_JobsManager;
+namespace Cratis.Chronicle.Jobs.for_JobsManager;
 
 public class when_cleaning_up_dead_jobs : given.the_manager
 {
