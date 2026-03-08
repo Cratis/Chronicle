@@ -36,4 +36,11 @@ public interface IKeyBuilder<TEvent, TBuilder>
     /// <param name="builderCallback">Builder callback for building the composite key.</param>
     /// <returns>Builder continuation.</returns>
     TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
+
+    /// <summary>
+    /// Define a constant value to use as the key. All events of this type will update the same read model instance.
+    /// </summary>
+    /// <param name="value">The constant value to use as key.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder UsingConstantKey(string value);
 }

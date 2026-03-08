@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Seeding.for_EventSeeding;
 
@@ -25,12 +26,13 @@ public class when_adding_events_with_for_event_source : Specification
 
         _seeding = new EventSeeding(
             "TestEventStore",
-            "TestNamespace",
             connection,
             eventTypes,
             eventSerializer,
             clientArtifactsProvider,
-            serviceProvider);
+            serviceProvider,
+            Substitute.For<IClientArtifactsActivator>(),
+            NullLogger<EventSeeding>.Instance);
 
         _event_source_id = "test-source-id";
         _first_event = new TestEvent("first");

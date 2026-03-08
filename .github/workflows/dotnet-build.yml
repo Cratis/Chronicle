@@ -59,29 +59,6 @@ jobs:
         run: |
           docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
-  dotnet-build-repack-clients:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - name: Clean output for repackaged clients
-        run: dotnet clean
-        working-directory: ./Source/Clients
-
-      - name: Build repackaged clients
-        run: dotnet build -p:IsPackaging=true --configuration Release -p:Repack=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -maxcpucount:1
-        working-directory: ./Source/Clients
-
   specs:
     runs-on: ubuntu-latest
     needs: [dotnet-build]

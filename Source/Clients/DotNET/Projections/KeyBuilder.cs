@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Projections.Expressions;
+using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 
@@ -44,6 +44,13 @@ public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuil
         var compositeKeyBuilder = new CompositeKeyBuilder<TKeyType, TEvent>(namingPolicy);
         builderCallback(compositeKeyBuilder);
         _keyExpression = compositeKeyBuilder.Build();
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder UsingConstantKey(string value)
+    {
+        _keyExpression = new ValueExpression(value).Build();
         return (this as TBuilder)!;
     }
 }

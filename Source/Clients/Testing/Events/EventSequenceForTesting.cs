@@ -39,7 +39,8 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default) => Task.FromResult(AppendResult.Success(correlationId ?? CorrelationId.New(), EventSequenceNumber.Unavailable));
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default) => Task.FromResult(AppendResult.Success(correlationId ?? CorrelationId.New(), EventSequenceNumber.Unavailable));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
@@ -50,7 +51,8 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default) => Task.FromResult(AppendManyResult.Success(correlationId ?? CorrelationId.New(), []));
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendMany(
