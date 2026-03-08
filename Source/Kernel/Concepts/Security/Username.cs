@@ -14,6 +14,7 @@ public record Username(string Value) : ConceptAs<string>(Value)
     /// </summary>
     public static readonly Username Unknown = new("unknown");
 
+    /// <summary>
     /// Gets the representation of an empty <see cref="Username"/>.
     /// </summary>
     public static readonly Username Empty = new(string.Empty);
