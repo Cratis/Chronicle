@@ -34,45 +34,50 @@ export const ChangePasswordDialog = () => {
             title={strings.eventStore.system.users.dialogs.changePassword.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
-            width="30vw"
+            width="400px"
+            isValid={password === confirmPassword && password.trim() !== ''}
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
-            <div className="flex flex-column gap-3">
-                <div className="p-inputgroup">
-                    <span className="p-inputgroup-addon">
-                        <i className="pi pi-lock"></i>
-                    </span>
-                    <InputText
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder={strings.eventStore.system.users.dialogs.changePassword.password}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                    />
-                    <Button
-                        icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="p-button-text"
-                        type="button"
-                        tooltip={showPassword ? strings.eventStore.system.users.dialogs.changePassword.hidePassword : strings.eventStore.system.users.dialogs.changePassword.showPassword}
-                    />
-                    <Button
-                        icon="pi pi-refresh"
-                        onClick={handleGeneratePassword}
-                        className="p-button-text"
-                        type="button"
-                        tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
-                    />
+            <div className="flex flex-column gap-3 w-full">
+                <div className="flex flex-column gap-1">
+                    <label>{strings.eventStore.system.users.dialogs.changePassword.password}</label>
+                    <div className="p-inputgroup">
+                        <span className="p-inputgroup-addon">
+                            <i className="pi pi-lock"></i>
+                        </span>
+                        <InputText
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                        />
+                        <Button
+                            icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="p-button-text"
+                            type="button"
+                            tooltip={showPassword ? strings.eventStore.system.users.dialogs.changePassword.hidePassword : strings.eventStore.system.users.dialogs.changePassword.showPassword}
+                        />
+                        <Button
+                            icon="pi pi-refresh"
+                            onClick={handleGeneratePassword}
+                            className="p-button-text"
+                            type="button"
+                            tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
+                        />
+                    </div>
                 </div>
-                <div className="p-inputgroup">
-                    <span className="p-inputgroup-addon">
-                        <i className="pi pi-lock"></i>
-                    </span>
-                    <InputText
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder={strings.eventStore.system.users.dialogs.changePassword.confirmPassword}
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                    />
+                <div className="flex flex-column gap-1">
+                    <label>{strings.eventStore.system.users.dialogs.changePassword.confirmPassword}</label>
+                    <div className="p-inputgroup">
+                        <span className="p-inputgroup-addon">
+                            <i className="pi pi-lock"></i>
+                        </span>
+                        <InputText
+                            type={showPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                        />
+                    </div>
                 </div>
                 {password !== confirmPassword && (
                     <small className="p-error">Passwords do not match</small>
