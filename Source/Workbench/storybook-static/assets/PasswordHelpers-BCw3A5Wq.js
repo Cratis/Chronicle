@@ -1,1 +1,0 @@
-function o(t=16){const a="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";let e="";const n=new Uint32Array(t);crypto.getRandomValues(n);for(let r=0;r<t;r++)e+=a[n[r]%a.length];return e}export{o as g};
