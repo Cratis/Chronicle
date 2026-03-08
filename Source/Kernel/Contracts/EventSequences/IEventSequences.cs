@@ -72,6 +72,7 @@ public interface IEventSequences
     [Operation]
     Task Compensate(CompensateRequest request, CallContext context = default);
 
+    /// <summary>
     /// Redact a specific event by its sequence number.
     /// </summary>
     /// <param name="request">The <see cref="RedactRequest"/>.</param>

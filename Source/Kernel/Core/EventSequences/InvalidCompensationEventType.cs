@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 
-namespace Cratis.Chronicle.Grains.EventSequences;
+namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
 /// The exception that is thrown when attempting to compensate an event with a different event type.
