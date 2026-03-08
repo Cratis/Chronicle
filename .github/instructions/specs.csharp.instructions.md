@@ -2,169 +2,248 @@
 applyTo: "**/for_*/**/*.cs, **/when_*/**/*.cs"
 ---
 
-# 🧪 How to Write C# Specs
+# How to Write C# Specs
 
-Use the base instructions for writing specs can be found in [Specs Instructions](./specs.instructions.md) and
-then adapt with the C# specific conventions below.
+Extends the base [Specs Instructions](./specs.instructions.md) with C#-specific conventions.
 
-## Test Frameworks & Conventions
+The `Cratis.Specifications` library was built to maintain the approach, structure, and syntax of Machine.Specifications (MSpec) — a BDD framework that makes specs read like a human-language specification. The `Establish → Because → should_` flow maps directly to "Given → When → Then" and keeps specs focused on *one action, one setup, one set of assertions*.
 
-- **Frameworks:**
-  - Uses [Xunit](https://xunit.net/) as test framework and execution.
-  - Uses [NSubstitute](https://nsubstitute.github.io/) for mocking.
-  - Uses [Cratis Specifications](https://github.com/Cratis/Specifications/blob/main/README.md) for BDD style specification by example testing.
-  - Use separate projects for specs, e.g. `Applications.Specs`.
+## Frameworks
 
-## Base class
+- [xUnit](https://xunit.net/) for test execution.
+- [NSubstitute](https://nsubstitute.github.io/) for mocking — chosen for its clean API that reads naturally.
+- [Cratis.Specifications](https://github.com/Cratis/Specifications) for BDD-style specification by example.
+- Spec projects are named `<Source>.Specs` (e.g. `Infrastructure.Specs`).
 
-- At the root of inheritance, `Specification` must be the base class.
+## Base Class
 
-## Test Class Pattern
+`Specification` from `Cratis.Specifications` must be at the root of every spec's inheritance chain.
+It discovers `Establish`, `Because`, and `Destroy` methods by convention — no attributes needed.
 
-- Use BDD-style methods:
-  - `void Establish()` for setup.
-  - `void Because()` for the action under test.
-  - `[Fact] void should_<expected_behavior>()` for assertions.
-  - Keep them focused on a single behavior or aspect.
+## BDD Pattern
 
-**Example:**
+The three-phase pattern makes every spec self-explanatory: `Establish` sets up the world, `Because` performs the single action under test, and `should_*` facts verify individual outcomes. No test framework attributes are needed on `Establish` or `Because` — `Cratis.Specifications` discovers them by convention.
 
 ```csharp
-public class when_adding : Specification
+public class when_combining_parts : Specification
 {
-    EventsToAppend events;
-    string @event;
+    object[] _parts;
+    string _result;
 
-    void Establish()
-    {
-        events = [];
-        @event = "Forty Two";
-    }
+    void Establish() => _parts = ["First", "Second", "Third"];
 
-    void Because() => events.Add(@event);
+    void Because() => _result = KeyHelper.Combine(_parts);
 
-    [Fact] void should_hold_the_added_event() => events.First().ShouldEqual(@event);
+    [Fact] void should_combine_all_parts() => _result.ShouldEqual("First+Second+Third");
 }
 ```
 
-**Example with multiple outcomes:**
+| Method | Purpose | Notes |
+|---|---|---|
+| `void Establish()` | Setup — called before `Because()` | Each class in the chain gets its own, called base-first |
+| `void Because()` | The single action under test | Only in concrete spec files, never in reusable contexts |
+| `[Fact] void should_*()` | One assertion per fact | Use `ShouldXxx()` extension methods |
+| `void Destroy()` | Teardown after each test | |
 
-```
-for_EventsCommandResponseValueHandler/
-├── given/
-│   └── an_events_command_response_value_handler.cs
-├── when_checking_can_handle/
-│   ├── with_valid_events_collection.cs
-│   ├── with_null_value.cs
-│   └── without_event_source_id.cs
-└── when_handling/
-    ├── empty_events_collection.cs
-    ├── single_event_collection.cs
-    └── multiple_events_collection.cs
-```
+All methods can be `async Task` when needed.
 
-Each test class inherits from `given.an_events_command_response_value_handler`:
+## Reusable Context Pattern
+
+Layered contexts build on each other like building blocks. The base layer mocks all dependencies, the next layer creates the system under test, and each spec only adds what's unique to its scenario. This eliminates setup duplication while keeping every spec self-contained.
 
 ```csharp
-public class with_valid_events_collection : given.an_events_command_response_value_handler
+// for_Changeset/given/a_changeset.cs
+namespace MyApp.Changes.for_Changeset.given;
+
+public class a_changeset : Specification
 {
-    IEnumerable<object> _events;
+    protected IObjectComparer _comparer;
+    protected Changeset<object, ExpandoObject> _changeset;
+
+    void Establish()
+    {
+        _comparer = Substitute.For<IObjectComparer>();
+        _changeset = new(_comparer, new object(), new ExpandoObject());
+    }
+}
+```
+
+```csharp
+// for_Changeset/when_adding_changes/and_there_are_differences.cs
+namespace MyApp.Changes.for_Changeset.when_adding_changes;
+
+public class and_there_are_differences : given.a_changeset
+{
     bool _result;
 
-    void Establish()
-    {
-        _events = [new TestEvent("Test"), new AnotherTestEvent(42)];
-    }
+    void Establish() =>
+        _comparer.Compare(Arg.Any<object>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<PropertyDifference>>())
+            .Returns(true);
 
-    void Because() => _result = _handler.CanHandle(_commandContext, _events);
+    void Because() => _result = _changeset.HasChanges;
 
-    [Fact] void should_return_true() => _result.ShouldBeTrue();
+    [Fact] void should_have_changes() => _result.ShouldBeTrue();
 }
 ```
 
-- Establish method can also be async if it needs to perform tasks that are async.
+**Layered givens (chaining contexts):**
 
-## Reusable Context
+```csharp
+// given/all_dependencies.cs — mocks all deps
+public class all_dependencies : Specification
+{
+    protected IEventStore _eventStore;
+    protected IReactorInvoker _reactorInvoker;
+    void Establish() { _eventStore = Substitute.For<IEventStore>(); /* ... */ }
+}
 
-- Namespace should include `given` in the name (e.g., `Infrastructure.ReadModels.for_EventsCommandResponseValueHandler.given`)
-- Members that are to be reused should be `protected`
-- Members are initialized using the `Establish` method, same as regular specs
-- Specs inherit from the context by doing `given.a_specific_context`, example: `public class when_performing_a_behavior : given.a_specific_context`
-- Remember the inheritance rule: `Specification` must be in the inheritance chain at the root
-- Shared variables should be `protected` fields, not properties and they should follow the `_camelCase` naming convention
-- **For behaviors with multiple outcomes:**
-  - The reusable context should be in the unit's `given/` folder (e.g., `for_<Unit>/given/`)
-  - All test files within behavior folders (e.g., `when_<behavior>/`) inherit from this shared context
-  - This allows consistent setup across all variations of the behavior
-- If a specific behavior needs additional setup, create behavior-specific contexts in `when_<behavior>/given/` folder
-- If the system being specified is not constructed in the reusable context, don't keep the variable for it in the context, instead create it in the specific behavior spec
-- Reusable contexts can inherit from other reusable contexts to build upon setups
-- Use `Establish` method for setup logic in reusable contexts
-- When it makes sense, create a root reusable context called `all_dependencies` that sets up all common dependencies for the unit under test that more specific contexts can inherit from
-- `Because`method should not be used in reusable contexts, it should be in the specific behavior spec files
+// given/a_reactor_handler.cs — builds the system under test
+public class a_reactor_handler : all_dependencies
+{
+    protected ReactorHandler _handler;
+    void Establish() => _handler = new(_eventStore, _reactorInvoker);
+}
+```
 
-## Async
+## NSubstitute Patterns
 
-- Any of the methods (`Establish`, `Because`, `Cleanup`) can be async if needed.
+```csharp
+// Create substitutes
+_service = Substitute.For<IMyService>();
 
-## Substitutes
+// Setup returns
+_service.GetValue(Arg.Any<string>()).Returns("result");
+_service.ProcessAsync(Arg.Any<int>()).Returns(Task.FromResult(42));
 
-- Concrete classes can be substituted/mocked, not just interfaces or abstract classes.
-- When substituting concrete classes, ensure they have virtual methods or properties to allow mocking behavior.
-- Pass constructor parameters as needed when substituting concrete classes. For example, `Substitute.For<ConcreteClass>(param1, param2)`.
+// Argument matchers
+Arg.Is<Request>(r => r.Id == expectedId && r.Name == expectedName)
 
-## Test Utilities
+// Verify received calls
+_service.Received(1).DoSomething(Arg.Any<string>());
+_service.DidNotReceive().DoSomethingElse(Arg.Any<int>());
 
-- Use `Substitute.For<T>()` for mocks.
-- Cratis Specifications has a set of assertion extension methods, use these
-  - `.ShouldEqual()`
-  - `.ShouldBeTrue()`
-  - `.ShouldBeFalse()`
-  - `.ShouldBeNull()`
-  - `.ShouldNotBeNull()`
-  - `.ShouldBeOfExactType<T>()`
-  - `.ShouldContain()`
-  - `.ShouldContainOnly()`
-  - `.ShouldNotContain()`
-  - `.ShouldBeEmpty()`
-  - `.ShouldNotBeEmpty()`
-  - `.ShouldBeInRange()`
-  - `.ShouldNotBeInRange()`
-  - `.ShouldBeGreaterThan()`
-  - `.ShouldBeGreaterThanOrEqual()`
-  - `.ShouldBeLessThan()`
-  - `.ShouldBeLessThanOrEqual()`
-- Use custom helpers from `XUnit.Integration` for integration/event-based assertions.
+// Capture arguments
+_service.When(s => s.Add(Arg.Any<IDictionary<string, string>>()))
+    .Do(info => _captured = info.Arg<IDictionary<string, string>>());
 
-## Using statements
+// Throw exceptions
+_handler.Handle(Arg.Any<CommandContext>()).Throws(new Exception("fail"));
+```
 
-- Common usings are provided in `GlobalUsings.Specs.cs` (e.g., `using Xunit;`, `using NSubstitute;`), don't add any using statements already in this file.
-- Don't add using statement for namespace of the system under test.
+## Assertion Extension Methods
 
-## Properties and Simple Members
+From `Cratis.Specifications`:
 
-**Do NOT create specs for:**
-- Simple auto-properties (e.g., `public string Name { get; set; }`)
-- Properties that return constructor parameters (e.g., `public string TableName => tableName;`)
-- Properties that return field values (e.g., `public Key Key => key;`)
-- Properties that delegate to other objects without transformation (e.g., `public IEnumerable<Property> Properties => mapper.Properties;`)
-- Expression-bodied properties that return simple values (e.g., `public Type PropertyName => someValue;`)
-- Properties that perform simple null checks or basic validation without complex logic
-- Getters that return injected dependencies or configuration values
+| Method | Usage |
+|---|---|
+| `.ShouldEqual(expected)` | `_result.ShouldEqual(42)` |
+| `.ShouldBeTrue()` | `_flag.ShouldBeTrue()` |
+| `.ShouldBeFalse()` | `_flag.ShouldBeFalse()` |
+| `.ShouldBeNull()` | `_error.ShouldBeNull()` |
+| `.ShouldNotBeNull()` | `_value.ShouldNotBeNull()` |
+| `.ShouldBeEmpty()` | `_list.ShouldBeEmpty()` |
+| `.ShouldNotBeEmpty()` | `_list.ShouldNotBeEmpty()` |
+| `.ShouldContain(item)` | `_list.ShouldContain(expected)` |
+| `.ShouldNotContain(item)` | `_list.ShouldNotContain(excluded)` |
+| `.ShouldContainOnly(items)` | `_list.ShouldContainOnly(expectedItems)` |
+| `.ShouldBeOfExactType<T>()` | `_obj.ShouldBeOfExactType<PropertiesChanged<ExpandoObject>>()` |
+| `.ShouldBeGreaterThan(n)` | `_count.ShouldBeGreaterThan(0)` |
+| `.ShouldBeLessThan(n)` | `_count.ShouldBeLessThan(100)` |
 
-**Examples of properties to IGNORE:**
+**Catching exceptions:**
+
+```csharp
+async Task Because() => _error = await Catch.Exception(_sut.DoSomething);
+
+[Fact] void should_not_fail() => _error.ShouldBeNull();
+```
+
+## Using Statements
+
+- Common usings are provided globally in `GlobalUsings.Specs.cs` (`Xunit`, `NSubstitute`, `Cratis.Specifications`, etc.) — don't duplicate them.
+- Don't add a using statement for the namespace of the system under test.
+
+## Properties — What NOT to Spec
+
+Simple properties are compiler-verified — the type system already guarantees they work. Writing specs for them adds maintenance cost without catching real bugs. Save spec effort for code where errors actually hide: business logic, coordination between dependencies, and complex transformations.
+
 ```csharp
 // ❌ Do NOT write specs for these
-public string TableName => tableName;                    // Returns constructor parameter
-public Key Key => key;                                   // Returns constructor parameter
+public string TableName => tableName;                         // Returns constructor parameter
+public Key Key => key;                                        // Returns field
 public IEnumerable<Property> Properties => mapper.Properties; // Simple delegation
-public bool IsValid => _value is not null;              // Simple validation
-public ILogger Logger { get; }                          // Injected dependency
+
+// ✅ Only write specs for complex business logic in properties
+public decimal TotalCost => Items.Sum(i => i.Cost * i.Quantity * (1 + i.TaxRate));
 ```
 
-**Only write specs for properties with complex business logic:**
+---
+
+## Chronicle Integration Specs
+
+Integration specs are the highest-value specs in the project. They test a complete vertical slice — from HTTP request through command handling, event appending, constraint checking, and projection — against a real Chronicle event store. If one of these passes, the entire stack works.
+
+They live under `when_<behavior>/` folders directly inside the slice folder — **no `for_` folder**, because there's no isolated unit under test. The "unit" is the entire slice.
+
+### Structure
+
 ```csharp
-// ✅ These might need specs if they contain complex logic
-public decimal TotalCost => Items.Sum(i => i.Cost * i.Quantity * (1 + i.TaxRate));
-public bool CanProcess => ValidateComplexBusinessRules() && CheckExternalConditions();
+using context = MyApp.Authors.Registration.when_registering.and_name_already_exists.context;
+
+namespace MyApp.Authors.Registration.when_registering;
+
+[Collection(ChronicleCollection.Name)]
+public class and_name_already_exists(context context) : Given<context>(context)
+{
+    public class context(ChronicleOutOfProcessFixture fixture) : given.an_http_client(fixture)
+    {
+        public const string AuthorName = "John Doe";
+        public CommandResult<object>? Result;
+
+        async Task Establish() =>
+            await EventStore.EventLog.Append(AuthorId.New(), new AuthorRegistered(AuthorName));
+
+        async Task Because()
+        {
+            Result = await Client.ExecuteCommand<RegisterAuthor>(
+                "/api/authors/register",
+                new RegisterAuthor(AuthorName));
+        }
+    }
+
+    [Fact] void should_not_be_successful() => Context.Result.IsSuccess.ShouldBeFalse();
+    [Fact] void should_have_appended_only_one_event() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
+}
 ```
+
+### Key Rules
+
+- `context` is an inner public class inheriting from `given.an_http_client(fixture)`.
+- Use `async Task Establish()` to seed the event store with preconditions.
+- Use `async Task Because()` to execute the command under test.
+- `ExecuteCommand<TCommand>(url, cmd)` returns `CommandResult<object>?` (single type parameter).
+- `ExecuteCommand<TCommand, TResult>(url, cmd)` returns `CommandResult<TResult>?` (two type parameters for typed response).
+- Declare `Result` initialized with `null!` to satisfy nullable analysis.
+- Add a `using context = ...` alias at the top of each spec file.
+
+### Integration Assertion Helpers
+
+| Assertion | Purpose |
+|---|---|
+| `Context.Result.IsSuccess.ShouldBeTrue()` | Command succeeded |
+| `Context.Result.IsSuccess.ShouldBeFalse()` | Command failed (validation, constraint, etc.) |
+| `Context.ShouldHaveTailSequenceNumber(n)` | Verify event log tail (First = sequence 0) |
+| `Context.ShouldHaveAppendedEvent<TEvent>(seq, eventSourceId, validator)` | Verify specific event was appended |
+
+## Formatting
+
+- Don't break long `should_` method lines — prefer one-line lambda assertions.
+- Don't add blank lines between multiple `should_` methods.
+
+## Entity Framework Core Specs
+
+- Use SQLite in-memory database for specs involving `DbContext`.
+- `SaveChanges` / `SaveChangesAsync` are virtual and can be mocked with NSubstitute.
+- `DbSet` methods are virtual — mock as needed.
+- Pass options when substituting: `Substitute.For<YourDbContext>(options)`.
+- Simulate failures by mocking `SaveChanges` to throw exceptions.

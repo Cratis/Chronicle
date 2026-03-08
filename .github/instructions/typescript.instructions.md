@@ -1,0 +1,144 @@
+---
+applyTo: "**/*.ts,**/*.tsx"
+---
+
+# TypeScript Conventions
+
+TypeScript's type system is the primary tool for catching bugs before they reach production. Every rule here pushes toward maximum compiler coverage and self-documenting code. If the types are right, the code almost writes itself.
+
+## Enums over Magic Strings
+
+String literal unions look concise but provide no refactoring support, no namespace, and no discoverability. Enums give you all three — plus `switch` exhaustiveness checking.
+
+```ts
+// ✅ Correct — refactorable, discoverable, exhaustive
+export enum SliceType {
+    StateChange = 'stateChange',
+    StateView   = 'stateView',
+    Automation  = 'automation',
+    Translator  = 'translator',
+}
+
+// ❌ Wrong — no refactoring support, invisible to tooling
+export type SliceType = 'stateChange' | 'stateView' | 'automation' | 'translator';
+```
+
+- Use enum members everywhere — `switch` cases, comparisons, defaults.
+- Do **not** import enums as `type`; they are values.
+- Export enums from `index.ts` without the `type` keyword.
+
+## One Type or Enum per File
+
+Each type gets its own file because it makes the codebase navigable — finding `SliceType` means opening `SliceType.ts`, not hunting through `types.ts`. It also keeps diffs clean and makes imports explicit.
+
+- Every interface, type alias, and enum lives in **its own file**, named after the type (e.g. `SliceType.ts`).
+- **Never create** `types.ts`, `models.ts`, `interfaces.ts` grab-bag files — they become dumping grounds that grow without limit.
+- Exception: component props interfaces (`*Props`) may live alongside their component `.tsx` file since they are tightly coupled to that component.
+- Aggregate exports through the folder's `index.ts`.
+
+## Type Safety
+
+`any` disables the compiler — the one tool that catches bugs for free. Every `any` is a hole in the safety net. Use `unknown` and narrow with type guards instead.
+
+- Never use `any` — use `unknown`, `Record<string, unknown>`, or proper generic constraints.
+- Prefer `value as unknown as TargetType` over `value as any`.
+- Use `unknown` as default generic parameter instead of `any`.
+- React synthetic events (`React.MouseEvent<Element, MouseEvent>`) and DOM events (`MouseEvent`) are different types — don't mix them.
+
+## Localised Strings
+
+All user-visible text **must** come from translation files — never hard-code UI strings directly in component code. This is not optional even for English-only deployments — it centralizes copy, enables future localization, and makes it possible to audit all user-facing text in one place.
+
+### Structure
+
+```
+Source/Core/
+  Strings.ts                    ← re-exports the default (English) JSON
+  Locales/
+    en/
+      translation.json          ← all English strings, organized by feature/component
+```
+
+`translation.json` is a nested JSON object whose top-level keys group strings by feature or component (e.g. `projects`, `eventModeling`, `chat`). Add new keys under the appropriate existing group, or add a new top-level group if the feature is new.
+
+### Importing
+
+Import the strings object using the `Strings` path alias (configured in `tsconfig.json`):
+
+```ts
+import strings from 'Strings';
+```
+
+Do **not** use relative paths such as `'../../Strings'` or `'../Strings'`.
+
+### Usage
+
+Access strings directly through the nested object — TypeScript infers the full type from the JSON file:
+
+```tsx
+import strings from 'Strings';
+
+export const MyComponent = () => (
+    <Button label={strings.projects.addProject} />
+);
+```
+
+For attribute strings (e.g. `title`, `placeholder`, `aria-label`):
+
+```tsx
+<div title={strings.eventModeling.grid.detailPanel.event}>
+    ...
+</div>
+```
+
+### Adding New Strings
+
+1. Add the key to `Source/Core/Locales/en/translation.json` under the appropriate group.
+2. TypeScript picks up the new key automatically from `Strings.ts` (no regeneration step).
+3. Use the key via `strings.<group>.<key>` in the component.
+
+### Rules
+
+- **Never** use plain string literals for user-visible text in JSX or attribute props. This includes `label`, `header`, `placeholder`, `title`, `aria-label`, `emptyMessage`, and any visible text nodes.
+- Only constant, non-localised values are allowed as raw strings (CSS class names, `key` props, internal identifiers).
+
+## Arc Frontend Patterns
+
+Arc's proxy generator bridges C# and TypeScript automatically — every `[Command]` and `[ReadModel]` becomes a TypeScript class with `.use()` hooks, `.execute()` methods, and change tracking. This is the foundation of full-stack type safety: change a C# record and the TypeScript proxy updates on the next `dotnet build`.
+
+### Commands
+
+Auto-generated from C# `[Command]` records. The `.use()` hook returns a tuple: the command instance (with change tracking) and a setter for property values.
+
+```tsx
+const [command, setValues] = OpenAccount.use({ name: '', owner: '' });
+await command.execute();       // Sends command to backend, returns CommandResult
+await command.validate();      // Pre-flight validation only, no side effects
+command.hasChanges;            // True when any property differs from initial values
+command.revertChanges();       // Reset all properties to initial values
+```
+
+### Queries
+
+Auto-generated from C# `[ReadModel]` static query methods. Observable queries (returning `ISubject<T>` on the backend) auto-subscribe via WebSocket — the component re-renders when data changes on the server.
+
+```tsx
+const [result, perform] = AllProjects.use();
+// result.data — the query result
+// result.isPerforming — true while loading
+// result.hasData — true when data has arrived
+// result.isSuccess — true when query completed without errors
+```
+
+Paginated queries:
+```tsx
+const [result, , setPage] = AllProjects.useWithPaging(10);
+```
+
+### CommandScope
+
+Wraps multiple command-using components, aggregating their `hasChanges` state and enabling bulk `execute()` and `revertChanges()`. Useful for forms that span multiple components.
+
+### CommandForm
+
+Declarative form component with built-in field types, validation timing (`validateOn: blur|change|both`), and automatic server-side validation feedback.
