@@ -1,0 +1,27 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts;
+import "google/protobuf/empty.proto";
+
+message EnsureEventStore {
+   string Name = 1;
+}
+message EnsureNamespace {
+   string EventStore = 1;
+   string Name = 2;
+}
+message GetNamespacesRequest {
+   string EventStore = 1;
+}
+message IEnumerable_String {
+   repeated string items = 1;
+}
+service EventStores {
+   rpc Ensure (EnsureEventStore) returns (.google.protobuf.Empty);
+   rpc GetEventStores (.google.protobuf.Empty) returns (IEnumerable_String);
+   rpc ObserveEventStores (.google.protobuf.Empty) returns (stream IEnumerable_String);
+}
+service Namespaces {
+   rpc Ensure (EnsureNamespace) returns (.google.protobuf.Empty);
+   rpc GetNamespaces (GetNamespacesRequest) returns (IEnumerable_String);
+   rpc ObserveNamespaces (GetNamespacesRequest) returns (stream IEnumerable_String);
+}
