@@ -42,5 +42,6 @@ public class EmailNotificationsReactor : IReactor
 
 - [Getting Started](getting-started.md)
 - [Event Processing](event-processing.md)
+- [Once-Only Processing](once-only.md)
 - [Tagging Reactors](../concepts/tagging-reactors.md)
 

@@ -5,6 +5,9 @@ uid: Chronicle.ReadModels
 
 Read models in Chronicle represent the current state of your application derived from events stored in the event log. They provide a denormalized, queryable view of your data optimized for reading, making them essential for building responsive applications.
 
+> [!TIP]
+> For information on how to define and configure read models in Arc, see <xref:Arc.Chronicle.ReadModels>.
+
 ## What are Read Models?
 
 A read model is a projection of events into a structured format that's optimized for querying. Unlike traditional databases where you store current state directly, Chronicle builds read models by applying events from the event log, ensuring your data is always in sync with what actually happened in your system.

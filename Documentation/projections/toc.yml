@@ -4,8 +4,8 @@
   href: architecture.md
 - name: Eventual Consistency
   href: eventual-consistency.md
-- name: Categorizing Projections
-  href: categorizing-projections.md
+- name: Tagging Projections
+  href: tagging-projections.md
 - name: Projection Declaration Language
   href: projection-declaration-language/toc.yml
 - name: Model-Bound Projections

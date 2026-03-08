@@ -2,3 +2,5 @@
   href: ./contracts.md
 - name: Services
   href: ./services.md
+- name: Patches
+  href: ./patches/toc.yml

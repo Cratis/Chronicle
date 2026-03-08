@@ -1,8 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Grains.Jobs;
-using Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
+using Cratis.Chronicle.InProcess.Integration.for_JobsManager.given;
 using Cratis.Chronicle.Jobs;
 using Cratis.Monads;
 using context = Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_with_single_step.and_job_step_completes_successfully.context;
