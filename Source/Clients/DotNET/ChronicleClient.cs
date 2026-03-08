@@ -34,6 +34,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly IConcurrencyScopeStrategies _concurrencyScopeStrategies;
+    readonly IClientArtifactsActivator _artifactActivator;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -78,6 +79,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
+        _artifactActivator = result.ArtifactActivator;
 
         var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(options.LoggerFactory.CreateLogger<ConnectionLifecycle>());
@@ -116,6 +118,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         CausationManager = result.CausationManager;
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
+        _artifactActivator = result.ArtifactActivator;
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -158,6 +161,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _jsonSchemaGenerator,
             Options.NamingPolicy,
             Options.ServiceProvider,
+            _artifactActivator,
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
             Options.LoggerFactory);
@@ -179,7 +183,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
     }
 
-    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies) Initialize()
+    (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) Initialize()
     {
         var causationManager = new CausationManager();
         causationManager.DefineRoot(new Dictionary<string, string>
@@ -199,10 +203,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, Options.ServiceProvider));
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, Options.ServiceProvider);
+        var artifactActivator = new ClientArtifactsActivator(Options.ServiceProvider, Options.LoggerFactory);
 
         InitializeJsonSerializationOptions();
 
-        return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies);
+        return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
     ITokenProvider CreateTokenProvider(ChronicleOptions options)

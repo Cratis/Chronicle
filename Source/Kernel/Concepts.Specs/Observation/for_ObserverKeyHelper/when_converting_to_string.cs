@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Observation;
 
-namespace Cratis.Chronicle.Grains.Observation.for_ObserverKeyHelper;
+namespace Cratis.Chronicle.Observation.for_ObserverKeyHelper;
 
 public class when_converting_to_string : Specification
 {

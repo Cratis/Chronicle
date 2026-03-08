@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Xml.Linq;
-using Cratis.Chronicle.Grains.Security;
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.Hosting;
@@ -20,6 +21,8 @@ public static class HostBuilderExtensions
         this IHostBuilder hostBuilder,
         ILoggerFactory? loggerFactory = default)
     {
+        ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
 #pragma warning disable CA2000 // Dispose objects before losing scope
         loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
 #pragma warning restore CA2000 // Dispose objects before losing scope

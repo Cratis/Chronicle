@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Expressions;
+namespace Cratis.Chronicle.Projections.Engine.Expressions;
 
 /// <summary>
 /// Represents a <see cref="IEventValueExpression"/> that builds an event content property accessor expression.

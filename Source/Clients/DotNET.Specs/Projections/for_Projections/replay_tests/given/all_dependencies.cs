@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_Projections.replay_tests.given;
 
@@ -17,7 +18,7 @@ public class all_dependencies : Specification
     protected IClientArtifactsProvider _clientArtifacts;
     protected INamingPolicy _namingPolicy;
     protected IEventSerializer _eventSerializer;
-    protected IServiceProvider _serviceProvider;
+    protected IClientArtifactsActivator _artifactsActivator;
     protected JsonSerializerOptions _jsonSerializerOptions;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
@@ -36,7 +37,7 @@ public class all_dependencies : Specification
         _clientArtifacts = Substitute.For<IClientArtifactsProvider>();
         _eventSerializer = Substitute.For<IEventSerializer>();
         _namingPolicy = new DefaultNamingPolicy();
-        _serviceProvider = Substitute.For<IServiceProvider>();
+        _artifactsActivator = Substitute.For<IClientArtifactsActivator>();
         _jsonSerializerOptions = new();
 
         _observers = Substitute.For<IObservers>();
@@ -58,8 +59,9 @@ public class all_dependencies : Specification
             _eventTypes,
             _clientArtifacts,
             _namingPolicy,
-            _serviceProvider,
-            _jsonSerializerOptions);
+            _artifactsActivator,
+            _jsonSerializerOptions,
+            NullLogger<Projections>.Instance);
 
         // Use reflection to set the private handler fields
         var handlersByTypeField = typeof(Projections).GetField("_handlersByType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

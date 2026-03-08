@@ -46,6 +46,7 @@ public class AccountBalanceReducer : IReducerFor<AccountBalance>
 - [Getting Started](getting-started.md) - Learn how to create your first reducer
 - [Passive Reducers](passive-reducers.md) - Control when reducers actively observe events
 - [Event Processing](event-processing.md) - Understand how reducers process events
+- [Tagging Reducers](tagging-reducers.md) - How to use tags with reducers
 
 ## Reading Your Reducer-Based Read Models
 

@@ -1,14 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Grains;
-using Cratis.Chronicle.Grains.EventSequences;
+extern alias KernelCore;
+extern alias KernelConcepts;
+
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
+using EventSequencesStorageProvider = KernelCore::Cratis.Chronicle.EventSequences.EventSequencesStorageProvider;
+using WellKnownGrainStorageProviders = KernelCore::Cratis.Chronicle.WellKnownGrainStorageProviders;
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
@@ -57,10 +59,10 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
 
     /// <summary>
-    /// Internal: Gets the <see cref="IEventSequence"/> for the event log.
+    /// Internal: Gets the <see cref="KernelCore::Cratis.Chronicle.EventSequences.IEventSequence"/> for the event log.
     /// </summary>
-    /// <returns>The <see cref="IEventSequence"/>.</returns>
-    internal IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(EventSequenceId.Log);
+    /// <returns>The <see cref="KernelCore::Cratis.Chronicle.EventSequences.IEventSequence"/>.</returns>
+    internal KernelCore::Cratis.Chronicle.EventSequences.IEventSequence EventLogSequenceGrain => GetEventSequenceGrain(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log);
 
     /// <summary>
     /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
@@ -78,14 +80,14 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// </summary>
     /// <param name="namespaceName">The namespace name.</param>
     /// <returns>The <see cref="IEventStoreNamespaceStorage"/>.</returns>
-    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? Concepts.EventStoreNamespaceName.Default);
+    internal IEventStoreNamespaceStorage GetEventStoreNamespaceStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => EventStoreStorage.GetNamespace(namespaceName ?? KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
     /// <summary>
     /// Internal: Gets the <see cref="IEventSequenceStorage"/> for the event log.
     /// </summary>
     /// <param name="namespaceName">The namespace name.</param>
     /// <returns>The <see cref="IEventSequenceStorage"/>.</returns>
-    internal IEventSequenceStorage GetEventLogStorage(Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(EventSequenceId.Log);
+    internal IEventSequenceStorage GetEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log);
 
     /// <summary>
     /// Gets the <see cref="IGrainStorage"/> for the specified key.
@@ -103,16 +105,16 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     internal EventSequencesStorageProvider GetEventSequenceStatesStorage() => GetGrainStorage<EventSequencesStorageProvider>(WellKnownGrainStorageProviders.EventSequences);
 
     /// <summary>
-    /// Internal: Gets the <see cref="IEventSequence"/> for the specified event sequence ID.
+    /// Internal: Gets the <see cref="KernelCore::Cratis.Chronicle.EventSequences.IEventSequence"/> for the specified event sequence ID.
     /// </summary>
     /// <param name="id">The event sequence ID.</param>
-    /// <returns>The <see cref="IEventSequence"/>.</returns>
-    internal IEventSequence GetEventSequenceGrain(EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<IEventSequence>(CreateEventSequenceKey(id));
+    /// <returns>The <see cref="KernelCore::Cratis.Chronicle.EventSequences.IEventSequence"/>.</returns>
+    internal KernelCore::Cratis.Chronicle.EventSequences.IEventSequence GetEventSequenceGrain(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId id) => Services.GetRequiredService<IGrainFactory>().GetGrain<KernelCore::Cratis.Chronicle.EventSequences.IEventSequence>(CreateEventSequenceKey(id));
 
     /// <summary>
-    /// Internal: Creates an <see cref="EventSequenceKey"/> for the specified event sequence ID.
+    /// Internal: Creates an <see cref="KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey"/> for the specified event sequence ID.
     /// </summary>
     /// <param name="id">The event sequence ID.</param>
-    /// <returns>The <see cref="EventSequenceKey"/>.</returns>
-    internal EventSequenceKey CreateEventSequenceKey(EventSequenceId id) => new(id, Constants.EventStore, Concepts.EventStoreNamespaceName.Default);
+    /// <returns>The <see cref="KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey"/>.</returns>
+    internal KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey CreateEventSequenceKey(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId id) => new(id, Constants.EventStore, KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 }

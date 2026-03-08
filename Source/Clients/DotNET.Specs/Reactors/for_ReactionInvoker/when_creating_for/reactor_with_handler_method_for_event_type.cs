@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_creating_for;
 
 public class reactor_with_handler_method_for_event_type : given.an_reactor_invoker_for<ReactorWithHandlerMethodForEventType>
 {
-    [Fact] void should_have_the_event_type() => _invoker.EventTypes.ShouldContainOnly(typeof(MyEvent).GetEventType());
+    [Fact] void should_have_the_event_type() => _reactorEventTypes.ShouldContainOnly(typeof(MyEvent).GetEventType());
 }

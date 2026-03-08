@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Projections;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.for_Projections.when_discovering;
 
@@ -18,8 +19,9 @@ public class and_there_are_no_projections : given.all_dependencies
             _eventTypes,
             _clientArtifacts,
             _namingPolicy,
-            _serviceProvider,
-            _jsonSerializerOptions);
+            _artifactsActivator,
+            _jsonSerializerOptions,
+            NullLogger<Projections>.Instance);
     }
 
     async Task Because()
