@@ -6,6 +6,7 @@ import type { UserConfig as ViteConfig } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
+import { EmitMetadataPlugin } from '@cratis/arc.vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,7 +27,13 @@ const config: StorybookConfig = {
         const cfg: ViteConfig = { ...existingConfig };
         delete cfg.root;
         cfg.server = { ...(cfg.server || {}), open: false } as unknown;
-        cfg.plugins = [...(cfg.plugins as [] || []), tailwindcss()];
+
+        const tsconfigPath = path.resolve(__dirname, '../tsconfig.json');
+        cfg.plugins = [
+            ...(cfg.plugins as [] || []),
+            tailwindcss(),
+            EmitMetadataPlugin({ tsconfigPath }),
+        ];
 
         const root = path.resolve(__dirname, '../..');
         const newAliases = [
