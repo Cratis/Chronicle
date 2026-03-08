@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Defines the reserved keywords for the Projection Declaration Language.
@@ -48,7 +48,8 @@ public static class Keywords
             { "by", TokenType.By },
             { "true", TokenType.True },
             { "false", TokenType.False },
-            { "null", TokenType.Null }
+            { "null", TokenType.Null },
+            { "literal", TokenType.Literal }
         };
 
         All = new HashSet<string>(TokenMapping.Keys, StringComparer.Ordinal);

@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Generates a projection declaration language string from a <see cref="ProjectionDefinition"/> using the new indentation-based syntax.
@@ -104,6 +104,13 @@ public class Generator : IGenerator
         return string.Join('.', segments);
     }
 
+    static string ConvertConstantKeyForOutput(string keyExpression)
+    {
+        // Convert $value(some value) to literal "some value"
+        var innerValue = keyExpression[(WellKnownExpressions.Value.Length + 1)..^1];
+        return $"literal \"{innerValue}\"";
+    }
+
     void GenerateEveryBlock(StringBuilder sb, FromEveryDefinition every, int indent, bool isChildContext = false)
     {
         sb.AppendLine($"{Indent(indent)}every");
@@ -132,13 +139,15 @@ public class Generator : IGenerator
         // Use inline syntax for simple keys
         // Use block syntax for composite keys or when other content exists
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
+        var hasConstantKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
         var isDefaultKey = from.Key.IsSet() && from.Key.Value == WellKnownExpressions.EventSourceId;
         var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
 
         // Build from statement with optional inline key (skip if it's the default $eventSourceId)
         if (useInlineKey)
         {
-            sb.AppendLine($"{Indent(indent)}from {eventTypeName} key {from.Key.Value}");
+            var keyOutput = hasConstantKey ? ConvertConstantKeyForOutput(from.Key.Value) : from.Key.Value;
+            sb.AppendLine($"{Indent(indent)}from {eventTypeName} key {keyOutput}");
         }
         else
         {
@@ -271,7 +280,10 @@ public class Generator : IGenerator
         // Inline key if present
         if (removedWith.Key.IsSet())
         {
-            sb.AppendLine($" key {removedWith.Key.Value}");
+            var keyOutput = removedWith.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && removedWith.Key.Value.EndsWith(')')
+                ? ConvertConstantKeyForOutput(removedWith.Key.Value)
+                : removedWith.Key.Value;
+            sb.AppendLine($" key {keyOutput}");
         }
         else
         {
@@ -290,7 +302,10 @@ public class Generator : IGenerator
 
         if (removedWithJoin.Key.IsSet())
         {
-            sb.AppendLine($" key {removedWithJoin.Key.Value}");
+            var keyOutput = removedWithJoin.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && removedWithJoin.Key.Value.EndsWith(')')
+                ? ConvertConstantKeyForOutput(removedWithJoin.Key.Value)
+                : removedWithJoin.Key.Value;
+            sb.AppendLine($" key {keyOutput}");
         }
         else
         {

@@ -4,7 +4,7 @@
 using System.Text;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Tokenizer for the indentation-based projection declaration language.

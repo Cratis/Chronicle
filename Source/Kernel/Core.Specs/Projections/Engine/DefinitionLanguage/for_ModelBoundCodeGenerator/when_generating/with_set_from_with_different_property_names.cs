@@ -9,7 +9,7 @@ using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NJsonSchema;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_ModelBoundCodeGenerator.when_generating;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.when_generating;
 
 public class with_set_from_with_different_property_names : given.a_model_bound_code_generator
 {

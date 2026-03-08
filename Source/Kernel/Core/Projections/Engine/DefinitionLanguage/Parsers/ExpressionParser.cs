@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Parsers;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
 
 /// <summary>
 /// Handles parsing of expressions.
@@ -25,6 +25,12 @@ public class ExpressionParser
             var template = context.Current.Value;
             context.Advance();
             return ParseTemplate(context, template);
+        }
+
+        // 'literal "value"' for constant key expressions - consume the keyword and continue to parse the literal below
+        if (context.Check(TokenType.Literal))
+        {
+            context.Advance(); // Skip 'literal'
         }
 
         // $eventSourceId or $eventContext.property

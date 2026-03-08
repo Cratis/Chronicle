@@ -39,7 +39,7 @@ public class when_converting_to_contract : Specification
     }
 
     [Fact] void should_have_correct_name() => _contract.Name.ShouldEqual(_constraintName.Value);
-    [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(ConstraintType.Unique);
+    [Fact] void should_have_correct_type() => _contract.Type.ShouldEqual(Contracts.Events.Constraints.ConstraintType.Unique);
     [Fact] void should_have_correct_removed_with() => _contract.RemovedWith.ShouldEqual(_removedWithEventType);
     [Fact] void should_have_first_event_type() => _definitionContract.EventDefinitions[0].EventTypeId.ShouldEqual(_firstEventType.Id.Value);
     [Fact] void should_have_first_event_first_property() => _definitionContract.EventDefinitions[0].Properties.ToArray()[0].ShouldEqual(_definition.EventsWithProperties.First().Properties.ToArray()[0]);

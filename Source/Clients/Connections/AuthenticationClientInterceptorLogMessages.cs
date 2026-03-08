@@ -19,7 +19,7 @@ internal static partial class AuthenticationClientInterceptorLogMessages
     [LoggerMessage(LogLevel.Warning, "Authentication failed (Unauthenticated) for {Method}, retrying with token refresh")]
     internal static partial void AuthenticationFailedRetryingWithTokenRefresh(this ILogger<AuthenticationClientInterceptor> logger, string method);
 
-    [LoggerMessage(LogLevel.Information, "Retrying gRPC call {Method} after token refresh")]
+    [LoggerMessage(LogLevel.Debug, "Retrying gRPC call {Method} after token refresh")]
     internal static partial void RetryingCallAfterTokenRefresh(this ILogger<AuthenticationClientInterceptor> logger, string method);
 
     [LoggerMessage(LogLevel.Error, "Retry failed after token refresh for {Method}")]

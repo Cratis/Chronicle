@@ -31,6 +31,6 @@ internal static partial class HandleEventLogging
     [LoggerMessage(LogLevel.Debug, "Child projection '{ChildPath}' does NOT have key resolver for event type '{EventType}', passing context through")]
     internal static partial void ChildNoKeyResolver(this ILogger<HandleEvent> logger, string childPath, EventTypeId eventType);
 
-    [LoggerMessage(LogLevel.Information, "Child projection '{ChildPath}' key resolution deferred for event type '{EventType}' at sequence {SequenceNumber} - creating future")]
+    [LoggerMessage(LogLevel.Debug, "Child projection '{ChildPath}' key resolution deferred for event type '{EventType}' at sequence {SequenceNumber} - creating future")]
     internal static partial void ChildKeyResolutionDeferred(this ILogger<HandleEvent> logger, string childPath, EventTypeId eventType, ulong sequenceNumber);
 }

@@ -17,9 +17,11 @@ export interface DialogProps {
     width?: string;
     resizable?: boolean;
     isValid?: boolean;
+    okLabel?: string;
+    cancelLabel?: string;
 }
 
-export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false, isValid }: DialogProps) => {
+export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons.OkCancel, children, width = '450px', resizable = false, isValid, okLabel = 'Ok', cancelLabel = 'Cancel' }: DialogProps) => {
     const { closeDialog } = useDialogContext();
     const isDialogValid = isValid !== false;
     const headerElement = (
@@ -37,14 +39,14 @@ export const Dialog = ({ title, visible = true, onClose, buttons = DialogButtons
 
     const okFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
+            <Button label={okLabel} icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
         </>
     );
 
     const okCancelFooter = (
         <>
-            <Button label="Ok" icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
-            <Button label="Cancel" icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
+            <Button label={okLabel} icon="pi pi-check" onClick={() => handleClose(DialogResult.Ok)} disabled={!isDialogValid} autoFocus />
+            <Button label={cancelLabel} icon="pi pi-times" outlined onClick={() => handleClose(DialogResult.Cancelled)} />
         </>
     );
 

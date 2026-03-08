@@ -3,7 +3,7 @@
 
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 
 /// <summary>
 /// Represents the root of a projection definition document.

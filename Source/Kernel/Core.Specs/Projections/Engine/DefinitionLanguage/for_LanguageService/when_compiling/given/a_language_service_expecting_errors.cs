@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling.given;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling.given;
 
 public class a_language_service_expecting_errors : Specification
 {

@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
 /// <summary>
 /// Visitor for parsing the "no automap" directive.

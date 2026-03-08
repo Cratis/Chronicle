@@ -33,6 +33,9 @@ internal static partial class EventSequenceStorageLogMessages
     [LoggerMessage(LogLevel.Debug, "Getting range of events from {From} to {To} in event sequence {EventSequenceId}")]
     internal static partial void GettingRange(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber from, EventSequenceNumber to);
 
+    [LoggerMessage(LogLevel.Information, "Compensating event with sequence number {EventSequenceNumber} from sequence {EventSequenceId}")]
+    internal static partial void Compensating(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
+
     [LoggerMessage(LogLevel.Information, "Redacting event with sequence number {EventSequenceNumber} from sequence {EventSequenceId}")]
     internal static partial void Redacting(this ILogger<EventSequenceStorage> logger, EventSequenceId eventSequenceId, EventSequenceNumber eventSequenceNumber);
 

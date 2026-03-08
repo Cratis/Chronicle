@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import React, { useEffect, useRef, useState } from 'react';
-import Editor, { OnMount, Monaco } from '@monaco-editor/react';
+import MonacoEditor, { Monaco, OnMount } from 'Components/MonacoEditor/MonacoEditor';
 import type { editor, Uri } from 'monaco-editor';
 import {
     registerProjectionDefinitionLanguage,
@@ -285,7 +285,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
                         root: { style: { width: '3rem', height: '3rem' } }
                     }}
                 />
-                <Editor
+                <MonacoEditor
                     height="100%"
                     language={languageId}
                     value={value}

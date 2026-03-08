@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
-import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { ObjectContent } from 'Components/ObjectContent';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { QueryResultWithState } from '@cratis/arc/queries';
@@ -32,6 +32,18 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
         label: 'Event Type',
         getValue: (item) => item.context.eventType.id,
         sort: (a, b) => b.items.length - a.items.length,
+    },
+    {
+        key: 'eventSourceType',
+        label: 'Event Source Type',
+        getValue: (item) => item.context.eventSourceType,
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
+    {
+        key: 'eventStreamType',
+        label: 'Event Stream Type',
+        getValue: (item) => item.context.eventStreamType,
+        sort: (a, b) => a.label.localeCompare(b.label),
     },
     {
         key: 'correlation',
@@ -61,6 +73,12 @@ const dimensions: PivotDimension<AppendedEvent>[] = [
         getValue: (item) => (item.context.causation.length > 0 ? item.context.causation[0].type : 'Origin'),
         sort: (a, b) => a.label.localeCompare(b.label),
     },
+    {
+        key: 'tags',
+        label: 'Tags',
+        getValue: (item) => (item.context.tags?.length > 0 ? item.context.tags.join(', ') : 'No Tags'),
+        sort: (a, b) => a.label.localeCompare(b.label),
+    },
 ];
 
 const filters: PivotFilter<AppendedEvent>[] = [
@@ -74,6 +92,24 @@ const filters: PivotFilter<AppendedEvent>[] = [
         key: 'type',
         label: 'Event Type',
         getValue: (item) => item.context.eventType.id,
+        multi: true,
+    },
+    {
+        key: 'eventSourceType',
+        label: 'Event Source Type',
+        getValue: (item) => item.context.eventSourceType,
+        multi: true,
+    },
+    {
+        key: 'eventStreamType',
+        label: 'Event Stream Type',
+        getValue: (item) => item.context.eventStreamType,
+        multi: true,
+    },
+    {
+        key: 'tags',
+        label: 'Tags',
+        getValue: (item) => item.context.tags?.join(', ') || 'No Tags',
         multi: true,
     },
     {
@@ -93,7 +129,7 @@ const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<E
     return (
         <div style={{ padding: '20px', height: '100%', overflow: 'auto' }}>
             <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>{event.context.eventType.id}</h2>
-            <ObjectContentViewer object={content} schema={schema} />
+            <ObjectContent object={content} schema={schema} />
         </div>
     );
 };

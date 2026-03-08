@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Parsers;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 using Cratis.Monads;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
 /// <summary>
 /// Parser for the indentation-based projection declaration language that converts tokens into an AST.

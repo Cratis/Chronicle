@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.AST;
-using Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Visitors;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
+using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.Parsers;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
 
 /// <summary>
 /// Parses key directives (simple and composite).
@@ -54,6 +54,12 @@ internal sealed class KeyDirectiveParser
                 Line = keyToken.Line,
                 Column = keyToken.Column
             };
+        }
+
+        // Skip optional 'literal' keyword before the key expression (for constant key support)
+        if (context.Check(TokenType.Literal))
+        {
+            context.Advance(); // Skip 'literal'
         }
 
         var keyExpr = _expressions.Parse(context);

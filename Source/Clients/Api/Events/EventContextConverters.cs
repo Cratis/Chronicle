@@ -26,7 +26,8 @@ internal static class EventContextConverters
         context.Occurred,
         context.CorrelationId,
         context.Causation.Select(c => new Causation(c.Occurred, c.Type, c.Properties)),
-        new Identity(context.CausedBy.Subject, context.CausedBy.Name, context.CausedBy.UserName, null));
+        new Identity(context.CausedBy.Subject, context.CausedBy.Name, context.CausedBy.UserName, null),
+        context.Tags);
 
     /// <summary>
     /// Converts an <see cref="EventContext"/> to a contract <see cref="Contracts.Events.EventContext"/>.
@@ -44,6 +45,7 @@ internal static class EventContextConverters
         Occurred = context.Occurred!,
         CorrelationId = context.CorrelationId,
         Causation = context.Causation.ToContract(),
-        CausedBy = context.CausedBy.ToContract()
+        CausedBy = context.CausedBy.ToContract(),
+        Tags = context.Tags.ToList()
     };
 }

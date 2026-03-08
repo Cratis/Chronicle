@@ -26,8 +26,9 @@ internal static class EventToAppendConverters
             eventToAppend.EventStreamType,
             eventToAppend.EventStreamId,
             eventToAppend.EventType.ToChronicle(),
-            eventToAppend.Tags.Select(t => new Concepts.Events.Tag(t)).ToArray(),
-            JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, jsonSerializerOptions)!.AsObject());
+            eventToAppend.Tags.Select(t => new Tag(t)).ToArray(),
+            JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, jsonSerializerOptions)!.AsObject(),
+            eventToAppend.Occurred);
 
     /// <summary>
     /// Convert a collection to a Chronicle representation of <see cref="Contracts.Events.EventToAppend"/>.

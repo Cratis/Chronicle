@@ -100,6 +100,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="causedBy">The person, system or service that caused the event, defined by <see cref="Identity"/>.</param>
     /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="concurrencyScope">The <see cref="ConcurrencyScope"/>.</param>
+    /// <param name="occurred">Optional occurred time. If null, the server will set it to approximately the time of append.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<AppendResult> Append(
         EventSourceType eventSourceType,
@@ -112,7 +113,8 @@ public interface IEventSequence : IGrainWithStringKey
         IEnumerable<Causation> causation,
         Identity causedBy,
         IEnumerable<Tag> tags,
-        ConcurrencyScope concurrencyScope);
+        ConcurrencyScope concurrencyScope,
+        DateTimeOffset? occurred = null);
 
     /// <summary>
     /// Append a single event to the event store.

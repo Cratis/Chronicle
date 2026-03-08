@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Projections.Engine.DefinitionLanguage.for_LanguageService.when_compiling;
+namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling;
 
 public class children_with_every_block : for_LanguageService.given.a_language_service_with_schemas<for_LanguageService.given.GroupReadModel>
 {
