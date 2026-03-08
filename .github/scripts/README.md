@@ -15,12 +15,18 @@ Generates a Protocol Buffers schema definition from the Chronicle Contracts proj
 
 **Usage:**
 ```bash
-.github/scripts/generate-grpc-schema.sh <output-file>
+.github/scripts/generate-grpc-schema.sh <output-file> [repo-root]
 ```
+
+**Parameters:**
+- `output-file`: Path where the generated schema will be saved
+- `repo-root` (optional): Root directory of the repository. If not provided, auto-detects based on script location.
 
 **Example:**
 ```bash
 .github/scripts/generate-grpc-schema.sh schema.proto
+# Or with custom repo root
+.github/scripts/generate-grpc-schema.sh schema.proto /path/to/repo
 ```
 
 #### `compare-grpc-schemas.sh`

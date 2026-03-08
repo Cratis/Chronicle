@@ -50,9 +50,9 @@ jobs:
           .github/scripts/generate-grpc-schema.sh current-schema.proto
           
       - name: Generate baseline schema
-        working-directory: baseline
         run: |
-          .github/scripts/generate-grpc-schema.sh baseline-schema.proto
+          # Use the script from current (PR) branch to generate schema for baseline code
+          current/.github/scripts/generate-grpc-schema.sh baseline/baseline-schema.proto $PWD/baseline
 
       - name: Compare schemas
         id: compare

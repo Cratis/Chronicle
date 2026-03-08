@@ -3,13 +3,19 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 # Script to generate gRPC schema from Contracts project
-# Usage: ./generate-grpc-schema.sh <output-file>
+# Usage: ./generate-grpc-schema.sh <output-file> [repo-root]
 
 set -e
 
 OUTPUT_FILE="${1:-grpc-schema.proto}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Allow repo root to be specified as second argument, otherwise auto-detect
+if [ -n "$2" ]; then
+    REPO_ROOT="$2"
+else
+    REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 
 echo "Generating gRPC schema from Contracts..."
 echo "Repository root: $REPO_ROOT"
