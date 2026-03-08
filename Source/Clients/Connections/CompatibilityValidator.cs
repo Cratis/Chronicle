@@ -81,10 +81,10 @@ internal static partial class CompatibilityValidator
         return generator.GetSchema(Contracts.AvailableServices.All.ToArray());
     }
 
-    [GeneratedRegex(@"^\s*service\s+(\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ServicePattern();
 
-    [GeneratedRegex(@"^\s*rpc\s+(\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex RpcPattern();
 
     static Dictionary<string, Dictionary<string, string>> ParseSchemaToServices(string schema)
@@ -111,7 +111,7 @@ internal static partial class CompatibilityValidator
                     services[currentService] = currentServiceMethods;
                 }
 
-                currentService = serviceMatch.Groups[1].Value;
+                currentService = serviceMatch.Groups["name"].Value;
                 currentServiceMethods = [];
                 continue;
             }
@@ -122,7 +122,7 @@ internal static partial class CompatibilityValidator
                 var rpcMatch = rpcPattern.Match(trimmedLine);
                 if (rpcMatch.Success)
                 {
-                    var methodName = rpcMatch.Groups[1].Value;
+                    var methodName = rpcMatch.Groups["name"].Value;
 
                     // Store the full normalized signature (trimmed and semicolon removed)
                     currentServiceMethods[methodName] = trimmedLine.TrimEnd(';', ' ');
