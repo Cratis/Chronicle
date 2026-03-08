@@ -7,13 +7,10 @@ Any client connecting to Chronicle needs to communicate the event types before a
 can be appended to an [event sequence](./event-sequence.md).
 
 An event type can contain multiple generations. Every new event starts with generation 1
-and any changes to the event should then become a new generation. This will allow versioning
-your event types and also allow for migrating between different event type generations with
-specific **upcasters** and **downcasters**.
+and any changes to the event should then become a new generation. This allows versioning
+your event types so that multiple schema generations can coexist in the same event store.
 
-The concept of migration is very important when working with systems that evolve over time.
-Being then able to just roll out new versions with changes and automatically have the events
-migrated to different generations is critical for evolving systems.
+The concept of generations is important when working with systems that evolve over time.
+Each generation registers its own JSON schema, which Chronicle uses to validate and store
+events correctly for that generation.
 
-> Note: Migrations are not supported yet. But the internals of Chronicle
-> has been designed and prepared for this and will come in a future version.
