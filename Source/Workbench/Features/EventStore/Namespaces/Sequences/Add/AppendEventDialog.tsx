@@ -7,7 +7,7 @@ import { Append } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { EventTypeRegistration } from 'Api/Events';
 import { Dialog } from 'Components/Dialogs';
-import { ObjectContent } from 'Components/ObjectContent';
+import { ObjectContent } from 'Components/ObjectContentViewer';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';

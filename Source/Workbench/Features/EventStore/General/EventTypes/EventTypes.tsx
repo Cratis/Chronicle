@@ -11,12 +11,11 @@ import { DataTableFilterMeta } from 'primereact/datatable';
 import { DataPage, MenuItem } from 'Components';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
-import { EventTypeOwner, EventTypeRegistration, EventTypeSource, CreateEventType } from 'Api/Events';
+import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
-import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField } from '@cratis/components/CommandForm';
-import { DialogResult, useDialog, useDialogContext } from '@cratis/arc.react/dialogs';
+import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
+import { AddEventTypeDialog } from './AddEventTypeDialog';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -81,27 +80,6 @@ const sourceFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
         className='p-column-filter'
     />
 );
-
-const AddEventTypeDialog = () => {
-    const params = useParams<EventStoreAndNamespaceParams>();
-    const { closeDialog } = useDialogContext<object>();
-
-    return (
-        <CommandDialog
-            command={CreateEventType}
-            initialValues={{ eventStore: params.eventStore }}
-            title={strings.eventStore.general.eventTypes.dialogs.addEventType.title}
-            okLabel={strings.general.buttons.ok}
-            cancelLabel={strings.general.buttons.cancel}
-            onConfirm={() => closeDialog(DialogResult.Ok)}
-            onCancel={() => closeDialog(DialogResult.Cancelled)}>
-            <InputTextField<CreateEventType>
-                value={c => c.name}
-                title={strings.eventStore.general.eventTypes.dialogs.addEventType.name}
-                icon={<i className="pi pi-code" />} />
-        </CommandDialog>
-    );
-};
 
 export const EventTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();

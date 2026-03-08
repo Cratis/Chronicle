@@ -18,15 +18,15 @@ export interface CompensateDialogProps {
 export const CompensateDialog = ({ event, eventStore, namespace, visible, onClose }: CompensateDialogProps) => {
     const [contentStr, setContentStr] = useState(JSON.stringify(JSON.parse(event.content), null, 2));
     const [jsonError, setJsonError] = useState<string | undefined>();
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => JSON.parse(event.content));
 
-    const getContent = (): Record<string, unknown> => {
+    const handleContentChange = (value: string) => {
+        setContentStr(value);
         try {
-            const parsed = JSON.parse(contentStr);
+            setParsedContent(JSON.parse(value));
             setJsonError(undefined);
-            return parsed;
         } catch (e) {
             setJsonError((e as Error).message);
-            return {};
         }
     };
 
@@ -36,7 +36,7 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
         eventSequenceId: 'event-log',
         sequenceNumber: event.context.sequenceNumber,
         eventType: event.context.eventType,
-        content: getContent(),
+        content: parsedContent,
         causation: [],
         causedBy: undefined
     };
@@ -67,7 +67,7 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
                     <InputTextarea
                         id="content"
                         value={contentStr}
-                        onChange={(e) => setContentStr(e.target.value)}
+                        onChange={(e) => handleContentChange(e.target.value)}
                         rows={15}
                         autoResize
                         className={jsonError ? 'p-invalid' : ''}

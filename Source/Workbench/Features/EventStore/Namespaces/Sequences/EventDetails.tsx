@@ -6,7 +6,7 @@ import { AppendedEvent } from 'Api/Events';
 import { IDetailsComponentProps } from 'Components';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContent } from 'Components/ObjectContent';
+import { ObjectContent } from 'Components/ObjectContentViewer';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 

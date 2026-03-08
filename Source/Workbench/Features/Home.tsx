@@ -7,33 +7,11 @@ import { HomeViewModel } from './HomeViewModel';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
-import { AddEventStore as AddEventStoreCommand } from 'Api/EventStores';
-import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField } from '@cratis/components/CommandForm';
 import { Button } from 'primereact/button';
 import { ImPlus } from "react-icons/im";
 import strings from 'Strings';
-import { DialogResult, useDialog, useDialogContext } from '@cratis/arc.react/dialogs';
-
-const AddEventStoreDialog = () => {
-    const { closeDialog } = useDialogContext<object>();
-
-    return (
-        <CommandDialog
-            command={AddEventStoreCommand}
-            title={strings.home.dialogs.addEventStore.title}
-            okLabel={strings.general.buttons.ok}
-            cancelLabel={strings.general.buttons.cancel}
-            width="20vw"
-            onConfirm={() => closeDialog(DialogResult.Ok)}
-            onCancel={() => closeDialog(DialogResult.Cancelled)}>
-            <InputTextField<AddEventStoreCommand>
-                value={c => c.name}
-                title={strings.home.dialogs.addEventStore.name}
-                icon={<i className="pi pi-pencil" />} />
-        </CommandDialog>
-    );
-};
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { AddEventStoreDialog } from './AddEventStoreDialog';
 
 export const Home = withViewModel(HomeViewModel, ({ viewModel }) => {
     const basePath = useRelativePath('event-store');

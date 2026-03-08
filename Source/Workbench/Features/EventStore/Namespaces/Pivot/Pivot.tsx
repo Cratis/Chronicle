@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
-import { ObjectContent } from 'Components/ObjectContent';
+import { ObjectContent } from 'Components/ObjectContentViewer';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { QueryResultWithState } from '@cratis/arc/queries';

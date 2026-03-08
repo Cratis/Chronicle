@@ -7,7 +7,7 @@ export * from './DataPage';
 export * from './DataTables';
 export * from './Dialogs';
 export * from './ItemsList';
-export * from './ObjectContent';
+export * from './ObjectContentViewer';
 export * from './ObjectNavigationalBar';
 export * from './ReadModelInstances';
 export * from './SchemaEditor';
