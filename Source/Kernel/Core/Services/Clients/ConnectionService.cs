@@ -96,6 +96,6 @@ internal sealed class ConnectionService(
             ProtoSyntax = ProtoSyntax.Proto3
         };
 
-        return generator.GetSchema(Contracts.RegisteredServiceTypes.All);
+        return generator.GetSchema(Contracts.AvailableServices.All.ToArray());
     }
 }

@@ -78,7 +78,7 @@ internal static partial class CompatibilityValidator
             ProtoSyntax = ProtoSyntax.Proto3
         };
 
-        return generator.GetSchema(Contracts.RegisteredServiceTypes.All);
+        return generator.GetSchema(Contracts.AvailableServices.All.ToArray());
     }
 
     [GeneratedRegex(@"^\s*service\s+(\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
