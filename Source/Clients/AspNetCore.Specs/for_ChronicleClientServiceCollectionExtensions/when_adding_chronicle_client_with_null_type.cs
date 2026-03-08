@@ -24,7 +24,7 @@ public class when_adding_chronicle_client_with_null_type : Specification
 
     void Because()
     {
-        _services.AddCratisChronicleClient();
+        _services.AddCratisChronicleClient(DefaultClientArtifactsProvider.Default);
         _serviceProvider = _services.BuildServiceProvider();
         _exception = Catch.Exception(() => _serviceProvider.GetRequiredService<IEventStoreNamespaceResolver>());
     }

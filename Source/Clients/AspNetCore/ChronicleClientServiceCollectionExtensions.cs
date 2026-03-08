@@ -29,9 +29,12 @@ public static class ChronicleClientServiceCollectionExtensions
     /// Add the <see cref="IChronicleClient"/> to the services.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/> instance to register.
+    /// When not provided, falls back to <see cref="DefaultClientArtifactsProvider.Default"/>.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
+    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services, IClientArtifactsProvider? artifactsProvider = null)
     {
+        artifactsProvider ??= DefaultClientArtifactsProvider.Default;
         services.AddHttpContextAccessor();
         services.AddSingleton(sp =>
         {
@@ -102,7 +105,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
 
-        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
+        services.AddSingleton(artifactsProvider);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);
 

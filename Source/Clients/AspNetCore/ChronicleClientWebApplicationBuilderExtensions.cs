@@ -57,7 +57,7 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .AddUnitOfWork()
             .AddCompliance()
             .AddCausation()
-            .AddCratisChronicleClient();
+            .AddCratisChronicleClient(artifactsProvider);
 
         var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, artifactsProvider);
         configure?.Invoke(chronicleBuilder);
