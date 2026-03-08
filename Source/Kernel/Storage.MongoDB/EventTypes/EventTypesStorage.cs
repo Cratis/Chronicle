@@ -31,7 +31,10 @@ public class EventTypesStorage(
 {
     ConcurrentBag<EventType> _eventTypes = new();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Populates the event types storage with existing event types from the database.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task Populate()
     {
         logger.Populating(eventStore);
@@ -68,9 +71,9 @@ public class EventTypesStorage(
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
-        _eventTypes.Add(eventSchema.ToMongoDB());
-
         var mongoEventSchema = eventSchema.ToMongoDB();
+        _eventTypes.Add(mongoEventSchema);
+
         await GetCollection().ReplaceOneAsync(
             _ => _.Id == mongoEventSchema.Id,
             mongoEventSchema,

@@ -105,12 +105,8 @@
    - [Documentation](./instructions/documentation.instructions.md)
    - [Pull Requests](./instructions/pull-requests.instructions.md)
 
-## Header
+## Nullable Reference Types
 
-All files should start with the following header:
-
-```csharp
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-```
+- Always use is null or is not null instead of == null or != null.
+- Trust the C# null annotations and don't add null checks when the type system says a value cannot be null.
 
