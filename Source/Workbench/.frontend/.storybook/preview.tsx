@@ -2,11 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import 'reflect-metadata';
-import 'primereact/resources/themes/lara-dark-blue/theme.css';
-import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
+// Tailwind must come BEFORE PrimeReact so that @layer primereact is declared
+// after @layer base/utilities and therefore has higher cascade priority.
+// This mirrors the production app's index.css: @import "tailwindcss" → @import primereact theme.
 import '@cratis/components/styles';
 import './preview.css';
+import 'primereact/resources/themes/lara-dark-blue/theme.css';
 
 import type { Preview, Decorator } from '@storybook/react';
 import React from 'react';
