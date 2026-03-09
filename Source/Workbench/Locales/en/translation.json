@@ -271,7 +271,8 @@
                 "empty": "No events found",
                 "actions": {
                     "appendEvent": "Append Event",
-                    "redact": "Redact"
+                    "redact": "Redact",
+                    "compensate": "Compensate"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
