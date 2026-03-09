@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Identities;
-using Cratis.Execution;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.AspNetCore;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleBuilder"/> for .NET clients.

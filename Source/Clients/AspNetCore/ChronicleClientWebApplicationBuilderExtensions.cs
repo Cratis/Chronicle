@@ -6,7 +6,6 @@ using Cratis.Chronicle.AspNetCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -28,14 +27,12 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     /// <param name="configureOptions">Optional <see cref="Action{T}"/> for configuring options.</param>
     /// <param name="configSection">Optional config section.</param>
     /// <param name="configure">Optional delegate for configuring the <see cref="IChronicleBuilder"/>.</param>
-    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="WebApplicationBuilder"/> for configuration continuation.</returns>
     public static WebApplicationBuilder AddCratisChronicle(
         this WebApplicationBuilder builder,
         Action<ChronicleAspNetCoreOptions>? configureOptions = default,
         string? configSection = default,
-        Action<IChronicleBuilder>? configure = default,
-        ILoggerFactory? loggerFactory = default)
+        Action<IChronicleBuilder>? configure = default)
     {
         ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleClientWebApplicationBuilderExtensions).Assembly);
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -62,7 +59,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         builder.Services.AddCratisChronicleClient(chronicleBuilder);
 
-        builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
     }
 

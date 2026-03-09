@@ -2,7 +2,7 @@
 
 `ChronicleOptions` is designed to hold **runtime configuration** that can be bound from `appsettings.json` or environment variables — connection strings, timeouts, TLS settings, naming policies, and so on.
 
-Services and providers that must be resolved at registration time (before the DI container is built) are called **structural dependencies**. These are not configuration values and cannot be meaningfully bound from `appsettings.json`. They are passed directly as constructor arguments to `ChronicleClient` or set on `IChronicleBuilder` in the ASP.NET Core integration.
+Services and providers that must be resolved at registration time (before the DI container is built) are called **structural dependencies**. These are not configuration values and cannot be meaningfully bound from `appsettings.json`. They are passed directly as constructor arguments to `ChronicleClient` or set on `IChronicleBuilder` when using the DI-hosted setup (`IHostApplicationBuilder`, `WebApplicationBuilder`).
 
 ## Structural dependencies
 
@@ -27,9 +27,9 @@ var client = new ChronicleClient(
 
 All parameters are optional. Any parameter you omit uses the default shown in the table above.
 
-## Configuring in ASP.NET Core with IChronicleBuilder
+## Configuring with IChronicleBuilder
 
-In ASP.NET Core applications, use the `configure` callback on `AddCratisChronicle` to set structural dependencies via the `IChronicleBuilder` fluent API. This callback runs at registration time, before the DI container is built.
+In DI-hosted applications (ASP.NET Core, worker services, or any `IHostApplicationBuilder`-based host), use the `configure` callback on `AddCratisChronicle` to set structural dependencies via the `IChronicleBuilder` fluent API. This callback runs at registration time, before the DI container is built.
 
 ```csharp
 builder.AddCratisChronicle(
@@ -40,12 +40,22 @@ builder.AddCratisChronicle(
     },
     configure: b => b                                    // structural dependencies
         .WithArtifactsProvider(myCustomProvider)
-        .WithIdentityProvider(myIdentityProvider)
-        .WithLoggerFactory(myLoggerFactory));
+        .WithIdentityProvider(myIdentityProvider));
+```
+
+The same pattern works with `WebApplicationBuilder` in ASP.NET Core:
+
+```csharp
+// ASP.NET Core — WebApplicationBuilder
+var builder = WebApplication.CreateBuilder(args);
+builder.AddCratisChronicle(
+    configureOptions: options => options.EventStore = "my-store",
+    configure: b => b
+        .WithIdentityProvider(myIdentityProvider));
 ```
 
 The two callbacks are intentionally separate:
-- `configureOptions` feeds the ASP.NET Core options pipeline and can be overridden by `appsettings.json` or `IConfiguration`.
+- `configureOptions` feeds the options pipeline and can be overridden by `appsettings.json` or `IConfiguration`.
 - `configure` sets structural dependencies at registration time and is not overridable by configuration.
 
 ## IChronicleBuilder fluent methods

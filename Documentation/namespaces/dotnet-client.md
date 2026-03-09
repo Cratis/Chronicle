@@ -40,11 +40,29 @@ If the claim is not found or the user is not authenticated, the default namespac
 
 ## Passing a resolver to ChronicleClient
 
-The namespace resolver is a structural dependency and is passed directly to the `ChronicleClient` constructor:
+For console or direct-client scenarios, pass the resolver as a constructor parameter:
 
 ```csharp
 var resolver = new DefaultEventStoreNamespaceResolver();
 var client = new ChronicleClient(options, namespaceResolver: resolver);
+```
+
+## Configuring in a hosted application
+
+When using `IHostApplicationBuilder` (worker service or web app), configure the resolver through `ChronicleClientOptions` or directly via `IChronicleBuilder`:
+
+```csharp
+// Via options (type is resolved from DI)
+builder.AddCratisChronicle(options =>
+{
+    options.EventStore = "my-store";
+    options.EventStoreNamespaceResolverType = typeof(TenantNamespaceResolver);
+});
+
+// Via builder (instance is used directly)
+builder.AddCratisChronicle(
+    configureOptions: options => options.EventStore = "my-store",
+    configure: b => b.WithNamespaceResolver(new TenantNamespaceResolver(config)));
 ```
 
 ## Custom resolvers
