@@ -103,21 +103,22 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
+#pragma warning disable CS0618
                     services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
                     services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.NamingPolicy);
                     services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
+#pragma warning restore CS0618
                     services.AddSingleton(Globals.JsonSerializerOptions);
                     services.AddHttpContextAccessor();
 
                     services.AddSingleton<IChronicleClient>(sp =>
                     {
                         var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
-                        options.ServiceProvider = sp;
-                        options.ArtifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
-                        options.NamingPolicy = sp.GetRequiredService<INamingPolicy>();
-                        options.IdentityProvider = new IdentityProvider(
+                        var artifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
+                        var identityProvider = new IdentityProvider(
                             sp.GetRequiredService<IHttpContextAccessor>(),
                             sp.GetRequiredService<ILogger<IdentityProvider>>());
+                        options.NamingPolicy = sp.GetRequiredService<INamingPolicy>();
 
                         var grainFactory = sp.GetRequiredService<IGrainFactory>();
                         var chronicleServices = sp.GetRequiredService<IServices>();
@@ -127,7 +128,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
-                        return new ChronicleClient(connection, options);
+                        return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, loggerFactory: loggerFactory);
                     });
 
                     services.AddSingleton(sp =>

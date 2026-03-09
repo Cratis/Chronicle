@@ -85,6 +85,10 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IIdentityProvider"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the identity provider directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass identityProvider as a constructor argument to ChronicleClient instead.")]
     public IIdentityProvider IdentityProvider { get; set; } = identityProvider ?? new BaseIdentityProvider();
 
     /// <summary>
@@ -95,21 +99,37 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="IServiceProvider"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the service provider directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass serviceProvider as a constructor argument to ChronicleClient instead.")]
     public IServiceProvider ServiceProvider { get; set; } = serviceProvider ?? new DefaultServiceProvider();
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the artifacts provider directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass artifactsProvider as a constructor argument to ChronicleClient instead.")]
     public IClientArtifactsProvider ArtifactsProvider { get; set; } = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
 
     /// <summary>
     /// Gets the <see cref="ICorrelationIdAccessor"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the correlation ID accessor directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass correlationIdAccessor as a constructor argument to ChronicleClient instead.")]
     public ICorrelationIdAccessor CorrelationIdAccessor { get; set; } = correlationIdAccessor ?? new CorrelationIdAccessor();
 
     /// <summary>
     /// Gets the <see cref="IEventStoreNamespaceResolver"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the namespace resolver directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass namespaceResolver as a constructor argument to ChronicleClient instead.")]
     public IEventStoreNamespaceResolver EventStoreNamespaceResolver { get; set; } = eventStoreNamespaceResolver ?? new DefaultEventStoreNamespaceResolver();
 
     /// <summary>
@@ -145,6 +165,10 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="ILoggerFactory"/> to use internally in the client.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Pass the logger factory directly as a constructor argument to <see cref="ChronicleClient"/> instead.
+    /// </remarks>
+    [Obsolete("Pass loggerFactory as a constructor argument to ChronicleClient instead.")]
     public ILoggerFactory LoggerFactory { get; set; } = loggerFactory ?? new LoggerFactory();
 
     /// <summary>

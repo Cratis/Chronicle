@@ -27,7 +27,9 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
             {
                 void OptionsConfigurator(ChronicleOptions options)
                 {
+#pragma warning disable CS0618
                     options.ArtifactsProvider = fixture;
+#pragma warning restore CS0618
                     options.ConnectionString = "chronicle://localhost:35001?disableTls=true";
                 }
 

@@ -103,7 +103,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
         var options = new ChronicleAspNetCoreOptions();
         configuration.GetSection(configSectionPath).Bind(options);
         configureOptions?.Invoke(options);
+#pragma warning disable CS0618
         return options.ArtifactsProvider;
+#pragma warning restore CS0618
     }
 
     /// <summary>
@@ -127,7 +129,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
                 configure?.Invoke(options);
 
                 // Ensure the options always use the same provider that was used for DI registration.
+#pragma warning disable CS0618
                 options.ArtifactsProvider = artifactsProvider;
+#pragma warning restore CS0618
             })
             .ValidateDataAnnotations()
             .ValidateOnStart();
@@ -138,7 +142,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+#pragma warning disable CS0618
         baseBuilder.Configure(options => options.ArtifactsProvider = artifactsProvider);
+#pragma warning restore CS0618
 
         if (configure is not null)
         {
@@ -148,7 +154,9 @@ public static class ChronicleClientWebApplicationBuilderExtensions
                 CopyValues(aspNetCoreOptions, options);
                 configure(aspNetCoreOptions);
                 CopyValues(options, aspNetCoreOptions);
+#pragma warning disable CS0618
                 options.ArtifactsProvider = artifactsProvider;
+#pragma warning restore CS0618
             });
         }
     }

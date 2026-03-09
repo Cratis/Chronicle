@@ -32,7 +32,9 @@ public static class ChronicleOptionsExtensions
     /// </remarks>
     public static ChronicleOptions WithClaimsBasedNamespaceResolver(this ChronicleOptions options, string? claimType = default)
     {
+#pragma warning disable CS0618
         options.EventStoreNamespaceResolver = new ClaimsBasedNamespaceResolver(claimType ?? options.ClaimsBasedNamespaceResolverClaimType);
+#pragma warning restore CS0618
         return options;
     }
 }

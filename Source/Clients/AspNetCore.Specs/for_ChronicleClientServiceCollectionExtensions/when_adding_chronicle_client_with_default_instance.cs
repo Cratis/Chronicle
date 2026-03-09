@@ -18,7 +18,9 @@ public class when_adding_chronicle_client_with_default_instance : Specification
         _services.Configure<ChronicleAspNetCoreOptions>(options =>
         {
             options.EventStore = "test-store";
+#pragma warning disable CS0618
             options.EventStoreNamespaceResolver = new DefaultEventStoreNamespaceResolver();
+#pragma warning restore CS0618
             options.EventStoreNamespaceResolverType = typeof(CustomEventStoreNamespaceResolver);
         });
     }
