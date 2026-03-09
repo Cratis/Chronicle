@@ -17,11 +17,10 @@ public class with_explicit_namespace : Specification
 
         _options = new ChronicleOptions
         {
-            EventStoreNamespaceResolver = _namespaceResolver,
             AutoDiscoverAndRegister = false
         };
 
-        _client = new ChronicleClient(_options);
+        _client = new ChronicleClient(_options, namespaceResolver: _namespaceResolver);
     }
 
     void Because() => _ = _client.GetEventStore("TestStore", _explicitNamespace);

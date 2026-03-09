@@ -1,6 +1,6 @@
 # DotNET client usage
 
-The .NET client resolves a namespace for every event store operation. You can configure namespace resolution through `ChronicleOptions` by supplying an `IEventStoreNamespaceResolver` implementation.
+The .NET client resolves a namespace for every event store operation. You can configure namespace resolution by passing an `IEventStoreNamespaceResolver` implementation to the `ChronicleClient` constructor.
 
 ## IEventStoreNamespaceResolver
 
@@ -18,27 +18,34 @@ The resolver returns the namespace name to use for the current context.
 ### DefaultEventStoreNamespaceResolver
 
 Always returns the default namespace. Use this when you do not need tenant isolation.
-
-```csharp
-var options = new ChronicleOptions
-{
-    EventStoreNamespaceResolver = new DefaultEventStoreNamespaceResolver()
-};
-```
+This is the default when no resolver is supplied.
 
 ### ClaimsBasedNamespaceResolver
 
 Resolves the namespace from the current principal's claims. This is useful when you have an authenticated user and want to map the tenant from a claim.
 
 ```csharp
-var options = new ChronicleOptions()
-    .WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
+// Uses the default claim type "tenant_id"
+var client = new ChronicleClient(
+    options,
+    namespaceResolver: new ClaimsBasedNamespaceResolver("tenant_id"));
 
-var options = new ChronicleOptions()
-    .WithClaimsBasedNamespaceResolver("custom_tenant_claim");
+// Uses a custom claim type
+var client = new ChronicleClient(
+    options,
+    namespaceResolver: new ClaimsBasedNamespaceResolver("custom_tenant_claim"));
 ```
 
 If the claim is not found or the user is not authenticated, the default namespace is used.
+
+## Passing a resolver to ChronicleClient
+
+The namespace resolver is a structural dependency and is passed directly to the `ChronicleClient` constructor:
+
+```csharp
+var resolver = new DefaultEventStoreNamespaceResolver();
+var client = new ChronicleClient(options, namespaceResolver: resolver);
+```
 
 ## Custom resolvers
 
@@ -62,10 +69,7 @@ public class TenantNamespaceResolver : IEventStoreNamespaceResolver
 ```
 
 ```csharp
-var options = new ChronicleOptions
-{
-    EventStoreNamespaceResolver = new TenantNamespaceResolver(tenantContext)
-};
+var client = new ChronicleClient(options, namespaceResolver: new TenantNamespaceResolver(tenantContext));
 ```
 
 ## Best practices

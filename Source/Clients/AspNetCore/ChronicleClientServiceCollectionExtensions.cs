@@ -3,8 +3,11 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
+using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
+using Cratis.Execution;
+using Cratis.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,20 +32,20 @@ public static class ChronicleClientServiceCollectionExtensions
     /// Add the <see cref="IChronicleClient"/> to the services.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="chronicleBuilder">Optional <see cref="IChronicleBuilder"/> providing structural dependencies. When omitted, defaults are used.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services)
+    public static IServiceCollection AddCratisChronicleClient(this IServiceCollection services, IChronicleBuilder? chronicleBuilder = null)
     {
         services.AddHttpContextAccessor();
-        services.AddSingleton(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
 
-            if (options.EventStoreNamespaceResolver is not null &&
-                options.EventStoreNamespaceResolver is not DefaultEventStoreNamespaceResolver)
+        services.AddSingleton<IEventStoreNamespaceResolver>(sp =>
+        {
+            if (chronicleBuilder?.NamespaceResolver is not null)
             {
-                return options.EventStoreNamespaceResolver;
+                return chronicleBuilder.NamespaceResolver;
             }
 
+            var options = sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value;
             var resolverType = options.EventStoreNamespaceResolverType ?? throw new InvalidOperationException("EventStoreNamespaceResolverType cannot be null");
 
             if (!typeof(IEventStoreNamespaceResolver).IsAssignableFrom(resolverType))
@@ -62,16 +65,17 @@ public static class ChronicleClientServiceCollectionExtensions
             }
             catch { }
 
-            options.ServiceProvider = sp;
-            options.IdentityProvider = new IdentityProvider(
-                                sp.GetRequiredService<IHttpContextAccessor>(),
-                                sp.GetRequiredService<ILogger<IdentityProvider>>());
-            options.EventStoreNamespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
-            options.LoggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var artifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
+            var identityProvider = chronicleBuilder?.IdentityProvider ?? new IdentityProvider(
+                sp.GetRequiredService<IHttpContextAccessor>(),
+                sp.GetRequiredService<ILogger<IdentityProvider>>());
+            var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
+            var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
             return connection is null ?
-                new ChronicleClient(options) :
-                new ChronicleClient(connection, options);
+                new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory) :
+                new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory);
         });
 
         services.AddScoped(sp =>
@@ -102,9 +106,9 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
 
-        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.ArtifactsProvider);
-        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
-        services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.CorrelationIdAccessor);
+        services.AddSingleton<IClientArtifactsProvider>(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
+        services.AddSingleton<INamingPolicy>(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
+        services.AddSingleton<ICorrelationIdAccessor>(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
 
         return services;
     }

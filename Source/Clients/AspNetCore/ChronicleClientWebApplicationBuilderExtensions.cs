@@ -42,25 +42,25 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         var configSectionPath = configSection ?? ConfigurationPath.Combine(DefaultSectionPaths);
 
-        // Determine the ArtifactsProvider eagerly by applying config binding + user callback.
-        // Artifact types must be registered in DI before the container is built, so the provider
-        // must be known at this point. This is the same pattern as AddDbContext (where the DB
-        // provider must be set in the callback — you can't switch it via post-configuration).
-        // All other options (EventStore, ConnectionString, etc.) remain fully configurable
-        // through the standard options pipeline after this call.
-        var artifactsProvider = ResolveArtifactsProvider(builder.Configuration, configSectionPath, configureOptions);
+        // Create the builder first with defaults. The builder collects structural dependencies
+        // (artifacts provider, identity provider, etc.) before the DI container is built.
+        // This is the same pattern as AddDbContext: structural dependencies are captured eagerly
+        // at registration time and cannot be overridden via configuration.
+        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, DefaultClientArtifactsProvider.Default);
 
         // Register via the standard options pipeline for runtime resolution.
-        builder.Services.AddChronicleOptions(configureOptions, configSectionPath, artifactsProvider);
+        builder.Services.AddChronicleOptions(configureOptions, configSectionPath);
 
         builder.Services
             .AddUnitOfWork()
             .AddCompliance()
-            .AddCausation()
-            .AddCratisChronicleClient();
+            .AddCausation();
 
-        var chronicleBuilder = new ChronicleBuilder(builder.Services, builder.Configuration, artifactsProvider);
+        // Let the caller configure structural dependencies on the builder. This runs after
+        // AddChronicleOptions so that the caller can also interact with registered services.
         configure?.Invoke(chronicleBuilder);
+
+        builder.Services.AddCratisChronicleClient(chronicleBuilder);
 
         builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
@@ -87,48 +87,20 @@ public static class ChronicleClientWebApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Resolves the <see cref="IClientArtifactsProvider"/> by binding configuration and applying the user callback.
-    /// The provider must be determined at registration time because artifact types are registered in DI
-    /// before the container is built.
-    /// </summary>
-    /// <param name="configuration"><see cref="ConfigurationManager"/> to bind from.</param>
-    /// <param name="configSectionPath">Configuration section path to bind.</param>
-    /// <param name="configureOptions">Optional user callback for configuring options.</param>
-    /// <returns>The resolved <see cref="IClientArtifactsProvider"/>.</returns>
-    static IClientArtifactsProvider ResolveArtifactsProvider(
-        ConfigurationManager configuration,
-        string configSectionPath,
-        Action<ChronicleAspNetCoreOptions>? configureOptions)
-    {
-        var options = new ChronicleAspNetCoreOptions();
-        configuration.GetSection(configSectionPath).Bind(options);
-        configureOptions?.Invoke(options);
-        return options.ArtifactsProvider;
-    }
-
-    /// <summary>
     /// Registers <see cref="ChronicleAspNetCoreOptions"/> and <see cref="ChronicleOptions"/> in the options pipeline.
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> to add to.</param>
     /// <param name="configure">Optional user callback for configuring options.</param>
     /// <param name="configSectionPath">Configuration section path to bind.</param>
-    /// <param name="artifactsProvider">The <see cref="IClientArtifactsProvider"/> resolved at registration time.</param>
     static void AddChronicleOptions(
         this IServiceCollection services,
         Action<ChronicleAspNetCoreOptions>? configure,
-        string configSectionPath,
-        IClientArtifactsProvider artifactsProvider)
+        string configSectionPath)
     {
         services
             .AddOptions<ChronicleAspNetCoreOptions>()
             .BindConfiguration(configSectionPath)
-            .Configure(options =>
-            {
-                configure?.Invoke(options);
-
-                // Ensure the options always use the same provider that was used for DI registration.
-                options.ArtifactsProvider = artifactsProvider;
-            })
+            .Configure(options => configure?.Invoke(options))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -138,8 +110,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        baseBuilder.Configure(options => options.ArtifactsProvider = artifactsProvider);
-
         if (configure is not null)
         {
             baseBuilder.Configure(options =>
@@ -148,7 +118,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
                 CopyValues(aspNetCoreOptions, options);
                 configure(aspNetCoreOptions);
                 CopyValues(options, aspNetCoreOptions);
-                options.ArtifactsProvider = artifactsProvider;
             });
         }
     }

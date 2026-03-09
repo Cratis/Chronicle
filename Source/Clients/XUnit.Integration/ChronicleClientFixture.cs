@@ -335,7 +335,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         {
             return [];
         }
-        _defaultClientArtifactsProvider.Initialize();
         return getTypes(_defaultClientArtifactsProvider);
     }
 }

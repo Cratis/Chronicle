@@ -35,7 +35,6 @@ public class Defaults
 
         var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
-        ClientArtifactsProvider.Initialize();
 
         EventTypes = new EventTypes(
             EventStore,

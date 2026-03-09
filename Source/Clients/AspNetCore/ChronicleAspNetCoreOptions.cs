@@ -27,8 +27,7 @@ public class ChronicleAspNetCoreOptions : ChronicleOptions
     /// <summary>
     /// Gets or sets the type of the <see cref="IEventStoreNamespaceResolver"/> to use.
     /// If not set, defaults to <see cref="HttpHeaderEventStoreNamespaceResolver"/>.
-    /// If an <see cref="IEventStoreNamespaceResolver"/> instance is set (via the base class property) and is not
-    /// a <see cref="DefaultEventStoreNamespaceResolver"/>, it will be used instead of this type.
+    /// This is used when no resolver instance is supplied via <see cref="Cratis.Chronicle.AspNetCore.IChronicleBuilder.NamespaceResolver"/>.
     /// </summary>
     public Type EventStoreNamespaceResolverType { get; set; } = typeof(HttpHeaderEventStoreNamespaceResolver);
 }
