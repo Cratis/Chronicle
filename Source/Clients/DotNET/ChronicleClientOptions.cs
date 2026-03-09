@@ -24,8 +24,8 @@ public class ChronicleClientOptions : ChronicleOptions
 
     /// <summary>
     /// Gets or sets the type of the <see cref="IEventStoreNamespaceResolver"/> to use.
-    /// Defaults to <see cref="DefaultEventStoreNamespaceResolver"/>, which always returns
-    /// the default namespace. Override this to use a different resolution strategy.
+    /// When <see langword="null"/>, defaults to <see cref="DefaultEventStoreNamespaceResolver"/> at runtime.
+    /// Override this to use a different resolution strategy (for example, a tenant-based resolver).
     /// </summary>
-    public Type EventStoreNamespaceResolverType { get; set; } = typeof(DefaultEventStoreNamespaceResolver);
+    public Type? EventStoreNamespaceResolverType { get; set; }
 }

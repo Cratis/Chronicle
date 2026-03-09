@@ -58,12 +58,7 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton<IChronicleClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value;
-            IChronicleConnection? connection = null;
-            try
-            {
-                connection = sp.GetService<IChronicleConnection>();
-            }
-            catch { }
+            var connection = sp.GetService<IChronicleConnection>();
 
             var artifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
             var identityProvider = chronicleBuilder?.IdentityProvider
