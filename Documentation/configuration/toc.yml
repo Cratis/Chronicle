@@ -4,5 +4,7 @@
   href: camel-casing.md
 - name: gRPC Message Size
   href: grpc-message-size.md
+- name: Structural Dependencies
+  href: structural-dependencies.md
 - name: TLS
   href: tls.md

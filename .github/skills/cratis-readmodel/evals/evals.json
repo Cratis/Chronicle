@@ -1,0 +1,33 @@
+{
+  "skill_name": "cratis-readmodel",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need a read model that shows all employees with their department name and start date. The read model should be updated whenever an employee is registered (EmployeeRegistered event has EmployeeName, DepartmentId) or when a department name changes (DepartmentNameChanged has DepartmentId, NewName). Use the model-bound/attribute approach if possible.",
+      "expected_output": "A C# file with [ReadModel] record using [FromEvent<>] and possibly [Join<>] attributes, with a static AllEmployees query method returning ISubject<IEnumerable<Employee>>. Includes [EventType] records if not already defined.",
+      "files": [],
+      "assertions": [
+        "Output contains [ReadModel] attribute on a record",
+        "Output includes a static query method on the read model record",
+        "Query method returns ISubject<T> for real-time push (observable query)",
+        "Output uses [FromEvent<T>] or IProjectionFor<T> for projection",
+        "Output uses ConceptAs<T> for id types",
+        "Output does NOT use IProjectionFor with joins reading from other read models (events only)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a read model to track the current stock level for each product. Events are: ProductAdded(ProductId, InitialStock), StockIncreased(ProductId, Amount), StockDecreased(ProductId, Amount). I need a reducer since the logic involves arithmetic accumulation.",
+      "expected_output": "A C# file with [ReadModel] record + IReducerFor<T> class that handles all three events. Includes [EventType] records and a static query method.",
+      "files": [],
+      "assertions": [
+        "Output contains IReducerFor<T> implementation",
+        "Reducer handles null current state gracefully (first event initialization)",
+        "Reducer methods are pure (no side effects, no I/O calls)",
+        "Output contains [EventType] records for all three events",
+        "Output includes a static query method on the read model",
+        "Uses 'with' expressions for record state updates"
+      ]
+    }
+  ]
+}

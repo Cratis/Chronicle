@@ -11,15 +11,11 @@ If your multi-tenant setup is based on Arc Tenancy, you can map the current tena
 The default resolver reads the namespace from an HTTP header. Configure it through `ChronicleAspNetCoreOptions`:
 
 ```csharp
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
+builder.AddCratisChronicle(options =>
 {
     options.EventStore = "my-event-store";
-    options.NamespaceHttpHeader = "x-cratis-tenant-id"; // Default value
+    options.WithHttpHeaderNamespaceResolver("x-cratis-tenant-id"); // Default header name
 });
-
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
-    options.EventStore = "my-event-store"
-           .WithHttpHeaderNamespaceResolver("x-cratis-tenant-id"));
 ```
 
 When the header is present, its value becomes the namespace for the request. If the header is missing, the default namespace is used.
@@ -29,14 +25,30 @@ When the header is present, its value becomes the namespace for the request. If 
 The subdomain resolver extracts the namespace from the request host (for example, `tenant1.example.com`).
 
 ```csharp
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
-    options.EventStore = "my-event-store"
-           .WithSubdomainNamespaceResolver());
+builder.AddCratisChronicle(options =>
+{
+    options.EventStore = "my-event-store";
+    options.WithSubdomainNamespaceResolver();
+});
 ```
 
 ## Custom resolvers
 
-You can configure a custom resolver either by type (DI) or by instance:
+You can configure a custom resolver either by type (DI) or using the `IChronicleBuilder` fluent API.
+
+### Using the builder (recommended)
+
+Pass a resolver instance using the `IChronicleBuilder` configure callback:
+
+```csharp
+builder.AddCratisChronicle(
+    configureOptions: options => options.EventStore = "my-event-store",
+    configure: b => b.WithNamespaceResolver(new CustomNamespaceResolver(someConfiguration)));
+```
+
+### Using type-based DI resolution
+
+Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI container resolve it:
 
 ```csharp
 builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
@@ -46,17 +58,9 @@ builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
 });
 ```
 
-```csharp
-builder.Services.Configure<ChronicleAspNetCoreOptions>(options =>
-{
-    options.EventStore = "my-event-store";
-    options.EventStoreNamespaceResolver = new CustomNamespaceResolver(someConfiguration);
-});
-```
-
 ## Configuration priority
 
-1. Instance configuration (`EventStoreNamespaceResolver`) when set to a non-default instance
+1. Resolver set via `IChronicleBuilder.WithNamespaceResolver()` or `IChronicleBuilder.NamespaceResolver`
 2. Type configuration (`EventStoreNamespaceResolverType`) when provided
 3. Default HTTP header resolver
 

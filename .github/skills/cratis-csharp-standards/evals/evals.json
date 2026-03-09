@@ -1,0 +1,37 @@
+{
+  "skill_name": "cratis-csharp-standards",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write a C# service class called AccountManager that handles creating bank accounts. It takes IEventLog and ILogger as dependencies. When CreateAccount(AccountName name) is called, it logs 'Creating account {Name}' at Information level and appends an AccountCreated event. If the account already exists it should throw an appropriate exception. Follow all Cratis C# coding standards.",
+      "expected_output": "Class uses primary constructor, file-scoped namespace, record for event, custom exception (no Exception suffix, not built-in), [LoggerMessage] in a separate AccountManagerLogging.cs partial class, ConceptAs<T> for AccountId/AccountName, var for local variables, expression-bodied members where appropriate.",
+      "files": [],
+      "assertions": [
+        "Uses primary constructor (not field declarations + constructor body)",
+        "Uses file-scoped namespace (no extra indentation level)",
+        "Custom exception class defined (not InvalidOperationException or similar built-in)",
+        "Custom exception class does NOT have 'Exception' suffix",
+        "Logging uses [LoggerMessage] attribute in a separate partial static internal class",
+        "AccountId uses ConceptAs<Guid> (not raw Guid)",
+        "AccountName uses ConceptAs<string> (not raw string)",
+        "Uses 'var' for local variable declarations",
+        "No postfix on class names (no 'Manager', 'Impl', 'Service' naming anti-patterns caught)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review this C# code and rewrite it following Cratis coding standards:\n\n```csharp\npublic class OrderService\n{\n    private IOrderRepository _repo;\n    private ILogger _logger;\n    \n    public OrderService(IOrderRepository repo, ILogger logger)\n    {\n        _repo = repo;\n        _logger = logger;\n    }\n    \n    public async Task<List<Order>> GetAllOrdersAsync()\n    {\n        _logger.LogInformation(\"Getting all orders\");\n        var orders = await _repo.GetAllAsync();\n        return orders;\n    }\n    \n    public void ProcessOrder(Guid orderId)\n    {\n        if (orderId == null)\n            throw new InvalidOperationException(\"OrderId cannot be null\");\n    }\n}\n```",
+      "expected_output": "Rewritten with primary constructor, file-scoped namespace, IEnumerable<Order> return type, [LoggerMessage] logging, ConceptAs<Guid> for OrderId, custom exception, 'is null' check, Async suffix removed, no redundant 'Async' postfix.",
+      "files": [],
+      "assertions": [
+        "Primary constructor used (field declarations removed)",
+        "Returns IEnumerable<Order> not List<Order>",
+        "Uses 'is null' instead of '== null' for null check",
+        "Custom exception replaces InvalidOperationException",
+        "Async method does not have Async postfix",
+        "Uses [LoggerMessage] or mentions it should be moved to logging partial class",
+        "OrderId converted to ConceptAs<Guid> or at minimum flagged as a raw primitive"
+      ]
+    }
+  ]
+}

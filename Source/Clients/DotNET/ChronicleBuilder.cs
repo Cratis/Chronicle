@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Identities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Cratis.Chronicle.AspNetCore;
+namespace Cratis.Chronicle;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleBuilder"/> for .NET clients.
@@ -21,5 +22,14 @@ public class ChronicleBuilder(IServiceCollection services, IConfiguration config
     public IConfiguration Configuration { get; } = configuration;
 
     /// <inheritdoc/>
-    public IClientArtifactsProvider ClientArtifactsProvider { get; } = clientArtifactsProvider;
+    public IClientArtifactsProvider ClientArtifactsProvider { get; set; } = clientArtifactsProvider;
+
+    /// <inheritdoc/>
+    public IIdentityProvider? IdentityProvider { get; set; }
+
+    /// <inheritdoc/>
+    public ICorrelationIdAccessor? CorrelationIdAccessor { get; set; }
+
+    /// <inheritdoc/>
+    public IEventStoreNamespaceResolver? NamespaceResolver { get; set; }
 }
