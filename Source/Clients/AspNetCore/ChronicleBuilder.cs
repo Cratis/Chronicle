@@ -5,7 +5,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Execution;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore;
 
@@ -34,7 +33,4 @@ public class ChronicleBuilder(IServiceCollection services, IConfiguration config
 
     /// <inheritdoc/>
     public IEventStoreNamespaceResolver? NamespaceResolver { get; set; }
-
-    /// <inheritdoc/>
-    public ILoggerFactory? LoggerFactory { get; set; }
 }

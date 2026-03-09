@@ -5,7 +5,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Execution;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore;
 
@@ -43,9 +42,4 @@ public interface IChronicleBuilder
     /// Gets or sets the event store namespace resolver.
     /// </summary>
     IEventStoreNamespaceResolver? NamespaceResolver { get; set; }
-
-    /// <summary>
-    /// Gets or sets the logger factory.
-    /// </summary>
-    ILoggerFactory? LoggerFactory { get; set; }
 }

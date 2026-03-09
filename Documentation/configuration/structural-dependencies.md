@@ -56,7 +56,6 @@ The two callbacks are intentionally separate:
 | `WithIdentityProvider(IIdentityProvider)` | Custom identity resolution |
 | `WithCorrelationIdAccessor(ICorrelationIdAccessor)` | Custom correlation ID accessor |
 | `WithNamespaceResolver(IEventStoreNamespaceResolver)` | Custom namespace resolution |
-| `WithLoggerFactory(ILoggerFactory)` | Custom logger factory |
 
 ## Custom artifact discovery
 

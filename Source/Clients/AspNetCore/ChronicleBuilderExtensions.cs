@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Identities;
 using Cratis.Execution;
-using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.AspNetCore;
 
@@ -57,18 +56,6 @@ public static class ChronicleBuilderExtensions
     public static IChronicleBuilder WithNamespaceResolver(this IChronicleBuilder builder, IEventStoreNamespaceResolver resolver)
     {
         builder.NamespaceResolver = resolver;
-        return builder;
-    }
-
-    /// <summary>
-    /// Configures the <see cref="ILoggerFactory"/> to use for creating loggers.
-    /// </summary>
-    /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use.</param>
-    /// <returns>The same <see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithLoggerFactory(this IChronicleBuilder builder, ILoggerFactory loggerFactory)
-    {
-        builder.LoggerFactory = loggerFactory;
         return builder;
     }
 }
