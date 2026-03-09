@@ -12,6 +12,8 @@ The sample will focus on a straightforward and well-understood domain: a library
 You can find the complete working sample [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore).
 which also leverages common things from [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
+> **Not building a web app?** If you are creating a worker service or a background processing host without ASP.NET Core, see the [Worker Service Quickstart](./worker.md) instead.
+
 [!INCLUDE [docker](./docker.md)]
 
 ## Setup project
