@@ -121,14 +121,14 @@ internal sealed class EventSequences(
         var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
         await systemEventSequence.Append(
             (EventSourceId)request.EventSequenceId,
-            new EventCompensated(
+            new EventCompensationRequested(
                 request.EventSequenceId,
                 request.SequenceNumber,
                 request.EventType.ToChronicle(),
-                request.Content,
-                request.CorrelationId,
-                request.Causation.ToChronicle(),
-                request.CausedBy.ToChronicle()));
+                request.Content),
+            correlationId: request.CorrelationId,
+            causation: request.Causation.ToChronicle(),
+            causedBy: request.CausedBy.ToChronicle());
     }
 
     /// <inheritdoc/>
@@ -178,13 +178,13 @@ internal sealed class EventSequences(
         var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
         await systemEventSequence.Append(
             (EventSourceId)request.EventSequenceId,
-            new EventRedacted(
+            new EventRedactionRequested(
                 request.EventSequenceId,
                 request.SequenceNumber,
-                request.Reason,
-                request.CorrelationId,
-                request.Causation.ToChronicle(),
-                request.CausedBy.ToChronicle()));
+                request.Reason),
+            correlationId: request.CorrelationId,
+            causation: request.Causation.ToChronicle(),
+            causedBy: request.CausedBy.ToChronicle());
 
         return new RedactResponse();
     }

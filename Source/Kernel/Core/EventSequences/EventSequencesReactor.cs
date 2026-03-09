@@ -22,12 +22,13 @@ namespace Cratis.Chronicle.EventSequences;
 public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOptions jsonSerializerOptions, ILogger<EventSequencesReactor> logger) : Reactor
 {
     /// <summary>
-    /// Performs the actual redaction of a single event when an <see cref="EventRedacted"/> system event is observed.
+    /// Performs the actual redaction of a single event when an <see cref="EventRedactionRequested"/> system event is observed.
+    /// The audit context (who triggered it, when, which correlation) is carried in the <paramref name="context"/>.
     /// </summary>
-    /// <param name="event">The system event containing redaction details.</param>
-    /// <param name="context">The <see cref="EventContext"/> of the system event.</param>
+    /// <param name="event">The system event containing the target sequence and reason.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the redaction audit context.</param>
     /// <returns>Awaitable task.</returns>
-    public async Task Redacted(EventRedacted @event, EventContext context)
+    public async Task RedactionRequested(EventRedactionRequested @event, EventContext context)
     {
         logger.Redacting(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber);
 
@@ -35,16 +36,17 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
         await eventSequence.Redact(
             @event.SequenceNumber,
             @event.Reason,
-            @event.CorrelationId,
-            @event.Causation,
-            @event.CausedBy);
+            context.CorrelationId,
+            context.Causation,
+            context.CausedBy);
     }
 
     /// <summary>
     /// Performs the actual redaction of all events for an event source when an <see cref="EventsRedactedForEventSource"/> system event is observed.
+    /// The audit context (who triggered it, when, which correlation) is carried in the <paramref name="context"/>.
     /// </summary>
-    /// <param name="event">The system event containing redaction details.</param>
-    /// <param name="context">The <see cref="EventContext"/> of the system event.</param>
+    /// <param name="event">The system event containing the target event source and reason.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the redaction audit context.</param>
     /// <returns>Awaitable task.</returns>
     public async Task RedactedForEventSource(EventsRedactedForEventSource @event, EventContext context)
     {
@@ -55,19 +57,20 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
             @event.EventSourceId,
             @event.Reason,
             @event.EventTypes,
-            @event.CorrelationId,
-            @event.Causation,
-            @event.CausedBy);
+            context.CorrelationId,
+            context.Causation,
+            context.CausedBy);
     }
 
     /// <summary>
-    /// Performs the actual compensation of an event when an <see cref="EventCompensated"/> system event is observed.
+    /// Performs the actual compensation of an event when an <see cref="EventCompensationRequested"/> system event is observed.
+    /// The audit context (who triggered it, when, which correlation) is carried in the <paramref name="context"/>.
     /// </summary>
-    /// <param name="event">The system event containing compensation details.</param>
-    /// <param name="context">The <see cref="EventContext"/> of the system event.</param>
+    /// <param name="event">The system event containing the target sequence, event type and new content.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the compensation audit context.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the compensation content is null or contains invalid JSON.</exception>
-    public async Task Compensated(EventCompensated @event, EventContext context)
+    public async Task CompensationRequested(EventCompensationRequested @event, EventContext context)
     {
         logger.Compensating(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber, @event.EventType);
 
@@ -79,8 +82,8 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
             @event.SequenceNumber,
             @event.EventType,
             content,
-            @event.CorrelationId,
-            @event.Causation,
-            @event.CausedBy);
+            context.CorrelationId,
+            context.Causation,
+            context.CausedBy);
     }
 }
