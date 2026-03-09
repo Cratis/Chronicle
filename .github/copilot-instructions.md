@@ -34,40 +34,6 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 
-## Formatting
-
-- Honor the existing code style and conventions in the project.
-- Apply code-formatting style defined in .editorconfig.
-- Prefer file-scoped namespace declarations and single-line using directives.
-- Insert a new line before the opening curly brace of any code block (e.g., after `if`, `for`, `while`, `foreach`, `using`, `try`, etc.).
-- Ensure that the final return statement of a method is on its own line.
-- Use pattern matching and switch expressions wherever possible.
-- Use `nameof` instead of string literals when referring to member names.
-- Place private class declarations at the bottom of the file.
-
-## C# Instructions
-
-- Prefer `var` over explicit types when declaring variables.
-- Do not add unnecessary comments or documentation.
-- Use `using` directives for namespaces at the top of the file.
-- Sort the `using` directives alphabetically.
-- Use namespaces that match the folder structure.
-- Remove unused `using` directives.
-- Use file-scoped namespace declarations.
-- Use single-line using directives.
-- For types that do not have an implementation, don't add a body (e.g., `public interface IMyInterface;`).
-- Prefer using `record` types for immutable data structures (events, commands, read models, concepts).
-- Use expression-bodied members for simple methods and properties.
-- Use `async` and `await` for asynchronous programming.
-- Use `Task` and `Task<T>` for asynchronous methods.
-- Use `IEnumerable<T>` for collections that are not modified.
-- Never return mutable collections from public APIs.
-- Don't use regions in the code.
-- Never add postfixes like Async, Impl, etc. to class or method names.
-- Favor collection initializers and object initializers.
-- Use string interpolation instead of string.Format or concatenation.
-- Favor primary constructors for all types.
-
 ## Chronicle & Arc Key Conventions
 
 These conventions exist because the frameworks rely on convention-based discovery. Breaking them doesn't just violate style — it breaks runtime behavior.
@@ -93,20 +59,6 @@ Commands and Queries generate TypeScript proxies at build time via `dotnet build
 
 **When running parallel agents or sub-agents:** backend and frontend work for the same slice **cannot** run in parallel. The backend agent must finish and `dotnet build` must succeed before the frontend agent starts. Independent slices (no shared events) can have their backends worked on in parallel, but each slice's frontend still depends on its own backend build completing first.
 
-## TypeScript / Frontend Instructions
-
-- Prefer `const` over `let` over `var` when declaring variables.
-- Never use shortened or abbreviated names for variables, parameters, or properties.
-  - Use full descriptive names: `deltaX` not `dx`, `index` not `idx`, `event` not `e`, `previous` not `prev`, `direction` not `dir`, `position` not `pos`, `contextMenu` not `ctx`/`ctxMenu`.
-  - The only acceptable short names are well-established domain terms (e.g. `id`, `url`, `min`, `max`).
-- Never leave unused import statements in the code.
-- Always ensure that the code compiles without warnings.
-  - Use `yarn compile` to verify (if successful it doesn't output anything).
-- Do not prefix a file, component, type, or symbol with the name of its containing folder or the concept it belongs to. Instead, use folder structure to provide that context.
-- Favor functional folder structure over technical folder structure.
-  - Group files by the feature or concept they belong to, not by their technical role.
-  - Avoid folders like `components/`, `hooks/`, `utils/`, `types/` at the feature level.
-
 ## Development Workflow
 
 - After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
@@ -116,95 +68,9 @@ Commands and Queries generate TypeScript proxies at build time via `dotnet build
 - Review each file for lint compliance before moving on.
 - The user may keep Storybook running — do not try to stop it, suggest stopping it, or start your own instance.
 
-## XML Documentation
-
-- All **public** types, methods, properties, and operators **must** have XML doc comments.
-- Always use **multiline** `<summary>` tags — opening and closing tags on their own lines. Never single-line.
-- Every method or operator with parameters must include `<param name="...">` for each parameter.
-- Every non-void method or operator must include `<returns>`.
-- Every method that throws must document the exception with `<exception cref="...">` tags.
-- Use `<see cref="..."/>` and `<paramref name="..."/>` to cross-reference types and parameters.
-
-## Exceptions
-
-- Use exceptions for exceptional situations only.
-- Don't use exceptions for control flow.
-- Always provide a meaningful message when throwing an exception.
-- Always create a custom exception type that derives from Exception.
-- Never use any built-in exception types like InvalidOperationException, ArgumentException, etc.
-- Add XML documentation for exceptions being thrown.
-- XML documentation for exception should start with "The exception that is thrown when ...".
-- Never suffix exception class names with "Exception".
-
-## Nullable Reference Types
-
-- Always use is null or is not null instead of == null or != null.
-- Trust the C# null annotations and don't add null checks when the type system says a value cannot be null.
-- Add `!` operator where nullability warnings occur.
-- Use `is not null` checks before dereferencing potentially null values.
-
-## Naming Conventions
-
-- Follow PascalCase for component names, method names, and public members.
-- Use camelCase for private fields and local variables.
-- Prefix private fields with an underscore (e.g., `_privateField`).
-- Prefix interface names with "I" (e.g., IUserService).
-
-## Logging
-
-- Use structured logging with named parameters.
-- Use appropriate log levels (Information, Warning, Error, Debug).
-- Always use a generic ILogger<T> where T is the class name.
-- Keep logging in separate partial methods for better readability. Call the file `<SystemName>Logging.cs`. Make this class partial and static and internal and all methods should be internal.
-- Use the `[LoggerMessage]` attribute to define log messages.
-- Don't include `eventId` in the `[LoggerMessage]` attribute.
-
-## Dependency Injection
-
-- Systems that have a convention of IFoo to Foo does not need to be registered explicitly.
-- Prefer constructor injection over method injection.
-- Avoid service locator pattern (i.e., avoid using IServiceProvider directly).
-- For implementations that should be singletons, use the `[Singleton]` attribute on the class.
-
 ## TypeScript Type Safety
 
-- Never use `any` type - always use proper type annotations:
-  - Use `unknown` for values of unknown type that need runtime checking.
-  - Use `Record<string, unknown>` for objects with unknown properties.
-  - Use proper generic constraints like `<TCommand extends object = object>` instead of `= any`.
-  - Use `React.ComponentType<Props>` for React component types.
-- When type assertions are necessary, use `unknown` as an intermediate type:
-  - Prefer `value as unknown as TargetType` over `value as any`.
-  - For objects with dynamic properties: `(obj as unknown as { prop: Type }).prop`.
-- For generic React components:
-  - Use `unknown` as default generic parameter instead of `any`.
-  - Example: `<TCommand = unknown>` not `<TCommand = any>`.
-- For Storybook files:
-  - Use `React.ComponentType<Record<string, never>>` for components with no props.
-  - Always use `as unknown as` when converting component imports to avoid type mismatch errors.
-  - Properly type story args instead of using `any`.
-- For event handlers:
-  - Be careful with React.MouseEvent vs DOM MouseEvent - they are different types.
-  - React synthetic events: `React.MouseEvent<Element, MouseEvent>`.
-  - DOM native events: `MouseEvent`.
-  - Convert between them using: `nativeEvent as unknown as React.MouseEvent`.
-  - Use `e.preventDefault?.()` instead of `(e as any).preventDefault?.()`.
-- For library objects (PIXI, etc.):
-  - Use proper library types when available.
-  - Use specific property types: `{ canvas?: HTMLCanvasElement }` instead of `any`.
-- When working with external libraries that have strict generic constraints:
-  - Import necessary types (e.g., `Command` from `@cratis/arc/commands`).
-  - Use type assertions through `unknown` to satisfy constraints: `props.command as unknown as Constructor<Command<...>>`.
-  - Extract tuple results explicitly rather than destructuring when type assertions are needed.
-- For function parameter types that may be unknown:
-  - Add type guards: `if (typeof accessor !== 'function') return ''`.
-  - Type parameters with fallbacks: `function<T = unknown>(accessor: ((obj: T) => unknown) | unknown)`.
-- For arrays and collections accessed from `unknown` types:
-  - Cast to proper array type: `((obj as Record<string, unknown>).items || []) as string[]`.
-  - Type array elements when iterating: `array.forEach((item: string) => ...)`.
-- For generic type parameters:
-  - Ensure proper type conversions: `String(value)` when string operations are needed.
-  - Use explicit Date parameter types: `new Date(value as string | number | Date)`.
+- Never use `any` — use `unknown`, `Record<string, unknown>`, or proper generic constraints instead. See [TypeScript Conventions](./instructions/typescript.instructions.md) for detailed patterns.
 
 ## Detailed Guides
 
@@ -224,12 +90,3 @@ These guides contain the full rules, examples, and rationale for each topic. The
    - [Dialogs](./instructions/dialogs.instructions.md)
    - [Reactors](./instructions/reactors.instructions.md)
    - [Orleans](./instructions/orleans.instructions.md)
-
-## Header
-
-All files should start with the following header:
-
-```csharp
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-```

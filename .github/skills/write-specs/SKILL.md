@@ -1,6 +1,6 @@
 ---
 name: write-specs
-description: Use this skill when asked to write tests, specs, or test coverage for a command, query, or slice in a Cratis-based project. Produces BDD-style integration specs using xUnit and Cratis.Specifications.
+description: Use this skill when asked to write integration specs for a vertical slice in a Cratis-based project. Produces BDD-style Chronicle integration specs using ChronicleOutOfProcessFixture, Given<context>, and xUnit. Covers State Change commands (happy path, validation, business rules, constraints) and State View queries. For unit specs, standalone class specs, or the general BDD spec pattern (Establish/Because/should_), see cratis-specs-csharp.
 ---
 
 Write comprehensive BDD integration specs for a vertical slice command or query.
@@ -25,6 +25,38 @@ Write one spec class for **each** of:
 2. **Each validation failure** — one `and_` class per `[Required]`, `[MaxLength]`, etc. rule
 3. **Each business rule violation** — one `and_` class per DCB condition in `Handle()` that inspects a read model
 4. **Each constraint violation** — one `and_` class per `IConstraint`
+
+## What to cover for State View queries
+
+State View queries project events into read models — they have no command to execute, so specs validate the projection logic by appending events first:
+
+```csharp
+// Listing/when_listing_authors/and_authors_have_been_registered.cs
+using context = MyApp.Authors.Listing.when_listing_authors.and_authors_have_been_registered.context;
+
+namespace MyApp.Authors.Listing.when_listing_authors;
+
+[Collection(ChronicleCollection.Name)]
+public class and_authors_have_been_registered(context context) : Given<context>(context)
+{
+    public class context(ChronicleOutOfProcessFixture fixture) : given.an_http_client(fixture)
+    {
+        public IEnumerable<AuthorSummary>? Result;
+        static readonly AuthorId _authorId = AuthorId.New();
+
+        async Task Establish() =>
+            await EventStore.EventLog.Append(_authorId, new AuthorRegistered(new AuthorName("John Doe")));
+
+        async Task Because() =>
+            Result = await Client.GetFromJsonAsync<IEnumerable<AuthorSummary>>("/api/authors");
+    }
+
+    [Fact] void should_include_the_registered_author() =>
+        Context.Result!.ShouldContain(a => a.Name == "John Doe");
+    [Fact] void should_return_one_author() =>
+        Context.Result!.Count().ShouldEqual(1);
+}
+```
 
 ## C# spec structure
 
