@@ -125,10 +125,6 @@ dotnet_diagnostic.IDE0055.severity = none
 csharp_indent_braces = false
 
 [{**/*.Specs/**/*.cs,Integration/**/*.cs}]
-# Resharper specific
-resharper_inconsistent_naming_highlighting = none
-resharper_check_namespace_highlighting = none
-resharper_unused_member_local_highlighting = none
 dotnet_diagnostic.CA1001.severity = none
 dotnet_diagnostic.CA1008.severity = none
 dotnet_diagnostic.CA1024.severity = none
