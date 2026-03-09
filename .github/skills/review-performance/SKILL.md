@@ -8,7 +8,7 @@ Perform a focused performance review of changed code.
 ## Chronicle / Event Sourcing
 
 - [ ] Projections use AutoMap (on by default) — avoids manual mapping cost
-- [ ] Projections do NOT join on the read model (forces full re-read)
+- [ ] Projections do NOT join on the read model (forces full re-read on every event replay)
 - [ ] Reactors do NOT re-query the event log inside `On()` — use event data directly
 - [ ] No eager loading of entire event sequences without paging/filtering
 - [ ] New projections can replay all historical events without crashing
@@ -42,6 +42,18 @@ Perform a focused performance review of changed code.
 - [ ] `IEnumerable<T>` not enumerated multiple times — materialise once if needed
 - [ ] Large object logging uses `{@obj}` only at `Debug` level
 
+---
+
+## Why the Chronicle items matter
+
+**Projection join semantics** — projections join events to events, never read models. Joining on a read model forces the framework to reload that model on every event during replay, turning O(1) projections into O(n) reads. At scale (millions of events) this is catastrophic.
+
+**Reactor I/O** — reactors receive the event as a parameter; all data for decisions is already there. Re-querying the event log inside `On()` creates redundant I/O and couples the reactor to current state instead of the event stream.
+
+**Historical replay safety** — new projections are replayed over all historical events the first time they are deployed. A crash on any historical event means the read model can never be built.
+
+---
+
 ## Risk classification
 
 - 🔴 High — measurable degradation at moderate load — must fix before merge
@@ -52,4 +64,12 @@ Perform a focused performance review of changed code.
 
 Start with: **Performance Review: ✅ No issues / ⚠️ Minor findings / ❌ Blocking issues found**
 
-Group findings by category. End with a summary table showing ✅/⚠️/❌ per category.
+Group findings by category. For each finding include:
+- The specific file/line
+- What the issue is and why it matters
+- A concrete suggestion for fixing it
+
+End with a summary table showing ✅/⚠️/❌ per category.
+
+**Example finding:**
+> 🔴 **Chronicle / Event Sourcing** — `AuthorProjection.cs:14`: projection calls `.Join<AuthorUpdated>(u => u.AuthorId, r => r.Id)` where the right side `r` is a read model. This forces a full read-model reload on every `AuthorUpdated` event during replay. Fix: join on the event itself using a second `.From<AuthorUpdated>()` call.
