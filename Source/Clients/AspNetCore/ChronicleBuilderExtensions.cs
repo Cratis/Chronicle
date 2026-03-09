@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle;
-using Cratis.Chronicle.AspNetCore;
 using Cratis.Chronicle.Identities;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.Builder;
+namespace Cratis.Chronicle.AspNetCore;
 
 /// <summary>
 /// Extension methods for configuring structural dependencies on <see cref="IChronicleBuilder"/>.
