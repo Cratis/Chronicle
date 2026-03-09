@@ -237,7 +237,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.react.mvvm@npm:^19.7.3":
+"@cratis/arc.react.mvvm@npm:^19.9.2":
   version: 19.9.2
   resolution: "@cratis/arc.react.mvvm@npm:19.9.2"
   dependencies:
@@ -268,7 +268,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.vite@npm:^19.6.9, @cratis/arc.vite@npm:^19.7.3":
+"@cratis/arc.vite@npm:^19.6.9, @cratis/arc.vite@npm:^19.9.2":
   version: 19.9.2
   resolution: "@cratis/arc.vite@npm:19.9.2"
   dependencies:
@@ -7427,8 +7427,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "workbench@workspace:."
   dependencies:
-    "@cratis/arc.react.mvvm": "npm:^19.7.3"
-    "@cratis/arc.vite": "npm:^19.7.3"
+    "@cratis/arc.react.mvvm": "npm:^19.9.2"
+    "@cratis/arc.vite": "npm:^19.9.2"
     "@cratis/components": "npm:^1.4.1"
     "@eslint/eslintrc": "npm:3.3.5"
     "@eslint/js": "npm:10.0.1"
