@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Events.EventSequences;
 /// <param name="Sequence"><see cref="EventSequenceId"/> the event was in.</param>
 /// <param name="SequenceNumber"><see cref="EventSequenceNumber"/> of the event that was redacted.</param>
 /// <param name="Reason"><see cref="RedactionReason"/> representing why it was redacted.</param>
+[EventType]
 public record EventRedacted(
     EventSequenceId Sequence,
     EventSequenceNumber SequenceNumber,
