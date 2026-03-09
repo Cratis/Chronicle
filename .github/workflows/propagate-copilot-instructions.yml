@@ -9,6 +9,7 @@ on:
       - ".github/agents/**"
       - ".github/skills/**"
       - ".github/prompts/**"
+  workflow_dispatch:
 
 jobs:
   propagate:
