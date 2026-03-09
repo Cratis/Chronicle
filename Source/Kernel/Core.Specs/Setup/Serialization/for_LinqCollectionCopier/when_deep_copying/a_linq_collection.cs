@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.Serialization.Cloning;
-
 namespace Cratis.Chronicle.Setup.Serialization.for_LinqCollectionCopier.when_deep_copying;
 
 public class a_linq_collection : Specification
