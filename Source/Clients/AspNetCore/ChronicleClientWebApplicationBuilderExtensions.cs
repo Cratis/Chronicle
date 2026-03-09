@@ -62,7 +62,6 @@ public static class ChronicleClientWebApplicationBuilderExtensions
 
         builder.Services.AddCratisChronicleClient(chronicleBuilder);
 
-        builder.Host.AddCratisChronicle(loggerFactory);
         return builder;
     }
 

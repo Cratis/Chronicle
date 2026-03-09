@@ -22,14 +22,6 @@ public static class HostBuilderExtensions
         ILoggerFactory? loggerFactory = default)
     {
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
-        hostBuilder.ConfigureServices((context, services) =>
-        {
-        });
         return hostBuilder;
     }
 }
