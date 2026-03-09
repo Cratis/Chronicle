@@ -102,7 +102,7 @@ csharp_style_expression_bodied_accessors = true:none
 # allow both local and anonymous functions
 csharp_style_pattern_local_over_anonymous_function = false:none
 
-# dont need to save everything to a var
+# don't need to save everything to a var
 csharp_style_unused_value_expression_statement_preference = false:none
 
 # not ready for changing everything to pattern matching
@@ -116,7 +116,7 @@ csharp_style_prefer_range_operator = false:none
 # CSharp formatting rules:
 dotnet_diagnostic.CA1031.severity = none
 dotnet_diagnostic.CA1515.severity = none
-# dont want these bombing the build logs, will still show up in the IDE
+# don't want these bombing the build logs, will still show up in the IDE
 dotnet_diagnostic.IDE0008.severity = none
 dotnet_diagnostic.IDE0022.severity = none
 dotnet_diagnostic.IDE0055.severity = none
