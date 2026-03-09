@@ -8,6 +8,7 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
@@ -46,6 +47,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
+    readonly IChronicleSetupFixture _fixture = fixture;
+
     /// <inheritdoc/>
     protected override IHostBuilder CreateHostBuilder()
     {
@@ -103,11 +106,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-#pragma warning disable CS0618
-                    services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.ArtifactsProvider);
+                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
                     services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.NamingPolicy);
-                    services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.IdentityProvider);
-#pragma warning restore CS0618
+                    services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
+                        sp.GetRequiredService<IHttpContextAccessor>(),
+                        sp.GetRequiredService<ILogger<IdentityProvider>>()));
                     services.AddSingleton(Globals.JsonSerializerOptions);
                     services.AddHttpContextAccessor();
 

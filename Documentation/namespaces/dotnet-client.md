@@ -25,11 +25,15 @@ This is the default when no resolver is supplied.
 Resolves the namespace from the current principal's claims. This is useful when you have an authenticated user and want to map the tenant from a claim.
 
 ```csharp
-var options = new ChronicleOptions()
-    .WithClaimsBasedNamespaceResolver(); // Uses default claim type "tenant_id"
+// Uses the default claim type "tenant_id"
+var client = new ChronicleClient(
+    options,
+    namespaceResolver: new ClaimsBasedNamespaceResolver("tenant_id"));
 
-var options = new ChronicleOptions()
-    .WithClaimsBasedNamespaceResolver("custom_tenant_claim");
+// Uses a custom claim type
+var client = new ChronicleClient(
+    options,
+    namespaceResolver: new ClaimsBasedNamespaceResolver("custom_tenant_claim"));
 ```
 
 If the claim is not found or the user is not authenticated, the default namespace is used.

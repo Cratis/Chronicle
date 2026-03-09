@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.AspNetCore;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.for_ChronicleClientServiceCollectionExtensions;
@@ -17,18 +19,16 @@ public class when_adding_chronicle_client_with_instance : Specification
     {
         _customResolver = new CustomEventStoreNamespaceResolver();
         _services = new ServiceCollection();
-        _services.Configure<ChronicleAspNetCoreOptions>(options =>
-        {
-            options.EventStore = "test-store";
-#pragma warning disable CS0618
-            options.EventStoreNamespaceResolver = _customResolver;
-#pragma warning restore CS0618
-        });
+        _services.Configure<ChronicleAspNetCoreOptions>(options => options.EventStore = "test-store");
     }
 
     void Because()
     {
-        _services.AddCratisChronicleClient();
+        var builder = new ChronicleBuilder(_services, new ConfigurationManager(), DefaultClientArtifactsProvider.Default)
+        {
+            NamespaceResolver = _customResolver
+        };
+        _services.AddCratisChronicleClient(builder);
         _serviceProvider = _services.BuildServiceProvider();
         _resolver = _serviceProvider.GetRequiredService<IEventStoreNamespaceResolver>();
     }

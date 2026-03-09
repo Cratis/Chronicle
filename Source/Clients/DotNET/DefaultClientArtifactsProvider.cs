@@ -48,53 +48,134 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _eventSeeders = [];
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventTypes { get { EnsureInitialized(); return _eventTypes; } }
+    public virtual IEnumerable<Type> EventTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventTypes;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Projections { get { EnsureInitialized(); return _projections; } }
+    public virtual IEnumerable<Type> Projections
+    {
+        get
+        {
+            EnsureInitialized();
+            return _projections;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ModelBoundProjections { get { EnsureInitialized(); return _modelBoundProjections; } }
+    public virtual IEnumerable<Type> ModelBoundProjections
+    {
+        get
+        {
+            EnsureInitialized();
+            return _modelBoundProjections;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reactors { get { EnsureInitialized(); return _reactors; } }
+    public virtual IEnumerable<Type> Reactors
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reactors;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reducers { get { EnsureInitialized(); return _reducers; } }
+    public virtual IEnumerable<Type> Reducers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reducers;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ReactorMiddlewares { get { EnsureInitialized(); return _reactorMiddlewares; } }
+    public virtual IEnumerable<Type> ReactorMiddlewares
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reactorMiddlewares;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForTypesProviders { get { EnsureInitialized(); return _complianceForTypesProviders; } }
+    public virtual IEnumerable<Type> ComplianceForTypesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _complianceForTypesProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get { EnsureInitialized(); return _complianceForPropertiesProviders; } }
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _complianceForPropertiesProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get { EnsureInitialized(); return _additionalEventInformationProviders; } }
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _additionalEventInformationProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ConstraintTypes { get { EnsureInitialized(); return _constraintTypes; } }
+    public virtual IEnumerable<Type> ConstraintTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _constraintTypes;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueConstraints { get { EnsureInitialized(); return _uniqueConstraints; } }
+    public virtual IEnumerable<Type> UniqueConstraints
+    {
+        get
+        {
+            EnsureInitialized();
+            return _uniqueConstraints;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueEventTypeConstraints { get { EnsureInitialized(); return _uniqueEventTypeConstraints; } }
+    public virtual IEnumerable<Type> UniqueEventTypeConstraints
+    {
+        get
+        {
+            EnsureInitialized();
+            return _uniqueEventTypeConstraints;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventSeeders { get { EnsureInitialized(); return _eventSeeders; } }
-
-    /// <summary>
-    /// Initializes the provider explicitly.
-    /// </summary>
-    /// <remarks>
-    /// This method is no longer necessary; the provider auto-initializes on first property access.
-    /// It is kept for backward compatibility only.
-    /// </remarks>
-    [Obsolete("Initialize() is no longer needed. The provider auto-initializes on first property access.")]
-    public void Initialize() => EnsureInitialized();
+    public virtual IEnumerable<Type> EventSeeders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventSeeders;
+        }
+    }
 
     void EnsureInitialized()
     {

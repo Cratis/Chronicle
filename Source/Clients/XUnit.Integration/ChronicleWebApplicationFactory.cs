@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,16 +24,11 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
             .UseContentRoot(contentRoot)
             .ConfigureServices(services =>
             {
-                void OptionsConfigurator(ChronicleOptions options)
-                {
-#pragma warning disable CS0618
-                    options.ArtifactsProvider = fixture;
-#pragma warning restore CS0618
-                    options.ConnectionString = "chronicle://localhost:35001?disableTls=true";
-                }
+                services.Configure<ChronicleOptions>(options =>
+                    options.ConnectionString = "chronicle://localhost:35001?disableTls=true");
 
-                services.Configure<ChronicleAspNetCoreOptions>(OptionsConfigurator);
-                services.Configure<ChronicleOptions>(OptionsConfigurator);
+                // Override the artifacts provider with the integration test fixture.
+                services.AddSingleton<IClientArtifactsProvider>(fixture);
             });
     }
 }

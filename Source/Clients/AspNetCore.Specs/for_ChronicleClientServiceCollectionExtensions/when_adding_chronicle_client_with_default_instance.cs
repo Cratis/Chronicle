@@ -18,9 +18,6 @@ public class when_adding_chronicle_client_with_default_instance : Specification
         _services.Configure<ChronicleAspNetCoreOptions>(options =>
         {
             options.EventStore = "test-store";
-#pragma warning disable CS0618
-            options.EventStoreNamespaceResolver = new DefaultEventStoreNamespaceResolver();
-#pragma warning restore CS0618
             options.EventStoreNamespaceResolverType = typeof(CustomEventStoreNamespaceResolver);
         });
     }
@@ -32,7 +29,7 @@ public class when_adding_chronicle_client_with_default_instance : Specification
         _resolver = _serviceProvider.GetRequiredService<IEventStoreNamespaceResolver>();
     }
 
-    [Fact] void should_use_type_configuration_when_instance_is_default() => _resolver.ShouldBeOfExactType<CustomEventStoreNamespaceResolver>();
+    [Fact] void should_use_type_configuration() => _resolver.ShouldBeOfExactType<CustomEventStoreNamespaceResolver>();
 
     class CustomEventStoreNamespaceResolver : IEventStoreNamespaceResolver
     {

@@ -79,13 +79,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
     /// </summary>
     /// <param name="options"><see cref="ChronicleOptions"/> to use.</param>
-    /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. Falls back to <see cref="ChronicleOptions.ArtifactsProvider"/> if not provided.</param>
-    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/>. Falls back to <see cref="ChronicleOptions.ServiceProvider"/> if not provided.</param>
-    /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/>. Falls back to <see cref="ChronicleOptions.IdentityProvider"/> if not provided.</param>
-    /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Falls back to <see cref="ChronicleOptions.CorrelationIdAccessor"/> if not provided.</param>
-    /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Falls back to <see cref="ChronicleOptions.EventStoreNamespaceResolver"/> if not provided.</param>
-    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Falls back to <see cref="ChronicleOptions.LoggerFactory"/> if not provided.</param>
-#pragma warning disable CS0618
+    /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. Defaults to <see cref="DefaultClientArtifactsProvider.Default"/> if not provided.</param>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/>. Defaults to <see cref="DefaultServiceProvider"/> if not provided.</param>
+    /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/>. Defaults to <see cref="BaseIdentityProvider"/> if not provided.</param>
+    /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Defaults to <see cref="CorrelationIdAccessor"/> if not provided.</param>
+    /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
+    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     public ChronicleClient(
         ChronicleOptions options,
         IClientArtifactsProvider? artifactsProvider = null,
@@ -96,13 +95,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
         ILoggerFactory? loggerFactory = null)
     {
         Options = options;
-        _artifactsProvider = artifactsProvider ?? options.ArtifactsProvider;
-        _serviceProvider = serviceProvider ?? options.ServiceProvider;
-        _identityProvider = identityProvider ?? options.IdentityProvider;
-        _correlationIdAccessor = correlationIdAccessor ?? options.CorrelationIdAccessor;
-        _namespaceResolver = namespaceResolver ?? options.EventStoreNamespaceResolver;
-        _loggerFactory = loggerFactory ?? options.LoggerFactory;
-#pragma warning restore CS0618
+        _artifactsProvider = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
+        _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
+        _identityProvider = identityProvider ?? new BaseIdentityProvider();
+        _correlationIdAccessor = correlationIdAccessor ?? new CorrelationIdAccessor();
+        _namespaceResolver = namespaceResolver ?? new DefaultEventStoreNamespaceResolver();
+        _loggerFactory = loggerFactory ?? new LoggerFactory();
 
         var result = InitializeInternal();
         CausationManager = result.CausationManager;
@@ -140,13 +138,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// </summary>
     /// <param name="connection"><see cref="IChronicleConnection"/> to use.</param>
     /// <param name="options">Optional <see cref="ChronicleOptions"/>.</param>
-    /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. Falls back to <see cref="ChronicleOptions.ArtifactsProvider"/> if not provided.</param>
-    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/>. Falls back to <see cref="ChronicleOptions.ServiceProvider"/> if not provided.</param>
-    /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/>. Falls back to <see cref="ChronicleOptions.IdentityProvider"/> if not provided.</param>
-    /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Falls back to <see cref="ChronicleOptions.CorrelationIdAccessor"/> if not provided.</param>
-    /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Falls back to <see cref="ChronicleOptions.EventStoreNamespaceResolver"/> if not provided.</param>
-    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Falls back to <see cref="ChronicleOptions.LoggerFactory"/> if not provided.</param>
-#pragma warning disable CS0618
+    /// <param name="artifactsProvider">Optional <see cref="IClientArtifactsProvider"/>. Defaults to <see cref="DefaultClientArtifactsProvider.Default"/> if not provided.</param>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/>. Defaults to <see cref="DefaultServiceProvider"/> if not provided.</param>
+    /// <param name="identityProvider">Optional <see cref="IIdentityProvider"/>. Defaults to <see cref="BaseIdentityProvider"/> if not provided.</param>
+    /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Defaults to <see cref="CorrelationIdAccessor"/> if not provided.</param>
+    /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
+    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     public ChronicleClient(
         IChronicleConnection connection,
         ChronicleOptions options,
@@ -158,13 +155,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
         ILoggerFactory? loggerFactory = null)
     {
         Options = options;
-        _artifactsProvider = artifactsProvider ?? options.ArtifactsProvider;
-        _serviceProvider = serviceProvider ?? options.ServiceProvider;
-        _identityProvider = identityProvider ?? options.IdentityProvider;
-        _correlationIdAccessor = correlationIdAccessor ?? options.CorrelationIdAccessor;
-        _namespaceResolver = namespaceResolver ?? options.EventStoreNamespaceResolver;
-        _loggerFactory = loggerFactory ?? options.LoggerFactory;
-#pragma warning restore CS0618
+        _artifactsProvider = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
+        _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
+        _identityProvider = identityProvider ?? new BaseIdentityProvider();
+        _correlationIdAccessor = correlationIdAccessor ?? new CorrelationIdAccessor();
+        _namespaceResolver = namespaceResolver ?? new DefaultEventStoreNamespaceResolver();
+        _loggerFactory = loggerFactory ?? new LoggerFactory();
 
         var result = InitializeInternal();
         CausationManager = result.CausationManager;

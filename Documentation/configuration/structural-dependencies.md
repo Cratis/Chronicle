@@ -95,4 +95,4 @@ var artifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
 
 The static `DefaultClientArtifactsProvider.Default` instance is used when no provider is supplied.
 
-> **Note:** In earlier versions, `IClientArtifactsProvider` had an `Initialize()` method that needed to be called explicitly. This method has been removed from the interface. `DefaultClientArtifactsProvider` now initializes lazily on first property access; no explicit initialization is required.
+> **Note:** `DefaultClientArtifactsProvider` initializes lazily on first property access; no explicit initialization is required.
