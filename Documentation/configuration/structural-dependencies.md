@@ -9,7 +9,6 @@ Services and providers that must be resolved at registration time (before the DI
 | Dependency | Purpose | Default |
 |---|---|---|
 | `IClientArtifactsProvider` | Discovers event types, projections, reactors, reducers, and other artifacts at startup | `DefaultClientArtifactsProvider` (auto-discovers from loaded assemblies) |
-| `IServiceProvider` | Resolves services at runtime (reactor activation, middleware, compliance providers) | `DefaultServiceProvider` (empty, throws if a type is not found) |
 | `IIdentityProvider` | Supplies the current user's identity for event metadata | `BaseIdentityProvider` (empty identity) |
 | `ICorrelationIdAccessor` | Provides the current correlation ID for event metadata | `CorrelationIdAccessor` (generates a new ID per call) |
 | `IEventStoreNamespaceResolver` | Resolves the event store namespace for each operation | `DefaultEventStoreNamespaceResolver` (always returns the default namespace) |
@@ -23,7 +22,6 @@ For console applications or other non-DI scenarios, pass structural dependencies
 var client = new ChronicleClient(
     options,
     artifactsProvider: myProvider,
-    serviceProvider: myServiceProvider,
     loggerFactory: LoggerFactory.Create(b => b.AddConsole()));
 ```
 
@@ -55,7 +53,6 @@ The two callbacks are intentionally separate:
 | Method | Sets |
 |---|---|
 | `WithArtifactsProvider(IClientArtifactsProvider)` | Custom artifact discovery |
-| `WithServiceProvider(IServiceProvider)` | Custom DI container |
 | `WithIdentityProvider(IIdentityProvider)` | Custom identity resolution |
 | `WithCorrelationIdAccessor(ICorrelationIdAccessor)` | Custom correlation ID accessor |
 | `WithNamespaceResolver(IEventStoreNamespaceResolver)` | Custom namespace resolution |

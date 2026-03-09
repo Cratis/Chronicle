@@ -30,11 +30,6 @@ public interface IChronicleBuilder
     IClientArtifactsProvider ClientArtifactsProvider { get; set; }
 
     /// <summary>
-    /// Gets or sets the service provider for resolving instances at runtime.
-    /// </summary>
-    IServiceProvider? ServiceProvider { get; set; }
-
-    /// <summary>
     /// Gets or sets the identity provider.
     /// </summary>
     IIdentityProvider? IdentityProvider { get; set; }

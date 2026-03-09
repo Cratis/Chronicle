@@ -25,18 +25,6 @@ public static class ChronicleBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the <see cref="IServiceProvider"/> to use for resolving runtime instances.
-    /// </summary>
-    /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
-    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> to use.</param>
-    /// <returns>The same <see cref="IChronicleBuilder"/> for continuation.</returns>
-    public static IChronicleBuilder WithServiceProvider(this IChronicleBuilder builder, IServiceProvider serviceProvider)
-    {
-        builder.ServiceProvider = serviceProvider;
-        return builder;
-    }
-
-    /// <summary>
     /// Configures the <see cref="IIdentityProvider"/> to use for resolving identity information.
     /// </summary>
     /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>

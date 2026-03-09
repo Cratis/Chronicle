@@ -27,9 +27,6 @@ public class ChronicleBuilder(IServiceCollection services, IConfiguration config
     public IClientArtifactsProvider ClientArtifactsProvider { get; set; } = clientArtifactsProvider;
 
     /// <inheritdoc/>
-    public IServiceProvider? ServiceProvider { get; set; }
-
-    /// <inheritdoc/>
     public IIdentityProvider? IdentityProvider { get; set; }
 
     /// <inheritdoc/>
