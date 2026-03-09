@@ -7,6 +7,7 @@ import { CompensateDialog } from './CompensateDialog';
 import { AppendedEvent } from 'Api/Events';
 import { EventContext } from 'Api/Events/EventContext';
 import { EventType } from 'Api/Events/EventType';
+import { DialogContext, DialogContextContent } from '@cratis/arc.react/dialogs';
 
 const mockEventType = Object.assign(new EventType(), {
     id: 'user-registered',
@@ -37,13 +38,22 @@ const mockEvent = Object.assign(new AppendedEvent(), {
     }),
 });
 
+const noop = (_result: unknown) => { return _result; };
+
+const mockContextValue = new DialogContextContent(
+    { event: mockEvent, eventStore: 'my-store', namespace: 'default' },
+    noop
+);
+
 const meta: Meta<typeof CompensateDialog> = {
     title: 'Features/EventStore/Namespaces/Sequences/CompensateDialog',
     component: CompensateDialog,
     decorators: [
         (Story) => (
             <MemoryRouter>
-                <Story />
+                <DialogContext.Provider value={mockContextValue}>
+                    <Story />
+                </DialogContext.Provider>
             </MemoryRouter>
         ),
     ],
@@ -54,29 +64,30 @@ export default meta;
 type Story = StoryObj<typeof CompensateDialog>;
 
 export const Default: Story = {
-    render: () => (
-        <CompensateDialog
-            event={mockEvent}
-            eventStore="my-store"
-            namespace="default"
-            visible={true}
-            onClose={() => {}}
-        />
-    ),
+    render: () => <CompensateDialog />,
 };
 
 export const WithInvalidJson: Story = {
-    render: () => (
-        <CompensateDialog
-            event={Object.assign(new AppendedEvent(), {
-                context: mockEventContext,
-                content: '{"name": "Jane Doe"}',
-            })}
-            eventStore="my-store"
-            namespace="default"
-            visible={true}
-            onClose={() => {}}
-        />
-    ),
+    decorators: [
+        (Story) => (
+            <MemoryRouter>
+                <DialogContext.Provider
+                    value={new DialogContextContent(
+                        {
+                            event: Object.assign(new AppendedEvent(), {
+                                context: mockEventContext,
+                                content: '{"name": "Jane Doe"}',
+                            }),
+                            eventStore: 'my-store',
+                            namespace: 'default',
+                        },
+                        noop
+                    )}>
+                    <Story />
+                </DialogContext.Provider>
+            </MemoryRouter>
+        ),
+    ],
+    render: () => <CompensateDialog />,
 };
 

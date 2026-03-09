@@ -17,6 +17,7 @@ import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
+import { CompensateDialog, CompensateDialogProps } from './CompensateDialog';
 import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
@@ -44,6 +45,7 @@ export const Sequences = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
+    const [CompensateWrapper, showCompensate] = useDialog<CompensateDialogProps>(CompensateDialog);
 
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
@@ -58,6 +60,16 @@ export const Sequences = () => {
                 namespace: params.namespace!,
                 eventSequenceId: 'event-log',
                 sequenceNumber: selectedEvent.context.sequenceNumber
+            });
+        }
+    };
+
+    const handleCompensateEvent = () => {
+        if (selectedEvent) {
+            showCompensate({
+                event: selectedEvent,
+                eventStore: params.eventStore!,
+                namespace: params.namespace!
             });
         }
     };
@@ -128,6 +140,12 @@ export const Sequences = () => {
                         icon={faIcons.FaEraser}
                         disableOnUnselected
                         command={handleRedactEvent} />
+                    <MenuItem
+                        id='compensateEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.compensate}
+                        icon={faIcons.FaArrowsRotate}
+                        disableOnUnselected
+                        command={handleCompensateEvent} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
@@ -164,6 +182,7 @@ export const Sequences = () => {
             </DataPage>
             <AppendEventWrapper />
             <RedactEventWrapper />
+            <CompensateWrapper />
         </>
     );
 };

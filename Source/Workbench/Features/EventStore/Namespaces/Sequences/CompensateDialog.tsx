@@ -3,67 +3,77 @@
 
 import { AppendedEvent } from 'Api/Events';
 import { Compensate } from 'Api/EventSequences';
+import { Dialog } from 'Components/Dialogs';
 import { useState } from 'react';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { CommandDialog } from '@cratis/components/CommandDialog';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import strings from 'Strings';
 
 export interface CompensateDialogProps {
     event: AppendedEvent;
     eventStore: string;
     namespace: string;
-    visible: boolean;
-    onClose: () => void;
 }
 
-export const CompensateDialog = ({ event, eventStore, namespace, visible, onClose }: CompensateDialogProps) => {
-    const [contentStr, setContentStr] = useState(JSON.stringify(JSON.parse(event.content), null, 2));
+export const CompensateDialog = () => {
+    const { request } = useDialogContext<CompensateDialogProps>();
+    const [compensate] = Compensate.use();
+    const [contentStr, setContentStr] = useState(() =>
+        request ? JSON.stringify(JSON.parse(request.event.content), null, 2) : ''
+    );
     const [jsonError, setJsonError] = useState<string | undefined>();
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => JSON.parse(event.content));
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() =>
+        request ? (JSON.parse(request.event.content) as Record<string, unknown>) : {}
+    );
 
     const handleContentChange = (value: string) => {
         setContentStr(value);
         try {
-            setParsedContent(JSON.parse(value));
+            setParsedContent(JSON.parse(value) as Record<string, unknown>);
             setJsonError(undefined);
         } catch (e) {
             setJsonError((e as Error).message);
         }
     };
 
-    const currentValues = {
-        eventStore,
-        namespace,
-        eventSequenceId: 'event-log',
-        sequenceNumber: event.context.sequenceNumber,
-        eventType: event.context.eventType,
-        content: parsedContent,
-        causation: [],
-        causedBy: undefined
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok || !request) {
+            return true;
+        }
+
+        compensate.eventStore = request.eventStore;
+        compensate.namespace = request.namespace;
+        compensate.eventSequenceId = 'event-log';
+        compensate.sequenceNumber = request.event.context.sequenceNumber;
+        compensate.eventType = request.event.context.eventType;
+        compensate.content = parsedContent;
+
+        const executeResult = await compensate.execute();
+        return executeResult.isSuccess;
     };
 
+    if (!request) return null;
+
     return (
-        <CommandDialog
-            command={Compensate}
-            currentValues={currentValues}
-            visible={visible}
-            title={`Compensate Event #${event.context.sequenceNumber}`}
-            width="50vw"
+        <Dialog
+            title={`${strings.eventStore.namespaces.sequences.dialogs.compensate.title} #${request.event.context.sequenceNumber}`}
+            onClose={handleClose}
             isValid={!jsonError}
-            onConfirm={onClose}
-            onCancel={onClose}>
+            width="50vw"
+            okLabel={strings.eventStore.namespaces.sequences.dialogs.compensate.okLabel}>
             <div className="p-fluid">
                 <div className="field">
-                    <label htmlFor="eventType">Event Type</label>
+                    <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.compensate.eventType}</label>
                     <input
                         id="eventType"
                         type="text"
                         className="p-inputtext"
-                        value={event.context.eventType.id}
+                        value={request.event.context.eventType.id}
                         disabled
                     />
                 </div>
                 <div className="field">
-                    <label htmlFor="content">Compensating Content (JSON)</label>
+                    <label htmlFor="content">{strings.eventStore.namespaces.sequences.dialogs.compensate.content}</label>
                     <InputTextarea
                         id="content"
                         value={contentStr}
@@ -75,6 +85,6 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
                     {jsonError && <small className="p-error">{jsonError}</small>}
                 </div>
             </div>
-        </CommandDialog>
+        </Dialog>
     );
 };

@@ -271,7 +271,8 @@
                 "empty": "No events found",
                 "actions": {
                     "appendEvent": "Append Event",
-                    "redact": "Redact"
+                    "redact": "Redact",
+                    "compensate": "Compensate"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -301,6 +302,12 @@
                         "title": "Redact Event",
                         "reason": "Reason for redaction",
                         "reasonPlaceholder": "Enter the reason for redacting this event"
+                    },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Event Type",
+                        "content": "Compensating Content (JSON)"
                     }
                 }
             },
