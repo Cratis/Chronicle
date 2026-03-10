@@ -160,7 +160,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public async Task<ProjectionPreview> Preview(string declaration, string eventSequenceId = "event-log")
+    public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
     {
         var result = await _servicesAccessor.Services.Projections.Preview(new Contracts.Projections.PreviewProjectionRequest
         {
@@ -172,11 +172,11 @@ public class Projections(
 
         if (result.Value1 is not null)
         {
-            throw new UnableToPreviewProjection(result.Value1.Errors.Select(e => e.Message));
+            throw new UnableToQueryProjection(result.Value1.Errors.Select(e => e.Message));
         }
 
-        var preview = result.Value0!;
-        return new ProjectionPreview([.. preview.ReadModelEntries]);
+        var queryResult = result.Value0!;
+        return new ProjectionQueryResult([.. queryResult.ReadModelEntries]);
     }
 
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(

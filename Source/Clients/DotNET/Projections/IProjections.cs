@@ -118,17 +118,17 @@ public interface IProjections
     Task Register();
 
     /// <summary>
-    /// Preview a projection declaration against the event log without registering it.
+    /// Query a projection declaration against the event log without registering it.
     /// </summary>
     /// <remarks>
     /// The declaration may omit the <c>=> ReadModelType</c> target — in that case the read model
     /// schema is inferred from the events used in the projection. An inferred read model can never
-    /// be registered as a permanent projection; preview-only declarations are exclusively for
+    /// be registered as a permanent projection; query-only declarations are exclusively for
     /// ad-hoc exploration.
     /// </remarks>
-    /// <param name="declaration">The Projection Declaration Language string to preview.</param>
+    /// <param name="declaration">The Projection Declaration Language string to query.</param>
     /// <param name="eventSequenceId">Optional event sequence identifier to query. Defaults to <c>"event-log"</c>.</param>
-    /// <returns>A <see cref="ProjectionPreview"/> containing the resulting read model entries.</returns>
-    /// <exception cref="UnableToPreviewProjection">Thrown when the declaration contains errors.</exception>
-    Task<ProjectionPreview> Preview(string declaration, string eventSequenceId = "event-log");
+    /// <returns>A <see cref="ProjectionQueryResult"/> containing the resulting read model entries.</returns>
+    /// <exception cref="UnableToQueryProjection">Thrown when the declaration contains errors.</exception>
+    Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log");
 }

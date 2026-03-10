@@ -10,7 +10,7 @@ The PDL allows you to:
 - Test and iterate on projections quickly in the Workbench
 - Create projections without recompiling your application
 - Visualize projection results immediately
-- Preview results ad-hoc without a read model target
+- Query event data ad-hoc without defining a read model type
 - Support all Chronicle projection capabilities
 
 ## Mental Model
@@ -62,7 +62,7 @@ projection User
 
 > **When to use inferred projections**
 >
-> Inferred projections are designed for **ad-hoc exploration and preview only**.
+> Inferred projections are designed for **ad-hoc querying only**.
 > They enable you to query the event log without first defining a read model type.
 > An inferred projection can never be registered as a permanent projection — you must always
 > specify an explicit `=> ReadModelType` when saving a projection.
@@ -82,7 +82,7 @@ projection BadProjection
 - **Indentation-based**: Structure defined by indentation (spaces only, no tabs)
 - **Event-driven**: Rules trigger when events occur
 - **AutoMap**: Automatically map matching property names
-- **Inferred schema**: Read model can be omitted for ad-hoc preview queries
+- **Inferred schema**: Read model can be omitted for ad-hoc queries (see `IProjections.Query()`)
 - **Expressions**: Support for property paths, event context, literals, and templates
 - **Operations**: Counters, arithmetic, assignments
 - **Relationships**: Joins and nested children

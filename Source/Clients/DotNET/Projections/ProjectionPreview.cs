@@ -1,10 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Projections;
+// This file is intentionally empty. The type was renamed to ProjectionQueryResult.
+#pragma warning disable RCS1093
 
-/// <summary>
-/// Represents the result of previewing a projection against the event log.
-/// </summary>
-/// <param name="ReadModelEntries">Collection of JSON representations of the resulting read model entries.</param>
-public record ProjectionPreview(IReadOnlyList<string> ReadModelEntries);
