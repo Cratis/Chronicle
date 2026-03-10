@@ -33,7 +33,12 @@ public class ProjectionValidator(
     /// <returns>The read model schema if validation succeeds, null otherwise.</returns>
     public JsonSchema? Validate(ProjectionNode projection, CompilerErrors errors)
     {
-        var readModelIdentifier = new ReadModelIdentifier(projection.ReadModelType.Name);
+        if (!projection.HasExplicitReadModel)
+        {
+            return ValidateAndInferSchema(projection, errors);
+        }
+
+        var readModelIdentifier = new ReadModelIdentifier(projection.ReadModelType!.Name);
 
         if (!_readModelLookup.TryGetValue(readModelIdentifier, out var readModelDefinition))
         {
@@ -46,6 +51,34 @@ public class ProjectionValidator(
         ValidateDuplicateEvents(projection.Directives, errors);
         ValidateDirectives(projection.Directives, readModelSchema, errors);
         return readModelSchema;
+    }
+
+    /// <summary>
+    /// Validates a projection without an explicit read model and infers the schema from event types.
+    /// </summary>
+    /// <param name="projection">The projection to validate.</param>
+    /// <param name="errors">The compiler errors collection to add errors to.</param>
+    /// <returns>The inferred read model schema if validation succeeds, null otherwise.</returns>
+    public JsonSchema? ValidateAndInferSchema(ProjectionNode projection, CompilerErrors errors)
+    {
+        ValidateDuplicateEvents(projection.Directives, errors);
+
+        var inferredProperties = new Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)>(StringComparer.Ordinal);
+
+        CollectEventProperties(projection.Directives, inferredProperties, errors);
+
+        if (errors.HasErrors)
+        {
+            return null;
+        }
+
+        var schema = new JsonSchema { Type = JsonObjectType.Object };
+        foreach (var (name, (type, format, _, _)) in inferredProperties)
+        {
+            schema.Properties[name] = new JsonSchemaProperty { Type = type, Format = format };
+        }
+
+        return schema;
     }
 
     static string LowercaseFirstLetter(string value)
@@ -521,5 +554,70 @@ public class ProjectionValidator(
         // Allow numeric conversions
         var numericTypesForNonNullable = new[] { JsonObjectType.Integer, JsonObjectType.Number };
         return numericTypesForNonNullable.Contains(targetType) && numericTypesForNonNullable.Contains(sourceType);
+    }
+
+    void CollectEventProperties(
+        IReadOnlyList<ProjectionDirective> directives,
+        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> inferredProperties,
+        CompilerErrors errors)
+    {
+        foreach (var directive in directives)
+        {
+            switch (directive)
+            {
+                case FromEventBlock fromEvent:
+                    CollectEventTypeProperties(fromEvent.EventType, inferredProperties, errors);
+                    break;
+                case MultiFromEventBlock multiFromEvent:
+                    foreach (var block in multiFromEvent.Blocks)
+                    {
+                        CollectEventTypeProperties(block.EventType, inferredProperties, errors);
+                    }
+
+                    break;
+                case RemoveWithDirective removeWith:
+                    ValidateEventTypeExists(removeWith.EventType, errors);
+                    break;
+                case RemoveWithJoinDirective removeWithJoin:
+                    ValidateEventTypeExists(removeWithJoin.EventType, errors);
+                    break;
+            }
+        }
+    }
+
+    void CollectEventTypeProperties(
+        TypeRef eventTypeRef,
+        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> inferredProperties,
+        CompilerErrors errors)
+    {
+        var eventType = EventType.Parse(eventTypeRef.Name);
+
+        if (!_eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+        {
+            errors.Add($"Event type '{eventType.Id}' not found", eventTypeRef.Line, eventTypeRef.Column);
+            return;
+        }
+
+        foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
+        {
+            var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
+            var propFormat = prop.Format;
+
+            if (inferredProperties.TryGetValue(name, out var existing))
+            {
+                // Check type compatibility between events that share property names
+                if (!AreTypesCompatible(existing.Type, propType))
+                {
+                    errors.Add(
+                        $"Property '{name}' has incompatible types across events: '{existing.Type}' vs '{propType}'",
+                        eventTypeRef.Line,
+                        eventTypeRef.Column);
+                }
+            }
+            else
+            {
+                inferredProperties[name] = (propType, propFormat, eventTypeRef.Line, eventTypeRef.Column);
+            }
+        }
     }
 }

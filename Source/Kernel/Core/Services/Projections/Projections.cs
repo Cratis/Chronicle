@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.Primitives;
@@ -100,35 +101,45 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
-                // Find the read model definition - need to handle potential empty schemas gracefully
-                var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
+                ReadModelDefinition? readModelDefinition;
+                var isInferred = definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred;
 
-                if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
+                if (isInferred)
                 {
-                    return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(
-                        new ContractProjectionDefinitionParsingErrors
-                        {
-                            Errors = [new ProjectionDeclarationSyntaxError
-                            {
-                                Line = 1,
-                                Column = 1,
-                                Message = $"Read model '{definition.ReadModel}' not found"
-                            }]
-                        });
+                    // Build an inferred read model definition from the event type schemas
+                    readModelDefinition = CreateInferredReadModelDefinition(definition.Identifier.Value, definition.From.Keys, eventTypeSchemas);
                 }
+                else
+                {
+                    // Find the read model definition - need to handle potential empty schemas gracefully
+                    readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
-                definition = definition with { ReadModel = readModelDefinition.Identifier };
+                    if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
+                    {
+                        return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(
+                            new ContractProjectionDefinitionParsingErrors
+                            {
+                                Errors = [new ProjectionDeclarationSyntaxError
+                                {
+                                    Line = 1,
+                                    Column = 1,
+                                    Message = $"Read model '{definition.ReadModel}' not found"
+                                }]
+                            });
+                    }
+
+                    definition = definition with { ReadModel = readModelDefinition.Identifier };
+                }
 
                 var projectionId = ProjectionId.CreatePreviewId();
                 var projectionKey = new ProjectionKey(projectionId, request.EventStore);
                 var projection = grainFactory.GetGrain<IProjection>(projectionKey);
                 await projection.SetDefinition(definition);
 
-                // Get event types - use preview method if we have a draft read model
                 IEnumerable<EventType> eventTypes;
-                if (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier)
+                if (isInferred || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
                 {
-                    eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
+                    eventTypes = await projection.GetEventTypesForPreview(readModelDefinition!);
                 }
                 else
                 {
@@ -145,23 +156,22 @@ internal sealed class Projections(
                     events.AddRange(cursor.Current);
                 }
 
-                // Process events - use preview method if we have a draft read model
                 IEnumerable<System.Dynamic.ExpandoObject> result;
-                if (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier)
+                if (isInferred || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
                 {
-                    result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition);
+                    result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition!);
                 }
                 else
                 {
                     result = await projection.Process(request.Namespace, events);
                 }
 
-                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition!.GetSchemaForLatestGeneration()).ToString()).ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
                 {
                     ReadModelEntries = readModels,
-                    ReadModel = readModelDefinition.ToContract()
+                    ReadModel = readModelDefinition!.ToContract()
                 });
             },
             errors => Task.FromResult(new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(errors.ToContract())));
@@ -396,6 +406,53 @@ internal sealed class Projections(
             identifier,
             draft.ContainerName,
             displayName,
+            Concepts.ReadModels.ReadModelOwner.Server,
+            Concepts.ReadModels.ReadModelSource.User,
+            Concepts.ReadModels.ReadModelObserverType.Projection,
+            Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+            new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
+            schemas,
+            []);
+    }
+
+    static ReadModelDefinition CreateInferredReadModelDefinition(
+        string projectionName,
+        IEnumerable<EventType> eventTypes,
+        IEnumerable<EventTypeSchema> eventTypeSchemas)
+    {
+        var eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
+        var inferredSchema = new JsonSchema { Type = JsonObjectType.Object, Title = projectionName };
+
+        var seenProperties = new Dictionary<string, JsonObjectType>(StringComparer.Ordinal);
+
+        foreach (var eventType in eventTypes)
+        {
+            if (!eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            {
+                continue;
+            }
+
+            foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
+            {
+                if (!seenProperties.ContainsKey(name))
+                {
+                    var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
+                    seenProperties[name] = propType;
+                    inferredSchema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
+                }
+            }
+        }
+
+        var identifier = new Concepts.ReadModels.ReadModelIdentifier(projectionName);
+        var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
+        {
+            { Concepts.ReadModels.ReadModelGeneration.First, inferredSchema }
+        };
+
+        return new ReadModelDefinition(
+            identifier,
+            projectionName,
+            projectionName,
             Concepts.ReadModels.ReadModelOwner.Server,
             Concepts.ReadModels.ReadModelSource.User,
             Concepts.ReadModels.ReadModelObserverType.Projection,

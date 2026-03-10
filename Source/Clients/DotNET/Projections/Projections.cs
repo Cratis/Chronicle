@@ -159,6 +159,26 @@ public class Projections(
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<ProjectionPreview> Preview(string declaration, string eventSequenceId = "event-log")
+    {
+        var result = await _servicesAccessor.Services.Projections.Preview(new Contracts.Projections.PreviewProjectionRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = eventSequenceId,
+            Declaration = declaration
+        });
+
+        if (result.Value1 is not null)
+        {
+            throw new UnableToPreviewProjection(result.Value1.Errors.Select(e => e.Message));
+        }
+
+        var preview = result.Value0!;
+        return new ProjectionPreview([.. preview.ReadModelEntries]);
+    }
+
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(
         IEventTypes eventTypes,
         IClientArtifactsProvider clientArtifacts,

@@ -10,6 +10,7 @@ The PDL allows you to:
 - Test and iterate on projections quickly in the Workbench
 - Create projections without recompiling your application
 - Visualize projection results immediately
+- Preview results ad-hoc without a read model target
 - Support all Chronicle projection capabilities
 
 ## Mental Model
@@ -24,7 +25,9 @@ The PDL allows you to:
 
 ## Basic Structure
 
-Every projection definition starts with a projection declaration and contains one or more directives or blocks:
+Every projection definition starts with a projection declaration and contains one or more directives or blocks.
+
+### With an explicit read model target
 
 ```pdl
 projection {Name} => {ReadModelType}
@@ -41,11 +44,45 @@ projection User => UserReadModel
     IsActive = true
 ```
 
+### Without an explicit read model (inferred)
+
+The `=> ReadModelType` part is optional. When omitted, the read model schema is **inferred** from the events used in the projection — Chronicle automatically derives the target type from the event properties.
+
+```pdl
+projection {Name}
+  {directives and blocks}
+```
+
+Example:
+
+```pdl
+projection User
+  from UserRegistered
+```
+
+> **When to use inferred projections**
+>
+> Inferred projections are designed for **ad-hoc exploration and preview only**.
+> They enable you to query the event log without first defining a read model type.
+> An inferred projection can never be registered as a permanent projection — you must always
+> specify an explicit `=> ReadModelType` when saving a projection.
+
+#### Type compatibility
+
+When multiple `from` blocks contribute the same property to the inferred schema, their property types must be compatible. If two events define a property with the same name but different incompatible types, the compiler reports an error:
+
+```pdl
+projection BadProjection
+  from EventA   // EventA.value is string
+  from EventB   // EventB.value is int  → error: incompatible types
+```
+
 ## Key Features
 
 - **Indentation-based**: Structure defined by indentation (spaces only, no tabs)
 - **Event-driven**: Rules trigger when events occur
 - **AutoMap**: Automatically map matching property names
+- **Inferred schema**: Read model can be omitted for ad-hoc preview queries
 - **Expressions**: Support for property paths, event context, literals, and templates
 - **Operations**: Counters, arithmetic, assignments
 - **Relationships**: Joins and nested children
