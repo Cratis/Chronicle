@@ -1,0 +1,9 @@
+<Project>
+    <!-- Tools are build-time executables that don't ship as NuGet packages.
+         Import the root Directory.Build.props directly to avoid inheriting the
+         Source-level settings (e.g. the Cratis.Fundamentals implicit reference),
+         which bring in Humanizer.Core 3.0.8 whose buildTransitive targets file
+         uses item-metadata conditions in a static ItemGroup - invalid in .NET 10
+         MSBuild and causes 'dotnet run' to report 'not a valid project file'. -->
+    <Import Project="$(MSBuildThisFileDirectory)../../Directory.Build.props" />
+</Project>
