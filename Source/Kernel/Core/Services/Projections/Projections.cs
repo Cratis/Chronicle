@@ -102,9 +102,9 @@ internal sealed class Projections(
             async definition =>
             {
                 ReadModelDefinition? readModelDefinition;
-                var isInferred = definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred;
+                var isInferredReadModel = definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred;
 
-                if (isInferred)
+                if (isInferredReadModel)
                 {
                     // Build an inferred read model definition from the event type schemas
                     readModelDefinition = CreateInferredReadModelDefinition(definition.Identifier.Value, definition.From.Keys, eventTypeSchemas);
@@ -137,7 +137,7 @@ internal sealed class Projections(
                 await projection.SetDefinition(definition);
 
                 IEnumerable<EventType> eventTypes;
-                if (isInferred || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
+                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
                 {
                     eventTypes = await projection.GetEventTypesForPreview(readModelDefinition!);
                 }
@@ -157,7 +157,7 @@ internal sealed class Projections(
                 }
 
                 IEnumerable<System.Dynamic.ExpandoObject> result;
-                if (isInferred || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
+                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
                 {
                     result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition!);
                 }
@@ -423,7 +423,9 @@ internal sealed class Projections(
         var eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
         var inferredSchema = new JsonSchema { Type = JsonObjectType.Object, Title = projectionName };
 
-        var seenProperties = new Dictionary<string, JsonObjectType>(StringComparer.Ordinal);
+        // Track seen property names to take only the first occurrence of each.
+        // Type compatibility is already validated by the compiler before reaching this point.
+        var seenPropertyNames = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var eventType in eventTypes)
         {
@@ -434,10 +436,9 @@ internal sealed class Projections(
 
             foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
             {
-                if (!seenProperties.ContainsKey(name))
+                if (seenPropertyNames.Add(name))
                 {
                     var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
-                    seenProperties[name] = propType;
                     inferredSchema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
                 }
             }

@@ -63,9 +63,9 @@ public class ProjectionValidator(
     {
         ValidateDuplicateEvents(projection.Directives, errors);
 
-        var inferredProperties = new Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)>(StringComparer.Ordinal);
+        var aggregatedEventProperties = new Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)>(StringComparer.Ordinal);
 
-        CollectEventProperties(projection.Directives, inferredProperties, errors);
+        CollectEventProperties(projection.Directives, aggregatedEventProperties, errors);
 
         if (errors.HasErrors)
         {
@@ -73,7 +73,7 @@ public class ProjectionValidator(
         }
 
         var schema = new JsonSchema { Type = JsonObjectType.Object };
-        foreach (var (name, (type, format, _, _)) in inferredProperties)
+        foreach (var (name, (type, format, _, _)) in aggregatedEventProperties)
         {
             schema.Properties[name] = new JsonSchemaProperty { Type = type, Format = format };
         }
@@ -558,7 +558,7 @@ public class ProjectionValidator(
 
     void CollectEventProperties(
         IReadOnlyList<ProjectionDirective> directives,
-        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> inferredProperties,
+        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> aggregatedEventProperties,
         CompilerErrors errors)
     {
         foreach (var directive in directives)
@@ -566,12 +566,12 @@ public class ProjectionValidator(
             switch (directive)
             {
                 case FromEventBlock fromEvent:
-                    CollectEventTypeProperties(fromEvent.EventType, inferredProperties, errors);
+                    CollectEventTypeProperties(fromEvent.EventType, aggregatedEventProperties, errors);
                     break;
                 case MultiFromEventBlock multiFromEvent:
                     foreach (var block in multiFromEvent.Blocks)
                     {
-                        CollectEventTypeProperties(block.EventType, inferredProperties, errors);
+                        CollectEventTypeProperties(block.EventType, aggregatedEventProperties, errors);
                     }
 
                     break;
@@ -587,7 +587,7 @@ public class ProjectionValidator(
 
     void CollectEventTypeProperties(
         TypeRef eventTypeRef,
-        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> inferredProperties,
+        Dictionary<string, (JsonObjectType Type, string? Format, int Line, int Column)> aggregatedEventProperties,
         CompilerErrors errors)
     {
         var eventType = EventType.Parse(eventTypeRef.Name);
@@ -603,20 +603,23 @@ public class ProjectionValidator(
             var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
             var propFormat = prop.Format;
 
-            if (inferredProperties.TryGetValue(name, out var existing))
+            if (aggregatedEventProperties.TryGetValue(name, out var existing))
             {
-                // Check type compatibility between events that share property names
-                if (!AreTypesCompatible(existing.Type, propType))
+                // Check type compatibility between events that share property names.
+                // Two properties are incompatible when their base types differ; format differences
+                // (e.g. date-time vs plain string) are also considered incompatible.
+                if (!AreTypesCompatible(existing.Type, propType) ||
+                    existing.Format != propFormat)
                 {
                     errors.Add(
-                        $"Property '{name}' has incompatible types across events: '{existing.Type}' vs '{propType}'",
+                        $"Property '{name}' has incompatible types across events: '{existing.Type}' (format: '{existing.Format}') vs '{propType}' (format: '{propFormat}')",
                         eventTypeRef.Line,
                         eventTypeRef.Column);
                 }
             }
             else
             {
-                inferredProperties[name] = (propType, propFormat, eventTypeRef.Line, eventTypeRef.Column);
+                aggregatedEventProperties[name] = (propType, propFormat, eventTypeRef.Line, eventTypeRef.Column);
             }
         }
     }
