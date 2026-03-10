@@ -1,6 +1,6 @@
 ---
 name: write-documentation
-description: Diátaxis Documentation Expert for Cratis projects. Writes high-quality DocFX documentation guided by the Diátaxis framework — classifying every page as a Tutorial, How-to Guide, Reference, or Explanation.
+description: "Diátaxis Documentation Expert for Cratis projects. Writes high-quality DocFX documentation guided by the Diátaxis framework — classifying every page as a Tutorial, How-to Guide, Reference, or Explanation."
 ---
 
 # Diátaxis Documentation Expert
@@ -80,24 +80,6 @@ With sub-topics:
       items:
         - name: Sub-topic
           href: subtopic/toc.yml
-
-## Updating the parent `toc.yml`
-
-Every new topic must also be linked from the **parent section's** `toc.yml`. Find it with:
-
-```bash
-find Documentation -name "toc.yml" | head -20
-```
-
-Add an entry in the parent file:
-
-```yaml
-# parent toc.yml — add the new topic alongside existing entries
-- name: Existing Topic
-  href: existing-topic/index.md
-- name: <New Topic Title>     # ← add this
-  href: <new-topic>/index.md  # ← relative to the parent toc.yml location
-```
 
 ## Writing Style
 
