@@ -7,22 +7,20 @@ using Cratis.Chronicle.Concepts.EventSequences;
 namespace Cratis.Chronicle.Events.EventSequences;
 
 /// <summary>
-/// Represents the fact that an event in a user sequence has been compensated.
-/// When a user-sequence event is compensated, a new entry is appended to its <c>Compensations</c> array
-/// in storage without changing the event's type. This record is a companion concept to
-/// <see cref="EventCompensationRequested"/> (the system event that triggers the operation) and is useful
-/// for tracing and logging.
+/// System event appended to the System event sequence when an event is compensated.
+/// Its purpose is to record that an event at a specific sequence number in a specific event sequence
+/// was compensated, along with the compensating content.
+/// A reactor handles this event and performs the actual in-place update (pushing to the
+/// <c>Compensations</c> array of the original event in storage without altering its type).
+/// The compensation audit context (who, when, correlation) is carried in the event's <see cref="EventContext"/>.
 /// </summary>
-/// <remarks>
-/// This is NOT a Chronicle system event (<c>[EventType]</c> is intentionally absent) — it is a concept
-/// record for conveying compensation identity in tracing scenarios.
-/// See also: <see cref="EventCompensationRequested"/>, which is the <c>[EventType]</c> system event that
-/// triggers the reactor to perform the actual in-place update.
-/// </remarks>
-/// <param name="Sequence"><see cref="EventSequenceId"/> the event was in.</param>
-/// <param name="SequenceNumber"><see cref="EventSequenceNumber"/> of the compensated event.</param>
-/// <param name="EventType">The <see cref="EventType"/> of the compensated event.</param>
+/// <param name="Sequence"><see cref="EventSequenceId"/> the event to compensate is in.</param>
+/// <param name="SequenceNumber"><see cref="EventSequenceNumber"/> of the event to compensate.</param>
+/// <param name="EventType">The <see cref="EventType"/> of the event being compensated.</param>
+/// <param name="Content">The compensating event content as a JSON string.</param>
+[EventType, AllEventStores]
 public record EventCompensated(
     EventSequenceId Sequence,
     EventSequenceNumber SequenceNumber,
-    EventType EventType);
+    EventType EventType,
+    string Content);

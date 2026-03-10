@@ -121,7 +121,7 @@ internal sealed class EventSequences(
         var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
         await systemEventSequence.Append(
             (EventSourceId)request.EventSequenceId,
-            new EventCompensationRequested(
+            new EventCompensated(
                 request.EventSequenceId,
                 request.SequenceNumber,
                 request.EventType.ToChronicle(),

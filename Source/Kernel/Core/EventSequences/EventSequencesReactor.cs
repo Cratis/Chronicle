@@ -63,14 +63,14 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     }
 
     /// <summary>
-    /// Performs the actual compensation of an event when an <see cref="EventCompensationRequested"/> system event is observed.
+    /// Performs the actual compensation of an event when an <see cref="EventCompensated"/> system event is observed.
     /// The audit context (who triggered it, when, which correlation) is carried in the <paramref name="context"/>.
     /// </summary>
     /// <param name="event">The system event containing the target sequence, event type and new content.</param>
     /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the compensation audit context.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the compensation content is null or contains invalid JSON.</exception>
-    public async Task CompensationRequested(EventCompensationRequested @event, EventContext context)
+    public async Task Compensated(EventCompensated @event, EventContext context)
     {
         logger.Compensating(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber, @event.EventType);
 
