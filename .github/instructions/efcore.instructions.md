@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.cs"
+applyTo: "**/*Context*.cs, **/Database/**/*.cs, **/Migrations/**/*.cs"
 ---
 
 # Entity Framework Core Instructions
