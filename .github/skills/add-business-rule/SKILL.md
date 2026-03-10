@@ -99,23 +99,6 @@ public class UniqueProjectName : IConstraint
 
 Constraints are discovered and enforced automatically — no registration or attribute on the command needed.
 
-## Simple validators (`CommandValidator<T>`)
-
-For format, range, and required-field rules that do not need event-sourced state — evaluated before `Handle()` runs:
-
-```csharp
-public class RegisterAuthorValidator : CommandValidator<RegisterAuthor>
-{
-    public RegisterAuthorValidator()
-    {
-        RuleFor(c => c.Name).NotEmpty().WithMessage("Name is required.");
-        RuleFor(c => c.Name).MaximumLength(100).WithMessage("Name must be 100 characters or fewer.");
-    }
-}
-```
-
-Validators are discovered automatically — no registration needed. If any rule fails, Chronicle returns an error result and `Handle()` is never called.
-
 ## After adding
 
 1. Add a spec for the failure case — see `write-specs` skill

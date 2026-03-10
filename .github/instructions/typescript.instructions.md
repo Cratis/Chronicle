@@ -1,26 +1,10 @@
 ---
-applyTo: "**/*.ts, **/*.tsx"
+applyTo: "**/*.ts,**/*.tsx"
 ---
 
 # TypeScript Conventions
 
 TypeScript's type system is the primary tool for catching bugs before they reach production. Every rule here pushes toward maximum compiler coverage and self-documenting code. If the types are right, the code almost writes itself.
-
-## Variables and Naming
-
-- Prefer `const` over `let` over `var`.
-- Never use shortened or abbreviated names for variables, parameters, or properties.
-  - Use full descriptive names: `deltaX` not `dx`, `index` not `idx`, `event` not `e`, `previous` not `prev`, `direction` not `dir`, `position` not `pos`, `contextMenu` not `ctx`/`ctxMenu`.
-  - The only acceptable short names are well-established domain terms (e.g. `id`, `url`, `min`, `max`).
-- Never leave unused import statements in the code.
-- Always ensure the code compiles without warnings — run `yarn compile` to verify (no output means success).
-
-## Folder Structure and Naming
-
-- Do not prefix a file, component, type, or symbol with the name of its containing folder or concept — use folder structure to provide that context instead.
-- Favor functional folder structure over technical folder structure.
-  - Group files by the feature or concept they belong to, not by their technical role.
-  - Avoid folders like `components/`, `hooks/`, `utils/`, `types/` at the feature level.
 
 ## Enums over Magic Strings
 
@@ -57,37 +41,9 @@ Each type gets its own file because it makes the codebase navigable — finding 
 `any` disables the compiler — the one tool that catches bugs for free. Every `any` is a hole in the safety net. Use `unknown` and narrow with type guards instead.
 
 - Never use `any` — use `unknown`, `Record<string, unknown>`, or proper generic constraints.
-- Use proper generic constraints: `<TCommand extends object = object>` not `= any`.
-- Use `unknown` as the default generic parameter: `<T = unknown>` not `<T = any>`.
 - Prefer `value as unknown as TargetType` over `value as any`.
-- For objects with dynamic properties: `(obj as unknown as { prop: Type }).prop`.
-
-### Event Handlers
-
+- Use `unknown` as default generic parameter instead of `any`.
 - React synthetic events (`React.MouseEvent<Element, MouseEvent>`) and DOM events (`MouseEvent`) are different types — don't mix them.
-- Convert between them: `nativeEvent as unknown as React.MouseEvent`.
-- Use `e.preventDefault?.()` instead of `(e as any).preventDefault?.()`.
-
-### Generic React Components
-
-- Use `React.ComponentType<Props>` for React component types.
-- For Storybook components with no props: `React.ComponentType<Record<string, never>>`.
-- When converting component imports in Storybook: always `as unknown as` to avoid type mismatch errors.
-- Properly type story args — never use `any`.
-
-### External Libraries
-
-- Use proper library types when available (e.g. PIXI types, not `any`).
-- Use specific property types: `{ canvas?: HTMLCanvasElement }` instead of `any`.
-- When library generics have strict constraints, thread types through `unknown`: `props.command as unknown as Constructor<Command<...>>`.
-- Extract tuple results explicitly rather than destructuring when type assertions are needed.
-
-### Unknown Values
-
-- Add type guards before using function parameters of unknown type: `if (typeof accessor !== 'function') return ''`.
-- Type parameters with fallbacks: `function<T = unknown>(accessor: ((obj: T) => unknown) | unknown)`.
-- Cast unknown objects to record before property access: `(obj as Record<string, unknown>).items`.
-- Use `String(value)` for string conversions; `new Date(value as string | number | Date)` for dates.
 
 ## Localised Strings
 
@@ -145,22 +101,6 @@ For attribute strings (e.g. `title`, `placeholder`, `aria-label`):
 
 - **Never** use plain string literals for user-visible text in JSX or attribute props. This includes `label`, `header`, `placeholder`, `title`, `aria-label`, `emptyMessage`, and any visible text nodes.
 - Only constant, non-localised values are allowed as raw strings (CSS class names, `key` props, internal identifiers).
-
-## File Header
-
-Every TypeScript file must start with:
-
-```typescript
-// Copyright (c) Cratis. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-```
-
-## Generated Files
-
-**Never edit generated files.** Files produced by the proxy generator (`dotnet build`), code scaffolding tools, or any other automated tool must not be modified by hand — in any language. Generated files are overwritten on the next build, so hand-edits are silently lost and create false confidence that a fix is in place.
-
-- If the generated output is wrong, fix the **source** (the C# record, the template, or the generator configuration) and rebuild.
-- Generated TypeScript proxy files (commands, queries, observable queries) are always regenerated from C# sources. Never edit them directly.
 
 ## Arc Frontend Patterns
 
