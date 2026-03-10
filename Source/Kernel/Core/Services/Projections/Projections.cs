@@ -207,6 +207,49 @@ internal sealed class Projections(
             {
                 var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
+                // When the declaration has no explicit => ReadModel, the compiler returns ReadModelIdentifier.Inferred.
+                // If the caller has provided a DraftReadModel (name for the new type), infer the schema from events
+                // and build a full read model definition so that we can register both the type and the projection.
+                if (definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred)
+                {
+                    if (draftDefinition is null)
+                    {
+                        return new SaveProjectionResult
+                        {
+                            Errors = [new ProjectionDeclarationSyntaxError
+                            {
+                                Line = 1,
+                                Column = 1,
+                                Message = "Cannot save a projection without a read model type. Provide a read model name."
+                            }]
+                        };
+                    }
+
+                    var inferredSchema = InferSchema(definition.From.Keys, eventTypeSchemas, draftDefinition.DisplayName);
+                    var inferredSchemas = new Dictionary<ReadModelGeneration, JsonSchema>
+                    {
+                        { Concepts.ReadModels.ReadModelGeneration.First, inferredSchema }
+                    };
+
+                    readModelDefinition = new ReadModelDefinition(
+                        draftDefinition.Identifier,
+                        draftDefinition.ContainerName,
+                        draftDefinition.DisplayName,
+                        Concepts.ReadModels.ReadModelOwner.Server,
+                        Concepts.ReadModels.ReadModelSource.User,
+                        Concepts.ReadModels.ReadModelObserverType.Projection,
+                        Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+                        new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
+                        inferredSchemas,
+                        []);
+
+                    // Point the draft registration at the same (inferred-schema) definition.
+                    draftDefinition = readModelDefinition;
+
+                    // Redirect the projection definition to the user-provided read model identifier.
+                    definition = definition with { ReadModel = draftDefinition.Identifier };
+                }
+
                 if (readModelDefinition is null || readModelDefinition.Schemas.Count == 0)
                 {
                     return new SaveProjectionResult
@@ -420,30 +463,7 @@ internal sealed class Projections(
         IEnumerable<EventType> eventTypes,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        var eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
-        var inferredSchema = new JsonSchema { Type = JsonObjectType.Object, Title = projectionName };
-
-        // Track seen property names to take only the first occurrence of each.
-        // Type compatibility is already validated by the compiler before reaching this point.
-        var seenPropertyNames = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var eventType in eventTypes)
-        {
-            if (!eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
-            {
-                continue;
-            }
-
-            foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
-            {
-                if (seenPropertyNames.Add(name))
-                {
-                    var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
-                    inferredSchema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
-                }
-            }
-        }
-
+        var inferredSchema = InferSchema(eventTypes, eventTypeSchemas, projectionName);
         var identifier = new Concepts.ReadModels.ReadModelIdentifier(projectionName);
         var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
         {
@@ -461,5 +481,46 @@ internal sealed class Projections(
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
             schemas,
             []);
+    }
+
+    /// <summary>
+    /// Builds a <see cref="JsonSchema"/> by aggregating properties from the supplied event type schemas.
+    /// Properties are taken from the first event type that defines them; type compatibility is assumed to
+    /// have been validated by the compiler before this method is called.
+    /// </summary>
+    /// <param name="eventTypes">The event types referenced in the projection.</param>
+    /// <param name="eventTypeSchemas">All available event-type schemas for the event store.</param>
+    /// <param name="title">The schema title (typically the projection or read model name).</param>
+    /// <returns>An inferred <see cref="JsonSchema"/> with <see cref="JsonObjectType.Object"/> type.</returns>
+    static JsonSchema InferSchema(
+        IEnumerable<EventType> eventTypes,
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        string title)
+    {
+        var eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
+        var schema = new JsonSchema { Type = JsonObjectType.Object, Title = title };
+
+        // Track seen property names to take only the first occurrence of each.
+        // Type compatibility is already validated by the compiler before reaching this point.
+        var seenPropertyNames = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var eventType in eventTypes)
+        {
+            if (!eventTypeLookup.TryGetValue(eventType, out var eventTypeSchema))
+            {
+                continue;
+            }
+
+            foreach (var (name, prop) in eventTypeSchema.Schema.Properties)
+            {
+                if (seenPropertyNames.Add(name))
+                {
+                    var propType = prop.ActualTypeSchema?.Type ?? prop.Type;
+                    schema.Properties[name] = new JsonSchemaProperty { Type = propType, Format = prop.Format };
+                }
+            }
+        }
+
+        return schema;
     }
 }

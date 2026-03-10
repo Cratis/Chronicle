@@ -216,6 +216,11 @@
                     "unsavedChanges": {
                         "title": "Unsaved Changes",
                         "message": "You have unsaved changes. Do you want to continue and discard them?"
+                    },
+                    "saveWithInferredReadModel": {
+                        "title": "Create Read Model",
+                        "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
+                        "readModelNameLabel": "Read Model Name"
                     }
                 }
             }
