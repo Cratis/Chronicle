@@ -27,6 +27,7 @@
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+        <Project Path="Source/Tools/Cli/Cli.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
