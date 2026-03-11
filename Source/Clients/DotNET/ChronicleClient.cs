@@ -108,12 +108,13 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _artifactActivator = result.ArtifactActivator;
 
-        var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(_loggerFactory.CreateLogger<ConnectionLifecycle>());
 
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
         var disableTls = options.Tls.IsDisabled || (string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls);
+
+        var tokenProvider = CreateTokenProvider(options, disableTls);
 
         _connection = new ChronicleConnection(
             options.ConnectionString,
@@ -256,7 +257,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options)
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool disableTls)
     {
         if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -265,7 +266,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 options.ConnectionString.Username ?? string.Empty,
                 options.ConnectionString.Password ?? string.Empty,
                 options.ManagementPort,
-                options.Tls.IsDisabled,
+                disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
         }
 
