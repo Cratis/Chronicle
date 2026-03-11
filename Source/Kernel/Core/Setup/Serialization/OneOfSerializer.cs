@@ -40,7 +40,7 @@ public class OneOfSerializer(ICodecProvider codecProvider) : IGeneralizedCodec, 
             {
                 return true;
             }
-            current = current.BaseType!;
+            current = current.BaseType;
         }
 
         return null;

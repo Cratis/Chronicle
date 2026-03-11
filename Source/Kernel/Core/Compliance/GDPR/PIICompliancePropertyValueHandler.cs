@@ -31,7 +31,7 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         var valueAsString = value.ToString();
         var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
         var encryptedAsBase64 = Convert.ToBase64String(encrypted);
-        return JsonValue.Create(encryptedAsBase64)!;
+        return JsonValue.Create(encryptedAsBase64);
     }
 
     /// <inheritdoc/>
@@ -42,6 +42,6 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         var encrypted = Convert.FromBase64String(encryptedAsString);
         var decrypted = _encryption.Decrypt(encrypted, key);
         var decryptedAsString = Encoding.UTF8.GetString(decrypted);
-        return JsonValue.Create(decryptedAsString)!;
+        return JsonValue.Create(decryptedAsString);
     }
 }
