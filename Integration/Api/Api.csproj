@@ -25,12 +25,9 @@
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <MakeDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <ItemGroup>
-            <_ServerFiles Include="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/**/*"
-                          Exclude="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/out/**" />
-        </ItemGroup>
-        <Copy SourceFiles="@(_ServerFiles)"
-              DestinationFolder="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/%(RecursiveDir)" />
+        <!-- Publish the server with DEVELOPMENT symbol so dev-tools endpoints are available in the Docker image -->
+        <Exec Command="dotnet publish -c $(Configuration) -p:DefineConstants=DEVELOPMENT -o out"
+              WorkingDirectory="$(MSBuildThisFileDirectory)../../Source/Kernel/Server" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 
