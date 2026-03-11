@@ -68,7 +68,7 @@ public class ReadModelDefinitionsStorage(
         Dictionary<ReadModelGeneration, JsonSchema> schemas = new();
         foreach (var (key, schema) in readModel.Schemas)
         {
-            var generation = (ReadModelGeneration)key!;
+            var generation = (ReadModelGeneration)key;
             schemas[generation] = await JsonSchema.FromJsonAsync(schema.ToJson());
         }
         return new(

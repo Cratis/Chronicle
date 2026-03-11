@@ -17,7 +17,6 @@ namespace GrpcClients;
 public class MethodBodyReader
 {
     readonly byte[] _il = [];
-    readonly MethodInfo _mi = null!;
     readonly IEnumerable<FieldInfo> _fields;
 
     public MethodBodyReader(Module module, IEnumerable<FieldInfo> fields, string ilArrayAsString)
@@ -233,7 +232,7 @@ public class MethodBodyReader
                     // now we call the ResolveType always using the generic attributes type in order
                     // to support decompilation of generic methods and classes
                     // thanks to the guys from code project who commented on this missing feature
-                    instruction.Operand = module.ResolveType(metadataToken, _mi.DeclaringType!.GetGenericArguments(), _mi.GetGenericArguments());
+                    instruction.Operand = module.ResolveType(metadataToken, null, null);
                     break;
 
                 case OperandType.InlineI:
