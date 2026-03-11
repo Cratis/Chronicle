@@ -33,6 +33,9 @@ internal sealed class ChronicleInitializer(
     /// <inheritdoc/>
     public async Task Initialize(CancellationToken cancellationToken = default)
     {
+        // Ensure the System event store is registered in storage so it appears in GetEventStores().
+        _ = storage.GetEventStore(EventStoreName.System);
+
         await grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault();
 
         // Register System reactors first so ReactorsReactor can process EventStoreAdded/NamespaceAdded
