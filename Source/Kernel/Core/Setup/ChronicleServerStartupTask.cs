@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patching;
@@ -13,7 +12,7 @@ namespace Orleans.Hosting;
 /// Represents a startup task for Chronicle.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
-/// <param name="initializer"><see cref="IChronicleInitializer"/> for bootstrapping Chronicle artifacts.</param>
+/// <param name="initializer"><see cref="Cratis.Chronicle.Setup.IChronicleInitializer"/> for bootstrapping Chronicle artifacts.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,

@@ -4,7 +4,6 @@
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 
