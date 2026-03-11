@@ -10,7 +10,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using Orleans.Runtime;
 using KernelEventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using KernelEventStoreNamespaceName = Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 

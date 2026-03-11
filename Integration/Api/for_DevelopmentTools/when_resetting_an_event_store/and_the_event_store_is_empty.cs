@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_a
 /// Verifies that resetting an event store removes it from the system.
 /// This test passes only when the Chronicle server is built in Development (Debug) mode.
 /// </summary>
+/// <param name="context">The spec context.</param>
 [Collection(ChronicleCollection.Name)]
 public class and_the_event_store_is_empty(context context) : Given<context>(context)
 {

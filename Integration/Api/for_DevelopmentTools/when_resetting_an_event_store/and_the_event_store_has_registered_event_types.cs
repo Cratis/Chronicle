@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries;
-using Cratis.Chronicle.Api.EventStores;
 using Cratis.Chronicle.Api.Events;
+using Cratis.Chronicle.Api.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_an_event_store.and_the_event_store_has_registered_event_types.context;
 
 namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_an_event_store;
@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_a
 /// Verifies that registered event types are cleared when an event store is reset.
 /// This test passes only when the Chronicle server is built in Development (Debug) mode.
 /// </summary>
+/// <param name="context">The spec context.</param>
 [Collection(ChronicleCollection.Name)]
 public class and_the_event_store_has_registered_event_types(context context) : Given<context>(context)
 {
