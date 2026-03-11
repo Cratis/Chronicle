@@ -25,9 +25,11 @@
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <MakeDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <!-- Publish the server with DEVELOPMENT symbol so dev-tools endpoints are available in the Docker image -->
-        <Exec Command="dotnet publish -c $(Configuration) -p:DefineConstants=DEVELOPMENT -o out"
-              WorkingDirectory="$(MSBuildThisFileDirectory)../../Source/Kernel/Server" />
+        <!-- Publish the server with DEVELOPMENT symbol so dev-tools endpoints are available in the Docker image.
+             %3B is the URL-encoded semicolon required by MSBuild Properties attribute to pass multi-value DefineConstants. -->
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj"
+                 Targets="Publish"
+                 Properties="Configuration=$(Configuration);PublishDir=$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out;DefineConstants=TRACE%3BRELEASE%3BDEVELOPMENT" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 
