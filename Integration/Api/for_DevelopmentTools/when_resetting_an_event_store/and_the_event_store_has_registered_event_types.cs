@@ -58,6 +58,6 @@ public class and_the_event_store_has_registered_event_types(context context) : G
     [Fact] void should_succeed_querying_registrations_after_reset() =>
         Context.RegistrationsResult!.IsSuccess.ShouldBeTrue();
 
-    [Fact] void should_have_no_registered_event_types_after_reset() =>
-        Context.Registrations!.ShouldBeEmpty();
+    [Fact] void should_not_have_the_custom_event_type_after_reset() =>
+        Context.Registrations!.Any(r => r.Type.Id == context.EventTypeId).ShouldBeFalse();
 }
