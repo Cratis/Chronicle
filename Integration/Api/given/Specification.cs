@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Integration.Api.given;
 public class Specification(ChronicleOutOfProcessFixtureWithLocalImage fixture) : Specification<ChronicleOutOfProcessFixtureWithLocalImage, ApiWebApplicationFactory, Program>(fixture)
 {
     /// <inheritdoc/>
-#pragma warning disable CA2215 // Intentionally not calling base — base calls RemoveAllDatabases() which wipes OpenIddict state
+#pragma warning disable CA2215
     public override Task DisposeAsync()
 #pragma warning restore CA2215
     {
