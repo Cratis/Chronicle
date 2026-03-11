@@ -31,7 +31,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             JsonNode? value = null;
 
-            var keyValue = expandoObject!.SingleOrDefault(_ => _.Key == property.Name);
+            var keyValue = expandoObject.SingleOrDefault(_ => _.Key == property.Name);
 
             var name = property.Name;
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
@@ -80,11 +80,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
                 if (schemaProperty is null)
                 {
-                    value = ConvertUnknownSchemaTypeToClrType(sourceValue!);
+                    value = ConvertUnknownSchemaTypeToClrType(sourceValue);
                 }
                 else
                 {
-                    value = ConvertFromJsonNode(sourceValue!, schemaProperty);
+                    value = ConvertFromJsonNode(sourceValue, schemaProperty);
                 }
             }
 

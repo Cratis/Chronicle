@@ -35,10 +35,10 @@ internal static class ProjectionDefinitionConverters
             Children = definition.Children.ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
             FromEvery = definition.FromDerivatives.Select(_ => _.ToContract()).ToList(),
             All = definition.FromEvery.ToContract(),
-            FromEventProperty = definition.FromEventProperty?.ToContract() ?? null!,
+            FromEventProperty = definition.FromEventProperty?.ToContract(),
             RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
-            LastUpdated = definition.LastUpdated ?? null!,
+            LastUpdated = definition.LastUpdated,
             AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap
         };
     }

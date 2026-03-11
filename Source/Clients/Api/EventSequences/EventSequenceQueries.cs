@@ -61,7 +61,7 @@ public class EventSequenceQueries : ControllerBase
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = from,
-            ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null!,
+            ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null,
             EventSourceId = eventSourceId
         });
 
