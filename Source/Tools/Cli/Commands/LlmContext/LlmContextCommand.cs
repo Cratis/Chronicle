@@ -35,7 +35,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             CommandGroups = BuildCommandGroups(),
             ConnectionInfo = new ConnectionInfoDescriptor
             {
-                DefaultConnectionString = "chronicle://localhost:35000",
+                DefaultConnectionString = "chronicle://<client>:<secret>@localhost:35000",
                 EnvironmentVariable = "CHRONICLE_CONNECTION_STRING",
                 ConfigFile = CliConfiguration.GetConfigPath(),
                 Precedence = ["--server flag", "CHRONICLE_CONNECTION_STRING env var", "config file", "default (localhost:35000)"],
@@ -176,7 +176,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     EventStoreOptions(),
                     [
                         new OptionDescriptor("<READ_MODEL>", "string", "Read model identifier (positional)"),
-                        new OptionDescriptor("--page", "int", "Page number (default: 0)"),
+                        new OptionDescriptor("--page", "int", "Page number, 1-based (default: 1)"),
                         new OptionDescriptor("--page-size", "int", "Items per page (default: 20)"),
                     ]),
             ]),

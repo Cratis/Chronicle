@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using Cratis.Chronicle.Connections;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli;
@@ -49,7 +50,7 @@ public class GlobalSettings : CommandSettings
             return config.DefaultServer;
         }
 
-        return "chronicle://localhost:35000";
+        return $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35000";
     }
 
     /// <summary>
