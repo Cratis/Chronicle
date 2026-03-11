@@ -121,6 +121,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertFromBsonValue(BsonValue bsonValue, JsonSchema schemaProperty)
     {
+        if (bsonValue is BsonNull)
+        {
+            return null;
+        }
+
         schemaProperty = schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema;
 
         if (bsonValue is BsonDocument childDocument)
