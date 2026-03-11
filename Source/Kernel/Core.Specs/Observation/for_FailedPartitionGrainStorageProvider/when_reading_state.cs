@@ -14,7 +14,7 @@ public class when_reading_state : given.the_provider
     {
         _grainId = GrainId.Create("type", "key");
         _state = new GrainState<FailedPartitions> { State = new(), ETag = "ETag", RecordExists = true };
-        _observerKey = ObserverKey.Parse(_grainId.Key.ToString()!);
+        _observerKey = ObserverKey.Parse(_grainId.Key.ToString());
     }
 
     Task Because() => provider.ReadStateAsync("name", _grainId, _state);

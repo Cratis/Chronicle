@@ -453,7 +453,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
     /// <returns>The result.</returns>
     protected abstract ValueTask<TResult?> CreateCancelledResultFromCurrentState(TState currentState);
 
-    async Task<Result<JobStepError>> WriteStatusChange(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
+    async Task<Result<JobStepError>> WriteStatusChange(JobStepStatus status, IEnumerable<string>? exceptionMessages = null, string? exceptionStackTrace = null)
     {
         try
         {
@@ -477,7 +477,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         }
     }
 
-    void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null!, string? exceptionStackTrace = null!)
+    void StatusChanged(JobStepStatus status, IEnumerable<string>? exceptionMessages = null, string? exceptionStackTrace = null)
     {
         state.State.StatusChanges.Add(new()
         {

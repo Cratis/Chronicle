@@ -281,7 +281,7 @@ public partial class PropertyPath
         if (target is ExpandoObject targetAsExpandoObject)
         {
             var inner = targetAsExpandoObject.EnsurePath(this, arrayIndexers) as IDictionary<string, object>;
-            inner![LastSegment.Value] = value;
+            inner[LastSegment.Value] = value;
         }
         else
         {
@@ -343,7 +343,7 @@ public partial class PropertyPath
 
     static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {
-        var match = ArrayIndexRegex!.Match(segment);
+        var match = ArrayIndexRegex.Match(segment);
         if (match.Success)
         {
             return new ArrayProperty(match.Groups["property"].Value);

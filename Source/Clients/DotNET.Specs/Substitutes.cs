@@ -34,7 +34,7 @@ public static class Substitutes
             null,
             [typeof(T)]);
 
-        return typeBuilder.CreateType()!;
+        return typeBuilder.CreateType();
     }
 
     /// <summary>
