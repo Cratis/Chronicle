@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Cli.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Cli</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Cli/Cli.csproj" />
+    </ItemGroup>
+</Project>
