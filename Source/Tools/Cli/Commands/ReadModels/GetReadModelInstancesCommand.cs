@@ -32,7 +32,7 @@ public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstanc
                 response.TotalCount,
                 response.Page,
                 response.PageSize,
-                Instances = response.Instances.ToList()
+                Instances = (response.Instances ?? []).ToList()
             },
             data =>
             {

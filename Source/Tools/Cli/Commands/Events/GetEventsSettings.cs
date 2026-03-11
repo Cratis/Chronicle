@@ -40,4 +40,11 @@ public class GetEventsSettings : EventStoreSettings
     [CommandOption("--event-source-id <ID>")]
     [Description("Filter by event source ID")]
     public string? EventSourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event type filter (name, or name+generation). Defaults to generation 1 if not specified.
+    /// </summary>
+    [CommandOption("--event-type <TYPE>")]
+    [Description("Filter by event type (name, or name+generation)")]
+    public string? EventType { get; set; }
 }

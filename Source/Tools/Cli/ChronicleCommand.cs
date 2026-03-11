@@ -26,6 +26,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             var options = ChronicleOptions.FromConnectionString(new ChronicleConnectionString(connectionString));
             options.AutoDiscoverAndRegister = false;
             using var client = new ChronicleClient(options);
+            OutputFormatter.Configure(client.Options.JsonSerializerOptions);
             return await ExecuteCommandAsync(client, settings, format);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)

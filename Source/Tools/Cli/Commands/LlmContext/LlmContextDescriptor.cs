@@ -42,4 +42,9 @@ public record LlmContextDescriptor
     /// Gets or sets usage tips for AI agents.
     /// </summary>
     public required IReadOnlyList<string> Tips { get; set; }
+
+    /// <summary>
+    /// Gets or sets per-command output format guidance for token-efficient usage.
+    /// </summary>
+    public required OutputFormatGuidanceDescriptor OutputFormatGuidance { get; set; }
 }

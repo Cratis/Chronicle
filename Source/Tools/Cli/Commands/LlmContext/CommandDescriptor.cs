@@ -10,4 +10,5 @@ namespace Cratis.Chronicle.Cli.Commands.LlmContext;
 /// <param name="Description">A description of the command.</param>
 /// <param name="InheritedOptions">Options inherited from the parent (event store settings, etc.).</param>
 /// <param name="Options">Command-specific options and arguments.</param>
-public record CommandDescriptor(string Name, string Description, IReadOnlyList<OptionDescriptor>? InheritedOptions, IReadOnlyList<OptionDescriptor>? Options);
+/// <param name="Examples">Example usages of the command.</param>
+public record CommandDescriptor(string Name, string Description, IReadOnlyList<OptionDescriptor>? InheritedOptions, IReadOnlyList<OptionDescriptor>? Options, IReadOnlyList<string>? Examples = null);

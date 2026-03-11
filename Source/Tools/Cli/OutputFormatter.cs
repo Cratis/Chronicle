@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Cli.Json;
+using Cratis.Json;
 using Spectre.Console;
 
 namespace Cratis.Chronicle.Cli;
@@ -11,11 +13,21 @@ namespace Cratis.Chronicle.Cli;
 /// </summary>
 public static class OutputFormatter
 {
-    static readonly JsonSerializerOptions _jsonOptions = new()
+    static JsonSerializerOptions _jsonOptions = CreateDefaultOptions();
+
+    /// <summary>
+    /// Configures the JSON serializer options by building on top of the provided base options
+    /// from <see cref="ChronicleOptions.JsonSerializerOptions"/>, adding CLI-specific converters.
+    /// </summary>
+    /// <param name="baseOptions">The base <see cref="JsonSerializerOptions"/> from the Chronicle client.</param>
+    public static void Configure(JsonSerializerOptions baseOptions)
     {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+        _jsonOptions = new JsonSerializerOptions(baseOptions)
+        {
+            WriteIndented = true
+        };
+        AddCliConverters(_jsonOptions);
+    }
 
     /// <summary>
     /// Writes data to the console in the specified format.
@@ -52,8 +64,7 @@ public static class OutputFormatter
     {
         if (format == "json")
         {
-            var json = JsonSerializer.Serialize(data, _jsonOptions);
-            Console.WriteLine(json);
+            WriteJsonSafe(data);
             return;
         }
 
@@ -63,8 +74,7 @@ public static class OutputFormatter
             return;
         }
 
-        var fallback = JsonSerializer.Serialize(data, _jsonOptions);
-        Console.WriteLine(fallback);
+        WriteJsonSafe(data);
     }
 
     /// <summary>
@@ -112,10 +122,57 @@ public static class OutputFormatter
         }
     }
 
+    static JsonSerializerOptions CreateDefaultOptions()
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        options.Converters.Add(new EnumConverterFactory());
+        options.Converters.Add(new ConceptAsJsonConverterFactory());
+        AddCliConverters(options);
+
+        return options;
+    }
+
+    static void AddCliConverters(JsonSerializerOptions options)
+    {
+        options.Converters.Add(new ContractsEventTypeFromDefinitionsDictionaryConverter());
+        options.Converters.Add(new ContractsEventTypeJoinDefinitionsDictionaryConverter());
+        options.Converters.Add(new ContractsEventTypeRemovedWithDefinitionsDictionaryConverter());
+        options.Converters.Add(new ContractsEventTypeRemovedWithJoinDefinitionsDictionaryConverter());
+    }
+
     static void WriteJson<T>(IEnumerable<T> data)
     {
-        var json = JsonSerializer.Serialize(data, _jsonOptions);
-        Console.WriteLine(json);
+        try
+        {
+            var json = JsonSerializer.Serialize(data, _jsonOptions);
+            Console.WriteLine(json);
+        }
+        catch (NotSupportedException ex)
+        {
+            WriteError("json", $"Failed to serialize output as JSON: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Safely serializes a single object to JSON, catching serialization errors.
+    /// </summary>
+    /// <typeparam name="T">The type of the object.</typeparam>
+    /// <param name="data">The object to serialize.</param>
+    static void WriteJsonSafe<T>(T data)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(data, _jsonOptions);
+            Console.WriteLine(json);
+        }
+        catch (NotSupportedException ex)
+        {
+            WriteError("json", $"Failed to serialize output as JSON: {ex.Message}");
+        }
     }
 
     static void WriteTable<T>(IEnumerable<T> data, string[] columns, Func<T, string[]> getRow)
@@ -142,5 +199,4 @@ public static class OutputFormatter
             Console.WriteLine(string.Join('\t', getRow(item)));
         }
     }
-
 }
