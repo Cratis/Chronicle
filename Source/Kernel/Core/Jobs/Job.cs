@@ -25,7 +25,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
 {
     Dictionary<JobStepId, IJobStep>? _jobStepGrains;
     ObserverManager<IJobObserver>? _observers;
-    ILogger<IJob> _logger = null!;
+    ILogger<IJob> _logger = NullLogger<IJob>.Instance;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Job{TRequest, TJobState}"/> class.
@@ -122,7 +122,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         }
 
         State.Created = DateTimeOffset.UtcNow;
-        State.Request = request!;
+        State.Request = request;
         State.Details = GetJobDetails();
 
         _ = await WriteStatusChanged(JobStatus.PreparingJob);
@@ -325,7 +325,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         if (_observers?.Count > 0)
         {
             // The job steps will eventually handle completion
-            await _observers!.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
+            await _observers.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
             return;
         }
 
@@ -336,7 +336,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             _jobStepGrains ??= await GetIdAndGrainReferenceForNonCompletedJobSteps();
             foreach (var (jobStepId, _) in _jobStepGrains)
             {
-                await SubscribeJobStep(_jobStepGrains![jobStepId].AsReference<IJobObserver>());
+                await SubscribeJobStep(_jobStepGrains[jobStepId].AsReference<IJobObserver>());
             }
         }
 
@@ -348,7 +348,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
         else
         {
             // The job steps will eventually handle completion
-            await _observers!.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
+            await _observers.Notify(o => removing ? o.OnJobRemoved() : o.OnJobStopped());
         }
     }
 

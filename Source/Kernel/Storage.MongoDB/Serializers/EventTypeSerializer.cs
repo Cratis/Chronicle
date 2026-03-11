@@ -21,8 +21,8 @@ public class EventTypeSerializer : IBsonSerializer<EventType>
     public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, EventType value) => context.Writer.WriteString(value.ToString());
 
     /// <inheritdoc/>
-    public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value) => Serialize(context, args, (EventType)value!);
+    public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, object value) => Serialize(context, args, (EventType)value);
 
     /// <inheritdoc/>
-    object IBsonSerializer.Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args) => Deserialize(context, args)!;
+    object IBsonSerializer.Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args) => Deserialize(context, args);
 }

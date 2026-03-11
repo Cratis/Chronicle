@@ -12,7 +12,7 @@ public class when_resolving_without_authenticated_user : Specification
 
     void Establish()
     {
-        ClaimsPrincipal.ClaimsPrincipalSelector = () => null!;
+        ClaimsPrincipal.ClaimsPrincipalSelector = () => null;
         _resolver = new ClaimsBasedNamespaceResolver();
     }
 

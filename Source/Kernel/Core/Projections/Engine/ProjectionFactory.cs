@@ -235,7 +235,7 @@ public class ProjectionFactory(
                 var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
                     childProjection.IdentifiedByProperty :
                     childDefinition.IdentifiedBy;
-                var childrenProperty = currentReadModelSchema.Properties[childEntry.kvp.Key.LastSegment.Value]!;
+                var childrenProperty = currentReadModelSchema.Properties[childEntry.kvp.Key.LastSegment.Value];
                 var childSchema = childrenProperty.Item?.ActualSchema ?? currentReadModelSchema;
 
                 SetupSubscriptionsRecursively(
@@ -273,7 +273,7 @@ public class ProjectionFactory(
         // Create child projection structures first (without resolving events)
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
         {
-            var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value]!;
+            var childrenProperty = currentReadModelSchema.Properties[kvp.Key.LastSegment.Value];
             return await CreateProjectionStructure(
                 eventSequenceStorage,
                 projectionId,
@@ -355,7 +355,7 @@ public class ProjectionFactory(
                 Format = projection.TargetReadModelSchema.Format
             };
 
-            var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty!, projectionDefinition.FromEventProperty.PropertyExpression);
+            var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty, projectionDefinition.FromEventProperty.PropertyExpression);
             projection.Event
                 .WhereEventTypeEquals(projectionDefinition.FromEventProperty.Event)
                 .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);

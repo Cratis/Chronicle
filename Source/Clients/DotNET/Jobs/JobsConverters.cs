@@ -21,7 +21,7 @@ internal static class JobsConverters
             Details = job.Details,
             Type = job.Type,
             Status = (JobStatus)(int)job.Status,
-            Created = job.Created!,
+            Created = job.Created,
             StatusChanges = job.StatusChanges.ToClient(),
             Progress = job.Progress.ToClient()
         };

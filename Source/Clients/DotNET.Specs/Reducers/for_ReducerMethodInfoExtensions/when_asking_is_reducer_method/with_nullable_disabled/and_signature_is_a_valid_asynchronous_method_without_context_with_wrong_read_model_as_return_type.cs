@@ -11,7 +11,7 @@ public class and_signature_is_a_valid_asynchronous_method_without_context_with_w
     {
         public ReducerId Id => "55753433-5bbd-4a79-91b6-7b6231c52183";
 
-        public Task<object> Something(ValidEvent @event, ReadModel current) => Task.FromResult<object>(null!);
+        public Task<object> Something(ValidEvent @event, ReadModel current) => Task.FromResult<object>(null);
     }
 
     bool _result;
