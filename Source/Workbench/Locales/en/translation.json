@@ -51,7 +51,8 @@
         "system": {
             "groupLabel": "System",
             "users": "Users",
-            "applications": "Applications"
+            "applications": "Applications",
+            "developmentTools": "Development Tools"
         }
     },
     "eventStore": {
@@ -441,6 +442,27 @@
                         "title": "Remove Application",
                         "message": "Are you sure you want to remove application '{clientId}'? This action cannot be undone."
                     }
+                }
+            },
+            "developmentTools": {
+                "title": "Development Tools",
+                "notAvailable": "Development tools are not available in this build. Run the server in Debug configuration to enable them.",
+                "resetAll": {
+                    "title": "Reset All State",
+                    "description": "Drops all Chronicle databases and evicts all Orleans grain activations. Connected clients will need to reconnect and re-register their event stores.",
+                    "button": "Reset All",
+                    "confirmTitle": "Reset All State",
+                    "confirmMessage": "This will permanently delete ALL Chronicle data including all events, projections, and read models across every event store. This action cannot be undone. Are you sure?",
+                    "success": "All state has been reset. Connected clients must reconnect."
+                },
+                "resetEventStore": {
+                    "title": "Reset Event Store",
+                    "description": "Select an event store and reset its state. Drops all databases for that event store. The event store will be re-registered when a client reconnects.",
+                    "button": "Reset",
+                    "confirmTitle": "Reset Event Store",
+                    "confirmMessage": "This will permanently delete all data for event store '{eventStore}' including all events, projections, and read models. This action cannot be undone. Are you sure?",
+                    "success": "Event store '{eventStore}' has been reset.",
+                    "empty": "No event stores found."
                 }
             }
         }

@@ -29,6 +29,7 @@ import { Sequences } from './Namespaces/Sequences/Sequences';
 import { useRelativePath } from '../../Utils/useRelativePath';
 import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
+import { DevelopmentTools } from './System/DevelopmentTools/DevelopmentTools';
 // import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
@@ -65,7 +66,8 @@ export const EventStore = () => {
             label: strings.mainMenu.system.groupLabel,
             items: [
                 { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
-                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity }
+                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity },
+                { label: strings.mainMenu.system.developmentTools, url: 'development-tools', icon: mdIcons.MdDeleteForever }
             ]
         }
     ];
@@ -90,6 +92,7 @@ export const EventStore = () => {
                 <Route path={'sinks'} element={<Sinks />} />
                 <Route path={'users'} element={<Users />} />
                 <Route path={'applications'} element={<Applications />} />
+                <Route path={'development-tools'} element={<DevelopmentTools />} />
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} replace />} />

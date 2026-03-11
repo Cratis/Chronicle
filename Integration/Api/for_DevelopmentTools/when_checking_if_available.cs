@@ -1,0 +1,24 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using context = Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_checking_if_available.context;
+
+namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools;
+
+/// <summary>
+/// Verifies that the development-tools availability endpoint responds successfully.
+/// This test passes only when the Chronicle server is built in Development (Debug) mode.
+/// </summary>
+[Collection(ChronicleCollection.Name)]
+public class when_checking_if_available(context context) : Given<context>(context)
+{
+    public class context(ChronicleOutOfProcessFixtureWithLocalImage fixture) : given.an_http_client(fixture)
+    {
+        public HttpResponseMessage Result = null!;
+
+        async Task Because() =>
+            Result = await Client.GetAsync("/api/development-tools/is-available");
+    }
+
+    [Fact] void should_return_success() => Context.Result.IsSuccessStatusCode.ShouldBeTrue();
+}

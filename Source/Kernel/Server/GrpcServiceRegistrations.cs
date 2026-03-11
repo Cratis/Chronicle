@@ -39,6 +39,9 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
         services.AddSingleton<Contracts.Security.IApplications, Services.Security.Applications>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
+#if DEVELOPMENT
+        services.AddSingleton<Contracts.Host.IDevelopmentTools, Services.Host.DevelopmentTools>();
+#endif
 
         return services;
     }
