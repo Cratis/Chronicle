@@ -27,4 +27,9 @@ public static class ExitCodes
     /// The server returned an unexpected error.
     /// </summary>
     public const int ServerError = 3;
+
+    /// <summary>
+    /// Authentication failed or credentials are missing.
+    /// </summary>
+    public const int AuthenticationError = 4;
 }

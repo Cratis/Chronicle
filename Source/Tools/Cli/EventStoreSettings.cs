@@ -24,8 +24,8 @@ public class EventStoreSettings : GlobalSettings
     /// </summary>
     [CommandOption("-n|--namespace <NAME>")]
     [Description("Namespace within the event store")]
-    [DefaultValue("default")]
-    public string Namespace { get; set; } = "default";
+    [DefaultValue("Default")]
+    public string Namespace { get; set; } = "Default";
 
     /// <summary>
     /// Resolves the effective event store name by checking flag, then config file, then default.
@@ -53,7 +53,7 @@ public class EventStoreSettings : GlobalSettings
     /// <returns>The resolved namespace name.</returns>
     public string ResolveNamespace()
     {
-        if (Namespace != "default")
+        if (Namespace != "Default")
         {
             return Namespace;
         }
@@ -64,6 +64,6 @@ public class EventStoreSettings : GlobalSettings
             return config.DefaultNamespace;
         }
 
-        return "default";
+        return "Default";
     }
 }

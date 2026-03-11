@@ -79,6 +79,16 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     new CommandOutputAdvice("recommendations list", "plain", "When empty, JSON is smaller (2B vs 34B). With data, use plain for consistency."),
                     new CommandOutputAdvice("config show", "json", "JSON is slightly smaller (85B vs 117B) and structured for key-value parsing."),
                     new CommandOutputAdvice("config path", "plain", "Both formats output identical raw path text."),
+                    new CommandOutputAdvice("auth login", "plain", "Interactive command. Plain outputs a simple success/failure message."),
+                    new CommandOutputAdvice("auth logout", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("auth status", "json", "JSON is structured for key-value parsing. Use JSON when checking auth state programmatically."),
+                    new CommandOutputAdvice("users list", "plain", "Use plain for consistency with other listing commands."),
+                    new CommandOutputAdvice("users add", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("users remove", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("applications list", "plain", "Use plain for consistency with other listing commands."),
+                    new CommandOutputAdvice("applications add", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("applications remove", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("applications rotate-secret", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("llm-context", "json", "Always outputs JSON regardless of --output flag."),
                 ],
             },
@@ -291,6 +301,71 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     ["cratis read-models snapshots MyReadModel abc-123"]),
             ]),
         new(
+            "auth",
+            "Authentication and login management",
+            [
+                new CommandDescriptor(
+                    "login",
+                    "Log in as a user via the password grant flow. Prompts for password interactively.",
+                    null,
+                    [new OptionDescriptor("<USERNAME>", "string", "The username to log in with (positional)")],
+                    ["cratis auth login admin"]),
+                new CommandDescriptor("logout", "Clear the cached login session", null, null, ["cratis auth logout"]),
+                new CommandDescriptor("status", "Show current authentication status (login session, client credentials, server)", null, null, ["cratis auth status", "cratis auth status -o json"]),
+            ]),
+        new(
+            "users",
+            "Manage Chronicle users",
+            [
+                new CommandDescriptor("list", "List all users", EventStoreOptions(), null, ["cratis users list", "cratis users list -o plain"]),
+                new CommandDescriptor(
+                    "add",
+                    "Add a new user",
+                    EventStoreOptions(),
+                    [
+                        new OptionDescriptor("<USERNAME>", "string", "The username for the new user (positional)"),
+                        new OptionDescriptor("<EMAIL>", "string", "The email address for the new user (positional)"),
+                        new OptionDescriptor("<PASSWORD>", "string", "The initial password for the new user (positional)"),
+                    ],
+                    ["cratis users add alice alice@example.com P@ssw0rd!"]),
+                new CommandDescriptor(
+                    "remove",
+                    "Remove a user",
+                    EventStoreOptions(),
+                    [new OptionDescriptor("<USER_ID>", "guid", "The unique identifier of the user to remove (positional)")],
+                    ["cratis users remove 550e8400-e29b-41d4-a716-446655440000"]),
+            ]),
+        new(
+            "applications",
+            "Manage OAuth client applications",
+            [
+                new CommandDescriptor("list", "List all applications", EventStoreOptions(), null, ["cratis applications list", "cratis applications list -o plain"]),
+                new CommandDescriptor(
+                    "add",
+                    "Add a new application (OAuth client)",
+                    EventStoreOptions(),
+                    [
+                        new OptionDescriptor("<CLIENT_ID>", "string", "The client identifier for the new application (positional)"),
+                        new OptionDescriptor("<CLIENT_SECRET>", "string", "The client secret for the new application (positional)"),
+                    ],
+                    ["cratis applications add my-app my-secret"]),
+                new CommandDescriptor(
+                    "remove",
+                    "Remove an application",
+                    EventStoreOptions(),
+                    [new OptionDescriptor("<APP_ID>", "guid", "The unique identifier of the application to remove (positional)")],
+                    ["cratis applications remove 550e8400-e29b-41d4-a716-446655440000"]),
+                new CommandDescriptor(
+                    "rotate-secret",
+                    "Rotate an application's client secret",
+                    EventStoreOptions(),
+                    [
+                        new OptionDescriptor("<APP_ID>", "guid", "The unique identifier of the application (positional)"),
+                        new OptionDescriptor("<NEW_SECRET>", "string", "The new client secret (positional)"),
+                    ],
+                    ["cratis applications rotate-secret 550e8400-e29b-41d4-a716-446655440000 new-secret"]),
+            ]),
+        new(
             "config",
             "Manage CLI configuration",
             [
@@ -300,10 +375,10 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "Set a configuration value",
                     null,
                     [
-                        new OptionDescriptor("<KEY>", "string", "Key to set: server, event-store, or namespace (positional)"),
+                        new OptionDescriptor("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, or client-secret (positional)"),
                         new OptionDescriptor("<VALUE>", "string", "Value to assign (positional)"),
                     ],
-                    ["cratis config set server chronicle://myhost:35000", "cratis config set event-store MyStore"]),
+                    ["cratis config set server chronicle://myhost:35000", "cratis config set event-store MyStore", "cratis config set client-id my-app", "cratis config set client-secret my-secret"]),
                 new CommandDescriptor("path", "Print configuration file path", null, null, ["cratis config path"]),
             ]),
     ];

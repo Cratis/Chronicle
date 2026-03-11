@@ -27,8 +27,14 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
             case "namespace":
                 config.DefaultNamespace = settings.Value;
                 break;
+            case "client-id":
+                config.ClientId = settings.Value;
+                break;
+            case "client-secret":
+                config.ClientSecret = settings.Value;
+                break;
             default:
-                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace");
+                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret");
                 return Task.FromResult(ExitCodes.NotFound);
         }
 

@@ -36,8 +36,8 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         }
         catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
         {
-            OutputFormatter.WriteError(format, "Cannot connect to Chronicle server", $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
-            return ExitCodes.ConnectionError;
+            OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}");
+            return ExitCodes.ServerError;
         }
         catch (RpcException ex)
         {
@@ -48,6 +48,11 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         {
             OutputFormatter.WriteError(format, "Cannot connect to Chronicle server", $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
             return ExitCodes.ConnectionError;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            OutputFormatter.WriteError(format, ex.Message);
+            return ExitCodes.ServerError;
         }
     }
 

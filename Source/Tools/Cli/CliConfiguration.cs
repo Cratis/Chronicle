@@ -32,6 +32,31 @@ public class CliConfiguration
     public string? DefaultNamespace { get; set; }
 
     /// <summary>
+    /// Gets or sets the client ID for client_credentials authentication.
+    /// </summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the client secret for client_credentials authentication.
+    /// </summary>
+    public string? ClientSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cached access token from a previous login.
+    /// </summary>
+    public string? AccessToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the token expiry time in UTC ISO-8601 format.
+    /// </summary>
+    public string? TokenExpiry { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the currently logged-in user.
+    /// </summary>
+    public string? LoggedInUser { get; set; }
+
+    /// <summary>
     /// Gets the path to the configuration file.
     /// </summary>
     /// <returns>The full path to the config file.</returns>

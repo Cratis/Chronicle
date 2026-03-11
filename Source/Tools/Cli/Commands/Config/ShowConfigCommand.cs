@@ -19,11 +19,17 @@ public class ShowConfigCommand : AsyncCommand<GlobalSettings>
 
         OutputFormatter.WriteObject(format, config, cfg =>
         {
-            AnsiConsole.MarkupLine($"[bold]Default Server:[/]      {(cfg.DefaultServer ?? "(not set)").EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Default Event Store:[/] {(cfg.DefaultEventStore ?? "(not set)").EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Default Namespace:[/]   {(cfg.DefaultNamespace ?? "(not set)").EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Default Server:[/]      {OrNotSet(cfg.DefaultServer).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Default Event Store:[/] {OrNotSet(cfg.DefaultEventStore).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Default Namespace:[/]   {OrNotSet(cfg.DefaultNamespace).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Client ID:[/]           {OrNotSet(cfg.ClientId).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Client Secret:[/]       {(string.IsNullOrWhiteSpace(cfg.ClientSecret) ? "(not set)" : "********")}");
+            AnsiConsole.MarkupLine($"[bold]Logged-in User:[/]      {OrNotSet(cfg.LoggedInUser).EscapeMarkup()}");
         });
 
         return Task.FromResult(ExitCodes.Success);
     }
+
+    static string OrNotSet(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
 }

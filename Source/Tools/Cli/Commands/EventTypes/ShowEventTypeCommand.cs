@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Cli.Commands.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Spectre.Console;
 
@@ -17,7 +18,7 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
         var eventStore = await client.GetEventStore(settings.ResolveEventStore());
         var services = GetServices(eventStore);
 
-        var (id, generation) = ParseEventType(settings.EventType);
+        var parsed = EventTypeParser.ParseEventType(settings.EventType);
 
         var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest
         {
@@ -25,8 +26,8 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
         });
 
         var match = registrations.FirstOrDefault(r =>
-            string.Equals(r.Type.Id, id, StringComparison.OrdinalIgnoreCase) &&
-            r.Type.Generation == generation);
+            string.Equals(r.Type.Id, parsed.Id, StringComparison.OrdinalIgnoreCase) &&
+            r.Type.Generation == parsed.Generation);
 
         if (match is null)
         {
@@ -61,19 +62,5 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
             });
 
         return ExitCodes.Success;
-    }
-
-    /// <summary>
-    /// Parses an event type string into its id and generation components.
-    /// Accepts "name" (defaults to generation 1) or "name+generation".
-    /// </summary>
-    /// <param name="input">The event type string to parse.</param>
-    /// <returns>A tuple of id and generation.</returns>
-    static (string Id, uint Generation) ParseEventType(string input)
-    {
-        var parts = input.Split('+');
-        var id = parts[0];
-        var generation = parts.Length > 1 && uint.TryParse(parts[1], out var gen) ? gen : 1u;
-        return (id, generation);
     }
 }

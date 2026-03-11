@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Cli.Commands.Applications;
+using Cratis.Chronicle.Cli.Commands.Auth;
 using Cratis.Chronicle.Cli.Commands.Config;
 using Cratis.Chronicle.Cli.Commands.Events;
 using Cratis.Chronicle.Cli.Commands.EventStores;
@@ -13,6 +15,7 @@ using Cratis.Chronicle.Cli.Commands.Observers;
 using Cratis.Chronicle.Cli.Commands.Projections;
 using Cratis.Chronicle.Cli.Commands.ReadModels;
 using Cratis.Chronicle.Cli.Commands.Recommendations;
+using Cratis.Chronicle.Cli.Commands.Users;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli;
@@ -34,6 +37,7 @@ public static class CliApp
         {
             config.SetApplicationName("cratis");
             config.SetApplicationVersion(typeof(CliApp).Assembly.GetName().Version?.ToString() ?? "0.0.0");
+            config.SetInterceptor(new EventStoreInterceptor());
 
             config.AddBranch("event-stores", eventStores =>
             {
@@ -165,6 +169,51 @@ public static class CliApp
                 readModels.AddCommand<GetReadModelSnapshotsCommand>("snapshots")
                     .WithDescription("Get snapshots for a read model instance by key")
                     .WithExample("read-models", "snapshots", "MyReadModel", "abc-123");
+            });
+
+            config.AddBranch("auth", auth =>
+            {
+                auth.SetDescription("Authentication and login management");
+                auth.AddCommand<LoginCommand>("login")
+                    .WithDescription("Log in as a user via the password grant flow")
+                    .WithExample("auth", "login", "admin");
+                auth.AddCommand<LogoutCommand>("logout")
+                    .WithDescription("Clear the cached login session")
+                    .WithExample("auth", "logout");
+                auth.AddCommand<AuthStatusCommand>("status")
+                    .WithDescription("Show current authentication status")
+                    .WithExample("auth", "status");
+            });
+
+            config.AddBranch("users", users =>
+            {
+                users.SetDescription("Manage Chronicle users");
+                users.AddCommand<ListUsersCommand>("list")
+                    .WithDescription("List all users")
+                    .WithExample("users", "list");
+                users.AddCommand<AddUserCommand>("add")
+                    .WithDescription("Add a new user")
+                    .WithExample("users", "add", "alice", "alice@example.com", "P@ssw0rd!");
+                users.AddCommand<RemoveUserCommand>("remove")
+                    .WithDescription("Remove a user")
+                    .WithExample("users", "remove", "550e8400-e29b-41d4-a716-446655440000");
+            });
+
+            config.AddBranch("applications", applications =>
+            {
+                applications.SetDescription("Manage OAuth client applications");
+                applications.AddCommand<ListApplicationsCommand>("list")
+                    .WithDescription("List all applications")
+                    .WithExample("applications", "list");
+                applications.AddCommand<AddApplicationCommand>("add")
+                    .WithDescription("Add a new application")
+                    .WithExample("applications", "add", "my-app", "my-secret");
+                applications.AddCommand<RemoveApplicationCommand>("remove")
+                    .WithDescription("Remove an application")
+                    .WithExample("applications", "remove", "550e8400-e29b-41d4-a716-446655440000");
+                applications.AddCommand<RotateSecretCommand>("rotate-secret")
+                    .WithDescription("Rotate an application's client secret")
+                    .WithExample("applications", "rotate-secret", "550e8400-e29b-41d4-a716-446655440000", "new-secret");
             });
 
             config.AddBranch("config", configCmd =>

@@ -42,9 +42,9 @@ public class GetEventsSettings : EventStoreSettings
     public string? EventSourceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event type filter (name, or name+generation). Defaults to generation 1 if not specified.
+    /// Gets or sets the event type filter (comma-separated; each can be name or name+generation). Defaults to generation 1 if not specified.
     /// </summary>
     [CommandOption("--event-type <TYPE>")]
-    [Description("Filter by event type (name, or name+generation)")]
+    [Description("Filter by event type (comma-separated; name or name+generation)")]
     public string? EventType { get; set; }
 }

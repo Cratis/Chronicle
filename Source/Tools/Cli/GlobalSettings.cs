@@ -29,28 +29,39 @@ public class GlobalSettings : CommandSettings
 
     /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, config file, then default.
+    /// When the resolved connection string has no embedded credentials, client credentials from the config file are composed in.
     /// </summary>
     /// <returns>The resolved connection string.</returns>
     public string ResolveConnectionString()
     {
+        string connectionString;
+
         if (!string.IsNullOrWhiteSpace(Server))
         {
-            return Server;
+            connectionString = Server;
         }
-
-        var envVar = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING");
-        if (!string.IsNullOrWhiteSpace(envVar))
+        else
         {
-            return envVar;
+            var envVar = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING");
+            if (!string.IsNullOrWhiteSpace(envVar))
+            {
+                connectionString = envVar;
+            }
+            else
+            {
+                var config = CliConfiguration.Load();
+                if (!string.IsNullOrWhiteSpace(config.DefaultServer))
+                {
+                    connectionString = config.DefaultServer;
+                }
+                else
+                {
+                    connectionString = $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35000/?disableTls=true";
+                }
+            }
         }
 
-        var config = CliConfiguration.Load();
-        if (!string.IsNullOrWhiteSpace(config.DefaultServer))
-        {
-            return config.DefaultServer;
-        }
-
-        return $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35000";
+        return ComposeCredentials(connectionString);
     }
 
     /// <summary>
@@ -71,5 +82,22 @@ public class GlobalSettings : CommandSettings
         }
 
         return Console.IsOutputRedirected ? "json" : "text";
+    }
+
+    static string ComposeCredentials(string connectionString)
+    {
+        var parsed = new ChronicleConnectionString(connectionString);
+        if (!string.IsNullOrEmpty(parsed.Username))
+        {
+            return connectionString;
+        }
+
+        var config = CliConfiguration.Load();
+        if (!string.IsNullOrWhiteSpace(config.ClientId) && !string.IsNullOrWhiteSpace(config.ClientSecret))
+        {
+            return parsed.WithCredentials(config.ClientId, config.ClientSecret).ToString();
+        }
+
+        return connectionString;
     }
 }

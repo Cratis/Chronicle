@@ -28,14 +28,19 @@ public class ListFailedPartitionsCommand : ChronicleCommand<ListFailedPartitions
         OutputFormatter.Write(
             format,
             list,
-            ["Id", "ObserverId", "Partition", "Attempts"],
+            ["Id", "ObserverId", "Partition", "Attempts", "LastFailedSeq#"],
             fp =>
-            [
-                fp.Id.ToString(),
-                fp.ObserverId,
-                fp.Partition,
-                fp.Attempts.Count().ToString()
-            ]);
+            {
+                var lastAttempt = fp.Attempts.MaxBy(a => (DateTimeOffset?)a.Occurred ?? DateTimeOffset.MinValue);
+                return
+                [
+                    fp.Id.ToString(),
+                    fp.ObserverId,
+                    fp.Partition,
+                    fp.Attempts.Count().ToString(),
+                    lastAttempt?.SequenceNumber.ToString() ?? string.Empty
+                ];
+            });
 
         return ExitCodes.Success;
     }
