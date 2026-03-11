@@ -20,7 +20,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
     };
 
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings)
+    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         var descriptor = new LlmContextDescriptor
         {

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Cli.Commands.Config;
 public class ConfigPathCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings)
+    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         Console.WriteLine(CliConfiguration.GetConfigPath());
         return Task.FromResult(ExitCodes.Success);

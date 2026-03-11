@@ -22,6 +22,20 @@ Read the documentation on our site [https://cratis.io](https://cratis.io) for al
 All samples are available in our [Samples repo](https://github.com/cratis/samples).
 For general guidance on the core values and principles we adhere to, read more [here](https://github.com/Cratis/.github/blob/main/profile/README.md).
 
+## CLI
+
+The Cratis Chronicle CLI is distributed as a .NET global tool via NuGet. Install it with:
+
+```shell
+dotnet tool install -g Cratis.Chronicle.Cli
+```
+
+Once installed, the tool is available as `cratis` from any terminal. To update to the latest version:
+
+```shell
+dotnet tool update -g Cratis.Chronicle.Cli
+```
+
 ## Support
 
 [![githelp.app shield](https://rbpwwcsvhmbmfiphokrm.supabase.co/storage/v1/object/public/public_resources/Badge2%20-%20round%20corners.svg?t=2023-12-11T13%3A11%3A05.524Z)](https://githelp.app/repos/cratis)

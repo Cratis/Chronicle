@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Cli.Commands.Config;
 public class SetConfigCommand : AsyncCommand<SetConfigSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, SetConfigSettings settings)
+    public override Task<int> ExecuteAsync(CommandContext context, SetConfigSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

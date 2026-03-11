@@ -142,4 +142,5 @@ public static class OutputFormatter
             Console.WriteLine(string.Join('\t', getRow(item)));
         }
     }
+
 }

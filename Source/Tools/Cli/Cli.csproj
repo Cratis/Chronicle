@@ -3,8 +3,11 @@
         <OutputType>Exe</OutputType>
         <AssemblyName>Cratis.Chronicle.Cli</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Cli</RootNamespace>
-        <IsPackable>false</IsPackable>
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifiers></RuntimeIdentifiers>
     </PropertyGroup>
 
     <ItemGroup>

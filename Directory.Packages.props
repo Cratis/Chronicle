@@ -99,8 +99,8 @@
     <PackageVersion Include="handlebars.net" Version="2.1.6" />
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <!-- CLI -->
-    <PackageVersion Include="Spectre.Console" Version="0.50.0" />
-    <PackageVersion Include="Spectre.Console.Cli" Version="0.50.0" />
+    <PackageVersion Include="Spectre.Console" Version="0.54.0" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.53.1" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
     <!-- Testing & Specifications -->
     <PackageVersion Include="coverlet.collector" Version="8.0.0" />

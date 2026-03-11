@@ -373,3 +373,23 @@ cratis observers list -o plain
 ```
 
 Set `CHRONICLE_CONNECTION_STRING` in your CI environment rather than passing `--server` on every command.
+
+---
+
+For a machine-readable description of all CLI capabilities (commands, options, connection info), use the `llm-context` command:
+
+```bash
+cratis llm-context
+```
+
+This outputs a JSON schema of the entire CLI surface — ideal for tool-use integration with AI agents.
+
+---
+
+### `llm-context`
+
+```bash
+cratis llm-context
+```
+
+Outputs a machine-readable JSON description of all CLI commands, options, and connection information. Designed for AI agents to discover CLI capabilities programmatically.

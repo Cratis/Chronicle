@@ -16,7 +16,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : GlobalSettings
 {
     /// <inheritdoc/>
-    public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings)
+    public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

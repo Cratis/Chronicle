@@ -133,8 +133,7 @@ public static class CliApp
             });
 
             config.AddCommand<LlmContextCommand>("llm-context")
-                .WithDescription("Output CLI capabilities as JSON for AI agent consumption")
-                .IsHidden();
+                .WithDescription("Output CLI capabilities as JSON for AI agent consumption");
         });
 
         return app;
