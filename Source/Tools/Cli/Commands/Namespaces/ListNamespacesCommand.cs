@@ -24,6 +24,6 @@ public class ListNamespacesCommand : ChronicleCommand<EventStoreSettings>
             ["Namespace"],
             name => [name]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

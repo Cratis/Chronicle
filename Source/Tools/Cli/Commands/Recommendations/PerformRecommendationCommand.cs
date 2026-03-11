@@ -24,6 +24,6 @@ public class PerformRecommendationCommand : ChronicleCommand<RecommendationActio
         });
 
         OutputFormatter.WriteMessage(format, $"Recommendation '{settings.RecommendationId}' performed");
-        return 0;
+        return ExitCodes.Success;
     }
 }

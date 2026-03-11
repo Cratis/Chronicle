@@ -25,6 +25,6 @@ public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
         });
 
         OutputFormatter.WriteMessage(format, $"Replay started for observer '{settings.ObserverId}'");
-        return 0;
+        return ExitCodes.Success;
     }
 }

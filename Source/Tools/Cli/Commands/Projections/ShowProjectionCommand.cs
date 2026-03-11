@@ -26,7 +26,7 @@ public class ShowProjectionCommand : ChronicleCommand<ShowProjectionSettings>
         if (match is null)
         {
             OutputFormatter.WriteError(format, $"Projection '{settings.Identifier}' not found", "Use 'cratis projections list' to see available projections");
-            return 1;
+            return ExitCodes.NotFound;
         }
 
         OutputFormatter.WriteObject(
@@ -45,6 +45,6 @@ public class ShowProjectionCommand : ChronicleCommand<ShowProjectionSettings>
                 AnsiConsole.WriteLine(data.Declaration);
             });
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

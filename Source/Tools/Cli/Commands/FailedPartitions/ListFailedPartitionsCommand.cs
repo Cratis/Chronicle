@@ -37,6 +37,6 @@ public class ListFailedPartitionsCommand : ChronicleCommand<ListFailedPartitions
                 fp.Attempts.Count().ToString()
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

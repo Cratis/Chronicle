@@ -24,6 +24,6 @@ public class ShowConfigCommand : AsyncCommand<GlobalSettings>
             AnsiConsole.MarkupLine($"[bold]Default Namespace:[/]   {(cfg.DefaultNamespace ?? "(not set)").EscapeMarkup()}");
         });
 
-        return Task.FromResult(0);
+        return Task.FromResult(ExitCodes.Success);
     }
 }

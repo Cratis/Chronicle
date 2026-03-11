@@ -35,6 +35,6 @@ public class ListIdentitiesCommand : ChronicleCommand<EventStoreSettings>
                 id.UserName
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

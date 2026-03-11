@@ -14,6 +14,6 @@ public class ConfigPathCommand : AsyncCommand<GlobalSettings>
     public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings)
     {
         Console.WriteLine(CliConfiguration.GetConfigPath());
-        return Task.FromResult(0);
+        return Task.FromResult(ExitCodes.Success);
     }
 }

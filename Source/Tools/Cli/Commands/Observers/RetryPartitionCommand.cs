@@ -26,6 +26,6 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
         });
 
         OutputFormatter.WriteMessage(format, $"Retry started for partition '{settings.Partition}' of observer '{settings.ObserverId}'");
-        return 0;
+        return ExitCodes.Success;
     }
 }

@@ -38,6 +38,6 @@ public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
                 evt.Context.Occurred?.ToString() ?? string.Empty
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

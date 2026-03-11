@@ -20,6 +20,6 @@ public class ListEventStoresCommand : ChronicleCommand<GlobalSettings>
             ["Name"],
             name => [name]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

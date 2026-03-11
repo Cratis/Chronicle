@@ -38,7 +38,7 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
                 obs.IsSubscribed.ToString()
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 
     static IEnumerable<ObserverInformation> FilterByType(IEnumerable<ObserverInformation> observers, string type)

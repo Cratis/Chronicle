@@ -51,7 +51,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
         };
 
         Console.WriteLine(JsonSerializer.Serialize(descriptor, _serializerOptions));
-        return Task.FromResult(0);
+        return Task.FromResult(ExitCodes.Success);
     }
 
     static IReadOnlyList<CommandGroupDescriptor> BuildCommandGroups() =>

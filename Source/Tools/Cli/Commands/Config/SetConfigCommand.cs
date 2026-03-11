@@ -29,11 +29,11 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
                 break;
             default:
                 OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace");
-                return Task.FromResult(1);
+                return Task.FromResult(ExitCodes.NotFound);
         }
 
         config.Save();
         OutputFormatter.WriteMessage(format, $"Set '{settings.Key}' to '{settings.Value}'");
-        return Task.FromResult(0);
+        return Task.FromResult(ExitCodes.Success);
     }
 }

@@ -37,6 +37,6 @@ public class ListRecommendationsCommand : ChronicleCommand<EventStoreSettings>
                 rec.Occurred?.ToString() ?? string.Empty
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

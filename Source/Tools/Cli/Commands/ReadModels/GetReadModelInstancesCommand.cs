@@ -44,6 +44,6 @@ public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstanc
                 }
             });
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

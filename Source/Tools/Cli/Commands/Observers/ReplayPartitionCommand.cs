@@ -26,6 +26,6 @@ public class ReplayPartitionCommand : ChronicleCommand<PartitionCommandSettings>
         });
 
         OutputFormatter.WriteMessage(format, $"Replay started for partition '{settings.Partition}' of observer '{settings.ObserverId}'");
-        return 0;
+        return ExitCodes.Success;
     }
 }

@@ -36,6 +36,6 @@ public class ListProjectionsCommand : ChronicleCommand<EventStoreSettings>
                 def.AutoMap.ToString()
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

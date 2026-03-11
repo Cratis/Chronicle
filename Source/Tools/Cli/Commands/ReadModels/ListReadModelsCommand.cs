@@ -35,6 +35,6 @@ public class ListReadModelsCommand : ChronicleCommand<EventStoreSettings>
                 rm.Source.ToString()
             ]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

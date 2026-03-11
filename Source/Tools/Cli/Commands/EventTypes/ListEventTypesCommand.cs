@@ -24,6 +24,6 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
             ["Id", "Generation", "Owner", "Source"],
             reg => [reg.Type.Id, reg.Type.Generation.ToString(), reg.Owner.ToString(), reg.Source.ToString()]);
 
-        return 0;
+        return ExitCodes.Success;
     }
 }

@@ -25,6 +25,6 @@ public class IgnoreRecommendationCommand : ChronicleCommand<RecommendationAction
         });
 
         OutputFormatter.WriteMessage(format, $"Recommendation '{settings.RecommendationId}' ignored");
-        return 0;
+        return ExitCodes.Success;
     }
 }

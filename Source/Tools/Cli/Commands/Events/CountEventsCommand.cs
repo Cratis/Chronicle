@@ -26,6 +26,6 @@ public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
         OutputFormatter.WriteObject(format, new { TailSequenceNumber = response.SequenceNumber }, data =>
             Console.WriteLine(data.TailSequenceNumber));
 
-        return 0;
+        return ExitCodes.Success;
     }
 }
