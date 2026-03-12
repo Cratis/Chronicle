@@ -3,11 +3,12 @@
 
 import { AppendedEvent } from 'Api/Events';
 import { Compensate } from 'Api/EventSequences';
-import { Dialog } from 'Components/Dialogs';
-import { useState } from 'react';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import strings from 'Strings';
+import { AllEventTypesWithSchemas } from 'Api/EventTypes';
+import { useState, useEffect } from 'react';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { ObjectContent } from 'Components/ObjectContentViewer';
+import { JsonSchema } from 'Components/JsonSchema';
+import { Json } from 'Features/index';
 
 export interface CompensateDialogProps {
     event: AppendedEvent;
@@ -15,26 +16,23 @@ export interface CompensateDialogProps {
     namespace: string;
 }
 
-export const CompensateDialog = () => {
-    const { request } = useDialogContext<CompensateDialogProps>();
-    const [compensate] = Compensate.use();
-    const [contentStr, setContentStr] = useState(() =>
-        request ? JSON.stringify(JSON.parse(request.event.content), null, 2) : ''
-    );
-    const [jsonError, setJsonError] = useState<string | undefined>();
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() =>
-        request ? (JSON.parse(request.event.content) as Record<string, unknown>) : {}
-    );
+export const CompensateDialog = ({ event, eventStore, namespace, visible, onClose }: CompensateDialogProps) => {
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => JSON.parse(event.content));
+    const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
+    const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
-    const handleContentChange = (value: string) => {
-        setContentStr(value);
-        try {
-            setParsedContent(JSON.parse(value) as Record<string, unknown>);
-            setJsonError(undefined);
-        } catch (e) {
-            setJsonError((e as Error).message);
+    const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore });
+
+    useEffect(() => {
+        const registration = allEventTypes.data.find(et => et.type.id === event.context.eventType.id);
+        if (registration) {
+            try {
+                setSchema(JSON.parse(registration.schema) as JsonSchema);
+            } catch {
+                setSchema({ type: 'object', properties: {} });
+            }
         }
-    };
+    }, [allEventTypes.data, event.context.eventType.id]);
 
     const handleClose = async (result: DialogResult) => {
         if (result !== DialogResult.Ok || !request) {
@@ -55,35 +53,29 @@ export const CompensateDialog = () => {
     if (!request) return null;
 
     return (
-        <Dialog
-            title={`${strings.eventStore.namespaces.sequences.dialogs.compensate.title} #${request.event.context.sequenceNumber}`}
-            onClose={handleClose}
-            isValid={!jsonError}
+        <CommandDialog
+            command={Compensate}
+            currentValues={currentValues}
+            visible={visible}
+            title={`Compensate Event #${event.context.sequenceNumber}`}
             width="50vw"
-            okLabel={strings.eventStore.namespaces.sequences.dialogs.compensate.okLabel}>
-            <div className="p-fluid">
-                <div className="field">
-                    <label htmlFor="eventType">{strings.eventStore.namespaces.sequences.dialogs.compensate.eventType}</label>
-                    <input
-                        id="eventType"
-                        type="text"
-                        className="p-inputtext"
-                        value={request.event.context.eventType.id}
-                        disabled
-                    />
-                </div>
-                <div className="field">
-                    <label htmlFor="content">{strings.eventStore.namespaces.sequences.dialogs.compensate.content}</label>
-                    <InputTextarea
-                        id="content"
-                        value={contentStr}
-                        onChange={(e) => handleContentChange(e.target.value)}
-                        rows={15}
-                        autoResize
-                        className={jsonError ? 'p-invalid' : ''}
-                    />
-                    {jsonError && <small className="p-error">{jsonError}</small>}
-                </div>
+            isValid={!hasValidationErrors}
+            onConfirm={onClose}
+            onCancel={onClose}>
+            <div style={{
+                border: '1px solid var(--surface-border)',
+                borderRadius: '4px',
+                padding: '1rem',
+                maxHeight: '400px',
+                overflow: 'auto'
+            }}>
+                <ObjectContent
+                    object={parsedContent as Json}
+                    schema={schema}
+                    editMode={true}
+                    onChange={(obj) => setParsedContent(obj as Record<string, unknown>)}
+                    onValidationChange={setHasValidationErrors}
+                />
             </div>
         </Dialog>
     );
