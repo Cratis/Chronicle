@@ -48,4 +48,12 @@ public interface IStorage
     /// <param name="eventStore"><see cref="EventStoreName"/> to remove.</param>
     /// <returns>Awaitable task.</returns>
     Task RemoveEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Clear all in-memory caches and delete all event store registration documents.
+    /// Call after grain eviction to undo any re-upserts that deactivating grains
+    /// may have performed via <see cref="GetEventStore"/>.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ResetAll();
 }

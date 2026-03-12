@@ -102,7 +102,7 @@ public class Reactor(
         {
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                "Reducer definition has changed.",
+                "Reactor definition has changed.",
                 new()
                 {
                     ObserverId = key.ReactorId,

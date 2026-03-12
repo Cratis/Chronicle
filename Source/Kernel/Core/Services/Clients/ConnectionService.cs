@@ -13,9 +13,11 @@ namespace Cratis.Chronicle.Services.Clients;
 /// Represents an implementation of <see cref="IConnectionService"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
+/// <param name="connectionManager"><see cref="IClientConnectionManager"/> for tracking and controlling client connections.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
+    IClientConnectionManager connectionManager,
     ILogger<ConnectionService> logger) : IConnectionService
 {
     /// <inheritdoc/>
@@ -29,21 +31,23 @@ internal sealed class ConnectionService(
         _ = Task.Run(
             async () =>
             {
-                await connectedClients.OnClientConnected(
-                    request.ConnectionId,
-                    request.ClientVersion,
-                    request.IsRunningWithDebugger);
+                // Wait until the server is accepting connections (blocks during reset).
+                await connectionManager.WaitUntilAcceptingConnections();
+
+                // Create a linked CTS so the server can force-disconnect this client.
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+                connectionManager.Register(request.ConnectionId, linkedCts);
 
                 try
                 {
-                    while (!context.CancellationToken.IsCancellationRequested)
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    await connectedClients.OnClientConnected(
+                        request.ConnectionId,
+                        request.ClientVersion,
+                        request.IsRunningWithDebugger);
 
-                        if (context.CancellationToken.IsCancellationRequested)
-                        {
-                            break;
-                        }
+                    while (!linkedCts.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1), linkedCts.Token).ConfigureAwait(false);
 
                         subject.OnNext(new ConnectionKeepAlive
                         {
@@ -51,20 +55,24 @@ internal sealed class ConnectionService(
                         });
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the connection is terminated — either by client disconnect
+                    // or server-initiated disconnection during a reset.
+                }
                 catch (Exception ex)
                 {
                     logger.FailureDuringKeepAlive(request.ConnectionId, ex);
                 }
-
-                await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+                finally
+                {
+                    connectionManager.Unregister(request.ConnectionId);
+                    subject.OnCompleted();
+                    subject.Dispose();
+                    await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
+                }
             },
-            context.CancellationToken);
-
-        context.CancellationToken.Register(() =>
-        {
-            subject.OnCompleted();
-            subject.Dispose();
-        });
+            CancellationToken.None);
 
         return subject;
     }

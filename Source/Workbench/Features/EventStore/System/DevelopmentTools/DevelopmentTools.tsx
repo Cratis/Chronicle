@@ -3,12 +3,11 @@
 
 import { useState } from 'react';
 import { AllEventStores } from 'Api/EventStores';
-import { IsAvailable, ResetAll, ResetEventStore } from 'Api/DevelopmentTools';
+import { ResetAll, ResetEventStore } from 'Api/DevelopmentTools';
 import { useConfirmationDialog, DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 
 export const DevelopmentTools = () => {
-    const [availabilityResult] = IsAvailable.use();
     const [eventStoresResult] = AllEventStores.use();
     const [resetAll] = ResetAll.use();
     const [resetEventStore] = ResetEventStore.use();
@@ -19,13 +18,6 @@ export const DevelopmentTools = () => {
     const [resetEventStoreRunning, setResetEventStoreRunning] = useState(false);
 
     const devToolsStrings = strings.eventStore.system.developmentTools;
-
-    if (!availabilityResult.isSuccess) {        return (
-            <div className='p-6'>
-                <p className='text-gray-500'>{devToolsStrings.notAvailable}</p>
-            </div>
-        );
-    }
 
     const handleResetAll = async () => {
         const result = await showConfirmation(

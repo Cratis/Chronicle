@@ -108,6 +108,14 @@ public class Storage(
         _eventStores.TryRemove(eventStore, out _);
     }
 
+    /// <inheritdoc/>
+    public async Task ResetAll()
+    {
+        _eventStores.Clear();
+        var collection = GetCollection();
+        await collection.DeleteManyAsync(_ => true);
+    }
+
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
         if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))
