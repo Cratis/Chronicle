@@ -13,11 +13,12 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
     /// <inheritdoc/>
     public override Task<int> ExecuteAsync(CommandContext context, CreateContextSettings settings, CancellationToken cancellationToken)
     {
+        var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
 
         if (config.Contexts.ContainsKey(settings.Name))
         {
-            OutputFormatter.WriteError("text", $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
+            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
             return Task.FromResult(ExitCodes.ValidationError);
         }
 
@@ -40,7 +41,7 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
             ? $"Created and switched to context '{settings.Name}'."
             : $"Created context '{settings.Name}'. Switch to it with: cratis context set {settings.Name}";
 
-        OutputFormatter.WriteMessage("text", message);
+        OutputFormatter.WriteMessage(format, message);
         return Task.FromResult(ExitCodes.Success);
     }
 }

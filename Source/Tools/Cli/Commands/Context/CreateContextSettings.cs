@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Cli.Commands.Context;
 /// <summary>
 /// Settings for creating a new context.
 /// </summary>
-public class CreateContextSettings : CommandSettings
+public class CreateContextSettings : GlobalSettings
 {
     /// <summary>
     /// Gets or sets the name of the context to create.
@@ -17,13 +17,6 @@ public class CreateContextSettings : CommandSettings
     [CommandArgument(0, "<NAME>")]
     [Description("Name of the context to create")]
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the server connection string for the new context.
-    /// </summary>
-    [CommandOption("--server <CONNECTION_STRING>")]
-    [Description("Chronicle server connection string for this context")]
-    public string? Server { get; set; }
 
     /// <summary>
     /// Gets or sets the event store name for the new context.

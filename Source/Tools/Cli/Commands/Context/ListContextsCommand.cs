@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli.Commands.Context;
@@ -33,29 +32,18 @@ public class ListContextsCommand : AsyncCommand<GlobalSettings>
             return Task.FromResult(ExitCodes.Success);
         }
 
-        OutputFormatter.WriteObject(format, contexts, entries =>
-        {
-            var table = new Table();
-            table.AddColumn(" ");
-            table.AddColumn("Name");
-            table.AddColumn("Server");
-            table.AddColumn("Event Store");
-            table.AddColumn("User");
-
-            foreach (var entry in entries)
-            {
-                var marker = entry.IsCurrent ? "[green]*[/]" : " ";
-                var name = entry.IsCurrent ? $"[green]{entry.Name.EscapeMarkup()}[/]" : entry.Name.EscapeMarkup();
-                table.AddRow(
-                    marker,
-                    name,
-                    entry.Server.EscapeMarkup(),
-                    entry.EventStore.EscapeMarkup(),
-                    entry.LoggedInUser?.EscapeMarkup() ?? "[dim]-[/]");
-            }
-
-            AnsiConsole.Write(table);
-        });
+        OutputFormatter.Write(
+            format,
+            contexts,
+            ["Current", "Name", "Server", "Event Store", "User"],
+            entry =>
+            [
+                entry.IsCurrent ? "*" : string.Empty,
+                entry.Name,
+                entry.Server,
+                entry.EventStore,
+                entry.LoggedInUser ?? "-"
+            ]);
 
         return Task.FromResult(ExitCodes.Success);
     }
