@@ -71,10 +71,11 @@ internal sealed class DevelopmentTools(
             await client.DropDatabaseAsync(readModelDbName);
         }
 
-        // Remove the event store from the registry so clients re-register it cleanly
-        await storage.RemoveEventStore(eventStoreName);
-
         await ForceGrainEviction();
+
+        // Remove the event store from the registry after grain eviction so that
+        // reactivating grains cannot re-create the entry via storage.GetEventStore().
+        await storage.RemoveEventStore(eventStoreName);
     }
 
     IMongoClient GetMongoClient()

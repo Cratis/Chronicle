@@ -3,6 +3,7 @@
 
 #if DEVELOPMENT
 using Cratis.Chronicle.Contracts.Host;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Cratis.Chronicle.Api.DevelopmentTools;
 
@@ -27,9 +28,10 @@ public class DevelopmentToolsCommands : ControllerBase
     /// <summary>
     /// Check whether development tools are available on this server.
     /// </summary>
-    /// <returns>200 OK when available; a 404 would indicate a production build.</returns>
+    /// <returns>True when available; a 404 would indicate a production build.</returns>
+    [AllowAnonymous]
     [HttpGet("is-available")]
-    public IActionResult IsAvailable() => Ok();
+    public bool IsAvailable() => true;
 
     /// <summary>
     /// Reset all Chronicle state: drops all databases and evicts all Orleans grain activations.
