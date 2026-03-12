@@ -5,7 +5,6 @@ using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Contracts.Primitives;
 
 namespace Cratis.Chronicle.Contracts.EventSequences;
 
