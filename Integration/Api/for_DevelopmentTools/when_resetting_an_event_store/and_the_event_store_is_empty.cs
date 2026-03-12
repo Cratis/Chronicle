@@ -7,10 +7,6 @@ using context = Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_reset
 
 namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_an_event_store;
 
-/// <summary>
-/// Verifies that resetting an event store removes it from the system.
-/// This test passes only when the Chronicle server is built in Development (Debug) mode.
-/// </summary>
 [Collection(ChronicleCollection.Name)]
 public class and_the_event_store_is_empty(context context) : Given<context>(context)
 {

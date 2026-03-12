@@ -2,16 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Queries;
-using Cratis.Chronicle.Api.EventStores;
 using Cratis.Chronicle.Api.Events;
+using Cratis.Chronicle.Api.EventStores;
 using context = Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_an_event_store.and_verifying_the_store_is_functional_after_reset.context;
 
 namespace Cratis.Chronicle.Integration.Api.for_DevelopmentTools.when_resetting_an_event_store;
 
-/// <summary>
-/// Verifies that an event store is fully functional (can be re-created and re-populated) after a reset.
-/// This test passes only when the Chronicle server is built in Development (Debug) mode.
-/// </summary>
 [Collection(ChronicleCollection.Name)]
 public class and_verifying_the_store_is_functional_after_reset(context context) : Given<context>(context)
 {
