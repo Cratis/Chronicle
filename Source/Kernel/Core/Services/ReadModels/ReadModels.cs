@@ -112,7 +112,7 @@ internal sealed class ReadModels(
         var definition = await readModel.GetDefinition();
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = sinks.GetFor(definition);
-        var skip = request.Page * request.PageSize;
+        var skip = Math.Max(0, request.Page * request.PageSize);
 
         Concepts.ReadModels.ReadModelContainerName? occurrence = null;
         if (!string.IsNullOrEmpty(request.Occurrence))
@@ -125,7 +125,7 @@ internal sealed class ReadModels(
             skip,
             request.PageSize);
 
-        var instancesAsJson = instances.Select(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)) ?? [];
         return new()
         {
             Instances = instancesAsJson,
