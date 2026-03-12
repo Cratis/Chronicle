@@ -103,6 +103,7 @@ projection BadProjection
 - [Children](children.md) - Define nested collections
 - [Removal](removal.md) - Remove projection instances based on events
 - [Expressions](expressions.md) - Understanding expression syntax
+- [Ad-hoc Querying](adhoc-querying.md) - Query the event log without registering a projection
 - [Grammar (EBNF)](grammar.md) - Complete formal grammar specification
 
 ## Example Projection
