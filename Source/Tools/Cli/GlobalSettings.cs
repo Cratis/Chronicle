@@ -28,8 +28,8 @@ public class GlobalSettings : CommandSettings
     public string Output { get; set; } = "auto";
 
     /// <summary>
-    /// Resolves the effective connection string by checking flag, environment variable, config file, then default.
-    /// When the resolved connection string has no embedded credentials, client credentials from the config file are composed in.
+    /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
+    /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
     /// <returns>The resolved connection string.</returns>
     public string ResolveConnectionString()
@@ -50,9 +50,10 @@ public class GlobalSettings : CommandSettings
             else
             {
                 var config = CliConfiguration.Load();
-                if (!string.IsNullOrWhiteSpace(config.DefaultServer))
+                var ctx = config.GetCurrentContext();
+                if (!string.IsNullOrWhiteSpace(ctx.Server))
                 {
-                    connectionString = config.DefaultServer;
+                    connectionString = ctx.Server;
                 }
                 else
                 {
@@ -93,9 +94,10 @@ public class GlobalSettings : CommandSettings
         }
 
         var config = CliConfiguration.Load();
-        if (!string.IsNullOrWhiteSpace(config.ClientId) && !string.IsNullOrWhiteSpace(config.ClientSecret))
+        var ctx = config.GetCurrentContext();
+        if (!string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret))
         {
-            return parsed.WithCredentials(config.ClientId, config.ClientSecret).ToString();
+            return parsed.WithCredentials(ctx.ClientId, ctx.ClientSecret).ToString();
         }
 
         return connectionString;

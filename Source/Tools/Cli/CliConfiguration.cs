@@ -2,14 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cratis.Chronicle.Cli;
 
 /// <summary>
 /// Represents the CLI configuration stored at XDG config path.
+/// Supports named contexts for connecting to different Chronicle servers.
 /// </summary>
 public class CliConfiguration
 {
+    const string DefaultContextName = "default";
+
     static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
@@ -17,44 +21,20 @@ public class CliConfiguration
     };
 
     /// <summary>
-    /// Gets or sets the default server connection string.
+    /// Gets or sets the name of the currently active context.
     /// </summary>
-    public string? DefaultServer { get; set; }
+    public string? ActiveContext { get; set; }
 
     /// <summary>
-    /// Gets or sets the default event store name.
+    /// Gets or sets the named contexts.
     /// </summary>
-    public string? DefaultEventStore { get; set; }
+    public IDictionary<string, CliContext> Contexts { get; set; } = new Dictionary<string, CliContext>();
 
     /// <summary>
-    /// Gets or sets the default namespace name.
+    /// Gets the name of the active context, falling back to the default name.
     /// </summary>
-    public string? DefaultNamespace { get; set; }
-
-    /// <summary>
-    /// Gets or sets the client ID for client_credentials authentication.
-    /// </summary>
-    public string? ClientId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the client secret for client_credentials authentication.
-    /// </summary>
-    public string? ClientSecret { get; set; }
-
-    /// <summary>
-    /// Gets or sets the cached access token from a previous login.
-    /// </summary>
-    public string? AccessToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the token expiry time in UTC ISO-8601 format.
-    /// </summary>
-    public string? TokenExpiry { get; set; }
-
-    /// <summary>
-    /// Gets or sets the username of the currently logged-in user.
-    /// </summary>
-    public string? LoggedInUser { get; set; }
+    [JsonIgnore]
+    public string ActiveContextName => ActiveContext ?? DefaultContextName;
 
     /// <summary>
     /// Gets the path to the configuration file.
@@ -73,6 +53,7 @@ public class CliConfiguration
 
     /// <summary>
     /// Loads the configuration from disk, returning defaults if the file does not exist.
+    /// Automatically migrates legacy flat configuration to the new context-based format.
     /// </summary>
     /// <returns>The loaded <see cref="CliConfiguration"/>.</returns>
     public static CliConfiguration Load()
@@ -84,7 +65,37 @@ public class CliConfiguration
         }
 
         var json = File.ReadAllText(path);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        // Detect legacy flat format: has "defaultServer" or "clientId" but no "contexts".
+        if (root.TryGetProperty("defaultServer", out _) || root.TryGetProperty("clientId", out _))
+        {
+            if (!root.TryGetProperty("contexts", out _))
+            {
+                return MigrateLegacy(root);
+            }
+        }
+
         return JsonSerializer.Deserialize<CliConfiguration>(json, _jsonOptions) ?? new CliConfiguration();
+    }
+
+    /// <summary>
+    /// Gets the active context, creating the default one if none exists.
+    /// </summary>
+    /// <returns>The current <see cref="CliContext"/>.</returns>
+    public CliContext GetCurrentContext()
+    {
+        var name = ActiveContext ?? DefaultContextName;
+        if (Contexts.TryGetValue(name, out var ctx))
+        {
+            return ctx;
+        }
+
+        ctx = new CliContext();
+        Contexts[name] = ctx;
+        ActiveContext = name;
+        return ctx;
     }
 
     /// <summary>
@@ -101,5 +112,45 @@ public class CliConfiguration
 
         var json = JsonSerializer.Serialize(this, _jsonOptions);
         File.WriteAllText(path, json);
+    }
+
+    /// <summary>
+    /// Migrates a legacy flat config to context-based format.
+    /// </summary>
+    /// <param name="root">The root JSON element with legacy properties.</param>
+    /// <returns>A new <see cref="CliConfiguration"/> with the legacy values in a default context.</returns>
+    static CliConfiguration MigrateLegacy(JsonElement root)
+    {
+        var ctx = new CliContext
+        {
+            Server = GetStringProperty(root, "defaultServer"),
+            EventStore = GetStringProperty(root, "defaultEventStore"),
+            Namespace = GetStringProperty(root, "defaultNamespace"),
+            ClientId = GetStringProperty(root, "clientId"),
+            ClientSecret = GetStringProperty(root, "clientSecret"),
+            AccessToken = GetStringProperty(root, "accessToken"),
+            TokenExpiry = GetStringProperty(root, "tokenExpiry"),
+            LoggedInUser = GetStringProperty(root, "loggedInUser")
+        };
+
+        var config = new CliConfiguration
+        {
+            ActiveContext = DefaultContextName,
+            Contexts = new Dictionary<string, CliContext> { [DefaultContextName] = ctx }
+        };
+
+        // Save the migrated format immediately so we don't re-migrate every load.
+        config.Save();
+        return config;
+    }
+
+    static string? GetStringProperty(JsonElement root, string name)
+    {
+        if (root.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+
+        return null;
     }
 }

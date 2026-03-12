@@ -28,7 +28,7 @@ public class EventStoreSettings : GlobalSettings
     public string Namespace { get; set; } = "Default";
 
     /// <summary>
-    /// Resolves the effective event store name by checking flag, then config file, then default.
+    /// Resolves the effective event store name by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved event store name.</returns>
     public string ResolveEventStore()
@@ -39,16 +39,17 @@ public class EventStoreSettings : GlobalSettings
         }
 
         var config = CliConfiguration.Load();
-        if (!string.IsNullOrWhiteSpace(config.DefaultEventStore))
+        var ctx = config.GetCurrentContext();
+        if (!string.IsNullOrWhiteSpace(ctx.EventStore))
         {
-            return config.DefaultEventStore;
+            return ctx.EventStore;
         }
 
         return "default";
     }
 
     /// <summary>
-    /// Resolves the effective namespace by checking flag, then config file, then default.
+    /// Resolves the effective namespace by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved namespace name.</returns>
     public string ResolveNamespace()
@@ -59,9 +60,10 @@ public class EventStoreSettings : GlobalSettings
         }
 
         var config = CliConfiguration.Load();
-        if (!string.IsNullOrWhiteSpace(config.DefaultNamespace))
+        var ctx = config.GetCurrentContext();
+        if (!string.IsNullOrWhiteSpace(ctx.Namespace))
         {
-            return config.DefaultNamespace;
+            return ctx.Namespace;
         }
 
         return "Default";

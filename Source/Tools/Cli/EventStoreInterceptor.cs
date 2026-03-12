@@ -28,9 +28,10 @@ public class EventStoreInterceptor : ICommandInterceptor
         }
 
         var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
 
         // If already configured, no need to prompt.
-        if (!string.IsNullOrWhiteSpace(config.DefaultEventStore))
+        if (!string.IsNullOrWhiteSpace(ctx.EventStore))
         {
             return;
         }
@@ -41,7 +42,7 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        PromptForDefaultEventStore(eventStoreSettings, config);
+        PromptForDefaultEventStore(eventStoreSettings, config, ctx);
     }
 
     /// <summary>
@@ -49,7 +50,8 @@ public class EventStoreInterceptor : ICommandInterceptor
     /// </summary>
     /// <param name="settings">The event store settings from the current command.</param>
     /// <param name="config">The CLI configuration to save the selection to.</param>
-    static void PromptForDefaultEventStore(EventStoreSettings settings, CliConfiguration config)
+    /// <param name="ctx">The current context to update.</param>
+    static void PromptForDefaultEventStore(EventStoreSettings settings, CliConfiguration config, CliContext ctx)
     {
         try
         {
@@ -85,7 +87,7 @@ public class EventStoreInterceptor : ICommandInterceptor
                         .AddChoices(eventStores));
             }
 
-            config.DefaultEventStore = selected;
+            ctx.EventStore = selected;
             config.Save();
             AnsiConsole.MarkupLine($"[green]Default event store set to '{selected.EscapeMarkup()}'.[/]");
             AnsiConsole.MarkupLine("[dim]You can change it later with: cratis config set event-store <name>[/]");

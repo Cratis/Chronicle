@@ -16,15 +16,37 @@ public class ShowConfigCommand : AsyncCommand<GlobalSettings>
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
+        var contextName = config.ActiveContextName;
+        var ctx = config.GetCurrentContext();
 
-        OutputFormatter.WriteObject(format, config, cfg =>
+        OutputFormatter.WriteObject(
+            format,
+            new
+            {
+                ActiveContext = contextName,
+                AvailableContexts = config.Contexts.Keys.ToArray(),
+                ctx.Server,
+                ctx.EventStore,
+                ctx.Namespace,
+                ctx.ClientId,
+                HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
+                ctx.LoggedInUser
+            },
+            _ =>
         {
-            AnsiConsole.MarkupLine($"[bold]Default Server:[/]      {OrNotSet(cfg.DefaultServer).EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Default Event Store:[/] {OrNotSet(cfg.DefaultEventStore).EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Default Namespace:[/]   {OrNotSet(cfg.DefaultNamespace).EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Client ID:[/]           {OrNotSet(cfg.ClientId).EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Client Secret:[/]       {(string.IsNullOrWhiteSpace(cfg.ClientSecret) ? "(not set)" : "********")}");
-            AnsiConsole.MarkupLine($"[bold]Logged-in User:[/]      {OrNotSet(cfg.LoggedInUser).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Current Context:[/]    {contextName.EscapeMarkup()}");
+            if (config.Contexts.Count > 1)
+            {
+                AnsiConsole.MarkupLine($"[bold]Available Contexts:[/] {string.Join(", ", config.Contexts.Keys.Select(k => k == contextName ? $"[green]{k.EscapeMarkup()}[/]" : k.EscapeMarkup()))}");
+            }
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[bold]Server:[/]             {OrNotSet(ctx.Server).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Event Store:[/]        {OrNotSet(ctx.EventStore).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Namespace:[/]          {OrNotSet(ctx.Namespace).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Client ID:[/]          {OrNotSet(ctx.ClientId).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Client Secret:[/]      {(string.IsNullOrWhiteSpace(ctx.ClientSecret) ? "(not set)" : "********")}");
+            AnsiConsole.MarkupLine($"[bold]Logged-in User:[/]     {OrNotSet(ctx.LoggedInUser).EscapeMarkup()}");
         });
 
         return Task.FromResult(ExitCodes.Success);

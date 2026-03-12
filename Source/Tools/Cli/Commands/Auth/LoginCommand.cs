@@ -68,9 +68,10 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             var expiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
 
             var config = CliConfiguration.Load();
-            config.AccessToken = accessToken;
-            config.TokenExpiry = expiry.ToString("O");
-            config.LoggedInUser = settings.Username;
+            var ctx = config.GetCurrentContext();
+            ctx.AccessToken = accessToken;
+            ctx.TokenExpiry = expiry.ToString("O");
+            ctx.LoggedInUser = settings.Username;
             config.Save();
 
             OutputFormatter.WriteMessage(format, $"Logged in as '{settings.Username}'. Token expires at {expiry:u}.");

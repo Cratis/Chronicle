@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Cli.Commands.Applications;
 using Cratis.Chronicle.Cli.Commands.Auth;
 using Cratis.Chronicle.Cli.Commands.Config;
+using Cratis.Chronicle.Cli.Commands.Context;
 using Cratis.Chronicle.Cli.Commands.Events;
 using Cratis.Chronicle.Cli.Commands.EventStores;
 using Cratis.Chronicle.Cli.Commands.EventTypes;
@@ -173,16 +174,42 @@ public static class CliApp
 
             config.AddBranch("auth", auth =>
             {
-                auth.SetDescription("Authentication and login management");
-                auth.AddCommand<LoginCommand>("login")
-                    .WithDescription("Log in as a user via the password grant flow")
-                    .WithExample("auth", "login", "admin");
-                auth.AddCommand<LogoutCommand>("logout")
-                    .WithDescription("Clear the cached login session")
-                    .WithExample("auth", "logout");
+                auth.SetDescription("Authentication management");
                 auth.AddCommand<AuthStatusCommand>("status")
                     .WithDescription("Show current authentication status")
                     .WithExample("auth", "status");
+            });
+
+            config.AddCommand<LoginCommand>("login")
+                .WithDescription("Log in as a user via the password grant flow")
+                .WithExample("login", "admin");
+
+            config.AddCommand<LogoutCommand>("logout")
+                .WithDescription("Clear the cached login session")
+                .WithExample("logout");
+
+            config.AddBranch("context", ctx =>
+            {
+                ctx.SetDescription("Manage named connection contexts");
+                ctx.AddCommand<ListContextsCommand>("list")
+                    .WithDescription("List all contexts")
+                    .WithExample("context", "list");
+                ctx.AddCommand<CreateContextCommand>("create")
+                    .WithDescription("Create a new context")
+                    .WithExample("context", "create", "dev", "--server", "chronicle://localhost:35000/?disableTls=true")
+                    .WithExample("context", "create", "prod", "--server", "chronicle://prod:35000", "-e", "production");
+                ctx.AddCommand<SetContextCommand>("set")
+                    .WithDescription("Switch to a context")
+                    .WithExample("context", "set", "prod");
+                ctx.AddCommand<ShowContextCommand>("show")
+                    .WithDescription("Show current context details")
+                    .WithExample("context", "show");
+                ctx.AddCommand<DeleteContextCommand>("delete")
+                    .WithDescription("Delete a context")
+                    .WithExample("context", "delete", "old-dev");
+                ctx.AddCommand<RenameContextCommand>("rename")
+                    .WithDescription("Rename a context")
+                    .WithExample("context", "rename", "dev", "development");
             });
 
             config.AddBranch("users", users =>

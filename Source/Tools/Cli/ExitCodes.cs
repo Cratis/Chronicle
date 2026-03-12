@@ -32,4 +32,9 @@ public static class ExitCodes
     /// Authentication failed or credentials are missing.
     /// </summary>
     public const int AuthenticationError = 4;
+
+    /// <summary>
+    /// The command failed due to a validation error (e.g. duplicate name, invalid state).
+    /// </summary>
+    public const int ValidationError = 5;
 }

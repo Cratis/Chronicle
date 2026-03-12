@@ -15,23 +15,24 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
 
         switch (settings.Key.ToLowerInvariant())
         {
             case "server":
-                config.DefaultServer = settings.Value;
+                ctx.Server = settings.Value;
                 break;
             case "event-store":
-                config.DefaultEventStore = settings.Value;
+                ctx.EventStore = settings.Value;
                 break;
             case "namespace":
-                config.DefaultNamespace = settings.Value;
+                ctx.Namespace = settings.Value;
                 break;
             case "client-id":
-                config.ClientId = settings.Value;
+                ctx.ClientId = settings.Value;
                 break;
             case "client-secret":
-                config.ClientSecret = settings.Value;
+                ctx.ClientSecret = settings.Value;
                 break;
             default:
                 OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret");
@@ -39,7 +40,7 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
         }
 
         config.Save();
-        OutputFormatter.WriteMessage(format, $"Set '{settings.Key}' to '{settings.Value}'");
+        OutputFormatter.WriteMessage(format, $"Set '{settings.Key}' to '{settings.Value}' in context '{config.ActiveContextName}'");
         return Task.FromResult(ExitCodes.Success);
     }
 }

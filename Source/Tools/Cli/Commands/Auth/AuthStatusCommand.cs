@@ -16,20 +16,25 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
+        var contextName = config.ActiveContextName;
+        var ctx = config.GetCurrentContext();
 
         var status = new AuthStatusInfo
         {
-            LoggedInUser = config.LoggedInUser,
-            HasToken = !string.IsNullOrWhiteSpace(config.AccessToken),
-            TokenExpiry = config.TokenExpiry,
-            IsTokenValid = IsTokenValid(config),
-            ClientId = config.ClientId,
-            HasClientSecret = !string.IsNullOrWhiteSpace(config.ClientSecret),
-            Server = config.DefaultServer
+            Context = contextName,
+            LoggedInUser = ctx.LoggedInUser,
+            HasToken = !string.IsNullOrWhiteSpace(ctx.AccessToken),
+            TokenExpiry = ctx.TokenExpiry,
+            IsTokenValid = IsTokenValid(ctx),
+            ClientId = ctx.ClientId,
+            HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
+            Server = ctx.Server
         };
 
         OutputFormatter.WriteObject(format, status, s =>
         {
+            AnsiConsole.MarkupLine($"[bold]Context:[/]         {s.Context.EscapeMarkup()}");
+            AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[bold]Login Session:[/]");
             if (!string.IsNullOrWhiteSpace(s.LoggedInUser))
             {
@@ -74,18 +79,19 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
         return Task.FromResult(ExitCodes.Success);
     }
 
-    static bool IsTokenValid(CliConfiguration config)
+    static bool IsTokenValid(CliContext ctx)
     {
-        if (string.IsNullOrWhiteSpace(config.AccessToken) || string.IsNullOrWhiteSpace(config.TokenExpiry))
+        if (string.IsNullOrWhiteSpace(ctx.AccessToken) || string.IsNullOrWhiteSpace(ctx.TokenExpiry))
         {
             return false;
         }
 
-        return DateTimeOffset.TryParse(config.TokenExpiry, out var expiry) && DateTimeOffset.UtcNow < expiry;
+        return DateTimeOffset.TryParse(ctx.TokenExpiry, out var expiry) && DateTimeOffset.UtcNow < expiry;
     }
 
     sealed record AuthStatusInfo
     {
+        public string Context { get; init; } = string.Empty;
         public string? LoggedInUser { get; init; }
         public bool HasToken { get; init; }
         public string? TokenExpiry { get; init; }
