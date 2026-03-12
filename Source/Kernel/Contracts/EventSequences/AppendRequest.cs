@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts.Auditing;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 using Cratis.Chronicle.Contracts.Identities;
+using Cratis.Chronicle.Contracts.Primitives;
 
 namespace Cratis.Chronicle.Contracts.EventSequences;
 
@@ -96,5 +97,5 @@ public class AppendRequest : IEventSequenceRequest
     /// Gets or sets the optional occurred time. If not set, the server will set it to approximately the time of append.
     /// </summary>
     [ProtoMember(15)]
-    public DateTimeOffset? Occurred { get; set; }
+    public SerializableDateTimeOffset? Occurred { get; set; }
 }
