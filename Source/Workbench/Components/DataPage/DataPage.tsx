@@ -173,7 +173,7 @@ export interface DataPageProps<TQuery extends IQueryFor<TDataType> | IObservable
  * @returns Function to render the DataPage component
  */
 const DataPage = <TQuery extends IQueryFor<TDataType> | IObservableQueryFor<TDataType, TArguments>, TDataType, TArguments extends object>(props: DataPageProps<TQuery, TDataType, TArguments>) => {
-    const [selectedItem, setSelectedItem] = React.useState(undefined);
+    const [selectedItem, setSelectedItem] = React.useState(props.selection ?? undefined);
 
     const selectionChanged = (e: DataTableSelectionSingleChangeEvent<any>) => {
         setSelectedItem(e.value);

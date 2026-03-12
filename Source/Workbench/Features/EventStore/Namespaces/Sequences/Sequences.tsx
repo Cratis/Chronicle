@@ -53,14 +53,17 @@ export const Sequences = () => {
         eventSequenceId: 'event-log'
     };
 
-    const handleRedactEvent = () => {
+    const handleRedactEvent = async () => {
         if (selectedEvent) {
-            showRedactEvent({
+            const [result] = await showRedactEvent({
                 eventStore: params.eventStore!,
                 namespace: params.namespace!,
                 eventSequenceId: 'event-log',
                 sequenceNumber: selectedEvent.context.sequenceNumber
             });
+            if (result === DialogResult.Ok) {
+                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
+            }
         }
     };
 
@@ -121,6 +124,7 @@ export const Sequences = () => {
                 title={strings.eventStore.namespaces.sequences.title}
                 query={AppendedEvents}
                 queryArguments={queryArgs}
+                selection={selectedEvent}
                 emptyMessage={strings.eventStore.namespaces.sequences.empty}
                 dataKey={sequenceNumberPath}
                 defaultFilters={filters}
