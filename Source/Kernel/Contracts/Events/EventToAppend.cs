@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Primitives;
+
 namespace Cratis.Chronicle.Contracts.Events;
 
 /// <summary>
@@ -55,5 +57,5 @@ public class EventToAppend
     /// Gets or sets the optional occurred time. If not set, the server will set it to approximately the time of append.
     /// </summary>
     [ProtoMember(8)]
-    public DateTimeOffset? Occurred { get; set; }
+    public SerializableDateTimeOffset? Occurred { get; set; }
 }
