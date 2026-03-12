@@ -1,5 +1,8 @@
 @import url(allotment/dist/style.css);
 @import "tailwindcss";
+@source "../Components";
+@source "../Features";
+@source "../Layout";
 @import '@cratis/components/styles';
 @import 'primereact/resources/themes/lara-dark-blue/theme.css';
 
@@ -59,7 +62,7 @@ h1 {
 
 .panel {
     background: var(--surface-card);
-    border: 1px solid var(--shade600);
+    border: 1px solid var(--surface-border);
     border-radius: var(--border-radius);
     color: var(--menu-text-color);
 }
