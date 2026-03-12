@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 using Orleans.Utilities;
 
@@ -19,10 +22,12 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// Initializes a new instance of the <see cref="Webhook"/> class.
 /// </remarks>
 /// <param name="webhookDefinitionComparer"><see cref="IWebhookDefinitionComparer"/> for comparing projection definitions.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Webhooks)]
 public class Webhook(
     IWebhookDefinitionComparer webhookDefinitionComparer,
+    IOptions<ChronicleOptions> options,
     ILogger<Webhook> logger) : Grain<WebhookDefinition>, IWebhook
 {
     readonly ObserverManager<INotifyWebhookDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
@@ -42,7 +47,15 @@ public class Webhook(
             logger.WebhookHasChanged(key.WebhookId);
             await _definitionObservers.Notify(notifier => notifier.OnWebhookDefinitionsChanged());
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
-            await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+
+            if (options.Value.Observers.ReplayOnDefinitionChange)
+            {
+                await ReplayForAllNamespaces(key, namespaceNames);
+            }
+            else
+            {
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+            }
         }
     }
 
@@ -61,6 +74,16 @@ public class Webhook(
     {
         _definitionObservers.Unsubscribe(subscriber);
         return Task.CompletedTask;
+    }
+
+    async Task ReplayForAllNamespaces(WebhookKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        foreach (var @namespace in namespaces)
+        {
+            logger.AutoReplayingWebhook(key.WebhookId, @namespace);
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.WebhookId, key.EventStore, @namespace, State.EventSequenceId));
+            await observer.Replay();
+        }
     }
 
     async Task AddReplayRecommendationForAllNamespaces(WebhookKey key, IEnumerable<EventStoreNamespaceName> namespaces)
