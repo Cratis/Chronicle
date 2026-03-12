@@ -9,6 +9,8 @@ import { CommandDialog } from '@cratis/components/CommandDialog';
 import { ObjectContent } from 'Components/ObjectContentViewer';
 import { JsonSchema } from 'Components/JsonSchema';
 import { Json } from 'Features/index';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import strings from 'Strings';
 
 export interface CompensateDialogProps {
     event: AppendedEvent;
@@ -16,15 +18,22 @@ export interface CompensateDialogProps {
     namespace: string;
 }
 
-export const CompensateDialog = ({ event, eventStore, namespace, visible, onClose }: CompensateDialogProps) => {
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => JSON.parse(event.content));
+export const CompensateDialog = () => {
+    const { request, closeDialog } = useDialogContext<CompensateDialogProps>();
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>({});
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
-    const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore });
+    const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore: request?.eventStore ?? '' });
 
     useEffect(() => {
-        const registration = allEventTypes.data.find(et => et.type.id === event.context.eventType.id);
+        if (request) {
+            setParsedContent(JSON.parse(request.event.content));
+        }
+    }, [request]);
+
+    useEffect(() => {
+        const registration = allEventTypes.data.find(et => et.type.id === request?.event.context.eventType.id);
         if (registration) {
             try {
                 setSchema(JSON.parse(registration.schema) as JsonSchema);
@@ -32,36 +41,28 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
                 setSchema({ type: 'object', properties: {} });
             }
         }
-    }, [allEventTypes.data, event.context.eventType.id]);
-
-    const handleClose = async (result: DialogResult) => {
-        if (result !== DialogResult.Ok || !request) {
-            return true;
-        }
-
-        compensate.eventStore = request.eventStore;
-        compensate.namespace = request.namespace;
-        compensate.eventSequenceId = 'event-log';
-        compensate.sequenceNumber = request.event.context.sequenceNumber;
-        compensate.eventType = request.event.context.eventType;
-        compensate.content = parsedContent;
-
-        const executeResult = await compensate.execute();
-        return executeResult.isSuccess;
-    };
+    }, [allEventTypes.data, request?.event.context.eventType.id]);
 
     if (!request) return null;
 
     return (
         <CommandDialog
             command={Compensate}
-            currentValues={currentValues}
-            visible={visible}
-            title={`Compensate Event #${event.context.sequenceNumber}`}
+            currentValues={{
+                eventStore: request.eventStore,
+                namespace: request.namespace,
+                eventSequenceId: 'event-log',
+                sequenceNumber: request.event.context.sequenceNumber,
+                eventType: request.event.context.eventType,
+                content: parsedContent
+            }}
+            title={`Compensate Event #${request.event.context.sequenceNumber}`}
+            okLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             width="50vw"
             isValid={!hasValidationErrors}
-            onConfirm={onClose}
-            onCancel={onClose}>
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div style={{
                 border: '1px solid var(--surface-border)',
                 borderRadius: '4px',
@@ -77,6 +78,6 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
                     onValidationChange={setHasValidationErrors}
                 />
             </div>
-        </Dialog>
+        </CommandDialog>
     );
 };

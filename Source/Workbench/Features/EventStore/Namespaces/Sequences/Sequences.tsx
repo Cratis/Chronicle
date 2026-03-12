@@ -13,7 +13,7 @@ import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { MultiSelect } from 'primereact/multiselect';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
-import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
@@ -44,6 +44,7 @@ export const Sequences = () => {
     const [AppendEventWrapper, showAppendEvent] = useDialog(AppendEventDialog);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
+    const [showConfirmation] = useConfirmationDialog();
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
     const [CompensateWrapper, showCompensate] = useDialog<CompensateDialogProps>(CompensateDialog);
 
@@ -55,6 +56,13 @@ export const Sequences = () => {
 
     const handleRedactEvent = async () => {
         if (selectedEvent) {
+            const confirmResult = await showConfirmation(
+                strings.eventStore.namespaces.sequences.dialogs.redact.confirmTitle,
+                strings.eventStore.namespaces.sequences.dialogs.redact.confirmMessage,
+                DialogButtons.YesNo
+            );
+            if (confirmResult !== DialogResult.Yes) return;
+
             const [result] = await showRedactEvent({
                 eventStore: params.eventStore!,
                 namespace: params.namespace!,

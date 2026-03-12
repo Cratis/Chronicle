@@ -301,7 +301,9 @@
                     "redact": {
                         "title": "Redact Event",
                         "reason": "Reason for redaction",
-                        "reasonPlaceholder": "Enter the reason for redacting this event"
+                        "reasonPlaceholder": "Enter the reason for redacting this event",
+                        "confirmTitle": "Confirm Redaction",
+                        "confirmMessage": "Redacting an event cannot be undone. Are you sure you want to proceed?"
                     },
                     "compensate": {
                         "title": "Compensate Event",
