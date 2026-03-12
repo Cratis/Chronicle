@@ -302,6 +302,12 @@
                         "title": "Redact Event",
                         "reason": "Reason for redaction",
                         "reasonPlaceholder": "Enter the reason for redacting this event"
+                    },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Event Type",
+                        "content": "Compensating Content (JSON)"
                     }
                 }
             },

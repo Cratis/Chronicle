@@ -311,14 +311,22 @@ public class EventSequenceStorage(
         logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = _collection;
 
-        var @event = await GetEventAt(sequenceNumber);
+        // Load the raw document so we can preserve the original event's context in the replacement content
+        var filter = Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber);
+        var rawEvent = await collection.Find(filter)
+                                       .SortByDescendingSequenceNumber()
+                                       .Limit(1)
+                                       .SingleAsync()
+                                       .ConfigureAwait(false);
+        var @event = await converter.ToAppendedEvent(rawEvent);
+
         if (@event.Context.EventType == GlobalEventTypes.Redaction)
         {
             logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;
         }
 
-        var updateModel = CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred);
+        var updateModel = CreateRedactionUpdateModelFor(rawEvent, reason, correlationId, causation, causedByChain, occurred);
         await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update).ConfigureAwait(false);
 
         return @event;
@@ -336,25 +344,45 @@ public class EventSequenceStorage(
     {
         logger.RedactingMultiple(eventSequenceId, eventSourceId, eventTypes ?? []);
         var collection = _collection;
-        var updates = new List<UpdateOneModel<Event>>();
         var affectedEventTypes = new HashSet<EventType>();
 
-        using var cursor = await GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId, eventTypes: eventTypes);
-        while (await cursor.MoveNext())
+        // Build filter to iterate raw documents so we can preserve the original event context in replacement content
+        var filters = new List<FilterDefinition<Event>>
         {
-            foreach (var @event in cursor.Current)
+            Builders<Event>.Filter.Gte(_ => _.SequenceNumber, EventSequenceNumber.First),
+            Builders<Event>.Filter.Eq(e => e.EventSourceId, eventSourceId)
+        };
+
+        if (eventTypes?.Any() == true)
+        {
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+
+        var bulkFilter = Builders<Event>.Filter.And([.. filters]);
+        using var cursor = await collection.Find(bulkFilter)
+                                           .SortByAscendingSequenceNumber()
+                                           .ToCursorAsync()
+                                           .ConfigureAwait(false);
+
+        while (await cursor.MoveNextAsync().ConfigureAwait(false))
+        {
+            var updates = new List<UpdateOneModel<Event>>();
+            foreach (var rawEvent in cursor.Current)
             {
-                if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+                if (rawEvent.Type == GlobalEventTypes.Redaction)
                 {
-                    logger.RedactionAlreadyApplied(eventSequenceId, @event.Context.SequenceNumber);
+                    logger.RedactionAlreadyApplied(eventSequenceId, rawEvent.SequenceNumber);
                     continue;
                 }
 
-                updates.Add(CreateRedactionUpdateModelFor(@event, reason, correlationId, causation, causedByChain, occurred));
-                affectedEventTypes.Add(@event.Context.EventType);
+                updates.Add(CreateRedactionUpdateModelFor(rawEvent, reason, correlationId, causation, causedByChain, occurred));
+                affectedEventTypes.Add(new EventType(rawEvent.Type, EventTypeGeneration.First, false));
             }
 
-            await collection.BulkWriteAsync(updates).ConfigureAwait(false);
+            if (updates.Count > 0)
+            {
+                await collection.BulkWriteAsync(updates).ConfigureAwait(false);
+            }
         }
 
         return affectedEventTypes;
@@ -756,32 +784,49 @@ public class EventSequenceStorage(
         return new EventCursor(converter, cursor);
     }
 
+    /// <summary>
+    /// Creates a MongoDB update model for replacing an event in-place with the <see cref="GlobalEventTypes.Redaction"/> event type.
+    /// The replacement content stores the ORIGINAL event's context (type, occurred, correlation, causation, caused-by) so it
+    /// can be audited after the fact. The CURRENT redaction context (correlationId, causation, causedByChain, occurred) is
+    /// written directly to the event document's own context fields.
+    /// </summary>
+    /// <param name="originalRawEvent">The raw MongoDB <see cref="Event"/> document for the event being redacted.</param>
+    /// <param name="reason">The <see cref="RedactionReason"/> for the redaction.</param>
+    /// <param name="redactionCorrelationId">The <see cref="CorrelationId"/> of the redaction operation.</param>
+    /// <param name="redactionCausation">The <see cref="Causation"/> chain of the redaction operation.</param>
+    /// <param name="redactionCausedByChain">The identity chain that caused the redaction.</param>
+    /// <param name="redactionOccurred">The time the redaction was applied.</param>
+    /// <returns>A <see cref="UpdateOneModel{Event}"/> that performs the in-place replacement.</returns>
     UpdateOneModel<Event> CreateRedactionUpdateModelFor(
-        AppendedEvent @event,
+        Event originalRawEvent,
         RedactionReason reason,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedById,
-        DateTimeOffset occurred)
+        CorrelationId redactionCorrelationId,
+        IEnumerable<Causation> redactionCausation,
+        IEnumerable<IdentityId> redactionCausedByChain,
+        DateTimeOffset redactionOccurred)
     {
         var content = new RedactionEventContent(
             reason,
-            @event.Context.EventType.Id,
-            occurred,
-            correlationId,
-            causation,
-            causedById);
+            originalRawEvent.Type,
+            originalRawEvent.Occurred,
+            originalRawEvent.CorrelationId,
+            originalRawEvent.Causation,
+            originalRawEvent.CausedBy);
 
         var document = BsonDocument.Parse(JsonSerializer.Serialize(content, jsonSerializerOptions));
         var generationalContent = new Dictionary<string, BsonDocument>
-                {
-                        { EventTypeGeneration.First.ToString(), document }
-                };
+        {
+            { EventTypeGeneration.First.ToString(), document }
+        };
 
         return new UpdateOneModel<Event>(
-            Builders<Event>.Filter.Eq(e => e.SequenceNumber, @event.Context.SequenceNumber),
+            Builders<Event>.Filter.Eq(e => e.SequenceNumber, originalRawEvent.SequenceNumber),
             Builders<Event>.Update
                 .Set(e => e.Type, GlobalEventTypes.Redaction)
-                .Set(e => e.Content, generationalContent));
+                .Set(e => e.Content, generationalContent)
+                .Set(e => e.Occurred, redactionOccurred)
+                .Set(e => e.CorrelationId, redactionCorrelationId)
+                .Set(e => e.Causation, redactionCausation)
+                .Set(e => e.CausedBy, redactionCausedByChain));
     }
 }

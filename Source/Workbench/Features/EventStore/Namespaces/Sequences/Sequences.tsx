@@ -17,7 +17,7 @@ import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
-import { CompensateDialog } from './CompensateDialog';
+import { CompensateDialog, CompensateDialogProps } from './CompensateDialog';
 import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
@@ -45,7 +45,7 @@ export const Sequences = () => {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
-    const [showCompensate, setShowCompensate] = useState(false);
+    const [CompensateWrapper, showCompensate] = useDialog<CompensateDialogProps>(CompensateDialog);
 
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
@@ -66,7 +66,11 @@ export const Sequences = () => {
 
     const handleCompensateEvent = () => {
         if (selectedEvent) {
-            setShowCompensate(true);
+            showCompensate({
+                event: selectedEvent,
+                eventStore: params.eventStore!,
+                namespace: params.namespace!
+            });
         }
     };
 
@@ -178,15 +182,7 @@ export const Sequences = () => {
             </DataPage>
             <AppendEventWrapper />
             <RedactEventWrapper />
-            {selectedEvent && showCompensate && (
-                <CompensateDialog
-                    event={selectedEvent}
-                    eventStore={params.eventStore!}
-                    namespace={params.namespace!}
-                    visible={showCompensate}
-                    onClose={() => setShowCompensate(false)}
-                />
-            )}
+            <CompensateWrapper />
         </>
     );
 };

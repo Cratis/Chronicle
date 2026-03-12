@@ -14,8 +14,6 @@ export interface CompensateDialogProps {
     event: AppendedEvent;
     eventStore: string;
     namespace: string;
-    visible: boolean;
-    onClose: () => void;
 }
 
 export const CompensateDialog = ({ event, eventStore, namespace, visible, onClose }: CompensateDialogProps) => {
@@ -36,16 +34,23 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
         }
     }, [allEventTypes.data, event.context.eventType.id]);
 
-    const currentValues = {
-        eventStore,
-        namespace,
-        eventSequenceId: 'event-log',
-        sequenceNumber: event.context.sequenceNumber,
-        eventType: event.context.eventType,
-        content: parsedContent,
-        causation: [],
-        causedBy: undefined
+    const handleClose = async (result: DialogResult) => {
+        if (result !== DialogResult.Ok || !request) {
+            return true;
+        }
+
+        compensate.eventStore = request.eventStore;
+        compensate.namespace = request.namespace;
+        compensate.eventSequenceId = 'event-log';
+        compensate.sequenceNumber = request.event.context.sequenceNumber;
+        compensate.eventType = request.event.context.eventType;
+        compensate.content = parsedContent;
+
+        const executeResult = await compensate.execute();
+        return executeResult.isSuccess;
     };
+
+    if (!request) return null;
 
     return (
         <CommandDialog
@@ -72,6 +77,6 @@ export const CompensateDialog = ({ event, eventStore, namespace, visible, onClos
                     onValidationChange={setHasValidationErrors}
                 />
             </div>
-        </CommandDialog>
+        </Dialog>
     );
 };
