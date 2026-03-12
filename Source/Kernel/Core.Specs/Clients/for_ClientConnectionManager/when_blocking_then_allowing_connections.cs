@@ -20,9 +20,9 @@ public class when_blocking_then_allowing_connections : given.a_connection_manage
 
     void Because() => _manager.AllowConnections();
 
-    [Fact] void should_release_waiting_callers()
+    [Fact] async Task should_release_waiting_callers()
     {
-        _waitTask.Wait(TimeSpan.FromSeconds(2));
+        await _waitTask.WaitAsync(TimeSpan.FromSeconds(2));
         _completed.ShouldBeTrue();
     }
 }

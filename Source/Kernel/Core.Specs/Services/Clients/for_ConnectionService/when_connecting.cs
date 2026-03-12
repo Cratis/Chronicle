@@ -30,7 +30,7 @@ public class when_connecting : given.a_connection_service
     async Task Because()
     {
         _observable = _service.Connect(_request, _clientCts.Token);
-        _observable.Subscribe(keepAlive => _received.Add(keepAlive));
+        _observable.Subscribe(_received.Add);
 
         // Let the background loop run long enough to emit at least one keep-alive.
         await Task.Delay(TimeSpan.FromSeconds(2));

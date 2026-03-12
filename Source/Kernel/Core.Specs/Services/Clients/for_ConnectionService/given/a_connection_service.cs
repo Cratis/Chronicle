@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging.Abstractions;
 
