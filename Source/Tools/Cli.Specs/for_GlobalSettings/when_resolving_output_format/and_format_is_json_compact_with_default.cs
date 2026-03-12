@@ -4,14 +4,14 @@
 namespace Cratis.Chronicle.Cli.for_GlobalSettings.when_resolving_output_format;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_format_is_explicitly_set : Specification
+public class and_format_is_json_compact_with_default : Specification
 {
     GlobalSettings _settings;
     string _result;
 
-    void Establish() => _settings = new GlobalSettings { Output = "JSON" };
+    void Establish() => _settings = new GlobalSettings { Output = OutputFormats.JsonCompact };
 
     void Because() => _result = _settings.ResolveOutputFormat();
 
-    [Fact] void should_return_the_format_lowercased() => _result.ShouldEqual(OutputFormats.Json);
+    [Fact] void should_pass_json_compact_through_to_output_formatter() => _result.ShouldEqual(OutputFormats.JsonCompact);
 }

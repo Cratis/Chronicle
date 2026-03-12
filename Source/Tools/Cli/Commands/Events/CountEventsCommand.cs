@@ -6,7 +6,7 @@ using Cratis.Chronicle.Contracts.EventSequences;
 namespace Cratis.Chronicle.Cli.Commands.Events;
 
 /// <summary>
-/// Gets the tail sequence number for an event sequence, optionally filtered by event type and/or event source ID.
+/// Gets the tail (highest) sequence number in an event sequence. This is not a count of events — gaps may exist.
 /// </summary>
 public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
 {

@@ -15,9 +15,9 @@ public class GetEventsSettings : EventStoreSettings
     /// Gets or sets the event sequence ID to query.
     /// </summary>
     [CommandOption("--sequence <ID>")]
-    [Description("Event sequence ID")]
-    [DefaultValue("event-log")]
-    public string EventSequenceId { get; set; } = "event-log";
+    [Description("Event sequence name (default: event-log)")]
+    [DefaultValue(CliDefaults.DefaultEventSequenceId)]
+    public string EventSequenceId { get; set; } = CliDefaults.DefaultEventSequenceId;
 
     /// <summary>
     /// Gets or sets the starting sequence number.
@@ -45,6 +45,6 @@ public class GetEventsSettings : EventStoreSettings
     /// Gets or sets the event type filter (comma-separated; each can be name or name+generation). Defaults to generation 1 if not specified.
     /// </summary>
     [CommandOption("--event-type <TYPE>")]
-    [Description("Filter by event type (comma-separated; name or name+generation)")]
+    [Description("Filter by event type (e.g. UserRegistered or UserRegistered+1). Comma-separate multiple.")]
     public string? EventType { get; set; }
 }

@@ -13,5 +13,5 @@ public class and_no_override_is_configured : given.a_temp_config_directory
 
     void Because() => _result = _settings.ResolveEventStore();
 
-    [Fact] void should_return_default() => _result.ShouldEqual("default");
+    [Fact] void should_return_default() => _result.ShouldEqual(CliDefaults.DefaultEventStoreName);
 }

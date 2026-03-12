@@ -13,7 +13,7 @@ public class and_format_is_json : Specification
         var writer = new StringWriter();
         Console.SetOut(writer);
 
-        OutputFormatter.WriteMessage("json", "Operation completed");
+        OutputFormatter.WriteMessage(OutputFormats.Json, "Operation completed");
 
         _output = writer.ToString();
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });

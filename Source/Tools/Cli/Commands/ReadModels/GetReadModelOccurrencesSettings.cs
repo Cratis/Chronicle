@@ -15,7 +15,7 @@ public class GetReadModelOccurrencesSettings : EventStoreSettings
     /// Gets or sets the read model type identifier.
     /// </summary>
     [CommandArgument(0, "<READ_MODEL_TYPE>")]
-    [Description("The read model type identifier")]
+    [Description("Read model type identifier (from 'cratis read-models list')")]
     public string ReadModelType { get; set; } = string.Empty;
 
     /// <summary>

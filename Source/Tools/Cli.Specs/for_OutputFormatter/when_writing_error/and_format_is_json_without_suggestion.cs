@@ -13,7 +13,7 @@ public class and_format_is_json_without_suggestion : Specification
         var writer = new StringWriter();
         Console.SetError(writer);
 
-        OutputFormatter.WriteError("json", "Connection lost");
+        OutputFormatter.WriteError(OutputFormats.Json, "Connection lost");
 
         _output = writer.ToString();
         Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });

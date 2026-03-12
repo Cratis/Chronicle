@@ -16,16 +16,16 @@ public class EventStoreSettings : GlobalSettings
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]
     [Description("Event store name")]
-    [DefaultValue("default")]
-    public string EventStore { get; set; } = "default";
+    [DefaultValue(CliDefaults.DefaultEventStoreName)]
+    public string EventStore { get; set; } = CliDefaults.DefaultEventStoreName;
 
     /// <summary>
     /// Gets or sets the namespace name.
     /// </summary>
     [CommandOption("-n|--namespace <NAME>")]
     [Description("Namespace within the event store")]
-    [DefaultValue("Default")]
-    public string Namespace { get; set; } = "Default";
+    [DefaultValue(CliDefaults.DefaultNamespaceName)]
+    public string Namespace { get; set; } = CliDefaults.DefaultNamespaceName;
 
     /// <summary>
     /// Resolves the effective event store name by checking flag, then current context, then default.
@@ -33,7 +33,7 @@ public class EventStoreSettings : GlobalSettings
     /// <returns>The resolved event store name.</returns>
     public string ResolveEventStore()
     {
-        if (EventStore != "default")
+        if (EventStore != CliDefaults.DefaultEventStoreName)
         {
             return EventStore;
         }
@@ -45,7 +45,7 @@ public class EventStoreSettings : GlobalSettings
             return ctx.EventStore;
         }
 
-        return "default";
+        return CliDefaults.DefaultEventStoreName;
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ public class EventStoreSettings : GlobalSettings
     /// <returns>The resolved namespace name.</returns>
     public string ResolveNamespace()
     {
-        if (Namespace != "Default")
+        if (Namespace != CliDefaults.DefaultNamespaceName)
         {
             return Namespace;
         }
@@ -66,6 +66,6 @@ public class EventStoreSettings : GlobalSettings
             return ctx.Namespace;
         }
 
-        return "Default";
+        return CliDefaults.DefaultNamespaceName;
     }
 }

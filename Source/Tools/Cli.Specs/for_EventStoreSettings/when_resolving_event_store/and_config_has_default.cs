@@ -13,7 +13,14 @@ public class and_config_has_default : given.a_temp_config_directory
 
     void Establish()
     {
-        var config = new CliConfiguration { DefaultEventStore = ExpectedEventStore };
+        var config = new CliConfiguration
+        {
+            ActiveContext = "default",
+            Contexts = new Dictionary<string, CliContext>
+            {
+                ["default"] = new CliContext { EventStore = ExpectedEventStore }
+            }
+        };
         config.Save();
         _settings = new EventStoreSettings();
     }

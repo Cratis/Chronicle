@@ -14,7 +14,14 @@ public class and_config_has_default_server : given.a_temp_config_directory
     void Establish()
     {
         Environment.SetEnvironmentVariable("CHRONICLE_CONNECTION_STRING", null);
-        var config = new CliConfiguration { DefaultServer = ExpectedServer };
+        var config = new CliConfiguration
+        {
+            ActiveContext = "default",
+            Contexts = new Dictionary<string, CliContext>
+            {
+                ["default"] = new CliContext { Server = ExpectedServer }
+            }
+        };
         config.Save();
         _settings = new GlobalSettings();
     }

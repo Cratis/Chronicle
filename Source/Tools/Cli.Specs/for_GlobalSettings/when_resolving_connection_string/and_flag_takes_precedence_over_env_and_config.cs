@@ -16,7 +16,14 @@ public class and_flag_takes_precedence_over_env_and_config : given.a_temp_config
     void Establish()
     {
         Environment.SetEnvironmentVariable("CHRONICLE_CONNECTION_STRING", EnvServer);
-        var config = new CliConfiguration { DefaultServer = ConfigServer };
+        var config = new CliConfiguration
+        {
+            ActiveContext = "default",
+            Contexts = new Dictionary<string, CliContext>
+            {
+                ["default"] = new CliContext { Server = ConfigServer }
+            }
+        };
         config.Save();
         _settings = new GlobalSettings { Server = FlagServer };
     }

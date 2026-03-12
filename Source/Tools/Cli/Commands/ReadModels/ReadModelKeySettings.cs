@@ -15,21 +15,21 @@ public class ReadModelKeySettings : EventStoreSettings
     /// Gets or sets the read model identifier.
     /// </summary>
     [CommandArgument(0, "<READ_MODEL>")]
-    [Description("The read model identifier")]
+    [Description("Read model container name (from 'cratis read-models list')")]
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the read model key.
     /// </summary>
     [CommandArgument(1, "<KEY>")]
-    [Description("The read model instance key")]
+    [Description("Read model instance key (typically an event source ID)")]
     public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the event sequence ID.
     /// </summary>
     [CommandOption("--sequence <ID>")]
-    [Description("Event sequence ID")]
-    [DefaultValue("event-log")]
-    public string EventSequenceId { get; set; } = "event-log";
+    [Description("Event sequence name (default: event-log)")]
+    [DefaultValue(CliDefaults.DefaultEventSequenceId)]
+    public string EventSequenceId { get; set; } = CliDefaults.DefaultEventSequenceId;
 }

@@ -30,20 +30,21 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             GlobalOptions =
             [
                 new OptionDescriptor("--server", "string", "Chronicle server connection string (e.g. chronicle://localhost:35000)"),
-                new OptionDescriptor("-o, --output", "string", "Output format: json, text, or plain. Defaults to auto-detection."),
+                new OptionDescriptor("-o, --output", "string", "Output format: json, text, plain, or json-compact. Defaults to auto-detection. Use 'json-compact' for compact non-indented JSON (fewer tokens than 'json', same content)."),
             ],
             CommandGroups = BuildCommandGroups(),
             ConnectionInfo = new ConnectionInfoDescriptor
             {
                 DefaultConnectionString = "chronicle://<client>:<secret>@localhost:35000",
-                EnvironmentVariable = "CHRONICLE_CONNECTION_STRING",
+                EnvironmentVariable = CliDefaults.ConnectionStringEnvVar,
                 ConfigFile = CliConfiguration.GetConfigPath(),
                 Precedence = ["--server flag", "CHRONICLE_CONNECTION_STRING env var", "config file", "default (localhost:35000)"],
             },
             Tips =
             [
+                "Use '-o json-compact' for compact (non-indented) JSON — fewer tokens than '-o json' while preserving full structured detail. Best when you need structured data but want to avoid whitespace overhead.",
                 "Prefer --output plain for AI consumption — it uses dramatically fewer tokens than JSON for most commands (up to 27x fewer).",
-                "JSON output includes raw schemas, causation chains, and nested metadata that inflate token usage. Only use --output json when you need to parse structured key-value data (e.g. config show, projections show).",
+                "JSON output includes raw schemas, causation chains, and nested metadata that inflate token usage. Only use --output json (or json-compact to save whitespace tokens) when you need to parse structured key-value data (e.g. config show, projections show).",
                 "For listing commands (event-stores, namespaces, event-types, observers, read-models, projections, failed-partitions, recommendations, identities), always use --output plain.",
                 "Enums in JSON output serialize as human-readable names (e.g. 'Client', 'Projection') rather than integers.",
                 "Pipe plain output through grep/awk for filtering; use --output json with jq only when structured parsing is essential.",
@@ -54,7 +55,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
-                Summary = "Use --output plain for nearly all commands — it is the most token-efficient format, often 10-27x smaller than JSON. JSON includes raw schemas, causation chains, and deeply nested metadata that waste tokens. Only use JSON when you need structured key-value parsing (config show) or the command only outputs JSON (llm-context).",
+                Summary = "Use --output plain for nearly all commands — it is the most token-efficient format, often 10-27x smaller than JSON. Use --output json-compact when you need structured data but want to avoid whitespace overhead (same content as json, no indentation). JSON and json-compact include raw schemas, causation chains, and deeply nested metadata — only use them when you need to parse structured values (e.g. config show, read-models get, llm-context).",
                 PerCommand =
                 [
                     new CommandOutputAdvice("event-stores list", "plain", "plain is ~3x smaller (29B vs 99B). JSON wraps each name in {\"value\": ...}."),
@@ -79,9 +80,15 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     new CommandOutputAdvice("recommendations list", "plain", "When empty, JSON is smaller (2B vs 34B). With data, use plain for consistency."),
                     new CommandOutputAdvice("config show", "json", "JSON is slightly smaller (85B vs 117B) and structured for key-value parsing."),
                     new CommandOutputAdvice("config path", "plain", "Both formats output identical raw path text."),
-                    new CommandOutputAdvice("auth login", "plain", "Interactive command. Plain outputs a simple success/failure message."),
-                    new CommandOutputAdvice("auth logout", "plain", "Plain outputs a simple confirmation message."),
+                    new CommandOutputAdvice("login", "plain", "Top-level command (not 'auth login'). Prompts for password interactively, or use --password for non-interactive auth."),
+                    new CommandOutputAdvice("logout", "plain", "Top-level command (not 'auth logout'). Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("auth status", "json", "JSON is structured for key-value parsing. Use JSON when checking auth state programmatically."),
+                    new CommandOutputAdvice("context list", "plain", "Use plain for consistency with other listing commands."),
+                    new CommandOutputAdvice("context show", "json", "JSON is structured for key-value parsing."),
+                    new CommandOutputAdvice("context create", "plain", "Plain outputs a confirmation message."),
+                    new CommandOutputAdvice("context set", "plain", "Plain outputs a confirmation message."),
+                    new CommandOutputAdvice("context delete", "plain", "Plain outputs a confirmation message."),
+                    new CommandOutputAdvice("context rename", "plain", "Plain outputs a confirmation message."),
                     new CommandOutputAdvice("users list", "plain", "Use plain for consistency with other listing commands."),
                     new CommandOutputAdvice("users add", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("users remove", "plain", "Plain outputs a simple confirmation message."),
@@ -133,12 +140,12 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                         new OptionDescriptor("--from", "ulong", "Start sequence number"),
                         new OptionDescriptor("--to", "ulong", "End sequence number"),
                         new OptionDescriptor("--event-source-id", "string", "Filter by event source identifier"),
-                        new OptionDescriptor("--event-type", "string", "Filter by event type (name, or name+generation)"),
+                        new OptionDescriptor("--event-type", "string", "Filter by event type (e.g. UserRegistered or UserRegistered+1). Comma-separate multiple."),
                     ],
                     ["cratis events get -o plain", "cratis events get --from 100 --to 200", "cratis events get --event-source-id abc-123", "cratis events get --event-type UserRegistered"]),
                 new CommandDescriptor(
                     "count",
-                    "Get the tail sequence number",
+                    "Get the tail (highest) sequence number. Note: not a count of events — gaps may exist.",
                     EventStoreOptions(),
                     [new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)")],
                     ["cratis events count", "cratis events count -e MyStore"]),
@@ -160,46 +167,46 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "list",
                     "List observers",
                     EventStoreOptions(),
-                    [new OptionDescriptor("-t, --type", "string", "Filter by type: reactor, reducer, projection, or all")],
+                    [new OptionDescriptor("-t, --type", "string", "Filter by type: reactor, reducer, projection, or all. Invalid values return an error.")],
                     ["cratis observers list", "cratis observers list --type reactor -o plain"]),
                 new CommandDescriptor(
                     "show",
                     "Show detailed information about a specific observer",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<OBSERVER_ID>", "guid", "Observer identifier (positional)"),
+                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional). Format varies: projections use dotted type names (e.g. Core.MyFeature.Listing.MyProjection), system observers use prefixed names."),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
-                    ["cratis observers show 550e8400-e29b-41d4-a716-446655440000"]),
+                    ["cratis observers show Core.MyFeature.Listing.MyProjection"]),
                 new CommandDescriptor(
                     "replay",
-                    "Replay an observer from the beginning",
+                    "Replay an observer from the beginning. Use 'cratis observers show <id>' to check progress.",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<OBSERVER_ID>", "guid", "Observer identifier (positional)"),
+                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)"),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
-                    ["cratis observers replay 550e8400-e29b-41d4-a716-446655440000"]),
+                    ["cratis observers replay Core.MyFeature.Listing.MyProjection"]),
                 new CommandDescriptor(
                     "replay-partition",
                     "Replay a specific partition of an observer",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<OBSERVER_ID>", "guid", "Observer identifier (positional)"),
-                        new OptionDescriptor("<PARTITION>", "string", "Partition key (positional)"),
+                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)"),
+                        new OptionDescriptor("<PARTITION>", "string", "Partition key (typically an event source ID) (positional)"),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
-                    ["cratis observers replay-partition 550e8400-e29b-41d4-a716-446655440000 my-partition"]),
+                    ["cratis observers replay-partition Core.MyFeature.Listing.MyProjection abc-123"]),
                 new CommandDescriptor(
                     "retry-partition",
-                    "Retry a failed partition",
+                    "Retry a failed partition. Use 'cratis observers show <id>' to check progress.",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<OBSERVER_ID>", "guid", "Observer identifier (positional)"),
-                        new OptionDescriptor("<PARTITION>", "string", "Partition key (positional)"),
+                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)"),
+                        new OptionDescriptor("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis failed-partitions list') (positional)"),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
-                    ["cratis observers retry-partition 550e8400-e29b-41d4-a716-446655440000 my-partition"]),
+                    ["cratis observers retry-partition Core.MyFeature.Listing.MyProjection abc-123"]),
             ]),
         new(
             "failed-partitions",
@@ -216,8 +223,8 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "Show detailed information about a specific failed partition with error messages and stack traces",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (positional)"),
-                        new OptionDescriptor("<PARTITION>", "string", "Partition key (positional)"),
+                        new OptionDescriptor("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)"),
+                        new OptionDescriptor("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis failed-partitions list') (positional)"),
                     ],
                     ["cratis failed-partitions show 550e8400-e29b-41d4-a716-446655440000 my-partition"]),
             ]),
@@ -265,18 +272,18 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "List read model instances",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<READ_MODEL>", "string", "Read model identifier (positional)"),
-                        new OptionDescriptor("--page", "int", "Page number, 1-based (default: 1)"),
+                        new OptionDescriptor("<READ_MODEL>", "string", "Read model container name (positional)"),
+                        new OptionDescriptor("--page", "int", "Page number, 0-based (default: 0)"),
                         new OptionDescriptor("--page-size", "int", "Items per page (default: 20)"),
                     ],
-                    ["cratis read-models instances MyReadModel", "cratis read-models instances MyReadModel --page 2 --page-size 50"]),
+                    ["cratis read-models instances MyReadModel", "cratis read-models instances MyReadModel --page 1 --page-size 50"]),
                 new CommandDescriptor(
                     "get",
                     "Get a single read model instance by key",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<READ_MODEL>", "string", "Read model identifier (positional)"),
-                        new OptionDescriptor("<KEY>", "string", "Read model instance key (positional)"),
+                        new OptionDescriptor("<READ_MODEL>", "string", "Read model container name (from 'cratis read-models list') (positional)"),
+                        new OptionDescriptor("<KEY>", "string", "Read model instance key (typically an event source ID) (positional)"),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
                     ["cratis read-models get MyReadModel abc-123", "cratis read-models get MyReadModel abc-123 -o json"]),
@@ -285,7 +292,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "List read model occurrences (replay history)",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<READ_MODEL_TYPE>", "string", "Read model type identifier (positional)"),
+                        new OptionDescriptor("<READ_MODEL_TYPE>", "string", "Read model type identifier (from 'cratis read-models list') (positional)"),
                         new OptionDescriptor("--generation", "uint", "Read model type generation (default: 1)"),
                     ],
                     ["cratis read-models occurrences MyReadModelType"]),
@@ -294,24 +301,32 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "Get snapshots for a read model instance by key",
                     EventStoreOptions(),
                     [
-                        new OptionDescriptor("<READ_MODEL>", "string", "Read model identifier (positional)"),
-                        new OptionDescriptor("<KEY>", "string", "Read model instance key (positional)"),
+                        new OptionDescriptor("<READ_MODEL>", "string", "Read model container name (from 'cratis read-models list') (positional)"),
+                        new OptionDescriptor("<KEY>", "string", "Read model instance key (typically an event source ID) (positional)"),
                         new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)"),
                     ],
                     ["cratis read-models snapshots MyReadModel abc-123"]),
             ]),
         new(
             "auth",
-            "Authentication and login management",
+            "Authentication status",
+            [
+                new CommandDescriptor("status", "Show current authentication status (login session, client credentials, server)", null, null, ["cratis auth status", "cratis auth status -o json"]),
+            ]),
+        new(
+            "(top-level)",
+            "Top-level authentication commands (not nested under a group)",
             [
                 new CommandDescriptor(
                     "login",
-                    "Log in as a user via the password grant flow. Prompts for password interactively.",
+                    "Log in as a user via the password grant flow. Prompts for password interactively unless --password is provided. Usage: cratis login <USERNAME> [--password <PASSWORD>]",
                     null,
-                    [new OptionDescriptor("<USERNAME>", "string", "The username to log in with (positional)")],
-                    ["cratis auth login admin"]),
-                new CommandDescriptor("logout", "Clear the cached login session", null, null, ["cratis auth logout"]),
-                new CommandDescriptor("status", "Show current authentication status (login session, client credentials, server)", null, null, ["cratis auth status", "cratis auth status -o json"]),
+                    [
+                        new OptionDescriptor("<USERNAME>", "string", "The username to log in with (positional)"),
+                        new OptionDescriptor("--password", "string", "Password for non-interactive login. If omitted, prompts interactively."),
+                    ],
+                    ["cratis login admin", "cratis login admin --password P@ssw0rd"]),
+                new CommandDescriptor("logout", "Clear the cached login session. Usage: cratis logout", null, null, ["cratis logout"]),
             ]),
         new(
             "users",
@@ -366,6 +381,45 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     ["cratis applications rotate-secret 550e8400-e29b-41d4-a716-446655440000 new-secret"]),
             ]),
         new(
+            "context",
+            "Manage named connection contexts (server, event store, namespace per environment)",
+            [
+                new CommandDescriptor("list", "List all contexts", null, null, ["cratis context list"]),
+                new CommandDescriptor(
+                    "create",
+                    "Create a new named context. If it is the first context, it becomes active automatically.",
+                    null,
+                    [
+                        new OptionDescriptor("<NAME>", "string", "Name of the context to create (positional)"),
+                        new OptionDescriptor("--server", "string", "Chronicle server connection string for this context"),
+                        new OptionDescriptor("-e, --event-store", "string", "Default event store for this context"),
+                        new OptionDescriptor("-n, --namespace", "string", "Default namespace for this context"),
+                    ],
+                    ["cratis context create dev --server chronicle://localhost:35000/?disableTls=true", "cratis context create prod --server chronicle://prod:35000 -e production"]),
+                new CommandDescriptor(
+                    "set",
+                    "Switch to a named context",
+                    null,
+                    [new OptionDescriptor("<NAME>", "string", "Name of the context to switch to (positional)")],
+                    ["cratis context set prod"]),
+                new CommandDescriptor("show", "Show current context details", null, null, ["cratis context show", "cratis context show -o json"]),
+                new CommandDescriptor(
+                    "delete",
+                    "Delete a named context. Cannot delete the active context.",
+                    null,
+                    [new OptionDescriptor("<NAME>", "string", "Name of the context to delete (positional)")],
+                    ["cratis context delete staging"]),
+                new CommandDescriptor(
+                    "rename",
+                    "Rename a context",
+                    null,
+                    [
+                        new OptionDescriptor("<OLD_NAME>", "string", "Current context name (positional)"),
+                        new OptionDescriptor("<NEW_NAME>", "string", "New context name (positional)"),
+                    ],
+                    ["cratis context rename dev development"]),
+            ]),
+        new(
             "config",
             "Manage CLI configuration",
             [
@@ -375,7 +429,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "Set a configuration value",
                     null,
                     [
-                        new OptionDescriptor("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, or client-secret (positional)"),
+                        new OptionDescriptor("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, or client-secret (positional). These update the active context's defaults."),
                         new OptionDescriptor("<VALUE>", "string", "Value to assign (positional)"),
                     ],
                     ["cratis config set server chronicle://myhost:35000", "cratis config set event-store MyStore", "cratis config set client-id my-app", "cratis config set client-secret my-secret"]),

@@ -21,17 +21,24 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         var format = settings.ResolveOutputFormat();
 
         string password;
-        try
+        if (!string.IsNullOrWhiteSpace(settings.Password))
         {
-            password = AnsiConsole.Prompt(
-                new TextPrompt<string>("Password:")
-                    .PromptStyle("dim")
-                    .Secret());
+            password = settings.Password;
         }
-        catch (InvalidOperationException)
+        else
         {
-            OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry.");
-            return ExitCodes.AuthenticationError;
+            try
+            {
+                password = AnsiConsole.Prompt(
+                    new TextPrompt<string>("Password:")
+                        .PromptStyle("dim")
+                        .Secret());
+            }
+            catch (InvalidOperationException)
+            {
+                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --password for non-interactive login.");
+                return ExitCodes.AuthenticationError;
+            }
         }
 
         try
@@ -79,7 +86,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         }
         catch (HttpRequestException ex)
         {
-            OutputFormatter.WriteError(format, "Cannot connect to Chronicle server", ex.Message);
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message);
             return ExitCodes.ConnectionError;
         }
     }

@@ -20,4 +20,7 @@
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Cli.Specs" />
+    </ItemGroup>
 </Project>

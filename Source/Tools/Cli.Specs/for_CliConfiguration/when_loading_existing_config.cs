@@ -16,16 +16,23 @@ public class when_loading_existing_config : given.a_temp_config_directory
     {
         var config = new CliConfiguration
         {
-            DefaultServer = ExpectedServer,
-            DefaultEventStore = ExpectedEventStore,
-            DefaultNamespace = ExpectedNamespace
+            ActiveContext = "default",
+            Contexts = new Dictionary<string, CliContext>
+            {
+                ["default"] = new CliContext
+                {
+                    Server = ExpectedServer,
+                    EventStore = ExpectedEventStore,
+                    Namespace = ExpectedNamespace
+                }
+            }
         };
         config.Save();
     }
 
     void Because() => _result = CliConfiguration.Load();
 
-    [Fact] void should_have_correct_default_server() => _result.DefaultServer.ShouldEqual(ExpectedServer);
-    [Fact] void should_have_correct_default_event_store() => _result.DefaultEventStore.ShouldEqual(ExpectedEventStore);
-    [Fact] void should_have_correct_default_namespace() => _result.DefaultNamespace.ShouldEqual(ExpectedNamespace);
+    [Fact] void should_have_correct_server() => _result.GetCurrentContext().Server.ShouldEqual(ExpectedServer);
+    [Fact] void should_have_correct_event_store() => _result.GetCurrentContext().EventStore.ShouldEqual(ExpectedEventStore);
+    [Fact] void should_have_correct_namespace() => _result.GetCurrentContext().Namespace.ShouldEqual(ExpectedNamespace);
 }

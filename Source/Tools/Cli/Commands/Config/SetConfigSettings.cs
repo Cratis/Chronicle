@@ -15,7 +15,7 @@ public class SetConfigSettings : GlobalSettings
     /// Gets or sets the configuration key.
     /// </summary>
     [CommandArgument(0, "<KEY>")]
-    [Description("Configuration key (server, event-store, namespace)")]
+    [Description("Configuration key (server, event-store, namespace, client-id, client-secret)")]
     public string Key { get; set; } = string.Empty;
 
     /// <summary>

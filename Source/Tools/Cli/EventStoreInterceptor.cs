@@ -22,7 +22,7 @@ public class EventStoreInterceptor : ICommandInterceptor
         }
 
         // If the user passed --event-store explicitly (not the default), skip prompting.
-        if (eventStoreSettings.EventStore != "default")
+        if (eventStoreSettings.EventStore != CliDefaults.DefaultEventStoreName)
         {
             return;
         }

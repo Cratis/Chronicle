@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.Cli;
 /// </summary>
 public static class OutputFormatter
 {
-    static JsonSerializerOptions _jsonOptions = CreateDefaultOptions();
+    static JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
+    static JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
 
     /// <summary>
     /// Configures the JSON serializer options by building on top of the provided base options
@@ -22,18 +23,19 @@ public static class OutputFormatter
     /// <param name="baseOptions">The base <see cref="JsonSerializerOptions"/> from the Chronicle client.</param>
     public static void Configure(JsonSerializerOptions baseOptions)
     {
-        _jsonOptions = new JsonSerializerOptions(baseOptions)
-        {
-            WriteIndented = true
-        };
+        _jsonOptions = new JsonSerializerOptions(baseOptions) { WriteIndented = true };
         AddCliConverters(_jsonOptions);
+
+        _compactJsonOptions = new JsonSerializerOptions(baseOptions) { WriteIndented = false };
+        AddCliConverters(_compactJsonOptions);
     }
 
     /// <summary>
     /// Writes data to the console in the specified format.
+    /// For <see cref="OutputFormats.JsonCompact"/>, outputs compact (non-indented) JSON.
     /// </summary>
     /// <typeparam name="T">The type of data items.</typeparam>
-    /// <param name="format">The output format (json, text, or plain).</param>
+    /// <param name="format">The output format (json, text, plain, or json-compact).</param>
     /// <param name="data">The data to write.</param>
     /// <param name="columns">Column definitions for tabular output.</param>
     /// <param name="getRow">Function to extract row values from each data item.</param>
@@ -41,10 +43,11 @@ public static class OutputFormatter
     {
         switch (format)
         {
-            case "json":
-                WriteJson(data);
+            case OutputFormats.JsonCompact:
+            case OutputFormats.Json:
+                WriteJson(data, OptionsFor(format));
                 break;
-            case "plain":
+            case OutputFormats.Plain:
                 WritePlain(data, columns, getRow);
                 break;
             default:
@@ -55,6 +58,7 @@ public static class OutputFormatter
 
     /// <summary>
     /// Writes a single object to the console in the specified format.
+    /// For <see cref="OutputFormats.JsonCompact"/>, emits compact JSON.
     /// </summary>
     /// <typeparam name="T">The type of the object.</typeparam>
     /// <param name="format">The output format.</param>
@@ -62,9 +66,9 @@ public static class OutputFormatter
     /// <param name="render">Function to render the object as text for non-json formats.</param>
     public static void WriteObject<T>(string format, T data, Action<T>? render = null)
     {
-        if (format == "json")
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
         {
-            WriteJsonSafe(data);
+            WriteJsonSafe(data, OptionsFor(format));
             return;
         }
 
@@ -79,14 +83,15 @@ public static class OutputFormatter
 
     /// <summary>
     /// Writes a simple message to the console.
+    /// For <see cref="OutputFormats.JsonCompact"/>, emits compact JSON.
     /// </summary>
     /// <param name="format">The output format.</param>
     /// <param name="message">The message text.</param>
     public static void WriteMessage(string format, string message)
     {
-        if (format == "json")
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
         {
-            var json = JsonSerializer.Serialize(new { message }, _jsonOptions);
+            var json = JsonSerializer.Serialize(new { message }, OptionsFor(format));
             Console.WriteLine(json);
             return;
         }
@@ -102,7 +107,7 @@ public static class OutputFormatter
     /// <param name="suggestion">An optional suggestion for resolution.</param>
     public static void WriteError(string format, string error, string? suggestion = null)
     {
-        if (format == "json")
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
         {
             var errorObj = new Dictionary<string, string> { ["error"] = error };
             if (suggestion is not null)
@@ -110,7 +115,7 @@ public static class OutputFormatter
                 errorObj["suggestion"] = suggestion;
             }
 
-            var json = JsonSerializer.Serialize(errorObj, _jsonOptions);
+            var json = JsonSerializer.Serialize(errorObj, OptionsFor(format));
             Console.Error.WriteLine(json);
             return;
         }
@@ -122,11 +127,14 @@ public static class OutputFormatter
         }
     }
 
-    static JsonSerializerOptions CreateDefaultOptions()
+    static JsonSerializerOptions OptionsFor(string format) =>
+        format == OutputFormats.JsonCompact ? _compactJsonOptions : _jsonOptions;
+
+    static JsonSerializerOptions CreateDefaultOptions(bool indented)
     {
         var options = new JsonSerializerOptions
         {
-            WriteIndented = true,
+            WriteIndented = indented,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
         options.Converters.Add(new EnumConverterFactory());
@@ -144,34 +152,29 @@ public static class OutputFormatter
         options.Converters.Add(new ContractsEventTypeRemovedWithJoinDefinitionsDictionaryConverter());
     }
 
-    static void WriteJson<T>(IEnumerable<T> data)
+    static void WriteJson<T>(IEnumerable<T> data, JsonSerializerOptions? options = null)
     {
         try
         {
-            var json = JsonSerializer.Serialize(data, _jsonOptions);
+            var json = JsonSerializer.Serialize(data, options ?? _jsonOptions);
             Console.WriteLine(json);
         }
         catch (NotSupportedException ex)
         {
-            WriteError("json", $"Failed to serialize output as JSON: {ex.Message}");
+            WriteError(OutputFormats.Json, $"Failed to serialize output as JSON: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Safely serializes a single object to JSON, catching serialization errors.
-    /// </summary>
-    /// <typeparam name="T">The type of the object.</typeparam>
-    /// <param name="data">The object to serialize.</param>
-    static void WriteJsonSafe<T>(T data)
+    static void WriteJsonSafe<T>(T data, JsonSerializerOptions? options = null)
     {
         try
         {
-            var json = JsonSerializer.Serialize(data, _jsonOptions);
+            var json = JsonSerializer.Serialize(data, options ?? _jsonOptions);
             Console.WriteLine(json);
         }
         catch (NotSupportedException ex)
         {
-            WriteError("json", $"Failed to serialize output as JSON: {ex.Message}");
+            WriteError(OutputFormats.Json, $"Failed to serialize output as JSON: {ex.Message}");
         }
     }
 

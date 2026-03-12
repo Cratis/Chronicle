@@ -14,12 +14,12 @@ public sealed class and_output_is_redirected : Specification, IDisposable
     {
         _previousNoColor = Environment.GetEnvironmentVariable("NO_COLOR");
         Environment.SetEnvironmentVariable("NO_COLOR", null);
-        _settings = new GlobalSettings { Output = "auto" };
+        _settings = new GlobalSettings { Output = OutputFormats.Auto };
     }
 
     void Because() => _result = _settings.ResolveOutputFormat();
 
-    [Fact] void should_return_json_when_stdout_is_redirected() => _result.ShouldEqual("json");
+    [Fact] void should_return_json_when_stdout_is_redirected() => _result.ShouldEqual(OutputFormats.Json);
 
     /// <inheritdoc/>
     void IDisposable.Dispose() => Environment.SetEnvironmentVariable("NO_COLOR", _previousNoColor);

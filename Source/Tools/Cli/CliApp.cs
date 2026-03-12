@@ -22,12 +22,12 @@ using Spectre.Console.Cli;
 namespace Cratis.Chronicle.Cli;
 
 /// <summary>
-/// Factory for creating a fully configured Chronicle CLI <see cref="CommandApp"/>.
+/// Factory for creating a fully configured Cratis CLI <see cref="CommandApp"/>.
 /// </summary>
 public static class CliApp
 {
     /// <summary>
-    /// Creates a new <see cref="CommandApp"/> with all Chronicle CLI commands registered.
+    /// Creates a new <see cref="CommandApp"/> with all Cratis CLI commands registered.
     /// </summary>
     /// <returns>A configured <see cref="CommandApp"/> ready to run.</returns>
     public static CommandApp Create()
@@ -78,7 +78,7 @@ public static class CliApp
                     .WithExample("events", "get", "--from", "100", "--to", "200")
                     .WithExample("events", "get", "--event-type", "UserRegistered");
                 events.AddCommand<CountEventsCommand>("count")
-                    .WithDescription("Get the tail sequence number")
+                    .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
                     .WithExample("events", "count");
                 events.AddCommand<HasEventsCommand>("has")
                     .WithDescription("Check if events exist for an event source ID")

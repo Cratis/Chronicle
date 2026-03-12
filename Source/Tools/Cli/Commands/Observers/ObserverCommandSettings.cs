@@ -15,14 +15,14 @@ public class ObserverCommandSettings : EventStoreSettings
     /// Gets or sets the observer ID.
     /// </summary>
     [CommandArgument(0, "<OBSERVER_ID>")]
-    [Description("The observer ID")]
+    [Description("Observer identifier (from 'cratis observers list')")]
     public string ObserverId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the event sequence ID.
     /// </summary>
     [CommandOption("--sequence <ID>")]
-    [Description("Event sequence ID")]
-    [DefaultValue("event-log")]
-    public string EventSequenceId { get; set; } = "event-log";
+    [Description("Event sequence name (default: event-log)")]
+    [DefaultValue(CliDefaults.DefaultEventSequenceId)]
+    public string EventSequenceId { get; set; } = CliDefaults.DefaultEventSequenceId;
 }

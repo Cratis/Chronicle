@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli.Commands.Context;
@@ -18,7 +17,7 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 
         if (config.Contexts.ContainsKey(settings.Name))
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] Context '{settings.Name.EscapeMarkup()}' already exists. Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
+            OutputFormatter.WriteError("text", $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
             return Task.FromResult(ExitCodes.ValidationError);
         }
 
@@ -38,10 +37,10 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
         config.Save();
 
         var message = config.ActiveContext == settings.Name
-            ? $"Created and switched to context '{settings.Name.EscapeMarkup()}'."
-            : $"Created context '{settings.Name.EscapeMarkup()}'. Switch to it with: cratis context set {settings.Name.EscapeMarkup()}";
+            ? $"Created and switched to context '{settings.Name}'."
+            : $"Created context '{settings.Name}'. Switch to it with: cratis context set {settings.Name}";
 
-        AnsiConsole.MarkupLine($"[green]{message}[/]");
+        OutputFormatter.WriteMessage("text", message);
         return Task.FromResult(ExitCodes.Success);
     }
 }

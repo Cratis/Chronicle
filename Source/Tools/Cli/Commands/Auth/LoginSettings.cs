@@ -17,4 +17,11 @@ public class LoginSettings : GlobalSettings
     [CommandArgument(0, "<USERNAME>")]
     [Description("The username to log in with")]
     public string Username { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the password for non-interactive login.
+    /// </summary>
+    [CommandOption("--password <PASSWORD>")]
+    [Description("Password for non-interactive login. If omitted, prompts interactively.")]
+    public string? Password { get; set; }
 }

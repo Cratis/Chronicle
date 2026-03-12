@@ -11,7 +11,7 @@ public class when_loading_and_no_config_exists : given.a_temp_config_directory
     void Because() => _result = CliConfiguration.Load();
 
     [Fact] void should_return_a_configuration() => _result.ShouldNotBeNull();
-    [Fact] void should_have_null_default_server() => _result.DefaultServer.ShouldBeNull();
-    [Fact] void should_have_null_default_event_store() => _result.DefaultEventStore.ShouldBeNull();
-    [Fact] void should_have_null_default_namespace() => _result.DefaultNamespace.ShouldBeNull();
+    [Fact] void should_have_null_server() => _result.GetCurrentContext().Server.ShouldBeNull();
+    [Fact] void should_have_null_event_store() => _result.GetCurrentContext().EventStore.ShouldBeNull();
+    [Fact] void should_have_null_namespace() => _result.GetCurrentContext().Namespace.ShouldBeNull();
 }

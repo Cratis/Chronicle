@@ -31,7 +31,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
-            OutputFormatter.WriteError(format, "Cannot connect to Chronicle server", $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
             return ExitCodes.ConnectionError;
         }
         catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
@@ -46,7 +46,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         }
         catch (ObjectDisposedException)
         {
-            OutputFormatter.WriteError(format, "Cannot connect to Chronicle server", $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
             return ExitCodes.ConnectionError;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

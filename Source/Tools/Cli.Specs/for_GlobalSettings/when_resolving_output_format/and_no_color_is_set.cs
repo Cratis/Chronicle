@@ -14,12 +14,12 @@ public sealed class and_no_color_is_set : Specification, IDisposable
     {
         _previousNoColor = Environment.GetEnvironmentVariable("NO_COLOR");
         Environment.SetEnvironmentVariable("NO_COLOR", "1");
-        _settings = new GlobalSettings { Output = "auto" };
+        _settings = new GlobalSettings { Output = OutputFormats.Auto };
     }
 
     void Because() => _result = _settings.ResolveOutputFormat();
 
-    [Fact] void should_return_plain() => _result.ShouldEqual("plain");
+    [Fact] void should_return_plain() => _result.ShouldEqual(OutputFormats.Plain);
 
     /// <inheritdoc/>
     void IDisposable.Dispose() => Environment.SetEnvironmentVariable("NO_COLOR", _previousNoColor);

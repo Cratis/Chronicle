@@ -23,9 +23,9 @@ public class GlobalSettings : CommandSettings
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
-    [Description("Output format: json, text, or plain")]
-    [DefaultValue("auto")]
-    public string Output { get; set; } = "auto";
+    [Description("Output format: json, text, plain, or json-compact (non-indented JSON)")]
+    [DefaultValue(OutputFormats.Auto)]
+    public string Output { get; set; } = OutputFormats.Auto;
 
     /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
@@ -42,7 +42,7 @@ public class GlobalSettings : CommandSettings
         }
         else
         {
-            var envVar = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING");
+            var envVar = Environment.GetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar);
             if (!string.IsNullOrWhiteSpace(envVar))
             {
                 connectionString = envVar;
@@ -71,7 +71,12 @@ public class GlobalSettings : CommandSettings
     /// <returns>The resolved output format name.</returns>
     public string ResolveOutputFormat()
     {
-        if (!string.Equals(Output, "auto", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(Output, OutputFormats.JsonCompact, StringComparison.OrdinalIgnoreCase))
+        {
+            return OutputFormats.JsonCompact;
+        }
+
+        if (!string.Equals(Output, OutputFormats.Auto, StringComparison.OrdinalIgnoreCase))
         {
             return Output.ToLowerInvariant();
         }
@@ -79,10 +84,10 @@ public class GlobalSettings : CommandSettings
         var noColor = Environment.GetEnvironmentVariable("NO_COLOR");
         if (noColor is not null)
         {
-            return "plain";
+            return OutputFormats.Plain;
         }
 
-        return Console.IsOutputRedirected ? "json" : "text";
+        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Text;
     }
 
     static string ComposeCredentials(string connectionString)

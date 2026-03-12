@@ -25,7 +25,7 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
             Partition = settings.Partition
         });
 
-        OutputFormatter.WriteMessage(format, $"Retry started for partition '{settings.Partition}' of observer '{settings.ObserverId}'");
+        OutputFormatter.WriteMessage(format, $"Retry started for partition '{settings.Partition}' of observer '{settings.ObserverId}'. Use 'cratis observers show {settings.ObserverId}' to check progress.");
         return ExitCodes.Success;
     }
 }

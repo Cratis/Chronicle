@@ -22,7 +22,7 @@ public class HasEventsSettings : EventStoreSettings
     /// Gets or sets the event sequence ID.
     /// </summary>
     [CommandOption("--sequence <ID>")]
-    [Description("Event sequence ID")]
-    [DefaultValue("event-log")]
-    public string EventSequenceId { get; set; } = "event-log";
+    [Description("Event sequence name (default: event-log)")]
+    [DefaultValue(CliDefaults.DefaultEventSequenceId)]
+    public string EventSequenceId { get; set; } = CliDefaults.DefaultEventSequenceId;
 }

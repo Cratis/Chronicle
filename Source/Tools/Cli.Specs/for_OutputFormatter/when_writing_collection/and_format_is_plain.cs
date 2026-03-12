@@ -14,7 +14,7 @@ public class and_format_is_plain : Specification
         Console.SetOut(writer);
 
         var data = new[] { new { Name = "Alice", Age = 30 } };
-        OutputFormatter.Write("plain", data, ["Name", "Age"], item => [item.Name, item.Age.ToString()]);
+        OutputFormatter.Write(OutputFormats.Plain, data, ["Name", "Age"], item => [item.Name, item.Age.ToString()]);
 
         _output = writer.ToString();
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
