@@ -22,9 +22,9 @@ public class GetReadModelInstancesSettings : EventStoreSettings
     /// Gets or sets the page number.
     /// </summary>
     [CommandOption("--page <NUMBER>")]
-    [Description("Page number (1-based)")]
-    [DefaultValue(1)]
-    public int Page { get; set; } = 1;
+    [Description("Page number (0-based)")]
+    [DefaultValue(0)]
+    public int Page { get; set; }
 
     /// <summary>
     /// Gets or sets the page size.
