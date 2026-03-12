@@ -44,6 +44,7 @@ public class EventSeeding(
     readonly IServiceProvider _serviceProvider = serviceProvider;
     readonly IClientArtifactsActivator _artifactActivator = artifactActivator;
     readonly List<SeedingEntry> _entries = [];
+    bool _discovered;
 
     /// <inheritdoc/>
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
@@ -74,6 +75,15 @@ public class EventSeeding(
     /// <inheritdoc/>
     public async Task Discover()
     {
+        if (_discovered) return;
+
+        _connection.Lifecycle.OnDisconnected += () =>
+        {
+            _discovered = false;
+            _entries.Clear();
+            return Task.CompletedTask;
+        };
+
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
             var activatedSeederResult = _artifactActivator.Activate<ICanSeedEvents>(_serviceProvider, seederType);
@@ -86,6 +96,8 @@ public class EventSeeding(
             await using var activatedSeeder = activatedSeederResult.AsT0;
             activatedSeeder.Instance.Seed(this);
         }
+
+        _discovered = true;
     }
 
     /// <inheritdoc/>
@@ -123,8 +135,6 @@ public class EventSeeding(
                     Tags = e.Tags
                 })
             });
-
-        _entries.Clear();
     }
 
     record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags);

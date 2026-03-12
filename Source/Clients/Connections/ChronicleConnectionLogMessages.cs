@@ -27,4 +27,10 @@ internal static partial class ChronicleConnectionLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Grpc channel created for address {Address}")]
     internal static partial void ChannelCreated(this ILogger<ChronicleConnection> logger, string address);
+
+    [LoggerMessage(LogLevel.Warning, "Connection stream completed by server — triggering reconnection")]
+    internal static partial void ConnectionStreamCompleted(this ILogger<ChronicleConnection> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Connection stream error — triggering reconnection")]
+    internal static partial void ConnectionStreamError(this ILogger<ChronicleConnection> logger, Exception exception);
 }

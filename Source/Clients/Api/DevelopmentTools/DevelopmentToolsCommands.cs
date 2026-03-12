@@ -26,14 +26,6 @@ public class DevelopmentToolsCommands : ControllerBase
     }
 
     /// <summary>
-    /// Check whether development tools are available on this server.
-    /// </summary>
-    /// <returns>True when available; a 404 would indicate a production build.</returns>
-    [AllowAnonymous]
-    [HttpGet("is-available")]
-    public bool IsAvailable() => true;
-
-    /// <summary>
     /// Reset all Chronicle state: drops all databases and evicts all Orleans grain activations.
     /// </summary>
     /// <returns>Awaitable task.</returns>
