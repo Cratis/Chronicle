@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useEffect } from 'react';
-import { IDetailsComponentProps } from 'Components';
+import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { SchemaEditor as _SE } from '@cratis/components';
 const SchemaEditor = _SE.SchemaEditor;
 import type { JsonSchema } from '@cratis/components/types';

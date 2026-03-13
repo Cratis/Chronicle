@@ -19,7 +19,7 @@ export const Page = ({ title, children, noBackground, noPadding, ...rest }: Page
     }, [title, setPageTitle]);
 
     return (
-        <div className={`flex flex-col h-full${noPadding ? '' : ' px-6 py-4'}`} {...rest}>
+        <div className='flex flex-col h-full' {...rest}>
             <main className={`${noBackground ? '' : 'panel'} overflow-hidden h-full flex flex-col flex-1`}>
                 {children}
             </main>

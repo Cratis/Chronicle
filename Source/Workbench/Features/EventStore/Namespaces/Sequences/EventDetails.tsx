@@ -3,7 +3,7 @@
 
 import { TabView, TabPanel } from 'primereact/tabview';
 import { AppendedEvent } from 'Api/Events';
-import { IDetailsComponentProps } from 'Components';
+import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { ObjectContentEditor as _OCE } from '@cratis/components';

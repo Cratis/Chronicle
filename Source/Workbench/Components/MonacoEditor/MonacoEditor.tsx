@@ -49,6 +49,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
             value: value ?? '',
             language,
             theme,
+            automaticLayout: true,
             ...options,
         });
         editorRef.current = editor;

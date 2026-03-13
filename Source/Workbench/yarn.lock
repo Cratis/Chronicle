@@ -256,7 +256,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc.react@npm:19.9.8":
+"@cratis/arc.react@npm:19.9.8, @cratis/arc.react@npm:^19.6.9":
   version: 19.9.8
   resolution: "@cratis/arc.react@npm:19.9.8"
   dependencies:
@@ -265,18 +265,6 @@ __metadata:
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
   checksum: 10/6690670637b9db7ffc1c609d4d678031a0321d7ab67f175addd267d4e69abd2b5bcf5adb96eed101e02e94e132a3286926fd7fae424356b8ff086ece9c188fcb
-  languageName: node
-  linkType: hard
-
-"@cratis/arc.react@npm:^19.6.9":
-  version: 19.9.2
-  resolution: "@cratis/arc.react@npm:19.9.2"
-  dependencies:
-    "@cratis/arc": "npm:19.9.2"
-    tsyringe: "npm:^4.10.0"
-  peerDependencies:
-    react: ^18.0.0 || ^19.0.0
-  checksum: 10/b95fdedaa562ae6ca3de22df01df7809248bf7a4fb521e924b0351e2297c500b6b2aedfc3556305e21797886ce8f6dff9e87353bf1f8b4dd26b31dc24752fc6e
   languageName: node
   linkType: hard
 
@@ -302,7 +290,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc@npm:19.9.2, @cratis/arc@npm:^19.6.9":
+"@cratis/arc@npm:19.9.2":
   version: 19.9.2
   resolution: "@cratis/arc@npm:19.9.2"
   dependencies:
@@ -311,7 +299,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/arc@npm:19.9.8":
+"@cratis/arc@npm:19.9.8, @cratis/arc@npm:^19.6.9":
   version: 19.9.8
   resolution: "@cratis/arc@npm:19.9.8"
   dependencies:
