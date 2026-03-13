@@ -233,6 +233,12 @@
                     "description": "Description",
                     "type": "Type",
                     "occurred": "Occurred at"
+                },
+                "dialogs": {
+                    "ignoreRecommendation": {
+                        "title": "Ignore Recommendation",
+                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                    }
                 }
             },
             "jobs": {
