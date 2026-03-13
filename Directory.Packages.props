@@ -78,7 +78,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.22" />
     <!-- Not categorized -->
-    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.3.0" />
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.4.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="humanizer" Version="3.0.10" />
