@@ -94,6 +94,7 @@ public static class OpenTelemetryConfigurationExtensions
                     .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
+                    .AddRuntimeInstrumentation()
                     .AddOtlpExporter();
             });
         return services;
@@ -101,7 +102,9 @@ public static class OpenTelemetryConfigurationExtensions
 
     static void MaybeSetHttp2Unencrypted(OtlpExporterOptions? options)
     {
-        var endpoint = options?.Endpoint.ToString() ?? string.Empty;
+        var endpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+            ?? options?.Endpoint.ToString()
+            ?? string.Empty;
         if (string.IsNullOrWhiteSpace(endpoint) ||
             (Uri.TryCreate(endpoint, UriKind.RelativeOrAbsolute, out var otlpEndpoint) && otlpEndpoint.Scheme.Equals("http")))
         {
