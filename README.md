@@ -312,9 +312,6 @@ You can also browse the code directly in your browser:
 |---|---|
 | 💬 **Discord** | Join the community on [Discord](https://discord.gg/kt4AMpV8WV) for questions and discussions |
 | 🐛 **GitHub Issues** | [Report bugs or request features](https://github.com/cratis/chronicle/issues) |
-| 💼 **Paid Support** | Need dedicated help? We offer paid support via [githelp](https://githelp.app/repos/cratis) |
-
-[![githelp.app shield](https://rbpwwcsvhmbmfiphokrm.supabase.co/storage/v1/object/public/public_resources/Badge2%20-%20round%20corners.svg?t=2023-12-11T13%3A11%3A05.524Z)](https://githelp.app/repos/cratis)
 
 ---
 
