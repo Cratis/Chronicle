@@ -45,6 +45,7 @@ public class EventSeeding(
     readonly IClientArtifactsActivator _artifactActivator = artifactActivator;
     readonly List<SeedingEntry> _entries = [];
     bool _discovered;
+    bool _disconnectHandlerRegistered;
 
     /// <inheritdoc/>
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
@@ -77,12 +78,7 @@ public class EventSeeding(
     {
         if (_discovered) return;
 
-        _connection.Lifecycle.OnDisconnected += () =>
-        {
-            _discovered = false;
-            _entries.Clear();
-            return Task.CompletedTask;
-        };
+        EnsureDisconnectHandlerRegistered();
 
         foreach (var seederType in _clientArtifactsProvider.EventSeeders)
         {
@@ -135,6 +131,19 @@ public class EventSeeding(
                     Tags = e.Tags
                 })
             });
+    }
+
+    void EnsureDisconnectHandlerRegistered()
+    {
+        if (_disconnectHandlerRegistered) return;
+        _disconnectHandlerRegistered = true;
+
+        _connection.Lifecycle.OnDisconnected += () =>
+        {
+            _discovered = false;
+            _entries.Clear();
+            return Task.CompletedTask;
+        };
     }
 
     record SeedingEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, object Event, IEnumerable<Tag> Tags);
