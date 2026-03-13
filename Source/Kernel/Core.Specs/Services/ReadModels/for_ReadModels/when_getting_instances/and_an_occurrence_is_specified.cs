@@ -39,6 +39,6 @@ public class and_an_occurrence_is_specified : given.all_dependencies
             Arg.Is<Concepts.ReadModels.ReadModelContainerName?>(o => o != null && o.Value == OccurrenceName),
             0,
             10);
-    [Fact] void should_return_the_instances() => _result.Instances.Count().ShouldEqual(1);
+    [Fact] void should_return_the_instances() => _result.Instances.Count.ShouldEqual(1);
     [Fact] void should_return_total_count() => _result.TotalCount.ShouldEqual(3);
 }

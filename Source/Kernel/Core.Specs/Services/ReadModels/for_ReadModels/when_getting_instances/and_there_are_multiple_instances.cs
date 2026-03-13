@@ -38,10 +38,10 @@ public class and_there_are_multiple_instances : given.all_dependencies
         PageSize = 20
     });
 
-    [Fact] void should_return_two_instances() => _result.Instances.Count().ShouldEqual(2);
+    [Fact] void should_return_two_instances() => _result.Instances.Count.ShouldEqual(2);
     [Fact] void should_serialize_first_instance_as_json() =>
-        JsonSerializer.Deserialize<JsonElement>(_result.Instances.First()).GetProperty("Name").GetString().ShouldEqual("Alice");
+        JsonSerializer.Deserialize<JsonElement>(_result.Instances[0]).GetProperty("Name").GetString().ShouldEqual("Alice");
     [Fact] void should_serialize_second_instance_as_json() =>
-        JsonSerializer.Deserialize<JsonElement>(_result.Instances.Last()).GetProperty("Name").GetString().ShouldEqual("Bob");
+        JsonSerializer.Deserialize<JsonElement>(_result.Instances[1]).GetProperty("Name").GetString().ShouldEqual("Bob");
     [Fact] void should_return_total_count() => _result.TotalCount.ShouldEqual(2);
 }

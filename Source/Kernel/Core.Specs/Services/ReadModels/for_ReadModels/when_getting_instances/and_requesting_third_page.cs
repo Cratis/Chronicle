@@ -36,7 +36,7 @@ public class and_requesting_third_page : given.all_dependencies
 
     [Fact] void should_skip_ten_records() =>
         _sink.Received(1).GetInstances(Arg.Any<Concepts.ReadModels.ReadModelContainerName?>(), 10, 5);
-    [Fact] void should_return_the_instances() => _result.Instances.Count().ShouldEqual(2);
+    [Fact] void should_return_the_instances() => _result.Instances.Count.ShouldEqual(2);
     [Fact] void should_return_total_count() => _result.TotalCount.ShouldEqual(12);
     [Fact] void should_echo_back_page() => _result.Page.ShouldEqual(2);
     [Fact] void should_echo_back_page_size() => _result.PageSize.ShouldEqual(5);

@@ -36,7 +36,7 @@ public class and_requesting_first_page : given.all_dependencies
 
     [Fact] void should_pass_zero_skip_to_sink() =>
         _sink.Received(1).GetInstances(Arg.Any<Concepts.ReadModels.ReadModelContainerName?>(), 0, 20);
-    [Fact] void should_return_the_instances() => _result.Instances.Count().ShouldEqual(1);
+    [Fact] void should_return_the_instances() => _result.Instances.Count.ShouldEqual(1);
     [Fact] void should_return_total_count() => _result.TotalCount.ShouldEqual(5);
     [Fact] void should_echo_back_page() => _result.Page.ShouldEqual(0);
     [Fact] void should_echo_back_page_size() => _result.PageSize.ShouldEqual(20);

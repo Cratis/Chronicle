@@ -34,7 +34,7 @@ public class and_requesting_second_page : given.all_dependencies
 
     [Fact] void should_pass_skip_equal_to_page_size() =>
         _sink.Received(1).GetInstances(Arg.Any<Concepts.ReadModels.ReadModelContainerName?>(), 10, 10);
-    [Fact] void should_return_the_instances() => _result.Instances.Count().ShouldEqual(1);
+    [Fact] void should_return_the_instances() => _result.Instances.Count.ShouldEqual(1);
     [Fact] void should_return_total_count() => _result.TotalCount.ShouldEqual(25);
     [Fact] void should_echo_back_page() => _result.Page.ShouldEqual(1);
 }
