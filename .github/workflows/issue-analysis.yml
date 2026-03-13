@@ -1,0 +1,87 @@
+# Issue Analysis Workflow
+#
+# PURPOSE
+# ───────
+# Keeps IssueAnalysis.md up-to-date every week so the team always has a
+# reliable, data-driven view of the open backlog.
+#
+# WHAT IT PRODUCES
+# ────────────────
+# IssueAnalysis.md is divided into two parts:
+#
+#   Auto-generated sections (updated by this workflow on every run):
+#     • "Excluded — Has an Open Pull Request"
+#         Issues with at least one open PR are excluded from the triage
+#         backlog. The PR is linked so reviewers can check progress.
+#     • "Assigned to Copilot — No PR Yet"
+#         Issues that have been assigned to the Copilot user but for which
+#         no open PR has been created yet. They may be queued or in progress.
+#     • "Potentially Obsolete"
+#         Issues that have had zero activity for ≥ 2 years and no linked PR.
+#         These are candidates for closure or re-evaluation.
+#
+#   Hand-written sections (preserved by the script, updated by humans or AI):
+#     1. Already Implemented in Code
+#     2. Can Do Without More Details
+#     3. Need More Details
+#
+# HOW IT WORKS
+# ────────────
+# 1. The `analyze-issues.sh` script uses the GitHub CLI (`gh`) to:
+#      a. List all open issues (up to 1,000).
+#      b. List all open and recently-merged PRs (up to 500 each).
+#      c. Scan every PR body for closing-keyword patterns
+#         (closes/fixes/resolves #N or a full GitHub URL) to build an
+#         issue → PR map.
+#      d. Classify each issue into one of the four buckets above.
+#      e. Regenerate the auto-generated top sections of IssueAnalysis.md
+#         while leaving everything below the
+#         `<!-- HAND-WRITTEN SECTIONS START -->` marker untouched.
+# 2. If the file changed, the workflow commits and pushes the update.
+#
+# SCHEDULE
+# ────────
+# Runs every Monday at 08:00 UTC. Can also be triggered manually via
+# workflow_dispatch.
+
+name: Issue Analysis
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Also allow manual runs
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Refresh IssueAnalysis.md
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: read
+      pull-requests: read
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run issue analysis script
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OUTPUT: IssueAnalysis.md
+        run: bash .github/scripts/analyze-issues.sh
+
+      - name: Commit and push updated analysis
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add IssueAnalysis.md
+          git diff --cached --quiet \
+            && echo "No changes to IssueAnalysis.md — nothing to commit." \
+            || git commit -m "docs: update issue analysis [skip ci]" && git push
