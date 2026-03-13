@@ -6,7 +6,9 @@ import { AppendedEvent } from 'Api/Events';
 import { IDetailsComponentProps } from 'Components';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContent } from 'Components/ObjectContentViewer';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
+import type { Json } from '@cratis/components/types';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 
@@ -82,8 +84,8 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
             <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <TabPanel header="Context">
                     <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContent
-                            object={contextObject}
+                        <ObjectContentEditor
+                            object={contextObject as Json}
                             schema={contextSchema}
                             timestamp={item.context.occurred}
                         />
@@ -91,7 +93,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                 </TabPanel>
                 <TabPanel header="Content">
                     <div style={{ height: '100%', overflow: 'auto' }}>
-                        <ObjectContent
+                        <ObjectContentEditor
                             object={content}
                             schema={schema}
                             timestamp={item.context.occurred}

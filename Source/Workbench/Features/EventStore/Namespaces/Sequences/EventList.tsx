@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { Column } from 'primereact/column';
-import { DataTableForQuery } from 'Components/index';
+import { DataTableForQuery } from '@cratis/components/DataTables';
 import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { AppendedEvent } from 'Api/Events';
 import { type EventStoreAndNamespaceParams } from 'Shared';

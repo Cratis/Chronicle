@@ -6,9 +6,9 @@ import { Compensate } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { useState, useEffect } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
-import { ObjectContent } from 'Components/ObjectContentViewer';
-import { JsonSchema } from 'Components/JsonSchema';
-import { Json } from 'Features/index';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
+import type { JsonSchema, Json } from '@cratis/components/types';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 
@@ -70,7 +70,7 @@ export const CompensateDialog = () => {
                 maxHeight: '400px',
                 overflow: 'auto'
             }}>
-                <ObjectContent
+                <ObjectContentEditor
                     object={parsedContent as Json}
                     schema={schema}
                     editMode={true}

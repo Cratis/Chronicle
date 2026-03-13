@@ -3,7 +3,7 @@
 
 import { Column } from 'primereact/column';
 import { AllApplications, Application, RemoveApplication } from 'Api/Security';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
 import { ChangeSecretDialog, ChangeSecretDialogRequest } from './ChangeSecret';

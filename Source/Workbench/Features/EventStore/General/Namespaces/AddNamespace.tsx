@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
-import { Dialog } from 'Components/Dialogs';
+import { Dialog } from '@cratis/components/Dialogs';
 import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';

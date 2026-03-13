@@ -7,7 +7,7 @@ import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModel
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { AddReadModelDialog } from './Add/AddReadModelDialog';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
 import { useState, useCallback } from 'react';

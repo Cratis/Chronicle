@@ -6,7 +6,7 @@ import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
-import { type JsonSchema } from 'Components/JsonSchema';
+import { type JsonSchema } from '@cratis/components/types';
 import { useState } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';

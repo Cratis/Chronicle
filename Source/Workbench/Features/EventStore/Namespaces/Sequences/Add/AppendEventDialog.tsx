@@ -6,8 +6,9 @@ import { Guid } from '@cratis/fundamentals';
 import { Append } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { EventTypeRegistration } from 'Api/Events';
-import { Dialog } from 'Components/Dialogs';
-import { ObjectContent } from 'Components/ObjectContentViewer';
+import { Dialog } from '@cratis/components/Dialogs';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
@@ -15,8 +16,7 @@ import { useState, useEffect } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { Json } from 'Features/index';
-import { JsonSchema } from 'Components/JsonSchema';
+import type { Json, JsonSchema } from '@cratis/components/types';
 
 export const AppendEventDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -184,7 +184,7 @@ export const AppendEventDialog = () => {
                             maxHeight: '400px',
                             overflow: 'auto'
                         }}>
-                            <ObjectContent
+                            <ObjectContentEditor
                                 object={eventContent}
                                 schema={schema}
                                 editMode={true}

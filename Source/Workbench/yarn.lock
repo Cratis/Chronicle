@@ -320,15 +320,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/components@npm:^1.4.1":
-  version: 1.4.1
-  resolution: "@cratis/components@npm:1.4.1"
+"@cratis/components@npm:^1.4.2":
+  version: 1.4.2
+  resolution: "@cratis/components@npm:1.4.2"
   dependencies:
     "@cratis/arc": "npm:^19.6.9"
     "@cratis/arc.react": "npm:^19.6.9"
     "@cratis/arc.vite": "npm:^19.6.9"
     allotment: "npm:1.20.5"
-    framer-motion: "npm:12.35.0"
+    framer-motion: "npm:12.35.2"
     pixi.js: "npm:^8.16.0"
     primeicons: "npm:7.0.0"
     primereact: "npm:10.9.7"
@@ -344,7 +344,7 @@ __metadata:
     usehooks-ts: "npm:3.1.1"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/417f4d6e88d393dd2b7ecb15dd239125e583939d0bc64970aceaf4d50afc40c88078a267a4b0cc47476e91dc36a1a49ccbfb3bcc0f1b9d48240f4d77a08ebb93
+  checksum: 10/94353ed46d309bb93013041fc27ff1cb4b9e311094c629bf4106e06164d32c36ff7dc4d2c1fbbf4ae6ecbb5a51c7aa30f33fe3dfeba21871fbe6d1fe46cae827
   languageName: node
   linkType: hard
 
@@ -3700,11 +3700,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"framer-motion@npm:12.35.0":
-  version: 12.35.0
-  resolution: "framer-motion@npm:12.35.0"
+"framer-motion@npm:12.35.2":
+  version: 12.35.2
+  resolution: "framer-motion@npm:12.35.2"
   dependencies:
-    motion-dom: "npm:^12.35.0"
+    motion-dom: "npm:^12.35.2"
     motion-utils: "npm:^12.29.2"
     tslib: "npm:^2.4.0"
   peerDependencies:
@@ -3718,7 +3718,7 @@ __metadata:
       optional: true
     react-dom:
       optional: true
-  checksum: 10/9c2dd8a44efcf15d787ea1d1a24dbb2352b44824c4c33273f176f3feabe602278b9571541c89cc5673b3590b483daf9e0761889412feaafd4feba758cfdc1c96
+  checksum: 10/10af699ff1e35a166ef60ceab464479b81624ef74de3ec9e11b427f86bd7bf2c8c8a9f24fb0646288b2d4b0c1b219203da351821fc568c7b91c6821594af4a3f
   languageName: node
   linkType: hard
 
@@ -5212,12 +5212,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"motion-dom@npm:^12.35.0":
-  version: 12.35.2
-  resolution: "motion-dom@npm:12.35.2"
+"motion-dom@npm:^12.35.2":
+  version: 12.36.0
+  resolution: "motion-dom@npm:12.36.0"
   dependencies:
-    motion-utils: "npm:^12.29.2"
-  checksum: 10/dd009e58b178dd80b123a86199ae78ecd6b2fc6c8e03464b2daf43b4218dfcc36042ec0af8fad2c6c157198f56849f90dc033b58f46478b45fbaeaefcc2710ad
+    motion-utils: "npm:^12.36.0"
+  checksum: 10/3d96e8827f45696f2d1b2fdf98737114183f63686797b5c5d215db099b667ec4fd99fb1ba66c9e8cd33e23e3235f35443c682bd780eaa5dc9e2c6177e650d5b0
   languageName: node
   linkType: hard
 
@@ -5225,6 +5225,13 @@ __metadata:
   version: 12.29.2
   resolution: "motion-utils@npm:12.29.2"
   checksum: 10/ae5f9be58c07939af72334894ed1a18653d724946182a718dc3d11268ef26e63804c3f16dee5a6110596d4406b539c4513822b74f86adebef9488601c34b18b7
+  languageName: node
+  linkType: hard
+
+"motion-utils@npm:^12.36.0":
+  version: 12.36.0
+  resolution: "motion-utils@npm:12.36.0"
+  checksum: 10/c4a2a7ffac48ca44082d6d31b115f245025060a7e69d70dac062646d8f96c39e5662a7c8a51f255566fdf8e719ef1269a8e9aa3a04fc263bb65b5a7b61331901
   languageName: node
   linkType: hard
 
@@ -7445,7 +7452,7 @@ __metadata:
   dependencies:
     "@cratis/arc.react.mvvm": "npm:^19.9.8"
     "@cratis/arc.vite": "npm:^19.9.8"
-    "@cratis/components": "npm:^1.4.1"
+    "@cratis/components": "npm:^1.4.2"
     "@eslint/eslintrc": "npm:3.3.5"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"

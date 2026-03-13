@@ -9,7 +9,9 @@ import { AllSnapshotsForReadModel } from 'Api/ReadModels/AllSnapshotsForReadMode
 import { EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { ReadModelDefinition } from 'Api/ReadModelTypes/ReadModelDefinition';
-import { ObjectContent } from 'Components/ObjectContentViewer';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
+import type { Json } from '@cratis/components/types';
 
 export interface TimeMachineDialogProps {
     readModel: ReadModelDefinition;
@@ -49,7 +51,7 @@ export const TimeMachineDialog = ({ readModelKey, readModel }: TimeMachineDialog
                     id: `snapshot-${index}`,
                     timestamp,
                     label: `${readModel.identifier} @ ${snapshot.occurred.toLocaleString()}`,
-                    content: <ObjectContent object={snapshot.instance} timestamp={timestamp} schema={schema} />,
+                    content: <ObjectContentEditor object={snapshot.instance as Json} timestamp={timestamp} schema={schema} />,
                     events: mappedEvents,
                 };
             });

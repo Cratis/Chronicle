@@ -1,11 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IDetailsComponentProps } from 'Components/DataPage/DataPage';
+import { IDetailsComponentProps } from 'Components';
 import { SeedEntry } from 'Api/Seeding/SeedEntry';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
-import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 
@@ -25,7 +26,7 @@ export const SeedEntryDetails = ({ item }: IDetailsComponentProps<SeedEntry>) =>
             <div style={{ marginBottom: '10px', color: 'var(--text-color-secondary)' }}>
                 <strong>Event Source:</strong> {item.eventSourceId}
             </div>
-            <ObjectContentViewer object={content} schema={schema} />
+            <ObjectContentEditor object={content} schema={schema} />
         </div>
     );
 };
