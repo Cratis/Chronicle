@@ -5,6 +5,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
@@ -57,6 +58,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IWebhooks Webhooks => throw new NotImplementedException();
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptions Subscriptions => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public IConstraints Constraints => throw new NotImplementedException();

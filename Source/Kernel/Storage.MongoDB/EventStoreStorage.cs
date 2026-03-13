@@ -13,12 +13,14 @@ using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
+using Cratis.Chronicle.Storage.MongoDB.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reactors;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 using Cratis.Chronicle.Storage.MongoDB.Observation.Webhooks;
 using Cratis.Chronicle.Storage.MongoDB.Projections;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
@@ -82,6 +84,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IConstraintsStorage Constraints { get; } = new ConstraintsStorage(eventStoreDatabase);
