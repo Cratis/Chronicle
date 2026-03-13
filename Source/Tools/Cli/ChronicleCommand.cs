@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Http;
+using System.Net.Sockets;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Grpc.Core;
@@ -47,6 +49,11 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         catch (ObjectDisposedException)
         {
             OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
+            return ExitCodes.ConnectionError;
+        }
+        catch (HttpRequestException ex)
+        {
+            OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message);
             return ExitCodes.ConnectionError;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

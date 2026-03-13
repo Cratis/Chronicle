@@ -206,6 +206,13 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
+      - name: Login to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run CLI integration tests
         working-directory: ./Integration/Cli
         run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
