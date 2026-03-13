@@ -13,9 +13,12 @@
 #     • "Excluded — Has an Open Pull Request"
 #         Issues with at least one open PR are excluded from the triage
 #         backlog. The PR is linked so reviewers can check progress.
+#         Only open (not merged or closed) PRs are counted.
 #     • "Assigned to Copilot — No PR Yet"
-#         Issues that have been assigned to the Copilot user but for which
-#         no open PR has been created yet. They may be queued or in progress.
+#         Issues that have been assigned to the Copilot user and have
+#         NO linked pull request at all (neither open nor merged). Issues
+#         that have a merged PR but are still open are moved to the
+#         hand-written backlog sections instead.
 #     • "Potentially Obsolete"
 #         Issues that have had zero activity for ≥ 2 years and no linked PR.
 #         These are candidates for closure or re-evaluation.

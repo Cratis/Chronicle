@@ -8,18 +8,22 @@
 #
 # How it works
 # ────────────
-# 1. Fetch every open issue (number, title, assignees, labels, body, dates).
-# 2. Fetch all open PRs plus recently-closed PRs (last 500).
+# 1. Fetch every OPEN issue (number, title, assignees, labels, body, dates).
+#    Closed issues are never included.
+# 2. Fetch all OPEN PRs plus recently-merged PRs (last 500).
+#    Closed (declined) PRs are never fetched and never appear in the report.
 # 3. For each PR body, scan for closing-keyword patterns
 #    ("closes #N", "fixes #N", "resolves #N", etc.) to build a map of
 #    issue → list of PRs.
 # 4. Determine whether a linked PR was created by Copilot or a human.
 # 5. Classify each open issue into one of:
-#       A. Excluded  – has at least one open PR
-#       B. Copilot   – assigned to Copilot but no open PR yet
+#       A. Excluded  – has at least one OPEN PR
+#       B. Copilot   – assigned to Copilot but no open PR and no linked PR at all
 #       C. Obsolete  – last updated >730 days ago with no PR and no recent
 #                      activity (heuristic for stale/superseded issues)
 #       D. Active    – everything else (preserved from manual categorisation)
+#    Note: issues that have only MERGED (not open) PRs linked to them are moved
+#    to the Active bucket so they do not appear under "No PR Yet".
 # 6. Regenerate the auto-managed sections of IssueAnalysis.md while leaving
 #    the hand-written "Already Implemented", "Can Do", and "Need More Details"
 #    sections intact.
@@ -72,7 +76,10 @@ jq -s 'add' "$TMP_DIR/prs_open.json" "$TMP_DIR/prs_merged.json" \
 echo "==> Building issue → PR map …"
 # Extract closing-keyword references from every PR body.
 # Recognises: closes, close, closed, fixes, fix, fixed, resolves, resolve, resolved
-# followed by #N or a full GitHub URL ending in /issues/N
+# followed by:
+#   - #N (bare issue reference)
+#   - owner/repo#N (cross-repo shorthand, e.g. Cratis/Chronicle#123)
+#   - https://github.com/owner/repo/issues/N (full URL)
 python3 - "$TMP_DIR/prs_all.json" "$TMP_DIR/issues_open.json" \
     "$TMP_DIR/issue_pr_map.json" <<'PYEOF'
 import json, re, sys
@@ -88,7 +95,7 @@ open_numbers = {i["number"] for i in issues}
 
 KEYWORDS = r"(?:clos(?:es?|ed)|fix(?:es|ed|ing)?|resolv(?:es|ed)?)"
 PATTERN = re.compile(
-    rf"{KEYWORDS}\s+(?:https?://github\.com/[^/]+/[^/]+/issues/|#)(\d+)",
+    rf"{KEYWORDS}\s+(?:https?://github\.com/[^/]+/[^/]+/issues/|[A-Za-z0-9._-]+/[A-Za-z0-9._-]+#|#)(\d+)",
     re.IGNORECASE,
 )
 
@@ -170,6 +177,10 @@ for issue in issues:
 
     if open_prs:
         classified["excluded"].append(entry)
+    elif linked_prs:
+        # Issue has linked PR(s) but none are open (all merged/closed).
+        # Do not show in "Copilot — No PR Yet" since PR(s) already exist.
+        classified["active"].append(entry)
     elif entry["is_copilot"]:
         classified["copilot"].append(entry)
     elif since_update >= STALE_DAYS:
@@ -221,11 +232,13 @@ lines.append("# Chronicle Repository Issue Analysis\n")
 lines.append(f"> **Auto-generated** on {NOW.strftime('%Y-%m-%d')} by the weekly "
              "[issue-analysis workflow](.github/workflows/issue-analysis.yml). "
              "Sections 1–3 below are maintained by hand and updated by AI analysis.\n")
+lines.append("> Only **open** issues and **open** pull requests are included. "
+             "Closed issues and closed/merged pull requests are excluded from sections A–C.\n")
 lines.append("")
 
-# ── Section 0: Excluded ──────────────────────────────────────────────────────
-lines.append("## Excluded — Has an Open Pull Request\n")
-lines.append("These issues are actively being worked on and are excluded from the backlog triage.\n")
+# ── Section A: Excluded ──────────────────────────────────────────────────────
+lines.append("## A. Excluded — Has an Open Pull Request\n")
+lines.append("Issues with at least one open PR are excluded from the backlog triage; work is actively underway.\n")
 lines.append("| # | Issue | Pull Request(s) |")
 lines.append("|---|-------|-----------------|")
 for e in sorted(data["excluded"], key=lambda x: x["number"], reverse=True):
@@ -233,19 +246,18 @@ for e in sorted(data["excluded"], key=lambda x: x["number"], reverse=True):
     lines.append(f"| {issue_link(e['number'], e['title'])} | {e['title']} | {pr_list} |")
 lines.append("")
 
-# ── Section Copilot ──────────────────────────────────────────────────────────
-lines.append("## Assigned to Copilot — No PR Yet\n")
-lines.append("These issues are assigned to Copilot but do not yet have an open PR. "
-             "They may be in progress or waiting to be picked up.\n")
-lines.append("| # | Issue | Assignees |")
-lines.append("|---|-------|-----------|")
+# ── Section B: Copilot ───────────────────────────────────────────────────────
+lines.append("## B. Assigned to Copilot — No PR Yet\n")
+lines.append("These issues are assigned to Copilot and have no pull request at all "
+             "(neither open nor merged). They may be in progress or waiting to be picked up.\n")
+lines.append("| # | Issue |")
+lines.append("|---|-------|")
 for e in data["copilot"]:
-    assignees = ", ".join(f"@{a}" for a in e["assignees"] if a)
-    lines.append(f"| {issue_link(e['number'], e['title'])} | {e['title']} | {assignees} |")
+    lines.append(f"| {issue_link(e['number'], e['title'])} | {e['title']} |")
 lines.append("")
 
-# ── Section Obsolete ─────────────────────────────────────────────────────────
-lines.append("## Potentially Obsolete\n")
+# ── Section C: Obsolete ──────────────────────────────────────────────────────
+lines.append("## C. Potentially Obsolete\n")
 lines.append("These issues have had no activity for **≥ 2 years** and no linked PR. "
              "They may be superseded by later work, no longer relevant, or waiting for "
              "someone to verify whether they still apply.\n")
