@@ -17,6 +17,7 @@ import { Constructor } from '@cratis/fundamentals';
 
 export interface MenuItemProps extends PrimeMenuItem {
     disableOnUnselected?: boolean;
+    disableWhen?: (selectedItem: unknown) => boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -46,7 +47,8 @@ export const MenuItems = ({ children }: MenuItemsProps) => {
                 const Icon = child.props.icon;
                 const menuItem = { ...child.props };
                 menuItem.icon = <Icon className='mr-2' />;
-                menuItem.disabled = isDisabled && child.props.disableOnUnselected;
+                const isDisabledByCondition = child.props.disableWhen ? child.props.disableWhen(context.selectedItem) : false;
+                menuItem.disabled = (isDisabled && child.props.disableOnUnselected) || isDisabledByCondition;
                 menuItems.push(menuItem);
             }
         });
