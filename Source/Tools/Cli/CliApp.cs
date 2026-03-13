@@ -77,9 +77,9 @@ public static class CliApp
                     .WithExample("events", "get", "-o", "plain")
                     .WithExample("events", "get", "--from", "100", "--to", "200")
                     .WithExample("events", "get", "--event-type", "UserRegistered");
-                events.AddCommand<CountEventsCommand>("count")
+                events.AddCommand<CountEventsCommand>("tail")
                     .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
-                    .WithExample("events", "count");
+                    .WithExample("events", "tail");
                 events.AddCommand<HasEventsCommand>("has")
                     .WithDescription("Check if events exist for an event source ID")
                     .WithExample("events", "has", "abc-123");

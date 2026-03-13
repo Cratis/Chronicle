@@ -4,6 +4,8 @@ The CLI resolves its connection to a Chronicle server through a layered configur
 
 ## Connection Resolution
 
+The CLI configuration file is stored at `~/.cratis/config.json`.
+
 The CLI determines which server to connect to using the following precedence (highest to lowest):
 
 1. `--server` flag on the command

@@ -17,8 +17,8 @@ public sealed class and_xdg_config_home_is_not_set : Specification, IDisposable
 
     void Because() => _result = CliConfiguration.GetConfigPath();
 
-    [Fact] void should_fall_back_to_user_home_config() => _result.ShouldContain(".config");
-    [Fact] void should_end_with_cratis_config_json() => _result.ShouldContain(Path.Combine("cratis", "config.json"));
+    [Fact] void should_not_use_xdg_config_folder() => _result.ShouldNotContain(Path.DirectorySeparatorChar + ".config" + Path.DirectorySeparatorChar);
+    [Fact] void should_end_with_dot_cratis_config_json() => _result.ShouldContain(Path.Combine(".cratis", "config.json"));
 
     /// <inheritdoc/>
     void IDisposable.Dispose() => Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _previousValue);

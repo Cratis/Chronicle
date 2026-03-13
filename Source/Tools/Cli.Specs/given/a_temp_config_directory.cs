@@ -4,17 +4,27 @@
 namespace Cratis.Chronicle.Cli.given;
 
 /// <summary>
-/// Base context that sets up a temporary XDG config directory for specs that need config file isolation.
+/// Base context that sets up a temporary user home directory for specs that need config file isolation.
 /// </summary>
 public class a_temp_config_directory : Specification, IDisposable
 {
     protected string _tempConfigHome;
+    string? _previousHome;
+    string? _previousUserProfile;
+    string? _previousXdgConfigHome;
 
     void Establish()
     {
         _tempConfigHome = Path.Combine(Path.GetTempPath(), $"cratis-cli-specs-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempConfigHome);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _tempConfigHome);
+
+        _previousHome = Environment.GetEnvironmentVariable("HOME");
+        _previousUserProfile = Environment.GetEnvironmentVariable("USERPROFILE");
+        _previousXdgConfigHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+
+        Environment.SetEnvironmentVariable("HOME", _tempConfigHome);
+        Environment.SetEnvironmentVariable("USERPROFILE", _tempConfigHome);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", null);
     }
 
     /// <inheritdoc/>
@@ -30,7 +40,9 @@ public class a_temp_config_directory : Specification, IDisposable
     /// </summary>
     protected virtual void CleanUp()
     {
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", null);
+        Environment.SetEnvironmentVariable("HOME", _previousHome);
+        Environment.SetEnvironmentVariable("USERPROFILE", _previousUserProfile);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _previousXdgConfigHome);
 
         try
         {

@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace Cratis.Chronicle.Cli;
 
 /// <summary>
-/// Represents the CLI configuration stored at XDG config path.
+/// Represents the CLI configuration stored in the user's home directory under .cratis.
 /// Supports named contexts for connecting to different Chronicle servers.
 /// </summary>
 public class CliConfiguration
@@ -42,13 +42,7 @@ public class CliConfiguration
     /// <returns>The full path to the config file.</returns>
     public static string GetConfigPath()
     {
-        var configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-        if (string.IsNullOrWhiteSpace(configHome))
-        {
-            configHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        }
-
-        return Path.Combine(configHome, "cratis", "config.json");
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cratis", "config.json");
     }
 
     /// <summary>

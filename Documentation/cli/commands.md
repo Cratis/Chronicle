@@ -54,7 +54,7 @@ Accepts [event store options](#event-store-options).
 | Command | Description |
 | ------- | ----------- |
 | `cratis events get` | Get events from an event sequence |
-| `cratis events count` | Get the highest used sequence number (tail). Not a total count — gaps may exist. |
+| `cratis events tail` | Get the highest used sequence number (tail). Not a total count — gaps may exist. |
 | `cratis events has <EVENT_SOURCE_ID>` | Check if events exist for a given event source ID |
 
 Accepts [event store options](#event-store-options).
@@ -69,7 +69,7 @@ Accepts [event store options](#event-store-options).
 | `--event-source-id` | string | — | Filter by event source identifier |
 | `--event-type` | string | — | Filter by event type (e.g. `UserRegistered` or `UserRegistered+1`). Comma-separate multiple. |
 
-### events count options
+### events tail options
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
@@ -159,10 +159,10 @@ Accepts [event store options](#event-store-options).
 | Command | Description |
 | ------- | ----------- |
 | `cratis read-models list` | List read model definitions |
-| `cratis read-models instances <CONTAINER>` | List instances in a read model container |
-| `cratis read-models get <CONTAINER> <KEY>` | Get a single instance by key |
+| `cratis read-models instances <READ_MODEL>` | List instances in a read model |
+| `cratis read-models get <READ_MODEL> <KEY>` | Get a single instance by key |
 | `cratis read-models occurrences <TYPE>` | List replay history for a read model type |
-| `cratis read-models snapshots <CONTAINER> <KEY>` | Get snapshots for a specific instance |
+| `cratis read-models snapshots <READ_MODEL> <KEY>` | Get snapshots for a specific instance |
 
 Accepts [event store options](#event-store-options).
 
@@ -170,7 +170,7 @@ Accepts [event store options](#event-store-options).
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `<CONTAINER>` | string | — | Read model container name |
+| `<READ_MODEL>` | string | — | Read model identifier from `read-models list` |
 | `--page` | int | `0` | Page number (0-based) |
 | `--page-size` | int | `20` | Items per page |
 
@@ -178,7 +178,7 @@ Accepts [event store options](#event-store-options).
 
 | Option | Type | Description |
 | ------ | ---- | ----------- |
-| `<CONTAINER>` | string | Read model container name from `read-models list` |
+| `<READ_MODEL>` | string | Read model identifier from `read-models list` |
 | `<KEY>` | string | Read model instance key (typically an event source ID) |
 | `--sequence` | string | Event sequence name (default: `event-log`) |
 
@@ -193,7 +193,7 @@ Accepts [event store options](#event-store-options).
 
 | Option | Type | Description |
 | ------ | ---- | ----------- |
-| `<CONTAINER>` | string | Read model container name from `read-models list` |
+| `<READ_MODEL>` | string | Read model identifier from `read-models list` |
 | `<KEY>` | string | Read model instance key (typically an event source ID) |
 | `--sequence` | string | Event sequence name (default: `event-log`) |
 

@@ -62,7 +62,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     new CommandOutputAdvice("namespaces list", "plain", "Nearly identical size. Plain avoids JSON array brackets."),
                     new CommandOutputAdvice("event-types list", "plain", "plain is ~34x smaller (1.2KB vs 41KB). JSON includes full JSON Schema blob per event type."),
                     new CommandOutputAdvice("events get", "plain", "plain is ~25x smaller (6.8KB vs 169KB for 73 events). JSON includes context, causation chains, content."),
-                    new CommandOutputAdvice("events count", "plain", "plain returns just the number (3B vs 31B)."),
+                    new CommandOutputAdvice("events tail", "plain", "plain returns just the number (3B vs 31B)."),
                     new CommandOutputAdvice("observers list", "plain", "When empty, JSON is smaller (2B vs 44B), but with data plain is comparable. Use plain for consistency."),
                     new CommandOutputAdvice("projections list", "plain", "JSON output is very large due to full projection definitions with all From/Join/RemovedWith mappings. Plain shows the key fields concisely."),
                     new CommandOutputAdvice("projections show", "json", "JSON (612B) and plain (574B) are similar size. JSON is easier to parse for the declaration field."),
@@ -148,7 +148,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     "Get the tail (highest) sequence number. Note: not a count of events — gaps may exist.",
                     EventStoreOptions(),
                     [new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)")],
-                    ["cratis events count", "cratis events count -e MyStore"]),
+                    ["cratis events tail", "cratis events tail -e MyStore"]),
                 new CommandDescriptor(
                     "has",
                     "Check if events exist for an event source ID",

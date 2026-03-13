@@ -13,7 +13,7 @@ public class GetInstancesResponse
     /// Gets or sets the collection of instances as JSON strings.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<string> Instances { get; set; } = [];
+    public IList<string> Instances { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the total count of instances.

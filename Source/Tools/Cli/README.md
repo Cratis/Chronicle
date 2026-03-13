@@ -63,7 +63,7 @@ These options are available on every command:
 
 ## Configuration
 
-The CLI stores persistent defaults at `~/.config/cratis/config.json` (respects `XDG_CONFIG_HOME`).
+The CLI stores persistent defaults at `~/.cratis/config.json`.
 
 | Key | Description |
 |-----|-------------|
@@ -156,13 +156,13 @@ cratis events get -e my-app --from 100 --to 200
 cratis events get --event-source-id order-42
 ```
 
-#### `events count`
+#### `events tail`
 
 ```bash
-cratis events count [options]
+cratis events tail [options]
 ```
 
-Returns the tail sequence number (total event count) of an event sequence.
+Returns the highest used sequence number (tail) of an event sequence. This is not a total count because sequence numbers can have gaps.
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -349,10 +349,10 @@ Paginates the stored instances of a read model.
 
 | Argument / Option | Description | Default |
 |-------------------|-------------|---------|
-| `<READ_MODEL>` | Read model container name _(required)_ | |
+| `<READ_MODEL>` | Read model identifier _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
 | `-n, --namespace <NAME>` | Namespace | `default` |
-| `--page <NUMBER>` | Page number (1-based) | `1` |
+| `--page <NUMBER>` | Page number (0-based) | `0` |
 | `--page-size <SIZE>` | Instances per page | `20` |
 
 ---
@@ -363,7 +363,7 @@ When stdout is redirected the CLI automatically switches to JSON output, making 
 
 ```bash
 # Count events and parse with jq
-cratis events count -e my-app | jq '.tailSequenceNumber'
+cratis events tail -e my-app | jq '.tailSequenceNumber'
 
 # List all failed partitions as JSON
 cratis failed-partitions list -e my-app -n production | jq '.[]'

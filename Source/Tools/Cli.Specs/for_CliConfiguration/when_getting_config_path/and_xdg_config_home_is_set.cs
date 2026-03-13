@@ -10,6 +10,6 @@ public class and_xdg_config_home_is_set : given.a_temp_config_directory
 
     void Because() => _result = CliConfiguration.GetConfigPath();
 
-    [Fact] void should_use_xdg_config_home() => _result.ShouldContain(_tempConfigHome);
-    [Fact] void should_end_with_cratis_config_json() => _result.ShouldContain(Path.Combine("cratis", "config.json"));
+    [Fact] void should_use_the_temp_user_home() => _result.ShouldContain(_tempConfigHome);
+    [Fact] void should_end_with_dot_cratis_config_json() => _result.ShouldContain(Path.Combine(".cratis", "config.json"));
 }

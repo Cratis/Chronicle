@@ -83,8 +83,8 @@ cratis failed-partitions show Core.MyFeature.MyReactor abc-123 -e MyStore -o jso
 
 ```shell
 cratis read-models list -e MyStore -o plain
-cratis read-models instances myReadModels -e MyStore -o plain
-cratis read-models get myReadModels abc-123 -e MyStore -o json
+cratis read-models instances Core.MyFeature.Listing.MyReadModel -e MyStore -o plain
+cratis read-models get Core.MyFeature.Listing.MyReadModel abc-123 -e MyStore -o json
 ```
 
 ### Query events for an entity

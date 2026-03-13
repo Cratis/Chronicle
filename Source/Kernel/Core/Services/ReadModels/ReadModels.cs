@@ -125,7 +125,7 @@ internal sealed class ReadModels(
             skip,
             request.PageSize);
 
-        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)) ?? [];
+        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)).ToList() ?? [];
         return new()
         {
             Instances = instancesAsJson,
@@ -261,7 +261,7 @@ internal sealed class ReadModels(
 
         // Process events to get all instances grouped by event source ID
         var result = await projection.Process(request.Namespace, events);
-        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToList();
 
         return new GetAllInstancesResponse
         {
