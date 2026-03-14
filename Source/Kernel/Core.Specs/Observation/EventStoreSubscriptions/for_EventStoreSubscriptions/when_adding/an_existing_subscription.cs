@@ -7,8 +7,8 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
-using EventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
+using EventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptions.when_adding;
 

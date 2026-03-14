@@ -12,7 +12,7 @@ import { Recommendation } from 'Api/Recommendations/Recommendation';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 
 const defaultFilters: DataTableFilterMeta = {

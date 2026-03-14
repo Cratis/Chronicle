@@ -4,21 +4,20 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection;
-using KernelEventType = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventType;
-using KernelEventTypeId = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId;
-using KernelEventTypeGeneration = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeGeneration;
+using KernelCorrelationId = Cratis.Execution.CorrelationId;
+using KernelEventCompensated = KernelCore::Cratis.Chronicle.Events.EventSequences.EventCompensated;
+using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
+using KernelEventSequenceId = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 using KernelEventSequenceNumber = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 using KernelEventSourceId = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSourceId;
-using KernelRedactionReason = KernelConcepts::Cratis.Chronicle.Concepts.Events.RedactionReason;
-using KernelCorrelationId = Cratis.Execution.CorrelationId;
-using KernelIdentity = KernelConcepts::Cratis.Chronicle.Concepts.Identities.Identity;
-using KernelEventSequenceId = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
-using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
-using KernelEventCompensated = KernelCore::Cratis.Chronicle.Events.EventSequences.EventCompensated;
 using KernelEventsRedactedForEventSource = KernelCore::Cratis.Chronicle.Events.EventSequences.EventsRedactedForEventSource;
+using KernelEventType = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventType;
+using KernelEventTypeGeneration = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeGeneration;
+using KernelEventTypeId = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId;
+using KernelIdentity = KernelConcepts::Cratis.Chronicle.Concepts.Identities.Identity;
+using KernelRedactionReason = KernelConcepts::Cratis.Chronicle.Concepts.Events.RedactionReason;
 
 namespace Cratis.Chronicle.XUnit.Integration.Events;
 
@@ -114,7 +113,7 @@ public static class EventSequenceMutationExtensions
             : new KernelRedactionReason(reason);
 
         var kernelEventTypes = eventTypes
-            .Select(t => fixture.EventStore.EventTypes.GetEventTypeFor(t))
+            .Select(fixture.EventStore.EventTypes.GetEventTypeFor)
             .Select(et => new KernelEventType(
                 new KernelEventTypeId(et.Id.Value),
                 new KernelEventTypeGeneration(et.Generation.Value)))

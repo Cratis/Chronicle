@@ -3,11 +3,10 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
-using Cratis.Chronicle.Events;
-using IEventTypes = Cratis.Chronicle.Events.IEventTypes;
-using ContractEventType = Cratis.Chronicle.Contracts.Events.EventType;
-using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
 using Microsoft.Extensions.Logging;
+using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
+using ContractEventType = Cratis.Chronicle.Contracts.Events.EventType;
+using IEventTypes = Cratis.Chronicle.Events.IEventTypes;
 
 namespace Cratis.Chronicle.EventStoreSubscriptions;
 

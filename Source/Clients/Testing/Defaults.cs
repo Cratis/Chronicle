@@ -37,6 +37,7 @@ public class Defaults
         var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
 
+#pragma warning disable CA2000 // Dispose objects before losing scope
         var serviceProvider = new DefaultServiceProvider();
         var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, serviceProvider);
 
@@ -48,7 +49,6 @@ public class Defaults
 
         EventTypes.Discover().Wait();
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var artifactActivator = new ClientArtifactsActivator(serviceProvider, new NullLoggerFactory());
         EventSerializer = new EventSerializer(
             ClientArtifactsProvider,
