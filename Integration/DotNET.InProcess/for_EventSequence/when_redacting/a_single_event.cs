@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_redacting.a_single_event.context;
 using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_redacting.a_single_event.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_redacting;
 

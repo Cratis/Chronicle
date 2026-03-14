@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using KernelEventHash = Cratis.Chronicle.Concepts.Events.EventHash;
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_compensating.an_event.context;
+using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
+using KernelEventHash = Cratis.Chronicle.Concepts.Events.EventHash;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_compensating;
 
