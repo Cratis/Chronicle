@@ -12,7 +12,7 @@ public class when_has_constraint_violations : Specification
 
     void Establish()
     {
-        _violation = new ConstraintViolation("SomeEvent", 42UL, "constraint", "message", []);
+        _violation = new ConstraintViolation("SomeEvent", 42UL, ConstraintType.Unknown, "constraint", "message", []);
         _result = new AppendManyResult
         {
             ConstraintViolations = [_violation]

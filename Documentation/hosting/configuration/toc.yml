@@ -18,6 +18,8 @@
   href: tls.md
 - name: Environment Variables
   href: environment-variables.md
+- name: Open Telemetry
+  href: open-telemetry.md
 - name: Docker Configuration
   href: docker.md
 - name: Configuration Precedence

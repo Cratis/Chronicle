@@ -13,6 +13,7 @@ import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { DataPage, MenuItem } from 'Components';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 
 const defaultFilters: DataTableFilterMeta = {
     tombstone: { value: null, matchMode: FilterMatchMode.IN },
@@ -24,10 +25,25 @@ const occurred = (recommendation: Recommendation) => {
 
 export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [showConfirmation] = useConfirmationDialog();
 
     const queryArgs: AllRecommendationsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!
+    };
+
+    const handleIgnore = async () => {
+        if (viewModel.selectedRecommendation) {
+            const result = await showConfirmation(
+                strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.title,
+                strings.eventStore.namespaces.recommendations.dialogs.ignoreRecommendation.message.replace('{name}', viewModel.selectedRecommendation.name),
+                DialogButtons.YesNo
+            );
+
+            if (result === DialogResult.Yes) {
+                await viewModel.ignore();
+            }
+        }
     };
 
     return (
@@ -51,7 +67,7 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
                     id='ignore'
                     label={strings.eventStore.namespaces.recommendations.actions.ignore} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
-                    command={() => viewModel.ignore()} />
+                    command={() => handleIgnore()} />
             </DataPage.MenuItems>
 
             <DataPage.Columns>

@@ -7,7 +7,7 @@ import { ProjectionDefinitionLanguageCompletionProvider } from './ProjectionDefi
 import { ProjectionDefinitionLanguageValidator } from './ProjectionDefinitionLanguageValidator';
 import { ProjectionDefinitionLanguageHoverProvider } from './ProjectionDefinitionLanguageHoverProvider';
 import { ProjectionDefinitionLanguageCodeActionProvider } from './ProjectionDefinitionLanguageCodeActionProvider';
-import type { JsonSchema } from '../JsonSchema';
+import type { JsonSchema } from '@cratis/components/types';
 
 export interface ReadModelInfo {
     identifier: string;
@@ -237,4 +237,4 @@ function revalidateAllModels(): void {
 }
 
 export { languageId };
-export type { JsonSchema } from '../JsonSchema';
+export type { JsonSchema } from '@cratis/components/types';

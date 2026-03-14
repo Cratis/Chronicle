@@ -36,6 +36,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Authentication](authentication.md) - External authority and default admin settings.
 - [TLS](tls.md) - Configure TLS certificates for Chronicle Server.
 - [Environment Variables](environment-variables.md) - Configure with `Cratis__Chronicle__` settings.
+- [Open Telemetry](open-telemetry.md) - Export metrics, traces, and logs via OTLP.
 - [Docker Configuration](docker.md) - Configure Chronicle in Docker.
 - [Configuration Precedence](configuration-precedence.md) - How sources override each other.
 - [Best Practices](best-practices.md) - Recommended configuration guidelines.

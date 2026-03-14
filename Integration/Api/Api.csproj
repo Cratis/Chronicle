@@ -8,6 +8,11 @@
         <!-- Explicitly set TargetFramework to net10.0 to override Directory.Build.props -->
         <TargetFramework>net10.0</TargetFramework>
         <TargetFrameworks></TargetFrameworks>
+        <!-- .NET 10 makes the compiler-generated Program class public, so the local Program.cs
+             intentionally shadows the one from the referenced Api project (CS0436).
+             The test SDK also generates an entry point that conflicts with top-level statements (CS7022). -->
+        <NoWarn>$(NoWarn);CS0436;CS7022</NoWarn>
+        <GenerateProgramFile>false</GenerateProgramFile>
     </PropertyGroup>
 
     <ItemGroup>

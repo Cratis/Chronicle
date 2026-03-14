@@ -1,0 +1,35 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Cratis.Chronicle.Connections.for_CompatibilityValidator;
+
+public class when_validating_with_missing_method_on_server : Specification
+{
+    CompatibilityCheckResult _result;
+
+    const string _clientSchema = """
+        syntax = "proto3";
+        service MyService {
+          rpc DoSomething (MyRequest) returns (MyResponse);
+          rpc DoSomethingElse (MyRequest) returns (MyResponse);
+        }
+        message MyRequest {}
+        message MyResponse {}
+        """;
+
+    const string _serverSchema = """
+        syntax = "proto3";
+        service MyService {
+          rpc DoSomething (MyRequest) returns (MyResponse);
+        }
+        message MyRequest {}
+        message MyResponse {}
+        """;
+
+    void Because() => _result = CompatibilityValidator.Validate(_clientSchema, _serverSchema, NullLogger.Instance);
+
+    [Fact] void should_not_be_compatible() => _result.IsCompatible.ShouldBeFalse();
+    [Fact] void should_have_error_about_missing_method() => _result.Errors.ShouldContain(e => e.Contains("DoSomethingElse") && e.Contains("missing"));
+}

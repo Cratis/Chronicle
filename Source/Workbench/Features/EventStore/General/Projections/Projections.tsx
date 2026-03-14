@@ -4,7 +4,7 @@
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
-import type { JsonSchema } from 'Components/JsonSchema';
+import type { JsonSchema } from '@cratis/components/types';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { Menubar } from 'primereact/menubar';

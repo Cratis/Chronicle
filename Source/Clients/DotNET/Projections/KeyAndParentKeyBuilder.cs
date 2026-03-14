@@ -47,4 +47,11 @@ public class KeyAndParentKeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy
         _parentKeyExpression = new EventContextPropertyExpression(_namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
         return (this as TBuilder)!;
     }
+
+    /// <inheritdoc/>
+    public TBuilder UsingConstantParentKey(string value)
+    {
+        _parentKeyExpression = new ValueExpression(value).Build();
+        return (this as TBuilder)!;
+    }
 }
