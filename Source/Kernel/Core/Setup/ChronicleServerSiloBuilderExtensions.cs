@@ -19,6 +19,7 @@ using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
+using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
@@ -53,6 +54,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
+        builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()

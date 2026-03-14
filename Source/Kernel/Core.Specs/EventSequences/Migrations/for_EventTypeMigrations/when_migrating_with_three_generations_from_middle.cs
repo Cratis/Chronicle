@@ -68,7 +68,7 @@ public class when_migrating_with_three_generations_from_middle : given.all_depen
             .Returns(_gen3ExpandoObject);
     }
 
-    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventType, _content);
+    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content);
 
     [Fact] void should_return_three_generations() => _result.Count.ShouldEqual(3);
 

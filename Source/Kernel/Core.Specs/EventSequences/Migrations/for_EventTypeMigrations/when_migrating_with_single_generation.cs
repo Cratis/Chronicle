@@ -32,7 +32,7 @@ public class when_migrating_with_single_generation : given.all_dependencies
             .Returns(_expectedExpandoObject);
     }
 
-    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventType, _content);
+    async Task Because() => _result = await _eventTypeMigrations.MigrateToAllGenerations(_eventStoreName, _eventType, _content);
 
     [Fact] void should_return_single_generation() => _result.Count.ShouldEqual(1);
 

@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
@@ -15,8 +16,9 @@ public interface IEventTypeMigrations
     /// <summary>
     /// Migrate an event to all its generations (both upcast and downcast).
     /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> to migrate for.</param>
     /// <param name="eventType">The <see cref="EventType"/> being migrated.</param>
     /// <param name="content">The event content as <see cref="JsonObject"/>.</param>
     /// <returns>A dictionary mapping each generation to its corresponding content.</returns>
-    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventType eventType, JsonObject content);
+    Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content);
 }

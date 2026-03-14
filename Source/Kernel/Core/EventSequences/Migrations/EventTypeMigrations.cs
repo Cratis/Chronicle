@@ -4,9 +4,10 @@
 using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage;
 using JsonCons.JmesPath;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
@@ -14,16 +15,17 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// <summary>
 /// Represents an implementation of <see cref="IEventTypeMigrations"/>.
 /// </summary>
-/// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for retrieving event type definitions.</param>
+/// <param name="storage">The <see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between JSON and ExpandoObject.</param>
 public class EventTypeMigrations(
-    IEventTypesStorage eventTypesStorage,
+    IStorage storage,
     IExpandoObjectConverter expandoObjectConverter) : IEventTypeMigrations
 {
     /// <inheritdoc/>
-    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventType eventType, JsonObject content)
+    public async Task<IDictionary<EventTypeGeneration, ExpandoObject>> MigrateToAllGenerations(EventStoreName eventStore, EventType eventType, JsonObject content)
     {
         var result = new Dictionary<EventTypeGeneration, ExpandoObject>();
+        var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
 
         // Get the event type definition with all generations and migrations
         var definition = await eventTypesStorage.GetDefinition(eventType.Id);

@@ -473,7 +473,7 @@ public class EventSequence(
             var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
 
             // Migrate the event to all generations
-            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(eventType, contentAsJson);
+            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, contentAsJson);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
