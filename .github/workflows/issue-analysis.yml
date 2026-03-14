@@ -1,5 +1,39 @@
 name: Issue Analysis
 
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Also allow manual runs
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Categorize Issues in GitHub Project
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: read
+      pull-requests: read
+      contents: read
+      projects: write   # required to add/update items in the org-level project
+                        # note: GitHub Actions does not support project-level scoping;
+                        # this grants write access to all projects in the Cratis org
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run issue analysis and update project
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ORG: ${{ github.repository_owner }}
+          PROJECT_NUMBER: 7
+          ISSUE_ANALYSIS_FILE: IssueAnalysis.md
+        run: bash .github/scripts/analyze-issues.sh
+
 # Issue Analysis Workflow
 #
 # PURPOSE
@@ -48,37 +82,3 @@ name: Issue Analysis
 # ────────
 # Runs every Monday at 08:00 UTC. Can also be triggered manually via
 # workflow_dispatch.
-
-on:
-  schedule:
-    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
-  workflow_dispatch:        # Also allow manual runs
-
-permissions:
-  contents: read
-
-jobs:
-  analyze:
-    name: Categorize Issues in GitHub Project
-    runs-on: ubuntu-latest
-
-    permissions:
-      issues: read
-      pull-requests: read
-      contents: read
-      projects: write   # required to add/update items in the org-level project
-                        # note: GitHub Actions does not support project-level scoping;
-                        # this grants write access to all projects in the Cratis org
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run issue analysis and update project
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          ORG: ${{ github.repository_owner }}
-          PROJECT_NUMBER: 7
-          ISSUE_ANALYSIS_FILE: IssueAnalysis.md
-        run: bash .github/scripts/analyze-issues.sh
