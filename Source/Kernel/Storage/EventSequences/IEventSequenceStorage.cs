@@ -85,8 +85,9 @@ public interface IEventSequenceStorage
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="occurred">The date and time the compensation occurred.</param>
     /// <param name="content">The content of the event.</param>
+    /// <param name="hash">The <see cref="EventHash"/> of the compensated event content.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content, EventHash hash);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

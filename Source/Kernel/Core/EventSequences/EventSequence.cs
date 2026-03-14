@@ -378,6 +378,7 @@ public class EventSequence(
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
+        var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
         await EventSequenceStorage.Compensate(
             sequenceNumber,
@@ -386,7 +387,8 @@ public class EventSequence(
             causation,
             await IdentityStorage.GetFor(causedBy),
             DateTimeOffset.UtcNow,
-            contentAsExpandoObject);
+            contentAsExpandoObject,
+            hash);
 
         await RewindPartitionForAffectedObservers(@event.Context.EventSourceId, [@event.Context.EventType]);
     }

@@ -17,10 +17,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="CausedBy">Who or what caused the event.</param>
 /// <param name="Occurred">The time the compensation occurred.</param>
 /// <param name="Content">The content per event type generation.</param>
+/// <param name="ContentHashes">The content hashes per event type generation.</param>
 public record EventCompensation(
     EventTypeGeneration EventTypeGeneration,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     IdentityId CausedBy,
     DateTimeOffset Occurred,
-    IDictionary<string, BsonDocument> Content);
+    IDictionary<string, BsonDocument> Content,
+    IDictionary<string, string> ContentHashes);

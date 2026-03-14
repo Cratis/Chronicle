@@ -58,9 +58,22 @@ public class EventConverter(
             content);
 
         var releasedContentAsExpandoObject = expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
-        var hash = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
-            ? new EventHash(hashValue)
-            : EventHash.NotSet;
+
+        EventHash hash;
+        if (@event.Compensations.Any())
+        {
+            var latestCompensation = @event.Compensations.Last();
+            var compensationGenKey = latestCompensation.EventTypeGeneration.ToString();
+            hash = latestCompensation.ContentHashes.TryGetValue(compensationGenKey, out var compensationHashValue)
+                ? new EventHash(compensationHashValue)
+                : EventHash.NotSet;
+        }
+        else
+        {
+            hash = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
+                ? new EventHash(hashValue)
+                : EventHash.NotSet;
+        }
 
         return new AppendedEvent(
             new(
