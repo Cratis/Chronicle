@@ -91,6 +91,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
+    <PackageVersion Include="protobuf-net.Reflection" Version="3.2.52" />
     <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.76.0" />

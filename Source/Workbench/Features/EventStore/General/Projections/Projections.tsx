@@ -352,7 +352,7 @@ export const Projections = () => {
                                     command: saveDisabledReason ? undefined : async () => {
                                         // When there is no read model in the declaration, prompt the user to name one.
                                         if (!readModelTokenFromDeclaration && !draftReadModel) {
-                                            const [result] = await showSaveWithInferredReadModel();
+                                            const [result] = await showSaveWithInferredReadModel({ declaration: declarationValue });
                                             if (result === DialogResult.Ok) {
                                                 await refreshProjections({ eventStore: params.eventStore! });
                                                 refreshReadModels({ eventStore: params.eventStore! });
@@ -521,7 +521,7 @@ export const Projections = () => {
                 )}
             </>
 
-            <SaveWithInferredReadModelWrapper declaration={normalizedDeclaration} />
+            <SaveWithInferredReadModelWrapper />
         </Page>
     );
 };

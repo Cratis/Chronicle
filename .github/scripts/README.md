@@ -11,9 +11,11 @@ The compatibility validation system helps ensure that changes to the Chronicle g
 ### Scripts
 
 #### `generate-grpc-schema.sh`
+
 Generates a Protocol Buffers schema definition from the Chronicle Contracts project.
 
 **Usage:**
+
 ```bash
 .github/scripts/generate-grpc-schema.sh <output-file> [repo-root]
 ```
@@ -23,6 +25,7 @@ Generates a Protocol Buffers schema definition from the Chronicle Contracts proj
 - `repo-root` (optional): Root directory of the repository. If not provided, auto-detects based on script location.
 
 **Example:**
+
 ```bash
 .github/scripts/generate-grpc-schema.sh schema.proto
 # Or with custom repo root
@@ -30,14 +33,17 @@ Generates a Protocol Buffers schema definition from the Chronicle Contracts proj
 ```
 
 #### `compare-grpc-schemas.sh`
+
 Compares two gRPC schema files and detects breaking changes.
 
 **Usage:**
+
 ```bash
 .github/scripts/compare-grpc-schemas.sh <baseline-schema> <current-schema>
 ```
 
 **Example:**
+
 ```bash
 .github/scripts/compare-grpc-schemas.sh baseline.proto current.proto
 ```
@@ -47,14 +53,17 @@ Exit codes:
 - `1`: Breaking changes detected
 
 #### `update-pr-description.sh`
+
 Updates a pull request description with a warning about gRPC breaking changes.
 
 **Usage:**
+
 ```bash
 GH_TOKEN=<token> .github/scripts/update-pr-description.sh <pr-number> <breaking-changes>
 ```
 
 **Example:**
+
 ```bash
 GH_TOKEN=$GITHUB_TOKEN .github/scripts/update-pr-description.sh 123 "Service 'Foo' was removed;Method 'Bar' signature changed"
 ```
@@ -62,6 +71,7 @@ GH_TOKEN=$GITHUB_TOKEN .github/scripts/update-pr-description.sh 123 "Service 'Fo
 ### Workflows
 
 #### `grpc-compatibility.yml`
+
 Reusable workflow that checks for gRPC contract compatibility.
 
 **Inputs:**
@@ -72,6 +82,7 @@ Reusable workflow that checks for gRPC contract compatibility.
 - `breaking-changes`: Semicolon-separated list of breaking changes
 
 **Usage in other workflows:**
+
 ```yaml
 jobs:
   check-grpc:

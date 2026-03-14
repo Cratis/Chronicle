@@ -31,7 +31,7 @@ This means you can call `Subscribe` at application startup without worrying abou
 
 ## Event Flow
 
-```
+```text
 Source event store               Target event store
 ─────────────────                ─────────────────
       Outbox                           Inbox
