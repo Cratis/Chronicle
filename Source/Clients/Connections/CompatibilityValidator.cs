@@ -78,7 +78,13 @@ internal static partial class CompatibilityValidator
             ProtoSyntax = ProtoSyntax.Proto3
         };
 
-        return generator.GetSchema(Contracts.AvailableServices.All.ToArray());
+        // SchemaGenerator requires all types in a single call to share the same proto package
+        // (derived from C# namespace). Group by namespace and concatenate the resulting schemas.
+        var schemas = Contracts.AvailableServices.All
+            .GroupBy(t => t.Namespace ?? string.Empty)
+            .Select(group => generator.GetSchema(group.ToArray()));
+
+        return string.Join('\n', schemas);
     }
 
     [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]

@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Services/Services.csproj" />
+        <ProjectReference Include="../Core/Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="protobuf-net.Grpc.Reflection" />
     </ItemGroup>
 </Project>
