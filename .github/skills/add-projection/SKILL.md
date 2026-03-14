@@ -1,6 +1,6 @@
 ---
 name: add-projection
-description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Covers model-bound projection attributes ([FromEvent<T>], [Key], [SetFrom<T>], etc.) and fluent IProjectionFor<T>. Enforces the AutoMap-first rule and Chronicle-specific join semantics. For creating a brand-new read model from scratch (events + projection + queries + TypeScript proxy), use cratis-readmodel instead. For reactors, use add-reactor instead.
+description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Enforces the AutoMap-first rule and Chronicle-specific join semantics.
 ---
 
 Add a Chronicle **projection** that populates a read model from events.

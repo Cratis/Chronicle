@@ -272,12 +272,11 @@ public class EventSequenceStorage(
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventHash hash)
     {
         logger.Compensating(eventSequenceId, sequenceNumber);
         var collection = _collection;
-
-        var @event = await GetEventAt(sequenceNumber);
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
@@ -292,6 +291,10 @@ public class EventSequenceStorage(
             new Dictionary<string, BsonDocument>
             {
                 { eventType.Generation.ToString(), document }
+            },
+            new Dictionary<string, string>
+            {
+                { eventType.Generation.ToString(), hash.Value }
             });
 
         var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
