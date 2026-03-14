@@ -131,7 +131,7 @@ public static class SerializationConfigurationExtensions
                     {
                         return false;
                     }
-                    current = current.BaseType!;
+                    current = current.BaseType;
                 }
 
                 return type == typeof(JsonObject) || type == typeof(JsonSchema) || (type.Namespace?.StartsWith("Cratis") ?? false);

@@ -38,7 +38,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
         {
             await _collection.ReplaceOneAsync(
                 _ => _.Id == failedPartition.Id,
-                failedPartition!,
+                failedPartition,
                 new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
         }
     }

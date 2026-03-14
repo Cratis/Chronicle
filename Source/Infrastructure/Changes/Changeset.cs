@@ -203,7 +203,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         object key,
         ArrayIndexers arrayIndexers)
     {
-        var workingState = CurrentState.Clone()!;
+        var workingState = CurrentState.Clone();
         var items = workingState.EnsureCollection<TTarget, object>(childrenProperty, arrayIndexers);
 
         var item = items.FindByKey(identifiedByProperty, key);

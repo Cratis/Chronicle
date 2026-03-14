@@ -14,7 +14,7 @@ public class when_writing_state : given.the_provider
     {
         _grainId = GrainId.Create("type", "key");
         _state = new GrainState<FailedPartitions> { State = new() { Partitions = [new() { Partition = "partition1" }, new() { Partition = "partition2" }] }, ETag = "ETag", RecordExists = true };
-        _observerKey = ObserverKey.Parse(_grainId.Key.ToString()!);
+        _observerKey = ObserverKey.Parse(_grainId.Key.ToString());
     }
 
     Task Because() => provider.WriteStateAsync("name", _grainId, _state);

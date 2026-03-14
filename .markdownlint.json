@@ -3,8 +3,9 @@
   "default": true,
   "MD013": false,
   "MD033": {
-    "allowed_elements": ["antml:function_calls", "antml:invoke", "antml:parameter", "a"]
+    "allowed_elements": ["antml:function_calls", "antml:invoke", "antml:parameter", "a", "div", "img", "h3", "p", "br", "strong"]
   },
+  "MD051": false,
   "MD041": false,
   "MD012": {
     "maximum": 3
