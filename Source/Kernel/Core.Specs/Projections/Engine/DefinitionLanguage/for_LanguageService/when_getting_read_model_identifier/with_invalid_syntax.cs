@@ -8,9 +8,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageSe
 public class with_invalid_syntax : a_language_service
 {
     const string Declaration = """
-        projection MyProjection
-          automap
-          from MyEvent key id
+        not_a_projection
         """;
 
     CompilerErrors _errors;

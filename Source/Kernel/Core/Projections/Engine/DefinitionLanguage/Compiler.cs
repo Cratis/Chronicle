@@ -36,6 +36,12 @@ public class Compiler
         }
 
         var projection = document.Projections[0];
+
+        if (projection.ReadModelType is null)
+        {
+            return ReadModelIdentifier.Inferred;
+        }
+
         return new ReadModelIdentifier(projection.ReadModelType.Name);
     }
 
@@ -81,6 +87,10 @@ public class Compiler
             }
         }
 
+        var readModelIdentifier = projection.ReadModelType is not null
+            ? new ReadModelIdentifier(projection.ReadModelType.Name)
+            : ReadModelIdentifier.Inferred;
+
         var identifier = new ProjectionId(projection.Name);
 
         // Check if NoAutoMapDirective is present in the projection
@@ -111,7 +121,7 @@ public class Compiler
             owner,
             eventSequenceId,
             identifier,
-            new ReadModelIdentifier(projection.ReadModelType.Name),
+            readModelIdentifier,
             IsActive: true,
             IsRewindable: false,
             new JsonObject(),
