@@ -116,12 +116,8 @@ public class GlobalSettings : CommandSettings
 
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
-        if (ctx.ManagementPort.HasValue)
-        {
-            return ctx.ManagementPort.Value;
-        }
 
-        return CliDefaults.DefaultManagementPort;
+        return ctx.ManagementPort ?? CliDefaults.DefaultManagementPort;
     }
 
     static string ComposeCredentials(string connectionString)

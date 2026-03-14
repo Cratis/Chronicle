@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Observers;
 public class ReplayPartitionCommand : ChronicleCommand<PartitionCommandSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, PartitionCommandSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, PartitionCommandSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Observers.ReplayPartition(new ReplayPartitionContract
         {
             EventStore = settings.ResolveEventStore(),

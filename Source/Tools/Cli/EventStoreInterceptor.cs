@@ -55,12 +55,11 @@ public class EventStoreInterceptor : ICommandInterceptor
     {
         try
         {
-            var connectionString = settings.ResolveConnectionString();
-            var options = ChronicleOptions.FromConnectionString(new ChronicleConnectionString(connectionString));
-            options.AutoDiscoverAndRegister = false;
-            using var client = new ChronicleClient(options);
+            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+            var managementPort = settings.ResolveManagementPort();
+            using var client = CliServiceClient.Create(connectionString, managementPort);
 
-            var eventStores = client.GetEventStores().GetAwaiter().GetResult().Select(e => e.Value).ToList();
+            var eventStores = client.Services.EventStores.GetEventStores().GetAwaiter().GetResult().ToList();
 
             if (eventStores.Count == 0)
             {

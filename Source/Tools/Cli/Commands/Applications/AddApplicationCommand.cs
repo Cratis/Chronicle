@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Applications;
 public class AddApplicationCommand : ChronicleCommand<AddApplicationSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, AddApplicationSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, AddApplicationSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Applications.Add(new AddApplication
         {
             Id = Guid.NewGuid().ToString(),

@@ -17,6 +17,7 @@ using Cratis.Chronicle.Cli.Commands.Projections;
 using Cratis.Chronicle.Cli.Commands.ReadModels;
 using Cratis.Chronicle.Cli.Commands.Recommendations;
 using Cratis.Chronicle.Cli.Commands.Users;
+using Cratis.Chronicle.Cli.Commands.Version;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli;
@@ -260,6 +261,16 @@ public static class CliApp
             config.AddCommand<LlmContextCommand>("llm-context")
                 .WithDescription("Output CLI capabilities as JSON for AI agent consumption")
                 .WithExample("llm-context");
+
+            config.AddCommand<VersionCommand>("version")
+                .WithDescription("Show CLI and server version information and contracts compatibility")
+                .WithExample("version")
+                .WithExample("version", "-o", "json");
+
+            config.AddCommand<SelfUpdateCommand>("update")
+                .WithDescription("Update the Cratis CLI to the latest version")
+                .WithExample("update")
+                .WithExample("update", "--version", "1.2.3");
         });
 
         return app;

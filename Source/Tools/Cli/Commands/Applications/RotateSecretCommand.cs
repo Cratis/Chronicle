@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Applications;
 public class RotateSecretCommand : ChronicleCommand<RotateSecretSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, RotateSecretSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, RotateSecretSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Applications.ChangeSecret(new ChangeApplicationSecret
         {
             Id = settings.AppId,

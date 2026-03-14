@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.FailedPartitions;
 public class ListFailedPartitionsCommand : ChronicleCommand<ListFailedPartitionsSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ListFailedPartitionsSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ListFailedPartitionsSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var failedPartitions = await services.FailedPartitions.GetFailedPartitions(new GetFailedPartitionsRequest
         {
             EventStore = settings.ResolveEventStore(),

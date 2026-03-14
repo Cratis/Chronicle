@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Users;
 public class AddUserCommand : ChronicleCommand<AddUserSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, AddUserSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, AddUserSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Users.Add(new AddUser
         {
             UserId = Guid.NewGuid(),

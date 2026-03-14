@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Events;
 public class HasEventsCommand : ChronicleCommand<HasEventsSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, HasEventsSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, HasEventsSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var response = await services.EventSequences.HasEventsForEventSourceId(new HasEventsForEventSourceIdRequest
         {
             EventStore = settings.ResolveEventStore(),

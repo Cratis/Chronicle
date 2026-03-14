@@ -9,10 +9,8 @@ namespace Cratis.Chronicle.Cli.Commands.Applications;
 public class ListApplicationsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, EventStoreSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
         var applications = await services.Applications.GetAll();
 
         OutputFormatter.Write(

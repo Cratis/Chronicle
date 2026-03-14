@@ -11,6 +11,7 @@ The Cratis CLI (`cratis`) connects to a Chronicle server over gRPC to inspect an
 - **Manage access** — authenticate users, manage OAuth applications
 - **Multiple environments** — named contexts for switching between servers
 - **AI-friendly output** — structured output formats designed for both human and machine consumption
+- **Self-management** — built-in update command and automatic new-version notifications
 
 ## Quick Start
 

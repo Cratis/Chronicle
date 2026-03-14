@@ -13,11 +13,8 @@ namespace Cratis.Chronicle.Cli.Commands.EventTypes;
 public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ShowEventTypeSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ShowEventTypeSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var parsed = EventTypeParser.ParseEventType(settings.EventType);
 
         var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest

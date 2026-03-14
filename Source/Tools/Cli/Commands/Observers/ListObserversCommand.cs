@@ -48,11 +48,8 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
     }
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ListObserversSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ListObserversSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         if (!IsValidType(settings.Type, out var errorMessage))
         {
             OutputFormatter.WriteError(format, errorMessage, "Valid types: reactor, reducer, projection, all");

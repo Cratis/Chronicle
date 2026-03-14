@@ -346,3 +346,37 @@ Accepts [event store options](#event-store-options).
 | Command | Description |
 | ------- | ----------- |
 | `cratis llm-context` | Output full CLI capabilities as JSON for AI agent consumption. Always outputs JSON regardless of `-o` flag. |
+
+## version
+
+| Command | Description |
+| ------- | ----------- |
+| `cratis version` | Show CLI version, server version, contracts versions, and compatibility status |
+
+Connects to the server to retrieve version information. Compatibility is determined by matching the major version of the contracts assembly.
+
+### JSON output fields
+
+| Field | Description |
+| ----- | ----------- |
+| `cli.version` | CLI assembly version |
+| `cli.contractsVersion` | Contracts assembly version used by the CLI |
+| `server.version` | Server assembly version |
+| `server.contractsVersion` | Contracts assembly version on the server |
+| `server.commitSha` | Git commit SHA the server was built from |
+| `compatible` | Whether CLI and server contracts are compatible (true when server info is unavailable — assumes compatibility) |
+| `serverSupportsVersionInfo` | Whether the server supports the version info endpoint |
+
+## update
+
+| Command | Description |
+| ------- | ----------- |
+| `cratis update` | Update the CLI to the latest or a specific version |
+
+Does not require a server connection. Runs `dotnet tool update -g Cratis.Chronicle.Cli` under the hood.
+
+### update options
+
+| Option | Type | Description |
+| ------ | ---- | ----------- |
+| `--version` | string | Specific version to install (default: latest) |

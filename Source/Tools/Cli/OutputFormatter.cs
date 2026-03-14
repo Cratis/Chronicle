@@ -13,22 +13,8 @@ namespace Cratis.Chronicle.Cli;
 /// </summary>
 public static class OutputFormatter
 {
-    static JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
-    static JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
-
-    /// <summary>
-    /// Configures the JSON serializer options by building on top of the provided base options
-    /// from <see cref="ChronicleOptions.JsonSerializerOptions"/>, adding CLI-specific converters.
-    /// </summary>
-    /// <param name="baseOptions">The base <see cref="JsonSerializerOptions"/> from the Chronicle client.</param>
-    public static void Configure(JsonSerializerOptions baseOptions)
-    {
-        _jsonOptions = new JsonSerializerOptions(baseOptions) { WriteIndented = true };
-        AddCliConverters(_jsonOptions);
-
-        _compactJsonOptions = new JsonSerializerOptions(baseOptions) { WriteIndented = false };
-        AddCliConverters(_compactJsonOptions);
-    }
+    static readonly JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
+    static readonly JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
 
     /// <summary>
     /// Writes data to the console in the specified format.

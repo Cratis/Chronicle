@@ -11,8 +11,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Clients/DotNET/DotNET.csproj" />
+        <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Cratis.Chronicle.Contracts" />
     </ItemGroup>
 
     <ItemGroup>

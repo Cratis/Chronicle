@@ -16,9 +16,33 @@ The package installs a global command called `cratis`.
 
 ## Update
 
+The CLI includes a built-in update command:
+
+```shell
+cratis update
+```
+
+To update to a specific version:
+
+```shell
+cratis update --version 2.0.0
+```
+
+Alternatively, use `dotnet tool update` directly:
+
 ```shell
 dotnet tool update --global Cratis.Chronicle.Cli
 ```
+
+## Version and Compatibility
+
+Check the installed CLI version and its compatibility with the connected server:
+
+```shell
+cratis version
+```
+
+The CLI also checks for updates in the background. When a newer version is available on NuGet, a hint appears after command output.
 
 ## Verify
 

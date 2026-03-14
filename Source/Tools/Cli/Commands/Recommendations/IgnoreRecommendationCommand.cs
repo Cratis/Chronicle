@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Recommendations;
 public class IgnoreRecommendationCommand : ChronicleCommand<RecommendationActionSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, RecommendationActionSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, RecommendationActionSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         // The Ignore RPC reuses the Perform request message type per the protobuf contract.
         await services.Recommendations.Ignore(new Perform
         {

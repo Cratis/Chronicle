@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.ReadModels;
 public class GetReadModelOccurrencesCommand : ChronicleCommand<GetReadModelOccurrencesSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, GetReadModelOccurrencesSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, GetReadModelOccurrencesSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var response = await services.ReadModels.GetOccurrences(new GetOccurrencesRequest
         {
             EventStore = settings.ResolveEventStore(),

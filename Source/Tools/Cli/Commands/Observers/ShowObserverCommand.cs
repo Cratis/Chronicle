@@ -12,11 +12,8 @@ namespace Cratis.Chronicle.Cli.Commands.Observers;
 public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ObserverCommandSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var info = await services.Observers.GetObserverInformation(new GetObserverInformationRequest
         {
             EventStore = settings.ResolveEventStore(),

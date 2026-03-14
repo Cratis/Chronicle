@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Projections;
 public class ListProjectionsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, EventStoreSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var definitions = await services.Projections.GetAllDefinitions(new GetAllDefinitionsRequest
         {
             EventStore = settings.ResolveEventStore()

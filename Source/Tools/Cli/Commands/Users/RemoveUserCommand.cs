@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Users;
 public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, RemoveUserSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveUserSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Users.Remove(new RemoveUser
         {
             UserId = settings.UserId

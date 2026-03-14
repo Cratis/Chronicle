@@ -52,6 +52,8 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                 "Most commands require --event-store and --namespace; both default to 'default'.",
                 "Use 'cratis observers list --type reactor' to filter by observer type.",
                 "config path outputs the same format regardless of --output flag.",
+                "Use 'cratis version -o json' to check CLI/server contract compatibility programmatically.",
+                "Use 'cratis update' to update the CLI to the latest version without remembering the NuGet package name.",
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
@@ -97,6 +99,8 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     new CommandOutputAdvice("applications remove", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("applications rotate-secret", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("llm-context", "json", "Always outputs JSON regardless of --output flag."),
+                    new CommandOutputAdvice("version", "json", "JSON contains CLI version, server version, contracts version, and compatibility flag — ideal for programmatic checks."),
+                    new CommandOutputAdvice("update", "json", "JSON contains previousVersion, currentVersion, and updated flag."),
                 ],
             },
         };
@@ -434,6 +438,28 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     ],
                     ["cratis config set server chronicle://myhost:35000", "cratis config set event-store MyStore", "cratis config set client-id my-app", "cratis config set client-secret my-secret"]),
                 new CommandDescriptor("path", "Print configuration file path", null, null, ["cratis config path"]),
+            ]),
+        new(
+            "(top-level)",
+            "Version and self-management commands",
+            [
+                new CommandDescriptor(
+                    "version",
+                    "Show CLI version, server version, contracts versions, and compatibility status. Connects to the server to retrieve server info.",
+                    null,
+                    null,
+                    ["cratis version", "cratis version -o json"]),
+            ]),
+        new(
+            "(top-level)",
+            "CLI update command",
+            [
+                new CommandDescriptor(
+                    "update",
+                    "Update the CLI to the latest (or a specific) version via 'dotnet tool update -g Cratis.Chronicle.Cli'. Does not require a server connection.",
+                    null,
+                    [new OptionDescriptor("--version", "string", "Specific version to install (default: latest)")],
+                    ["cratis update", "cratis update --version 2.0.0"]),
             ]),
     ];
 

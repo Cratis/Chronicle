@@ -12,11 +12,8 @@ namespace Cratis.Chronicle.Cli.Commands.Projections;
 public class ShowProjectionCommand : ChronicleCommand<ShowProjectionSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ShowProjectionSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ShowProjectionSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         var declarations = await services.Projections.GetAllDeclarations(new GetAllDeclarationsRequest
         {
             EventStore = settings.ResolveEventStore()

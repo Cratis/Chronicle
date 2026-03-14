@@ -17,6 +17,10 @@ public static class CliCommandRunner
     /// <returns>A <see cref="CliCommandResult"/> containing the exit code and captured output.</returns>
     public static async Task<CliCommandResult> RunAsync(params string[] args)
     {
+        // StringWriter wraps a StringBuilder and has no unmanaged resources to release.
+        // We intentionally avoid 'using'/'await using' because AnsiConsole.Console is a static
+        // singleton that captures Console.Out at first access. Disposing the writer while the
+        // static reference is alive causes ObjectDisposedException in subsequent test runs.
         var stdout = new StringWriter();
         var stderr = new StringWriter();
         var originalOut = Console.Out;

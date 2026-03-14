@@ -40,7 +40,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
-/// <param name="server"><see cref="IServer"/> instance.</param>
+/// <param name="Server"><see cref="IServer"/> instance.</param>
 public sealed record Services(
     IEventStores EventStores,
     INamespaces Namespaces,
@@ -60,4 +60,4 @@ public sealed record Services(
     IEventSeeding Seeding,
     IUsers Users,
     IApplications Applications,
-    IServer server) : IServices;
+    IServer Server) : IServices;

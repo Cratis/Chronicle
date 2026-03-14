@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Observers;
 public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, ObserverCommandSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Observers.Replay(new Replay
         {
             EventStore = settings.ResolveEventStore(),

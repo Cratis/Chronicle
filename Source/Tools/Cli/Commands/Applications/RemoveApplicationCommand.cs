@@ -11,11 +11,8 @@ namespace Cratis.Chronicle.Cli.Commands.Applications;
 public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IChronicleClient client, RemoveApplicationSettings settings, string format)
+    protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveApplicationSettings settings, string format)
     {
-        var eventStore = await client.GetEventStore(settings.ResolveEventStore());
-        var services = GetServices(eventStore);
-
         await services.Applications.Remove(new RemoveApplication
         {
             Id = settings.AppId

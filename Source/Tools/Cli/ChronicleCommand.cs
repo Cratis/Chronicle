@@ -2,9 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Sockets;
+using Cratis.Chronicle.Cli.Commands.Version;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Contracts;
 using Grpc.Core;
+using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace Cratis.Chronicle.Cli;
@@ -21,15 +22,20 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     {
         var format = settings.ResolveOutputFormat();
 
+        // Start update check in the background — never blocks the command.
+        using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        updateCts.CancelAfter(TimeSpan.FromSeconds(5));
+        var updateCheckTask = UpdateChecker.CheckForUpdate(VersionCommand.GetCliVersion(), updateCts.Token);
+
         try
         {
-            var connectionString = settings.ResolveConnectionString();
-            var options = ChronicleOptions.FromConnectionString(new ChronicleConnectionString(connectionString));
-            options.AutoDiscoverAndRegister = false;
-            options.ManagementPort = settings.ResolveManagementPort();
-            using var client = new ChronicleClient(options);
-            OutputFormatter.Configure(client.Options.JsonSerializerOptions);
-            return await ExecuteCommandAsync(client, settings, format);
+            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+            var managementPort = settings.ResolveManagementPort();
+            using var client = CliServiceClient.Create(connectionString, managementPort);
+            var exitCode = await ExecuteCommandAsync(client.Services, settings, format);
+
+            await ShowUpdateHint(updateCheckTask, format);
+            return exitCode;
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
@@ -64,19 +70,33 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     }
 
     /// <summary>
-    /// Gets the gRPC services accessor from an event store connection.
+    /// Executes the command logic with gRPC services.
     /// </summary>
-    /// <param name="eventStore">The event store to get services from.</param>
-    /// <returns>The <see cref="IServices"/> instance.</returns>
-    protected static IServices GetServices(IEventStore eventStore)
-        => ((IChronicleServicesAccessor)eventStore.Connection).Services;
-
-    /// <summary>
-    /// Executes the command logic with an established Chronicle client.
-    /// </summary>
-    /// <param name="client">The connected <see cref="IChronicleClient"/>.</param>
+    /// <param name="services">The gRPC service proxies.</param>
     /// <param name="settings">The command settings.</param>
     /// <param name="format">The resolved output format.</param>
     /// <returns>The exit code.</returns>
-    protected abstract Task<int> ExecuteCommandAsync(IChronicleClient client, TSettings settings, string format);
+    protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
+
+    static async Task ShowUpdateHint(Task<string?> updateCheckTask, string format)
+    {
+        try
+        {
+            var latestVersion = await updateCheckTask;
+            if (latestVersion is null)
+            {
+                return;
+            }
+
+            if (format is OutputFormats.Text)
+            {
+                AnsiConsole.MarkupLine(string.Empty);
+                AnsiConsole.MarkupLine($"[yellow]A newer version ({latestVersion.EscapeMarkup()}) is available. Run 'cratis update' to upgrade.[/]");
+            }
+        }
+        catch
+        {
+            // Update check failures are non-critical.
+        }
+    }
 }
