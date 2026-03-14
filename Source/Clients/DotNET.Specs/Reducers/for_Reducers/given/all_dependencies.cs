@@ -29,6 +29,7 @@ public class all_dependencies : Specification
     protected IObservers _observers;
     protected IIdentityProvider _identityProvider;
     protected IReducerObservers _reducerObservers;
+    protected IConnectionLifecycle _connectionLifecycle;
     protected Dictionary<Type, IReducerHandler> _handlersByType;
     protected Dictionary<Type, IReducerHandler> _handlersByModelType;
     protected Reducers _reducers;
@@ -56,6 +57,8 @@ public class all_dependencies : Specification
         var connection = Substitute.For<IChronicleConnection, IChronicleServicesAccessor>();
         _servicesAccessor = connection as IChronicleServicesAccessor;
         _servicesAccessor.Services.Returns(_services);
+        _connectionLifecycle = Substitute.For<IConnectionLifecycle>();
+        connection.Lifecycle.Returns(_connectionLifecycle);
         _eventStore.Connection.Returns(connection);
 
         _handlersByType = new Dictionary<Type, IReducerHandler>();

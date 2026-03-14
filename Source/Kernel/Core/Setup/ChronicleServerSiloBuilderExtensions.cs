@@ -71,6 +71,7 @@ public static class ChronicleServerSiloBuilderExtensions
 
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Users);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Applications);
+        builder.Services.AddSingleton<IChronicleInitializer, ChronicleInitializer>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
 
         builder.Services.AddChronicleMeters();

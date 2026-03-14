@@ -3,6 +3,9 @@
         <AssemblyName>Cratis.Chronicle.Integration.Api</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Integration.Api</RootNamespace>
         <IsTestProject>true</IsTestProject>
+        <!-- CS0436: local top-level Program class intentionally shadows the imported Cratis.Chronicle.Api.Program -->
+        <!-- CS7022: entry point conflict between local top-level statements and Microsoft.NET.Test.Sdk auto-generated Program -->
+        <NoWarn>$(NoWarn);CS0436;CS7022</NoWarn>
         <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
         <LocalImageName Condition="'$(LocalImageName)' == ''">cratis/chronicle:local-development</LocalImageName>
         <!-- Explicitly set TargetFramework to net10.0 to override Directory.Build.props -->
@@ -25,12 +28,10 @@
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <MakeDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <ItemGroup>
-            <_ServerFiles Include="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/**/*"
-                          Exclude="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/out/**" />
-        </ItemGroup>
-        <Copy SourceFiles="@(_ServerFiles)"
-              DestinationFolder="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/%(RecursiveDir)" />
+        <!-- Publish the server with DevelopmentBuild=true so the DEVELOPMENT symbol is defined
+             and dev-tools endpoints are compiled into the Docker image. -->
+        <Exec Command="dotnet publish Source/Kernel/Server/Server.csproj -c $(Configuration) -p:DevelopmentBuild=true -o Source/Kernel/Server/out"
+              WorkingDirectory="$(MSBuildThisFileDirectory)../../" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 

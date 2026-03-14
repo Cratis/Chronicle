@@ -265,6 +265,9 @@ public class EventStore : IEventStore
             EventTypes.Register(),
             ReadModels.Register());
 
+        // Re-discover seeders before registering — after a disconnect, seed entries are cleared.
+        await Seeding.Discover();
+
         await Task.WhenAll(
             Constraints.Register(),
             Reactors.Register(),

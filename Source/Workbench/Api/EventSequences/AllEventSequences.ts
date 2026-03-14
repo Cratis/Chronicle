@@ -24,7 +24,7 @@ class AllEventSequencesSortByWithoutQuery {
  * Gets all event sequences.
  */
 export interface AllEventSequencesParameters {
-    
+
     /**
      * The event store to get event sequences for.
     */

@@ -8,7 +8,9 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
+using ClientConnectionManager = KernelCore::Cratis.Chronicle.Clients.ClientConnectionManager;
 using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
+using IClientConnectionManager = KernelCore::Cratis.Chronicle.Clients.IClientConnectionManager;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -26,6 +28,7 @@ internal class ChronicleConnection(
     IGrainFactory grainFactory,
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
+    readonly IClientConnectionManager _connectionManager = new ClientConnectionManager(loggerFactory.CreateLogger<ClientConnectionManager>());
     IServices? _services;
     ConnectionService? _connectionService;
 
@@ -70,7 +73,7 @@ internal class ChronicleConnection(
 
     async Task Connect()
     {
-        _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
+        _connectionService = new ConnectionService(grainFactory, _connectionManager, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,

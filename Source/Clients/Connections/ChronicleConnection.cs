@@ -169,7 +169,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             {
                 ConnectionId = Lifecycle.ConnectionId,
                 IsRunningWithDebugger = Debugger.IsAttached,
-            }).Subscribe(HandleConnection);
+            }).Subscribe(HandleConnection, HandleConnectionError, HandleConnectionCompleted);
 
         try
         {
@@ -310,6 +310,37 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
         }
+    }
+
+    void HandleConnectionError(Exception error)
+    {
+        _logger.ConnectionStreamError(error);
+        HandleConnectionLost();
+    }
+
+    void HandleConnectionCompleted()
+    {
+        _logger.ConnectionStreamCompleted();
+        HandleConnectionLost();
+    }
+
+    void HandleConnectionLost()
+    {
+        // Only trigger reconnection if we were previously connected.
+        if (_connectTcs?.Task.IsCompleted != true)
+        {
+            return;
+        }
+
+        _ = _tasks.Run(
+            async () =>
+            {
+                _logger.Disconnected();
+                await Lifecycle.Disconnected();
+                _logger.Reconnecting();
+                await Connect();
+            },
+            _cancellationToken);
     }
 
     void StartWatchDog()
