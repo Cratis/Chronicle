@@ -99,7 +99,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     new CommandOutputAdvice("applications remove", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("applications rotate-secret", "plain", "Plain outputs a simple confirmation message."),
                     new CommandOutputAdvice("llm-context", "json", "Always outputs JSON regardless of --output flag."),
-                    new CommandOutputAdvice("version", "json", "JSON contains CLI version, server version, contracts version, and compatibility flag — ideal for programmatic checks."),
+                    new CommandOutputAdvice("version", "json", "JSON contains CLI version, server version, contracts version, compatibility flag, and latest available versions from NuGet — ideal for programmatic checks."),
                     new CommandOutputAdvice("update", "json", "JSON contains previousVersion, currentVersion, and updated flag."),
                 ],
             },
@@ -445,7 +445,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             [
                 new CommandDescriptor(
                     "version",
-                    "Show CLI version, server version, contracts versions, and compatibility status. Connects to the server to retrieve server info.",
+                    "Show CLI version, server version, contracts versions, compatibility status, and available updates from NuGet. Connects to the server to retrieve server info.",
                     null,
                     null,
                     ["cratis version", "cratis version -o json"]),

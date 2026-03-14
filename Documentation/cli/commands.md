@@ -353,7 +353,7 @@ Accepts [event store options](#event-store-options).
 | ------- | ----------- |
 | `cratis version` | Show CLI version, server version, contracts versions, and compatibility status |
 
-Connects to the server to retrieve version information. Compatibility is determined by matching the major version of the contracts assembly.
+Connects to the server to retrieve version information. Compatibility is determined by matching the major version of the contracts assembly. Also checks NuGet for newer CLI and server versions.
 
 ### JSON output fields
 
@@ -361,9 +361,11 @@ Connects to the server to retrieve version information. Compatibility is determi
 | ----- | ----------- |
 | `cli.version` | CLI assembly version |
 | `cli.contractsVersion` | Contracts assembly version used by the CLI |
+| `cli.latestVersion` | Latest CLI version on NuGet, or null if up to date |
 | `server.version` | Server assembly version |
 | `server.contractsVersion` | Contracts assembly version on the server |
 | `server.commitSha` | Git commit SHA the server was built from |
+| `server.latestVersion` | Latest server version on NuGet, or null if up to date |
 | `compatible` | Whether CLI and server contracts are compatible (true when server info is unavailable — assumes compatibility) |
 | `serverSupportsVersionInfo` | Whether the server supports the version info endpoint |
 

@@ -6,12 +6,22 @@ using System.Text.Json;
 namespace Cratis.Chronicle.Cli;
 
 /// <summary>
-/// Checks NuGet for the latest available version of the CLI tool and caches the result.
+/// Checks NuGet for the latest available version of a package and caches the result.
 /// The check runs at most once per configured interval to avoid slowing down every command.
 /// </summary>
 public static class UpdateChecker
 {
-    const string PackageId = "Cratis.Chronicle.Cli";
+    /// <summary>
+    /// The NuGet package ID for the CLI tool.
+    /// </summary>
+    public const string CliPackageId = "Cratis.Chronicle.Cli";
+
+    /// <summary>
+    /// The NuGet package ID used as a proxy for the Chronicle server version.
+    /// The server ships as a Docker image but shares the same release version as this client library.
+    /// </summary>
+    public const string ServerPackageId = "Cratis.Chronicle";
+
     static readonly TimeSpan _checkInterval = TimeSpan.FromHours(24);
     static readonly JsonSerializerOptions _cacheJsonOptions = new() { WriteIndented = true };
 
@@ -23,30 +33,48 @@ public static class UpdateChecker
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cratis", "version-check.json");
 
     /// <summary>
-    /// Checks whether a newer CLI version is available. Returns the latest version string
-    /// if an update is available, or null if the CLI is up to date or the check fails.
-    /// This method is designed to be called with a short timeout so it never blocks the user.
+    /// Checks whether a newer version of the CLI is available.
     /// </summary>
     /// <param name="currentVersion">The current CLI version.</param>
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <returns>The latest version string if newer, otherwise null.</returns>
-    public static async Task<string?> CheckForUpdate(string currentVersion, CancellationToken cancellationToken = default)
+    public static Task<string?> CheckForUpdate(string currentVersion, CancellationToken cancellationToken = default)
+        => CheckForUpdate(CliPackageId, currentVersion, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer version of the specified NuGet package is available.
+    /// Returns the latest version string if an update is available, or null if the
+    /// package is up to date or the check fails. Designed to be called with a short
+    /// timeout so it never blocks the user.
+    /// </summary>
+    /// <param name="packageId">The NuGet package ID to check.</param>
+    /// <param name="currentVersion">The current version.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static async Task<string?> CheckForUpdate(string packageId, string currentVersion, CancellationToken cancellationToken = default)
     {
-        var cached = ReadCache();
-        if (cached is not null && DateTime.UtcNow - cached.CheckedAt < _checkInterval)
+        var cache = ReadCache();
+        if (cache?.Packages.TryGetValue(packageId, out var entry) == true &&
+            DateTime.UtcNow - entry.CheckedAt < _checkInterval)
         {
-            return IsNewer(cached.LatestVersion, currentVersion) ? cached.LatestVersion : null;
+            return IsNewer(entry.LatestVersion, currentVersion) ? entry.LatestVersion : null;
         }
 
         try
         {
-            var latestVersion = await FetchLatestVersion(cancellationToken);
+            var latestVersion = await FetchLatestVersion(packageId, cancellationToken);
             if (latestVersion is null)
             {
                 return null;
             }
 
-            WriteCache(new VersionCache { LatestVersion = latestVersion, CheckedAt = DateTime.UtcNow });
+            cache ??= new VersionCache();
+            cache.Packages[packageId] = new PackageVersionEntry
+            {
+                LatestVersion = latestVersion,
+                CheckedAt = DateTime.UtcNow
+            };
+            WriteCache(cache);
 
             return IsNewer(latestVersion, currentVersion) ? latestVersion : null;
         }
@@ -67,15 +95,15 @@ public static class UpdateChecker
         var dashIndex = current.IndexOf('-');
         var currentNumeric = dashIndex > 0 ? current[..dashIndex] : current;
 
-        return System.Version.TryParse(latest, out var latestVer) &&
-               System.Version.TryParse(currentNumeric, out var currentVer) &&
+        return Version.TryParse(latest, out var latestVer) &&
+               Version.TryParse(currentNumeric, out var currentVer) &&
                latestVer > currentVer;
     }
 
-    static async Task<string?> FetchLatestVersion(CancellationToken cancellationToken)
+    static async Task<string?> FetchLatestVersion(string packageId, CancellationToken cancellationToken)
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-        var url = $"https://api.nuget.org/v3-flatcontainer/{PackageId.ToLowerInvariant()}/index.json";
+        var url = $"https://api.nuget.org/v3-flatcontainer/{packageId.ToLowerInvariant()}/index.json";
         var response = await http.GetAsync(url, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -147,6 +175,11 @@ public static class UpdateChecker
     }
 
     sealed class VersionCache
+    {
+        public Dictionary<string, PackageVersionEntry> Packages { get; set; } = new();
+    }
+
+    sealed class PackageVersionEntry
     {
         public string LatestVersion { get; set; } = string.Empty;
         public DateTime CheckedAt { get; set; }
