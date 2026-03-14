@@ -17,9 +17,6 @@ jobs:
       issues: read
       pull-requests: read
       contents: read
-      projects: write   # required to add/update items in the org-level project
-                        # note: GitHub Actions does not support project-level scoping;
-                        # this grants write access to all projects in the Cratis org
 
     steps:
       - name: Checkout repository
