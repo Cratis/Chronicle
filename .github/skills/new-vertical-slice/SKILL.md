@@ -1,6 +1,6 @@
 ---
 name: new-vertical-slice
-description: Use this skill when asked to implement (build, create, add) a new feature, command, query, slice, or screen in a Cratis-based project. Provides the hands-on step-by-step execution workflow: C# backend → specs → dotnet build → React frontend → quality gates. For questions about how vertical slices are structured or which slice type to choose, see cratis-vertical-slice.
+description: Use this skill when asked to implement a new feature, command, query, slice, or screen in a Cratis-based project. Guides the full end-to-end workflow: C# backend → specs → dotnet build → React frontend → quality gates.
 ---
 
 Implement a complete vertical slice following this EXACT order. Never skip steps or work on multiple slices in parallel.
@@ -26,8 +26,8 @@ File creation order within the slice:
 2. Command `record` with `Handle()` method and optional validation attributes
    - If a business rule depends on Chronicle event-sourced state, add the relevant read model as a parameter to `Handle()` — see `add-business-rule` skill (DCB pattern)
 3. Constraint class `<Name>Constraint` (if needed)
-4. Event `record` with `[EventType]` (no arguments, no mutable properties)
-5. Read model `record` with `[ReadModel]` and model-bound projection attributes (`[FromEvent<T>]`, `[Key]`, etc.)
+5. Event `record` with `[EventType]` (no arguments, no mutable properties)
+6. Read model `record` with `[ReadModel]` and model-bound projection attributes (`[FromEvent<T>]`, `[Key]`, etc.)
    - Use fluent `IProjectionFor<T>` only when model-bound attributes don't fit
 
 **Critical rules:**

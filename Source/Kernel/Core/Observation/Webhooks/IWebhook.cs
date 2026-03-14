@@ -36,4 +36,10 @@ public interface IWebhook : IGrainWithStringKey
     /// <param name="subscriber"><see cref="INotifyWebhookDefinitionsChanged"/> to subscribe.</param>
     /// <returns>Awaitable task.</returns>
     Task UnsubscribeDefinitionsChanged(INotifyWebhookDefinitionsChanged subscriber);
+
+    /// <summary>
+    /// Remove the webhook definition from storage.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task Remove();
 }

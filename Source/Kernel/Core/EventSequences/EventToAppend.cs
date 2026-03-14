@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
 /// <param name="Tags">Collection of tags associated with the event.</param>
 /// <param name="Content">The JSON payload of the event.</param>
+/// <param name="Occurred">Optional occurred time. If null, the server will set it to approximately the time of append.</param>
 public record EventToAppend(
     EventSourceType EventSourceType,
     EventSourceId EventSourceId,
@@ -23,4 +24,5 @@ public record EventToAppend(
     EventStreamId eventStreamId,
     EventType EventType,
     IEnumerable<Tag> Tags,
-    JsonObject Content);
+    JsonObject Content,
+    DateTimeOffset? Occurred = null);

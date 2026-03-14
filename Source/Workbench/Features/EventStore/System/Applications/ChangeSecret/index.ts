@@ -2,4 +2,4 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 export { ChangeSecretDialog } from './ChangeSecretDialog';
-export type { ChangeSecretDialogProps } from './ChangeSecretDialog';
+export type { ChangeSecretDialogRequest } from './ChangeSecretDialog';

@@ -18,7 +18,10 @@ The Cratis dialog wrappers handle command execution, validation timing, loading 
 - Pass the command constructor to `command={}`. `CommandDialog` handles instantiation, execution, and confirm/cancel buttons.
 - Use command form fields (`InputTextField`, `TextAreaField`, etc. from `@cratis/components/CommandForm`) for user-input values.
 - `CommandDialog` automatically disables confirm while the command executes.
-- Use `onBeforeExecute` only for values that cannot come from form fields (for example generated IDs).
+- Any value that must be present for the form to be considered valid (i.e. passes `validateRequiredProperties`) must be supplied via `initialValues`, **not** via `onBeforeExecute`.
+  - `onBeforeExecute` fires only at execution time — the command is already validated before it runs, so values set there never influence `isValid` and the OK/Submit button will remain permanently disabled.
+  - Use `initialValues` for injected context values (e.g. a parent entity id passed as a prop).
+  - Use `onBeforeExecute` only for transformations that should not affect form validity (e.g. generated IDs).
 
 ```tsx
 import { DialogProps, DialogResult } from '@cratis/arc.react/dialogs';

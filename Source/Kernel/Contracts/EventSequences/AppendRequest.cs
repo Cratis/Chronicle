@@ -91,4 +91,10 @@ public class AppendRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(14, IsRequired = true)]
     public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional occurred time. If not set, the server will set it to approximately the time of append.
+    /// </summary>
+    [ProtoMember(15)]
+    public SerializableDateTimeOffset? Occurred { get; set; }
 }

@@ -6,6 +6,8 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
+using ProtoBuf.Grpc.Reflection;
+using ProtoBuf.Meta;
 
 namespace Cratis.Chronicle.Services.Clients;
 
@@ -18,6 +20,8 @@ internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILogger<ConnectionService> logger) : IConnectionService
 {
+    static readonly Lazy<string> _schemaDefinition = new(GenerateSchema);
+
     /// <inheritdoc/>
     public IObservable<ConnectionKeepAlive> Connect(
         ConnectRequest request,
@@ -74,5 +78,30 @@ internal sealed class ConnectionService(
     {
         var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
         await connectedClients.OnClientPing(keepAlive.ConnectionId);
+    }
+
+    /// <inheritdoc/>
+    public Task<DescriptorSetResponse> GetDescriptorSet()
+    {
+        return Task.FromResult(new DescriptorSetResponse
+        {
+            SchemaDefinition = _schemaDefinition.Value
+        });
+    }
+
+    static string GenerateSchema()
+    {
+        var generator = new SchemaGenerator
+        {
+            ProtoSyntax = ProtoSyntax.Proto3
+        };
+
+        // SchemaGenerator requires all types in a single call to share the same proto package
+        // (derived from C# namespace). Group by namespace and concatenate the resulting schemas.
+        var schemas = Contracts.AvailableServices.All
+            .GroupBy(t => t.Namespace ?? string.Empty)
+            .Select(group => generator.GetSchema(group.ToArray()));
+
+        return string.Join('\n', schemas);
     }
 }

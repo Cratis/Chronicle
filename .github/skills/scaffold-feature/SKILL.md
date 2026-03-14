@@ -22,7 +22,7 @@ Features/<Feature>/
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Page } from '../../Core/Page';  // Verify this path by searching: find src -name 'Page.tsx'
+import { Page } from '../../Core/Page';
 
 export const <Feature> = () => {
     return (

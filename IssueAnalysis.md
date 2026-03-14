@@ -1,26 +1,72 @@
 # Chronicle Repository Issue Analysis
 
-This document categorizes all open issues in the repository into three groups:
+> **Sections A–C** (Excluded, Copilot-assigned, Potentially Obsolete) are **auto-generated** on 2026-03-13
+> by the [issue-analysis workflow](.github/workflows/issue-analysis.yml).
+> **Sections 1–3** below the `<!-- HAND-WRITTEN SECTIONS START -->` marker are maintained by AI
+> analysis and manual review.
+>
+> **How the workflow works:**
+> 1. Fetches all **open** issues and all open/recently merged PRs via the GitHub CLI.
+> 2. Scans every PR body for closing-keyword patterns (`closes #N`, `fixes #N`, `resolves #N`,
+>    `owner/repo#N`, etc.) to build an issue → PR map.
+> 3. Classifies each open issue into one of the buckets below.
+>    Issues with only merged (not open) PRs are moved to the backlog sections, not section B.
+> 4. Regenerates sections A–C while leaving everything below the marker intact.
+> 5. Closed issues and closed pull requests are **never** included.
 
-1. **Already Implemented** — the feature or fix exists in the current codebase
-2. **Can Do Without More Details** — clear enough requirements to implement directly
-3. **Need More Details** — too vague, too large, needs design decisions, or depends on investigation
-
-**Excluded from analysis** (have an existing open PR — either Copilot-assigned or community):
-- #2798 — Add support for Aspire hosting integration *(Copilot PR #2799)*
-- #2793 — Specify Admin password in development image as config option *(Copilot PR #2794)*
-- #2764 — Support projecting without specifying a read model *(Copilot PR #2765)*
-- #2600 — Agentic event sourcing domain specification and settings *(Copilot PR #2601)*
-- #2268 — Enable running integration specs across multiple test environments *(Copilot PR #2269)*
-- #1287 — Add a way to clear state / API call (development only) *(PR #2791)*
-- #1868 — Support SQL type servers as Event Store *(PR #2375)*
-- #1869 — Support SQL type servers as Sink for Reducers and Projections *(PR #2375)*
 
 ---
 
+## A. Excluded — Has an Open Pull Request
+
+Issues with at least one open PR are excluded from the backlog triage; work is actively underway.
+
+| # | Issue | Pull Request(s) |
+|---|-------|-----------------|
+| [#2831](https://github.com/Cratis/Chronicle/issues/2831) | Outbox - inbox pattern for events | PR [#2832](https://github.com/Cratis/Chronicle/pull/2832) *(Copilot)* |
+| [#2798](https://github.com/Cratis/Chronicle/issues/2798) | Add support for Aspire | PR [#2799](https://github.com/Cratis/Chronicle/pull/2799) *(Copilot)* |
+| [#2793](https://github.com/Cratis/Chronicle/issues/2793) | Specify Admin password in development image as config option | PR [#2794](https://github.com/Cratis/Chronicle/pull/2794) *(Copilot)* |
+| [#2764](https://github.com/Cratis/Chronicle/issues/2764) | Support projecting without specifying a read model - infer it | PR [#2765](https://github.com/Cratis/Chronicle/pull/2765) *(Copilot)* |
+| [#2600](https://github.com/Cratis/Chronicle/issues/2600) | Agentic Event Sourcing | PR [#2601](https://github.com/Cratis/Chronicle/pull/2601) *(Copilot)* |
+| [#2268](https://github.com/Cratis/Chronicle/issues/2268) | Enable running integration specs for different setups | PR [#2269](https://github.com/Cratis/Chronicle/pull/2269) *(Copilot)* |
+| [#1440](https://github.com/Cratis/Chronicle/issues/1440) | Disable replay button for disconnected observers | PR [#2829](https://github.com/Cratis/Chronicle/pull/2829) *(Copilot)* |
+| [#1439](https://github.com/Cratis/Chronicle/issues/1439) | Show "Are you sure" dialog when ignoring recommendation | PR [#2828](https://github.com/Cratis/Chronicle/pull/2828) *(Copilot)* |
+| [#253](https://github.com/Cratis/Chronicle/issues/253) | Jazz up the readme file | PR [#2827](https://github.com/Cratis/Chronicle/pull/2827) *(Copilot)* |
+
+---
+
+## B. Assigned to Copilot — No PR Yet
+
+These issues are assigned to Copilot and have **no pull request at all** (neither open nor merged). They may be queued, in progress, or awaiting a trigger.
+
+| # | Issue |
+|---|-------|
+| [#2681](https://github.com/Cratis/Chronicle/issues/2681) | Switch out components in Workbench |
+| [#2644](https://github.com/Cratis/Chronicle/issues/2644) | Add the ability to add events directly in the Event Sequence editor / page in Workbench |
+| [#2640](https://github.com/Cratis/Chronicle/issues/2640) | Hook up redaction from Workbench |
+| [#2464](https://github.com/Cratis/Chronicle/issues/2464) | All and Dictionaries |
+| [#2435](https://github.com/Cratis/Chronicle/issues/2435) | Add events in sequences page |
+| [#2433](https://github.com/Cratis/Chronicle/issues/2433) | Improve seed data and add editor |
+| [#1869](https://github.com/Cratis/Chronicle/issues/1869) | Support SQL type of servers as Sink for Reducers and Projections |
+| [#1863](https://github.com/Cratis/Chronicle/issues/1863) | Support clustering for Kernel |
+| [#1859](https://github.com/Cratis/Chronicle/issues/1859) | Support migration of events between generations (up & down casting) |
+| [#1749](https://github.com/Cratis/Chronicle/issues/1749) | Sink last handled event sequence number is wrong |
+| [#1459](https://github.com/Cratis/Chronicle/issues/1459) | Look into switching to .NET 9 new JsonSchemaExporter instead of NJsonSchema |
+
+---
+
+## C. Potentially Obsolete
+
+No issues are currently flagged as potentially obsolete (none have been inactive for ≥ 2 years without a linked PR).
+
+
+<!-- HAND-WRITTEN SECTIONS START -->
+
 ## 1. Already Implemented in Code
 
-These features exist in the current codebase in a substantially complete form.
+These features exist in the current codebase in a substantially complete form. **All issues in this
+section should be closed** — they are also listed in Section C (Potentially Obsolete) above as
+candidates for closure.
 
 | # | Issue | Evidence in codebase |
 |---|-------|----------------------|
@@ -361,3 +407,6 @@ These issues are too vague, too large, require architectural decisions, need inv
 | [#977](https://github.com/Cratis/Chronicle/issues/977) | Support for linking events | No design for what "linking" means or how links are stored/queried. |
 | [#1017](https://github.com/Cratis/Chronicle/issues/1017) | Create guidance on setting up Docker Compose | No outline of the guide. |
 | [#1277](https://github.com/Cratis/Chronicle/issues/1277) | Add overview on Docker Hub for Chronicle images | Needs content decisions. |
+
+
+

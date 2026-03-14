@@ -28,4 +28,9 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the <see cref="EventSourceType"/> for the event. Defaults to <see cref="EventSourceType.Default"/>.
     /// </summary>
     public EventSourceType EventSourceType { get; init; } = EventSourceType.Default;
+
+    /// <summary>
+    /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
+    /// </summary>
+    public DateTimeOffset? Occurred { get; init; }
 }

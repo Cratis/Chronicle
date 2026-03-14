@@ -11,7 +11,7 @@ export interface PageProps extends HTMLAttributes<HTMLDivElement> {
     noPadding?: boolean;
 }
 
-export const Page = ({ title, children, noBackground, ...rest }: PageProps) => {
+export const Page = ({ title, children, noBackground, noPadding, ...rest }: PageProps) => {
     const { setPageTitle } = useWorkbenchContext();
 
     useEffect(() => {
@@ -19,7 +19,7 @@ export const Page = ({ title, children, noBackground, ...rest }: PageProps) => {
     }, [title, setPageTitle]);
 
     return (
-        <div className={`flex flex-col h-full${rest.noPadding ? '' : ' px-6 py-4'}`} {...rest}>
+        <div className='flex flex-col h-full' {...rest}>
             <main className={`${noBackground ? '' : 'panel'} overflow-hidden h-full flex flex-col flex-1`}>
                 {children}
             </main>

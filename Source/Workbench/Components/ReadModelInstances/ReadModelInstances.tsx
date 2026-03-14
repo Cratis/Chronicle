@@ -9,7 +9,8 @@ import strings from 'Strings';
 import { Json } from 'Features';
 import * as faIcons from 'react-icons/fa6';
 import { ReadModelInstance } from 'Api/ReadModels';
-import { ObjectNavigationalBar } from '../ObjectNavigationalBar';
+import { ObjectNavigationalBar as _ONB } from '@cratis/components';
+const ObjectNavigationalBar = _ONB.ObjectNavigationalBar;
 
 interface Props {
     instances: ReadModelInstance[];

@@ -11,10 +11,9 @@ using var loggerFactory = LoggerFactory
         .AddConsole());
 
 var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
-options.LoggerFactory = loggerFactory;
 
 Console.WriteLine("Connecting to Chronicle...");
-using var client = new ChronicleClient(options);
+using var client = new ChronicleClient(options, loggerFactory: loggerFactory);
 var store = await client.GetEventStore("TestStore");
 
 Console.WriteLine("Registering artifacts and seed data...");
