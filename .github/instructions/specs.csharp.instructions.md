@@ -239,4 +239,11 @@ public class and_name_already_exists(context context) : Given<context>(context)
 
 - Don't break long `should_` method lines — prefer one-line lambda assertions.
 - Don't add blank lines between multiple `should_` methods.
+
+## Entity Framework Core Specs
+
+- Use SQLite in-memory database for specs involving `DbContext`.
+- `SaveChanges` / `SaveChangesAsync` are virtual and can be mocked with NSubstitute.
+- `DbSet` methods are virtual — mock as needed.
+- Pass options when substituting: `Substitute.For<YourDbContext>(options)`.
 - Simulate failures by mocking `SaveChanges` to throw exceptions.
