@@ -1,3 +1,5 @@
+name: Issue Analysis
+
 # Issue Analysis Workflow
 #
 # PURPOSE
@@ -46,8 +48,6 @@
 # ────────
 # Runs every Monday at 08:00 UTC. Can also be triggered manually via
 # workflow_dispatch.
-
-name: Issue Analysis
 
 on:
   schedule:
