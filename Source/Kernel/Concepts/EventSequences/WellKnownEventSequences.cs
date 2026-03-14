@@ -22,4 +22,9 @@ public static class WellKnownEventSequences
     /// The event sequence id for the outbox.
     /// </summary>
     public const string Outbox = "outbox";
+
+    /// <summary>
+    /// The event sequence id representing all inboxes (a virtual identifier).
+    /// </summary>
+    public const string Inbox = "inbox";
 }

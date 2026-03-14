@@ -20,6 +20,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -162,6 +163,7 @@ public class EventStore : IEventStore
 
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
+        Subscriptions = new EventStoreSubscriptions.EventStoreSubscriptions(EventTypes, this, loggerFactory.CreateLogger<EventStoreSubscriptions.EventStoreSubscriptions>());
         FailedPartitions = new FailedPartitions(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
@@ -228,6 +230,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IWebhooks Webhooks { get; }
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptions Subscriptions { get; }
 
     /// <inheritdoc/>
     public IFailedPartitions FailedPartitions { get; }

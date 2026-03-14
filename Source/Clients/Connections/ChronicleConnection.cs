@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
@@ -221,6 +222,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReducers>(clientFactory),
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
                 callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
+                callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
                 callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
