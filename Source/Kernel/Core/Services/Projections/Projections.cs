@@ -137,9 +137,9 @@ internal sealed class Projections(
                 await projection.SetDefinition(definition);
 
                 IEnumerable<EventType> eventTypes;
-                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
+                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
                 {
-                    eventTypes = await projection.GetEventTypesForPreview(readModelDefinition!);
+                    eventTypes = await projection.GetEventTypesForPreview(readModelDefinition);
                 }
                 else
                 {
@@ -157,21 +157,21 @@ internal sealed class Projections(
                 }
 
                 IEnumerable<System.Dynamic.ExpandoObject> result;
-                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition!.Identifier == draftDefinition.Identifier))
+                if (isInferredReadModel || (draftDefinition is not null && readModelDefinition.Identifier == draftDefinition.Identifier))
                 {
-                    result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition!);
+                    result = await projection.ProcessForPreview(request.Namespace, events, readModelDefinition);
                 }
                 else
                 {
                     result = await projection.Process(request.Namespace, events);
                 }
 
-                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition!.GetSchemaForLatestGeneration()).ToString()).ToArray();
+                var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
 
                 return new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(new ContractProjectionPreview
                 {
                     ReadModelEntries = readModels,
-                    ReadModel = readModelDefinition!.ToContract()
+                    ReadModel = readModelDefinition.ToContract()
                 });
             },
             errors => Task.FromResult(new OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>(errors.ToContract())));
