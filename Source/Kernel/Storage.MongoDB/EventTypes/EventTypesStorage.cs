@@ -143,6 +143,27 @@ public class EventTypesStorage(
         return schemas.Count == 1;
     }
 
+    /// <inheritdoc/>
+    public Task Register(EventTypeDefinition definition) =>
+        throw new NotImplementedException("Registration of complete event type definitions with migrations is not yet implemented");
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions() =>
+        throw new NotImplementedException("Getting all event type definitions is not yet implemented");
+
+    /// <inheritdoc/>
+    public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
+    {
+        // Get the latest schema for the event type to build a minimal definition
+        var schema = await GetFor(eventTypeId);
+        return new EventTypeDefinition(
+            eventTypeId,
+            EventTypeOwner.None,
+            false,
+            [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+            []);
+    }
+
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);
 
     FilterDefinition<EventType> GetFilterForSpecificEventType(EventTypeId type) => Builders<EventType>.Filter.Eq(et => et.Id, type);

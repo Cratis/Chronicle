@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
@@ -36,15 +37,18 @@ public class Defaults
         var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
         ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
 
+        var serviceProvider = new DefaultServiceProvider();
+        var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, serviceProvider);
+
         EventTypes = new EventTypes(
             EventStore,
             JsonSchemaGenerator,
-            ClientArtifactsProvider);
+            ClientArtifactsProvider,
+            eventTypeMigrators);
 
         EventTypes.Discover().Wait();
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        var serviceProvider = new DefaultServiceProvider();
         var artifactActivator = new ClientArtifactsActivator(serviceProvider, new NullLoggerFactory());
         EventSerializer = new EventSerializer(
             ClientArtifactsProvider,

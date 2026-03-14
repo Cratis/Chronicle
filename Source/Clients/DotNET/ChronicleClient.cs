@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
@@ -42,6 +43,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly IEventStoreNamespaceResolver _namespaceResolver;
     readonly ILoggerFactory _loggerFactory;
+    readonly IEventTypeMigrators _eventTypeMigrators;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -107,6 +109,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _artifactActivator = result.ArtifactActivator;
+        _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
 
         var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(_loggerFactory.CreateLogger<ConnectionLifecycle>());
@@ -167,6 +170,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _artifactActivator = result.ArtifactActivator;
+        _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -200,6 +204,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             @namespace,
             _connection,
             _artifactsProvider,
+            _eventTypeMigrators,
             _correlationIdAccessor,
             _concurrencyScopeStrategies,
             CausationManager,
