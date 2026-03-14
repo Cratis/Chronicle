@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
+using EventStoreName = Cratis.Chronicle.Concepts.EventStoreName;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptions.when_adding;
@@ -24,7 +25,7 @@ public class an_existing_subscription : given.an_event_store_subscriptions_servi
 
         var existingDefinition = new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition(
             new EventStoreSubscriptionId("test-subscription-id"),
-            new Concepts.Events.EventStoreName("source-event-store"),
+            new EventStoreName("source-event-store"),
             []);
 
         _subscriptionsManager = Substitute.For<IEventStoreSubscriptionsManager>();

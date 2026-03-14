@@ -30,7 +30,7 @@ public class a_new_subscription : given.an_event_store_subscriptions_service
             Arg.Any<IEnumerable<Tag>>(),
             Arg.Any<EventSourceType>(),
             Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>()).Returns(new AppendResult(Concepts.EventSequences.EventSequenceNumber.First, []));
+            Arg.Any<EventStreamId>()).Returns(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
 
         _subscriptionsManager = Substitute.For<IEventStoreSubscriptionsManager>();
         _subscriptionsManager.GetSubscriptionDefinitions().Returns([]);

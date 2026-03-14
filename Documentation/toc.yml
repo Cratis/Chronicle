@@ -24,6 +24,8 @@
   href: projections/toc.yml
 - name: Reactors
   href: reactors/toc.yml
+- name: Integration
+  href: integration/toc.yml
 - name: Reducers
   href: reducers/toc.yml
 - name: Code Analysis
