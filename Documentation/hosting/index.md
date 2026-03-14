@@ -6,6 +6,7 @@ Chronicle provides multiple deployment options to suit different environments an
 
 - **[Production](production.md)** - Docker-based production deployment with MongoDB
 - **[Configuration](configuration/index.md)** - Complete configuration reference
+- **[Aspire](aspire.md)** - Microsoft Aspire hosting integration for development and production
 - **[Local Certificates](local-certificates.md)** - Generate and configure TLS certificates for local development
 - **[Data Protection Key Encryption](encryption-certificate.md)** - Encrypt data protection keys in production
 - **[Docker Compose](docker-compose.md)** - Multi-container setup for development and testing

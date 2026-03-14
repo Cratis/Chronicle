@@ -1,5 +1,5 @@
 ---
-applyTo: ".github/**"
+applyTo: "**/*"
 ---
 
 # How to Do Pull Requests

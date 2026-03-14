@@ -1,0 +1,81 @@
+name: Issue Analysis
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
+  workflow_dispatch:        # Also allow manual runs
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Categorize Issues in GitHub Project
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: read
+      pull-requests: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run issue analysis and update project
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ORG: ${{ github.repository_owner }}
+          PROJECT_NUMBER: 7
+          ISSUE_ANALYSIS_FILE: IssueAnalysis.md
+        run: bash .github/scripts/analyze-issues.sh
+
+# Issue Analysis Workflow
+#
+# PURPOSE
+# ───────
+# Keeps the "Issues Categorized" GitHub Project up-to-date every week so the
+# team always has a reliable, data-driven view of the open backlog.
+# Project: https://github.com/orgs/Cratis/projects/7
+#
+# WHAT IT PRODUCES
+# ────────────────
+# Every open issue is placed in exactly one lane of the project:
+#
+#   • Potentially Obsolete
+#       Issues with no activity for ≥ 2 years and no linked PR.
+#       Candidates for closure or re-evaluation.
+#
+#   • Already Implemented
+#       Issues whose linked pull requests are all merged (done in code)
+#       or that were manually identified as already implemented.
+#
+#   • Ready
+#       Issues with an open pull request (actively being worked on) or
+#       assigned to Copilot (deemed ready for implementation).
+#
+#   • Need more details
+#       All other active issues that need further clarification or design
+#       before work can begin. This is the default lane for new issues.
+#       Manually moving an issue to "Ready" in the project is preserved on
+#       subsequent runs.
+#
+# HOW IT WORKS
+# ────────────
+# 1. The `analyze-issues.sh` script uses the GitHub CLI (`gh`) to:
+#      a. List all open issues (up to 1,000) including their GraphQL node IDs.
+#      b. List all open and recently-merged PRs (up to 500 each).
+#      c. Scan every PR body for closing-keyword patterns
+#         (closes/fixes/resolves #N or a full GitHub URL) to build an
+#         issue → PR map.
+#      d. Classify each issue into one of four buckets.
+#      e. Query the GitHub Project for its current state.
+#      f. Add new issues and update lanes where the auto-classification
+#         overrides the current lane. Existing "Ready" / "Need more details"
+#         assignments are preserved (manual triage is respected).
+#
+# SCHEDULE
+# ────────
+# Runs every Monday at 08:00 UTC. Can also be triggered manually via
+# workflow_dispatch.
