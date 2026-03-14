@@ -2,6 +2,8 @@
   href: production.md
 - name: Configuration
   href: configuration/toc.yml
+- name: Aspire
+  href: aspire.md
 - name: Docker Compose
   href: docker-compose.md
 - name: Local Certificates

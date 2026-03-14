@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using MongoDB.Bson;
+using ConceptsEventCompensation = Cratis.Chronicle.Concepts.Events.EventCompensation;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -38,6 +39,7 @@ public class EventConverter(
         var (eventType, generationKey, content) = ExtractContent(@event);
         var hash = ExtractHash(@event, generationKey);
         var resolvedContent = await ResolveContent(eventType, @event.EventSourceId, content);
+        var compensations = await ResolveCompensations(@event);
 
         return new AppendedEvent(
             new(
@@ -55,7 +57,10 @@ public class EventConverter(
                 await identityStorage.GetFor(@event.CausedBy),
                 @event.Tags.Select(_ => new Tag(_)).ToArray(),
                 hash),
-            resolvedContent);
+            resolvedContent)
+        {
+            Compensations = compensations
+        };
     }
 
     static EventHash ExtractHash(Event @event, string generationKey)
@@ -115,5 +120,22 @@ public class EventConverter(
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var released = await jsonComplianceManager.Release(eventStoreName, eventStoreNamespace, schema.Schema, eventSourceId, content);
         return expandoObjectConverter.ToExpandoObject(released, schema.Schema);
+    }
+
+    async Task<IEnumerable<ConceptsEventCompensation>> ResolveCompensations(Event @event)
+    {
+        var result = new List<ConceptsEventCompensation>();
+        foreach (var compensation in @event.Compensations)
+        {
+            var causedBy = await identityStorage.GetFor([compensation.CausedBy]);
+            result.Add(new ConceptsEventCompensation(
+                compensation.EventTypeGeneration,
+                compensation.CorrelationId,
+                compensation.Causation,
+                causedBy,
+                compensation.Occurred));
+        }
+
+        return result;
     }
 }

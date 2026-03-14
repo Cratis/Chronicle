@@ -13,6 +13,16 @@ namespace Cratis.Chronicle.Concepts.Events;
 public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
+    /// Gets the compensations applied to this event, if any.
+    /// </summary>
+    public IEnumerable<EventCompensation> Compensations { get; init; } = [];
+
+    /// <summary>
+    /// Gets whether this event has been compensated.
+    /// </summary>
+    public bool IsCompensated => Compensations.Any();
+
+    /// <summary>
     /// Creates an empty <see cref="AppendedEvent"/> with no content and no context.
     /// </summary>
     /// <returns>An empty <see cref="AppendedEvent"/>.</returns>
