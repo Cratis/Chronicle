@@ -3,84 +3,90 @@
 
 import { ChangePasswordForUser } from 'Api/Security';
 import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import strings from 'Strings';
 import { generatePassword } from '../../PasswordHelpers';
 import { Guid } from '@cratis/fundamentals';
 import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField, useCommandFormContext } from '@cratis/components/CommandForm';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
 export interface ChangePasswordDialogRequest {
     userId: Guid;
 }
 
+interface PasswordActionsProps {
+    showPassword: boolean;
+    onToggleShow: () => void;
+    onGenerate: () => void;
+}
+
+const PasswordActions = ({ showPassword, onToggleShow, onGenerate }: PasswordActionsProps) => {
+    const { setCommandValues } = useCommandFormContext<ChangePasswordForUser>();
+
+    const handleGenerate = () => {
+        const pw = generatePassword();
+        setCommandValues({ password: pw, confirmedPassword: pw } as unknown as ChangePasswordForUser);
+        onGenerate();
+    };
+
+    return (
+        <div className="flex gap-2 mt-2">
+            <Button
+                icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                onClick={onToggleShow}
+                className="p-button-text"
+                type="button"
+                tooltip={showPassword ? strings.eventStore.system.users.dialogs.changePassword.hidePassword : strings.eventStore.system.users.dialogs.changePassword.showPassword}
+            />
+            <Button
+                icon="pi pi-refresh"
+                onClick={handleGenerate}
+                className="p-button-text"
+                type="button"
+                tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
+            />
+        </div>
+    );
+};
+
 export const ChangePasswordDialog = () => {
     const { request, closeDialog } = useDialogContext<ChangePasswordDialogRequest>();
-    const [password, setPassword] = useState(generatePassword());
-    const [confirmPassword, setConfirmPassword] = useState(generatePassword());
     const [showPassword, setShowPassword] = useState(false);
-
-    const handleGeneratePassword = () => {
-        const newPassword = generatePassword();
-        setPassword(newPassword);
-        setConfirmPassword(newPassword);
-    };
+    const [passwordsMatch, setPasswordsMatch] = useState(true);
+    const initialPassword = useMemo(() => generatePassword(), []);
 
     return (
         <CommandDialog
             command={ChangePasswordForUser}
-            initialValues={{ userId: request.userId }}
-            currentValues={{ password, confirmedPassword: confirmPassword }}
+            initialValues={{ userId: request.userId, password: initialPassword, confirmedPassword: initialPassword }}
+            isValid={passwordsMatch}
             title={strings.eventStore.system.users.dialogs.changePassword.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="450px"
-            isValid={password === confirmPassword && password.trim() !== ''}
+            onFieldChange={(command) => {
+                setPasswordsMatch(command.password === command.confirmedPassword);
+            }}
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="p-fluid">
-                <div className="field mb-3">
-                    <label>{strings.eventStore.system.users.dialogs.changePassword.password}</label>
-                    <div className="p-inputgroup">
-                        <span className="p-inputgroup-addon">
-                            <i className="pi pi-lock"></i>
-                        </span>
-                        <InputText
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                        />
-                        <Button
-                            icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="p-button-text"
-                            type="button"
-                            tooltip={showPassword ? strings.eventStore.system.users.dialogs.changePassword.hidePassword : strings.eventStore.system.users.dialogs.changePassword.showPassword}
-                        />
-                        <Button
-                            icon="pi pi-refresh"
-                            onClick={handleGeneratePassword}
-                            className="p-button-text"
-                            type="button"
-                            tooltip={strings.eventStore.system.users.dialogs.changePassword.generatePassword}
-                        />
-                    </div>
-                </div>
-                <div className="field mb-3">
-                    <label>{strings.eventStore.system.users.dialogs.changePassword.confirmPassword}</label>
-                    <div className="p-inputgroup">
-                        <span className="p-inputgroup-addon">
-                            <i className="pi pi-lock"></i>
-                        </span>
-                        <InputText
-                            type={showPassword ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
-                        />
-                    </div>
-                </div>
-                {password !== confirmPassword && (
+                <InputTextField<ChangePasswordForUser>
+                    value={c => c.password}
+                    title={strings.eventStore.system.users.dialogs.changePassword.password}
+                    type={showPassword ? 'text' : 'password'}
+                />
+                <InputTextField<ChangePasswordForUser>
+                    value={c => c.confirmedPassword}
+                    title={strings.eventStore.system.users.dialogs.changePassword.confirmPassword}
+                    type={showPassword ? 'text' : 'password'}
+                />
+                <PasswordActions
+                    showPassword={showPassword}
+                    onToggleShow={() => setShowPassword(v => !v)}
+                    onGenerate={() => setPasswordsMatch(true)}
+                />
+                {!passwordsMatch && (
                     <small className="p-error">Passwords do not match</small>
                 )}
             </div>

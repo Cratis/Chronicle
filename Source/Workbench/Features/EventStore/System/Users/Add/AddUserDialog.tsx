@@ -3,30 +3,55 @@
 
 import { AddUser } from 'Api/Security';
 import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
 import { Guid } from '@cratis/fundamentals';
 import { generatePassword } from '../../PasswordHelpers';
 import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField } from '@cratis/components/CommandForm';
+import { InputTextField, useCommandFormContext } from '@cratis/components/CommandForm';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+
+interface PasswordActionsProps {
+    showPassword: boolean;
+    onToggleShow: () => void;
+}
+
+const PasswordActions = ({ showPassword, onToggleShow }: PasswordActionsProps) => {
+    const { setCommandValues } = useCommandFormContext<AddUser>();
+
+    const handleGenerate = () => {
+        setCommandValues({ password: generatePassword() } as unknown as AddUser);
+    };
+
+    return (
+        <div className="flex gap-2 mt-2">
+            <Button
+                icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                onClick={onToggleShow}
+                className="p-button-text"
+                type="button"
+                tooltip={showPassword ? strings.eventStore.system.users.dialogs.addUser.hidePassword : strings.eventStore.system.users.dialogs.addUser.showPassword}
+            />
+            <Button
+                icon="pi pi-refresh"
+                onClick={handleGenerate}
+                className="p-button-text"
+                type="button"
+                tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
+            />
+        </div>
+    );
+};
 
 export const AddUserDialog = () => {
     const [userId] = useState(Guid.parse(crypto.randomUUID()));
-    const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const { closeDialog } = useDialogContext<object>();
-
-    const handleGeneratePassword = () => {
-        setPassword(generatePassword());
-    };
 
     return (
         <CommandDialog
             command={AddUser}
             initialValues={{ userId }}
-            currentValues={{ password }}
             title={strings.eventStore.system.users.dialogs.addUser.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
@@ -41,31 +66,12 @@ export const AddUserDialog = () => {
                 title={strings.eventStore.system.users.dialogs.addUser.email}
                 icon={<i className="pi pi-envelope" />}
                 required={false} />
-            <div className="p-inputgroup flex-1 mt-3">
-                <span className="p-inputgroup-addon">
-                    <i className="pi pi-lock"></i>
-                </span>
-                <InputText
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder={strings.eventStore.system.users.dialogs.addUser.password}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                />
-                <Button
-                    icon={showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-button-text"
-                    type="button"
-                    tooltip={showPassword ? strings.eventStore.system.users.dialogs.addUser.hidePassword : strings.eventStore.system.users.dialogs.addUser.showPassword}
-                />
-                <Button
-                    icon="pi pi-refresh"
-                    onClick={handleGeneratePassword}
-                    className="p-button-text"
-                    type="button"
-                    tooltip={strings.eventStore.system.users.dialogs.addUser.generatePassword}
-                />
-            </div>
+            <InputTextField<AddUser>
+                value={c => c.password}
+                title={strings.eventStore.system.users.dialogs.addUser.password}
+                type={showPassword ? 'text' : 'password'}
+                icon={<i className="pi pi-lock" />} />
+            <PasswordActions showPassword={showPassword} onToggleShow={() => setShowPassword(v => !v)} />
         </CommandDialog>
     );
 };
