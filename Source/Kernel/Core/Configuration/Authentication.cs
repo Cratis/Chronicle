@@ -22,4 +22,14 @@ public class Authentication
     /// Gets the default admin username.
     /// </summary>
     public string DefaultAdminUsername { get; init; } = "admin";
+
+#if DEVELOPMENT
+    /// <summary>
+    /// Gets the default admin password for development. When set, the admin user is created with this password pre-configured,
+    /// bypassing the initial password setup flow. Only available in development builds.
+    /// The password is read from configuration in plain text — use only in isolated development environments,
+    /// never in staging or production.
+    /// </summary>
+    public string DefaultAdminPassword { get; init; } = string.Empty;
+#endif
 }

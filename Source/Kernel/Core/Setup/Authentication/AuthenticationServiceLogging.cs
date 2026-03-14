@@ -20,6 +20,12 @@ internal static partial class AuthenticationServiceLogging
     [LoggerMessage(LogLevel.Information, "Successfully created default admin user")]
     internal static partial void DefaultAdminUserAdded(this ILogger<AuthenticationService> logger);
 
+    [LoggerMessage(LogLevel.Information, "Setting pre-configured default admin password from development configuration")]
+    internal static partial void SettingDefaultAdminPassword(this ILogger<AuthenticationService> logger);
+
+    [LoggerMessage(LogLevel.Information, "Default admin password pre-configured successfully")]
+    internal static partial void DefaultAdminPasswordSet(this ILogger<AuthenticationService> logger);
+
     [LoggerMessage(LogLevel.Debug, "Checking for existing default client credentials with ClientId: {ClientId}")]
     internal static partial void CheckingForDefaultClientCredentials(this ILogger<AuthenticationService> logger, string clientId);
 
