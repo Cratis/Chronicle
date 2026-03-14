@@ -34,8 +34,19 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
             case "client-secret":
                 ctx.ClientSecret = settings.Value;
                 break;
+            case "management-port":
+                if (int.TryParse(settings.Value, out var port))
+                {
+                    ctx.ManagementPort = port;
+                }
+                else
+                {
+                    OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.");
+                    return Task.FromResult(ExitCodes.NotFound);
+                }
+                break;
             default:
-                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret");
+                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port");
                 return Task.FromResult(ExitCodes.NotFound);
         }
 

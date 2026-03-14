@@ -28,6 +28,13 @@ public class GlobalSettings : CommandSettings
     public string Output { get; set; } = OutputFormats.Auto;
 
     /// <summary>
+    /// Gets or sets the management port for the HTTP API and token endpoint.
+    /// </summary>
+    [CommandOption("--management-port <PORT>")]
+    [Description("Management port for the HTTP API and token endpoint (default: 8080)")]
+    public int? ManagementPort { get; set; }
+
+    /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
     /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
@@ -88,6 +95,33 @@ public class GlobalSettings : CommandSettings
         }
 
         return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Text;
+    }
+
+    /// <summary>
+    /// Resolves the effective management port by checking flag, environment variable, current context, then default.
+    /// </summary>
+    /// <returns>The resolved management port.</returns>
+    public int ResolveManagementPort()
+    {
+        if (ManagementPort.HasValue)
+        {
+            return ManagementPort.Value;
+        }
+
+        var envVar = Environment.GetEnvironmentVariable(CliDefaults.ManagementPortEnvVar);
+        if (!string.IsNullOrWhiteSpace(envVar) && int.TryParse(envVar, out var envPort))
+        {
+            return envPort;
+        }
+
+        var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
+        if (ctx.ManagementPort.HasValue)
+        {
+            return ctx.ManagementPort.Value;
+        }
+
+        return CliDefaults.DefaultManagementPort;
     }
 
     static string ComposeCredentials(string connectionString)

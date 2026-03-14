@@ -13,8 +13,6 @@ namespace Cratis.Chronicle.Cli.Commands.Auth;
 /// </summary>
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
-    const int DefaultManagementPort = 8080;
-
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
     {
@@ -46,7 +44,8 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var disableTls = connectionString.DisableTls;
             var scheme = disableTls ? "http" : "https";
-            var tokenEndpoint = $"{scheme}://{connectionString.ServerAddress.Host}:{DefaultManagementPort}/connect/token";
+            var managementPort = settings.ResolveManagementPort();
+            var tokenEndpoint = $"{scheme}://{connectionString.ServerAddress.Host}:{managementPort}/connect/token";
 
             using var handler = CreateHandler();
             using var httpClient = new HttpClient(handler);

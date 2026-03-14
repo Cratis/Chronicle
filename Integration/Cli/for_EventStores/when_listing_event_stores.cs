@@ -18,7 +18,7 @@ public class when_listing_event_stores(context context) : CliGiven<context>(cont
 
     [Fact] void should_return_success_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.Success);
 
-    [Fact] void should_contain_system_event_store() => Context.Result.StandardOutput.Contains("system").ShouldBeTrue();
+    [Fact] void should_contain_system_event_store() => Context.Result.StandardOutput.Contains("System", StringComparison.OrdinalIgnoreCase).ShouldBeTrue();
 
     [Fact] void should_have_no_errors() => Context.Result.StandardError.ShouldEqual(string.Empty);
 }

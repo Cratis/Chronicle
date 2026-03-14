@@ -24,9 +24,19 @@ public static class CliDefaults
     public const string DefaultNamespaceName = "Default";
 
     /// <summary>
+    /// The default management port.
+    /// </summary>
+    public const int DefaultManagementPort = 8080;
+
+    /// <summary>
     /// Environment variable name for the Chronicle connection string.
     /// </summary>
     public const string ConnectionStringEnvVar = "CHRONICLE_CONNECTION_STRING";
+
+    /// <summary>
+    /// Environment variable name for the management port override.
+    /// </summary>
+    public const string ManagementPortEnvVar = "CHRONICLE_MANAGEMENT_PORT";
 
     /// <summary>
     /// Standard error message when the CLI cannot reach the Chronicle server.

@@ -10,27 +10,28 @@ namespace Cratis.Chronicle.Integration.Cli;
 /// <summary>
 /// Fixture that uses the locally built Docker image for CLI integration tests.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The CLI connects to the Chronicle server externally via gRPC. The management
+/// port is mapped to host port 8081 (instead of the default 8080) to avoid
+/// conflicts with a locally running Chronicle instance used during development.
+/// Tests pass <c>--management-port 8081</c> to the CLI so that the
+/// <c>OAuthTokenProvider</c> reaches <c>http://localhost:8081/connect/token</c>.
+/// </para>
+/// <para>
+/// TLS is not configured. These tests are intended to run with a Debug-built
+/// Docker image where the <c>DEVELOPMENT</c> compilation constant is defined,
+/// so the server does not require TLS or encryption certificates.
+/// </para>
+/// </remarks>
 public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessFixture
 {
-    const string CertificatePassword = "TestPassword123";
-
-    /// <summary>
-    /// Gets the path to the certificate file.
-    /// </summary>
-    public static string CertificatePath { get; }
-
-    static ChronicleOutOfProcessFixtureWithLocalImage()
-    {
-        var certDir = Path.Combine(Path.GetTempPath(), "chronicle-test-certs");
-        CertificatePath = Path.Combine(certDir, "chronicle-test.pfx");
-        TestCertificateGenerator.GenerateAndSaveCertificate(CertificatePath, CertificatePassword);
-    }
-
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(8080));
+            .UntilInternalTcpPortIsAvailable(27017)
+            .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
 
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
@@ -53,11 +54,5 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 
     /// <inheritdoc/>
     protected override ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
-        builder
-            .WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development")
-            .WithBindMount(CertificatePath, "/app/certs/chronicle.pfx")
-            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
-            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
-            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
-            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword);
+        builder.WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development");
 }

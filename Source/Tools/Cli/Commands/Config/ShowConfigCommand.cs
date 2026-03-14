@@ -30,6 +30,7 @@ public class ShowConfigCommand : AsyncCommand<GlobalSettings>
                 ctx.Namespace,
                 ctx.ClientId,
                 HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
+                ctx.ManagementPort,
                 ctx.LoggedInUser
             },
             _ =>
@@ -46,6 +47,7 @@ public class ShowConfigCommand : AsyncCommand<GlobalSettings>
             AnsiConsole.MarkupLine($"[bold]Namespace:[/]          {OrNotSet(ctx.Namespace).EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Client ID:[/]          {OrNotSet(ctx.ClientId).EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Client Secret:[/]      {(string.IsNullOrWhiteSpace(ctx.ClientSecret) ? "(not set)" : "********")}");
+            AnsiConsole.MarkupLine($"[bold]Management Port:[/]    {(ctx.ManagementPort.HasValue ? ctx.ManagementPort.Value.ToString() : "(default: 8080)")}");
             AnsiConsole.MarkupLine($"[bold]Logged-in User:[/]     {OrNotSet(ctx.LoggedInUser).EscapeMarkup()}");
         });
 

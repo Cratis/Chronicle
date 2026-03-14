@@ -26,6 +26,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             var connectionString = settings.ResolveConnectionString();
             var options = ChronicleOptions.FromConnectionString(new ChronicleConnectionString(connectionString));
             options.AutoDiscoverAndRegister = false;
+            options.ManagementPort = settings.ResolveManagementPort();
             using var client = new ChronicleClient(options);
             OutputFormatter.Configure(client.Options.JsonSerializerOptions);
             return await ExecuteCommandAsync(client, settings, format);

@@ -34,6 +34,11 @@ public class CliContext
     public string? ClientSecret { get; set; }
 
     /// <summary>
+    /// Gets or sets the management port for the HTTP API and token endpoint.
+    /// </summary>
+    public int? ManagementPort { get; set; }
+
+    /// <summary>
     /// Gets or sets the cached access token from a previous login.
     /// </summary>
     public string? AccessToken { get; set; }

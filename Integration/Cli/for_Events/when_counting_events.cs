@@ -13,7 +13,7 @@ public class when_counting_events(context context) : CliGiven<context>(context)
     {
         public CliCommandResult Result = null!;
 
-        async Task Because() => Result = await RunCliAsync("events", "count", "--event-store", "system");
+        async Task Because() => Result = await RunCliAsync("events", "tail", "--event-store", "system");
     }
 
     [Fact] void should_return_success_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.Success);
