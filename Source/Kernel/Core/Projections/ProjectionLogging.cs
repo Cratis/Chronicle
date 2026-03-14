@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +20,9 @@ internal static partial class ProjectionLogging
 
     [LoggerMessage(LogLevel.Information, "Registering projection '{Identifier}' has changed its definition")]
     internal static partial void ProjectionHasChanged(this ILogger<Projection> logger, ProjectionId identifier);
+
+    [LoggerMessage(LogLevel.Information, "Auto-replaying projection '{Identifier}' for namespace '{Namespace}' due to definition change")]
+    internal static partial void AutoReplayingProjection(this ILogger<Projection> logger, ProjectionId identifier, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Rehydrating projections and pipelines")]
     internal static partial void Rehydrate(this ILogger<Projection> logger);
