@@ -20,7 +20,7 @@ export const RedactEventDialog = () => {
     return (
         <CommandDialog
             command={Redact}
-            currentValues={{
+            initialValues={{
                 eventStore: request.eventStore,
                 namespace: request.namespace,
                 eventSequenceId: request.eventSequenceId,

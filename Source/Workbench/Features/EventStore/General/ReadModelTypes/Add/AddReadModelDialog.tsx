@@ -33,16 +33,16 @@ export const AddReadModelDialog = () => {
     };
 
     const currentValues = readModelValues ? {
-        eventStore: params.eventStore,
         identifier: readModelValues.identifier,
         displayName: readModelValues.displayName,
         containerName: readModelValues.containerName,
         schema: JSON.stringify(readModelValues.schema)
-    } : { eventStore: params.eventStore };
+    } : undefined;
 
     return (
         <CommandDialog
             command={CreateReadModel}
+            initialValues={{ eventStore: params.eventStore }}
             currentValues={currentValues}
             title={strings.eventStore.general.readModels.dialogs.addReadModel.title}
             okLabel={strings.general.buttons.ok}

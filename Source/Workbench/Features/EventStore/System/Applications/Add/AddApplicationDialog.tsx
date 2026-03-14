@@ -24,7 +24,8 @@ export const AddApplicationDialog = () => {
     return (
         <CommandDialog
             command={AddApplication}
-            currentValues={{ id, clientSecret }}
+            initialValues={{ id }}
+            currentValues={{ clientSecret }}
             title={strings.eventStore.system.applications.dialogs.addApplication.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}

@@ -25,7 +25,8 @@ export const AddUserDialog = () => {
     return (
         <CommandDialog
             command={AddUser}
-            currentValues={{ userId, password }}
+            initialValues={{ userId }}
+            currentValues={{ password }}
             title={strings.eventStore.system.users.dialogs.addUser.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}

@@ -48,14 +48,14 @@ export const CompensateDialog = () => {
     return (
         <CommandDialog
             command={Compensate}
-            currentValues={{
+            initialValues={{
                 eventStore: request.eventStore,
                 namespace: request.namespace,
                 eventSequenceId: 'event-log',
                 sequenceNumber: request.event.context.sequenceNumber,
-                eventType: request.event.context.eventType,
-                content: parsedContent
+                eventType: request.event.context.eventType
             }}
+            currentValues={{ content: parsedContent }}
             title={`Compensate Event #${request.event.context.sequenceNumber}`}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}

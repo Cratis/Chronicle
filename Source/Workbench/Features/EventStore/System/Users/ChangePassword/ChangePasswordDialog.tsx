@@ -30,7 +30,8 @@ export const ChangePasswordDialog = () => {
     return (
         <CommandDialog
             command={ChangePasswordForUser}
-            currentValues={{ userId: request.userId, password, confirmedPassword: confirmPassword }}
+            initialValues={{ userId: request.userId }}
+            currentValues={{ password, confirmedPassword: confirmPassword }}
             title={strings.eventStore.system.users.dialogs.changePassword.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}

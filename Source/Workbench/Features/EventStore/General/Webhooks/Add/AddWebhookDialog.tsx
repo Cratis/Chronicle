@@ -113,7 +113,6 @@ export const AddWebhookDialog = () => {
                     selectedEventTypes.length > 0;
 
     const currentValues = {
-        eventStore: params.eventStore,
         name,
         url,
         eventSequenceId: eventSequence,
@@ -133,6 +132,7 @@ export const AddWebhookDialog = () => {
     return (
         <CommandDialog
             command={AddWebHook}
+            initialValues={{ eventStore: params.eventStore! }}
             currentValues={currentValues}
             title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
             okLabel={strings.general.buttons.ok}

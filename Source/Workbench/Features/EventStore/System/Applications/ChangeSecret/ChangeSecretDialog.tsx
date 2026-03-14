@@ -27,7 +27,8 @@ export const ChangeSecretDialog = () => {
     return (
         <CommandDialog
             command={ChangeApplicationSecret}
-            currentValues={{ id: request.applicationId, clientSecret }}
+            initialValues={{ id: request.applicationId }}
+            currentValues={{ clientSecret }}
             title={strings.eventStore.system.applications.dialogs.changeSecret.title}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
