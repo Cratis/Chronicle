@@ -53,7 +53,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
-        run: dotnet build --configuration Release -p:DisableProxyGenerator=true
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Build test Docker image
+        run: |
+          dotnet build Source/Kernel/Server/Server.csproj --configuration Debug --no-restore
+          rm -rf Source/Kernel/Server/out && mkdir -p Source/Kernel/Server/out
+          cp -r Source/Kernel/Server/bin/Debug/net10.0/* Source/Kernel/Server/out/
+          docker build -t ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }} -f Docker/Local/Dockerfile .
 
       - name: Publish Docker Image
         run: |
