@@ -6,13 +6,13 @@ namespace Cratis.Chronicle.Events.Migrations.for_EventMigrationPropertyBuilder;
 public class when_renaming_property : Specification
 {
     EventMigrationPropertyBuilder _builder;
-    string _result;
+    PropertyExpression _result;
 
     void Establish() => _builder = new EventMigrationPropertyBuilder();
 
     void Because() => _result = _builder.RenamedFrom("OldName");
 
-    [Fact] void should_return_expression_key() => _result.ShouldContain("__expr_");
+    [Fact] void should_return_expression_key() => _result.Value.ShouldContain("__expr_");
 
     [Fact] void should_have_property_in_properties_collection() => _builder.Properties.ContainsKey(_result).ShouldBeTrue();
 

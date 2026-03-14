@@ -36,7 +36,7 @@ public class EventMigrationBuilder : IEventMigrationBuilder
         {
             foreach (var property in builder.Properties)
             {
-                result[property.Key] = property.Value;
+                result[(string)property.Key] = property.Value;
             }
         }
         return result;
