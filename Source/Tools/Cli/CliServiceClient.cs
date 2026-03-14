@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Connections;
@@ -71,11 +73,43 @@ public sealed class CliServiceClient : IDisposable
         var scheme = disableTls ? "http" : "https";
         var address = $"{scheme}://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}";
 
+        X509Certificate2? certificate = null;
+        if (!disableTls && !string.IsNullOrEmpty(connectionString.CertificatePath))
+        {
+#pragma warning disable CA2000 // Certificate ownership is transferred to httpHandler.SslOptions.ClientCertificates
+            certificate = CertificateLoader.LoadCertificate(connectionString.CertificatePath, connectionString.CertificatePassword ?? string.Empty);
+#pragma warning restore CA2000
+        }
+
         var httpHandler = new SocketsHttpHandler
         {
             PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
             EnableMultipleHttp2Connections = true
         };
+
+        if (!disableTls)
+        {
+            if (certificate is not null)
+            {
+                httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
+            }
+
+            var certHashString = certificate?.GetCertHashString();
+            httpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) =>
+            {
+                if (sslPolicyErrors == SslPolicyErrors.None)
+                {
+                    return true;
+                }
+
+                if (cert is not null && certHashString is not null)
+                {
+                    return cert.GetCertHashString() == certHashString;
+                }
+
+                return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
+            };
+        }
 
         var channel = GrpcChannel.ForAddress(
             address,

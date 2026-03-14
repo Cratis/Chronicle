@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Cli;
 using context = Cratis.Chronicle.Integration.Cli.for_Version.when_running_self_update_with_invalid_version.context;
 

@@ -13,8 +13,14 @@ public class a_connected_cli : Specification
     /// <summary>
     /// Gets the gRPC connection string for the Docker-hosted Chronicle server.
     /// </summary>
-    protected static string ConnectionString =>
-        $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35001/?disableTls=true";
+    protected static string ConnectionString
+    {
+        get
+        {
+            var certPath = Uri.EscapeDataString(ChronicleOutOfProcessFixtureWithLocalImage.CertificatePath);
+            return $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35001/?certificatePath={certPath}&certificatePassword=TestPassword123";
+        }
+    }
 
     /// <summary>
     /// Runs a CLI command against the live server with JSON output format.
