@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -49,6 +50,30 @@ public class EventConverter(
             content = (JsonNode.Parse(@event.Content[generationKey].ToString()) as JsonObject)!;
         }
 
+        if (eventType.Id == GlobalEventTypes.Redaction)
+        {
+            var hash = @event.ContentHashes.TryGetValue(generationKey, out var redactionHashValue)
+                ? new EventHash(redactionHashValue)
+                : EventHash.NotSet;
+            return new AppendedEvent(
+                new(
+                    eventType,
+                    @event.EventSourceType,
+                    @event.EventSourceId,
+                    @event.EventStreamType,
+                    @event.EventStreamId,
+                    @event.SequenceNumber,
+                    @event.Occurred,
+                    eventStoreName,
+                    eventStoreNamespace,
+                    @event.CorrelationId,
+                    @event.Causation,
+                    await identityStorage.GetFor(@event.CausedBy),
+                    @event.Tags.Select(_ => new Tag(_)).ToArray(),
+                    hash),
+                ConvertJsonObjectToExpandoObject(content));
+        }
+
         var eventSchema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var releasedContent = await jsonComplianceManager.Release(
             eventStoreName,
@@ -59,18 +84,18 @@ public class EventConverter(
 
         var releasedContentAsExpandoObject = expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
 
-        EventHash hash;
+        EventHash hash2;
         if (@event.Compensations.Any())
         {
             var latestCompensation = @event.Compensations.Last();
             var compensationGenKey = latestCompensation.EventTypeGeneration.ToString();
-            hash = latestCompensation.ContentHashes.TryGetValue(compensationGenKey, out var compensationHashValue)
+            hash2 = latestCompensation.ContentHashes.TryGetValue(compensationGenKey, out var compensationHashValue)
                 ? new EventHash(compensationHashValue)
                 : EventHash.NotSet;
         }
         else
         {
-            hash = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
+            hash2 = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
                 ? new EventHash(hashValue)
                 : EventHash.NotSet;
         }
@@ -90,7 +115,30 @@ public class EventConverter(
                 @event.Causation,
                 await identityStorage.GetFor(@event.CausedBy),
                 @event.Tags.Select(_ => new Tag(_)).ToArray(),
-                hash),
+                hash2),
             releasedContentAsExpandoObject);
     }
+
+    static ExpandoObject ConvertJsonObjectToExpandoObject(JsonObject document)
+    {
+        var result = new ExpandoObject();
+        var dict = (IDictionary<string, object?>)result;
+        foreach (var (key, value) in document)
+        {
+            dict[key] = ConvertJsonNodeToClrType(value);
+        }
+        return result;
+    }
+
+    static object? ConvertJsonNodeToClrType(JsonNode? node) => node switch
+    {
+        null => null,
+        JsonObject obj => ConvertJsonObjectToExpandoObject(obj),
+        JsonArray array => array.Select(ConvertJsonNodeToClrType).ToArray(),
+        JsonValue value when value.TryGetValue<bool>(out var b) => b,
+        JsonValue value when value.TryGetValue<long>(out var l) => l,
+        JsonValue value when value.TryGetValue<double>(out var d) => d,
+        JsonValue value when value.TryGetValue<string>(out var s) => s,
+        _ => node.ToString()
+    };
 }

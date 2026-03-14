@@ -15,6 +15,10 @@ using KernelEventSourceId = KernelConcepts::Cratis.Chronicle.Concepts.Events.Eve
 using KernelRedactionReason = KernelConcepts::Cratis.Chronicle.Concepts.Events.RedactionReason;
 using KernelCorrelationId = Cratis.Execution.CorrelationId;
 using KernelIdentity = KernelConcepts::Cratis.Chronicle.Concepts.Identities.Identity;
+using KernelEventSequenceId = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
+using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
+using KernelEventCompensated = KernelCore::Cratis.Chronicle.Events.EventSequences.EventCompensated;
+using KernelEventsRedactedForEventSource = KernelCore::Cratis.Chronicle.Events.EventSequences.EventsRedactedForEventSource;
 
 namespace Cratis.Chronicle.XUnit.Integration.Events;
 
@@ -40,11 +44,24 @@ public static class EventSequenceMutationExtensions
             new KernelEventTypeId(eventType.Id.Value),
             new KernelEventTypeGeneration(eventType.Generation.Value));
 
+        var correlationId = KernelCorrelationId.New();
+        var systemEventSequence = fixture.GetEventSequenceGrain(KernelEventSequenceId.System);
+        await systemEventSequence.Append(
+            new KernelEventSourceId(KernelEventSequenceId.Log.Value),
+            new KernelEventCompensated(
+                KernelEventSequenceId.Log,
+                new KernelEventSequenceNumber(sequenceNumber.Value),
+                kernelEventType,
+                content.ToJsonString()),
+            correlationId,
+            [],
+            KernelIdentity.System);
+
         await fixture.EventLogSequenceGrain.Compensate(
             new KernelEventSequenceNumber(sequenceNumber.Value),
             kernelEventType,
             content,
-            KernelCorrelationId.New(),
+            correlationId,
             [],
             KernelIdentity.System);
     }
@@ -62,10 +79,22 @@ public static class EventSequenceMutationExtensions
             ? KernelRedactionReason.Unknown
             : new KernelRedactionReason(reason);
 
+        var correlationId = KernelCorrelationId.New();
+        var systemEventSequence = fixture.GetEventSequenceGrain(KernelEventSequenceId.System);
+        await systemEventSequence.Append(
+            new KernelEventSourceId(KernelEventSequenceId.Log.Value),
+            new KernelEventRedactionRequested(
+                KernelEventSequenceId.Log,
+                new KernelEventSequenceNumber(sequenceNumber.Value),
+                redactionReason),
+            correlationId,
+            [],
+            KernelIdentity.System);
+
         await fixture.EventLogSequenceGrain.Redact(
             new KernelEventSequenceNumber(sequenceNumber.Value),
             redactionReason,
-            KernelCorrelationId.New(),
+            correlationId,
             [],
             KernelIdentity.System);
     }
@@ -91,11 +120,24 @@ public static class EventSequenceMutationExtensions
                 new KernelEventTypeGeneration(et.Generation.Value)))
             .ToArray();
 
+        var correlationId = KernelCorrelationId.New();
+        var systemEventSequence = fixture.GetEventSequenceGrain(KernelEventSequenceId.System);
+        await systemEventSequence.Append(
+            new KernelEventSourceId(KernelEventSequenceId.Log.Value),
+            new KernelEventsRedactedForEventSource(
+                KernelEventSequenceId.Log,
+                new KernelEventSourceId(eventSourceId.Value),
+                kernelEventTypes,
+                redactionReason),
+            correlationId,
+            [],
+            KernelIdentity.System);
+
         await fixture.EventLogSequenceGrain.Redact(
             new KernelEventSourceId(eventSourceId.Value),
             redactionReason,
             kernelEventTypes,
-            KernelCorrelationId.New(),
+            correlationId,
             [],
             KernelIdentity.System);
     }

@@ -17,6 +17,7 @@ public class an_event(context context) : Given<context>(context)
         public SomeEvent OriginalEvent { get; private set; }
         public SomeEvent CompensatedEvent { get; private set; }
         public KernelAppendedEvent StoredEvent { get; private set; }
+        public KernelAppendedEvent SystemStoredEvent { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
@@ -31,6 +32,7 @@ public class an_event(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, OriginalEvent);
             await this.CompensateEvent(EventSequenceNumber.First, CompensatedEvent);
             StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+            SystemStoredEvent = await GetSystemEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
         }
     }
 
@@ -39,4 +41,7 @@ public class an_event(context context) : Given<context>(context)
 
     [Fact]
     void should_have_a_hash_set() => Context.StoredEvent.Context.Hash.ShouldNotEqual(KernelEventHash.NotSet);
+
+    [Fact]
+    void should_have_appended_event_compensated_to_system_log() => Context.SystemStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventCompensated");
 }

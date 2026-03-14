@@ -247,6 +247,13 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     internal IEventSequenceStorage GetEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
 
     /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> for the system event log storage.
+    /// </summary>
+    /// <param name="namespaceName">Namespace to get for.</param>
+    /// <returns>The <see cref="IEventSequenceStorage"/> for the system event log storage.</returns>
+    internal IEventSequenceStorage GetSystemEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetSystemEventLogStorage(namespaceName);
+
+    /// <summary>
     /// Gets the grain storage for the specified key.
     /// </summary>
     /// <typeparam name="TStorage">The type of the grain storage.</typeparam>
