@@ -4,14 +4,15 @@
 
 # analyze-issues.sh
 #
-# Produces an updated IssueAnalysis.md for the Cratis/Chronicle repository.
+# Classifies open issues and updates the "Issues Categorized" GitHub Project.
+# (https://github.com/orgs/Cratis/projects/7)
 #
 # How it works
 # ────────────
-# 1. Fetch every OPEN issue (number, title, assignees, labels, body, dates).
+# 1. Fetch every OPEN issue (number, title, assignees, labels, body, dates, node-id).
 #    Closed issues are never included.
 # 2. Fetch all OPEN PRs plus recently-merged PRs (last 500).
-#    Closed (declined) PRs are never fetched and never appear in the report.
+#    Closed (declined) PRs are never fetched.
 # 3. For each PR body, scan for closing-keyword patterns
 #    ("closes #N", "fixes #N", "resolves #N", etc.) to build a map of
 #    issue → list of PRs.
@@ -21,22 +22,33 @@
 #       B. Copilot   – assigned to Copilot but no open PR and no linked PR at all
 #       C. Obsolete  – last updated >730 days ago with no PR and no recent
 #                      activity (heuristic for stale/superseded issues)
-#       D. Active    – everything else (preserved from manual categorisation)
+#       D. Active    – everything else
 #    Note: issues that have only MERGED (not open) PRs linked to them are moved
 #    to the Active bucket so they do not appear under "No PR Yet".
-# 6. Regenerate the auto-managed sections of IssueAnalysis.md while leaving
-#    the hand-written "Already Implemented", "Can Do", and "Need More Details"
-#    sections intact.
+# 6. Map each issue to a project lane:
+#       Potentially Obsolete  – bucket C (stale, no PR)
+#       Already Implemented   – active issues where all linked PRs are merged
+#       Ready                 – bucket A (open PR) and bucket B (Copilot-assigned)
+#       Need more details     – remaining active issues (default)
+#    If an issue is already in the project with a "Ready" or "Need more details"
+#    lane, that lane is preserved (manual categorisation is respected).
+#    For a first-time run, existing IssueAnalysis.md sections are used to seed
+#    the "Ready" and "Need more details" lanes.
+# 7. Add new issues to the project and update lanes where the auto-classification
+#    overrides the current lane.
 #
-# Prerequisites: gh CLI authenticated, jq, python3 (for date arithmetic)
+# Prerequisites: gh CLI authenticated, jq, python3
 #
 # Usage:
-#   GH_TOKEN=<token> REPO=Cratis/Chronicle bash .github/scripts/analyze-issues.sh
+#   GH_TOKEN=<token> REPO=Cratis/Chronicle ORG=Cratis PROJECT_NUMBER=7 \
+#     bash .github/scripts/analyze-issues.sh
 
 set -euo pipefail
 
 REPO="${REPO:-Cratis/Chronicle}"
-OUTPUT="${OUTPUT:-IssueAnalysis.md}"
+ORG="${ORG:-Cratis}"
+PROJECT_NUMBER="${PROJECT_NUMBER:-7}"
+ISSUE_ANALYSIS_FILE="${ISSUE_ANALYSIS_FILE:-IssueAnalysis.md}"
 TMP_DIR="$(mktemp -d)"
 
 cleanup() { rm -rf "$TMP_DIR"; }
@@ -46,7 +58,7 @@ echo "==> Fetching open issues for $REPO …"
 gh issue list \
     --repo "$REPO" \
     --state open \
-    --json number,title,assignees,labels,body,createdAt,updatedAt \
+    --json number,title,assignees,labels,body,createdAt,updatedAt,id \
     --limit 1000 \
     > "$TMP_DIR/issues_open.json"
 
@@ -201,111 +213,329 @@ print(f"    excluded={len(classified['excluded'])} "
       f"active={len(classified['active'])}")
 PYEOF
 
-echo "==> Generating updated IssueAnalysis.md …"
+echo "==> Updating GitHub Project (org=$ORG, project=$PROJECT_NUMBER) …"
 python3 - \
     "$TMP_DIR/classified.json" \
-    "$OUTPUT" <<'PYEOF'
-import json, sys, re
-from datetime import datetime, timezone
+    "$TMP_DIR/issues_open.json" \
+    "$ISSUE_ANALYSIS_FILE" \
+    "$ORG" \
+    "$PROJECT_NUMBER" <<'PYEOF'
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from collections import Counter
 
-classified_file, output_file = sys.argv[1], sys.argv[2]
+classified_file  = sys.argv[1]
+issues_file      = sys.argv[2]
+issue_analysis   = sys.argv[3]   # may not exist – used only for initial seeding
+ORG              = sys.argv[4]
+PROJECT_NUMBER   = int(sys.argv[5])
 
 with open(classified_file) as f:
     data = json.load(f)
+with open(issues_file) as f:
+    issues_raw = json.load(f)
 
-NOW = datetime.now(tz=timezone.utc)
-REPO = "Cratis/Chronicle"
+# Build lookup: issue number → GraphQL node ID
+issue_node_ids = {i["number"]: i.get("id", "") for i in issues_raw}
 
-def issue_link(num, title):
-    return f"[#{num}](https://github.com/{REPO}/issues/{num})"
+# ── Lane constants ────────────────────────────────────────────────────────────
+LANE_OBSOLETE     = "Potentially Obsolete"
+LANE_IMPLEMENTED  = "Already Implemented"
+LANE_READY        = "Ready"
+LANE_NEEDS_DETAILS = "Need more details"
+LANES = [LANE_OBSOLETE, LANE_IMPLEMENTED, LANE_READY, LANE_NEEDS_DETAILS]
 
-def pr_badge(pr):
-    state = "open" if pr.get("is_open") else "merged"
-    author = pr["pr_author"]
-    tag = " *(Copilot)*" if author.lower() in ("copilot", "github-copilot") else ""
-    return f"PR [#{pr['pr_number']}](https://github.com/{REPO}/pull/{pr['pr_number']}){tag}"
+# ── Parse IssueAnalysis.md for initial seeding ────────────────────────────────
+# Sections 1 / 2 / 3 contain issue numbers that serve as a one-time seed for
+# the project lanes when the project is first populated.
+implemented_from_file: set[int] = set()
+ready_from_file: set[int]       = set()
+needs_from_file: set[int]       = set()
 
-# ── Build auto-generated sections ────────────────────────────────────────────
+if os.path.exists(issue_analysis):
+    with open(issue_analysis) as f:
+        md = f.read()
+    m1 = re.search(r'## 1\. Already Implemented', md)
+    m2 = re.search(r'## 2\. Can Do', md)
+    m3 = re.search(r'## 3\. Need More Details', md)
+    if m1 and m2:
+        for m in re.finditer(r'\[#(\d+)\]', md[m1.start():m2.start()]):
+            implemented_from_file.add(int(m.group(1)))
+    if m2 and m3:
+        for m in re.finditer(r'\[#(\d+)\]', md[m2.start():m3.start()]):
+            ready_from_file.add(int(m.group(1)))
+    if m3:
+        for m in re.finditer(r'\[#(\d+)\]', md[m3.start():]):
+            needs_from_file.add(int(m.group(1)))
+    print(f"    Seeded from IssueAnalysis.md: "
+          f"{len(implemented_from_file)} implemented, "
+          f"{len(ready_from_file)} ready, "
+          f"{len(needs_from_file)} needs-details")
 
-lines = []
-lines.append("# Chronicle Repository Issue Analysis\n")
-lines.append(f"> **Auto-generated** on {NOW.strftime('%Y-%m-%d')} by the weekly "
-             "[issue-analysis workflow](.github/workflows/issue-analysis.yml). "
-             "Sections 1–3 below are maintained by hand and updated by AI analysis.\n")
-lines.append("> Only **open** issues and **open** pull requests are included. "
-             "Closed issues and closed/merged pull requests are excluded from sections A–C.\n")
-lines.append("")
+# ── GraphQL helper ────────────────────────────────────────────────────────────
+def run_graphql(query: str, fail_on_error: bool = True, **kwargs) -> dict | None:
+    """Call `gh api graphql` and return the parsed JSON response."""
+    args = ["gh", "api", "graphql"]
+    for k, v in kwargs.items():
+        if v is None:
+            continue
+        elif isinstance(v, int):
+            args += ["-F", f"{k}={v}"]
+        else:
+            args += ["-f", f"{k}={v}"]
+    args += ["-f", f"query={query}"]
+    result = subprocess.run(args, capture_output=True, text=True)
+    if result.returncode != 0:
+        msg = f"gh api graphql failed (exit {result.returncode}): {result.stderr.strip()}"
+        if fail_on_error:
+            print(msg, file=sys.stderr)
+            sys.exit(1)
+        print(f"    WARNING: {msg}", file=sys.stderr)
+        return None
+    response = json.loads(result.stdout)
+    if "errors" in response:
+        msg = f"GraphQL errors: {json.dumps(response['errors'])}"
+        if fail_on_error:
+            print(msg, file=sys.stderr)
+            sys.exit(1)
+        print(f"    WARNING: {msg}", file=sys.stderr)
+        return None
+    return response
 
-# ── Section A: Excluded ──────────────────────────────────────────────────────
-lines.append("## A. Excluded — Has an Open Pull Request\n")
-lines.append("Issues with at least one open PR are excluded from the backlog triage; work is actively underway.\n")
-lines.append("| # | Issue | Pull Request(s) |")
-lines.append("|---|-------|-----------------|")
-for e in sorted(data["excluded"], key=lambda x: x["number"], reverse=True):
-    pr_list = ", ".join(pr_badge(p) for p in e["open_prs"])
-    lines.append(f"| {issue_link(e['number'], e['title'])} | {e['title']} | {pr_list} |")
-lines.append("")
+# ── Step 1: Get project info ──────────────────────────────────────────────────
+print("    Querying project metadata …")
+resp = run_graphql("""
+query($org: String!, $number: Int!) {
+  organization(login: $org) {
+    projectV2(number: $number) {
+      id
+      fields(first: 20) {
+        nodes {
+          ... on ProjectV2SingleSelectField {
+            id
+            name
+            options { id name }
+          }
+        }
+      }
+    }
+  }
+}
+""", org=ORG, number=PROJECT_NUMBER)
 
-# ── Section B: Copilot ───────────────────────────────────────────────────────
-lines.append("## B. Assigned to Copilot — No PR Yet\n")
-lines.append("These issues are assigned to Copilot and have no pull request at all "
-             "(neither open nor merged). They may be in progress or waiting to be picked up.\n")
-lines.append("| # | Issue |")
-lines.append("|---|-------|")
-for e in data["copilot"]:
-    lines.append(f"| {issue_link(e['number'], e['title'])} | {e['title']} |")
-lines.append("")
+project    = resp["data"]["organization"]["projectV2"]
+project_id = project["id"]
+print(f"    Project ID: {project_id}")
 
-# ── Section C: Obsolete ──────────────────────────────────────────────────────
-lines.append("## C. Potentially Obsolete\n")
-lines.append("These issues have had no activity for **≥ 2 years** and no linked PR. "
-             "They may be superseded by later work, no longer relevant, or waiting for "
-             "someone to verify whether they still apply.\n")
-lines.append("| # | Issue | Last updated (days ago) |")
-lines.append("|---|-------|------------------------|")
-for e in sorted(data["obsolete"], key=lambda x: x["days_since_update"], reverse=True):
-    lines.append(
-        f"| {issue_link(e['number'], e['title'])} | {e['title']} | {e['days_since_update']} days |"
-    )
-lines.append("")
+# Find the field that contains our lane options
+status_field = None
+for field in project["fields"]["nodes"]:
+    if not field:
+        continue
+    field_option_names = {opt["name"] for opt in field.get("options", [])}
+    if any(lane in field_option_names for lane in LANES):
+        status_field = field
+        break
 
-# ── Preserve hand-written sections if the file already exists ────────────────
-HAND_WRITTEN_MARKER = "<!-- HAND-WRITTEN SECTIONS START -->"
+if not status_field:
+    # Fallback: look for a field named "Status"
+    for field in project["fields"]["nodes"]:
+        if field and field.get("name", "").lower() == "status":
+            status_field = field
+            break
 
-try:
-    with open(output_file) as f:
-        existing = f.read()
-    idx = existing.find(HAND_WRITTEN_MARKER)
-    if idx != -1:
-        preserved = existing[idx:]
+if not status_field:
+    available = [f.get("name") for f in project["fields"]["nodes"] if f]
+    print(f"ERROR: No field with the expected lane options found in project.", file=sys.stderr)
+    print(f"       Available fields: {available}", file=sys.stderr)
+    sys.exit(1)
+
+field_id = status_field["id"]
+options  = {opt["name"]: opt["id"] for opt in status_field["options"]}
+print(f"    Using field '{status_field['name']}' (ID: {field_id})")
+print(f"    Available options: {list(options.keys())}")
+
+missing = [lane for lane in LANES if lane not in options]
+if missing:
+    print(f"ERROR: Required lane(s) not found in project field: {missing}", file=sys.stderr)
+    sys.exit(1)
+
+# ── Step 2: Fetch all existing project items ─────────────────────────────────
+print("    Fetching existing project items …")
+existing_items: dict[int, dict] = {}   # issue_number → {item_id, status}
+cursor = None
+while True:
+    resp = run_graphql("""
+query($projectId: ID!, $after: String) {
+  node(id: $projectId) {
+    ... on ProjectV2 {
+      items(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          content { ... on Issue { number } }
+          fieldValues(first: 10) {
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+                field { ... on ProjectV2SingleSelectField { name } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+""", projectId=project_id, after=cursor)
+    items_page = resp["data"]["node"]["items"]
+    for item in items_page["nodes"]:
+        content = item.get("content") or {}
+        if "number" not in content:
+            continue
+        issue_num = content["number"]
+        current_status = None
+        for fv in item["fieldValues"]["nodes"]:
+            fv_field = fv.get("field", {})
+            if fv_field.get("name") == status_field["name"]:
+                current_status = fv.get("name")
+                break
+        existing_items[issue_num] = {"item_id": item["id"], "status": current_status}
+    if items_page["pageInfo"]["hasNextPage"]:
+        cursor = items_page["pageInfo"]["endCursor"]
     else:
-        # File exists but has no marker — keep everything after the first hand-written section
-        m = re.search(r'\n## 1\.', existing)
-        preserved = (HAND_WRITTEN_MARKER + "\n\n" + existing[m.start():].lstrip()) if m else ""
-except FileNotFoundError:
-    preserved = ""
+        break
+print(f"    Found {len(existing_items)} existing items in project.")
 
-if not preserved:
-    preserved = (
-        HAND_WRITTEN_MARKER + "\n\n"
-        "---\n\n"
-        "## 1. Already Implemented in Code\n\n"
-        "*To be filled in by AI analysis or manual review.*\n\n"
-        "---\n\n"
-        "## 2. Can Do Without More Details\n\n"
-        "*To be filled in by AI analysis or manual review.*\n\n"
-        "---\n\n"
-        "## 3. Need More Details\n\n"
-        "*To be filled in by AI analysis or manual review.*\n"
-    )
+# ── Step 3: Compute lane assignments ─────────────────────────────────────────
+# The auto-classification always wins for objective lanes (Obsolete, Implemented).
+# For subjective lanes (Ready / Need more details) the existing project state is
+# respected; IssueAnalysis.md is used only for issues not yet in the project.
+lane_assignments: dict[int, str] = {}
 
-content = "\n".join(lines) + "\n---\n\n" + preserved + "\n"
+# Potentially Obsolete
+for e in data["obsolete"]:
+    lane_assignments[e["number"]] = LANE_OBSOLETE
 
-with open(output_file, "w") as f:
-    f.write(content)
+# Already Implemented – active issues whose linked PRs are all merged
+for e in data["active"]:
+    if e.get("prs") and not e.get("open_prs"):
+        lane_assignments[e["number"]] = LANE_IMPLEMENTED
 
-print(f"    Written to {output_file}")
+# Ready – Copilot-assigned issues and issues with open PRs
+for e in data["copilot"]:
+    lane_assignments[e["number"]] = LANE_READY
+for e in data["excluded"]:
+    lane_assignments[e["number"]] = LANE_READY
+
+# Remaining active issues (no PRs, not stale, not Copilot)
+for e in data["active"]:
+    num = e["number"]
+    if num in lane_assignments:
+        continue  # already assigned above (e.g. has merged PRs)
+    # If already in project with a valid lane, preserve it
+    if num in existing_items and existing_items[num]["status"] in LANES:
+        lane_assignments[num] = existing_items[num]["status"]
+    # Seed from IssueAnalysis.md sections
+    elif num in implemented_from_file:
+        lane_assignments[num] = LANE_IMPLEMENTED
+    elif num in ready_from_file:
+        lane_assignments[num] = LANE_READY
+    elif num in needs_from_file:
+        lane_assignments[num] = LANE_NEEDS_DETAILS
+    else:
+        lane_assignments[num] = LANE_NEEDS_DETAILS   # default
+
+counts = Counter(lane_assignments.values())
+print("    Lane assignment summary:")
+for lane in LANES:
+    print(f"      {lane}: {counts.get(lane, 0)}")
+
+# ── Step 4: Add / update project items ───────────────────────────────────────
+print("    Updating project …")
+added = updated = skipped = errors = 0
+
+for issue_num, target_lane in sorted(lane_assignments.items()):
+    node_id   = issue_node_ids.get(issue_num)
+    option_id = options[target_lane]
+
+    if not node_id:
+        print(f"    WARNING: no node ID for issue #{issue_num}; skipping.", file=sys.stderr)
+        errors += 1
+        continue
+
+    existing = existing_items.get(issue_num)
+
+    if existing and existing["status"] == target_lane:
+        skipped += 1
+        continue
+
+    if existing:
+        # Update existing item's lane
+        resp = run_graphql("""
+mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+  updateProjectV2ItemFieldValue(input: {
+    projectId: $projectId
+    itemId: $itemId
+    fieldId: $fieldId
+    value: { singleSelectOptionId: $optionId }
+  }) {
+    projectV2Item { id }
+  }
+}
+""", fail_on_error=False,
+     projectId=project_id, itemId=existing["item_id"],
+     fieldId=field_id, optionId=option_id)
+        if resp is None:
+            errors += 1
+        else:
+            updated += 1
+    else:
+        # Add issue to project
+        resp = run_graphql("""
+mutation($projectId: ID!, $contentId: ID!) {
+  addProjectV2ItemById(input: {
+    projectId: $projectId
+    contentId: $contentId
+  }) {
+    item { id }
+  }
+}
+""", fail_on_error=False, projectId=project_id, contentId=node_id)
+        if resp is None:
+            errors += 1
+            continue
+        item_id = resp["data"]["addProjectV2ItemById"]["item"]["id"]
+        # Set the lane
+        resp2 = run_graphql("""
+mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+  updateProjectV2ItemFieldValue(input: {
+    projectId: $projectId
+    itemId: $itemId
+    fieldId: $fieldId
+    value: { singleSelectOptionId: $optionId }
+  }) {
+    projectV2Item { id }
+  }
+}
+""", fail_on_error=False,
+     projectId=project_id, itemId=item_id,
+     fieldId=field_id, optionId=option_id)
+        if resp2 is None:
+            errors += 1
+        else:
+            added += 1
+
+    time.sleep(0.05)   # stay well within GitHub's rate limit
+
+print(f"    Done: added={added} updated={updated} skipped={skipped} errors={errors}")
+if errors:
+    print(f"    {errors} error(s) encountered – review warnings above.", file=sys.stderr)
 PYEOF
 
 echo ""
-echo "==> Done. Review $OUTPUT before committing."
+echo "==> Done."
