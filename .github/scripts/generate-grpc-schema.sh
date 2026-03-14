@@ -102,11 +102,11 @@ foreach (var kvp in serviceTypesByPackage)
     {
         ProtoSyntax = ProtoSyntax.Proto3
     };
-    
+
     try
     {
         var schema = generator.GetSchema(kvp.Value.ToArray());
-        
+
         // Remove the syntax line from individual schemas as we add it once at the top
         var lines = schema.Split('\n');
         foreach (var line in lines)
@@ -116,7 +116,7 @@ foreach (var kvp in serviceTypesByPackage)
                 combinedSchema.AppendLine(line);
             }
         }
-        
+
         combinedSchema.AppendLine();
     }
     catch (Exception ex)
