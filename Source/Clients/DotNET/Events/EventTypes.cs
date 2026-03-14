@@ -112,6 +112,27 @@ public class EventTypes : IEventTypes
                     UpcastJmesPath = upcastBuilder.ToJson().ToJsonString(),
                     DowncastJmesPath = downcastBuilder.ToJson().ToJsonString()
                 });
+
+                // Ensure both from and to generation schemas are registered so the kernel
+                // can store all generations. If a generation schema is not explicitly known
+                // (e.g. a previous generation schema), use an empty schema.
+                if (!registration.Generations.Any(g => g.Generation == migrator.From.Value))
+                {
+                    registration.Generations.Add(new EventTypeGenerationDefinition
+                    {
+                        Generation = migrator.From,
+                        Schema = "{}"
+                    });
+                }
+
+                if (!registration.Generations.Any(g => g.Generation == migrator.To.Value))
+                {
+                    registration.Generations.Add(new EventTypeGenerationDefinition
+                    {
+                        Generation = migrator.To,
+                        Schema = "{}"
+                    });
+                }
             }
 
             registrations.Add(registration);
