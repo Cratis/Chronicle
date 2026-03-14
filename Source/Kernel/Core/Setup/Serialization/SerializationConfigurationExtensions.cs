@@ -24,6 +24,7 @@ public static class SerializationConfigurationExtensions
 {
     static readonly IEnumerable<JsonConverter> _converters = [
         new EnumConverterFactory(),
+        new ConceptDictionaryJsonConverterFactory(),
         new EnumerableConceptAsJsonConverterFactory(),
         new ConceptAsJsonConverterFactory(),
         new DateOnlyJsonConverter(),
@@ -130,7 +131,7 @@ public static class SerializationConfigurationExtensions
                     {
                         return false;
                     }
-                    current = current.BaseType!;
+                    current = current.BaseType;
                 }
 
                 return type == typeof(JsonObject) || type == typeof(JsonSchema) || (type.Namespace?.StartsWith("Cratis") ?? false);

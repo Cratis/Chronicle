@@ -4,7 +4,7 @@
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { AllReadModelDefinitions, ReadModelSource } from 'Api/ReadModelTypes';
 import { Page } from 'Components/Common/Page';
-import type { JsonSchema } from 'Components/JsonSchema';
+import type { JsonSchema } from '@cratis/components/types';
 import { ProjectionEditor, setCreateReadModelCallback, setEditReadModelCallback, setDraftReadModel as setDraftReadModelInProvider } from 'Components/ProjectionEditor';
 import { ReadModelTypeEditor } from 'Components/ReadModelTypeEditor/ReadModelTypeEditor';
 import { Menubar } from 'primereact/menubar';
@@ -26,6 +26,7 @@ import { FluxCapacitor } from 'Icons';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { TimeMachineDialog, ReadModelInstances } from 'Components';
 import { Json } from 'Features';
+import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
 
 const projectionDeclarationPattern = /^(\s*projection\s+[\w.]+\s*=>\s*)([\w.]+)/m;
 
@@ -108,7 +109,13 @@ export const Projections = () => {
     const [previewProjection, setPreviewProjectionValues, clearPreviewProjectionValues] = PreviewProjection.use();
     const [saveProjection, setSaveProjectionValues, clearSaveProjectionValues] = SaveProjection.use();
     const [TimeMachineDialogWrapper, showTimeMachineDialog] = useDialog(TimeMachineDialog);
+    const [SaveWithInferredReadModelWrapper, showSaveWithInferredReadModel] = useDialog(SaveWithInferredReadModelDialog);
     const [showConfirmation] = useConfirmationDialog();
+
+    const normalizedDeclaration = useMemo(
+        () => toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
+        [declarationValue, readModels.data, draftReadModel]
+    );
 
     const selectedReadModel = useMemo(() => {
         if (!selectedProjection || !readModels.data) return null;
@@ -343,11 +350,22 @@ export const Projections = () => {
                                     icon: <faIcons.FaFloppyDisk className='mr-2' />,
                                     disabled: !!saveDisabledReason,
                                     command: saveDisabledReason ? undefined : async () => {
+                                        // When there is no read model in the declaration, prompt the user to name one.
+                                        if (!readModelTokenFromDeclaration && !draftReadModel) {
+                                            const [result] = await showSaveWithInferredReadModel();
+                                            if (result === DialogResult.Ok) {
+                                                await refreshProjections({ eventStore: params.eventStore! });
+                                                refreshReadModels({ eventStore: params.eventStore! });
+                                                setSyntaxErrors([]);
+                                                setOriginalDeclarationValue(declarationValue);
+                                            }
+                                            return;
+                                        }
                                         clearSaveProjectionValues();
                                         setSaveProjectionValues({
                                             eventStore: params.eventStore!,
                                             namespace: params.namespace!,
-                                            declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
+                                            declaration: normalizedDeclaration,
                                             draftReadModel: draftReadModel ?? undefined
                                         });
                                         const result = await saveProjection.execute();
@@ -502,6 +520,8 @@ export const Projections = () => {
                     />
                 )}
             </>
+
+            <SaveWithInferredReadModelWrapper declaration={normalizedDeclaration} />
         </Page>
     );
 };

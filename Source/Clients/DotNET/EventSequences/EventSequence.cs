@@ -66,7 +66,8 @@ public class EventSequence(
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default)
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
@@ -111,7 +112,8 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract(),
             Tags = allTags,
-            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract()
+            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract(),
+            Occurred = occurred
         });
 
         return ResolveViolationMessages(response.ToClient());
@@ -126,7 +128,8 @@ public class EventSequence(
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default)
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default)
     {
         var eventsToAppend = events.Select(@event =>
         {
@@ -145,7 +148,8 @@ public class EventSequence(
                 EventStreamId = eventStreamId ?? EventStreamId.Default,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString(),
-                Tags = allTags
+                Tags = allTags,
+                Occurred = occurred
             };
         }).ToList();
 
@@ -187,7 +191,8 @@ public class EventSequence(
                 EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString(),
-                Tags = allTags
+                Tags = allTags,
+                Occurred = @event.Occurred
             };
         }).ToList();
 

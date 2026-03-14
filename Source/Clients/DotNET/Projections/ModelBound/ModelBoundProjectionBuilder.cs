@@ -107,6 +107,27 @@ internal class ModelBoundProjectionBuilder(
         return cachedEventType;
     }
 
+    void ProcessConstantKeyForEventAttributes(IEnumerable<(Attribute Attribute, Type EventType)> attributesWithEventType, IDictionary<EventType, FromDefinition> targetFrom)
+    {
+        foreach (var (attr, eventType) in attributesWithEventType)
+        {
+            var constantKey = attr switch
+            {
+                ICountAttribute countAttr => countAttr.ConstantKey,
+                IIncrementAttribute incrementAttr => incrementAttr.ConstantKey,
+                IDecrementAttribute decrementAttr => decrementAttr.ConstantKey,
+                _ => null
+            };
+
+            if (!string.IsNullOrEmpty(constantKey))
+            {
+                var eventTypeId = GetOrCreateEventType(eventType);
+                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
+            }
+        }
+    }
+
     void BuildFromEveryDefinition(ProjectionDefinition definition)
     {
         if (_fromEveryAttributes.Count == 0)
@@ -238,6 +259,10 @@ internal class ModelBoundProjectionBuilder(
         TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
+        ProcessConstantKeyForEventAttributes(parameter.GetAttributesOfGenericType<IncrementAttribute<object>>(), targetFrom);
+        ProcessConstantKeyForEventAttributes(parameter.GetAttributesOfGenericType<DecrementAttribute<object>>(), targetFrom);
+        ProcessConstantKeyForEventAttributes(parameter.GetAttributesOfGenericType<CountAttribute<object>>(), targetFrom);
+
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<SetFromContextAttribute<object>>())
         {
             allEventTypesReferencedByModel.Add(eventType);
@@ -288,6 +313,14 @@ internal class ModelBoundProjectionBuilder(
                 var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
                 var keyPropertyPath = new PropertyPath(key);
                 fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+            }
+
+            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
+            if (!string.IsNullOrEmpty(constantKey))
+            {
+                var eventTypeId = GetOrCreateEventType(eventType);
+                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
             }
         }
 
@@ -346,6 +379,10 @@ internal class ModelBoundProjectionBuilder(
         TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
         TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
+        ProcessConstantKeyForEventAttributes(property.GetAttributesOfGenericType<IncrementAttribute<object>>(), targetFrom);
+        ProcessConstantKeyForEventAttributes(property.GetAttributesOfGenericType<DecrementAttribute<object>>(), targetFrom);
+        ProcessConstantKeyForEventAttributes(property.GetAttributesOfGenericType<CountAttribute<object>>(), targetFrom);
+
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<SetFromContextAttribute<object>>())
         {
             eventTypesReferencedByMember.Add(eventType);
@@ -400,6 +437,12 @@ internal class ModelBoundProjectionBuilder(
                 PropertyValidator.ValidatePropertyExists(eventType, key);
                 var keyPropertyPath = new PropertyPath(key);
                 fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+            }
+
+            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
+            if (!string.IsNullOrEmpty(constantKey))
+            {
+                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
             }
         }
 

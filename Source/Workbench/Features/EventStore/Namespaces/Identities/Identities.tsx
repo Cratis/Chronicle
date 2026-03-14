@@ -3,7 +3,7 @@
 
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
-import { DataPage } from 'Components';
+import { DataPage } from '@cratis/components/DataPage';
 import { Column } from 'primereact/column';
 import { useParams } from 'react-router-dom';
 import { AllIdentities, AllIdentitiesParameters } from 'Api/Identities';

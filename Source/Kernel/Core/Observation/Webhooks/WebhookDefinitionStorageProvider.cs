@@ -16,7 +16,7 @@ public class WebhookDefinitionStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var webhookKey = WebhookKey.Parse(grainId.Key.ToString()!);
+        var webhookKey = WebhookKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(webhookKey.EventStore);
         return eventStore.Webhooks.Delete(webhookKey.WebhookId);
     }

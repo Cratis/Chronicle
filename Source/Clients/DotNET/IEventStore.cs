@@ -11,6 +11,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
@@ -81,6 +82,11 @@ public interface IEventStore
     /// Gets the <see cref="IWebhooks"/> for the event store.
     /// </summary>
     IWebhooks Webhooks { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventStoreSubscriptions"/> for the event store.
+    /// </summary>
+    IEventStoreSubscriptions Subscriptions { get; }
 
     /// <summary>
     /// Gets the <see cref="IFailedPartitions"/> for the event store.

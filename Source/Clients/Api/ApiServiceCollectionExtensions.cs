@@ -10,6 +10,7 @@ using System.Xml.XPath;
 using Cratis.Arc.Swagger;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Identities;
 using Cratis.Execution;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -67,6 +68,7 @@ public static class ApiServiceCollectionExtensions
         }
 
         services.AddCratisChronicleServices();
+        services.AddCausation();
 
         services.AddSingleton<IControllerActivator, CustomControllerActivator>();
 

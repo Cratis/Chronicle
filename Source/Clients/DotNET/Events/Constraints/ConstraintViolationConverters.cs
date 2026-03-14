@@ -17,6 +17,7 @@ internal static class ConstraintViolationConverters
         new(
             violation.EventTypeId,
             violation.SequenceNumber,
+            (ConstraintType)violation.ConstraintType,
             violation.ConstraintName,
             violation.Message,
             new(violation.Details));

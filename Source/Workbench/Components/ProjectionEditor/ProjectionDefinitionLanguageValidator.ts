@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { editor } from 'monaco-editor';
-import type { JsonSchema } from '../JsonSchema';
+import type { JsonSchema } from '@cratis/components/types';
 import type { ReadModelInfo } from './index';
 
 export interface DraftReadModelInfo {

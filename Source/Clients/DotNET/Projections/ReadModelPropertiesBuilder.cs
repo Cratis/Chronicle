@@ -43,7 +43,7 @@ public class ReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder, TParentBui
     public TBuilder Decrement<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
         var propertyPath = _namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
-        _propertyExpressions[propertyPath] = new IncrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
+        _propertyExpressions[propertyPath] = new DecrementBuilder<TReadModel, TEvent, TProperty>(propertyPath);
         return (this as TBuilder)!;
     }
 

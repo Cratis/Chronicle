@@ -11,7 +11,7 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { FailedPartition } from 'Api/Observation';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 
 const defaultFilters: DataTableFilterMeta = {

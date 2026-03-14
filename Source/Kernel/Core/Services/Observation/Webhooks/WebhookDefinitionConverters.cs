@@ -47,7 +47,12 @@ internal static class WebhookDefinitionConverters
             Target = webhookDefinition.Target.ToContract()
         };
 
-    static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
+    /// <summary>
+    /// Convert from <see cref="Contracts.Observation.Webhooks.WebhookTarget"/> to <see cref="WebhookTarget"/>.
+    /// </summary>
+    /// <param name="target"><see cref="Contracts.Observation.Webhooks.WebhookTarget"/> to convert from.</param>
+    /// <returns>Converted <see cref="WebhookTarget"/>.</returns>
+    internal static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
         var authorization = target.Authorization switch
         {

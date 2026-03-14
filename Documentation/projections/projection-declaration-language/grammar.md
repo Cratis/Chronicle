@@ -29,10 +29,10 @@ EBNF is a notation for formally describing syntax. Here are the key elements use
 ```ebnf
 Document        = { Projection } ;
 
-Projection      = "projection", Ident, "=>", TypeRef, NL,
-                  INDENT,
+Projection      = "projection", Ident, [ "=>", TypeRef ], NL,
+                  [ INDENT,
                     { ProjDirective | Block },
-                  DEDENT ;
+                  DEDENT ] ;
 
 ProjDirective   = "no", "automap", NL
                 | KeyDecl

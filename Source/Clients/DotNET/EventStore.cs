@@ -7,6 +7,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -19,6 +20,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -47,6 +49,7 @@ public class EventStore : IEventStore
     /// <param name="namespace">Namespace for the event store.</param>
     /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
     /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
+    /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for getting event type migrators.</param>
     /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
     /// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
@@ -63,6 +66,7 @@ public class EventStore : IEventStore
         EventStoreNamespaceName @namespace,
         IChronicleConnection connection,
         IClientArtifactsProvider clientArtifactsProvider,
+        IEventTypeMigrators eventTypeMigrators,
         ICorrelationIdAccessor correlationIdAccessor,
         IConcurrencyScopeStrategies concurrencyScopeStrategies,
         ICausationManager causationManager,
@@ -86,7 +90,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
 
@@ -159,6 +163,7 @@ public class EventStore : IEventStore
 
         Projections = projections;
         Webhooks = new Webhooks.Webhooks(EventTypes, this, loggerFactory.CreateLogger<Webhooks.Webhooks>());
+        Subscriptions = new EventStoreSubscriptions.EventStoreSubscriptions(EventTypes, this, loggerFactory.CreateLogger<EventStoreSubscriptions.EventStoreSubscriptions>());
         FailedPartitions = new FailedPartitions(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
@@ -176,7 +181,6 @@ public class EventStore : IEventStore
 
         Seeding = new EventSeeding(
             eventStoreName,
-            @namespace,
             connection,
             EventTypes,
             _eventSerializer,
@@ -226,6 +230,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IWebhooks Webhooks { get; }
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptions Subscriptions { get; }
 
     /// <inheritdoc/>
     public IFailedPartitions FailedPartitions { get; }

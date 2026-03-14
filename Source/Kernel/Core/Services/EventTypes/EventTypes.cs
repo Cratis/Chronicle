@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Storage;
@@ -26,13 +27,59 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            await storage
-                .GetEventStore(request.EventStore).EventTypes
-                .Register(
-                    eventType.Type.ToChronicle(),
-                    schema,
-                    (Concepts.Events.EventTypeOwner)(int)eventType.Owner,
-                    (Concepts.Events.EventTypeSource)(int)eventType.Source);
+            var owner = (Concepts.Events.EventTypeOwner)(int)eventType.Owner;
+            var source = (Concepts.Events.EventTypeSource)(int)eventType.Source;
+
+            if (eventType.Migrations.Count > 0 || eventType.Generations.Count > 1)
+            {
+                // Register using full definition with all generations and migrations
+                var generations = new List<Concepts.Events.EventTypeGenerationDefinition>();
+                foreach (var genDef in eventType.Generations)
+                {
+                    var genSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
+                    generations.Add(new Concepts.Events.EventTypeGenerationDefinition(genDef.Generation, genSchema));
+                }
+
+                if (generations.Count == 0)
+                {
+                    generations.Add(new Concepts.Events.EventTypeGenerationDefinition(eventType.Type.ToChronicle().Generation, schema));
+                }
+
+                var migrations = eventType.Migrations.Select(m =>
+                {
+                    var upcastJson = string.IsNullOrEmpty(m.UpcastJmesPath)
+                        ? new JsonObject()
+                        : JsonNode.Parse(m.UpcastJmesPath)?.AsObject() ?? new JsonObject();
+                    var downcastJson = string.IsNullOrEmpty(m.DowncastJmesPath)
+                        ? new JsonObject()
+                        : JsonNode.Parse(m.DowncastJmesPath)?.AsObject() ?? new JsonObject();
+                    return new Concepts.Events.EventTypeMigrationDefinition(
+                        m.FromGeneration,
+                        m.ToGeneration,
+                        [],
+                        upcastJson,
+                        downcastJson);
+                }).ToList();
+
+                var definition = new Concepts.Events.EventTypeDefinition(
+                    eventType.Type.ToChronicle().Id,
+                    owner,
+                    eventType.Type.Tombstone,
+                    generations,
+                    migrations);
+
+                await storage.GetEventStore(request.EventStore).EventTypes.Register(definition);
+            }
+            else
+            {
+                await storage
+                    .GetEventStore(request.EventStore).EventTypes
+                    .Register(
+                        eventType.Type.ToChronicle(),
+                        schema,
+                        owner,
+                        source);
+            }
         }
     }
 

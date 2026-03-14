@@ -94,6 +94,7 @@ public static class OpenTelemetryConfigurationExtensions
                     .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
+                    .AddRuntimeInstrumentation()
                     .AddOtlpExporter();
             });
         return services;

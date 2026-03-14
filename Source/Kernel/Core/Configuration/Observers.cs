@@ -35,4 +35,11 @@ public class Observers
     /// Gets the max delay time in seconds for retrying a failed partition.
     /// </summary>
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
+
+    /// <summary>
+    /// Gets whether observers should automatically replay when their definition changes.
+    /// When enabled, projections, reducers, reactors, and webhooks replay immediately on definition change
+    /// instead of creating a recommendation for manual replay.
+    /// </summary>
+    public bool ReplayOnDefinitionChange { get; init; }
 }

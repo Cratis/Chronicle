@@ -20,7 +20,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage) : IGrainStora
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var projectionKey = ProjectionKey.Parse(grainId.Key.ToString()!);
+        var projectionKey = ProjectionKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         return eventStore.Projections.Delete(projectionKey.ProjectionId);
     }

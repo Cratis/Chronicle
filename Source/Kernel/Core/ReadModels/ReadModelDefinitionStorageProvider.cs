@@ -19,7 +19,7 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
+        var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
         return eventStore.ReadModels.Delete(readModelKey.Identifier);
     }

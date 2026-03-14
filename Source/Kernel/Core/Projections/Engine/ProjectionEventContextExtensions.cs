@@ -237,7 +237,7 @@ public static class ProjectionEventContextExtensions
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty)
     {
-        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value!, _.Key.ArrayIndexers));
+        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
         return observable;
     }
 }

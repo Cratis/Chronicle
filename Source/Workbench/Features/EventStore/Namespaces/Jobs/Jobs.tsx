@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import strings from 'Strings';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa6';
 import { AllJobs, AllJobsParameters } from 'Api/Jobs';

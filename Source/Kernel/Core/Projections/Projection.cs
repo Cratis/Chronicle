@@ -6,12 +6,15 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.ReadModels;
@@ -19,6 +22,7 @@ using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 using Orleans.Utilities;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
@@ -32,6 +36,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="storage"><see cref="IStorage"/> for persisting projection state.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="logger">Logger for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Projections)]
 public class Projection(
@@ -39,6 +44,7 @@ public class Projection(
     IProjectionFactory projectionFactory,
     IObjectComparer objectComparer,
     IStorage storage,
+    IOptions<ChronicleOptions> options,
     ILogger<Projection> logger) : Grain<ProjectionDefinition>, IProjection
 {
     readonly ObserverManager<INotifyProjectionDefinitionsChanged> _definitionObservers = new(TimeSpan.FromDays(365 * 4), logger);
@@ -81,7 +87,15 @@ public class Projection(
             _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
-            await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+
+            if (options.Value.Observers.ReplayOnDefinitionChange)
+            {
+                await ReplayForAllNamespaces(key, namespaceNames);
+            }
+            else
+            {
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+            }
         }
     }
 
@@ -401,6 +415,16 @@ public class Projection(
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
         return await projectionFactory.Create(key.EventStore, eventStoreNamespace, State, readModelDefinition, eventTypeSchemas);
+    }
+
+    async Task ReplayForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        foreach (var @namespace in namespaces)
+        {
+            logger.AutoReplayingProjection(key.ProjectionId, @namespace);
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId));
+            await observer.Replay();
+        }
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)

@@ -49,6 +49,7 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -56,6 +57,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

@@ -34,5 +34,8 @@
         <PackageReference Include="Roslynator.Analyzers" PrivateAssets="All" />
         <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All" />
         <PackageReference Include="System.Text.Json" />
+        <!-- Force transitive package versions to avoid NU1603/NU1608 from Orleans/Roslyn prerelease mismatches -->
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" PrivateAssets="All" />
     </ItemGroup>
 </Project>

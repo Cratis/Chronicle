@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
+using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -33,20 +35,9 @@ public class EventConverter(
     /// <inheritdoc/>
     public async Task<AppendedEvent> ToAppendedEvent(Event @event)
     {
-        var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
-        var content = (JsonNode.Parse(@event.Content[EventTypeGeneration.First.ToString()].ToString()) as JsonObject)!;
-        var eventSchema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var releasedContent = await jsonComplianceManager.Release(
-            eventStoreName,
-            eventStoreNamespace,
-            eventSchema.Schema,
-            @event.EventSourceId,
-            content);
-
-        var releasedContentAsExpandoObject = expandoObjectConverter.ToExpandoObject(releasedContent, eventSchema.Schema);
-        var hash = @event.ContentHashes.TryGetValue(EventTypeGeneration.First.ToString(), out var hashValue)
-            ? new EventHash(hashValue)
-            : EventHash.NotSet;
+        var (eventType, generationKey, content) = ExtractContent(@event);
+        var hash = ExtractHash(@event, generationKey);
+        var resolvedContent = await ResolveContent(eventType, @event.EventSourceId, content);
 
         return new AppendedEvent(
             new(
@@ -64,6 +55,65 @@ public class EventConverter(
                 await identityStorage.GetFor(@event.CausedBy),
                 @event.Tags.Select(_ => new Tag(_)).ToArray(),
                 hash),
-            releasedContentAsExpandoObject);
+            resolvedContent);
+    }
+
+    static EventHash ExtractHash(Event @event, string generationKey)
+    {
+        if (@event.Compensations.Any())
+        {
+            var latest = @event.Compensations.Last();
+            var key = latest.EventTypeGeneration.ToString();
+            return latest.ContentHashes.TryGetValue(key, out var hv) ? new EventHash(hv) : EventHash.NotSet;
+        }
+
+        return @event.ContentHashes.TryGetValue(generationKey, out var hashValue) ? new EventHash(hashValue) : EventHash.NotSet;
+    }
+
+    static JsonObject ParseContent(IDictionary<string, BsonDocument> content, string generationKey)
+        => (JsonNode.Parse(content[generationKey].ToString()) as JsonObject)!;
+
+    static ExpandoObject ConvertToRawExpandoObject(JsonObject document)
+    {
+        var result = new ExpandoObject();
+        var dict = (IDictionary<string, object?>)result;
+        foreach (var (key, value) in document)
+            dict[key] = ConvertJsonNodeToClrType(value);
+        return result;
+    }
+
+    static object? ConvertJsonNodeToClrType(JsonNode? node) => node switch
+    {
+        null => null,
+        JsonObject obj => ConvertToRawExpandoObject(obj),
+        JsonArray array => array.Select(ConvertJsonNodeToClrType).ToArray(),
+        JsonValue value when value.TryGetValue<bool>(out var b) => b,
+        JsonValue value when value.TryGetValue<long>(out var l) => l,
+        JsonValue value when value.TryGetValue<double>(out var d) => d,
+        JsonValue value when value.TryGetValue<string>(out var s) => s,
+        _ => node.ToString()
+    };
+
+    (EventType EventType, string GenerationKey, JsonObject Content) ExtractContent(Event @event)
+    {
+        var generationKey = EventTypeGeneration.First.ToString();
+        var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
+
+        if (!@event.Compensations.Any())
+            return (eventType, generationKey, ParseContent(@event.Content, generationKey));
+
+        var latest = @event.Compensations.Last();
+        var compensationKey = latest.EventTypeGeneration.ToString();
+        return (new EventType(@event.Type, latest.EventTypeGeneration, false), compensationKey, ParseContent(latest.Content, compensationKey));
+    }
+
+    async Task<ExpandoObject> ResolveContent(EventType eventType, EventSourceId eventSourceId, JsonObject content)
+    {
+        if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+            return ConvertToRawExpandoObject(content);
+
+        var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        var released = await jsonComplianceManager.Release(eventStoreName, eventStoreNamespace, schema.Schema, eventSourceId, content);
+        return expandoObjectConverter.ToExpandoObject(released, schema.Schema);
     }
 }
