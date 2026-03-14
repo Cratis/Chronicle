@@ -3,12 +3,7 @@
 
 export * from './ColumnFilter';
 export * from './Common';
-export * from './DataPage';
-export * from './DataTables';
 export * from './Dialogs';
 export * from './ItemsList';
-export * from './ObjectContentViewer';
-export * from './ObjectNavigationalBar';
 export * from './ReadModelInstances';
-export * from './SchemaEditor';
 export * from './TimeMachineDialog';

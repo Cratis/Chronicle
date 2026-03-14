@@ -63,10 +63,13 @@ internal sealed class ProjectionParser
         var projectionName = _typeRefs.Parse(context);
         if (projectionName is null) return null;
 
-        if (context.Expect(TokenType.Arrow) is null) return null;
-
-        var readModelType = _typeRefs.Parse(context);
-        if (readModelType is null) return null;
+        TypeRef? readModelType = null;
+        if (context.Check(TokenType.Arrow))
+        {
+            context.Advance(); // consume the arrow
+            readModelType = _typeRefs.Parse(context);
+            if (readModelType is null) return null;
+        }
 
         var directives = new List<ProjectionDirective>();
 

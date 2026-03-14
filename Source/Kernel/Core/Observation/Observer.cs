@@ -175,6 +175,7 @@ public partial class Observer(
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
             observerDefinition,
+            _eventSequence,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 

@@ -3,13 +3,15 @@
 
 import { Column } from 'primereact/column';
 import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
-import { ChangePasswordDialog, ChangePasswordDialogProps } from './ChangePassword';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { ChangePasswordDialog, ChangePasswordDialogRequest } from './ChangePassword';
+import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { useState } from 'react';
 import strings from 'Strings';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { Guid } from '@cratis/fundamentals';
 
 const formatDate = (date: Date) => {
     if (!date) return '';
@@ -18,15 +20,19 @@ const formatDate = (date: Date) => {
 
 export const Users = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [AddUserWrapper, showAddUser] = useDialog(AddUserDialog);
-    const [ChangePasswordWrapper, showChangePassword] = useDialog<ChangePasswordDialogProps>(ChangePasswordDialog);
     const [showConfirmation] = useConfirmationDialog();
+    const [AddUserDialogWrapper, showAddUserDialog] = useDialog(AddUserDialog);
+    const [ChangePasswordDialogWrapper, showChangePasswordDialog] = useDialog<object, ChangePasswordDialogRequest>(ChangePasswordDialog);
     const [removeUser] = RemoveUser.use();
     const [requirePasswordChange] = RequirePasswordChange.use();
 
-    const handleChangePassword = () => {
+    const handleAddUser = async () => {
+        await showAddUserDialog();
+    };
+
+    const handleChangePassword = async () => {
         if (selectedUser) {
-            showChangePassword({ userId: selectedUser.id });
+            await showChangePasswordDialog({ userId: selectedUser.id });
         }
     };
 
@@ -74,7 +80,7 @@ export const Users = () => {
                         id="add"
                         label={strings.eventStore.system.users.actions.add}
                         icon={faIcons.FaPlus}
-                        command={() => showAddUser()} />
+                        command={handleAddUser} />
                     <MenuItem
                         id="changePassword"
                         label={strings.eventStore.system.users.actions.changePassword}
@@ -114,8 +120,8 @@ export const Users = () => {
                         body={(user: User) => formatDate(user.lastModifiedAt || new Date())} />
                 </DataPage.Columns>
             </DataPage>
-            <AddUserWrapper />
-            <ChangePasswordWrapper />
+            <AddUserDialogWrapper />
+            <ChangePasswordDialogWrapper userId={Guid.empty} />
         </>
     );
 };

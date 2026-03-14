@@ -30,6 +30,13 @@ public interface IEventTypesStorage
     Task Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code);
 
     /// <summary>
+    /// Register a complete <see cref="EventTypeDefinition"/> with all generations and migrations.
+    /// </summary>
+    /// <param name="definition">The <see cref="EventTypeDefinition"/> to register.</param>
+    /// <returns>Async task.</returns>
+    Task Register(EventTypeDefinition definition);
+
+    /// <summary>
     /// Get the latest <see cref="EventTypeSchema">event schema</see> for all registered <see cref="EventType">event types</see>.
     /// </summary>
     /// <returns>A collection of <see cref="EventTypeSchema">event schemas</see>.</returns>
@@ -40,6 +47,19 @@ public interface IEventTypesStorage
     /// </summary>
     /// <returns>Subject with all event type schemas.</returns>
     ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes();
+
+    /// <summary>
+    /// Get all the <see cref="EventTypeDefinition">event type definitions</see> for all registered event types.
+    /// </summary>
+    /// <returns>A collection of <see cref="EventTypeDefinition">event type definitions</see>.</returns>
+    Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions();
+
+    /// <summary>
+    /// Get the complete <see cref="EventTypeDefinition"/> for a specific event type.
+    /// </summary>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to get for.</param>
+    /// <returns>The <see cref="EventTypeDefinition"/>.</returns>
+    Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId);
 
     /// <summary>
     /// Get all the <see cref="EventTypeSchema">event schemas</see> for all generations for a specific <see cref="EventType"/>.

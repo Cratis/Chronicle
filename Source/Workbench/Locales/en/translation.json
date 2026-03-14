@@ -46,7 +46,8 @@
             "projections": "Projections",
             "reducers": "Reducers",
             "reactors": "Reactors",
-            "sinks": "Sinks"
+            "sinks": "Sinks",
+            "seedData": "Seed Data"
         },
         "system": {
             "groupLabel": "System",
@@ -178,7 +179,9 @@
                         "oauthClientId": "Client ID",
                         "oauthClientSecret": "Client Secret",
                         "isActive": "Active",
-                        "isReplayable": "Replayable"
+                        "isReplayable": "Replayable",
+                        "test": "Test",
+                        "testSuccess": "Webhook configuration is valid"
                     },
                     "removeWebhook": {
                         "title": "Remove Webhook",
@@ -216,6 +219,11 @@
                     "unsavedChanges": {
                         "title": "Unsaved Changes",
                         "message": "You have unsaved changes. Do you want to continue and discard them?"
+                    },
+                    "saveWithInferredReadModel": {
+                        "title": "Create Read Model",
+                        "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
+                        "readModelNameLabel": "Read Model Name"
                     }
                 }
             }
@@ -233,6 +241,12 @@
                     "description": "Description",
                     "type": "Type",
                     "occurred": "Occurred at"
+                },
+                "dialogs": {
+                    "ignoreRecommendation": {
+                        "title": "Ignore Recommendation",
+                        "message": "Are you sure you want to ignore the recommendation '{name}'? This action cannot be undone."
+                    }
                 }
             },
             "jobs": {
@@ -266,6 +280,11 @@
             "sequences": {
                 "title": "Sequences",
                 "empty": "No events found",
+                "actions": {
+                    "appendEvent": "Append Event",
+                    "redact": "Redact",
+                    "compensate": "Compensate"
+                },
                 "columns": {
                     "sequenceNumber": "Sequence number",
                     "eventSourceId": "Event Source Id",
@@ -277,6 +296,31 @@
                         "eventType": "Event type",
                         "eventSourceId": "Event source",
                         "occurred": "Occurred"
+                    }
+                },
+                "dialogs": {
+                    "appendEvent": {
+                        "title": "Append Event",
+                        "eventType": "Event Type",
+                        "selectEventType": "Select event type",
+                        "eventSourceId": "Event Source ID",
+                        "eventSourceIdPlaceholder": "Enter event source ID",
+                        "content": "Event Content",
+                        "contentPlaceholder": "Enter event content as JSON",
+                        "viewSchema": "View Schema"
+                    },
+                    "redact": {
+                        "title": "Redact Event",
+                        "reason": "Reason for redaction",
+                        "reasonPlaceholder": "Enter the reason for redacting this event",
+                        "confirmTitle": "Confirm Redaction",
+                        "confirmMessage": "Redacting an event cannot be undone. Are you sure you want to proceed?"
+                    },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Event Type",
+                        "content": "Compensating Content (JSON)"
                     }
                 }
             },

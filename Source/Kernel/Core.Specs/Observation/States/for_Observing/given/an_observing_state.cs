@@ -18,6 +18,7 @@ public class an_observing_state : Specification
 {
     protected IObserver _observer;
     protected IAppendedEventsQueues _appendedEventsQueues;
+    protected IEventSequence _eventSequence;
     protected Observing _state;
     protected ObserverState _storedState;
     protected ObserverState _resultingStoredState;
@@ -46,6 +47,8 @@ public class an_observing_state : Specification
         _observer = Substitute.For<IObserver>();
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
         _appendedEventsQueue = Substitute.For<IAppendedEventsQueue>();
+        _eventSequence = Substitute.For<IEventSequence>();
+        _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _observerId = Guid.NewGuid().ToString();
         _observerKey = new ObserverKey(
             _observerId,
@@ -69,6 +72,7 @@ public class an_observing_state : Specification
             _eventStoreNamespace,
             _eventSequenceId,
             _definitionState,
+            _eventSequence,
             Substitute.For<ILogger<Observing>>());
         _state.SetStateMachine(_observer);
         _storedState = new ObserverState
