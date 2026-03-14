@@ -22,35 +22,35 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        fromBuilder!.UsingKey(keyAccessor);
+        fromBuilder.UsingKey(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        fromBuilder!.UsingKeyFromContext(keyAccessor);
+        fromBuilder.UsingKeyFromContext(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        fromBuilder!.UsingParentKey(keyAccessor);
+        fromBuilder.UsingParentKey(keyAccessor);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback)
     {
-        fromBuilder!.UsingParentCompositeKey(builderCallback);
+        fromBuilder.UsingParentCompositeKey(builderCallback);
         return this;
     }
 
     /// <inheritdoc/>
     public IAddChildBuilder<TChildModel, TEvent> UsingParentKeyFromContext<TProperty>(Expression<Func<EventContext, TProperty>> keyAccessor)
     {
-        fromBuilder!.UsingParentKeyFromContext(keyAccessor);
+        fromBuilder.UsingParentKeyFromContext(keyAccessor);
         return this;
     }
 
@@ -68,7 +68,7 @@ public class AddChildBuilder<TParentReadModel, TChildModel, TEvent>(IChildrenBui
         foreach (var property in typeof(TChildModel).GetProperties())
         {
             var propertyPath = new PropertyPath(property.Name);
-            fromBuilder!.Set(propertyPath).To(childProperty + propertyPath);
+            fromBuilder.Set(propertyPath).To(childProperty + propertyPath);
         }
 
         return this;

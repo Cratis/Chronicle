@@ -73,7 +73,7 @@ public class Observing(
     {
         if (_subscription is not null)
         {
-            await appendedEventsQueues.Unsubscribe(_subscription!);
+            await appendedEventsQueues.Unsubscribe(_subscription);
         }
         return state;
     }

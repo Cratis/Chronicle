@@ -18,7 +18,7 @@ public class when_adding_chronicle_client_with_null_type : Specification
         _services.Configure<ChronicleAspNetCoreOptions>(options =>
         {
             options.EventStore = "test-store";
-            options.EventStoreNamespaceResolverType = null!;
+            options.EventStoreNamespaceResolverType = null;
         });
     }
 

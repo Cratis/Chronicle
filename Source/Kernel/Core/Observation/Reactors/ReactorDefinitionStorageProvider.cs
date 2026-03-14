@@ -16,7 +16,7 @@ public class ReactorDefinitionStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var reactorKey = ReactorKey.Parse(grainId.Key.ToString()!);
+        var reactorKey = ReactorKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(reactorKey.EventStore);
         return eventStore.Reactors.Delete(reactorKey.ReactorId);
     }

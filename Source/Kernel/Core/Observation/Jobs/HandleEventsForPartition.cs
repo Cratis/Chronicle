@@ -52,7 +52,7 @@ public class HandleEventsForPartition(
             _observer = GrainFactory.GetGrain<IObserver>(State.ObserverKey);
             var subscription = await _observer.GetSubscription();
             _eventSourceId = State.Partition.ToString();
-            _subscriber = (GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription)) as IObserverSubscriber)!;
+            _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, GetObserverSubscriberKey(subscription)) as IObserverSubscriber;
         }
         await base.OnActivateAsync(cancellationToken);
     }
@@ -97,7 +97,7 @@ public class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                _subscriber = (GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(subscription.SiloAddress)) as IObserverSubscriber)!;
+                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, request.ToObserverSubscriberKey(subscription.SiloAddress)) as IObserverSubscriber;
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
             }
