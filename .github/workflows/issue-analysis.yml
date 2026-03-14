@@ -2,45 +2,45 @@
 #
 # PURPOSE
 # ───────
-# Keeps IssueAnalysis.md up-to-date every week so the team always has a
-# reliable, data-driven view of the open backlog.
+# Keeps the "Issues Categorized" GitHub Project up-to-date every week so the
+# team always has a reliable, data-driven view of the open backlog.
+# Project: https://github.com/orgs/Cratis/projects/7
 #
 # WHAT IT PRODUCES
 # ────────────────
-# IssueAnalysis.md is divided into two parts:
+# Every open issue is placed in exactly one lane of the project:
 #
-#   Auto-generated sections (updated by this workflow on every run):
-#     • "Excluded — Has an Open Pull Request"
-#         Issues with at least one open PR are excluded from the triage
-#         backlog. The PR is linked so reviewers can check progress.
-#         Only open (not merged or closed) PRs are counted.
-#     • "Assigned to Copilot — No PR Yet"
-#         Issues that have been assigned to the Copilot user and have
-#         NO linked pull request at all (neither open nor merged). Issues
-#         that have a merged PR but are still open are moved to the
-#         hand-written backlog sections instead.
-#     • "Potentially Obsolete"
-#         Issues that have had zero activity for ≥ 2 years and no linked PR.
-#         These are candidates for closure or re-evaluation.
+#   • Potentially Obsolete
+#       Issues with no activity for ≥ 2 years and no linked PR.
+#       Candidates for closure or re-evaluation.
 #
-#   Hand-written sections (preserved by the script, updated by humans or AI):
-#     1. Already Implemented in Code
-#     2. Can Do Without More Details
-#     3. Need More Details
+#   • Already Implemented
+#       Issues whose linked pull requests are all merged (done in code)
+#       or that were manually identified as already implemented.
+#
+#   • Ready
+#       Issues with an open pull request (actively being worked on) or
+#       assigned to Copilot (deemed ready for implementation).
+#
+#   • Need more details
+#       All other active issues that need further clarification or design
+#       before work can begin. This is the default lane for new issues.
+#       Manually moving an issue to "Ready" in the project is preserved on
+#       subsequent runs.
 #
 # HOW IT WORKS
 # ────────────
 # 1. The `analyze-issues.sh` script uses the GitHub CLI (`gh`) to:
-#      a. List all open issues (up to 1,000).
+#      a. List all open issues (up to 1,000) including their GraphQL node IDs.
 #      b. List all open and recently-merged PRs (up to 500 each).
 #      c. Scan every PR body for closing-keyword patterns
 #         (closes/fixes/resolves #N or a full GitHub URL) to build an
 #         issue → PR map.
-#      d. Classify each issue into one of the four buckets above.
-#      e. Regenerate the auto-generated top sections of IssueAnalysis.md
-#         while leaving everything below the
-#         `<!-- HAND-WRITTEN SECTIONS START -->` marker untouched.
-# 2. If the file changed, the workflow commits and pushes the update.
+#      d. Classify each issue into one of four buckets.
+#      e. Query the GitHub Project for its current state.
+#      f. Add new issues and update lanes where the auto-classification
+#         overrides the current lane. Existing "Ready" / "Need more details"
+#         assignments are preserved (manual triage is respected).
 #
 # SCHEDULE
 # ────────
@@ -59,32 +59,26 @@ permissions:
 
 jobs:
   analyze:
-    name: Refresh IssueAnalysis.md
+    name: Categorize Issues in GitHub Project
     runs-on: ubuntu-latest
 
     permissions:
       issues: read
       pull-requests: read
-      contents: write
+      contents: read
+      projects: write   # required to add/update items in the org-level project
+                        # note: GitHub Actions does not support project-level scoping;
+                        # this grants write access to all projects in the Cratis org
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run issue analysis script
+      - name: Run issue analysis and update project
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          OUTPUT: IssueAnalysis.md
+          ORG: ${{ github.repository_owner }}
+          PROJECT_NUMBER: 7
+          ISSUE_ANALYSIS_FILE: IssueAnalysis.md
         run: bash .github/scripts/analyze-issues.sh
-
-      - name: Commit and push updated analysis
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add IssueAnalysis.md
-          git diff --cached --quiet \
-            && echo "No changes to IssueAnalysis.md — nothing to commit." \
-            || git commit -m "docs: update issue analysis [skip ci]" && git push
