@@ -15,9 +15,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 /// <param name="Source"><see cref="EventTypeSource">Source</see> of the event type.</param>
 /// <param name="Tombstone">Whether or not the event type is a tombstone event.</param>
 /// <param name="Schemas">A dictionary of <see cref="EventTypeGeneration">event type generations</see> and their corresponding JSON schemas.</param>
+/// <param name="Migrations">Collection of migration definitions between generations.</param>
 public record EventType(
     EventTypeId Id,
     EventTypeOwner Owner,
     EventTypeSource Source,
     bool Tombstone,
-    IDictionary<string, BsonDocument> Schemas);
+    IDictionary<string, BsonDocument> Schemas,
+    IEnumerable<EventTypeMigration>? Migrations = null);

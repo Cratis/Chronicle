@@ -49,6 +49,7 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />

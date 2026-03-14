@@ -7,7 +7,6 @@
     <!-- System -->
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
-    <PackageVersion Include="protobuf-net.Reflection" Version="3.2.52" />
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.5" />
@@ -67,8 +66,6 @@
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.15.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.6.0" />
     <!-- Roslyn-->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
@@ -87,6 +84,7 @@
     <PackageVersion Include="humanizer" Version="3.0.10" />
     <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
     <PackageVersion Include="NJsonSchema" Version="11.5.2" />
+    <PackageVersion Include="JsonCons.JmesPath" Version="1.0.0" />
     <PackageVersion Include="protobuf-net.BuildTools" Version="3.2.52">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

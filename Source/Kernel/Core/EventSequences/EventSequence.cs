@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -16,6 +17,7 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
@@ -38,6 +40,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing the underlying storage.</param>
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
+/// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="meter">The meter to use for metrics.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
@@ -48,6 +51,7 @@ namespace Cratis.Chronicle.EventSequences;
 public class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,
+    IEventTypeMigrations eventTypeMigrations,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
@@ -463,7 +467,13 @@ public class EventSequence(
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
 
             var identity = await IdentityStorage.GetFor(causedBy);
-            var eventHash = eventHashCalculator.Calculate(eventType.Id, eventSourceId, compliantEvent);
+
+            // Convert the compliant event to JsonObject for migration
+            var json = JsonSerializer.Serialize(compliantEvent);
+            var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
+
+            // Migrate the event to all generations
+            var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(eventType, contentAsJson);
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
@@ -488,8 +498,7 @@ public class EventSequence(
                     identity,
                     tags,
                     eventOccurred,
-                    compliantEvent,
-                    eventHash);
+                    migratedContent);
             }
             while (!appendResult.IsSuccess);
 

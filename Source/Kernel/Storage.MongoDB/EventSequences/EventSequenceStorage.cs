@@ -108,14 +108,18 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
-        ExpandoObject content,
-        EventHash hash)
+        IDictionary<EventTypeGeneration, ExpandoObject> content)
     {
         try
         {
-            var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-            var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
-            var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            var generationalContent = new Dictionary<string, BsonDocument>();
+            foreach (var (generation, expandoContent) in content)
+            {
+                var schema = await eventTypesStorage.GetFor(eventType.Id, generation);
+                var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
+                generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+            }
+
             var @event = new Event(
                 sequenceNumber,
                 correlationId,
@@ -128,17 +132,14 @@ public class EventSequenceStorage(
                 eventStreamType,
                 eventStreamId,
                 tags.Select(_ => _.Value),
-                new Dictionary<string, BsonDocument>
-                {
-                    { eventType.Generation.ToString(), document }
-                },
-                new Dictionary<string, string>
-                {
-                    { eventType.Generation.ToString(), hash.Value }
-                },
+                generationalContent,
+                new Dictionary<string, string>(),
                 []);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
+
+            // Return the content for the event type's generation
+            var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? [];
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
@@ -155,8 +156,8 @@ public class EventSequenceStorage(
                     causation,
                     await identityStorage.GetFor(causedByChain),
                     tags,
-                    hash),
-                content));
+                    EventHash.NotSet),
+                returnContent));
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {

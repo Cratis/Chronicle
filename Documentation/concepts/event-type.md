@@ -14,3 +14,4 @@ The concept of generations is important when working with systems that evolve ov
 Each generation registers its own JSON schema, which Chronicle uses to validate and store
 events correctly for that generation.
 
+For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations.md).
