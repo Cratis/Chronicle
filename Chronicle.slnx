@@ -28,6 +28,8 @@
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
+        <Project Path="Source/Tools/Cli/Cli.csproj" />
+        <Project Path="Source/Tools/Cli.Specs/Cli.Specs.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
@@ -38,6 +40,7 @@
     </Folder>
     <Folder Name="/Integration/">
         <Project Path="Integration/Api/Api.csproj" />
+        <Project Path="Integration/Cli/Cli.csproj" />
         <Project Path="Integration/DotNET.InProcess/DotNET.InProcess.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
     </Folder>

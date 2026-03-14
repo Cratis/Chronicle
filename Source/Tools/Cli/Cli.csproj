@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>Cratis.Chronicle.Cli</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Cli</RootNamespace>
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>cratis</ToolCommandName>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifiers></RuntimeIdentifiers>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Cratis.Chronicle.Contracts" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Spectre.Console" />
+        <PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="Grpc.Net.Client" />
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Chronicle.Cli.Specs" />
+    </ItemGroup>
+</Project>
