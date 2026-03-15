@@ -54,14 +54,20 @@ public class Observing(
         var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
         _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes);
 
-        var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
-        if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
+        // Only check for missed events when there is no active catch-up in progress.
+        // When partitions are being caught up, the catch-up job handles historical events
+        // while the queue subscription handles new events arriving in real time.
+        if (!state.CatchingUpPartitions.Any())
         {
-            var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
-            if (nextUnhandled.Match(n => n.IsActualValue, _ => false))
+            var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
+            if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
             {
-                logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
-                await StateMachine.TransitionTo<Routing>();
+                var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
+                if (nextUnhandled.Match(n => n.IsActualValue, _ => false))
+                {
+                    logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
+                    await StateMachine.TransitionTo<Routing>();
+                }
             }
         }
 
