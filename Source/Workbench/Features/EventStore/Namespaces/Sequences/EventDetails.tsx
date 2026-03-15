@@ -21,13 +21,22 @@ interface RevisionOption {
     value: number;
 }
 
+interface GenerationOption {
+    label: string;
+    value: number;
+}
+
 export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
     const params = useParams<EventStoreParams>();
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const [selectedRevision, setSelectedRevision] = useState<number>(-1);
+    const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
 
     const revisions: EventRevision[] = item.revisions ?? [];
     const isRevised = revisions.length > 0;
+
+    const generationEntries = item.generationalContent ?? [];
+    const hasMultipleGenerations = generationEntries.length > 1;
 
     // Build revision options: -1 = latest (default), 0 = original, 1..N = revision entries
     const revisionOptions: RevisionOption[] = useMemo(() => {
@@ -46,11 +55,34 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         return options;
     }, [revisions, isRevised]);
 
+    // Build generation options from available generational content
+    const generationOptions: GenerationOption[] = useMemo(() => {
+        if (!hasMultipleGenerations) return [];
+        return generationEntries
+            .slice()
+            .sort((a, b) => a.key - b.key)
+            .map(({ key }) => {
+                const isStored = key === item.context.eventType.generation;
+                const baseLabel = strings.eventStore.namespaces.sequences.details.generationLabel.replace('{n}', String(key));
+                return { label: isStored ? `${baseLabel} (stored)` : baseLabel, value: key };
+            });
+    }, [generationEntries, hasMultipleGenerations, item.context.eventType.generation]);
+
     // Default to latest revision when revised
     const effectiveRevision = selectedRevision === -1 && isRevised ? revisions.length : selectedRevision;
 
+    // Effective generation for content display
+    const effectiveGeneration = selectedGeneration ?? item.context.eventType.generation;
+
     // Get current revision content
     const currentContent = useMemo(() => {
+        // When a specific generation is selected and there are multiple generations, show that generation's raw content
+        if (hasMultipleGenerations && selectedGeneration !== null) {
+            const entry = generationEntries.find(g => g.key === effectiveGeneration);
+            if (entry?.value) {
+                try { return JSON.parse(entry.value); } catch { return entry.value; }
+            }
+        }
         if (!isRevised || effectiveRevision === 0) {
             const rawContent = effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content;
             try {
@@ -66,7 +98,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         } catch {
             return revision.content;
         }
-    }, [effectiveRevision, isRevised, item.content, item.originalContent, revisions]);
+    }, [effectiveRevision, effectiveGeneration, selectedGeneration, generationEntries, hasMultipleGenerations, isRevised, item.content, item.originalContent, revisions]);
 
     // Get metadata (occurred, correlationId, causedBy) for the current revision
     const currentMetadata = useMemo(() => {
@@ -86,8 +118,18 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         };
     }, [effectiveRevision, isRevised, item.context, revisions]);
 
-    const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
-    const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
+    // Schema: use the selected generation's schema when a specific generation is chosen
+    const effectiveEventType = useMemo(() => {
+        if (!eventTypes.data) return undefined;
+        if (hasMultipleGenerations && selectedGeneration !== null) {
+            return eventTypes.data.find(
+                (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
+            ) ?? eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
+        }
+        return eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
+    }, [eventTypes.data, hasMultipleGenerations, selectedGeneration, effectiveGeneration, item.context.eventType.id]);
+
+    const schema = effectiveEventType ? JSON.parse(effectiveEventType.schema) : { properties: {} };
 
     // Build context object for display - metadata reflects the current revision
     const contextObject = {
@@ -149,24 +191,43 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
     };
 
     const revisionPlaceholder = isRevised ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
+    const generationPlaceholder = hasMultipleGenerations ? generationOptions.find(o => o.value === item.context.eventType.generation)?.label : undefined;
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
             <h2 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-color)' }}>
                 {item.context.eventType.id}
             </h2>
-            {isRevised && (
-                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
-                        {strings.eventStore.namespaces.sequences.details.revision}:
-                    </label>
-                    <Dropdown
-                        value={effectiveRevision}
-                        options={revisionOptions}
-                        onChange={(e) => setSelectedRevision(e.value)}
-                        placeholder={revisionPlaceholder}
-                        style={{ minWidth: '200px' }}
-                    />
+            {(isRevised || hasMultipleGenerations) && (
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    {isRevised && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
+                                {strings.eventStore.namespaces.sequences.details.revision}:
+                            </label>
+                            <Dropdown
+                                value={effectiveRevision}
+                                options={revisionOptions}
+                                onChange={(e) => setSelectedRevision(e.value)}
+                                placeholder={revisionPlaceholder}
+                                style={{ minWidth: '200px' }}
+                            />
+                        </div>
+                    )}
+                    {hasMultipleGenerations && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
+                                {strings.eventStore.namespaces.sequences.details.generation}:
+                            </label>
+                            <Dropdown
+                                value={selectedGeneration ?? item.context.eventType.generation}
+                                options={generationOptions}
+                                onChange={(e) => setSelectedGeneration(e.value)}
+                                placeholder={generationPlaceholder}
+                                style={{ minWidth: '200px' }}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
             <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -192,3 +253,4 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         </div>
     );
 };
+
