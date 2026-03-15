@@ -6,9 +6,18 @@ using Cratis.Chronicle.Events;
 namespace TestApp;
 
 /// <summary>
-/// A simple event.
+/// Generation 1 of <see cref="MyEvent"/> — carries a single combined message in the form "subject:body".
 /// </summary>
-[EventType]
-public record MyEvent();
+/// <param name="Message">The raw message string, formatted as "subject:body".</param>
+[EventType("my-event", generation: 1)]
+public record MyEventV1(string Message);
+
+/// <summary>
+/// Generation 2 of MyEvent — the Message property has been split into separate Subject and Body fields.
+/// </summary>
+/// <param name="Subject">The subject part (everything before the first colon).</param>
+/// <param name="Body">The body part (everything after the first colon).</param>
+[EventType("my-event", generation: 2)]
+public record MyEvent(string Subject, string Body);
 
 

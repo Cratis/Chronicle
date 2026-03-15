@@ -53,6 +53,12 @@ while (true)
         case ConsoleKey.A:
             await Move(selectedIndex, random, CorrelationId.New());
             break;
+        case ConsoleKey.M:
+            await AppendMyEventV2(selectedIndex, CorrelationId.New());
+            break;
+        case ConsoleKey.N:
+            await AppendMyEventV1(selectedIndex, CorrelationId.New());
+            break;
         case ConsoleKey.Q:
         case ConsoleKey.Escape:
             Console.WriteLine("Exiting...");
@@ -87,8 +93,26 @@ void WriteSelectedPerson(int index)
     Console.WriteLine($"Selected [{index + 1}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
 }
 
+// Appends a generation-2 MyEvent (Subject + Body) for the selected employee.
+async Task AppendMyEventV2(int index, CorrelationId correlationId)
+{
+    var person = EmployeeData.Persons[index];
+    var @event = new MyEvent("Hello from gen 2", $"Subject and Body are now separate fields — employee {person.EventSourceId}");
+    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
+    Console.WriteLine($"[{person.EventSourceId}] Appended MyEvent gen 2 (Subject='{@event.Subject}', Body='{@event.Body}') at sequence {result.SequenceNumber}");
+}
+
+// Appends a generation-1 MyEventV1 (single Message field) for the selected employee.
+async Task AppendMyEventV1(int index, CorrelationId correlationId)
+{
+    var person = EmployeeData.Persons[index];
+    var @event = new MyEventV1($"Hello from gen 1:Single Message field for employee {person.EventSourceId}");
+    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
+    Console.WriteLine($"[{person.EventSourceId}] Appended MyEvent gen 1 (Message='{@event.Message}') at sequence {result.SequenceNumber} — Chronicle will upcast to gen 2");
+}
+
 // Writes the available keyboard controls to the console.
 void WriteInstructions()
 {
-    Console.WriteLine("Use 1-3 to select employee. P=Promote, A=Move, Q=Quit.");
+    Console.WriteLine("Use 1-3 to select employee. P=Promote, A=Move, M=MyEvent gen2, N=MyEvent gen1, Q=Quit.");
 }
