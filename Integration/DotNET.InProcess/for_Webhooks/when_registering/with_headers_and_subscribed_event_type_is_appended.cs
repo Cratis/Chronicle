@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Webhooks;
 using context = Cratis.Chronicle.InProcess.Integration.for_Webhooks.when_registering.with_headers_and_subscribed_event_type_is_appended.context;
 
@@ -21,9 +19,6 @@ public class with_headers_and_subscribed_event_type_is_appended(context context)
         {
             await Register(
                 (WebhookId, TargetUrl, builder => builder.WithEventType<SomeEvent>().WithHeader("some-header", "some-value")));
-
-            var webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor");
-            await webhookReactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
         }
 
         public async Task Because()
