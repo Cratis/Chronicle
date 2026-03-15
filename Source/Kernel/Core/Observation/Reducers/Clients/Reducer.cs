@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -112,7 +113,24 @@ public class Reducer(
 
             var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
             var observer = GrainFactory.GetGrain<IObserver>(key);
-            DeactivateOnIdle();
+            try
+            {
+                DeactivateOnIdle();
+            }
+            catch (InvalidOperationException)
+            {
+                // Grain activation may already be invalid during silo shutdown.
+            }
+
+            var subscription = await observer.GetSubscription();
+            if (subscription.IsSubscribed &&
+                subscription.Arguments is ConnectedClient connectedClient &&
+                connectedClient.ConnectionId != _observerKey!.ConnectionId)
+            {
+                _subscribed = false;
+                return;
+            }
+
             await observer.Unsubscribe();
             _subscribed = false;
         }
