@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: ChronicleOptions Reference
+  href: chronicle-options.md
 - name: Camel Casing
   href: camel-casing.md
 - name: gRPC Message Size

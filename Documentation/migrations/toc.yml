@@ -2,3 +2,5 @@
   href: index.md
 - name: C# usage
   href: dotnet-client.md
+- name: Generation validation
+  href: validation.md
