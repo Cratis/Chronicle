@@ -30,7 +30,7 @@ public class with_last_partial_page(context context) : Given<context>(context)
         }
     }
 
-    [Fact] void should_return_one_instance() => Context.Response.Instances.Count().ShouldEqual(1);
+    [Fact] void should_return_one_instance() => Context.Response.Instances.Count.ShouldEqual(1);
     [Fact] void should_return_total_count_of_five() => Context.Response.TotalCount.ShouldEqual(5L);
     [Fact] void should_echo_back_page_two() => Context.Response.Page.ShouldEqual(2);
     [Fact] void should_echo_back_page_size_two() => Context.Response.PageSize.ShouldEqual(2);
