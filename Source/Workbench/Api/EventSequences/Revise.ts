@@ -17,42 +17,42 @@ import { Identity } from '../Identities/Identity';
  * Revise a specific single event by its sequence number.
  */
 export interface IRevise {
-    
+
     /**
      * Collection of .
      */
     causation?: Causation[];
-    
+
     /**
      * to identify the person, system or service that caused the revision.
      */
     causedBy?: Identity;
-    
+
     /**
      * The revising event content.
      */
     content?: Record<string, unknown>;
-    
+
     /**
      * The event sequence to revise for.
      */
     eventSequenceId?: string;
-    
+
     /**
      * The event store to append for.
      */
     eventStore?: string;
-    
+
     /**
      * The type of event to revise with.
      */
     eventType?: EventType;
-    
+
     /**
      * The namespace to append to.
      */
     namespace?: string;
-    
+
     /**
      * The event sequence number to revise.
      */

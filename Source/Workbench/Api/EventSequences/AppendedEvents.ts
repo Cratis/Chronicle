@@ -61,22 +61,22 @@ class AppendedEventsSortByWithoutQuery {
  * Get events for a specific event sequence in an event store in a specific namespace.
  */
 export interface AppendedEventsParameters {
-    
+
     /**
      * Event sequence to get for.
     */
     eventSequenceId: string;
-    
+
     /**
      * Optional event source id to get for.
     */
     eventSourceId?: string;
-    
+
     /**
      * Event store to get for.
     */
     eventStore: string;
-    
+
     /**
      * Namespace to get for.
     */
