@@ -15,8 +15,8 @@ public class when_building_with_properties : Specification
         _builder = new EventMigrationBuilder();
         _builder.Properties(pb =>
         {
-            pb.Split("FullName", " ", 0);
-            pb.Combine("FirstName", "LastName");
+            pb.Split("FirstName", "FullName", " ", 0);
+            pb.Combine("FullName", "FirstName", "LastName");
         });
     }
 

@@ -23,7 +23,7 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     public IReadOnlyDictionary<PropertyExpression, JsonNode> Properties => _properties;
 
     /// <inheritdoc/>
-    public PropertyExpression Split(PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part)
+    public void Split(PropertyName targetProperty, PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part)
     {
         var expression = new JsonObject
         {
@@ -34,27 +34,27 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
                 ["part"] = (int)part
             }
         };
-        return AddExpression(expression);
+        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
-    public PropertyExpression Combine(params PropertyName[] properties)
+    public void Combine(PropertyName targetProperty, params PropertyName[] sourceProperties)
     {
         var expression = new JsonObject
         {
-            [CombineExpression] = new JsonArray(properties.Select(p => JsonValue.Create((string)p)).ToArray())
+            [CombineExpression] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray())
         };
-        return AddExpression(expression);
+        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
-    public PropertyExpression RenamedFrom(PropertyName oldName)
+    public void RenamedFrom(PropertyName targetProperty, PropertyName oldName)
     {
         var expression = new JsonObject
         {
             [RenameExpression] = (string)oldName
         };
-        return AddExpression(expression);
+        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
@@ -64,22 +64,5 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
         {
             [DefaultValueExpression] = JsonValue.Create(value)
         };
-    }
-
-    /// <inheritdoc/>
-    public PropertyExpression DefaultValue(object value)
-    {
-        var expression = new JsonObject
-        {
-            [DefaultValueExpression] = JsonValue.Create(value)
-        };
-        return AddExpression(expression);
-    }
-
-    PropertyExpression AddExpression(JsonObject expression)
-    {
-        PropertyExpression key = $"__expr_{_properties.Count}";
-        _properties[key] = expression;
-        return key;
     }
 }

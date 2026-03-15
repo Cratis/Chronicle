@@ -6,15 +6,14 @@ namespace Cratis.Chronicle.Events.Migrations.for_EventMigrationPropertyBuilder;
 public class when_combining_properties : Specification
 {
     EventMigrationPropertyBuilder _builder;
-    PropertyExpression _result;
 
     void Establish() => _builder = new EventMigrationPropertyBuilder();
 
-    void Because() => _result = _builder.Combine("FirstName", "LastName");
+    void Because() => _builder.Combine("FullName", "FirstName", "LastName");
 
-    [Fact] void should_return_expression_key() => _result.Value.ShouldContain("__expr_");
+    [Fact] void should_have_property_keyed_by_target_name() => _builder.Properties.ContainsKey("FullName").ShouldBeTrue();
 
-    [Fact] void should_have_property_in_properties_collection() => _builder.Properties.ContainsKey(_result).ShouldBeTrue();
+    [Fact] void should_have_combine_expression() => _builder.Properties["FullName"].ToString().ShouldContain("$combine");
 
-    [Fact] void should_have_combine_expression() => _builder.Properties[_result].ToString().ShouldContain("$combine");
+    [Fact] void should_only_add_one_property() => _builder.Properties.Count.ShouldEqual(1);
 }

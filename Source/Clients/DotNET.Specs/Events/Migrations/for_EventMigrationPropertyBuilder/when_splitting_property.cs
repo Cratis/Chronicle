@@ -6,15 +6,14 @@ namespace Cratis.Chronicle.Events.Migrations.for_EventMigrationPropertyBuilder;
 public class when_splitting_property : Specification
 {
     EventMigrationPropertyBuilder _builder;
-    PropertyExpression _result;
 
     void Establish() => _builder = new EventMigrationPropertyBuilder();
 
-    void Because() => _result = _builder.Split("FullName", " ", 0);
+    void Because() => _builder.Split("FirstName", "FullName", " ", 0);
 
-    [Fact] void should_return_expression_key() => _result.Value.ShouldContain("__expr_");
+    [Fact] void should_have_property_keyed_by_target_name() => _builder.Properties.ContainsKey("FirstName").ShouldBeTrue();
 
-    [Fact] void should_have_property_in_properties_collection() => _builder.Properties.ContainsKey(_result).ShouldBeTrue();
+    [Fact] void should_have_split_expression() => _builder.Properties["FirstName"].ToString().ShouldContain("$split");
 
-    [Fact] void should_have_split_expression() => _builder.Properties[_result].ToString().ShouldContain("$split");
+    [Fact] void should_only_add_one_property() => _builder.Properties.Count.ShouldEqual(1);
 }

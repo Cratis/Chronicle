@@ -9,27 +9,27 @@ namespace Cratis.Chronicle.Events.Migrations;
 public interface IEventMigrationPropertyBuilder
 {
     /// <summary>
-    /// Split a property value into parts.
+    /// Split a source property value into a target property by extracting one part.
     /// </summary>
+    /// <param name="targetProperty">The name of the property to write the split result into.</param>
     /// <param name="sourceProperty">The source property to split.</param>
     /// <param name="separator">The separator to use.</param>
     /// <param name="part">The zero-based part index to extract.</param>
-    /// <returns><see cref="PropertyExpression"/> identifying the expression.</returns>
-    PropertyExpression Split(PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part);
+    void Split(PropertyName targetProperty, PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part);
 
     /// <summary>
-    /// Combine multiple properties into one.
+    /// Combine multiple source properties into a single target property by concatenation.
     /// </summary>
-    /// <param name="properties">The properties to combine.</param>
-    /// <returns><see cref="PropertyExpression"/> identifying the expression.</returns>
-    PropertyExpression Combine(params PropertyName[] properties);
+    /// <param name="targetProperty">The name of the property to write the combined result into.</param>
+    /// <param name="sourceProperties">The source properties to concatenate.</param>
+    void Combine(PropertyName targetProperty, params PropertyName[] sourceProperties);
 
     /// <summary>
-    /// Rename a property from an old name.
+    /// Rename a property from an old name to a new target property.
     /// </summary>
-    /// <param name="oldName">The old property name.</param>
-    /// <returns><see cref="PropertyExpression"/> identifying the expression.</returns>
-    PropertyExpression RenamedFrom(PropertyName oldName);
+    /// <param name="targetProperty">The new name for the property.</param>
+    /// <param name="oldName">The old property name to read from.</param>
+    void RenamedFrom(PropertyName targetProperty, PropertyName oldName);
 
     /// <summary>
     /// Provide a default value for a new property that did not exist in the source generation.
@@ -37,12 +37,4 @@ public interface IEventMigrationPropertyBuilder
     /// <param name="targetProperty">The name of the property to set the default value on.</param>
     /// <param name="value">The default value.</param>
     void DefaultValue(PropertyName targetProperty, object value);
-
-    /// <summary>
-    /// Provide a default value for a property.
-    /// </summary>
-    /// <param name="value">The default value.</param>
-    /// <returns><see cref="PropertyExpression"/> identifying the expression.</returns>
-    [Obsolete("Use DefaultValue(PropertyName, object) to associate the default with a specific target property.")]
-    PropertyExpression DefaultValue(object value);
 }
