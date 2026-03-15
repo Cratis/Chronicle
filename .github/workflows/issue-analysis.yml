@@ -62,6 +62,9 @@ jobs:
 #       Manually moving an issue to "Ready" in the project is preserved on
 #       subsequent runs.
 #
+# Closed issues are completely ignored: they are never added to the project
+# and any project item whose issue has been closed is removed from the board.
+#
 # HOW IT WORKS
 # ────────────
 # 1. The `analyze-issues.sh` script uses the GitHub CLI (`gh`) to:
@@ -75,6 +78,7 @@ jobs:
 #      f. Add new issues and update lanes where the auto-classification
 #         overrides the current lane. Existing "Ready" / "Need more details"
 #         assignments are preserved (manual triage is respected).
+#      g. Remove project items for issues that are now closed.
 #
 # SCHEDULE
 # ────────
