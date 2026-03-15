@@ -36,6 +36,7 @@
 #    the "Ready" and "Need more details" lanes.
 # 7. Add new issues to the project and update lanes where the auto-classification
 #    overrides the current lane.
+# 8. Remove any project items whose issues are now closed (completely ignored).
 #
 # Prerequisites: gh CLI authenticated, jq, python3
 #
@@ -551,6 +552,41 @@ mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
 print(f"    Done: added={added} updated={updated} skipped={skipped} errors={errors}")
 if errors:
     print(f"    {errors} error(s) encountered – review warnings above.", file=sys.stderr)
+
+# ── Cleanup: Remove closed issues from the project ───────────────────────────
+# Any project item whose issue number is not among the currently open issues is
+# a closed (or deleted) issue and should be removed so the board only reflects
+# active work.
+open_issue_numbers = set(issue_node_ids.keys())
+closed_in_project = [
+    (num, item_data)
+    for num, item_data in existing_items.items()
+    if num not in open_issue_numbers
+]
+
+if closed_in_project:
+    print(f"    Removing {len(closed_in_project)} closed issue(s) from project …")
+    removed = remove_errors = 0
+    for issue_num, item_data in closed_in_project:
+        resp = run_graphql("""
+mutation($projectId: ID!, $itemId: ID!) {
+  deleteProjectV2Item(input: {
+    projectId: $projectId
+    itemId: $itemId
+  }) {
+    deletedItemId
+  }
+}
+""", fail_on_error=False, projectId=project_id, itemId=item_data["item_id"])
+        if resp is None:
+            remove_errors += 1
+            print(f"    WARNING: failed to remove issue #{issue_num} from project.", file=sys.stderr)
+        else:
+            removed += 1
+        time.sleep(0.05)   # stay well within GitHub's rate limit
+    print(f"    Closed issues: removed={removed} errors={remove_errors}")
+else:
+    print("    No closed issues found in project.")
 PYEOF
 
 echo ""
