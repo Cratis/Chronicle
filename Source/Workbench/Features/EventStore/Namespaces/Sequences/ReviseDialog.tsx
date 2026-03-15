@@ -20,17 +20,17 @@ export interface ReviseDialogProps {
 
 export const ReviseDialog = () => {
     const { request, closeDialog } = useDialogContext<ReviseDialogProps>();
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>({});
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => {
+        try {
+            return JSON.parse(request?.event.content ?? '{}') as Record<string, unknown>;
+        } catch {
+            return {};
+        }
+    });
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
     const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore: request?.eventStore ?? '' });
-
-    useEffect(() => {
-        if (request) {
-            setParsedContent(JSON.parse(request.event.content));
-        }
-    }, [request]);
 
     useEffect(() => {
         const registration = allEventTypes.data.find(et => et.type.id === request?.event.context.eventType.id);
@@ -53,9 +53,13 @@ export const ReviseDialog = () => {
                 namespace: request.namespace,
                 eventSequenceId: 'event-log',
                 sequenceNumber: request.event.context.sequenceNumber,
-                eventType: request.event.context.eventType
+                eventType: request.event.context.eventType,
+                content: parsedContent
             }}
-            currentValues={{ content: parsedContent }}
+            onBeforeExecute={(command) => {
+                command.content = parsedContent;
+                return command;
+            }}
             title={`Revise Event #${request.event.context.sequenceNumber}`}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
