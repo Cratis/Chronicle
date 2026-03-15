@@ -154,6 +154,7 @@ else
 fi
 
 # Copy the output file
+mkdir -p "$(dirname "$FINAL_OUTPUT")"
 mv temp-output.txt "$FINAL_OUTPUT"
 
 echo "Schema generated successfully: $FINAL_OUTPUT"

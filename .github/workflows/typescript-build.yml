@@ -64,7 +64,7 @@ jobs:
 
       - name: Install TypeScript dependencies
         working-directory: ./Source/Clients/TypeScript
-        run: yarn install
+        run: yarn install --ignore-scripts
 
       - name: Generate TypeScript from Proto
         working-directory: ./Source/Clients/TypeScript
