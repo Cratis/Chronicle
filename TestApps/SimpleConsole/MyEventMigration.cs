@@ -23,11 +23,11 @@ public class MyEventMigration : IEventTypeMigrationFor<MyEvent>
     public void Upcast(IEventMigrationBuilder builder) =>
         builder.Properties(pb =>
         {
-            pb.Split("Message", ":", 0);   // part 0 → Subject
-            pb.Split("Message", ":", 1);   // part 1 → Body
+            pb.Split("Subject", "Message", ":", 0);   // part 0 → Subject
+            pb.Split("Body", "Message", ":", 1);      // part 1 → Body
         });
 
     /// <inheritdoc/>
     public void Downcast(IEventMigrationBuilder builder) =>
-        builder.Properties(pb => pb.Combine("Subject", "Body"));
+        builder.Properties(pb => pb.Combine("Message", "Subject", "Body"));
 }

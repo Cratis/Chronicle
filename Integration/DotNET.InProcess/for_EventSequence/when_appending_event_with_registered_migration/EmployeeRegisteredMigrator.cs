@@ -23,11 +23,11 @@ public class EmployeeRegisteredMigrator : IEventTypeMigrationFor<EmployeeRegiste
     public void Upcast(IEventMigrationBuilder builder) =>
         builder.Properties(pb =>
         {
-            pb.Split("FullName", " ", 0);
-            pb.Split("FullName", " ", 1);
+            pb.Split("FirstName", "FullName", " ", 0);
+            pb.Split("LastName", "FullName", " ", 1);
         });
 
     /// <inheritdoc/>
     public void Downcast(IEventMigrationBuilder builder) =>
-        builder.Properties(pb => pb.Combine("FirstName", "LastName"));
+        builder.Properties(pb => pb.Combine("FullName", "FirstName", "LastName"));
 }

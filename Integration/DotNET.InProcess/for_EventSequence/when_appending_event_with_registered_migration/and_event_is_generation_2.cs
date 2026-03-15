@@ -14,7 +14,7 @@ public class and_event_is_generation_2(context context) : Given<context>(context
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-        public override IEnumerable<Type> EventTypes => [typeof(EmployeeRegistered)];
+        public override IEnumerable<Type> EventTypes => [typeof(EmployeeRegisteredV1), typeof(EmployeeRegistered)];
         public override IEnumerable<Type> EventTypeMigrators => [typeof(EmployeeRegisteredMigrator)];
 
         public EventSourceId EventSourceId { get; } = "some-employee";
@@ -40,4 +40,5 @@ public class and_event_is_generation_2(context context) : Given<context>(context
     [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
     [Fact] void should_have_stored_generation_2_content() => Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
     [Fact] void should_have_stored_generation_1_content_via_downcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    [Fact] void should_have_combined_first_and_last_name_into_generation_1_content() => Context.StoredEvent["content"].AsBsonDocument["1"].ToJson().ShouldContain("Jane");
 }

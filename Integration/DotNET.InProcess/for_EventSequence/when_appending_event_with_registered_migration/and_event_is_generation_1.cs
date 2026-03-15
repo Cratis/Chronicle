@@ -14,17 +14,17 @@ public class and_event_is_generation_1(context context) : Given<context>(context
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-        public override IEnumerable<Type> EventTypes => [typeof(PersonRegistered)];
+        public override IEnumerable<Type> EventTypes => [typeof(PersonRegisteredV1), typeof(PersonRegistered)];
         public override IEnumerable<Type> EventTypeMigrators => [typeof(PersonRegisteredMigrator)];
 
         public EventSourceId EventSourceId { get; } = "some-person";
-        public PersonRegistered Event { get; private set; }
+        public PersonRegisteredV1 Event { get; private set; }
         public IAppendResult AppendResult { get; private set; }
         public BsonDocument StoredEvent { get; private set; }
 
         void Establish()
         {
-            Event = new PersonRegistered("John", "Doe");
+            Event = new PersonRegisteredV1("John Doe");
         }
 
         async Task Because()
@@ -38,11 +38,8 @@ public class and_event_is_generation_1(context context) : Given<context>(context
     [Fact] void should_succeed() => Context.AppendResult.IsSuccess.ShouldBeTrue();
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
     [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
-    [Fact] Task should_have_stored_the_event_at_generation_1() => Context.ShouldHaveAppendedEvent<PersonRegistered>(EventSequenceNumber.First, Context.EventSourceId.Value, e =>
-    {
-        e.FirstName.ShouldEqual(Context.Event.FirstName);
-        e.LastName.ShouldEqual(Context.Event.LastName);
-    });
     [Fact] void should_have_stored_generation_1_content() => Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
     [Fact] void should_have_stored_generation_2_content_via_upcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    [Fact] void should_have_split_first_name_into_generation_2_content() => Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("John");
+    [Fact] void should_have_split_last_name_into_generation_2_content() => Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Doe");
 }
