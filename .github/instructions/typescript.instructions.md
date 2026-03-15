@@ -156,6 +156,7 @@ Declarative form component with built-in field types, validation timing (`valida
 - Always ensure that the code compiles without warnings — use `yarn compile` to verify (successful runs produce no output).
 - Review each file for lint compliance before finalizing.
 - Never use placeholder or temporary types — use proper types from the start.
+- **Never modify any file inside `node_modules/` or any build cache (e.g. `.vite/deps/`).** These are managed by the package manager and will be overwritten on the next install. If something appears broken in a library, look harder at the application code — especially when other usages of the same library work fine. Fixes belong in application code or upstream in the library's own repo.
 
 ## Folder Structure
 
