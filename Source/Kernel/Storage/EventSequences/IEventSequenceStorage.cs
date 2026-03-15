@@ -74,18 +74,18 @@ public interface IEventSequenceStorage
     Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events);
 
     /// <summary>
-    /// Compensate a single event to the event store.
+    /// Revise a single event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
-    /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="eventType">The <see cref="EventType">type of event</see> to revise.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
-    /// <param name="occurred">The date and time the compensation occurred.</param>
+    /// <param name="occurred">The date and time the revision occurred.</param>
     /// <param name="content">The content of the event.</param>
-    /// <param name="hash">The <see cref="EventHash"/> of the compensated event content.</param>
+    /// <param name="hash">The <see cref="EventHash"/> of the revised event content.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content, EventHash hash);
+    Task Revise(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content, EventHash hash);
 
     /// <summary>
     /// Redact an event at a specific sequence number.

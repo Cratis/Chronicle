@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { AppendedEvent } from 'Api/Events';
-import { Compensate } from 'Api/EventSequences';
+import { Revise } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
 import { useState, useEffect } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
@@ -12,14 +12,14 @@ import type { JsonSchema, Json } from '@cratis/components/types';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import strings from 'Strings';
 
-export interface CompensateDialogProps {
+export interface ReviseDialogProps {
     event: AppendedEvent;
     eventStore: string;
     namespace: string;
 }
 
-export const CompensateDialog = () => {
-    const { request, closeDialog } = useDialogContext<CompensateDialogProps>();
+export const ReviseDialog = () => {
+    const { request, closeDialog } = useDialogContext<ReviseDialogProps>();
     const [parsedContent, setParsedContent] = useState<Record<string, unknown>>({});
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
@@ -47,7 +47,7 @@ export const CompensateDialog = () => {
 
     return (
         <CommandDialog
-            command={Compensate}
+            command={Revise}
             initialValues={{
                 eventStore: request.eventStore,
                 namespace: request.namespace,
@@ -56,7 +56,7 @@ export const CompensateDialog = () => {
                 eventType: request.event.context.eventType
             }}
             currentValues={{ content: parsedContent }}
-            title={`Compensate Event #${request.event.context.sequenceNumber}`}
+            title={`Revise Event #${request.event.context.sequenceNumber}`}
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="50vw"

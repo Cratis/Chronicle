@@ -8,11 +8,11 @@ namespace Cratis.Chronicle.Api.Events;
 /// </summary>
 /// <param name="Context">The context for the event.</param>
 /// <param name="Content">The JSON representation content of the event.</param>
-/// <param name="OriginalContent">The original JSON content before any compensations. Only present when compensated.</param>
-/// <param name="Compensations">The compensations applied to this event, if any.</param>
+/// <param name="OriginalContent">The original JSON content before any revisions. Only present when revised.</param>
+/// <param name="Revisions">The revisions applied to this event, if any.</param>
 public record AppendedEvent(
     EventContext Context,
     string Content,
     string OriginalContent = "",
-    IEnumerable<EventCompensation>? Compensations = null);
+    IEnumerable<EventRevision>? Revisions = null);
 

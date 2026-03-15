@@ -120,31 +120,31 @@ public class EventSequenceCommands(
     }
 
     /// <summary>
-    /// Compensate a specific single event by its sequence number.
+    /// Revise a specific single event by its sequence number.
     /// </summary>
     /// <param name="eventStore">The event store to append for.</param>
     /// <param name="namespace">The namespace to append to.</param>
-    /// <param name="eventSequenceId">The event sequence to compensate for.</param>
-    /// <param name="compensation">The <see cref="CompensateEvent"/> to compensate.</param>
+    /// <param name="eventSequenceId">The event sequence to revise for.</param>
+    /// <param name="revision">The <see cref="ReviseEvent"/> to revise.</param>
     /// <returns>Awaitable task.</returns>
-    [HttpPost("compensate-event")]
-    public async Task Compensate(
+    [HttpPost("revise-event")]
+    public async Task Revise(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
-        [FromBody] CompensateEvent compensation)
+        [FromBody] ReviseEvent revision)
     {
-        await eventSequences.Compensate(new CompensateRequest
+        await eventSequences.Revise(new ReviseRequest
         {
             EventStore = eventStore,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            SequenceNumber = compensation.SequenceNumber,
-            EventType = compensation.EventType.ToContract(),
-            Content = JsonSerializer.Serialize(compensation.Content),
+            SequenceNumber = revision.SequenceNumber,
+            EventType = revision.EventType.ToContract(),
+            Content = JsonSerializer.Serialize(revision.Content),
             CorrelationId = Guid.NewGuid(),
-            Causation = compensation.Causation?.ToContract().ToList() ?? [],
-            CausedBy = compensation.CausedBy?.ToContract() ?? new()
+            Causation = revision.Causation?.ToContract().ToList() ?? [],
+            CausedBy = revision.CausedBy?.ToContract() ?? new()
         });
     }
 

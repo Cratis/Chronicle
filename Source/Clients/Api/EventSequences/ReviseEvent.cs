@@ -9,14 +9,14 @@ using Cratis.Chronicle.Api.Identities;
 namespace Cratis.Chronicle.Api.EventSequences;
 
 /// <summary>
-/// Command for compensating single event.
+/// Command for revising single event.
 /// </summary>
-/// <param name="SequenceNumber">The event sequence number to compensate.</param>
-/// <param name="EventType">The type of event to compensate with.</param>
-/// <param name="Content">The compensating event content.</param>
+/// <param name="SequenceNumber">The event sequence number to revise.</param>
+/// <param name="EventType">The type of event to revise with.</param>
+/// <param name="Content">The revising event content.</param>
 /// <param name="Causation">Collection of <see cref="Causation"/>.</param>
-/// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the compensation.</param>
-public record CompensateEvent(
+/// <param name="CausedBy"><see cref="CausedBy"/> to identify the person, system or service that caused the revision.</param>
+public record ReviseEvent(
     ulong SequenceNumber,
     EventType EventType,
     JsonObject Content,

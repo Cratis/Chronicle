@@ -14,6 +14,6 @@
   href: concurrency.md
 - name: Cross-cutting properties
   href: cross-cutting-properties.md
-- name: Compensation
-  href: compensation.md
+- name: Revision
+  href: revision.md
 

@@ -24,7 +24,7 @@ internal static class AppendedEventConverters
         Context = @event.Context.ToContract(),
         Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions),
         OriginalContent = @event.OriginalContent,
-        Compensations = @event.Compensations.Select(c => c.ToContract()).ToList()
+        Revisions = @event.Revisions.Select(c => c.ToContract()).ToList()
     };
 
     /// <summary>
@@ -47,16 +47,16 @@ internal static class AppendedEventConverters
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
 
     /// <summary>
-    /// Convert a <see cref="Concepts.Events.EventCompensation"/> to a <see cref="Contracts.Events.EventCompensation"/>.
+    /// Convert a <see cref="Concepts.Events.EventRevision"/> to a <see cref="Contracts.Events.EventRevision"/>.
     /// </summary>
-    /// <param name="compensation">The compensation to convert.</param>
-    /// <returns>The converted contract compensation.</returns>
-    public static Contracts.Events.EventCompensation ToContract(this Concepts.Events.EventCompensation compensation) => new()
+    /// <param name="revision">The revision to convert.</param>
+    /// <returns>The converted contract revision.</returns>
+    public static Contracts.Events.EventRevision ToContract(this Concepts.Events.EventRevision revision) => new()
     {
-        Generation = compensation.EventTypeGeneration,
-        CorrelationId = compensation.CorrelationId.ToString(),
-        CausedBy = compensation.CausedBy.ToContract(),
-        Occurred = compensation.Occurred,
-        Content = compensation.Content
+        Generation = revision.EventTypeGeneration,
+        CorrelationId = revision.CorrelationId.ToString(),
+        CausedBy = revision.CausedBy.ToContract(),
+        Occurred = revision.Occurred,
+        Content = revision.Content
     };
 }

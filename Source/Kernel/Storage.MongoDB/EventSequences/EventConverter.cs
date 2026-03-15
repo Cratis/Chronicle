@@ -9,7 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using MongoDB.Bson;
-using ConceptsEventCompensation = Cratis.Chronicle.Concepts.Events.EventCompensation;
+using ConceptsEventRevision = Cratis.Chronicle.Concepts.Events.EventRevision;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 
@@ -39,9 +39,9 @@ public class EventConverter(
         var (eventType, generationKey, content) = ExtractContent(@event);
         var hash = ExtractHash(@event, generationKey);
         var resolvedContent = await ResolveContent(eventType, @event.EventSourceId, content);
-        var compensations = await ResolveCompensations(@event);
+        var revisions = await ResolveRevisions(@event);
 
-        var originalContent = @event.Compensations.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
+        var originalContent = @event.Revisions.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
             ? originalBson.ToString()
             : string.Empty;
 
@@ -64,15 +64,15 @@ public class EventConverter(
             resolvedContent)
         {
             OriginalContent = originalContent,
-            Compensations = compensations
+            Revisions = revisions
         };
     }
 
     static EventHash ExtractHash(Event @event, string generationKey)
     {
-        if (@event.Compensations.Any())
+        if (@event.Revisions.Any())
         {
-            var latest = @event.Compensations.Last();
+            var latest = @event.Revisions.Last();
             var key = latest.EventTypeGeneration.ToString();
             return latest.ContentHashes.TryGetValue(key, out var hv) ? new EventHash(hv) : EventHash.NotSet;
         }
@@ -109,12 +109,12 @@ public class EventConverter(
         var generationKey = EventTypeGeneration.First.ToString();
         var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
 
-        if (!@event.Compensations.Any())
+        if (!@event.Revisions.Any())
             return (eventType, generationKey, ParseContent(@event.Content, generationKey));
 
-        var latest = @event.Compensations.Last();
-        var compensationKey = latest.EventTypeGeneration.ToString();
-        return (new EventType(@event.Type, latest.EventTypeGeneration, false), compensationKey, ParseContent(latest.Content, compensationKey));
+        var latest = @event.Revisions.Last();
+        var revisionKey = latest.EventTypeGeneration.ToString();
+        return (new EventType(@event.Type, latest.EventTypeGeneration, false), revisionKey, ParseContent(latest.Content, revisionKey));
     }
 
     async Task<ExpandoObject> ResolveContent(EventType eventType, EventSourceId eventSourceId, JsonObject content)
@@ -127,24 +127,24 @@ public class EventConverter(
         return expandoObjectConverter.ToExpandoObject(released, schema.Schema);
     }
 
-    async Task<IEnumerable<ConceptsEventCompensation>> ResolveCompensations(Event @event)
+    async Task<IEnumerable<ConceptsEventRevision>> ResolveRevisions(Event @event)
     {
-        var result = new List<ConceptsEventCompensation>();
-        foreach (var compensation in @event.Compensations)
+        var result = new List<ConceptsEventRevision>();
+        foreach (var revision in @event.Revisions)
         {
-            var causedBy = await identityStorage.GetFor([compensation.CausedBy]);
-            var compensationKey = compensation.EventTypeGeneration.ToString();
-            var compensationContentJson = compensation.Content.TryGetValue(compensationKey, out var contentBson)
+            var causedBy = await identityStorage.GetFor([revision.CausedBy]);
+            var revisionKey = revision.EventTypeGeneration.ToString();
+            var revisionContentJson = revision.Content.TryGetValue(revisionKey, out var contentBson)
                 ? contentBson.ToString()
                 : string.Empty;
 
-            result.Add(new ConceptsEventCompensation(
-                compensation.EventTypeGeneration,
-                compensation.CorrelationId,
-                compensation.Causation,
+            result.Add(new ConceptsEventRevision(
+                revision.EventTypeGeneration,
+                revision.CorrelationId,
+                revision.Causation,
                 causedBy,
-                compensation.Occurred,
-                compensationContentJson));
+                revision.Occurred,
+                revisionContentJson));
         }
 
         return result;

@@ -17,7 +17,7 @@ import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@
 import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
-import { CompensateDialog, CompensateDialogProps } from './CompensateDialog';
+import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
 import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
@@ -46,7 +46,7 @@ export const Sequences = () => {
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [showConfirmation] = useConfirmationDialog();
     const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
-    const [CompensateWrapper, showCompensate] = useDialog<CompensateDialogProps>(CompensateDialog);
+    const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
 
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
@@ -75,9 +75,9 @@ export const Sequences = () => {
         }
     };
 
-    const handleCompensateEvent = () => {
+    const handleReviseEvent = () => {
         if (selectedEvent) {
-            showCompensate({
+            showRevise({
                 event: selectedEvent,
                 eventStore: params.eventStore!,
                 namespace: params.namespace!
@@ -153,11 +153,11 @@ export const Sequences = () => {
                         disableOnUnselected
                         command={handleRedactEvent} />
                     <MenuItem
-                        id='compensateEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.compensate}
+                        id='reviseEvent'
+                        label={strings.eventStore.namespaces.sequences.actions.revise}
                         icon={faIcons.FaArrowsRotate}
                         disableOnUnselected
-                        command={handleCompensateEvent} />
+                        command={handleReviseEvent} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
@@ -194,7 +194,7 @@ export const Sequences = () => {
             </DataPage>
             <AppendEventWrapper />
             <RedactEventWrapper />
-            <CompensateWrapper />
+            <ReviseWrapper />
         </>
     );
 };

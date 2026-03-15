@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from '@storybook/react';
 import { MemoryRouter } from 'react-router-dom';
-import { CompensateDialog } from './CompensateDialog';
+import { ReviseDialog } from './ReviseDialog';
 import { AppendedEvent } from 'Api/Events';
 import { EventContext } from 'Api/Events/EventContext';
 import { EventType } from 'Api/Events/EventType';
@@ -45,9 +45,9 @@ const mockContextValue = new DialogContextContent(
     noop
 );
 
-const meta: Meta<typeof CompensateDialog> = {
-    title: 'Features/EventStore/Namespaces/Sequences/CompensateDialog',
-    component: CompensateDialog,
+const meta: Meta<typeof ReviseDialog> = {
+    title: 'Features/EventStore/Namespaces/Sequences/ReviseDialog',
+    component: ReviseDialog,
     decorators: [
         (Story) => (
             <MemoryRouter>
@@ -61,10 +61,10 @@ const meta: Meta<typeof CompensateDialog> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof CompensateDialog>;
+type Story = StoryObj<typeof ReviseDialog>;
 
 export const Default: Story = {
-    render: () => <CompensateDialog />,
+    render: () => <ReviseDialog />,
 };
 
 export const WithInvalidJson: Story = {
@@ -88,6 +88,6 @@ export const WithInvalidJson: Story = {
             </MemoryRouter>
         ),
     ],
-    render: () => <CompensateDialog />,
+    render: () => <ReviseDialog />,
 };
 

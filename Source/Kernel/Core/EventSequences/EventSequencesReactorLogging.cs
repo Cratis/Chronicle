@@ -16,6 +16,6 @@ internal static partial class EventSequencesReactorLogging
     [LoggerMessage(LogLevel.Information, "Redacting events for event source {EventSourceId} and event types {EventTypes} in event sequence '{EventSequenceId}' for event store '{EventStore}' on namespace '{Namespace}'")]
     internal static partial void RedactingForEventSource(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSourceId eventSourceId, IEnumerable<EventType> eventTypes);
 
-    [LoggerMessage(LogLevel.Information, "Compensating event @ {SequenceNumber} in event sequence '{EventSequenceId}' with event type '{EventType}' for event store '{EventStore}' on namespace '{Namespace}'")]
-    internal static partial void Compensating(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType);
+    [LoggerMessage(LogLevel.Information, "Revising event @ {SequenceNumber} in event sequence '{EventSequenceId}' with event type '{EventType}' for event store '{EventStore}' on namespace '{Namespace}'")]
+    internal static partial void Revising(this ILogger<EventSequencesReactor> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventSequenceNumber sequenceNumber, EventType eventType);
 }

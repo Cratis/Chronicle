@@ -36,5 +36,5 @@ Use these topics to append, read, and manage events:
 - [Getting state](getting-state.md)
 - [Concurrency](concurrency.md)
 - [Cross-cutting properties](cross-cutting-properties.md)
-- [Compensation](compensation.md)
+- [Revision](revision.md)
 

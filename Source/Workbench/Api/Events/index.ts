@@ -1,6 +1,6 @@
 export * from './AppendedEvent';
 export * from './CreateEventType';
-export * from './EventCompensation';
+export * from './EventRevision';
 export * from './EventContext';
 export * from './EventType';
 export * from './EventTypeOwner';

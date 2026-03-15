@@ -133,20 +133,20 @@ public interface IEventSequence : IGrainWithStringKey
         ConcurrencyScopes concurrencyScopes);
 
     /// <summary>
-    /// Compensate a specific event in the event store.
+    /// Revise a specific event in the event store.
     /// </summary>
-    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to compensate.</param>
-    /// <param name="eventType">The <see cref="EventType">type of event</see> to compensate.</param>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to revise.</param>
+    /// <param name="eventType">The <see cref="EventType">type of event</see> to revise.</param>
     /// <param name="content">The JSON payload of the event.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
-    /// <param name="causedBy">The person, system or service that caused the compensation, defined by <see cref="Identity"/>.</param>
+    /// <param name="causedBy">The person, system or service that caused the revision, defined by <see cref="Identity"/>.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     /// <remarks>
     /// The type of the event has to be the same as the original event at the sequence number.
-    /// Its generational information is taken into account when compensating.
+    /// Its generational information is taken into account when revising.
     /// </remarks>
-    Task Compensate(
+    Task Revise(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         JsonObject content,

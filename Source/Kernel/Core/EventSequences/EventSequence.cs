@@ -359,7 +359,7 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public async Task Compensate(
+    public async Task Revise(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         JsonObject content,
@@ -367,7 +367,7 @@ public class EventSequence(
         IEnumerable<Causation> causation,
         Identity causedBy)
     {
-        logger.Compensating(
+        logger.Revising(
             _eventSequenceKey.EventStore,
             _eventSequenceKey.Namespace,
             eventType,
@@ -377,14 +377,14 @@ public class EventSequence(
         var @event = await EventSequenceStorage.GetEventAt(sequenceNumber);
         if (@event.Context.EventType.Id != eventType.Id)
         {
-            throw new InvalidCompensationEventType(sequenceNumber, @event.Context.EventType.Id, eventType.Id);
+            throw new InvalidRevisionEventType(sequenceNumber, @event.Context.EventType.Id, eventType.Id);
         }
 
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var contentAsExpandoObject = expandoObjectConverter.ToExpandoObject(content, eventSchema.Schema);
         var hash = eventHashCalculator.Calculate(eventType.Id, @event.Context.EventSourceId, contentAsExpandoObject);
 
-        await EventSequenceStorage.Compensate(
+        await EventSequenceStorage.Revise(
             sequenceNumber,
             eventType,
             correlationId,

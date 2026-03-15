@@ -285,7 +285,7 @@
                 "actions": {
                     "appendEvent": "Append Event",
                     "redact": "Redact",
-                    "compensate": "Compensate"
+                    "revise": "Revise"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -318,11 +318,11 @@
                         "confirmTitle": "Confirm Redaction",
                         "confirmMessage": "Redacting an event cannot be undone. Are you sure you want to proceed?"
                     },
-                    "compensate": {
-                        "title": "Compensate Event",
-                        "okLabel": "Compensate",
+                    "revise": {
+                        "title": "Revise Event",
+                        "okLabel": "Revise",
                         "eventType": "Event Type",
-                        "content": "Compensating Content (JSON)"
+                        "content": "Revision Content (JSON)"
                     }
                 },
                 "details": {
@@ -331,7 +331,7 @@
                     "originalRevision": "Original",
                     "revisionLabel": "Revision {n}",
                     "generationLabel": "Generation {n}",
-                    "compensationBy": "Compensated by {name} at {occurred}"
+                    "revisionBy": "Revised by {name} at {occurred}"
                 }
             },
             "observers": {

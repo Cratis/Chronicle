@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_compensating;
+namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_revising;
 
 [EventType]
 public record SomeEvent(string Content);

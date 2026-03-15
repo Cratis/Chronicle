@@ -22,16 +22,16 @@ public class AppendedEvent
     public string Content { get; set; }
 
     /// <summary>
-    /// Gets or sets the original JSON content before any compensations were applied.
-    /// Only populated when the event has been compensated.
+    /// Gets or sets the original JSON content before any revisions were applied.
+    /// Only populated when the event has been revised.
     /// </summary>
     [ProtoMember(3)]
     public string OriginalContent { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the compensations applied to this event, if any.
+    /// Gets or sets the revisions applied to this event, if any.
     /// </summary>
     [ProtoMember(4)]
-    public IList<EventCompensation> Compensations { get; set; } = [];
+    public IList<EventRevision> Revisions { get; set; } = [];
 }
 

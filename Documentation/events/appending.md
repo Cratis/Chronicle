@@ -16,7 +16,7 @@ When you append an event, Chronicle:
 - Persists the event and metadata atomically
 - Updates the sequence state
 
-The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. This makes it safe to retry or compensate without duplicating events.
+The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. This makes it safe to retry or revise without duplicating events.
 
 ## AppendResult
 

@@ -9,16 +9,16 @@ using MongoDB.Bson;
 namespace Cratis.Chronicle.Storage.MongoDB;
 
 /// <summary>
-/// Represents the compensation of an event.
+/// Represents the revision of an event.
 /// </summary>
-/// <param name="EventTypeGeneration">The <see cref="EventTypeGeneration"/> of the compensation.</param>
+/// <param name="EventTypeGeneration">The <see cref="EventTypeGeneration"/> of the revision.</param>
 /// <param name="CorrelationId">The unique identifier used to correlation.</param>
 /// <param name="Causation">The chain of causation.</param>
 /// <param name="CausedBy">Who or what caused the event.</param>
-/// <param name="Occurred">The time the compensation occurred.</param>
+/// <param name="Occurred">The time the revision occurred.</param>
 /// <param name="Content">The content per event type generation.</param>
 /// <param name="ContentHashes">The content hashes per event type generation.</param>
-public record EventCompensation(
+public record EventRevision(
     EventTypeGeneration EventTypeGeneration,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,

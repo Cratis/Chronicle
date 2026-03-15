@@ -116,12 +116,12 @@ internal sealed class EventSequences(
     }
 
     /// <inheritdoc/>
-    public async Task Compensate(CompensateRequest request, CallContext context = default)
+    public async Task Revise(ReviseRequest request, CallContext context = default)
     {
         var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
         await systemEventSequence.Append(
             (EventSourceId)request.EventSequenceId,
-            new EventCompensated(
+            new EventRevised(
                 request.EventSequenceId,
                 request.SequenceNumber,
                 request.EventType.ToChronicle(),

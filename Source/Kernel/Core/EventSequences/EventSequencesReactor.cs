@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
-/// Represents a reactor that handles event sequence system events such as redaction and compensation,
+/// Represents a reactor that handles event sequence system events such as redaction and revision,
 /// performing the actual storage operations in response to events in the System event sequence.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
@@ -63,22 +63,22 @@ public class EventSequencesReactor(IGrainFactory grainFactory, JsonSerializerOpt
     }
 
     /// <summary>
-    /// Performs the actual compensation of an event when an <see cref="EventCompensated"/> system event is observed.
+    /// Performs the actual revision of an event when an <see cref="EventRevised"/> system event is observed.
     /// The audit context (who triggered it, when, which correlation) is carried in the <paramref name="context"/>.
     /// </summary>
     /// <param name="event">The system event containing the target sequence, event type and new content.</param>
-    /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the compensation audit context.</param>
+    /// <param name="context">The <see cref="EventContext"/> of the system event, which holds the revision audit context.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the compensation content is null or contains invalid JSON.</exception>
-    public async Task Compensated(EventCompensated @event, EventContext context)
+    /// <exception cref="InvalidOperationException">Thrown when the revision content is null or contains invalid JSON.</exception>
+    public async Task Revised(EventRevised @event, EventContext context)
     {
-        logger.Compensating(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber, @event.EventType);
+        logger.Revising(context.EventStore, context.Namespace, @event.Sequence, @event.SequenceNumber, @event.EventType);
 
         var eventSequence = grainFactory.GetEventSequence(@event.Sequence, context.EventStore, context.Namespace);
         var content = (JsonSerializer.Deserialize<JsonNode>(@event.Content, jsonSerializerOptions)
-            ?? throw new InvalidOperationException($"Compensation content for event at sequence {(ulong)@event.SequenceNumber} is null or invalid JSON."))
+            ?? throw new InvalidOperationException($"Revision content for event at sequence {(ulong)@event.SequenceNumber} is null or invalid JSON."))
             .AsObject();
-        await eventSequence.Compensate(
+        await eventSequence.Revise(
             @event.SequenceNumber,
             @event.EventType,
             content,

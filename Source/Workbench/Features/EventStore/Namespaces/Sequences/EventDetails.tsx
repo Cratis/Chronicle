@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Dropdown } from 'primereact/dropdown';
 import { AppendedEvent } from 'Api/Events';
-import { EventCompensation } from 'Api/Events/EventCompensation';
+import { EventRevision } from 'Api/Events/EventRevision';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
@@ -26,32 +26,32 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
     const [selectedRevision, setSelectedRevision] = useState<number>(-1);
 
-    const compensations: EventCompensation[] = item.compensations ?? [];
-    const isCompensated = compensations.length > 0;
+    const revisions: EventRevision[] = item.revisions ?? [];
+    const isRevised = revisions.length > 0;
 
-    // Build revision options: -1 = latest (default), 0 = original, 1..N = compensation revisions
+    // Build revision options: -1 = latest (default), 0 = original, 1..N = revision entries
     const revisionOptions: RevisionOption[] = useMemo(() => {
-        if (!isCompensated) return [];
+        if (!isRevised) return [];
 
         const options: RevisionOption[] = [
             { label: strings.eventStore.namespaces.sequences.details.originalRevision, value: 0 }
         ];
-        compensations.forEach((_, index) => {
-            const isLatest = index === compensations.length - 1;
+        revisions.forEach((_, index) => {
+            const isLatest = index === revisions.length - 1;
             const label = isLatest
                 ? `${strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1))} (latest)`
                 : strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1));
             options.push({ label, value: index + 1 });
         });
         return options;
-    }, [compensations, isCompensated]);
+    }, [revisions, isRevised]);
 
-    // Default to latest revision when compensated
-    const effectiveRevision = selectedRevision === -1 && isCompensated ? compensations.length : selectedRevision;
+    // Default to latest revision when revised
+    const effectiveRevision = selectedRevision === -1 && isRevised ? revisions.length : selectedRevision;
 
     // Get current revision content
     const currentContent = useMemo(() => {
-        if (!isCompensated || effectiveRevision === 0) {
+        if (!isRevised || effectiveRevision === 0) {
             const rawContent = effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content;
             try {
                 return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
@@ -59,32 +59,32 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                 return rawContent;
             }
         }
-        const compensation = compensations[effectiveRevision - 1];
-        if (!compensation) return {};
+        const revision = revisions[effectiveRevision - 1];
+        if (!revision) return {};
         try {
-            return typeof compensation.content === 'string' ? JSON.parse(compensation.content) : compensation.content;
+            return typeof revision.content === 'string' ? JSON.parse(revision.content) : revision.content;
         } catch {
-            return compensation.content;
+            return revision.content;
         }
-    }, [effectiveRevision, isCompensated, item.content, item.originalContent, compensations]);
+    }, [effectiveRevision, isRevised, item.content, item.originalContent, revisions]);
 
     // Get metadata (occurred, correlationId, causedBy) for the current revision
     const currentMetadata = useMemo(() => {
-        if (!isCompensated || effectiveRevision === 0) {
+        if (!isRevised || effectiveRevision === 0) {
             return {
                 occurred: item.context.occurred,
                 correlationId: item.context.correlationId,
                 causedBy: item.context.causedBy
             };
         }
-        const compensation = compensations[effectiveRevision - 1];
-        if (!compensation) return { occurred: item.context.occurred, correlationId: item.context.correlationId, causedBy: item.context.causedBy };
+        const revision = revisions[effectiveRevision - 1];
+        if (!revision) return { occurred: item.context.occurred, correlationId: item.context.correlationId, causedBy: item.context.causedBy };
         return {
-            occurred: compensation.occurred,
-            correlationId: compensation.correlationId,
-            causedBy: compensation.causedBy
+            occurred: revision.occurred,
+            correlationId: revision.correlationId,
+            causedBy: revision.causedBy
         };
-    }, [effectiveRevision, isCompensated, item.context, compensations]);
+    }, [effectiveRevision, isRevised, item.context, revisions]);
 
     const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
@@ -148,14 +148,14 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         }
     };
 
-    const revisionPlaceholder = isCompensated ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
+    const revisionPlaceholder = isRevised ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
             <h2 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-color)' }}>
                 {item.context.eventType.id}
             </h2>
-            {isCompensated && (
+            {isRevised && (
                 <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
                         {strings.eventStore.namespaces.sequences.details.revision}:

@@ -265,7 +265,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task Compensate(
+    public async Task Revise(
         EventSequenceNumber sequenceNumber,
         EventType eventType,
         CorrelationId correlationId,
@@ -275,14 +275,14 @@ public class EventSequenceStorage(
         ExpandoObject content,
         EventHash hash)
     {
-        logger.Compensating(eventSequenceId, sequenceNumber);
+        logger.Revising(eventSequenceId, sequenceNumber);
         var collection = _collection;
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
         var jsonObject = expandoObjectConverter.ToJsonObject(content, schema.Schema);
         var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
 
-        var compensation = new EventCompensation(
+        var revision = new EventRevision(
             eventType.Generation,
             correlationId,
             causation,
@@ -298,7 +298,7 @@ public class EventSequenceStorage(
             });
 
         var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
-        var update = Builders<Event>.Update.Push(e => e.Compensations, compensation);
+        var update = Builders<Event>.Update.Push(e => e.Revisions, revision);
 
         await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
     }

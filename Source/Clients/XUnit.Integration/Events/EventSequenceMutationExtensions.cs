@@ -7,7 +7,7 @@ extern alias KernelConcepts;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection;
 using KernelCorrelationId = Cratis.Execution.CorrelationId;
-using KernelEventCompensated = KernelCore::Cratis.Chronicle.Events.EventSequences.EventCompensated;
+using KernelEventRevised = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRevised;
 using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
 using KernelEventSequenceId = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 using KernelEventSequenceNumber = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
@@ -27,17 +27,17 @@ namespace Cratis.Chronicle.XUnit.Integration.Events;
 public static class EventSequenceMutationExtensions
 {
     /// <summary>
-    /// Compensate a specific event in the event log with new content.
+    /// Revise a specific event in the event log with new content.
     /// </summary>
-    /// <typeparam name="TEvent">Type of the event to compensate with.</typeparam>
+    /// <typeparam name="TEvent">Type of the event to revise with.</typeparam>
     /// <param name="fixture">The fixture to use.</param>
-    /// <param name="sequenceNumber">The sequence number of the event to compensate.</param>
-    /// <param name="compensation">The new event content to compensate with.</param>
+    /// <param name="sequenceNumber">The sequence number of the event to revise.</param>
+    /// <param name="revision">The new event content to revise with.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task CompensateEvent<TEvent>(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, TEvent compensation)
+    public static async Task ReviseEvent<TEvent>(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, TEvent revision)
     {
         var eventSerializer = fixture.Services.GetRequiredService<IEventSerializer>();
-        var content = await eventSerializer.Serialize(compensation!);
+        var content = await eventSerializer.Serialize(revision!);
         var eventType = fixture.EventStore.EventTypes.GetEventTypeFor(typeof(TEvent));
         var kernelEventType = new KernelEventType(
             new KernelEventTypeId(eventType.Id.Value),
@@ -47,7 +47,7 @@ public static class EventSequenceMutationExtensions
         var systemEventSequence = fixture.GetEventSequenceGrain(KernelEventSequenceId.System);
         await systemEventSequence.Append(
             new KernelEventSourceId(KernelEventSequenceId.Log.Value),
-            new KernelEventCompensated(
+            new KernelEventRevised(
                 KernelEventSequenceId.Log,
                 new KernelEventSequenceNumber(sequenceNumber.Value),
                 kernelEventType,
@@ -56,7 +56,7 @@ public static class EventSequenceMutationExtensions
             [],
             KernelIdentity.System);
 
-        await fixture.EventLogSequenceGrain.Compensate(
+        await fixture.EventLogSequenceGrain.Revise(
             new KernelEventSequenceNumber(sequenceNumber.Value),
             kernelEventType,
             content,

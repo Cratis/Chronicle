@@ -19,7 +19,7 @@ internal static class AppendedEventConverters
         appendedEvent.Context.ToApi(),
         appendedEvent.Content,
         appendedEvent.OriginalContent,
-        appendedEvent.Compensations.Select(c => c.ToApi()).ToArray());
+        appendedEvent.Revisions.Select(c => c.ToApi()).ToArray());
 
     /// <summary>
     /// Converts a collection of contract <see cref="Contracts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.
@@ -41,14 +41,14 @@ internal static class AppendedEventConverters
     };
 
     /// <summary>
-    /// Converts a contract <see cref="Contracts.Events.EventCompensation"/> to an <see cref="EventCompensation"/>.
+    /// Converts a contract <see cref="Contracts.Events.EventRevision"/> to an <see cref="EventRevision"/>.
     /// </summary>
-    /// <param name="compensation">The contract compensation to convert.</param>
-    /// <returns>The converted compensation.</returns>
-    public static EventCompensation ToApi(this Contracts.Events.EventCompensation compensation) => new(
-        compensation.Generation,
-        compensation.CorrelationId,
-        compensation.CausedBy.ToApi(),
-        compensation.Occurred,
-        compensation.Content);
+    /// <param name="revision">The contract revision to convert.</param>
+    /// <returns>The converted revision.</returns>
+    public static EventRevision ToApi(this Contracts.Events.EventRevision revision) => new(
+        revision.Generation,
+        revision.CorrelationId,
+        revision.CausedBy.ToApi(),
+        revision.Occurred,
+        revision.Content);
 }

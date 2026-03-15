@@ -104,7 +104,7 @@ Chronicle ships with:
 | **Multi-tenancy** | First-class namespace support for isolated tenant data |
 | **Constraints** | Server-side integrity rules enforced at append time |
 | **Compliance** | Full audit trails and data lineage for regulatory requirements |
-| **Compensation** | Built-in support for correcting past events |
+| **Revision** | Built-in support for correcting past events |
 
 ### 🚀 Developer Experience
 
