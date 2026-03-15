@@ -25,7 +25,7 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     /// <inheritdoc/>
     public void Split(PropertyName targetProperty, PropertyName sourceProperty, PropertySeparator separator, SplitPartIndex part)
     {
-        var expression = new JsonObject
+        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
         {
             [SplitExpression] = new JsonObject
             {
@@ -34,27 +34,24 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
                 ["part"] = (int)part
             }
         };
-        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
     public void Combine(PropertyName targetProperty, params PropertyName[] sourceProperties)
     {
-        var expression = new JsonObject
+        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
         {
             [CombineExpression] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray())
         };
-        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
     public void RenamedFrom(PropertyName targetProperty, PropertyName oldName)
     {
-        var expression = new JsonObject
+        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
         {
             [RenameExpression] = (string)oldName
         };
-        _properties[(PropertyExpression)(string)targetProperty] = expression;
     }
 
     /// <inheritdoc/>
