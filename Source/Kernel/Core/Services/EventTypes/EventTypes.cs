@@ -24,6 +24,18 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
     {
+        var skipValidation = false;
+#if DEVELOPMENT
+        skipValidation = request.DisableValidation;
+#endif
+        if (!skipValidation)
+        {
+            foreach (var eventType in request.Types)
+            {
+                ValidateMigrationChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
+            }
+        }
+
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
@@ -61,7 +73,7 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
                         downcastJson);
                 }).ToList();
 
-                var definition = new Concepts.Events.EventTypeDefinition(
+                var definition = new EventTypeDefinition(
                     eventType.Type.ToChronicle().Id,
                     owner,
                     eventType.Type.Tombstone,
@@ -130,5 +142,23 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
                 Source = (Contracts.Events.EventTypeSource)(int)_.Source,
                 Schema = _.Schema.ToJson()
             }).ToArray());
+    }
+
+    static void ValidateMigrationChain(string eventTypeId, uint currentGeneration, IList<Contracts.Events.EventTypeMigrationDefinition> migrations)
+    {
+        if (currentGeneration <= 1)
+            return;
+
+        if (migrations.Count == 0)
+            throw new MissingEventTypeMigrators(eventTypeId, currentGeneration);
+
+        if (!migrations.Any(m => m.FromGeneration == 1))
+            throw new MissingFirstGenerationForEventType(eventTypeId, currentGeneration);
+
+        for (uint from = 1; from < currentGeneration; from++)
+        {
+            if (!migrations.Any(m => m.FromGeneration == from))
+                throw new MissingMigrationForEventTypeGeneration(eventTypeId, currentGeneration, from);
+        }
     }
 }

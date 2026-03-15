@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Services.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
