@@ -19,4 +19,7 @@ internal static partial class EventSeedingLogMessages
 
     [LoggerMessage(LogLevel.Debug, "All events have already been seeded, skipping")]
     internal static partial void AllEventsAlreadySeeded(this ILogger<EventSeeding> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Applying global seeds to namespace '{Namespace}'")]
+    internal static partial void ApplyingSeedsToNamespace(this ILogger<EventSeeding> logger, string @namespace);
 }

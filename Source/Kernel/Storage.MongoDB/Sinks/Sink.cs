@@ -47,6 +47,7 @@ public class Sink(
 
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
+    readonly Dictionary<string, ExpandoObject> _bulkStateCache = [];
     int _currentBulkSize;
     bool _isBulkMode;
 
@@ -59,6 +60,15 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
+        if (_isBulkMode)
+        {
+            var cacheKey = converter.ToBsonValue(key).ToString()!;
+            if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
+            {
+                return cachedState;
+            }
+        }
+
         var collection = Collection;
 
         using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
@@ -86,6 +96,7 @@ public class Sink(
             if (_isBulkMode)
             {
                 AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
+                _bulkStateCache.Remove(converter.ToBsonValue(key).ToString()!);
                 return await FlushBulkIfNeeded();
             }
 
@@ -110,6 +121,10 @@ public class Sink(
                 ArrayFilters = converted.ArrayFilters
             };
             AddToBulk(updateModel, key, eventSequenceNumber);
+            if (!changeset.HasJoined())
+            {
+                _bulkStateCache[converter.ToBsonValue(key).ToString()!] = changeset.CurrentState;
+            }
             return await FlushBulkIfNeeded();
         }
 
@@ -130,6 +145,7 @@ public class Sink(
         _isBulkMode = true;
         _bulkOperations.Clear();
         _bulkOperationMetadata.Clear();
+        _bulkStateCache.Clear();
         _currentBulkSize = 0;
         return Task.CompletedTask;
     }
@@ -144,6 +160,7 @@ public class Sink(
         _isBulkMode = false;
         _bulkOperations.Clear();
         _bulkOperationMetadata.Clear();
+        _bulkStateCache.Clear();
         _currentBulkSize = 0;
     }
 

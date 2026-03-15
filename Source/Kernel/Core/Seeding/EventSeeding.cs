@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage.Seeding;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -60,9 +61,10 @@ public class EventSeeding(
                 new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
-        // For global grains, just store the entries without appending
+        // For global grains, store the entries and apply to all existing namespaces
         if (_key.IsGlobal)
         {
+            var newEntries = new List<SeedingEntry>();
             foreach (var entry in entriesList)
             {
                 var tags = entry.Tags?.Select(t => t.Value) ?? [];
@@ -70,9 +72,23 @@ public class EventSeeding(
                 if (!IsAlreadySeeded(seededEntry))
                 {
                     TrackSeededEvent(seededEntry);
+                    newEntries.Add(entry);
                 }
             }
             await state.WriteStateAsync();
+
+            if (newEntries.Count > 0)
+            {
+                var namespacesGrain = GrainFactory.GetGrain<INamespaces>(_key.EventStore.Value);
+                var namespaces = await namespacesGrain.GetAll();
+                foreach (var ns in namespaces)
+                {
+                    logger.ApplyingSeedsToNamespace(ns.Value);
+                    var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
+                    var nsGrain = GrainFactory.GetGrain<IEventSeeding>(namespaceKey.ToString());
+                    await nsGrain.Seed(newEntries);
+                }
+            }
         }
         else
         {
