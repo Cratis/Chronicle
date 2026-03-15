@@ -118,31 +118,64 @@ public class EventTypeMigrations(
     JsonObject ApplyJmesPathTransformation(JsonObject content, JsonObject? jmesPath)
     {
         // Apply JmesPath transformation if defined
-        if (jmesPath?.Count > 0)
+        if (jmesPath?.Count == 0 || jmesPath is null)
         {
-            try
+            return content;
+        }
+
+        // Separate default-value declarations from regular JmesPath expressions
+        var defaultValues = new Dictionary<string, JsonNode?>();
+        var regularJmesPath = new JsonObject();
+
+        foreach (var property in jmesPath)
+        {
+            if (property.Value is JsonObject expr &&
+                expr.Count == 1 &&
+                expr.ContainsKey(WellKnownExpressions.DefaultValue))
             {
-                // The JmesPath expression defines the transformation
-                var jmesPathExpr = jmesPath.ToJsonString();
-
-                // Convert JsonObject to JsonElement for JsonTransformer
-                var contentJson = content.ToJsonString();
-                using var contentDoc = JsonDocument.Parse(contentJson);
-
-                // Apply the JmesPath transformation using JsonCons.JmesPath
-                using var resultDoc = JsonTransformer.Transform(contentDoc.RootElement, jmesPathExpr);
-
-                // Convert result back to JsonObject
-                var resultJson = JsonSerializer.Serialize(resultDoc.RootElement);
-                return JsonNode.Parse(resultJson)?.AsObject() ?? new JsonObject();
+                defaultValues[property.Key] = expr[WellKnownExpressions.DefaultValue]?.DeepClone();
             }
-            catch
+            else
             {
-                // If transformation fails, return original content
-                return content;
+                regularJmesPath[property.Key] = property.Value?.DeepClone();
             }
         }
 
-        return content;
+        // Apply the regular JmesPath transform (if any)
+        JsonObject result;
+
+        if (regularJmesPath.Count > 0)
+        {
+            try
+            {
+                var jmesPathExpr = regularJmesPath.ToJsonString();
+                var contentJson = content.ToJsonString();
+                using var contentDoc = JsonDocument.Parse(contentJson);
+                using var resultDoc = JsonTransformer.Transform(contentDoc.RootElement, jmesPathExpr);
+                var resultJson = JsonSerializer.Serialize(resultDoc.RootElement);
+                result = JsonNode.Parse(resultJson)?.AsObject() ?? new JsonObject();
+            }
+            catch
+            {
+                // If transformation fails, preserve the original content
+                result = JsonNode.Parse(content.ToJsonString())?.AsObject() ?? new JsonObject();
+            }
+        }
+        else
+        {
+            // No regular expressions — start from a copy of the current content
+            result = JsonNode.Parse(content.ToJsonString())?.AsObject() ?? new JsonObject();
+        }
+
+        // Apply default values for any properties that are absent from the result
+        foreach (var (propertyName, defaultValue) in defaultValues)
+        {
+            if (!result.ContainsKey(propertyName))
+            {
+                result[propertyName] = defaultValue?.DeepClone();
+            }
+        }
+
+        return result;
     }
 }
