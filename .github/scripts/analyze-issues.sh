@@ -213,6 +213,22 @@ print(f"    excluded={len(classified['excluded'])} "
       f"active={len(classified['active'])}")
 PYEOF
 
+# GitHub Project V2 operations require a PAT with 'project' scope.
+# GITHUB_TOKEN is scoped to the repository and cannot access org-level projects.
+if [[ -n "${GH_PROJECT_TOKEN:-}" ]]; then
+    export GH_TOKEN="$GH_PROJECT_TOKEN"
+    echo "    Using GH_PROJECT_TOKEN for org project operations."
+else
+    echo ""
+    echo "==> WARNING: GH_PROJECT_TOKEN is not set." >&2
+    echo "    GitHub Project V2 update requires a Personal Access Token (PAT)" >&2
+    echo "    with the 'project' scope, stored as the GH_PROJECT_TOKEN secret." >&2
+    echo "    Issue classification completed but project was NOT updated." >&2
+    echo ""
+    echo "==> Done (project update skipped – GH_PROJECT_TOKEN not configured)."
+    exit 0
+fi
+
 echo "==> Updating GitHub Project (org=$ORG, project=$PROJECT_NUMBER) …"
 python3 - \
     "$TMP_DIR/classified.json" \
