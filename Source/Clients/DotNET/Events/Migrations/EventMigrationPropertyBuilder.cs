@@ -58,6 +58,15 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     }
 
     /// <inheritdoc/>
+    public void DefaultValue(PropertyName targetProperty, object value)
+    {
+        _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
+        {
+            [DefaultValueExpression] = JsonValue.Create(value)
+        };
+    }
+
+    /// <inheritdoc/>
     public PropertyExpression DefaultValue(object value)
     {
         var expression = new JsonObject

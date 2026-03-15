@@ -32,9 +32,17 @@ public interface IEventMigrationPropertyBuilder
     PropertyExpression RenamedFrom(PropertyName oldName);
 
     /// <summary>
+    /// Provide a default value for a new property that did not exist in the source generation.
+    /// </summary>
+    /// <param name="targetProperty">The name of the property to set the default value on.</param>
+    /// <param name="value">The default value.</param>
+    void DefaultValue(PropertyName targetProperty, object value);
+
+    /// <summary>
     /// Provide a default value for a property.
     /// </summary>
     /// <param name="value">The default value.</param>
     /// <returns><see cref="PropertyExpression"/> identifying the expression.</returns>
+    [Obsolete("Use DefaultValue(PropertyName, object) to associate the default with a specific target property.")]
     PropertyExpression DefaultValue(object value);
 }
