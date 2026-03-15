@@ -51,6 +51,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _disableTls;
+    readonly SemaphoreSlim _connectLock = new(1, 1);
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -136,6 +137,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public void Dispose()
     {
+        _connectLock.Dispose();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
         if (_tokenProvider is IDisposable disposableTokenProvider)
@@ -152,6 +154,24 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
+        await _connectLock.WaitAsync(_cancellationToken);
+        try
+        {
+            if (Lifecycle.IsConnected)
+            {
+                return;
+            }
+
+            await ConnectInternal();
+        }
+        finally
+        {
+            _connectLock.Release();
+        }
+    }
+
+    async Task ConnectInternal()
+    {
         _logger.Connecting(_connectionString);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
