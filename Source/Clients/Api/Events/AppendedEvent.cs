@@ -16,5 +16,5 @@ public record AppendedEvent(
     string Content,
     string OriginalContent = "",
     IEnumerable<EventRevision>? Revisions = null,
-    IReadOnlyDictionary<int, string>? GenerationalContent = null);
+    IEnumerable<KeyValuePair<int, string>>? GenerationalContent = null);
 
