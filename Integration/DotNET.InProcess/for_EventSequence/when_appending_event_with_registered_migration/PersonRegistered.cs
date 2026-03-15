@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_migrations;
+namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_registered_migration;
 
 [EventType]
 public record PersonRegistered(string FirstName, string LastName);

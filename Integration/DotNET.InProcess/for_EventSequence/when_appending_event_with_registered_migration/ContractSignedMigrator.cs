@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_migrations;
+namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_registered_migration;
 
 /// <summary>
 /// Migrates <see cref="ContractSigned"/> from generation 1 to generation 2.

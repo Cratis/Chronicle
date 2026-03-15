@@ -5,12 +5,12 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_migrations.with_a_registered_migration_when_appending_a_generation_2_event.context;
+using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_registered_migration.and_event_is_generation_2.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_migrations;
+namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_registered_migration;
 
 [Collection(ChronicleCollection.Name)]
-public class with_a_registered_migration_when_appending_a_generation_2_event(context context) : Given<context>(context)
+public class and_event_is_generation_2(context context) : Given<context>(context)
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
