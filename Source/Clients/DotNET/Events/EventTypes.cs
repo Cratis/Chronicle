@@ -31,7 +31,7 @@ public class EventTypes : IEventTypes
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for discovering event type migrators.</param>
-    /// <param name="disableEventTypeGenerationValidation">Whether to disable generation chain validation. Defaults to <see langword="false"/>.</param>
+    /// <param name="disableEventTypeGenerationValidation">Whether to disable event type generation chain validation on the server. Defaults to <see langword="false"/>.</param>
     public EventTypes(
         IEventStore eventStore,
         IJsonSchemaGenerator jsonSchemaGenerator,
@@ -87,11 +87,6 @@ public class EventTypes : IEventTypes
         {
             var schema = _schemasByEventType[eventType];
             var migrators = _eventTypeMigrators.GetMigratorsFor(clrType).ToList();
-
-            if (!_disableEventTypeGenerationValidation)
-            {
-                ValidateMigrationChain(clrType, eventType.Generation, migrators);
-            }
 
             var registration = new EventTypeRegistration
             {
@@ -151,37 +146,9 @@ public class EventTypes : IEventTypes
         await _servicesAccessor.Services.EventTypes.Register(new()
         {
             EventStore = _eventStore.Name,
-            Types = registrations
+            Types = registrations,
+            DisableValidation = _disableEventTypeGenerationValidation
         });
-    }
-
-    static void ValidateMigrationChain(Type clrType, EventTypeGeneration currentGeneration, List<IEventTypeMigration> migrators)
-    {
-        if (currentGeneration.Value <= 1)
-        {
-            return;
-        }
-
-        if (migrators.Count == 0)
-        {
-            throw new MissingEventTypeMigrators(clrType, currentGeneration.Value);
-        }
-
-        // Verify there is a migrator starting from generation 1
-        if (!migrators.Any(m => m.From.Value == 1))
-        {
-            throw new MissingFirstGenerationForEventType(clrType, currentGeneration.Value);
-        }
-
-        // Verify every step from 1 → currentGeneration is covered with no gaps
-        for (uint gen = 1; gen < currentGeneration.Value; gen++)
-        {
-            var nextGen = gen + 1;
-            if (!migrators.Any(m => m.From.Value == gen && m.To.Value == nextGen))
-            {
-                throw new MissingMigrationForEventTypeGeneration(clrType, gen, nextGen);
-            }
-        }
     }
 
     /// <inheritdoc/>

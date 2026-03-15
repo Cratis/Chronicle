@@ -116,9 +116,9 @@ public class ChronicleOptions(
     /// sequential generation numbering.
     /// </summary>
     /// <remarks>
-    /// This property is only honoured in DEVELOPMENT builds. In all other configurations
-    /// the setter is a no-op and the value is always <see langword="false"/>, ensuring that
-    /// production deployments never silently skip migration chain validation.
+    /// This property is only honoured in DEVELOPMENT builds of the Kernel. In all other
+    /// configurations the value sent to the server is ignored, ensuring that production
+    /// deployments never silently skip migration chain validation.
     /// </remarks>
 #if DEVELOPMENT
     public bool DisableEventTypeGenerationValidation { get; set; }
