@@ -24,7 +24,7 @@ jobs:
 
       - name: Run issue analysis and update project
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN }}
           REPO: ${{ github.repository }}
           ORG: ${{ github.repository_owner }}
           PROJECT_NUMBER: 7
