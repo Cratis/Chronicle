@@ -24,9 +24,10 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
     /// <inheritdoc/>
     public async Task Register(RegisterEventTypesRequest request)
     {
-        var skipValidation = false;
 #if DEVELOPMENT
-        skipValidation = request.DisableValidation;
+        var skipValidation = request.DisableValidation;
+#else
+        var skipValidation = false;
 #endif
         if (!skipValidation)
         {
