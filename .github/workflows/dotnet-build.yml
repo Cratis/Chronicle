@@ -90,12 +90,14 @@ jobs:
       matrix:
         namespace:
           - 'for_EventSequence'
+          - 'for_EventStoreSubscriptions'
           - 'for_JobsManager'
           - 'for_Reactors'
-          - 'for_Reducers'
           - 'for_ReadModels'
+          - 'for_Reducers'
           - 'for_Webhooks'
           - 'Jobs'
+          - 'Patches'
           - 'Projections'
     continue-on-error: true
     env:
