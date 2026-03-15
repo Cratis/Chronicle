@@ -79,14 +79,13 @@ The `DefaultValue(PropertyName targetProperty, object value)` method tells Chron
 
 ## Relaxing validation for development
 
-Strict validation is the default and is always enforced in non-development builds. During early development — before you have finalized your event schemas — you can disable the checks temporarily.
+Strict validation is the default and is always enforced in non-development Kernel builds. During early development — before you have finalised your event schemas — you can disable the checks temporarily.
 
 Set `DisableEventTypeGenerationValidation` in your `ChronicleOptions`:
 
 ```csharp
 builder.AddCratisChronicle(configureOptions: options =>
 {
-    // Only available in DEVELOPMENT builds — no-op in production
     options.DisableEventTypeGenerationValidation = true;
 });
 ```
@@ -103,13 +102,11 @@ Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section
 }
 ```
 
-> **Important:** `DisableEventTypeGenerationValidation` is only honoured when the application is compiled with the `DEVELOPMENT` preprocessor symbol. In all other build configurations the setter is silently ignored and validation always runs. This makes it impossible to accidentally disable validation in a production deployment.
-
-The Chronicle Kernel development build also runs with relaxed defaults, allowing experimental schemas without requiring a complete migration chain.
+This value is forwarded to the Kernel as part of the event-type registration request. The Kernel only honours it when running the **development image** — the production image always ignores the flag and validates unconditionally. This makes it impossible to accidentally disable validation in a production deployment even if the client sends `DisableValidation = true`.
 
 ## What happens when validation fires
 
-Validation runs during `Register()`, which is called when the client connects to Chronicle. If the validation fails, a `MissingEventTypeMigrators`, `MissingFirstGenerationForEventType`, or `MissingMigrationForEventTypeGeneration` exception is thrown before any events are appended. This is intentional — failing fast at startup is far better than discovering a broken migration chain at runtime.
+Validation runs on the Kernel during `Register()`, which is called when the client connects to Chronicle. If validation fails the server throws a `MissingEventTypeMigrators`, `MissingFirstGenerationForEventType`, or `MissingMigrationForEventTypeGeneration` exception, which the client receives as an `RpcException`. This is intentional — failing fast at startup is far better than discovering a broken migration chain at runtime.
 
 | Exception | Condition |
 |---|---|

@@ -168,13 +168,13 @@ OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle i
 
 ### DisableEventTypeGenerationValidation
 
-Bypasses the migration chain validation that Chronicle enforces when registering event types at generation 2 or higher. See [Generation Validation](../migrations/validation.md) for the full ruleset and when this is appropriate.
+Tells the Kernel to bypass migration chain validation when registering event types at generation 2 or higher. The value is forwarded as part of the registration request; it is only honoured by the **development image** of the Kernel. The production image always ignores the flag and validates unconditionally. See [Generation Validation](../migrations/validation.md) for the full ruleset and when this is appropriate.
 
 | | |
 |---|---|
 | Type | `bool` |
 | Default | `false` |
-| Build restriction | **DEVELOPMENT builds only.** The setter is a no-op in all other configurations — the value is always `false` in production regardless of what is set in code or `appsettings.json`. |
+| Image restriction | **Development image only.** The production image ignores this flag — validation is always enforced in production regardless of what is set in code or `appsettings.json`. |
 
 > **Important:** Only use this during early schema development. Never rely on it in production.
 
