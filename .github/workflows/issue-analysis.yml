@@ -80,3 +80,12 @@ jobs:
 # ────────
 # Runs every Monday at 08:00 UTC. Can also be triggered manually via
 # workflow_dispatch.
+#
+# REQUIRED SECRET
+# ───────────────
+# The GH_PROJECT_TOKEN repository secret must be set to a classic Personal
+# Access Token (PAT) with the 'project' scope.  GITHUB_TOKEN cannot access
+# org-level Projects V2.  If the secret is absent the workflow still runs
+# and updates IssueAnalysis.md, but the project board update is skipped.
+#
+# See .github/GH_PROJECT_TOKEN.md for step-by-step setup instructions.
