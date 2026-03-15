@@ -7,7 +7,7 @@ import { SeedEntry } from 'Api/Seeding/SeedEntry';
 import { Page } from 'Components/Common/Page';
 import { Allotment } from 'allotment';
 import { Column } from 'primereact/column';
-import { DataTable, DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import { DataTable, DataTableExpandedRows, DataTableSelectionSingleChangeEvent, DataTableValueArray } from 'primereact/datatable';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { useMemo, useState } from 'react';
 import { SeedEntryDetails } from './Seeding/SeedEntryDetails';
@@ -24,8 +24,8 @@ interface FlatSeedEntry extends SeedEntry {
 export const EventsSeeding = ({ eventStore, namespace }: EventsSeedingComponentProps) => {
     const title = namespace ? `Seed Data - ${namespace}` : 'Global Seed Data';
     const [selectedItem, setSelectedItem] = useState<FlatSeedEntry | undefined>(undefined);
-    const [expandedRowsBySource, setExpandedRowsBySource] = useState<any>(null);
-    const [expandedRowsByType, setExpandedRowsByType] = useState<any>(null);
+    const [expandedRowsBySource, setExpandedRowsBySource] = useState<DataTableValueArray | DataTableExpandedRows | undefined>(undefined);
+    const [expandedRowsByType, setExpandedRowsByType] = useState<DataTableValueArray | DataTableExpandedRows | undefined>(undefined);
 
     const [result] = namespace
         ? NamespaceSeedData.use({ eventStore, namespace })
