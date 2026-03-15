@@ -3,12 +3,11 @@
 
 extern alias KernelCore;
 extern alias KernelConcepts;
-
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.DependencyInjection;
 using KernelCorrelationId = Cratis.Execution.CorrelationId;
-using KernelEventRevised = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRevised;
 using KernelEventRedactionRequested = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRedactionRequested;
+using KernelEventRevised = KernelCore::Cratis.Chronicle.Events.EventSequences.EventRevised;
 using KernelEventSequenceId = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 using KernelEventSequenceNumber = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 using KernelEventSourceId = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSourceId;
