@@ -13,6 +13,12 @@ namespace Cratis.Chronicle.Concepts.Events;
 public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
+    /// Gets the original content of the event as a JSON string, before any compensations were applied.
+    /// Only populated when the event has been compensated.
+    /// </summary>
+    public string OriginalContent { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the compensations applied to this event, if any.
     /// </summary>
     public IEnumerable<EventCompensation> Compensations { get; init; } = [];

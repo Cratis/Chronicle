@@ -86,7 +86,9 @@
                     "unknown": "Unknown",
                     "code": "Code",
                     "user": "User"
-                }
+                },
+                "generation": "Generation {n}",
+                "latestGeneration": "Latest"
             },
             "namespaces": {
                 "title": "Namespaces",
@@ -322,6 +324,14 @@
                         "eventType": "Event Type",
                         "content": "Compensating Content (JSON)"
                     }
+                },
+                "details": {
+                    "revision": "Revision",
+                    "generation": "Generation",
+                    "originalRevision": "Original",
+                    "revisionLabel": "Revision {n}",
+                    "generationLabel": "Generation {n}",
+                    "compensationBy": "Compensated by {name} at {occurred}"
                 }
             },
             "observers": {

@@ -45,6 +45,15 @@ message AppendResponse {
 message AppendedEvent {
    EventContext Context = 1;
    string Content = 2;
+   string OriginalContent = 3;
+   repeated EventCompensation Compensations = 4;
+}
+message EventCompensation {
+   uint32 Generation = 1;
+   string CorrelationId = 2;
+   Identity CausedBy = 3;
+   DateTimeOffset Occurred = 4;
+   string Content = 5;
 }
 message Causation {
    SerializableDateTimeOffset Occurred = 1;

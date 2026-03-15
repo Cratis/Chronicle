@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Api.Identities;
+
 namespace Cratis.Chronicle.Api.Events;
 
 /// <summary>
@@ -15,7 +17,9 @@ internal static class AppendedEventConverters
     /// <returns>The converted appended event.</returns>
     public static AppendedEvent ToApi(this Contracts.Events.AppendedEvent appendedEvent) => new(
         appendedEvent.Context.ToApi(),
-        appendedEvent.Content);
+        appendedEvent.Content,
+        appendedEvent.OriginalContent,
+        appendedEvent.Compensations.Select(c => c.ToApi()).ToArray());
 
     /// <summary>
     /// Converts a collection of contract <see cref="Contracts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.
@@ -35,4 +39,16 @@ internal static class AppendedEventConverters
         Context = appendedEvent.Context.ToContract(),
         Content = appendedEvent.Content
     };
+
+    /// <summary>
+    /// Converts a contract <see cref="Contracts.Events.EventCompensation"/> to an <see cref="EventCompensation"/>.
+    /// </summary>
+    /// <param name="compensation">The contract compensation to convert.</param>
+    /// <returns>The converted compensation.</returns>
+    public static EventCompensation ToApi(this Contracts.Events.EventCompensation compensation) => new(
+        compensation.Generation,
+        compensation.CorrelationId,
+        compensation.CausedBy.ToApi(),
+        compensation.Occurred,
+        compensation.Content);
 }
