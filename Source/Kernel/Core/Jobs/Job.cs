@@ -413,7 +413,14 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             {
                 await ClearStateAsync();
             }
-            DeactivateOnIdle();
+            try
+            {
+                DeactivateOnIdle();
+            }
+            catch (InvalidOperationException)
+            {
+                // Grain activation may already be invalid during silo shutdown.
+            }
             return shouldClearState ? HandleCompletionSuccess.ClearedState : HandleCompletionSuccess.NotClearedState;
         }
         catch (Exception ex)
