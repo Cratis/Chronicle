@@ -27,7 +27,7 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
 #if DEVELOPMENT
         var skipValidation = request.DisableValidation;
 #else
-        var skipValidation = false;
+        const bool skipValidation = false;
 #endif
         if (!skipValidation)
         {

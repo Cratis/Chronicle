@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appendin
 
 /// <summary>
 /// Generation 1 of <see cref="ContractSigned"/>. Has only a contract identifier.
-/// Generation 2 adds a <see cref="Status"/> property, defaulting to <c>pending</c> for events
+/// Generation 2 adds a <c>Status</c> property, defaulting to <c>pending</c> for events
 /// stored before the property existed.
 /// </summary>
 /// <param name="ContractId">The contract identifier.</param>

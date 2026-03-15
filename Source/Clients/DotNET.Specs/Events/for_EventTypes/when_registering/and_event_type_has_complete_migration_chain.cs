@@ -6,11 +6,11 @@ using Cratis.Chronicle.Events.Migrations;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.when_registering;
 
-[EventType(generation: 2)]
-file record Gen2TestEventWithValidChain(string Name);
-
 public class and_event_type_has_complete_migration_chain : given.all_dependencies
 {
+    [EventType(generation: 2)]
+    record Gen2TestEventWithValidChain(string Name);
+
     EventTypes _subject;
 
     void Establish()

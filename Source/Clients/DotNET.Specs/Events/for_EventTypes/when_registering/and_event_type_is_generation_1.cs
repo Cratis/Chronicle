@@ -5,11 +5,11 @@ using Cratis.Chronicle.Contracts.Events;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.when_registering;
 
-[EventType]
-file record Gen1TestEvent(string Name);
-
 public class and_event_type_is_generation_1 : given.all_dependencies
 {
+    [EventType]
+    record Gen1TestEvent(string Name);
+
     EventTypes _subject;
 
     void Establish()

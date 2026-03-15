@@ -21,10 +21,7 @@ public class ContractSignedMigrator : IEventTypeMigrationFor<ContractSigned>
 
     /// <inheritdoc/>
     public void Upcast(IEventMigrationBuilder builder) =>
-        builder.Properties(pb =>
-        {
-            pb.DefaultValue("status", "pending");
-        });
+        builder.Properties(pb => pb.DefaultValue("status", "pending"));
 
     /// <inheritdoc/>
     public void Downcast(IEventMigrationBuilder builder)
