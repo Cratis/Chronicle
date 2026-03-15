@@ -24,7 +24,8 @@ internal static class AppendedEventConverters
         Context = @event.Context.ToContract(),
         Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions),
         OriginalContent = @event.OriginalContent,
-        Revisions = @event.Revisions.Select(c => c.ToContract()).ToList()
+        Revisions = @event.Revisions.Select(c => c.ToContract()).ToList(),
+        GenerationalContent = @event.GenerationalContent.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
     };
 
     /// <summary>

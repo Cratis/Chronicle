@@ -45,6 +45,8 @@ public class EventConverter(
             ? originalBson.ToString()
             : string.Empty;
 
+        var generationalContent = BuildGenerationalContent(@event);
+
         return new AppendedEvent(
             new(
                 eventType,
@@ -64,7 +66,8 @@ public class EventConverter(
             resolvedContent)
         {
             OriginalContent = originalContent,
-            Revisions = revisions
+            Revisions = revisions,
+            GenerationalContent = generationalContent
         };
     }
 
@@ -147,6 +150,17 @@ public class EventConverter(
                 revisionContentJson));
         }
 
+        return result;
+    }
+
+    static IReadOnlyDictionary<int, string> BuildGenerationalContent(Event @event)
+    {
+        var result = new Dictionary<int, string>();
+        foreach (var (key, value) in @event.Content)
+        {
+            if (int.TryParse(key, out var generation))
+                result[generation] = value.ToString();
+        }
         return result;
     }
 }

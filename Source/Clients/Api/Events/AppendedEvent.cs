@@ -10,9 +10,11 @@ namespace Cratis.Chronicle.Api.Events;
 /// <param name="Content">The JSON representation content of the event.</param>
 /// <param name="OriginalContent">The original JSON content before any revisions. Only present when revised.</param>
 /// <param name="Revisions">The revisions applied to this event, if any.</param>
+/// <param name="GenerationalContent">Content for each generation stored for this event, keyed by generation number.</param>
 public record AppendedEvent(
     EventContext Context,
     string Content,
     string OriginalContent = "",
-    IEnumerable<EventRevision>? Revisions = null);
+    IEnumerable<EventRevision>? Revisions = null,
+    IReadOnlyDictionary<int, string>? GenerationalContent = null);
 

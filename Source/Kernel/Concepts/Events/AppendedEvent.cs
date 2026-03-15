@@ -24,6 +24,12 @@ public record AppendedEvent(EventContext Context, ExpandoObject Content)
     public IEnumerable<EventRevision> Revisions { get; init; } = [];
 
     /// <summary>
+    /// Gets the content for each generation stored for this event.
+    /// Keys are generation numbers; values are the JSON content for that generation.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> GenerationalContent { get; init; } = new Dictionary<int, string>();
+
+    /// <summary>
     /// Gets whether this event has been revised.
     /// </summary>
     public bool IsRevised => Revisions.Any();

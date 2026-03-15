@@ -33,5 +33,12 @@ public class AppendedEvent
     /// </summary>
     [ProtoMember(4)]
     public IList<EventRevision> Revisions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the content for each generation stored for this event.
+    /// Keys are generation numbers; values are the JSON content for that generation.
+    /// </summary>
+    [ProtoMember(5, IsRequired = true)]
+    public IDictionary<int, string> GenerationalContent { get; set; } = new Dictionary<int, string>();
 }
 

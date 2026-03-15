@@ -19,7 +19,8 @@ internal static class AppendedEventConverters
         appendedEvent.Context.ToApi(),
         appendedEvent.Content,
         appendedEvent.OriginalContent,
-        appendedEvent.Revisions.Select(c => c.ToApi()).ToArray());
+        appendedEvent.Revisions.Select(c => c.ToApi()).ToArray(),
+        appendedEvent.GenerationalContent.ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
 
     /// <summary>
     /// Converts a collection of contract <see cref="Contracts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.
