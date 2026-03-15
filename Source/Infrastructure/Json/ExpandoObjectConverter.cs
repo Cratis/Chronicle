@@ -30,7 +30,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the expando object is preserved.
-        if (!schemaProperties.Any())
+        if (schemaProperties.Count == 0)
         {
             foreach (var (key, value) in expandoObject as IDictionary<string, object?>)
             {
@@ -89,7 +89,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         // When schema has no properties (e.g. a placeholder empty schema), fall back to
         // unknown-type conversion so that all data in the document is preserved.
-        if (!schemaProperties.Any())
+        if (schemaProperties.Count == 0)
         {
             foreach (var (name, sourceValue) in document)
             {
