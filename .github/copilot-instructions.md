@@ -22,16 +22,18 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Never change global.json unless explicitly asked to.
 - Never change package.json or package-lock.json files unless explicitly asked to.
 - Never change NuGet.config files unless explicitly asked to.
-- Always ensure that the code compiles without warnings.
+- Always ensure that the code compiles without warnings. **Warnings are treated as errors** — a build with warnings is a failing build.
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
+- **A task is not complete until the code has been built and every warning and error has been resolved.** Never hand back to the user with outstanding build warnings or errors.
 
 ## Development Workflow
 
-- After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
+- After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors **and warnings** as they appear — never accumulate technical debt.
+- Before marking any task done, run a final build (`dotnet build` for C#, `yarn compile` for TypeScript) and confirm it exits with zero errors and zero warnings. If there are warnings or errors, fix them before considering the task complete.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
 
