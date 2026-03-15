@@ -19,6 +19,7 @@ These rules exist so that every file in the codebase reads the same way. When fo
 - Apply code-formatting style defined in `.editorconfig`.
 - Use file-scoped namespace declarations — one less level of indentation for the entire file.
 - Use single-line `using` directives, sorted alphabetically.
+- Never qualify a type that is already unambiguously in scope via a `using` directive. When two `using` directives introduce conflicting type names, qualify only the conflicting occurrences using the shortest unambiguous path (e.g. `Concepts.Events.Foo` or `Contracts.Events.Foo`) — do not add `using` aliases for every conflicting type.
 - Insert a blank line before the opening `{` of every code block (`if`, `for`, `foreach`, `try`, `using`, etc.).
 - Ensure the final `return` statement of a method is on its own line.
 - Use pattern matching and switch expressions wherever possible — they are more readable and the compiler verifies exhaustiveness.
