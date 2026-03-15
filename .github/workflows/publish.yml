@@ -319,7 +319,9 @@ jobs:
 
       - name: Generate TypeScript from Proto
         working-directory: ./Source/Clients/TypeScript
-        run: yarn generate
+        run: |
+          mkdir -p generated
+          yarn generate
 
       - name: Build TypeScript package
         working-directory: ./Source/Clients/TypeScript
