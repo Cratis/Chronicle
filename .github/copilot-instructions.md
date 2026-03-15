@@ -16,6 +16,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 
 ## General
 
+- When adding new instructions or rules, always place them in the most specific location that applies — the relevant `.instructions.md` file (e.g. `typescript.instructions.md`, `csharp.instructions.md`) or a `SKILL.md` if it relates to a specific workflow. Only add something to `copilot-instructions.md` if it genuinely applies to every file and every context in the project.
 - Always use American English spelling in all code, comments, and documentation (e.g. "color" not "colour", "behavior" not "behaviour").
 - Write clear and concise comments for each function.
 - Make only high confidence suggestions when reviewing code changes.
