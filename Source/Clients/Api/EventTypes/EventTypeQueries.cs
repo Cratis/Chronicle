@@ -61,4 +61,16 @@ public class EventTypeQueries : ControllerBase
         observable.Subscribe(subject);
         return subject;
     }
+
+    /// <summary>
+    /// Gets all generations for a specific event type.
+    /// </summary>
+    /// <param name="eventStore">The event store to get event type generations for.</param>
+    /// <param name="eventTypeId">The event type identifier to get generations for.</param>
+    /// <returns>Collection of event type registrations, one per generation.</returns>
+    [HttpGet("{eventTypeId}/generations")]
+    public async Task<IEnumerable<EventTypeRegistration>> AllEventTypeGenerations(
+        [FromRoute] string eventStore,
+        [FromRoute] string eventTypeId) =>
+        (await _eventTypes.GetAllGenerationsForEventType(new() { EventStore = eventStore, EventTypeId = eventTypeId })).ToApi();
 }

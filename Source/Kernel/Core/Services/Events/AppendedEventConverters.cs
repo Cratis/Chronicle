@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Services.Identities;
 
 namespace Cratis.Chronicle.Services.Events;
 
@@ -21,7 +22,9 @@ internal static class AppendedEventConverters
     public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new()
     {
         Context = @event.Context.ToContract(),
-        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions)
+        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions),
+        OriginalContent = @event.OriginalContent,
+        Compensations = @event.Compensations.Select(c => c.ToContract()).ToList()
     };
 
     /// <summary>
@@ -42,4 +45,18 @@ internal static class AppendedEventConverters
     public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new(
             @event.Context.ToChronicle(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
+
+    /// <summary>
+    /// Convert a <see cref="Concepts.Events.EventCompensation"/> to a <see cref="Contracts.Events.EventCompensation"/>.
+    /// </summary>
+    /// <param name="compensation">The compensation to convert.</param>
+    /// <returns>The converted contract compensation.</returns>
+    public static Contracts.Events.EventCompensation ToContract(this Concepts.Events.EventCompensation compensation) => new()
+    {
+        Generation = compensation.EventTypeGeneration,
+        CorrelationId = compensation.CorrelationId.ToString(),
+        CausedBy = compensation.CausedBy.ToContract(),
+        Occurred = compensation.Occurred,
+        Content = compensation.Content
+    };
 }

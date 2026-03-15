@@ -49,4 +49,12 @@ public interface IEventTypes
     /// <returns>An observable of collection of <see cref="EventTypeRegistration"/> instances.</returns>
     [Operation]
     IObservable<IEnumerable<EventTypeRegistration>> ObserveAllRegistrations(GetAllEventTypesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all the registered generations for a specific event type.
+    /// </summary>
+    /// <param name="request">The <see cref="GetEventTypeGenerationsRequest"/> payload.</param>
+    /// <returns>A collection of <see cref="EventTypeRegistration"/> instances, one per generation.</returns>
+    [Operation]
+    Task<IEnumerable<EventTypeRegistration>> GetAllGenerationsForEventType(GetEventTypeGenerationsRequest request);
 }

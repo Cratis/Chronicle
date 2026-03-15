@@ -14,6 +14,10 @@ message EventTypeRegistration {
 message GetAllEventTypesRequest {
    string EventStore = 1;
 }
+message GetEventTypeGenerationsRequest {
+   string EventStore = 1;
+   string EventTypeId = 2;
+}
 message IEnumerable_EventType {
    repeated EventType items = 1;
 }
@@ -30,6 +34,7 @@ message RegisterSingleEventTypeRequest {
 }
 service EventTypes {
    rpc GetAll (GetAllEventTypesRequest) returns (IEnumerable_EventType);
+   rpc GetAllGenerationsForEventType (GetEventTypeGenerationsRequest) returns (IEnumerable_EventTypeRegistration);
    rpc GetAllRegistrations (GetAllEventTypesRequest) returns (IEnumerable_EventTypeRegistration);
    rpc ObserveAllRegistrations (GetAllEventTypesRequest) returns (stream IEnumerable_EventTypeRegistration);
    rpc Register (RegisterEventTypesRequest) returns (.google.protobuf.Empty);

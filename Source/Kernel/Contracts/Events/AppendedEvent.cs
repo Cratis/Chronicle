@@ -20,4 +20,18 @@ public class AppendedEvent
     /// </summary>
     [ProtoMember(2)]
     public string Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the original JSON content before any compensations were applied.
+    /// Only populated when the event has been compensated.
+    /// </summary>
+    [ProtoMember(3)]
+    public string OriginalContent { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the compensations applied to this event, if any.
+    /// </summary>
+    [ProtoMember(4)]
+    public IList<EventCompensation> Compensations { get; set; } = [];
 }
+

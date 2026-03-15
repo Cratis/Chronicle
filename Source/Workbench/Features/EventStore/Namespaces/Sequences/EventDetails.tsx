@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { useState, useMemo } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { Dropdown } from 'primereact/dropdown';
 import { AppendedEvent } from 'Api/Events';
+import { EventCompensation } from 'Api/Events/EventCompensation';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
@@ -11,41 +14,110 @@ const ObjectContentEditor = _OCE.ObjectContentEditor;
 import type { Json } from '@cratis/components/types';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
+import strings from 'Strings';
+
+interface RevisionOption {
+    label: string;
+    value: number;
+}
 
 export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
     const params = useParams<EventStoreParams>();
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [selectedRevision, setSelectedRevision] = useState<number>(-1);
+
+    const compensations: EventCompensation[] = item.compensations ?? [];
+    const isCompensated = compensations.length > 0;
+
+    // Build revision options: -1 = latest (default), 0 = original, 1..N = compensation revisions
+    const revisionOptions: RevisionOption[] = useMemo(() => {
+        if (!isCompensated) return [];
+
+        const options: RevisionOption[] = [
+            { label: strings.eventStore.namespaces.sequences.details.originalRevision, value: 0 }
+        ];
+        compensations.forEach((_, index) => {
+            const isLatest = index === compensations.length - 1;
+            const label = isLatest
+                ? `${strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1))} (latest)`
+                : strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1));
+            options.push({ label, value: index + 1 });
+        });
+        return options;
+    }, [compensations, isCompensated]);
+
+    // Default to latest revision when compensated
+    const effectiveRevision = selectedRevision === -1 && isCompensated ? compensations.length : selectedRevision;
+
+    // Get current revision content
+    const currentContent = useMemo(() => {
+        if (!isCompensated || effectiveRevision === 0) {
+            const rawContent = effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content;
+            try {
+                return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+            } catch {
+                return rawContent;
+            }
+        }
+        const compensation = compensations[effectiveRevision - 1];
+        if (!compensation) return {};
+        try {
+            return typeof compensation.content === 'string' ? JSON.parse(compensation.content) : compensation.content;
+        } catch {
+            return compensation.content;
+        }
+    }, [effectiveRevision, isCompensated, item.content, item.originalContent, compensations]);
+
+    // Get metadata (occurred, correlationId, causedBy) for the current revision
+    const currentMetadata = useMemo(() => {
+        if (!isCompensated || effectiveRevision === 0) {
+            return {
+                occurred: item.context.occurred,
+                correlationId: item.context.correlationId,
+                causedBy: item.context.causedBy
+            };
+        }
+        const compensation = compensations[effectiveRevision - 1];
+        if (!compensation) return { occurred: item.context.occurred, correlationId: item.context.correlationId, causedBy: item.context.causedBy };
+        return {
+            occurred: compensation.occurred,
+            correlationId: compensation.correlationId,
+            causedBy: compensation.causedBy
+        };
+    }, [effectiveRevision, isCompensated, item.context, compensations]);
 
     const eventType = eventTypes.data?.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
     const schema = eventType ? JSON.parse(eventType.schema) : { properties: {} };
-    const content = typeof item.content === 'string' ? JSON.parse(item.content) : item.content;
 
-    // Build context object for display
+    // Build context object for display - metadata reflects the current revision
     const contextObject = {
         eventType: item.context.eventType.id,
+        generation: item.context.eventType.generation,
         eventSourceType: item.context.eventSourceType,
         eventSourceId: item.context.eventSourceId,
         sequenceNumber: item.context.sequenceNumber,
         eventStreamType: item.context.eventStreamType,
         eventStreamId: item.context.eventStreamId,
-        occurred: item.context.occurred.toISOString(),
-        correlationId: item.context.correlationId.toString(),
+        occurred: currentMetadata.occurred instanceof Date
+            ? (currentMetadata.occurred as Date).toISOString()
+            : new Date(currentMetadata.occurred as string).toISOString(),
+        correlationId: currentMetadata.correlationId?.toString() ?? '',
         causedBy: {
-            name: item.context.causedBy.name,
-            subject: item.context.causedBy.subject
+            name: currentMetadata.causedBy?.name ?? '',
+            subject: currentMetadata.causedBy?.subject ?? ''
         },
         causation: item.context.causation.map(c => ({
             type: c.type,
-            occurred: c.occurred.toISOString(),
+            occurred: c.occurred instanceof Date ? (c.occurred as Date).toISOString() : new Date(c.occurred as string).toISOString(),
             properties: c.properties
         }))
     };
 
-    // Schema for context (we can define a basic schema for better display)
     const contextSchema = {
         type: 'object',
         properties: {
             eventType: { type: 'string', title: 'Event Type' },
+            generation: { type: 'number', title: 'Generation' },
             eventSourceType: { type: 'string', title: 'Event Source Type' },
             eventSourceId: { type: 'string', title: 'Event Source ID' },
             sequenceNumber: { type: 'number', title: 'Sequence Number' },
@@ -76,27 +148,43 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         }
     };
 
+    const revisionPlaceholder = isCompensated ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
+
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
-            <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>
+            <h2 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-color)' }}>
                 {item.context.eventType.id}
             </h2>
+            {isCompensated && (
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
+                        {strings.eventStore.namespaces.sequences.details.revision}:
+                    </label>
+                    <Dropdown
+                        value={effectiveRevision}
+                        options={revisionOptions}
+                        onChange={(e) => setSelectedRevision(e.value)}
+                        placeholder={revisionPlaceholder}
+                        style={{ minWidth: '200px' }}
+                    />
+                </div>
+            )}
             <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <TabPanel header="Context">
                     <div style={{ height: '100%', overflow: 'auto' }}>
                         <ObjectContentEditor
                             object={contextObject as Json}
                             schema={contextSchema}
-                            timestamp={item.context.occurred}
+                            timestamp={currentMetadata.occurred instanceof Date ? currentMetadata.occurred as Date : new Date(currentMetadata.occurred as string)}
                         />
                     </div>
                 </TabPanel>
                 <TabPanel header="Content">
                     <div style={{ height: '100%', overflow: 'auto' }}>
                         <ObjectContentEditor
-                            object={content}
+                            object={currentContent}
                             schema={schema}
-                            timestamp={item.context.occurred}
+                            timestamp={currentMetadata.occurred instanceof Date ? currentMetadata.occurred as Date : new Date(currentMetadata.occurred as string)}
                         />
                     </div>
                 </TabPanel>

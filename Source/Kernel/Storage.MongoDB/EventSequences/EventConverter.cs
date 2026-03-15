@@ -41,6 +41,10 @@ public class EventConverter(
         var resolvedContent = await ResolveContent(eventType, @event.EventSourceId, content);
         var compensations = await ResolveCompensations(@event);
 
+        var originalContent = @event.Compensations.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
+            ? originalBson.ToString()
+            : string.Empty;
+
         return new AppendedEvent(
             new(
                 eventType,
@@ -59,6 +63,7 @@ public class EventConverter(
                 hash),
             resolvedContent)
         {
+            OriginalContent = originalContent,
             Compensations = compensations
         };
     }
@@ -128,12 +133,18 @@ public class EventConverter(
         foreach (var compensation in @event.Compensations)
         {
             var causedBy = await identityStorage.GetFor([compensation.CausedBy]);
+            var compensationKey = compensation.EventTypeGeneration.ToString();
+            var compensationContentJson = compensation.Content.TryGetValue(compensationKey, out var contentBson)
+                ? contentBson.ToString()
+                : string.Empty;
+
             result.Add(new ConceptsEventCompensation(
                 compensation.EventTypeGeneration,
                 compensation.CorrelationId,
                 compensation.Causation,
                 causedBy,
-                compensation.Occurred));
+                compensation.Occurred,
+                compensationContentJson));
         }
 
         return result;

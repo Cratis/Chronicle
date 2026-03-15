@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="Causation">The chain of <see cref="Causation"/> for the compensation.</param>
 /// <param name="CausedBy">The <see cref="Identity"/> that caused the compensation.</param>
 /// <param name="Occurred">When the compensation occurred.</param>
+/// <param name="Content">The compensating content as a JSON string.</param>
 public record EventCompensation(
     EventTypeGeneration EventTypeGeneration,
     CorrelationId CorrelationId,
     IEnumerable<Causation> Causation,
     Identity CausedBy,
-    DateTimeOffset Occurred);
+    DateTimeOffset Occurred,
+    string Content = "");
