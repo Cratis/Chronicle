@@ -84,7 +84,7 @@ export const configuration: languages.LanguageConfiguration = {
             end: /^\s*$/,
         },
     },
-    wordPattern: /@?[a-zA-Z_$][\w$]*/,
+    wordPattern: /@?[a-zA-Z_$][\w$-]*/,
 };
 
 export const monarchLanguage: languages.IMonarchLanguage = {

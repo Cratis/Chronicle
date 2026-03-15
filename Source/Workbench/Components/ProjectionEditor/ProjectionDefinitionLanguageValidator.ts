@@ -86,37 +86,44 @@ export class ProjectionDefinitionLanguageValidator {
         }
 
         // Validate first meaningful line - projection declaration
-        // Support qualified names with dots (e.g., Namespace.ClassName)
-        const projectionMatch = firstLine.match(/^projection\s+([\w.]+)\s*=>\s*([\w.]+)\s*$/);
+        // Supports both "projection Name => ReadModel" and ad hoc "projection Name"
+        const projectionWithReadModelMatch = firstLine.match(/^projection\s+([\w.]+)\s*=>\s*([\w.]+)\s*$/);
+        const projectionAdHocMatch = !projectionWithReadModelMatch && firstLine.match(/^projection\s+([\w.]+)\s*$/);
 
-        if (!projectionMatch) {
+        if (!projectionWithReadModelMatch && !projectionAdHocMatch) {
             const lineNumber = firstNonEmptyLineIndex + 1;
-            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName> => <ReadModelIdentifier>"'));
+            markers.push(this.createError(lineNumber, 1, firstLine.length + 1, 'Projection definition must start with "projection <ProjectionName>" or "projection <ProjectionName> => <ReadModelIdentifier>"'));
             return markers;
         }
 
-        const [, , readModelName] = projectionMatch;
+        let activeSchema: JsonSchema | undefined;
+        let readModelName: string | null = null;
 
-        // Validate read model exists in schemas or is a draft
-        const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
-        const isDraftReadModel = this.isDraftReadModel(readModelName);
-        const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
+        if (projectionWithReadModelMatch) {
+            readModelName = projectionWithReadModelMatch[2];
 
-        if (!readModelExists && !isDraftReadModel) {
-            const lineNumber = firstNonEmptyLineIndex + 1;
-            const col = readModelStartColumn;
-            markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
-        } else if (isDraftReadModel) {
-            // Show info marker for draft read models - they exist but haven't been saved yet
-            const lineNumber = firstNonEmptyLineIndex + 1;
-            const col = readModelStartColumn;
-            markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
+            // Validate read model exists in schemas or is a draft
+            const readModelExists = this.resolveReadModelIdentifier(readModelName) !== null;
+            const isDraftReadModel = this.isDraftReadModel(readModelName);
+            const readModelStartColumn = this.getReadModelStartColumn(firstLine, readModelName);
+
+            if (!readModelExists && !isDraftReadModel) {
+                const lineNumber = firstNonEmptyLineIndex + 1;
+                const col = readModelStartColumn;
+                markers.push(this.createError(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' not found`));
+            } else if (isDraftReadModel) {
+                // Show info marker for draft read models - they exist but haven't been saved yet
+                const lineNumber = firstNonEmptyLineIndex + 1;
+                const col = readModelStartColumn;
+                markers.push(this.createInfo(lineNumber, col, col + readModelName.length, `Read model '${readModelName}' is a draft (not yet saved)`));
+            }
+
+            // Get the active read model schema for property validation (check draft first)
+            const isDraft = this.isDraftReadModel(readModelName);
+            const activeReadModel = isDraft ? null : this.resolveReadModelInfo(readModelName);
+            activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
         }
-
-        // Get the active read model schema for property validation (check draft first)
-        const isDraft = this.isDraftReadModel(readModelName);
-        const activeReadModel = isDraft ? null : this.resolveReadModelInfo(readModelName);
-        const activeSchema = isDraft ? this.draftReadModel!.schema : activeReadModel?.schema;
+        // For ad hoc projections (no read model), activeSchema stays undefined — property validation is skipped
 
         // Validate subsequent lines
         const contextStack: JsonSchema[] = [activeSchema!];
@@ -152,7 +159,7 @@ export class ProjectionDefinitionLanguageValidator {
             const currentEventContext = eventContextStack[eventContextStack.length - 1];
 
             // Validate event types in from/every blocks
-            const fromMatch = trimmed.match(/^from\s+(\w+)/);
+            const fromMatch = trimmed.match(/^from\s+([\w-]+)/);
             if (fromMatch) {
                 const eventType = fromMatch[1];
                 const col = line.indexOf(eventType) + 1;
@@ -170,7 +177,7 @@ export class ProjectionDefinitionLanguageValidator {
             }
 
             // Validate event types in join/remove blocks
-            const eventsMatch = trimmed.match(/^events\s+(\w+)/);
+            const eventsMatch = trimmed.match(/^events\s+([\w-]+)/);
             if (eventsMatch) {
                 const eventType = eventsMatch[1];
                 const col = line.indexOf(eventType) + 1;
@@ -187,7 +194,7 @@ export class ProjectionDefinitionLanguageValidator {
                 }
             }
 
-            const removeWithMatch = trimmed.match(/^remove\s+(?:with|via\s+join\s+on)\s+(\w+)/);
+            const removeWithMatch = trimmed.match(/^remove\s+(?:with|via\s+join\s+on)\s+([\w-]+)/);
             if (removeWithMatch) {
                 const eventType = removeWithMatch[1];
                 const col = line.indexOf(eventType) + 1;

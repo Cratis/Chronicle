@@ -592,7 +592,7 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
         // Search backwards to find the event type declaration
         for (let i = lineNumber; i >= 1; i--) {
             const line = model.getLineContent(i).trim();
-            const fromMatch = line.match(/^from\s+(\w+)/);
+            const fromMatch = line.match(/^from\s+([\w-]+)/);
             if (fromMatch) {
                 return fromMatch[1];
             }
