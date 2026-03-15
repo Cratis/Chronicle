@@ -260,9 +260,6 @@ jobs:
             dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
           done
 
-      - name: Build and Create CLI NuGet package
-        run: dotnet pack ./Source/Tools/Cli/Cli.csproj --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
-
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
