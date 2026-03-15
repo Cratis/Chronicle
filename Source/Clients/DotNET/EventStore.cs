@@ -60,6 +60,7 @@ public class EventStore : IEventStore
     /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+    /// <param name="disableEventTypeGenerationValidation">Whether to disable event type generation chain validation. Defaults to <see langword="false"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
@@ -77,6 +78,7 @@ public class EventStore : IEventStore
         IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
+        bool disableEventTypeGenerationValidation,
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
@@ -90,7 +92,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, disableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
 

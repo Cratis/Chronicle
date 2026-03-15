@@ -22,6 +22,7 @@ public class EventTypes : IEventTypes
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly IChronicleServicesAccessor _servicesAccessor;
+    readonly bool _disableEventTypeGenerationValidation;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventTypes"/>.
@@ -30,17 +31,20 @@ public class EventTypes : IEventTypes
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for discovering event type migrators.</param>
+    /// <param name="disableEventTypeGenerationValidation">Whether to disable generation chain validation. Defaults to <see langword="false"/>.</param>
     public EventTypes(
         IEventStore eventStore,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IClientArtifactsProvider clientArtifacts,
-        IEventTypeMigrators eventTypeMigrators)
+        IEventTypeMigrators eventTypeMigrators,
+        bool disableEventTypeGenerationValidation = false)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
         _eventTypeMigrators = eventTypeMigrators;
+        _disableEventTypeGenerationValidation = disableEventTypeGenerationValidation;
     }
 
     /// <inheritdoc/>
@@ -82,6 +86,12 @@ public class EventTypes : IEventTypes
         foreach (var (eventType, clrType) in _typesByEventType)
         {
             var schema = _schemasByEventType[eventType];
+            var migrators = _eventTypeMigrators.GetMigratorsFor(clrType).ToList();
+
+            if (!_disableEventTypeGenerationValidation)
+            {
+                ValidateMigrationChain(clrType, eventType.Generation, migrators);
+            }
 
             var registration = new EventTypeRegistration
             {
@@ -97,7 +107,7 @@ public class EventTypes : IEventTypes
             });
 
             // Add migration definitions from discovered migrators
-            foreach (var migrator in _eventTypeMigrators.GetMigratorsFor(clrType))
+            foreach (var migrator in migrators)
             {
                 var upcastBuilder = new EventMigrationBuilder();
                 migrator.Upcast(upcastBuilder);
@@ -143,6 +153,35 @@ public class EventTypes : IEventTypes
             EventStore = _eventStore.Name,
             Types = registrations
         });
+    }
+
+    static void ValidateMigrationChain(Type clrType, EventTypeGeneration currentGeneration, List<IEventTypeMigration> migrators)
+    {
+        if (currentGeneration.Value <= 1)
+        {
+            return;
+        }
+
+        if (migrators.Count == 0)
+        {
+            throw new MissingEventTypeMigrators(clrType, currentGeneration.Value);
+        }
+
+        // Verify there is a migrator starting from generation 1
+        if (!migrators.Any(m => m.From.Value == 1))
+        {
+            throw new MissingFirstGenerationForEventType(clrType, currentGeneration.Value);
+        }
+
+        // Verify every step from 1 → currentGeneration is covered with no gaps
+        for (uint gen = 1; gen < currentGeneration.Value; gen++)
+        {
+            var nextGen = gen + 1;
+            if (!migrators.Any(m => m.From.Value == gen && m.To.Value == nextGen))
+            {
+                throw new MissingMigrationForEventTypeGeneration(clrType, gen, nextGen);
+            }
+        }
     }
 
     /// <inheritdoc/>
