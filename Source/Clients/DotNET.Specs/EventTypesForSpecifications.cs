@@ -52,6 +52,9 @@ public class EventTypesForSpecifications : IEventTypes
     public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType[eventTypeId];
 
     /// <inheritdoc/>
+    public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _clrTypesByEventType[eventTypeId];
+
+    /// <inheritdoc/>
     public EventType GetEventTypeFor(Type clrType)
     {
         EnsureEventType(clrType);
