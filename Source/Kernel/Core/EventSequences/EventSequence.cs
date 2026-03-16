@@ -709,7 +709,7 @@ public class EventSequence(
         EventSourceId eventSourceId,
         IEnumerable<EventType> affectedEventTypes)
     {
-        var observers = await ObserverStorage.GetForEventTypes(affectedEventTypes);
+        var observers = await ObserverStorage.GetReplayableObserversForEventTypes(affectedEventTypes);
         foreach (var observer in observers)
         {
             var key = new ObserverKey(observer.Identifier, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId);

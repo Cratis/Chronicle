@@ -64,4 +64,11 @@ public class ObserverInformation
     /// </summary>
     [ProtoMember(9)]
     public bool IsSubscribed { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer supports replay scenarios.
+    /// </summary>
+    [ProtoMember(10)]
+    [System.ComponentModel.DefaultValue(true)]
+    public bool IsReplayable { get; set; } = true;
 }
