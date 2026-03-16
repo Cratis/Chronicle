@@ -142,7 +142,7 @@ public class Projection : IProjection, IDisposable
             ThrowIfMissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
         }
 
-        return _eventTypesToKeyResolver[resolvedKey];
+        return _eventTypesToKeyResolver[resolvedKey!];
     }
 
     /// <inheritdoc/>

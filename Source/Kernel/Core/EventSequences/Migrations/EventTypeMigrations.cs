@@ -52,6 +52,39 @@ public class EventTypeMigrations(
         return result;
     }
 
+    static JsonValue? EvaluateSplit(JsonObject content, JsonObject config)
+    {
+        var source = config["source"]?.GetValue<string>();
+        var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
+        var part = config["part"]?.GetValue<int>() ?? 0;
+
+        if (source is null || !content.TryGetPropertyValue(source, out var sourceNode) || sourceNode is null)
+            return JsonValue.Create(string.Empty);
+
+        var sourceValue = sourceNode.GetValue<string>();
+        var parts = sourceValue.Split(separator);
+        return JsonValue.Create(parts.Length > part ? parts[part] : string.Empty);
+    }
+
+    static JsonValue? EvaluateCombine(JsonObject content, JsonArray sources)
+    {
+        var builder = new StringBuilder();
+        foreach (var source in sources)
+        {
+            var propertyName = source?.GetValue<string>();
+            if (propertyName != null && content.TryGetPropertyValue(propertyName, out var node) && node != null)
+                builder.Append(node.GetValue<string>());
+        }
+        return JsonValue.Create(builder.ToString());
+    }
+
+    static JsonNode? EvaluateRename(JsonObject content, string? oldName)
+    {
+        if (oldName is null || !content.TryGetPropertyValue(oldName, out var value))
+            return null;
+        return value?.DeepClone();
+    }
+
     async Task UpcastToHigherGenerations(
         EventTypeGeneration sourceGeneration,
         JsonObject sourceContent,
@@ -133,8 +166,9 @@ public class EventTypeMigrations(
         {
             if (property.Value is JsonObject expr && expr.Count == 1)
             {
-                var expressionType = expr.First().Key;
-                switch (expressionType)
+                using var enumerator = expr.GetEnumerator();
+                enumerator.MoveNext();
+                switch (enumerator.Current.Key)
                 {
                     case WellKnownExpressions.DefaultValue:
                         defaultValues[property.Key] = expr[WellKnownExpressions.DefaultValue]?.DeepClone();
@@ -153,7 +187,7 @@ public class EventTypeMigrations(
                         break;
 
                     default:
-                        regularJmesPath[property.Key] = property.Value?.DeepClone();
+                        regularJmesPath[property.Key] = property.Value.DeepClone();
                         break;
                 }
             }
@@ -206,39 +240,6 @@ public class EventTypeMigrations(
         }
 
         return result;
-    }
-
-    static JsonNode? EvaluateSplit(JsonObject content, JsonObject config)
-    {
-        var source = config["source"]?.GetValue<string>();
-        var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
-        var part = config["part"]?.GetValue<int>() ?? 0;
-
-        if (source is null || !content.TryGetPropertyValue(source, out var sourceNode) || sourceNode is null)
-            return JsonValue.Create(string.Empty);
-
-        var sourceValue = sourceNode.GetValue<string>();
-        var parts = sourceValue.Split(separator);
-        return JsonValue.Create(parts.Length > part ? parts[part] : string.Empty);
-    }
-
-    static JsonNode? EvaluateCombine(JsonObject content, JsonArray sources)
-    {
-        var builder = new StringBuilder();
-        foreach (var source in sources)
-        {
-            var propertyName = source?.GetValue<string>();
-            if (propertyName != null && content.TryGetPropertyValue(propertyName, out var node) && node != null)
-                builder.Append(node.GetValue<string>());
-        }
-        return JsonValue.Create(builder.ToString());
-    }
-
-    static JsonNode? EvaluateRename(JsonObject content, string? oldName)
-    {
-        if (oldName is null || !content.TryGetPropertyValue(oldName, out var value))
-            return null;
-        return value?.DeepClone();
     }
 }
 

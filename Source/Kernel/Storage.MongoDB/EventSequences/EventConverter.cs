@@ -107,6 +107,17 @@ public class EventConverter(
         _ => node.ToString()
     };
 
+    static Dictionary<int, string> BuildGenerationalContent(Event @event)
+    {
+        var result = new Dictionary<int, string>();
+        foreach (var (key, value) in @event.Content)
+        {
+            if (int.TryParse(key, out var generation))
+                result[generation] = value.ToString();
+        }
+        return result;
+    }
+
     (EventType EventType, string GenerationKey, JsonObject Content) ExtractContent(Event @event)
     {
         if (@event.Revisions.Any())
@@ -157,17 +168,6 @@ public class EventConverter(
                 revisionContentJson));
         }
 
-        return result;
-    }
-
-    static IReadOnlyDictionary<int, string> BuildGenerationalContent(Event @event)
-    {
-        var result = new Dictionary<int, string>();
-        foreach (var (key, value) in @event.Content)
-        {
-            if (int.TryParse(key, out var generation))
-                result[generation] = value.ToString();
-        }
         return result;
     }
 }
