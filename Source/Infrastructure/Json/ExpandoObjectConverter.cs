@@ -48,7 +48,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             JsonNode? value = null;
 
-            var keyValue = expandoObject.SingleOrDefault(_ => _.Key == property.Name);
+            var keyValue = expandoObject.SingleOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
 
             var name = property.Name;
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
@@ -105,7 +105,8 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         foreach (var property in schemaProperties)
         {
             var name = property.Name;
-            var sourceValue = document[name];
+            var sourceValue = document[name]
+                ?? document.FirstOrDefault(kv => kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
 
             object? value = null;
             if (sourceValue is not null)
