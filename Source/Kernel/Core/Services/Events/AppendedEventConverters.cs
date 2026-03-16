@@ -48,11 +48,11 @@ internal static class AppendedEventConverters
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
 
     /// <summary>
-    /// Convert a <see cref="Concepts.Events.EventRevision"/> to a <see cref="Contracts.Events.EventRevision"/>.
+    /// Convert a <see cref="EventRevision"/> to a <see cref="Contracts.Events.EventRevision"/>.
     /// </summary>
     /// <param name="revision">The revision to convert.</param>
     /// <returns>The converted contract revision.</returns>
-    public static Contracts.Events.EventRevision ToContract(this Concepts.Events.EventRevision revision) => new()
+    public static Contracts.Events.EventRevision ToContract(this EventRevision revision) => new()
     {
         Generation = revision.EventTypeGeneration,
         CorrelationId = revision.CorrelationId.ToString(),

@@ -102,7 +102,7 @@ internal sealed class Projections(
             async definition =>
             {
                 ReadModelDefinition? readModelDefinition;
-                var isInferredReadModel = definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred;
+                var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
                 if (isInferredReadModel)
                 {
@@ -210,7 +210,7 @@ internal sealed class Projections(
                 // When the declaration has no explicit => ReadModel, the compiler returns ReadModelIdentifier.Inferred.
                 // If the caller has provided a DraftReadModel (name for the new type), infer the schema from events
                 // and build a full read model definition so that we can register both the type and the projection.
-                if (definition.ReadModel == Concepts.ReadModels.ReadModelIdentifier.Inferred)
+                if (definition.ReadModel == ReadModelIdentifier.Inferred)
                 {
                     if (draftDefinition is null)
                     {
@@ -228,17 +228,17 @@ internal sealed class Projections(
                     var inferredSchema = InferSchema(definition.From.Keys, eventTypeSchemas, draftDefinition.DisplayName);
                     var inferredSchemas = new Dictionary<ReadModelGeneration, JsonSchema>
                     {
-                        { Concepts.ReadModels.ReadModelGeneration.First, inferredSchema }
+                        { ReadModelGeneration.First, inferredSchema }
                     };
 
                     readModelDefinition = new ReadModelDefinition(
                         draftDefinition.Identifier,
                         draftDefinition.ContainerName,
                         draftDefinition.DisplayName,
-                        Concepts.ReadModels.ReadModelOwner.Server,
-                        Concepts.ReadModels.ReadModelSource.User,
-                        Concepts.ReadModels.ReadModelObserverType.Projection,
-                        Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+                        ReadModelOwner.Server,
+                        ReadModelSource.User,
+                        ReadModelObserverType.Projection,
+                        ReadModelObserverIdentifier.Unspecified,
                         new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
                         inferredSchemas,
                         []);
@@ -442,17 +442,17 @@ internal sealed class Projections(
 
         var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
         {
-            { Concepts.ReadModels.ReadModelGeneration.First, schema }
+            { ReadModelGeneration.First, schema }
         };
 
         return new ReadModelDefinition(
             identifier,
             draft.ContainerName,
             displayName,
-            Concepts.ReadModels.ReadModelOwner.Server,
-            Concepts.ReadModels.ReadModelSource.User,
-            Concepts.ReadModels.ReadModelObserverType.Projection,
-            Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+            ReadModelOwner.Server,
+            ReadModelSource.User,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
             schemas,
             []);
@@ -464,20 +464,20 @@ internal sealed class Projections(
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
         var inferredSchema = InferSchema(eventTypes, eventTypeSchemas, projectionName);
-        var identifier = new Concepts.ReadModels.ReadModelIdentifier(projectionName);
+        var identifier = new ReadModelIdentifier(projectionName);
         var schemas = new Dictionary<ReadModelGeneration, JsonSchema>
         {
-            { Concepts.ReadModels.ReadModelGeneration.First, inferredSchema }
+            { ReadModelGeneration.First, inferredSchema }
         };
 
         return new ReadModelDefinition(
             identifier,
             projectionName,
             projectionName,
-            Concepts.ReadModels.ReadModelOwner.Server,
-            Concepts.ReadModels.ReadModelSource.User,
-            Concepts.ReadModels.ReadModelObserverType.Projection,
-            Concepts.ReadModels.ReadModelObserverIdentifier.Unspecified,
+            ReadModelOwner.Server,
+            ReadModelSource.User,
+            ReadModelObserverType.Projection,
+            ReadModelObserverIdentifier.Unspecified,
             new Concepts.Sinks.SinkDefinition(Concepts.Sinks.SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
             schemas,
             []);

@@ -17,7 +17,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
     public async Task Seed(SeedRequest request, CallContext context = default)
     {
         // Seed global entries to the global grain
-        var globalEntries = new List<Contracts.Seeding.SeedingEntry>();
+        var globalEntries = new List<SeedingEntry>();
 
         // Collect all global entries from both ByEventType and ByEventSource
         foreach (var eventTypeGroup in request.GlobalByEventType)
@@ -53,7 +53,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
         // Seed namespace-specific entries
         foreach (var namespacedGroup in request.NamespacedEntries)
         {
-            var namespacedEntries = new List<Contracts.Seeding.SeedingEntry>();
+            var namespacedEntries = new List<SeedingEntry>();
 
             // Collect all entries from both ByEventType and ByEventSource
             foreach (var eventTypeGroup in namespacedGroup.ByEventType)
@@ -117,7 +117,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             response.ByEventType.Add(new EventTypeSeedEntries
             {
                 EventTypeId = eventTypeId.Value,
-                Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+                Entries = entries.Select(e => new SeedingEntry
                 {
                     EventSourceId = e.EventSourceId.Value,
                     EventTypeId = e.EventTypeId.Value,
@@ -131,7 +131,7 @@ internal sealed class EventSeeding(IGrainFactory grainFactory) : IEventSeeding
             response.ByEventSource.Add(new EventSourceSeedEntries
             {
                 EventSourceId = eventSourceId.Value,
-                Entries = entries.Select(e => new Contracts.Seeding.SeedingEntry
+                Entries = entries.Select(e => new SeedingEntry
                 {
                     EventSourceId = e.EventSourceId.Value,
                     EventTypeId = e.EventTypeId.Value,

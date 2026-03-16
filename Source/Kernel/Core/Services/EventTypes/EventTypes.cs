@@ -148,8 +148,8 @@ internal sealed class EventTypes(IStorage storage) : IEventTypes
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeRegistration>> GetAllGenerationsForEventType(GetEventTypeGenerationsRequest request)
     {
-        var eventTypeId = new Concepts.Events.EventTypeId(request.EventTypeId);
-        var eventType = new Concepts.Events.EventType(eventTypeId, Concepts.Events.EventTypeGeneration.First, false);
+        var eventTypeId = new EventTypeId(request.EventTypeId);
+        var eventType = new Concepts.Events.EventType(eventTypeId, EventTypeGeneration.First, false);
         var schemas = await storage.GetEventStore(request.EventStore).EventTypes.GetAllGenerationsForEventType(eventType);
         return schemas.Select(_ => new EventTypeRegistration
         {
