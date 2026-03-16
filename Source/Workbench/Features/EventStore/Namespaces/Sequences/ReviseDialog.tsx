@@ -4,7 +4,7 @@
 import { AppendedEvent } from 'Api/Events';
 import { Revise } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
 const ObjectContentEditor = _OCE.ObjectContentEditor;
@@ -20,15 +20,21 @@ export interface ReviseDialogProps {
 
 export const ReviseDialog = () => {
     const { request, closeDialog } = useDialogContext<ReviseDialogProps>();
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => {
+    const originalContent = useMemo(() => {
         try {
             return JSON.parse(request?.event.content ?? '{}') as Record<string, unknown>;
         } catch {
             return {};
         }
-    });
+    }, [request?.event.content]);
+    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => ({ ...originalContent }));
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+    const hasContentChanged = useMemo(
+        () => JSON.stringify(parsedContent) !== JSON.stringify(originalContent),
+        [parsedContent, originalContent]
+    );
 
     const [allEventTypes] = AllEventTypesWithSchemas.use({ eventStore: request?.eventStore ?? '' });
 
@@ -64,7 +70,7 @@ export const ReviseDialog = () => {
             okLabel={strings.general.buttons.ok}
             cancelLabel={strings.general.buttons.cancel}
             width="50vw"
-            isValid={!hasValidationErrors}
+            isValid={hasContentChanged && !hasValidationErrors}
             onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div style={{

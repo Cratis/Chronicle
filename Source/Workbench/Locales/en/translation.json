@@ -322,7 +322,10 @@
                         "title": "Revise Event",
                         "okLabel": "Revise",
                         "eventType": "Event Type",
-                        "content": "Revision Content (JSON)"
+                        "content": "Revision Content (JSON)",
+                        "confirmTitle": "Confirm Revision",
+                        "confirmMessage": "The following observers will be replayed after this revision:",
+                        "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
                     }
                 },
                 "details": {

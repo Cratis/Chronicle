@@ -18,6 +18,8 @@ import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
+import { GetReplayableObserversForEventTypes } from 'Api/Observation';
+import { ObserverType } from 'Api/Observation/ObserverType';
 import * as faIcons from 'react-icons/fa6';
 
 import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
@@ -75,8 +77,45 @@ export const Sequences = () => {
         }
     };
 
+    const observerTypeName = (type: ObserverType): string => {
+        switch (type) {
+            case ObserverType.reactor: return 'Reactor';
+            case ObserverType.projection: return 'Projection';
+            case ObserverType.reducer: return 'Reducer';
+            case ObserverType.external: return 'External';
+            default: return 'Unknown';
+        }
+    };
+
     const handleReviseEvent = async () => {
         if (selectedEvent) {
+            const query = new GetReplayableObserversForEventTypes();
+            const queryResult = await query.perform({
+                eventStore: params.eventStore!,
+                namespace: params.namespace!,
+                eventTypeIds: selectedEvent.context.eventType.id
+            });
+
+            const observers = queryResult.data;
+            const reviseStrings = strings.eventStore.namespaces.sequences.dialogs.revise;
+            let confirmMessage: string;
+
+            if (observers.length > 0) {
+                const observerList = observers
+                    .map(o => `\u2022 ${o.id} (${observerTypeName(o.type)})`)
+                    .join('\n');
+                confirmMessage = `${reviseStrings.confirmMessage}\n\n${observerList}`;
+            } else {
+                confirmMessage = reviseStrings.confirmNoObservers;
+            }
+
+            const confirmResult = await showConfirmation(
+                reviseStrings.confirmTitle,
+                confirmMessage,
+                DialogButtons.YesNo
+            );
+            if (confirmResult !== DialogResult.Yes) return;
+
             const [result] = await showRevise({
                 event: selectedEvent,
                 eventStore: params.eventStore!,
