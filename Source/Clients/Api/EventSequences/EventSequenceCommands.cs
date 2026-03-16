@@ -143,8 +143,8 @@ public class EventSequenceCommands(
             EventType = revision.EventType.ToContract(),
             Content = JsonSerializer.Serialize(revision.Content),
             CorrelationId = Guid.NewGuid(),
-            Causation = revision.Causation?.ToContract().ToList() ?? [],
-            CausedBy = revision.CausedBy?.ToContract() ?? new()
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract()
         });
     }
 
@@ -171,8 +171,8 @@ public class EventSequenceCommands(
             SequenceNumber = redaction.SequenceNumber,
             Reason = redaction.Reason,
             CorrelationId = Guid.NewGuid(),
-            Causation = redaction.Causation?.ToContract() ?? [],
-            CausedBy = redaction.CausedBy?.ToContract() ?? new()
+            Causation = causationManager.GetCurrentChain().ToContract(),
+            CausedBy = User.ToContract()
         });
     }
 
