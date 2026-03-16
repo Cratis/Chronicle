@@ -102,7 +102,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
                 new EventSequences(grainFactory, storage, jsonSerializerOptions),
-                new Cratis.Chronicle.Services.Events.EventTypes(storage),
+                new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
                 new FailedPartitions(storage),
