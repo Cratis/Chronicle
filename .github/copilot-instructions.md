@@ -49,6 +49,7 @@ These guides contain the full rules, examples, and rationale for each topic. The
    - [Entity Framework Core Specs](./instructions/efcore.specs.instructions.md)
    - [Concepts (ConceptAs)](./instructions/concepts.instructions.md)
    - [Documentation](./instructions/documentation.instructions.md)
+   - [Git Commits](./instructions/git-commits.instructions.md)
    - [Pull Requests](./instructions/pull-requests.instructions.md)
    - [Vertical Slices](./instructions/vertical-slices.instructions.md)
    - [TypeScript Conventions](./instructions/typescript.instructions.md)
