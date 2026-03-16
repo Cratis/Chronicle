@@ -130,23 +130,28 @@ public class Projection : IProjection, IDisposable
     public bool Accepts(EventType eventType) => _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
 
     /// <inheritdoc/>
-    public bool HasKeyResolverFor(EventType eventType) => _eventTypesToKeyResolver.ContainsKey(new(eventType.Id, eventType.Generation, eventType.Tombstone));
+    public bool HasKeyResolverFor(EventType eventType) =>
+        _eventTypesToKeyResolver.Keys.Any(_ => _.Id == eventType.Id);
 
     /// <inheritdoc/>
     public KeyResolver GetKeyResolverFor(EventType eventType)
     {
-        // We only care about the actual event type identifier and generation, any other properties should be the default
-        eventType = new(eventType.Id, eventType.Generation, eventType.Tombstone);
-        ThrowIfMissingKeyResolverForEventType(eventType);
-        return _eventTypesToKeyResolver[eventType];
+        var resolvedKey = _eventTypesToKeyResolver.Keys.FirstOrDefault(_ => _.Id == eventType.Id);
+        if (resolvedKey == default)
+        {
+            ThrowIfMissingKeyResolverForEventType(new(eventType.Id, eventType.Generation, eventType.Tombstone));
+        }
+
+        return _eventTypesToKeyResolver[resolvedKey];
     }
 
     /// <inheritdoc/>
     public ProjectionOperationType GetOperationTypeFor(EventType eventType)
     {
-        if (OperationTypes.TryGetValue(eventType, out var value))
+        var match = OperationTypes.Keys.FirstOrDefault(_ => _.Id == eventType.Id);
+        if (match != default)
         {
-            return value;
+            return OperationTypes[match];
         }
 
         foreach (var child in ChildProjections)

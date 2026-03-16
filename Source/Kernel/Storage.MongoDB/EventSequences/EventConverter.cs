@@ -109,15 +109,22 @@ public class EventConverter(
 
     (EventType EventType, string GenerationKey, JsonObject Content) ExtractContent(Event @event)
     {
-        var generationKey = EventTypeGeneration.First.ToString();
-        var eventType = new EventType(@event.Type, EventTypeGeneration.First, false);
+        if (@event.Revisions.Any())
+        {
+            var latest = @event.Revisions.Last();
+            var revisionKey = latest.EventTypeGeneration.ToString();
+            return (new EventType(@event.Type, latest.EventTypeGeneration, false), revisionKey, ParseContent(latest.Content, revisionKey));
+        }
 
-        if (!@event.Revisions.Any())
-            return (eventType, generationKey, ParseContent(@event.Content, generationKey));
-
-        var latest = @event.Revisions.Last();
-        var revisionKey = latest.EventTypeGeneration.ToString();
-        return (new EventType(@event.Type, latest.EventTypeGeneration, false), revisionKey, ParseContent(latest.Content, revisionKey));
+        // Use the highest available generation's content so that observers and projections
+        // that consume a newer generation receive the migrated content by default.
+        var highestGeneration = @event.Content.Keys
+            .Select(k => int.TryParse(k, out var g) ? g : 0)
+            .DefaultIfEmpty(1)
+            .Max();
+        var generationKey = highestGeneration.ToString();
+        var eventType = new EventType(@event.Type, new EventTypeGeneration((uint)highestGeneration), false);
+        return (eventType, generationKey, ParseContent(@event.Content, generationKey));
     }
 
     async Task<ExpandoObject> ResolveContent(EventType eventType, EventSourceId eventSourceId, JsonObject content)

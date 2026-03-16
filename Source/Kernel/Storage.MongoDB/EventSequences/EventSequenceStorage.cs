@@ -141,6 +141,14 @@ public class EventSequenceStorage(
             // Return the content for the event type's generation
             var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? [];
 
+            // Build generational content so real-time subscribers can pick the right generation
+            var genContentDict = new Dictionary<int, string>();
+            foreach (var (gen, genDoc) in generationalContent)
+            {
+                if (int.TryParse(gen, out var genNumber))
+                    genContentDict[genNumber] = genDoc.ToString();
+            }
+
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
                     eventType,
@@ -157,7 +165,10 @@ public class EventSequenceStorage(
                     await identityStorage.GetFor(causedByChain),
                     tags,
                     EventHash.NotSet),
-                returnContent));
+                returnContent)
+            {
+                GenerationalContent = genContentDict
+            });
         }
         catch (MongoWriteException writeException) when (writeException.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {

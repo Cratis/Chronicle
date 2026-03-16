@@ -183,4 +183,10 @@ public class EventTypes : IEventTypes
         .Where(_ => _.Key.Id == eventTypeId)
         .OrderByDescending(_ => _.Key.Generation.Value)
         .First().Value;
+
+    /// <inheritdoc/>
+    public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _typesByEventType
+        .Where(_ => _.Key.Id == eventTypeId && _.Key.Generation == generation)
+        .Select(_ => _.Value)
+        .FirstOrDefault() ?? GetClrTypeFor(eventTypeId);
 }
