@@ -75,13 +75,16 @@ export const Sequences = () => {
         }
     };
 
-    const handleReviseEvent = () => {
+    const handleReviseEvent = async () => {
         if (selectedEvent) {
-            showRevise({
+            const [result] = await showRevise({
                 event: selectedEvent,
                 eventStore: params.eventStore!,
                 namespace: params.namespace!
             });
+            if (result === DialogResult.Ok) {
+                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
+            }
         }
     };
 
