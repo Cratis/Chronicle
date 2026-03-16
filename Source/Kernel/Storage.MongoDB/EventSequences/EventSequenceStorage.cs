@@ -799,6 +799,24 @@ public class EventSequenceStorage(
         return new EventCursor(converter, cursor);
     }
 
+    /// <inheritdoc/>
+    public async Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        var filter = Builders<Event>.Filter.Eq(e => e.SequenceNumber, sequenceNumber);
+        var existingEvent = await _collection.Find(filter).SingleAsync().ConfigureAwait(false);
+
+        var generationalContent = new Dictionary<string, BsonDocument>();
+        foreach (var (generation, expandoContent) in content)
+        {
+            var schema = await eventTypesStorage.GetFor(existingEvent.Type, generation);
+            var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
+            generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+        }
+
+        var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
+        await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Creates a MongoDB update model for replacing an event in-place with the <see cref="GlobalEventTypes.Redaction"/> event type.
     /// The replacement content stores the ORIGINAL event's context (type, occurred, correlation, causation, caused-by) so it

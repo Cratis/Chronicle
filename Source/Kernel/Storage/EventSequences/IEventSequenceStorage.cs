@@ -236,4 +236,14 @@ public interface IEventSequenceStorage
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replace the generational content for an event at a specific sequence number.
+    /// Used during event type migration when new generations are added and existing events
+    /// need their content updated with the migrated content for all generations.
+    /// </summary>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to update.</param>
+    /// <param name="content">The new content per <see cref="EventTypeGeneration"/>.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content);
 }
