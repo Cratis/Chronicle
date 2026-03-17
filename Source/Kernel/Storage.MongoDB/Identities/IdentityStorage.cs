@@ -128,7 +128,8 @@ public class IdentityStorage(
     public async Task<IEnumerable<Identity>> GetAll()
     {
         using var result = await GetCollection().FindAsync(_ => true);
-        return result.ToEnumerable().Select(_ => new Identity(_.Subject, _.Name, _.UserName));
+        var all = await result.ToListAsync();
+        return all.Select(_ => new Identity(_.Subject, _.Name, _.UserName));
     }
 
     /// <inheritdoc/>
