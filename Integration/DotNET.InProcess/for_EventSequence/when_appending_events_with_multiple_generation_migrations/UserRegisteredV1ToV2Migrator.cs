@@ -18,5 +18,5 @@ public class UserRegisteredV1ToV2Migrator : EventTypeMigration<UserRegisteredV2,
 
     /// <inheritdoc/>
     public override void Downcast(IEventMigrationBuilder<UserRegisteredV1, UserRegisteredV2> builder) =>
-        builder.Properties(pb => pb.Combine(t => t.FullName, s => s.FirstName, s => s.LastName));
+        builder.Properties(pb => pb.Combine(t => t.FullName, " ", s => s.FirstName, s => s.LastName));
 }
