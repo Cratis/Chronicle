@@ -9,7 +9,8 @@ export { protobufPackage } from './generated/clients';
 // The following types are duplicated identically across multiple proto-generated files
 // (the ProtoGenerator embeds shared types in each proto file rather than using imports).
 // Explicit re-exports from canonical sources prevent TS2308 ambiguity from the export * below.
-export { AppendedEvent, Causation, Causation_PropertiesEntry, EventContext, EventObservationState, eventObservationStateFromJSON, eventObservationStateToJSON, SerializableDateTimeOffset } from './generated/eventsequences';
+export { AppendedEvent, AppendedEvent_GenerationalContentEntry, Causation, Causation_PropertiesEntry, EventContext, EventObservationState, eventObservationStateFromJSON, eventObservationStateToJSON, EventRevision, SerializableDateTimeOffset } from './generated/eventsequences';
+export { DateTimeOffset } from './generated/protobuf-net/bcl';
 export { EventType } from './generated/events';
 export { ConstraintType, constraintTypeFromJSON, constraintTypeToJSON } from './generated/events_constraints';
 export { EventTypeWithKeyExpression, ObservationState, observationStateFromJSON, observationStateToJSON } from './generated/observation_reactors';
