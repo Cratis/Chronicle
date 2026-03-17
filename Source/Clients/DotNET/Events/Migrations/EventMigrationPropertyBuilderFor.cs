@@ -35,10 +35,12 @@ public class EventMigrationPropertyBuilderFor<TTarget, TSource>(IEventMigrationP
     /// <inheritdoc/>
     public IEventMigrationPropertyBuilder<TTarget, TSource> Combine<TProperty>(
         Expression<Func<TTarget, TProperty>> targetProperty,
+        PropertySeparator separator,
         params Expression<Func<TSource, object>>[] sourceProperties)
     {
         inner.Combine(
             GetPropertyName(targetProperty),
+            separator,
             sourceProperties.Select(GetPropertyName).ToArray());
 
         return this;

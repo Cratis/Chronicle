@@ -37,11 +37,15 @@ public class EventMigrationPropertyBuilder : IEventMigrationPropertyBuilder
     }
 
     /// <inheritdoc/>
-    public void Combine(PropertyName targetProperty, params PropertyName[] sourceProperties)
+    public void Combine(PropertyName targetProperty, PropertySeparator separator, params PropertyName[] sourceProperties)
     {
         _properties[(PropertyExpression)(string)targetProperty] = new JsonObject
         {
-            [CombineExpression] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray())
+            [CombineExpression] = new JsonObject
+            {
+                ["sources"] = new JsonArray(sourceProperties.Select(p => JsonValue.Create((string)p)).ToArray()),
+                ["separator"] = (string)separator
+            }
         };
     }
 

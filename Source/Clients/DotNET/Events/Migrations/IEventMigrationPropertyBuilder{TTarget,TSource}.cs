@@ -32,10 +32,12 @@ public interface IEventMigrationPropertyBuilder<TTarget, TSource>
     /// </summary>
     /// <typeparam name="TProperty">The type of the target property.</typeparam>
     /// <param name="targetProperty">Expression selecting the target property to write the combined result into.</param>
+    /// <param name="separator">The separator to use between the combined values.</param>
     /// <param name="sourceProperties">Expressions selecting the source properties to concatenate.</param>
     /// <returns>The builder for continued configuration.</returns>
     IEventMigrationPropertyBuilder<TTarget, TSource> Combine<TProperty>(
         Expression<Func<TTarget, TProperty>> targetProperty,
+        PropertySeparator separator,
         params Expression<Func<TSource, object>>[] sourceProperties);
 
     /// <summary>

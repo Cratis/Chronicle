@@ -21,8 +21,9 @@ public interface IEventMigrationPropertyBuilder
     /// Combine multiple source properties into a single target property by concatenation.
     /// </summary>
     /// <param name="targetProperty">The name of the property to write the combined result into.</param>
+    /// <param name="separator">The separator to use between the combined values.</param>
     /// <param name="sourceProperties">The source properties to concatenate.</param>
-    void Combine(PropertyName targetProperty, params PropertyName[] sourceProperties);
+    void Combine(PropertyName targetProperty, PropertySeparator separator, params PropertyName[] sourceProperties);
 
     /// <summary>
     /// Rename a property from an old name to a new target property.
