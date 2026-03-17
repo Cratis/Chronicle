@@ -120,20 +120,31 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         };
     }, [effectiveRevision, isRevised, item.context, revisions]);
 
-    // Schema: use all registered generations for exact lookup, fall back to latest from AllEventTypesWithSchemas
+    // Schema: look for an exact generation match in allGenerations (historical) then in AllEventTypesWithSchemas (latest).
+    // Never fall back to a different generation — that would show wrong property labels.
+    // When no schema is registered for this generation, derive a basic schema from the content keys.
     const effectiveEventType = useMemo(() => {
-        if (allGenerations.data && allGenerations.data.length > 0) {
-            return allGenerations.data.find(
-                (et: EventTypeRegistration) => et.type.generation === effectiveGeneration
-            ) ?? allGenerations.data[allGenerations.data.length - 1];
-        }
-        if (!eventTypes.data) return undefined;
-        return eventTypes.data.find(
+        const fromGenerations = allGenerations.data?.find(
+            (et: EventTypeRegistration) => et.type.generation === effectiveGeneration
+        );
+        if (fromGenerations) return fromGenerations;
+        return eventTypes.data?.find(
             (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
-        ) ?? eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
+        );
     }, [allGenerations.data, eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 
-    const schema = effectiveEventType ? JSON.parse(effectiveEventType.schema) : { properties: {} };
+    const schema = useMemo(() => {
+        if (effectiveEventType) return JSON.parse(effectiveEventType.schema);
+        // No registered schema for this generation — derive from the content's own keys
+        if (currentContent && typeof currentContent === 'object' && !Array.isArray(currentContent)) {
+            return {
+                properties: Object.fromEntries(
+                    Object.keys(currentContent).map(key => [key, { type: 'string' }])
+                )
+            };
+        }
+        return { properties: {} };
+    }, [effectiveEventType, currentContent]);
 
     // Build context object for display - metadata reflects the current revision
     const contextObject = {
