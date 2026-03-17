@@ -251,7 +251,6 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                         <ObjectContentEditor
                             object={contextObject as Json}
                             schema={contextSchema}
-                            timestamp={currentMetadata.occurred instanceof Date ? currentMetadata.occurred as Date : new Date(currentMetadata.occurred as string)}
                         />
                     </div>
                 </TabPanel>
@@ -260,7 +259,6 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                         <ObjectContentEditor
                             object={currentContent}
                             schema={schema}
-                            timestamp={currentMetadata.occurred instanceof Date ? currentMetadata.occurred as Date : new Date(currentMetadata.occurred as string)}
                         />
                     </div>
                 </TabPanel>
