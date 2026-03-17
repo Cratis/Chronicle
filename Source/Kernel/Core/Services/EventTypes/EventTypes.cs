@@ -318,13 +318,16 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
 
                     break;
 
-                case WellKnownExpressions.Combine when entry.Value is JsonArray combineArray:
-                    foreach (var item in combineArray)
+                case WellKnownExpressions.Combine when entry.Value is JsonObject combineConfig:
+                    if (combineConfig["sources"] is JsonArray combineArray)
                     {
-                        var propName = item?.GetValue<string>();
-                        if (propName is not null)
+                        foreach (var item in combineArray)
                         {
-                            yield return propName;
+                            var propName = item?.GetValue<string>();
+                            if (propName is not null)
+                            {
+                                yield return propName;
+                            }
                         }
                     }
 

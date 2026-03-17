@@ -66,14 +66,25 @@ public class EventTypeMigrations(
         return JsonValue.Create(parts.Length > part ? parts[part] : string.Empty);
     }
 
-    static JsonValue? EvaluateCombine(JsonObject content, JsonArray sources)
+    static JsonValue? EvaluateCombine(JsonObject content, JsonObject config)
     {
+        if (config["sources"] is not JsonArray sources)
+            return JsonValue.Create(string.Empty);
+
+        var separator = config["separator"]?.GetValue<string>() ?? string.Empty;
+
         var builder = new StringBuilder();
+        var first = true;
         foreach (var source in sources)
         {
             var propertyName = source?.GetValue<string>();
             if (propertyName != null && content.TryGetPropertyValue(propertyName, out var node) && node != null)
+            {
+                if (!first)
+                    builder.Append(separator);
                 builder.Append(node.GetValue<string>());
+                first = false;
+            }
         }
         return JsonValue.Create(builder.ToString());
     }
@@ -178,8 +189,8 @@ public class EventTypeMigrations(
                         customResults[property.Key] = EvaluateSplit(content, splitConfig);
                         break;
 
-                    case WellKnownExpressions.Combine when expr[WellKnownExpressions.Combine] is JsonArray combineArray:
-                        customResults[property.Key] = EvaluateCombine(content, combineArray);
+                    case WellKnownExpressions.Combine when expr[WellKnownExpressions.Combine] is JsonObject combineConfig:
+                        customResults[property.Key] = EvaluateCombine(content, combineConfig);
                         break;
 
                     case WellKnownExpressions.Rename:
