@@ -28,11 +28,11 @@ public class when_upcasting_and_downcasting_with_split_and_combine : Specificati
         _downcastResult = _downcastBuilder.ToJson();
     }
 
-    [Fact] void should_upcast_first_name_with_split() => _upcastResult["FirstName"]!.ToString().ShouldContain("$split");
-    [Fact] void should_upcast_last_name_with_split() => _upcastResult["LastName"]!.ToString().ShouldContain("$split");
-    [Fact] void should_downcast_full_name_with_combine() => _downcastResult["FullName"]!.ToString().ShouldContain("$combine");
-    [Fact] void should_use_same_separator_in_upcast() => _upcastResult["FirstName"]!["$split"]!["separator"]!.GetValue<string>().ShouldEqual(":");
-    [Fact] void should_use_same_separator_in_downcast() => _downcastResult["FullName"]!["$combine"]!["separator"]!.GetValue<string>().ShouldEqual(":");
+    [Fact] void should_upcast_first_name_with_split() => _upcastResult["FirstName"].ToString().ShouldContain("$split");
+    [Fact] void should_upcast_last_name_with_split() => _upcastResult["LastName"].ToString().ShouldContain("$split");
+    [Fact] void should_downcast_full_name_with_combine() => _downcastResult["FullName"].ToString().ShouldContain("$combine");
+    [Fact] void should_use_same_separator_in_upcast() => _upcastResult["FirstName"]["$split"]["separator"].GetValue<string>().ShouldEqual(":");
+    [Fact] void should_use_same_separator_in_downcast() => _downcastResult["FullName"]["$combine"]["separator"].GetValue<string>().ShouldEqual(":");
 
     class RoundTripMigration : EventTypeMigration<TestEventV2, TestEventV1>
     {

@@ -20,7 +20,7 @@ public class SyncReducer
     public ReadModel Reduce(ValidEvent @event, ReadModel? initial, EventContext context)
     {
         _receivedEventsAndContexts.Add(new(@event, context));
-        _readModels.Add(initial?.Clone() ?? null!);
+        _readModels.Add(initial?.Clone() ?? null);
         ReturnedReadModel = new(initial?.Count + 1 ?? 1);
         return ReturnedReadModel;
     }

@@ -24,10 +24,10 @@ public class when_downcasting_with_combine : Specification
     }
 
     [Fact] void should_produce_full_name_property() => _result.ContainsKey("FullName").ShouldBeTrue();
-    [Fact] void should_have_combine_expression() => _result["FullName"]!.ToString().ShouldContain("$combine");
-    [Fact] void should_include_first_name_as_source() => _result["FullName"]!["$combine"]!["sources"]!.AsArray().Any(s => s!.GetValue<string>() == "FirstName").ShouldBeTrue();
-    [Fact] void should_include_last_name_as_source() => _result["FullName"]!["$combine"]!["sources"]!.AsArray().Any(s => s!.GetValue<string>() == "LastName").ShouldBeTrue();
-    [Fact] void should_use_space_as_separator() => _result["FullName"]!["$combine"]!["separator"]!.GetValue<string>().ShouldEqual(" ");
+    [Fact] void should_have_combine_expression() => _result["FullName"].ToString().ShouldContain("$combine");
+    [Fact] void should_include_first_name_as_source() => _result["FullName"]["$combine"]["sources"].AsArray().Any(s => s.GetValue<string>() == "FirstName").ShouldBeTrue();
+    [Fact] void should_include_last_name_as_source() => _result["FullName"]["$combine"]["sources"].AsArray().Any(s => s.GetValue<string>() == "LastName").ShouldBeTrue();
+    [Fact] void should_use_space_as_separator() => _result["FullName"]["$combine"]["separator"].GetValue<string>().ShouldEqual(" ");
 
     class CombineMigration : EventTypeMigration<TestEventV2, TestEventV1>
     {

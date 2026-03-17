@@ -24,8 +24,8 @@ public class when_upcasting_with_default_value : Specification
     }
 
     [Fact] void should_produce_age_property() => _result.ContainsKey("Age").ShouldBeTrue();
-    [Fact] void should_have_default_value_expression() => _result["Age"]!.ToString().ShouldContain("$defaultValue");
-    [Fact] void should_set_default_value_to_zero() => _result["Age"]!["$defaultValue"]!.GetValue<int>().ShouldEqual(0);
+    [Fact] void should_have_default_value_expression() => _result["Age"].ToString().ShouldContain("$defaultValue");
+    [Fact] void should_set_default_value_to_zero() => _result["Age"]["$defaultValue"].GetValue<int>().ShouldEqual(0);
 
     class DefaultValueMigration : EventTypeMigration<TestEventV2, TestEventV1>
     {

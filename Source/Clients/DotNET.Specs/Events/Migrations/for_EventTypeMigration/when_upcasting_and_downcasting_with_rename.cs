@@ -28,10 +28,10 @@ public class when_upcasting_and_downcasting_with_rename : Specification
         _downcastResult = _downcastBuilder.ToJson();
     }
 
-    [Fact] void should_upcast_with_rename_expression() => _upcastResult["Email"]!.ToString().ShouldContain("$rename");
-    [Fact] void should_upcast_from_old_property_name() => _upcastResult["Email"]!["$rename"]!.GetValue<string>().ShouldEqual("EmailAddress");
-    [Fact] void should_downcast_with_rename_expression() => _downcastResult["EmailAddress"]!.ToString().ShouldContain("$rename");
-    [Fact] void should_downcast_from_new_property_name() => _downcastResult["EmailAddress"]!["$rename"]!.GetValue<string>().ShouldEqual("Email");
+    [Fact] void should_upcast_with_rename_expression() => _upcastResult["Email"].ToString().ShouldContain("$rename");
+    [Fact] void should_upcast_from_old_property_name() => _upcastResult["Email"]["$rename"].GetValue<string>().ShouldEqual("EmailAddress");
+    [Fact] void should_downcast_with_rename_expression() => _downcastResult["EmailAddress"].ToString().ShouldContain("$rename");
+    [Fact] void should_downcast_from_new_property_name() => _downcastResult["EmailAddress"]["$rename"].GetValue<string>().ShouldEqual("Email");
 
     class RenameMigration : EventTypeMigration<RenameTestEventV2, RenameTestEventV1>
     {
