@@ -118,16 +118,13 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         };
     }, [effectiveRevision, isRevised, item.context, revisions]);
 
-    // Schema: use the selected generation's schema when a specific generation is chosen
+    // Schema: always use the effective generation's schema (defaults to stored generation, overridden by user selection)
     const effectiveEventType = useMemo(() => {
         if (!eventTypes.data) return undefined;
-        if (hasMultipleGenerations && selectedGeneration !== null) {
-            return eventTypes.data.find(
-                (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
-            ) ?? eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
-        }
-        return eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
-    }, [eventTypes.data, hasMultipleGenerations, selectedGeneration, effectiveGeneration, item.context.eventType.id]);
+        return eventTypes.data.find(
+            (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
+        ) ?? eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
+    }, [eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 
     const schema = effectiveEventType ? JSON.parse(effectiveEventType.schema) : { properties: {} };
 
