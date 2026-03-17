@@ -20,7 +20,9 @@ public class subscription_states_after_subscribing(ChronicleInProcessFixture chr
         }
 
         var subscriptionsReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor");
-        await subscriptionsReactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
+        var systemStorage = GetSystemEventLogStorage();
+        var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
+        await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
 
         StoredSubscriptions = await EventStoreStorage.EventStoreSubscriptions.GetAll();
     }

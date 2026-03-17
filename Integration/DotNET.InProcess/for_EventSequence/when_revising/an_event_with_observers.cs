@@ -91,7 +91,9 @@ public class an_event_with_observers(context context) : Given<context>(context)
             JobsAfterCompletion = await EventStore.Jobs.GetJobs();
 
             StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
-            SystemStoredEvent = await GetSystemEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+            var systemStorage = GetSystemEventLogStorage();
+            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
+            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();

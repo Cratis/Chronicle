@@ -90,7 +90,9 @@ public class a_single_event_with_observers(context context) : Given<context>(con
 
             var storage = GetEventLogStorage();
             RedactedStoredEvent = await storage.GetEventAt((EventSequenceNumber.First + 1).Value);
-            SystemStoredEvent = await GetSystemEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+            var systemStorage = GetSystemEventLogStorage();
+            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
+            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();

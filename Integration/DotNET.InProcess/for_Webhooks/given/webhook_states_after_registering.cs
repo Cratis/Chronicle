@@ -37,7 +37,9 @@ public class webhook_states_after_registering(ChronicleInProcessFixture chronicl
         }
 
         webhookReactor.ShouldNotBeNull();
-        await webhookReactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
+        var systemStorage = GetSystemEventLogStorage();
+        var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
+        await webhookReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
 
         StoredWebhooks = await EventStoreStorage.Webhooks.GetAll();
     }

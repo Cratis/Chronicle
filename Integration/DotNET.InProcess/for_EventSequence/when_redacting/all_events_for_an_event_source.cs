@@ -36,7 +36,9 @@ public class all_events_for_an_event_source(context context) : Given<context>(co
             var storage = GetEventLogStorage();
             StoredFirstEvent = await storage.GetEventAt(EventSequenceNumber.First.Value);
             StoredSecondEvent = await storage.GetEventAt((EventSequenceNumber.First + 1).Value);
-            SystemStoredEvent = await GetSystemEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+            var systemStorage = GetSystemEventLogStorage();
+            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
+            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
         }
     }
 

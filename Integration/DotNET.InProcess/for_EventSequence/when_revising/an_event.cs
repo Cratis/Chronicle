@@ -32,7 +32,9 @@ public class an_event(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, OriginalEvent);
             await this.ReviseEvent(EventSequenceNumber.First, RevisedEvent);
             StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
-            SystemStoredEvent = await GetSystemEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+            var systemStorage = GetSystemEventLogStorage();
+            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
+            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
         }
     }
 
