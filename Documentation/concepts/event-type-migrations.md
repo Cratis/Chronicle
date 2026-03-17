@@ -44,7 +44,7 @@ public class AuthorRegisteredMigrator : IEventTypeMigrationFor<AuthorRegistered>
     {
         builder.Properties(pb =>
         {
-            pb.Combine("FirstName", "LastName");  // Combine back to Name
+            pb.Combine("Name", " ", "FirstName", "LastName");  // Combine back to Name
         });
     }
 }
@@ -65,10 +65,10 @@ pb.Split("FullName", " ", 1);  // Gets second part
 
 ### Combine
 
-Combines multiple properties into a single value:
+Combines multiple source properties into a single value using a separator:
 
 ```csharp
-pb.Combine("FirstName", "LastName");  // Joins with space separator
+pb.Combine("FullName", " ", "FirstName", "LastName");  // Joins with space separator
 ```
 
 ### Rename

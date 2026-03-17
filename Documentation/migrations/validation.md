@@ -44,38 +44,42 @@ This throws `MissingEventTypeMigrators`.
 
 ## Default values for new properties
 
-When a new generation adds a property that did not exist in older events, you can declare a default value for that property using the `DefaultValue` operation. Chronicle will apply this default to events that were stored before the new property existed.
+When a new generation adds a property that did not exist in older events, declare a default value for it in the upcast. Chronicle applies this default to any event stored before the property was introduced.
 
 ```csharp
-public class AuthorRegisteredMigration : IEventTypeMigrationFor<AuthorRegistered>
+[EventType]
+public record AuthorRegisteredV1(string Name);
+
+[EventType(2)]
+public record AuthorRegistered(string Name, string Status);
+
+public class AuthorRegisteredMigration : EventTypeMigration<AuthorRegistered, AuthorRegisteredV1>
 {
-    public EventTypeGeneration From => 1;
-    public EventTypeGeneration To => 2;
+    public override void Upcast(IEventMigrationBuilder<AuthorRegistered, AuthorRegisteredV1> builder) =>
+        builder.Properties(pb => pb
+            .RenamedFrom(t => t.Name, s => s.Name)
+            .DefaultValue(t => t.Status, "active"));
 
-    public void Upcast(IEventMigrationBuilder builder)
-    {
-        builder.Properties(p =>
-        {
-            // Copy the existing name field
-            p["name"] = p.From("name");
-
-            // New field 'status' — use a default for events that predate it
-            p.DefaultValue("status", "active");
-        });
-    }
-
-    public void Downcast(IEventMigrationBuilder builder)
-    {
-        builder.Properties(p =>
-        {
-            p["name"] = p.From("name");
-            // 'status' does not exist in gen 1, so nothing to map
-        });
-    }
+    public override void Downcast(IEventMigrationBuilder<AuthorRegisteredV1, AuthorRegistered> builder) =>
+        builder.Properties(pb => pb
+            .RenamedFrom(t => t.Name, s => s.Name));
+            // Status does not exist in gen 1 — no mapping needed
 }
 ```
 
-The `DefaultValue(PropertyName targetProperty, object value)` method tells Chronicle: "if this property is absent from the event when upcasting, fill it with this value." Properties that already carry a value are left unchanged.
+`DefaultValue` tells Chronicle: "if this property is absent from the event when upcasting, fill it with this value." Properties that already carry a value are left unchanged.
+
+## Schema immutability
+
+Once a generation's schema is registered with the Kernel, it cannot be changed. If you modify an event record without bumping its generation, Chronicle detects that the schema no longer matches what was originally stored and throws:
+
+```text
+Cratis.Chronicle.Services.Events.EventTypeSchemaChanged:
+  Event type 'AuthorRegistered' at generation 2 has a schema that differs from the already registered schema.
+  Schema changes are not allowed without creating a new generation.
+```
+
+The fix is always to introduce a new generation and a corresponding migrator rather than silently mutating an existing one.
 
 ## Relaxing validation for development
 
@@ -106,10 +110,12 @@ This value is forwarded to the Kernel as part of the event-type registration req
 
 ## What happens when validation fires
 
-Validation runs on the Kernel during `Register()`, which is called when the client connects to Chronicle. If validation fails the server throws a `MissingEventTypeMigrators`, `MissingFirstGenerationForEventType`, or `MissingMigrationForEventTypeGeneration` exception, which the client receives as an `RpcException`. This is intentional — failing fast at startup is far better than discovering a broken migration chain at runtime.
+Validation runs on the Kernel during `Register()`, which is called when the client connects to Chronicle. If validation fails the server throws an exception that the client receives as an `RpcException`. This is intentional — failing fast at startup is far better than discovering a broken migration chain at runtime.
 
 | Exception | Condition |
 |---|---|
 | `MissingEventTypeMigrators` | Event type is at gen ≥ 2 but no migrators are defined |
 | `MissingFirstGenerationForEventType` | No migrator covering the path from generation 1 exists |
 | `MissingMigrationForEventTypeGeneration` | A specific step in the chain (N → N+1) is missing |
+| `InvalidMigrationPropertyForEventType` | A migration references a property that does not exist in the expected generation's schema |
+| `EventTypeSchemaChanged` | An existing generation's schema has changed; create a new generation instead |

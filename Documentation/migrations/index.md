@@ -50,18 +50,17 @@ Append gen 1 event
                 └── Store gen 2  ─── Service A reads gen 2
 ```
 
-## Migration definitions and JmesPath
+## Migrations happen in place
 
-Migrations are declared as C# classes on the client and sent to the Kernel as structured definitions during event type registration. The Kernel converts each migration into a [JmesPath](https://jmespath.org) expression — a query language for transforming JSON. Because events are stored as JSON, JmesPath gives the Kernel a language-neutral, declarative way to apply transformations without needing .NET-specific code at runtime.
+Chronicle migrations are **non-destructive**. Every generation of an event is stored permanently in the event store alongside the others. Nothing is deleted or overwritten: if you have a generation 1 event written two years ago, the event store still holds that exact record. The migration system produces additional representations alongside it, not instead of it.
 
-The supported transformation operations map to well-known JmesPath expressions:
+This is what makes running multiple versions of the same software against the same event store safe. Service A on the latest code reads generation 2; Service B on the previous release reads generation 1. Both read from the same physical storage. Neither service needs to know about the other, and no upgrade coordination is required.
 
-| Operation | Description |
-|---|---|
-| `$split` | Extract a part of a string by splitting on a separator |
-| `$combine` | Concatenate multiple properties into one value |
-| `$rename` | Read a value from a property with an old name |
-| `$defaultValue` | Provide a literal default for a new property |
+### Background upcasting for new generations
+
+When a new generation is introduced and registered with the Kernel, Chronicle automatically starts a background job that replays all existing events for that event type and produces the new generation where it is missing. You do not trigger this manually and you do not need to wait for it to complete before the application is usable. The background job runs at Kernel priority and completes asynchronously.
+
+Once the job finishes, every event in the event store that had only older generations will also have the new generation present. Consumers that expect the new generation will find it there, and consumers that expect older generations are unaffected.
 
 ## Topics
 
