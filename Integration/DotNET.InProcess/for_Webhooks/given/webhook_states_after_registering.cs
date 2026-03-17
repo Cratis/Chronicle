@@ -40,6 +40,18 @@ public class webhook_states_after_registering(ChronicleInProcessFixture chronicl
         var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
         await webhookReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
 
-        StoredWebhooks = await EventStoreStorage.Webhooks.GetAll();
+        // The webhook grain persists definitions to MongoDB asynchronously via a reminder.
+        // Poll until the definitions have been written.
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        while (!cts.IsCancellationRequested)
+        {
+            StoredWebhooks = await EventStoreStorage.Webhooks.GetAll();
+            if (StoredWebhooks.Any())
+            {
+                break;
+            }
+
+            await Task.Delay(50);
+        }
     }
 }
