@@ -20,7 +20,7 @@ public class AsyncReducer
     public Task<ReadModel> Reduce(ValidEvent @event, ReadModel? initial, EventContext context)
     {
         _receivedEventsAndContexts.Add(new(@event, context));
-        _readModels.Add(initial?.Clone() ?? null);
+        _readModels.Add(initial?.Clone());
         ReturnedReadModel = new(initial?.Count + 1 ?? 1);
         return Task.FromResult(ReturnedReadModel);
     }

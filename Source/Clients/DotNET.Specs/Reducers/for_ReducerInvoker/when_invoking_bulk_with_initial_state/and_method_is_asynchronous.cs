@@ -26,7 +26,7 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
 
     async Task Because()
     {
-        _reduceResult = (await _invoker.Invoke(_serviceProvider, _eventsAndContexts, _initial));
+        _reduceResult = await _invoker.Invoke(_serviceProvider, _eventsAndContexts, _initial);
         _result = _reduceResult.ReadModelState as ReadModel;
     }
 

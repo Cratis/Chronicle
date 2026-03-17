@@ -15,7 +15,7 @@ public class when_writing_and_reading_catch_up_observer_job_state(context contex
     {
         public JobStateWithLastHandledEvent OriginalState = default!;
         public JobStateWithLastHandledEvent RetrievedState = default!;
-        public GrainId JobGrainId = default;
+        public GrainId JobGrainId;
         public GrainState<JobStateWithLastHandledEvent> GrainState = default!;
         public string GrainStateName = "JobState";
 
