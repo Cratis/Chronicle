@@ -9,7 +9,7 @@ public class when_combining_properties : Specification
 
     void Establish() => _builder = new EventMigrationPropertyBuilder();
 
-    void Because() => _builder.Combine("FullName", "FirstName", "LastName");
+    void Because() => _builder.Combine("FullName", " ", "FirstName", "LastName");
 
     [Fact] void should_have_property_keyed_by_target_name() => _builder.Properties.ContainsKey("FullName").ShouldBeTrue();
 

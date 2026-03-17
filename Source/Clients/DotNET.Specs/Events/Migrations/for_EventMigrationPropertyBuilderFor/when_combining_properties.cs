@@ -14,7 +14,7 @@ public class when_combining_properties : Specification
         _builder = new EventMigrationPropertyBuilderFor<SourceEvent, TargetEvent>(_inner);
     }
 
-    void Because() => _builder.Combine(t => t.FullName, s => s.FirstName, s => s.LastName);
+    void Because() => _builder.Combine(t => t.FullName, PropertySeparator.Space, s => s.FirstName, s => s.LastName);
 
     [Fact] void should_have_property_keyed_by_target_name() => _inner.Properties.ContainsKey("FullName").ShouldBeTrue();
 

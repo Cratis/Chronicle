@@ -16,7 +16,7 @@ public class when_building_with_properties : Specification
         _builder.Properties(pb =>
         {
             pb.Split("FirstName", "FullName", " ", 0);
-            pb.Combine("FullName", "FirstName", "LastName");
+            pb.Combine("FullName", " ", "FirstName", "LastName");
         });
     }
 
