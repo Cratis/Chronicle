@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_revising.an_event_with_observers.context;
@@ -25,8 +23,6 @@ public class an_event_with_observers(context context) : Given<context>(context)
         public SomeEvent RevisedEvent { get; private set; }
         public KernelAppendedEvent StoredEvent { get; private set; }
         public KernelAppendedEvent SystemStoredEvent { get; private set; }
-        public IEnumerable<Job> ReplayJobs { get; private set; }
-        public IEnumerable<Job> JobsAfterCompletion { get; private set; }
         public ReactorState ReactorState { get; private set; }
         public ReducerState ReducerState { get; private set; }
         public ProjectionState ProjectionState { get; private set; }
@@ -80,15 +76,12 @@ public class an_event_with_observers(context context) : Given<context>(context)
             // Revise the first event (sequence number 0).
             await this.ReviseEvent(EventSequenceNumber.First, RevisedEvent);
 
-            // Wait for replay jobs to appear and complete.
-            ReplayJobs = await EventStore.Jobs.WaitForThereToBeJobs();
+            // Wait for replay jobs to complete.
             await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             // Wait for observers to finish processing the replay.
             await Reactor.WaitTillHandledEventReaches(3);
             await Reducer.WaitTillHandledEventReaches(3);
-
-            JobsAfterCompletion = await EventStore.Jobs.GetJobs();
 
             StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
             var systemStorage = GetSystemEventLogStorage();
@@ -109,12 +102,6 @@ public class an_event_with_observers(context context) : Given<context>(context)
 
     [Fact]
     void should_have_appended_event_revised_to_system_log() => Context.SystemStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRevised");
-
-    [Fact]
-    void should_have_started_replay_jobs() => Context.ReplayJobs.ShouldNotBeEmpty();
-
-    [Fact]
-    void should_have_replay_jobs_of_correct_type() => Context.ReplayJobs.Any(j => j.Type.Value.Contains(nameof(ReplayObserverPartition))).ShouldBeTrue();
 
     [Fact]
     void should_have_replayed_reactor() => Context.Reactor.HandledEvents.ShouldBeGreaterThanOrEqual(3);

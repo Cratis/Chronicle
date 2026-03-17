@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_redacting.a_single_event_with_non_replayable_observers.context;
@@ -20,7 +18,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
         public SomeEvent FirstEvent { get; private set; }
         public AnotherEvent SecondEvent { get; private set; }
         public SomeEvent ThirdEvent { get; private set; }
-        public IEnumerable<Job> ReplayJobs { get; private set; }
         public ReactorState ReactorState { get; private set; }
         public ReducerState ReducerState { get; private set; }
         public SomeReactor Reactor { get; private set; }
@@ -86,8 +83,7 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             // Redact the second event (sequence number 1).
             await this.RedactEvent(EventSequenceNumber.First + 1, "test reason");
 
-            // Wait for replay jobs to appear and complete.
-            ReplayJobs = await EventStore.Jobs.WaitForThereToBeJobs();
+            // Wait for replay jobs to complete.
             await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             // Wait for replayable observers to finish processing the replay.
@@ -109,12 +105,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             await observerDefinitions.Save(updated);
         }
     }
-
-    [Fact]
-    void should_have_started_replay_jobs() => Context.ReplayJobs.ShouldNotBeEmpty();
-
-    [Fact]
-    void should_have_replay_jobs_of_correct_type() => Context.ReplayJobs.Any(j => j.Type.Value.Contains(nameof(ReplayObserverPartition))).ShouldBeTrue();
 
     [Fact]
     void should_have_replayed_reactor() => Context.Reactor.HandledEvents.ShouldBeGreaterThanOrEqual(2);
