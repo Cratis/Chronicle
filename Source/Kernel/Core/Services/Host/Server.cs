@@ -28,12 +28,10 @@ internal sealed class Server(IClusterClient clusterClient) : IServer
     public Task<ServerVersionInfo> GetVersionInfo()
     {
         var serverAssembly = typeof(Server).Assembly;
-        var contractsAssembly = typeof(IServer).Assembly;
 
         return Task.FromResult(new ServerVersionInfo
         {
             Version = GetVersionFromAssembly(serverAssembly),
-            ContractsVersion = GetVersionFromAssembly(contractsAssembly),
             CommitSha = GetCommitShaFromAssembly(serverAssembly)
         });
     }

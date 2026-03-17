@@ -16,15 +16,8 @@ public class ServerVersionInfo
     public string Version { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the contracts assembly version. CLI and server are compatible
-    /// when their contracts versions share the same major version.
-    /// </summary>
-    [ProtoMember(2)]
-    public string ContractsVersion { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the commit SHA the server was built from, if available.
     /// </summary>
-    [ProtoMember(3)]
+    [ProtoMember(2)]
     public string CommitSha { get; set; } = string.Empty;
 }
