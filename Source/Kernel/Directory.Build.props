@@ -5,8 +5,9 @@
         <!-- Override global multi-targeting for Kernel projects (except Contracts which needs to multi-target) -->
         <TargetFramework Condition="'$(MSBuildProjectName)' != 'Contracts'">net10.0</TargetFramework>
         <TargetFrameworks Condition="'$(MSBuildProjectName)' != 'Contracts'"></TargetFrameworks>
-        <!-- Kernel projects should not be packaged -->
-        <IsPackable>false</IsPackable>
+        <!-- Only Contracts is published as a NuGet package from Kernel -->
+        <IsPackable Condition="'$(MSBuildProjectName)' != 'Contracts'">false</IsPackable>
+        <IsPackable Condition="'$(MSBuildProjectName)' == 'Contracts'">true</IsPackable>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <NoWarn>$(NoWarn);NU5104</NoWarn>
