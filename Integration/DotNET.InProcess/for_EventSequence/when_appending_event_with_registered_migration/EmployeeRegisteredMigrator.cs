@@ -29,5 +29,5 @@ public class EmployeeRegisteredMigrator : IEventTypeMigrationFor<EmployeeRegiste
 
     /// <inheritdoc/>
     public void Downcast(IEventMigrationBuilder builder) =>
-        builder.Properties(pb => pb.Combine("FullName", "FirstName", "LastName"));
+        builder.Properties(pb => pb.Combine("FullName", " ", "FirstName", "LastName"));
 }
