@@ -256,11 +256,18 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
     {
         var schemaProperties = schema.ActualProperties.Select(p => p.Key).ToHashSet();
 
-        foreach (var key in jmesPath.Select(p => p.Key))
+        foreach (var property in jmesPath)
         {
-            if (!schemaProperties.Contains(key))
+            // DefaultValue introduces a brand-new property to the target generation.
+            // The auto-generated schema for that generation may be empty, so skip validation.
+            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue))
             {
-                throw new InvalidMigrationPropertyForEventType(eventTypeId, key, generation, direction);
+                continue;
+            }
+
+            if (!schemaProperties.Contains(property.Key))
+            {
+                throw new InvalidMigrationPropertyForEventType(eventTypeId, property.Key, generation, direction);
             }
         }
     }
