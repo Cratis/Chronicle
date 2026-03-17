@@ -71,6 +71,86 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Convert from domain models (multi-generation content) to <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="sequenceNumber">The sequence number.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="eventStreamType">The event stream type.</param>
+    /// <param name="eventStreamId">The event stream identifier.</param>
+    /// <param name="eventType">The event type.</param>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="causation">The causation chain.</param>
+    /// <param name="causedByChain">The caused by chain.</param>
+    /// <param name="occurred">When the event occurred.</param>
+    /// <param name="content">The event content per generation.</param>
+    /// <returns>The <see cref="EventEntry"/>.</returns>
+    public static EventEntry ToEventEntry(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        var contentDict = content.ToDictionary(
+            kvp => ((uint)kvp.Key).ToString(),
+            kvp => (object)kvp.Value);
+
+        return new EventEntry
+        {
+            SequenceNumber = sequenceNumber.Value,
+            CorrelationId = correlationId.ToString(),
+            Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
+            CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
+            Type = eventType.Id.Value,
+            Occurred = occurred,
+            EventSourceType = eventSourceType.Value,
+            EventSourceId = eventSourceId.Value,
+            EventStreamType = eventStreamType.Value,
+            EventStreamId = eventStreamId.Value,
+            Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
+            Compensations = new Dictionary<string, string>()
+        };
+    }
+
+    /// <summary>
+    /// Update the content for a specific event type generation in an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="entry">The event entry to update.</param>
+    /// <param name="generation">The generation to update content for.</param>
+    /// <param name="content">The new content.</param>
+    public static void UpdateContentForGeneration(EventEntry entry, EventTypeGeneration generation, ExpandoObject content)
+    {
+        var contentDict = string.IsNullOrEmpty(entry.Content)
+            ? new Dictionary<string, JsonElement>()
+            : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions) ?? new Dictionary<string, JsonElement>();
+
+        var contentElement = JsonSerializer.SerializeToElement(content, _jsonSerializerOptions);
+        contentDict[((uint)generation).ToString()] = contentElement;
+        entry.Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Replace all generational content in an <see cref="EventEntry"/>.
+    /// </summary>
+    /// <param name="entry">The event entry to update.</param>
+    /// <param name="content">The new content per generation.</param>
+    public static void ReplaceAllGenerationContent(EventEntry entry, IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        var contentDict = content.ToDictionary(
+            kvp => ((uint)kvp.Key).ToString(),
+            kvp => (object)kvp.Value);
+
+        entry.Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions);
+    }
+
+    /// <summary>
     /// Get the event type from an event entry.
     /// </summary>
     /// <param name="entry">The event entry.</param>

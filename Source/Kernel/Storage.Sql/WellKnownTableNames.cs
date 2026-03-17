@@ -157,4 +157,14 @@ public static class WellKnownTableNames
     /// The table that holds projection futures.
     /// </summary>
     public const string ProjectionFutures = "ProjectionFutures";
+
+    /// <summary>
+    /// The table that holds event store subscription definitions.
+    /// </summary>
+    public const string EventStoreSubscriptions = "EventStoreSubscriptions";
+
+    /// <summary>
+    /// The table that holds webhook definitions.
+    /// </summary>
+    public const string WebhookDefinitions = "WebhookDefinitions";
 }

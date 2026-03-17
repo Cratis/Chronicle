@@ -38,4 +38,10 @@ public class EventType
     /// </summary>
     [Json]
     public IDictionary<uint, string> Schemas { get; set; } = new Dictionary<uint, string>();
+
+    /// <summary>
+    /// Gets or sets the migrations for the event type as a JSON string.
+    /// </summary>
+    public string MigrationsJson { get; set; } = "[]";
 }
+

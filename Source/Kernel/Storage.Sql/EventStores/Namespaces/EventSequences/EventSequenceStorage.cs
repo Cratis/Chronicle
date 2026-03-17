@@ -91,6 +91,111 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
+        IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        try
+        {
+            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+            var existingEvent = await scope.DbContext.Events
+                .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+
+            if (existingEvent is not null)
+            {
+                return new DuplicateEventSequenceNumber(sequenceNumber);
+            }
+
+            var eventEntry = EventEntryConverter.ToEventEntry(
+                sequenceNumber,
+                eventSourceType,
+                eventSourceId,
+                eventStreamType,
+                eventStreamId,
+                eventType,
+                correlationId,
+                causation,
+                causedByChain,
+                occurred,
+                content);
+
+            scope.DbContext.Events.Add(eventEntry);
+            await scope.DbContext.SaveChangesAsync();
+
+            var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject();
+
+            var eventContext = new EventContext(
+                eventType,
+                eventSourceType,
+                eventSourceId,
+                eventStreamType,
+                eventStreamId,
+                sequenceNumber,
+                occurred,
+                eventStore,
+                @namespace,
+                correlationId,
+                causation,
+                await identityStorage.GetFor(causedByChain),
+                tags,
+                EventHash.NotSet);
+
+            return new AppendedEvent(eventContext, returnContent);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToAppendEvent(ex, sequenceNumber, eventSequenceId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task Revise(
+        EventSequenceNumber sequenceNumber,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred,
+        ExpandoObject content,
+        EventHash hash)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+        if (eventEntry is null)
+        {
+            return;
+        }
+
+        EventEntryConverter.UpdateContentForGeneration(eventEntry, eventType.Generation, content);
+        scope.DbContext.Events.Update(eventEntry);
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
+        EventEntryConverter.ReplaceAllGenerationContent(eventEntry, content);
+        scope.DbContext.Events.Update(eventEntry);
+        await scope.DbContext.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+        EventSequenceNumber sequenceNumber,
+        EventSourceType eventSourceType,
+        EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
+        EventStreamId eventStreamId,
+        EventType eventType,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        IEnumerable<Tag> tags,
+        DateTimeOffset occurred,
         ExpandoObject content,
         EventHash hash)
     {

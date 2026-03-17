@@ -3,8 +3,10 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Seeding;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 using Cratis.Chronicle.Storage.Sql.EventStores.Projections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
@@ -65,4 +67,14 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the constraints DbSet.
     /// </summary>
     public DbSet<ConstraintDefinition> Constraints { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event store subscriptions DbSet.
+    /// </summary>
+    public DbSet<EventStoreSubscriptionDefinition> EventStoreSubscriptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the event seeds DbSet.
+    /// </summary>
+    public DbSet<EventSeedsEntity> EventSeeds { get; set; }
 }

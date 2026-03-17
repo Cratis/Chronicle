@@ -73,4 +73,19 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
             .Select(observer => observer.ToKernel())
             .ToListAsync();
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Observation.ObserverDefinition>> GetReplayableObserversForEventTypes(IEnumerable<EventType> eventTypes)
+    {
+        var eventTypeIds = eventTypes.Select(et => et.Id).ToHashSet();
+        await using var scope = await database.EventStore(eventStore);
+        var replayableObservers = await scope.DbContext.Observers
+            .Where(observer => observer.IsReplayable)
+            .ToListAsync();
+
+        return replayableObservers
+            .Where(observer => observer.EventTypes.Any(et => eventTypeIds.Contains(et.EventType)))
+            .Select(observer => observer.ToKernel())
+            .ToArray();
+    }
 }

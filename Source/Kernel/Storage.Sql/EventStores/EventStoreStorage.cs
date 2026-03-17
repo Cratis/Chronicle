@@ -8,11 +8,13 @@ using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Cratis.Chronicle.Storage.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
 
@@ -57,6 +59,12 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptions.EventStoreSubscriptionDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IEventSeedingStorage EventSeeding { get; } = new Seeding.EventSeedingStorage(eventStore, database, jsonSerializerOptions);
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)

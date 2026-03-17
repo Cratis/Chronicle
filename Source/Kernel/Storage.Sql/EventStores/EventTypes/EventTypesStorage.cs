@@ -54,6 +54,48 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     }
 
     /// <inheritdoc/>
+    public async Task Register(EventTypeDefinition definition)
+    {
+        await using var scope = await database.EventStore(eventStore);
+
+        var eventType = definition.ToSql();
+
+        _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != definition.Id));
+        _eventTypes.Add(eventType);
+
+        await scope.DbContext.EventTypes.Upsert(eventType);
+        await scope.DbContext.SaveChangesAsync();
+
+        _eventTypesSubject.OnNext(await GetLatestForAllEventTypes());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
+        return eventTypes.Select(_ => _.ToDefinition()).ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
+    {
+        var eventType = await GetSpecificEventType(eventTypeId);
+        if (eventType is null)
+        {
+            var schema = await GetFor(eventTypeId);
+            return new EventTypeDefinition(
+                eventTypeId,
+                EventTypeOwner.None,
+                false,
+                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                []);
+        }
+
+        return eventType.ToDefinition();
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
         await using var scope = await database.EventStore(eventStore);
