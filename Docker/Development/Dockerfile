@@ -75,8 +75,8 @@ RUN chmod +x ./entrypoint.sh
 COPY Docker/copy-server-files.sh ./copy-server-files.sh
 RUN chmod +x ./copy-server-files.sh
 
-COPY ./Source/Kernel/Server/out ./out
-COPY ./Source/Workbench/wwwroot wwwroot
+COPY ./Source/Kernel/Server/out-dev ./out
+COPY ./Source/Workbench/wwwroot-dev wwwroot
 
 RUN echo $PWD
 RUN ./copy-server-files.sh

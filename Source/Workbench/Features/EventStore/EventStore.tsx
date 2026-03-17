@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { lazy, Suspense } from 'react';
 import { DefaultLayout } from "../../Layout/Default/DefaultLayout";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useWorkbenchContext } from '../../Layout/Default/context/WorkbenchContext';
 import { SequencesFuture } from "./Namespaces/Sequences/SequencesFuture";
 import { IMenuItemGroup } from "../../Layout/Default/Sidebar/MenuItem/MenuItem";
 import * as mdIcons from 'react-icons/md';
@@ -31,7 +33,14 @@ import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
 // import { Dashboard } from './Dashboard/Dashboard';
 
+const isDevelopmentBuild = import.meta.env.CHRONICLE_DEVELOPMENT === 'true';
+const DevelopmentTools = isDevelopmentBuild
+    ? lazy(() => import('./System/DevelopmentTools/DevelopmentTools').then(m => ({ default: m.DevelopmentTools })))
+    : null;
+
 export const EventStore = () => {
+    const { isDevelopment } = useWorkbenchContext();
+
     const menuItems: IMenuItemGroup[] = [
         {
             items: [
@@ -65,7 +74,8 @@ export const EventStore = () => {
             label: strings.mainMenu.system.groupLabel,
             items: [
                 { label: strings.mainMenu.system.users, url: 'users', icon: mdIcons.MdVerifiedUser },
-                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity }
+                { label: strings.mainMenu.system.applications, url: 'applications', icon: mdIcons.MdSecurity },
+                ...(isDevelopment ? [{ label: strings.mainMenu.system.developmentTools, url: 'development-tools', icon: mdIcons.MdDeleteForever }] : [])
             ]
         }
     ];
@@ -90,6 +100,9 @@ export const EventStore = () => {
                 <Route path={'sinks'} element={<Sinks />} />
                 <Route path={'users'} element={<Users />} />
                 <Route path={'applications'} element={<Applications />} />
+                {isDevelopment && DevelopmentTools && (
+                    <Route path='development-tools' element={<Suspense fallback={<></>}><DevelopmentTools /></Suspense>} />
+                )}
 
                 <Route path={':namespace'}>
                     <Route path={''} element={<Navigate to={'recommendations'} replace />} />

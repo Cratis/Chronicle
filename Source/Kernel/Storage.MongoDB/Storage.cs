@@ -100,6 +100,22 @@ public class Storage(
         return _eventStores[eventStore] = eventStoreStorage;
     }
 
+    /// <inheritdoc/>
+    public async Task RemoveEventStore(EventStoreName eventStore)
+    {
+        var collection = GetCollection();
+        await collection.DeleteOneAsync(_ => _.Name == eventStore);
+        _eventStores.TryRemove(eventStore, out _);
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetAll()
+    {
+        _eventStores.Clear();
+        var collection = GetCollection();
+        await collection.DeleteManyAsync(_ => true);
+    }
+
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
         if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))

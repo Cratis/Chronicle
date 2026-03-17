@@ -1,16 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
-using Cratis.Chronicle.Observation.Reactors.Kernel;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
-using Cratis.Chronicle.Projections;
-using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
 
 namespace Orleans.Hosting;
@@ -19,18 +12,12 @@ namespace Orleans.Hosting;
 /// Represents a startup task for Chronicle.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for storing data.</param>
-/// <param name="eventTypes"><see cref="IEventTypes"/> for managing kernel event types.</param>
-/// <param name="reactors"><see cref="IReactors"/> for managing kernel reactors.</param>
-/// <param name="projectionsServiceClient"><see cref="IProjectionsServiceClient"/> for registering projections with local silos.</param>
+/// <param name="initializer"><see cref="Cratis.Chronicle.Setup.IChronicleInitializer"/> for bootstrapping Chronicle artifacts.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
-/// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 internal sealed class ChronicleServerStartupTask(
     IStorage storage,
-    IEventTypes eventTypes,
-    IReactors reactors,
-    IProjectionsServiceClient projectionsServiceClient,
-    IGrainFactory grainFactory,
-    IAuthenticationService authenticationService) : ILifecycleParticipant<ISiloLifecycle>
+    Cratis.Chronicle.Setup.IChronicleInitializer initializer,
+    IGrainFactory grainFactory) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -47,43 +34,20 @@ internal sealed class ChronicleServerStartupTask(
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
         await patchManager.ApplyPatches();
 
-        await grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault();
+        await initializer.Initialize(cancellationToken);
 
-        // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
-        await reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default);
-
+        // Rehydrate jobs for all event stores / namespaces
         var allEventStores = await storage.GetEventStores();
         foreach (var eventStore in allEventStores)
         {
-            await eventTypes.DiscoverAndRegister(eventStore);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
-            await namespaces.EnsureDefault();
-
-            var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
-            await readModelsManager.Ensure();
-
-            var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-            await projectionsManager.Ensure();
-
-            var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
-            await webhooksManager.Ensure();
-
-            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions();
-            await projectionsServiceClient.Register(eventStore, projectionDefinitions);
-
             var rehydrateAll = (await namespaces.GetAll()).Select(async namespaceName =>
             {
-                await reactors.DiscoverAndRegister(eventStore, namespaceName);
-
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
             });
             await Task.WhenAll(rehydrateAll);
         }
-
-        await authenticationService.EnsureDefaultAdminUser();
-#if DEVELOPMENT
-        await authenticationService.EnsureDefaultClientCredentials();
-#endif
     }
 }
+

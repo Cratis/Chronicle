@@ -3,14 +3,18 @@
 
 import { createContext, useState, ReactNode, useContext } from 'react';
 
+const isDevelopmentBuild = import.meta.env.CHRONICLE_DEVELOPMENT === 'true';
+
 interface IWorkbenchContext {
     pageTitle: string;
     setPageTitle: (title: string) => void;
+    isDevelopment: boolean;
 }
 
 const defaultWorkbenchContext: IWorkbenchContext = {
     pageTitle: '',
     setPageTitle: () => null,
+    isDevelopment: false,
 };
 
 export const WorkbenchContext = createContext<IWorkbenchContext>(defaultWorkbenchContext);
@@ -25,6 +29,7 @@ export const WorkbenchProvider = (props: { children: ReactNode }) => {
             value={{
                 pageTitle,
                 setPageTitle,
+                isDevelopment: isDevelopmentBuild,
             }}>
             {props.children}
         </WorkbenchContext.Provider>

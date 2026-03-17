@@ -20,6 +20,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly JsonSerializerOptions _jsonSerializerOptions;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
+    IDisposable? _subscription;
     bool _started;
 
     /// <summary>
@@ -36,6 +37,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _stopped = stopped;
         _jsonSerializerOptions = jsonSerializerOptions;
         _eventStore.Connection.Lifecycle.OnConnected += ClientConnected;
+        _eventStore.Connection.Lifecycle.OnDisconnected += ClientDisconnected;
     }
 
     /// <inheritdoc/>
@@ -45,6 +47,9 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     public void Dispose()
     {
         _eventStore.Connection.Lifecycle.OnConnected -= ClientConnected;
+        _eventStore.Connection.Lifecycle.OnDisconnected -= ClientDisconnected;
+        _subscription?.Dispose();
+        _subscription = null;
         _stopped?.Invoke();
         _stopped = null;
         _observable.Dispose();
@@ -68,7 +73,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             EventSequenceId = EventSequences.EventSequenceId.Log
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
-        _serverObservable.Subscribe(changeset =>
+        _subscription = _serverObservable.Subscribe(changeset =>
         {
             var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
             _observable.OnNext(new ReadModelChangeset<TReadModel>(
@@ -90,6 +95,14 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     Task ClientConnected()
     {
         Start();
+        return Task.CompletedTask;
+    }
+
+    Task ClientDisconnected()
+    {
+        _subscription?.Dispose();
+        _subscription = null;
+        _started = false;
         return Task.CompletedTask;
     }
 }

@@ -41,4 +41,19 @@ public interface IStorage
     /// <param name="eventStore"><see cref="EventStoreName"/> to get.</param>
     /// <returns>The <see cref="IEventStoreStorage"/> instance.</returns>
     IEventStoreStorage GetEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Remove an event store from the registry.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to remove.</param>
+    /// <returns>Awaitable task.</returns>
+    Task RemoveEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Clear all in-memory caches and delete all event store registration documents.
+    /// Call after grain eviction to undo any re-upserts that deactivating grains
+    /// may have performed via <see cref="GetEventStore"/>.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ResetAll();
 }

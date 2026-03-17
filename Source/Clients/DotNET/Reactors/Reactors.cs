@@ -69,6 +69,11 @@ public class Reactors : IReactors
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
+        eventStore.Connection.Lifecycle.OnDisconnected += () =>
+        {
+            _registered = false;
+            return Task.CompletedTask;
+        };
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventTypes = eventTypes;
