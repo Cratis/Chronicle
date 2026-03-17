@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -46,7 +47,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             RunningState = state.RunningState.ToContract(),
-            IsSubscribed = subscribed
+            IsSubscribed = subscribed,
+            IsReplayable = definition.IsReplayable
         };
     }
 
@@ -79,4 +81,17 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
                     select (definition, state);
                 return observers.ToContract();
             });
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
+    {
+        var eventTypes = request.EventTypes.ToChronicle();
+        var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
+        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observers =
+            from definition in observerDefinitions
+            join state in observerStates on definition.Identifier equals state.Identifier
+            select (definition, state);
+        return observers.ToContract();
+    }
 }

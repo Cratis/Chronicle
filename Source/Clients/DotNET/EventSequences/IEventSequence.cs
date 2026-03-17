@@ -97,6 +97,7 @@ public interface IEventSequence
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
+    /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
@@ -106,7 +107,8 @@ public interface IEventSequence
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default);
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.
@@ -119,6 +121,7 @@ public interface IEventSequence
     /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
     /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
+    /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the events occurred. If not set, the server will set it to approximately the time of append.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
@@ -131,7 +134,8 @@ public interface IEventSequence
         EventSourceType? eventSourceType = default,
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
-        ConcurrencyScope? concurrencyScope = default);
+        ConcurrencyScope? concurrencyScope = default,
+        DateTimeOffset? occurred = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.

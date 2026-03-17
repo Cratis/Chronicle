@@ -15,6 +15,11 @@ public record ReadModelIdentifier(string Value) : ConceptAs<string>(Value)
     public static readonly ReadModelIdentifier NotSet = "NotSet";
 
     /// <summary>
+    /// Gets a value representing an inferred model identifier when no explicit read model is specified in the projection declaration.
+    /// </summary>
+    public static readonly ReadModelIdentifier Inferred = "$inferred";
+
+    /// <summary>
     /// Implicitly convert from <see cref="string"/> to <see cref="ReadModelIdentifier"/>.
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>

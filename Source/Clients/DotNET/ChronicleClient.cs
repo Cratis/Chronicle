@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
@@ -42,6 +43,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly ICorrelationIdAccessor _correlationIdAccessor;
     readonly IEventStoreNamespaceResolver _namespaceResolver;
     readonly ILoggerFactory _loggerFactory;
+    readonly IEventTypeMigrators _eventTypeMigrators;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -107,13 +109,15 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _artifactActivator = result.ArtifactActivator;
+        _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
 
-        var tokenProvider = CreateTokenProvider(options);
         var connectionLifecycle = new ConnectionLifecycle(_loggerFactory.CreateLogger<ConnectionLifecycle>());
 
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
         var disableTls = options.Tls.IsDisabled || (string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls);
+
+        var tokenProvider = CreateTokenProvider(options, disableTls);
 
         _connection = new ChronicleConnection(
             options.ConnectionString,
@@ -167,6 +171,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _jsonSchemaGenerator = result.JsonSchemaGenerator;
         _concurrencyScopeStrategies = result.ConcurrencyScopeStrategies;
         _artifactActivator = result.ArtifactActivator;
+        _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
         _connection = connection;
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
@@ -200,6 +205,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             @namespace,
             _connection,
             _artifactsProvider,
+            _eventTypeMigrators,
             _correlationIdAccessor,
             _concurrencyScopeStrategies,
             CausationManager,
@@ -210,6 +216,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
+            Options.DisableEventTypeGenerationValidation,
             _loggerFactory);
         _eventStores[key] = eventStore;
 
@@ -256,7 +263,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options)
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool disableTls)
     {
         if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -265,7 +272,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 options.ConnectionString.Username ?? string.Empty,
                 options.ConnectionString.Password ?? string.Empty,
                 options.ManagementPort,
-                options.Tls.IsDisabled,
+                disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
         }
 

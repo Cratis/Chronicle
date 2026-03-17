@@ -309,8 +309,23 @@ public class Reactors : IReactors
             {
                 var context = @event.Context.ToClient();
 
-                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id);
-                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(@event.Content)!.AsObject());
+                var handlerEventType = handler.EventTypes.FirstOrDefault(et => et.Id == context.EventType.Id);
+                var targetGeneration = handlerEventType?.Generation ?? context.EventType.Generation;
+                var eventType = _eventTypes.GetClrTypeFor(context.EventType.Id, targetGeneration);
+
+                string contentJson;
+                if (targetGeneration != context.EventType.Generation &&
+                    @event.GenerationalContent.TryGetValue((int)targetGeneration.Value, out var genContent))
+                {
+                    contentJson = genContent;
+                    context = context with { EventType = context.EventType with { Generation = targetGeneration } };
+                }
+                else
+                {
+                    contentJson = @event.Content;
+                }
+
+                var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
                 if (handleResult.TryGetException(out var ex))

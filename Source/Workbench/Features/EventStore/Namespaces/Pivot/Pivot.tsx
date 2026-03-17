@@ -8,7 +8,8 @@ import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
 import strings from 'Strings';
 import { AppendedEvent } from 'Api/Events';
-import { ObjectContentViewer } from 'Components/ObjectContentViewer';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { QueryResultWithState } from '@cratis/arc/queries';
@@ -129,7 +130,7 @@ const detailRenderer = (event: AppendedEvent, eventTypes: QueryResultWithState<E
     return (
         <div style={{ padding: '20px', height: '100%', overflow: 'auto' }}>
             <h2 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--text-color)' }}>{event.context.eventType.id}</h2>
-            <ObjectContentViewer object={content} schema={schema} />
+            <ObjectContentEditor object={content} schema={schema} />
         </div>
     );
 };

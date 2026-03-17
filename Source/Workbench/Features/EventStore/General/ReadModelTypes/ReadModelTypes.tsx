@@ -6,15 +6,15 @@ import strings from 'Strings';
 import { AllReadModelDefinitions, ReadModelDefinition, ReadModelOwner, ReadModelSource } from 'Api/ReadModelTypes';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
-import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 import { AddReadModelDialog } from './Add/AddReadModelDialog';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { ReadModelDetails } from './ReadModelDetails';
 import * as faIcons from 'react-icons/fa6';
 import { useState, useCallback } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
 
 const renderSource = (readModel: ReadModelDefinition) => {
     switch (readModel.source) {
@@ -38,13 +38,20 @@ const renderOwner = (readModel: ReadModelDefinition) => {
 
 export const ReadModelTypes = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AddReadModelWrapper, showAddReadModel] = useDialog(AddReadModelDialog);
+    const [AddReadModelDialogWrapper, showAddReadModelDialog] = useDialog(AddReadModelDialog);
     // TODO: This is a workaround to force refresh after save. Should be replaced with WebSocket-based updates.
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleRefresh = useCallback(() => {
         setRefreshTrigger(prev => prev + 1);
     }, []);
+
+    const handleAddReadModel = async () => {
+        const [result] = await showAddReadModelDialog();
+        if (result === DialogResult.Ok) {
+            handleRefresh();
+        }
+    };
 
     const filters: DataTableFilterMeta = {
         owner: { value: null, matchMode: FilterMatchMode.EQUALS },
@@ -84,13 +91,6 @@ export const ReadModelTypes = () => {
             className='p-column-filter'
         />
     );
-
-    const handleAddReadModel = async () => {
-        const [result] = await showAddReadModel();
-        if (result === DialogResult.Ok) {
-            handleRefresh();
-        }
-    };
 
     return (
         <>
@@ -152,7 +152,7 @@ export const ReadModelTypes = () => {
                         header={strings.eventStore.general.readModels.columns.generation} />
                 </DataPage.Columns>
             </DataPage>
-            <AddReadModelWrapper />
+            <AddReadModelDialogWrapper />
         </>
     );
 };

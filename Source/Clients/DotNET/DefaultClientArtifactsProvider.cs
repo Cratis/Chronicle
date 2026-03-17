@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
@@ -51,6 +52,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _uniqueConstraints = [];
     IEnumerable<Type> _uniqueEventTypeConstraints = [];
     IEnumerable<Type> _eventSeeders = [];
+    IEnumerable<Type> _eventTypeMigrators = [];
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventTypes
@@ -182,6 +184,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         }
     }
 
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventTypeMigrators
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventTypeMigrators;
+        }
+    }
+
     void EnsureInitialized()
     {
         if (_initialized) return;
@@ -205,6 +217,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
             _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
             _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
             _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
+            _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
         }
     }
 }

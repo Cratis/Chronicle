@@ -20,6 +20,9 @@ internal static partial class ObservingLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Subscribing to stream from event sequence number {EventSequenceNumber}")]
     internal static partial void SubscribingToStream(this ILogger<Observing> logger, EventSequenceNumber eventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Events were missed after subscribing to queue - next expected: {NextEventSequenceNumber}, current tail: {TailEventSequenceNumber}. Transitioning back to Routing to catch up.")]
+    internal static partial void EventsMissedAfterSubscription(this ILogger<Observing> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
 }
 
 internal static class ObservingScopes

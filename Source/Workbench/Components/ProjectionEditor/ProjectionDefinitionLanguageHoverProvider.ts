@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { editor, languages, Position } from 'monaco-editor';
-import type { JsonSchema, JsonSchemaProperty } from '../JsonSchema';
+import type { JsonSchema, JsonSchemaProperty } from '@cratis/components/types';
 import type { ReadModelInfo } from './index';
 import strings from '../../Strings';
 
@@ -286,7 +286,7 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
     private getCurrentEventType(model: editor.ITextModel, lineNumber: number): string | null {
         for (let i = lineNumber; i >= 1; i--) {
             const line = model.getLineContent(i).trim();
-            const fromMatch = line.match(/^from\s+(\w+)/);
+            const fromMatch = line.match(/^from\s+([\w-]+)/);
             if (fromMatch) {
                 return fromMatch[1];
             }

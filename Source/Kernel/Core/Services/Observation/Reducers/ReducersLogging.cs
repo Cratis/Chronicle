@@ -30,7 +30,7 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Debug, "Reducer {ReducerId} observer stream disconnected from connection {ConnectionId}")]
     internal static partial void ObserverStreamDisconnected(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId);
 
-    [LoggerMessage(LogLevel.Information, "Reducer {ReducerId} disconnected ungracefully from connection {ConnectionId}")]
+    [LoggerMessage(LogLevel.Warning, "Reducer {ReducerId} disconnected ungracefully from connection {ConnectionId}")]
     internal static partial void DisconnectedUngracefully(this ILogger<Reducers> logger, ObserverId reducerId, ConnectionId connectionId);
 
     [LoggerMessage(LogLevel.Error, "Error occurred for reducer {ReducerId} from connection {ConnectionId} - disengaging")]

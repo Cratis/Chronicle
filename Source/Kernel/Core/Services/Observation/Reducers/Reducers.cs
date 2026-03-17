@@ -192,9 +192,12 @@ internal sealed class Reducers(
                 finally
                 {
                     reducerMediator.Disconnected(observerId, connectionId);
-                    reducerResultTcs.Values.ForEach(_ => _.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
-                    await clientObserver!.Unsubscribe();
-                    clientObserver = null;
+                    reducerResultTcs.Values.ForEach(_ => _.TrySetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
+                    if (clientObserver is not null)
+                    {
+                        await clientObserver.Unsubscribe();
+                        clientObserver = null;
+                    }
                 }
             });
 
@@ -204,13 +207,8 @@ internal sealed class Reducers(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-
             clientObserver?.Unsubscribe().GetAwaiter().GetResult();
-
             reducerMediator.Disconnected(observerId, connectionId);
-            reducerResultTcs.Values.ForEach(_ => _.SetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
-            clientObserver = null;
-
             register?.Dispose();
         });
 

@@ -1,44 +1,80 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddWebHook } from 'Api/Webhooks';
 import { AllEventSequences } from 'Api/EventSequences';
 import { AllEventTypes } from 'Api/EventTypes';
 import { EventType } from 'Api/Events';
 import { AuthorizationType } from 'Api/Security';
-import { Dialog } from 'Components/Dialogs';
-import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
-import { InputSwitch } from 'primereact/inputswitch';
 import { Message } from 'primereact/message';
+import { Button } from 'primereact/button';
 import { useState } from 'react';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField, DropdownField, CheckboxField } from '@cratis/components/CommandForm';
+import { useCommandInstance } from '@cratis/components/CommandForm';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+
+interface TestButtonProps {
+    isValid: boolean;
+    onTestResult: (success: boolean, errors: string[]) => void;
+}
+
+const WebhookTestButton = ({ isValid, onTestResult }: TestButtonProps) => {
+    const command = useCommandInstance<AddWebHook>();
+
+    const extractErrors = (result: { isValid: boolean; validationResults: { message: string }[]; hasExceptions: boolean; exceptionMessages: string[]; isAuthorized: boolean; authorizationFailureReason: string }) => {
+        const errors: string[] = [];
+        if (!result.isValid) {
+            errors.push(...result.validationResults.map(vr => vr.message));
+        }
+        if (result.hasExceptions) {
+            errors.push(...result.exceptionMessages);
+        }
+        if (!result.isAuthorized && result.authorizationFailureReason) {
+            errors.push(result.authorizationFailureReason);
+        }
+        if (errors.length === 0) {
+            errors.push('An unexpected error occurred while testing the webhook.');
+        }
+        return errors;
+    };
+
+    const handleTest = async () => {
+        const validationResult = await command.validate();
+        if (validationResult.isSuccess) {
+            onTestResult(true, []);
+        } else {
+            onTestResult(false, extractErrors(validationResult));
+        }
+    };
+
+    return (
+        <Button
+            label={strings.eventStore.general.webhooks.dialogs.addWebhook.test}
+            icon="pi pi-check-circle"
+            severity="secondary"
+            disabled={!isValid}
+            onClick={handleTest}
+        />
+    );
+};
 
 export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [addWebhook] = AddWebHook.use();
+    const { closeDialog } = useDialogContext<object>();
 
     const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
     const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
 
-    const [name, setName] = useState('');
-    const [url, setUrl] = useState('');
-    const [eventSequence, setEventSequence] = useState('event-log');
     const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
     const [authType, setAuthType] = useState(AuthorizationType.none);
-    const [basicUsername, setBasicUsername] = useState('');
-    const [basicPassword, setBasicPassword] = useState('');
-    const [bearerToken, setBearerToken] = useState('');
-    const [oauthAuthority, setOauthAuthority] = useState('');
-    const [oauthClientId, setOauthClientId] = useState('');
-    const [oauthClientSecret, setOauthClientSecret] = useState('');
-    const [isActive, setIsActive] = useState(true);
-    const [isReplayable, setIsReplayable] = useState(true);
+    const [urlValid, setUrlValid] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [testSuccess, setTestSuccess] = useState(false);
 
     const authTypes = [
         { label: strings.eventStore.general.webhooks.authTypes.none, value: AuthorizationType.none },
@@ -49,7 +85,7 @@ export const AddWebhookDialog = () => {
 
     const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
 
-    const isUrlValid = (urlString: string): boolean => {
+    const isUrlValidFormat = (urlString: string): boolean => {
         try {
             new URL(urlString);
             return true;
@@ -58,105 +94,53 @@ export const AddWebhookDialog = () => {
         }
     };
 
-    const isValid = name.trim() !== '' &&
-                    url.trim() !== '' &&
-                    isUrlValid(url) &&
-                    eventSequence.trim() !== '' &&
-                    selectedEventTypes.length > 0;
-
-    const extractErrors = (result: { isValid: boolean; validationResults: { message: string }[]; hasExceptions: boolean; exceptionMessages: string[]; isAuthorized: boolean; authorizationFailureReason: string }) => {
-        const errors: string[] = [];
-
-        if (!result.isValid) {
-            errors.push(...result.validationResults.map(vr => vr.message));
-        }
-
-        if (result.hasExceptions) {
-            errors.push(...result.exceptionMessages);
-        }
-
-        if (!result.isAuthorized && result.authorizationFailureReason) {
-            errors.push(result.authorizationFailureReason);
-        }
-
-        if (errors.length === 0) {
-            errors.push('An unexpected error occurred while adding the webhook.');
-        }
-
-        return errors;
-    };
-
-    const handleClose = async (result: DialogResult) => {
-        if (result !== DialogResult.Ok) {
-            return true;
-        }
-
-        if (name && url && eventSequence && params.eventStore) {
-            setValidationErrors([]);
-
-            addWebhook.eventStore = params.eventStore;
-            addWebhook.name = name;
-            addWebhook.url = url;
-            addWebhook.eventSequenceId = eventSequence;
-            addWebhook.eventTypes = selectedEventTypes;
-            addWebhook.authorizationType = authType;
-            addWebhook.basicUsername = basicUsername;
-            addWebhook.basicPassword = basicPassword;
-            addWebhook.bearerToken = bearerToken;
-            addWebhook.OAuthAuthority = oauthAuthority;
-            addWebhook.OAuthClientId = oauthClientId;
-            addWebhook.OAuthClientSecret = oauthClientSecret;
-            addWebhook.isActive = isActive;
-            addWebhook.isReplayable = isReplayable;
-            addWebhook.headers = {};
-
-            const validationResult = await addWebhook.validate();
-            if (!validationResult.isSuccess) {
-                setValidationErrors(extractErrors(validationResult));
-                return false;
-            }
-
-            const executeResult = await addWebhook.execute();
-            if (executeResult.isSuccess) {
-                return true;
-            } else {
-                setValidationErrors(extractErrors(executeResult));
-                return false;
-            }
-        }
-
-        return false;
-    };
+    const isValid = urlValid && selectedEventTypes.length > 0;
 
     return (
-        <Dialog
+        <CommandDialog
+            command={AddWebHook}
+            initialValues={{
+                eventStore: params.eventStore!,
+                eventSequenceId: 'event-log',
+                authorizationType: AuthorizationType.none,
+                isActive: true,
+                isReplayable: true,
+                headers: {} as Record<string, unknown>
+            }}
+            currentValues={{ eventTypes: selectedEventTypes }}
+            isValid={isValid}
             title={strings.eventStore.general.webhooks.dialogs.addWebhook.title}
-            onClose={handleClose}
+            okLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
             width="600px"
-            resizable={true}
-            isValid={isValid}>
+            onFieldChange={(command, fieldName) => {
+                if (fieldName === 'url') {
+                    setUrlValid(isUrlValidFormat(command.url ?? ''));
+                }
+                if (fieldName === 'authorizationType') {
+                    setAuthType(command.authorizationType!);
+                }
+            }}
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
             <div className="p-fluid">
-                <div className="field mb-3">
-                    <label htmlFor="name">{strings.eventStore.general.webhooks.dialogs.addWebhook.name}</label>
-                    <InputText id="name" value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
-
-                <div className="field mb-3">
-                    <label htmlFor="url">{strings.eventStore.general.webhooks.dialogs.addWebhook.url}</label>
-                    <InputText id="url" value={url} onChange={(e) => setUrl(e.target.value)} />
-                </div>
-
-                <div className="field mb-3">
-                    <label htmlFor="eventSequence">{strings.eventStore.general.webhooks.dialogs.addWebhook.eventSequence}</label>
-                    <Dropdown
-                        id="eventSequence"
-                        value={eventSequence}
-                        options={eventSequenceOptions}
-                        onChange={(e) => setEventSequence(e.value)}
+                <InputTextField<AddWebHook>
+                    value={c => c.name}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.name}
+                />
+                <InputTextField<AddWebHook>
+                    value={c => c.url}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.url}
+                    type="url"
+                />
+                <DropdownField<AddWebHook>
+                    value={c => c.eventSequenceId}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.eventSequence}
+                    options={eventSequenceOptions}
+                    optionValue="value"
+                    optionLabel="label"
                     placeholder="Select event sequence"
-                    />
-                </div>
-
+                />
                 <div className="field mb-3">
                     <label htmlFor="eventTypes">{strings.eventStore.general.webhooks.dialogs.addWebhook.eventTypes}</label>
                     <MultiSelect
@@ -170,55 +154,57 @@ export const AddWebhookDialog = () => {
                         display="chip"
                     />
                 </div>
-
-                <div className="field mb-3">
-                    <label htmlFor="authType">{strings.eventStore.general.webhooks.dialogs.addWebhook.authType}</label>
-                    <Dropdown
-                        id="authType"
-                        value={authType}
-                        options={authTypes}
-                        onChange={(e) => setAuthType(e.value)}
-                        placeholder="Select authorization type"
-                    />
-                </div>
-
+                <DropdownField<AddWebHook>
+                    value={c => c.authorizationType}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.authType}
+                    options={authTypes}
+                    optionValue="value"
+                    optionLabel="label"
+                    placeholder="Select authorization type"
+                    required={false}
+                />
                 {authType === AuthorizationType.basic && (
                     <>
-                        <div className="field mb-3">
-                            <label htmlFor="basicUsername">{strings.eventStore.general.webhooks.dialogs.addWebhook.basicUsername}</label>
-                            <InputText id="basicUsername" value={basicUsername} onChange={(e) => setBasicUsername(e.target.value)} />
-                        </div>
-                        <div className="field mb-3">
-                            <label htmlFor="basicPassword">{strings.eventStore.general.webhooks.dialogs.addWebhook.basicPassword}</label>
-                            <InputText id="basicPassword" type="password" value={basicPassword} onChange={(e) => setBasicPassword(e.target.value)} />
-                        </div>
+                        <InputTextField<AddWebHook>
+                            value={c => c.basicUsername}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.basicUsername}
+                            required={false}
+                        />
+                        <InputTextField<AddWebHook>
+                            value={c => c.basicPassword}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.basicPassword}
+                            type="password"
+                            required={false}
+                        />
                     </>
                 )}
-
                 {authType === AuthorizationType.bearer && (
-                    <div className="field mb-3">
-                        <label htmlFor="bearerToken">{strings.eventStore.general.webhooks.dialogs.addWebhook.bearerToken}</label>
-                        <InputText id="bearerToken" value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
-                    </div>
+                    <InputTextField<AddWebHook>
+                        value={c => c.bearerToken}
+                        title={strings.eventStore.general.webhooks.dialogs.addWebhook.bearerToken}
+                        required={false}
+                    />
                 )}
-
                 {authType === AuthorizationType.OAuth && (
                     <>
-                        <div className="field mb-3">
-                            <label htmlFor="oauthAuthority">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthAuthority}</label>
-                            <InputText id="oauthAuthority" value={oauthAuthority} onChange={(e) => setOauthAuthority(e.target.value)} />
-                        </div>
-                        <div className="field mb-3">
-                            <label htmlFor="oauthClientId">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientId}</label>
-                            <InputText id="oauthClientId" value={oauthClientId} onChange={(e) => setOauthClientId(e.target.value)} />
-                        </div>
-                        <div className="field mb-3">
-                            <label htmlFor="oauthClientSecret">{strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientSecret}</label>
-                            <InputText id="oauthClientSecret" type="password" value={oauthClientSecret} onChange={(e) => setOauthClientSecret(e.target.value)} />
-                        </div>
+                        <InputTextField<AddWebHook>
+                            value={c => c.OAuthAuthority}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.oauthAuthority}
+                            required={false}
+                        />
+                        <InputTextField<AddWebHook>
+                            value={c => c.OAuthClientId}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientId}
+                            required={false}
+                        />
+                        <InputTextField<AddWebHook>
+                            value={c => c.OAuthClientSecret}
+                            title={strings.eventStore.general.webhooks.dialogs.addWebhook.oauthClientSecret}
+                            type="password"
+                            required={false}
+                        />
                     </>
                 )}
-
                 {validationErrors.length > 0 && (
                     <div className="field mb-3">
                         {validationErrors.map((error, index) => (
@@ -226,17 +212,28 @@ export const AddWebhookDialog = () => {
                         ))}
                     </div>
                 )}
-
-                <div className="field flex align-items-center mb-3">
-                    <label htmlFor="isActive" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}</label>
-                    <InputSwitch inputId="isActive" checked={isActive} onChange={(e) => setIsActive(e.value)} />
-                </div>
-
-                <div className="field flex align-items-center">
-                    <label htmlFor="isReplayable" className="flex-1">{strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}</label>
-                    <InputSwitch inputId="isReplayable" checked={isReplayable} onChange={(e) => setIsReplayable(e.value)} />
+                {testSuccess && (
+                    <div className="field mb-3">
+                        <Message severity="success" text={strings.eventStore.general.webhooks.dialogs.addWebhook.testSuccess} className="mb-2" />
+                    </div>
+                )}
+                <CheckboxField<AddWebHook>
+                    value={c => c.isActive}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.isActive}
+                />
+                <CheckboxField<AddWebHook>
+                    value={c => c.isReplayable}
+                    title={strings.eventStore.general.webhooks.dialogs.addWebhook.isReplayable}
+                />
+                <div className="field">
+                    <WebhookTestButton
+                        isValid={isValid}
+                        onTestResult={(success, errors) => {
+                            setTestSuccess(success);
+                            setValidationErrors(errors);
+                        }} />
                 </div>
             </div>
-        </Dialog>
+        </CommandDialog>
     );
 };

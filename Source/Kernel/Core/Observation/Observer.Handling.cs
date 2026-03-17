@@ -34,7 +34,7 @@ public partial class Observer
             return;
         }
 
-        if (!events.Any(_ => _subscription.EventTypes.Contains(_.Context.EventType)))
+        if (!events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
         {
             State = State with
             {

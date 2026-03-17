@@ -110,6 +110,23 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
+    /// Gets or sets a value indicating whether event type generation validation is disabled.
+    /// When <see langword="true"/>, Chronicle will not enforce that every generation step
+    /// from 1 to the current generation has a migration defined, and will not require
+    /// sequential generation numbering.
+    /// </summary>
+    /// <remarks>
+    /// This property is only honoured in DEVELOPMENT builds of the Kernel. In all other
+    /// configurations the value sent to the server is ignored, ensuring that production
+    /// deployments never silently skip migration chain validation.
+    /// </remarks>
+#if DEVELOPMENT
+    public bool DisableEventTypeGenerationValidation { get; set; }
+#else
+    public bool DisableEventTypeGenerationValidation => false;
+#endif
+
+    /// <summary>
     /// Gets or sets the TLS configuration.
     /// </summary>
     public Tls Tls { get; set; } = new Tls();

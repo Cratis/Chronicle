@@ -34,7 +34,7 @@ public class when_round_tripping : Specification
     void Because()
     {
         var json = JsonSerializer.Serialize(_original, _options);
-        _result = JsonSerializer.Deserialize<EventRedacted>(json, _options)!;
+        _result = JsonSerializer.Deserialize<EventRedacted>(json, _options);
     }
 
     [Fact] void should_preserve_reason() => _result.Reason.ShouldEqual(_original.Reason);

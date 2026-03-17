@@ -76,6 +76,9 @@ public class Webhook(
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    public Task Remove() => ClearStateAsync();
+
     async Task ReplayForAllNamespaces(WebhookKey key, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         foreach (var @namespace in namespaces)

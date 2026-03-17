@@ -66,6 +66,18 @@ internal sealed class AuthenticationService(
         var eventSequence = grainFactory.GetEventLog();
         await eventSequence.Append(userId, @event);
 
+#if DEVELOPMENT
+        if (!string.IsNullOrEmpty(_options.Authentication.DefaultAdminPassword))
+        {
+            logger.SettingDefaultAdminPassword();
+
+            // null! is safe here: ASP.NET Identity's default PasswordHasher ignores the user parameter
+            var passwordHash = _passwordHasher.HashPassword(null!, _options.Authentication.DefaultAdminPassword);
+            await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
+            logger.DefaultAdminPasswordSet();
+        }
+#endif
+
         logger.DefaultAdminUserAdded();
     }
 

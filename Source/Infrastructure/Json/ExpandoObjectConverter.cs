@@ -26,12 +26,29 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     public JsonObject ToJsonObject(ExpandoObject expandoObject, JsonSchema schema)
     {
         var jsonObject = new JsonObject();
-        var schemaProperties = schema.GetFlattenedProperties();
+        var schemaProperties = schema.GetFlattenedProperties().ToList();
+
+        // When schema has no properties (e.g. a placeholder empty schema), fall back to
+        // unknown-type conversion so that all data in the expando object is preserved.
+        if (schemaProperties.Count == 0)
+        {
+            foreach (var (key, value) in expandoObject as IDictionary<string, object?>)
+            {
+                var node = ConvertUnknownSchemaTypeToJsonValue(value);
+                if (node is not null)
+                {
+                    jsonObject[key] = node;
+                }
+            }
+
+            return jsonObject;
+        }
+
         foreach (var property in schemaProperties)
         {
             JsonNode? value = null;
 
-            var keyValue = expandoObject.SingleOrDefault(_ => _.Key == property.Name);
+            var keyValue = expandoObject.SingleOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
 
             var name = property.Name;
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
@@ -68,11 +85,28 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
 
-        var schemaProperties = schema.GetFlattenedProperties();
+        var schemaProperties = schema.GetFlattenedProperties().ToList();
+
+        // When schema has no properties (e.g. a placeholder empty schema), fall back to
+        // unknown-type conversion so that all data in the document is preserved.
+        if (schemaProperties.Count == 0)
+        {
+            foreach (var (name, sourceValue) in document)
+            {
+                if (sourceValue is not null)
+                {
+                    expandoObjectAsDictionary[name] = ConvertUnknownSchemaTypeToClrType(sourceValue);
+                }
+            }
+
+            return expandoObject;
+        }
+
         foreach (var property in schemaProperties)
         {
             var name = property.Name;
-            var sourceValue = document[name];
+            var sourceValue = document[name]
+                ?? document.FirstOrDefault(kv => kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
 
             object? value = null;
             if (sourceValue is not null)

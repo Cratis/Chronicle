@@ -16,8 +16,12 @@ PR descriptions serve two purposes: they help reviewers understand the change *n
 
 ## Commits
 
-- Write clear, concise commit messages in imperative mood: "Add author registration" not "Added author registration" or "Adding author registration".
-- Each commit should represent a logical unit of work. Avoid "WIP" or "fix" commits in the final PR — squash or rebase if needed.
+See the full [Git Commits guide](./git-commits.instructions.md) for rules on logical grouping, message format, and staging discipline.
+
+Quick reminders:
+- Imperative mood: "Add author registration" not "Added author registration".
+- Each commit = one logical unit of work. No WIP commits in the final PR.
+- Never mix unrelated changes in a single commit.
 
 ## Labels
 

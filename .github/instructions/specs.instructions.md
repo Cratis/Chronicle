@@ -22,30 +22,59 @@ Specs mirror the source structure and read like a sentence when you trace the pa
 ```
 for_<TypeUnderTest>/
 ├── given/
-│   ├── all_dependencies           ← common DI/mock setup
-│   └── a_<descriptive_name>       ← reusable context
-├── when_<behavior>/               ← folder for behaviors with multiple outcomes
-│   ├── given/                     ← behavior-specific context (optional)
+│   ├── all_dependencies              ← common DI/mock setup
+│   └── a_<descriptive_name>          ← reusable context
+├── when_<behavior>/                  ← folder for behaviors with multiple outcomes
+│   ├── given/                        ← behavior-specific context (optional)
 │   │   └── a_<specific_setup>
-│   ├── and_<condition>            ← individual spec file
-│   ├── with_<data_state>
-│   └── without_<requirement>
-└── when_<simple_behavior>         ← single file for single-outcome behaviors
+│   ├── and_<condition>.cs            ← spec file for one outcome
+│   ├── and_<condition>/              ← OR a sub-folder when that condition itself has multiple outcomes
+│   │   ├── with_<data_state>.cs
+│   │   └── without_<requirement>.cs
+│   ├── with_<data_state>.cs
+│   └── without_<requirement>.cs
+└── when_<simple_behavior>.cs         ← single file for single-outcome behaviors
 ```
+
+The `and_`, `with_`, `without_`, `having_`, `given_` prepositions work **both** as file names and as folder names. Use a folder when there are multiple outcomes under that condition; use a file when there is only one.
 
 **Naming conventions — read them as English sentences:**
 | Element | Pattern | Reads as... |
 |---|---|---|
 | Unit folder | `for_<ClassName>` | "For the Changeset..." |
 | Behavior folder | `when_<action>` | "...when adding changes..." |
-| Spec file | Descriptive preposition | "...and there are differences" |
+| Condition folder or spec file | Descriptive preposition | "...and there are differences" |
 | Assertion | `should <expected result>` | "...it should return true" |
 
-**Allowed prepositions for spec file/class names:**
+**Allowed prepositions for spec file/class names (and sub-folder names):**
 - `and_*` — additional conditions or compound scenarios
 - `with_*` / `without_*` — specific data or state present/absent
 - `having_*` — possession or state-based conditions
 - `given_*` — precondition scenarios
+
+**Critical naming rule — never embed `when` in a spec file or folder name:**
+`when` belongs **only** in `when_<behavior>` folder names. A spec file, spec class, or non-`when_` folder must **never** contain the word `when` anywhere in it. If the name starts with a preposition (`with_`, `and_`, etc.) but also contains `_when_` somewhere in the middle (e.g. `with_a_registered_migration_when_appending_a_generation_1_event`), you have two "whens" in the sentence — which is always wrong.
+
+The fix is to fold the context into the `when_` folder name itself, then use preposition files/folders for the outcomes:
+
+```
+# ❌ Wrong — double when in the sentence path
+when_appending_event_with_migrations/
+└── with_a_registered_migration_when_appending_a_generation_1_event.cs
+
+# ❌ Still wrong — unnecessary extra level when a single flat file suffices
+when_appending_event_with_migrations/
+└── and_event_is_generation_1/
+    └── with_a_registered_migration.cs
+
+# ✅ Correct — context baked into the when_ folder; outcomes are flat files
+when_appending_event_with_registered_migration/
+├── and_event_is_generation_1.cs
+├── and_event_is_generation_2.cs
+└── and_event_has_default_value.cs
+```
+
+A sub-folder under `when_` is only needed when that condition has its **own** multiple outcomes that warrant further breakdown. If there is only one outcome per condition, use a flat file. This applies to **all languages** (C#, TypeScript, etc.).
 
 ## What to Specify
 

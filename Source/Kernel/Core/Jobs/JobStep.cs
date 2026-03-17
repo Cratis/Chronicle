@@ -152,7 +152,14 @@ public abstract class JobStep<TRequest, TResult, TState>(
             if (!removing && State.Status is JobStepStatus.Stopped)
             {
                 logger.AlreadyStopped();
-                DeactivateOnIdle();
+                try
+                {
+                    DeactivateOnIdle();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Grain activation may already be invalid during silo shutdown.
+                }
                 return Result.Success<JobStepError>();
             }
 
@@ -192,7 +199,14 @@ public abstract class JobStep<TRequest, TResult, TState>(
                 _ = await WriteStatusChange(JobStepStatus.Removing);
                 if (wasStopped)
                 {
-                    DeactivateOnIdle();
+                    try
+                    {
+                        DeactivateOnIdle();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Grain activation may already be invalid during silo shutdown.
+                    }
                 }
             }
         }
@@ -329,7 +343,13 @@ public abstract class JobStep<TRequest, TResult, TState>(
         finally
         {
             // Always release throttle slot after work completes (success or failure)
-            throttle.Release();
+            try
+            {
+                throttle.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         async Task<PerformWorkResult<JobStepResult>> HandleJobStepResult(JobStepResult jobStepResult)
@@ -390,7 +410,14 @@ public abstract class JobStep<TRequest, TResult, TState>(
             }
             finally
             {
-                DeactivateOnIdle();
+                try
+                {
+                    DeactivateOnIdle();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Grain activation may already be invalid during silo shutdown.
+                }
             }
         }
 

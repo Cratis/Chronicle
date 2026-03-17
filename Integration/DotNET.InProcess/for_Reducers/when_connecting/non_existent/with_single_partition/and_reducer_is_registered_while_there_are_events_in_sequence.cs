@@ -19,9 +19,11 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
         public ReducerState ReducerState;
 
         public EventSequenceNumber LastEventSequenceNumberAppended;
+        public int HandledEventsBefore;
 
         async Task Establish()
         {
+            HandledEventsBefore = Reducer.HandledEvents;
             Events = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(Events);
             LastEventSequenceNumberAppended = result.SequenceNumbers.Last();
@@ -33,7 +35,7 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await reducer.WaitTillSubscribed();
             await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
-            await Reducer.WaitTillHandledEventReaches(Events.Count);
+            await Reducer.WaitTillHandledEventReaches(HandledEventsBefore + Events.Count);
 
             ReducerState = await reducer.GetState();
         }
@@ -46,5 +48,5 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
     void should_catch_up_all_events_added_while_disconnected() => Context.ReducerState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAppended.Value);
 
     [Fact]
-    void should_process_all_events() => Context.Reducer.HandledEvents.ShouldEqual(Context.Events.Count);
+    void should_process_all_events() => (Context.Reducer.HandledEvents - Context.HandledEventsBefore).ShouldEqual(Context.Events.Count);
 }

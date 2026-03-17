@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useState, useEffect } from 'react';
-import { IDetailsComponentProps } from 'Components';
-import { SchemaEditor, JsonSchema } from 'Components';
+import { IDetailsComponentProps } from '@cratis/components/DataPage';
+import { SchemaEditor as _SE } from '@cratis/components';
+const SchemaEditor = _SE.SchemaEditor;
+import type { JsonSchema } from '@cratis/components/types';
+import { AllTypeFormats } from 'Api/TypeFormats';
 import { ReadModelDefinition, ReadModelSource, UpdateReadModelDefinition } from 'Api/ReadModelTypes';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -32,6 +35,8 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
         }
     };
 
+    const [typeFormatsQuery] = AllTypeFormats.use();
+
     const handleSchemaChange = (newSchema: JsonSchema) => {
         setSchema(newSchema);
     };
@@ -48,6 +53,7 @@ export const ReadModelDetails = (props: IDetailsComponentProps<ReadModelDefiniti
                 canNotEditReason={canEditReason}
                 onChange={handleSchemaChange}
                 onSave={handleSave}
+                typeFormats={typeFormatsQuery.data}
             />
         </div>
     );

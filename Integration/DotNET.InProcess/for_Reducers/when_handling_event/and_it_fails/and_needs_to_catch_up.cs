@@ -46,7 +46,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
             FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobs();
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition));
 
             // Wait for the second event to have been handled
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());

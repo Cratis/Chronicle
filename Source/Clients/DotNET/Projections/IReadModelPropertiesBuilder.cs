@@ -68,6 +68,20 @@ public interface IReadModelPropertiesBuilder<TReadModel, TEvent, TBuilder>
     TBuilder UsingCompositeKey<TKeyType>(Action<ICompositeKeyBuilder<TKeyType, TEvent>> builderCallback);
 
     /// <summary>
+    /// Define a constant value to use as the key. All events of this type will update the same read model instance.
+    /// </summary>
+    /// <param name="value">The constant value to use as key.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder UsingConstantKey(string value);
+
+    /// <summary>
+    /// Define a constant value to use as the parent key. All events of this type will update the same parent read model instance.
+    /// </summary>
+    /// <param name="value">The constant value to use as parent key.</param>
+    /// <returns>Builder continuation.</returns>
+    TBuilder UsingConstantParentKey(string value);
+
+    /// <summary>
     /// Increment the value of a property on the model.
     /// </summary>
     /// <param name="readModelPropertyAccessor">Model property accessor for defining the target property.</param>

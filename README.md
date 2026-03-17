@@ -46,18 +46,30 @@
 
 ## 📖 Table of Contents
 
-- [About](#-about)
-- [Key Features](#-key-features)
-- [Getting Started](#-getting-started)
+- [📖 Table of Contents](#-table-of-contents)
+- [🧭 About](#-about)
+- [✨ Key Features](#-key-features)
+  - [🏗️ Event Sourcing Foundation](#️-event-sourcing-foundation)
+  - [🎯 Real-time Processing](#-real-time-processing)
+  - [🛡️ Enterprise Ready](#️-enterprise-ready)
+  - [🚀 Developer Experience](#-developer-experience)
+- [🚀 Getting Started](#-getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Quick Example](#quick-example)
-- [Architecture](#-architecture)
-- [Documentation](#-documentation)
-- [Contributing](#-contributing)
-- [Support](#-support)
-- [License](#-license)
-- [Acknowledgements](#-acknowledgements)
+    - [ASP.NET Core setup (`Program.cs`)](#aspnet-core-setup-programcs)
+    - [Define events](#define-events)
+    - [Append events](#append-events)
+    - [React to events (Reactor)](#react-to-events-reactor)
+    - [Build read models (Reducer)](#build-read-models-reducer)
+    - [Declarative projections](#declarative-projections)
+- [🏛️ Architecture](#️-architecture)
+- [📚 Documentation](#-documentation)
+- [🤝 Contributing](#-contributing)
+- [💬 Support](#-support)
+- [📊 Repository Stats](#-repository-stats)
+- [📄 License](#-license)
+- [🙏 Acknowledgements](#-acknowledgements)
 
 ---
 
@@ -104,7 +116,7 @@ Chronicle ships with:
 | **Multi-tenancy** | First-class namespace support for isolated tenant data |
 | **Constraints** | Server-side integrity rules enforced at append time |
 | **Compliance** | Full audit trails and data lineage for regulatory requirements |
-| **Compensation** | Built-in support for correcting past events |
+| **Revision** | Built-in support for correcting past events |
 
 ### 🚀 Developer Experience
 

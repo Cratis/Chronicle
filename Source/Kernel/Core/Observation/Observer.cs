@@ -106,6 +106,12 @@ public partial class Observer(
     public Task<bool> IsSubscribed() => Task.FromResult(_subscription.IsSubscribed);
 
     /// <inheritdoc/>
+    public Task<bool> IsPreparingCatchup() => Task.FromResult(_isPreparingCatchup);
+
+    /// <inheritdoc/>
+    public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
 
     /// <inheritdoc/>
@@ -175,6 +181,7 @@ public partial class Observer(
             _observerKey.Namespace,
             _observerKey.EventSequenceId,
             observerDefinition,
+            _eventSequence,
             loggerFactory.CreateLogger<Observing>())
     }.ToImmutableList();
 

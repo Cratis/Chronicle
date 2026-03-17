@@ -99,6 +99,41 @@ public sealed class OrderDevelopmentSeeding : ICanSeedEvents
 }
 ```
 
+## Namespace-scoped seed data
+
+By default, seed data applies to all namespaces in the event store. To target a specific namespace, use `ForNamespace` to get a scoped builder:
+
+```csharp
+public sealed class TenantSeeding : ICanSeedEvents
+{
+    public void Seed(IEventSeedingBuilder builder)
+    {
+        // Global seed data — applied to every namespace
+        builder.For<ProductCreated>("product-1", [
+            new("Laptop", 1299.00m)
+        ]);
+
+        // Namespace-scoped seed data — applied only to the "acme" namespace
+        builder.ForNamespace("acme")
+            .For<UserRegistered>("user-1", [
+                new("admin@acme.com", "Acme Admin")
+            ]);
+
+        // A second namespace with different seed data
+        builder.ForNamespace("contoso")
+            .For<UserRegistered>("user-1", [
+                new("admin@contoso.com", "Contoso Admin")
+            ])
+            .ForEventSource("org-1", [
+                new OrganizationCreated("Contoso"),
+                new BillingSetUp("contoso@billing.com")
+            ]);
+    }
+}
+```
+
+The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods as the global builder. Each namespace receives only its own scoped events in addition to any global events.
+
 ## How it runs
 
 - Seeders are automatically discovered at application startup.
@@ -112,4 +147,5 @@ public sealed class OrderDevelopmentSeeding : ICanSeedEvents
 - Use clear event source IDs to make debugging easier.
 - Group seeders by scenario so you can remove or adjust them easily.
 - Use build flags or runtime settings to prevent seeding in production.
+- Use `ForNamespace` when seed data is tenant-specific or environment-specific to avoid polluting other namespaces.
 

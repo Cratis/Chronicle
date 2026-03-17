@@ -49,9 +49,16 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
     /// <inheritdoc/>
     public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> GetForEventTypes(IEnumerable<EventType> eventTypes)
     {
-        var eventTypeIds = eventTypes.Select(_ => _.Id.ToString()).ToArray();
-        var result = await _collection
-            .FindAsync(_ => _.EventTypes.Keys.Any(_ => eventTypeIds.Contains(_)));
-        return result.ToList().ToKernel();
+        var eventTypeIds = eventTypes.Select(_ => _.Id.ToString()).ToHashSet();
+        var result = await _collection.Find(FilterDefinition<ObserverDefinition>.Empty).ToListAsync();
+        return result.Where(def => def.EventTypes.Keys.Any(key => eventTypeIds.Contains(key.Split('+')[0]))).ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> GetReplayableObserversForEventTypes(IEnumerable<EventType> eventTypes)
+    {
+        var eventTypeIds = eventTypes.Select(_ => _.Id.ToString()).ToHashSet();
+        var result = await _collection.Find(def => def.IsReplayable).ToListAsync();
+        return result.Where(def => def.EventTypes.Keys.Any(key => eventTypeIds.Contains(key.Split('+')[0]))).ToKernel();
     }
 }

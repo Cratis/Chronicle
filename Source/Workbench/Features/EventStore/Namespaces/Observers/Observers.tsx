@@ -7,13 +7,12 @@ import { DataTableFilterMeta } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { ObserverType } from 'Api/Observation/ObserverType';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
-import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
 import { FilterMatchMode } from 'primereact/api';
 import strings from 'Strings';
 import { AllObservers, AllObserversParameters, ObserverOwner } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 
@@ -76,7 +75,6 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                     id="replay"
                     label={strings.eventStore.namespaces.observers.actions.replay} icon={faIcons.FaArrowsRotate}
                     disableOnUnselected
-                    disableWhen={(observer) => (observer as ObserverInformation).runningState === ObserverRunningState.disconnected}
                     command={() => viewModel.replay()} />
             </DataPage.MenuItems>
             <DataPage.Columns>

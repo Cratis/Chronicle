@@ -79,6 +79,11 @@ public static class WellKnownGrainStorageProviders
     public const string WebhooksManager = "webhooks-manager";
 
     /// <summary>
+    /// The name of the storage provider used for event store subscriptions manager.
+    /// </summary>
+    public const string EventStoreSubscriptionsManager = "event-store-subscriptions-manager";
+
+    /// <summary>
     /// The name of the storage provider used for reducers.
     /// </summary>
     public const string Reducers = "reducers";

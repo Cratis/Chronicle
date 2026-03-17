@@ -150,6 +150,20 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Check if the observer is currently preparing for a catch-up (between the <see cref="CatchUp"/> call and <see cref="RegisterCatchingUpPartitions"/> being called).
+    /// </summary>
+    /// <returns>True if preparing for catch-up, false otherwise.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsPreparingCatchup();
+
+    /// <summary>
+    /// Check if the observer currently has any failed partitions.
+    /// </summary>
+    /// <returns>True if there are failed partitions, false otherwise.</returns>
+    [AlwaysInterleave]
+    Task<bool> HasFailedPartitions();
+
+    /// <summary>
     /// Catch up the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>

@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Services.Identities;
 
 namespace Cratis.Chronicle.Services.Events;
 
@@ -21,7 +22,10 @@ internal static class AppendedEventConverters
     public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new()
     {
         Context = @event.Context.ToContract(),
-        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions)
+        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions),
+        OriginalContent = @event.OriginalContent,
+        Revisions = @event.Revisions.Select(c => c.ToContract()).ToList(),
+        GenerationalContent = @event.GenerationalContent.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
     };
 
     /// <summary>
@@ -42,4 +46,18 @@ internal static class AppendedEventConverters
     public static AppendedEvent ToChronicle(this Contracts.Events.AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new(
             @event.Context.ToChronicle(),
             JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions)!);
+
+    /// <summary>
+    /// Convert a <see cref="EventRevision"/> to a <see cref="Contracts.Events.EventRevision"/>.
+    /// </summary>
+    /// <param name="revision">The revision to convert.</param>
+    /// <returns>The converted contract revision.</returns>
+    public static Contracts.Events.EventRevision ToContract(this EventRevision revision) => new()
+    {
+        Generation = revision.EventTypeGeneration,
+        CorrelationId = revision.CorrelationId.ToString(),
+        CausedBy = revision.CausedBy.ToContract(),
+        Occurred = revision.Occurred,
+        Content = revision.Content
+    };
 }

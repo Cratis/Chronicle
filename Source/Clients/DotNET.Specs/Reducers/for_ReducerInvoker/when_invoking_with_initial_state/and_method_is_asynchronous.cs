@@ -21,6 +21,6 @@ public class and_method_is_asynchronous : given.a_reducer_invoker_for<AsyncReduc
 
     async Task Because() => _result = await _invoker.Invoke(_serviceProvider, [new(_event, _eventContext)], _current);
 
-    [Fact] void should_return_read_model_with_incremented_count() => ((ReadModel)_result.ReadModelState!).Count.ShouldEqual(_current.Count + 1);
+    [Fact] void should_return_read_model_with_incremented_count() => ((ReadModel)_result.ReadModelState).Count.ShouldEqual(_current.Count + 1);
     [Fact] void should_be_successful() => _result.IsSuccess.ShouldBeTrue();
 }

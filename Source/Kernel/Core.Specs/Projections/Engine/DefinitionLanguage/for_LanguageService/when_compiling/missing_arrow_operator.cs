@@ -14,5 +14,5 @@ public class missing_arrow_operator : given.a_language_service_expecting_errors
     void Because() => Compile(Declaration);
 
     [Fact] void should_have_errors() => _errors.HasErrors.ShouldBeTrue();
-    [Fact] void should_report_expected_arrow() => _errors.Errors.ShouldContain(e => e.Message.Contains("=>") || e.Message.Contains("Arrow"));
+    [Fact] void should_report_unexpected_token() => _errors.Errors.ShouldContain(e => e.Message.Contains("projection") || e.Message.Contains("AccountReadModel"));
 }
