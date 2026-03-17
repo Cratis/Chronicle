@@ -2,10 +2,32 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Seeding;
 import "google/protobuf/empty.proto";
 
-message SeedRequest {
+message EventSourceSeedEntries {
+   string EventSourceId = 1;
+   repeated SeedingEntry Entries = 2;
+}
+message EventTypeSeedEntries {
+   string EventTypeId = 1;
+   repeated SeedingEntry Entries = 2;
+}
+message GetSeedDataRequest {
    string EventStore = 1;
    string Namespace = 2;
-   repeated SeedingEntry Entries = 3;
+}
+message NamespacedSeedEntries {
+   string Namespace = 1;
+   repeated EventTypeSeedEntries ByEventType = 2;
+   repeated EventSourceSeedEntries ByEventSource = 3;
+}
+message SeedDataResponse {
+   repeated EventTypeSeedEntries ByEventType = 1;
+   repeated EventSourceSeedEntries ByEventSource = 2;
+}
+message SeedRequest {
+   string EventStore = 1;
+   repeated EventTypeSeedEntries GlobalByEventType = 2;
+   repeated EventSourceSeedEntries GlobalByEventSource = 3;
+   repeated NamespacedSeedEntries NamespacedEntries = 4;
 }
 message SeedingEntry {
    string EventSourceId = 1;
@@ -14,5 +36,7 @@ message SeedingEntry {
    repeated string Tags = 4;
 }
 service EventSeeding {
+   rpc GetGlobalSeedData (GetSeedDataRequest) returns (SeedDataResponse);
+   rpc GetNamespaceSeedData (GetSeedDataRequest) returns (SeedDataResponse);
    rpc Seed (SeedRequest) returns (.google.protobuf.Empty);
 }

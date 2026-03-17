@@ -12,6 +12,7 @@ enum ConstraintType {
    Unknown = 0;
    Unique = 1;
    UniqueEventType = 2;
+   Schema = 3;
 }
 message OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition {
    UniqueConstraintDefinition Value0 = 1;

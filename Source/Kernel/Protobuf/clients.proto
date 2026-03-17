@@ -10,7 +10,11 @@ message ConnectRequest {
 message ConnectionKeepAlive {
    string ConnectionId = 1;
 }
+message DescriptorSetResponse {
+   string SchemaDefinition = 1;
+}
 service ConnectionService {
    rpc Connect (ConnectRequest) returns (stream .Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive);
    rpc ConnectionKeepAlive (.Cratis.Chronicle.Contracts.Clients.ConnectionKeepAlive) returns (.google.protobuf.Empty);
+   rpc GetDescriptorSet (.google.protobuf.Empty) returns (DescriptorSetResponse);
 }

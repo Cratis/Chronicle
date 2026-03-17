@@ -5,11 +5,16 @@ import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .
 message AppendedEvent {
    EventContext Context = 1;
    string Content = 2;
+   string OriginalContent = 3;
+   repeated EventRevision Revisions = 4;
+   map<int32,string> GenerationalContent = 5;
 }
 message Causation {
    SerializableDateTimeOffset Occurred = 1;
    string Type = 2;
    map<string,string> Properties = 3;
+}
+message DateTimeOffset {
 }
 message EventContext {
    EventType EventType = 1;
@@ -35,6 +40,13 @@ enum EventObservationState {
    HeadOfReplay = 2;
    Replay = 4;
    TailOfReplay = 8;
+}
+message EventRevision {
+   uint32 Generation = 1;
+   string CorrelationId = 2;
+   Identity CausedBy = 3;
+   DateTimeOffset Occurred = 4;
+   string Content = 5;
 }
 message EventType {
    string Id = 1;
