@@ -8,6 +8,7 @@ import { AppendedEvent } from 'Api/Events';
 import { EventRevision } from 'Api/Events/EventRevision';
 import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
+import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
 import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
 import { ObjectContentEditor as _OCE } from '@cratis/components';
 const ObjectContentEditor = _OCE.ObjectContentEditor;
@@ -29,6 +30,7 @@ interface GenerationOption {
 export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
     const params = useParams<EventStoreParams>();
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [allGenerations] = AllEventTypeGenerations.use({ eventStore: params.eventStore!, eventTypeId: item.context.eventType.id });
     const [selectedRevision, setSelectedRevision] = useState<number>(-1);
     const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
 
@@ -118,13 +120,18 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         };
     }, [effectiveRevision, isRevised, item.context, revisions]);
 
-    // Schema: always use the effective generation's schema (defaults to stored generation, overridden by user selection)
+    // Schema: use all registered generations for exact lookup, fall back to latest from AllEventTypesWithSchemas
     const effectiveEventType = useMemo(() => {
+        if (allGenerations.data && allGenerations.data.length > 0) {
+            return allGenerations.data.find(
+                (et: EventTypeRegistration) => et.type.generation === effectiveGeneration
+            ) ?? allGenerations.data[allGenerations.data.length - 1];
+        }
         if (!eventTypes.data) return undefined;
         return eventTypes.data.find(
             (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
         ) ?? eventTypes.data.find((et: EventTypeRegistration) => et.type.id === item.context.eventType.id);
-    }, [eventTypes.data, effectiveGeneration, item.context.eventType.id]);
+    }, [allGenerations.data, eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 
     const schema = effectiveEventType ? JSON.parse(effectiveEventType.schema) : { properties: {} };
 
