@@ -58,9 +58,17 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                     }
 
                     // Accept self-signed certificates in development
-                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && chain?.ChainStatus.All(status => status.Status == X509ChainStatusFlags.PartialChain) == true)
+                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
+                        chain?.ChainStatus.All(status =>
+                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
                     {
                         _logger.AcceptingSelfSignedCertificate(certificate?.Subject ?? "unknown");
+                        return true;
+                    }
+
+                    // Accept localhost certificates with name mismatch (for development)
+                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch)
+                    {
                         return true;
                     }
 

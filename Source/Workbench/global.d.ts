@@ -16,6 +16,13 @@ declare module '*.png' {
     export default content;
 }
 
+declare module 'monaco-editor/esm/vs/editor/editor.worker?worker' {
+    const workerConstructor: {
+        new (): Worker;
+    };
+    export default workerConstructor;
+}
+
 // Ensure chai should is available globally
 declare global {
     namespace Chai {

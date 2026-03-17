@@ -1,4 +1,6 @@
 - name: Console
   href: console.md
+- name: Worker Service
+  href: worker.md
 - name: ASP.NET Core
   href: aspnetcore.md

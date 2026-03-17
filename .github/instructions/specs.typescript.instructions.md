@@ -2,59 +2,23 @@
 applyTo: "**/for_*/**/*.ts, **/when_*/**/*.ts"
 ---
 
-# 🧪 How to Write TypeScript Specs
+# How to Write TypeScript Specs
 
-Use the base instructions for writing specs can be found in [Specs Instructions](./specs.instructions.md) and
-then adapt with the C# specific conventions below.
+Extends the base [Specs Instructions](./specs.instructions.md) with TypeScript-specific conventions.
 
-## Test Frameworks & Conventions
+TypeScript specs follow the same BDD philosophy as C# specs — they describe behaviors, not implementations. The `given()` helper and context classes mirror the Cratis.Specifications pattern on the C# side: setup is separated from the action, and each `it()` assertion verifies a single outcome.
 
-- **Frameworks:**
-  - Uses [Mocha](https://mochajs.org) as test framework and execution.
-  - Uses [SinonJS](https://sinonjs.org) for mocking.
-  - Uses [Chai](https://www.chaijs.com) for assertions.
-  - Uses Vitest for running tests. See [Vitest Documentation](https://vitest.dev/).
-  - Uses yarn as package manager.
-  - Tests can be run using `yarn test` from every package.
-  - Tests are found in alongside the code being tested in folders starting with either `for_`, `when_` or `given_` (for reusable contexts).
+## Frameworks
 
-- **File/Folder Structure:**
-  - Organize tests by feature/domain, e.g. `Events/Constraints/for_UniqueConstraintProvider/when_providing.ts`.
-  - Use descriptive folder and file names:
-    - `for_<TypeUnderTest>/` for the unit under test
-    - `when_<behavior>/` for behaviors with multiple outcomes
-    - `when_<behavior>.ts` for simple behaviors with single outcomes
-    - Example: `for_UnitOfWork/when_committing/and_it_has_events_and_append_returns_constraints_and_errors.ts`
+- [Vitest](https://vitest.dev/) for running tests.
+- [Mocha](https://mochajs.org) for test structure (`describe`, `it`, `beforeEach`).
+- [SinonJS](https://sinonjs.org) for mocking/stubbing.
+- [Chai](https://www.chaijs.com) for assertions — **always use the `.should` fluent interface**, never `expect()`. The fluent style reads as a natural sentence: `result.should.equal(expected)`.
+- Run tests with `yarn test` from each package.
 
-## Test Class Pattern
+## File Structure
 
-- Use BDD-style methods:
-  - `void Establish()` for setup.
-  - `void Because()` for the action under test.
-  - `[Fact] void should_<expected_behavior>()` for assertions.
-  - Keep them focused on a single behavior or aspect.
-
-**Example:**
-
-```typescript
-describe("when adding", () => {
-    let events: EventsToAppend;
-    let event: string;
-
-    beforeEach(() => {
-        events = [];
-        event = "Forty Two";
-
-        events.Add(event);
-    });
-
-    it("should hold the added event", () => {
-        events[0].should.equal(event);
-    });
-});
-```
-
-**Example with multiple outcomes:**
+Tests live alongside source code in `for_`, `when_`, or `given_` folders:
 
 ```
 for_EventsCommandResponseValueHandler/
@@ -66,86 +30,105 @@ for_EventsCommandResponseValueHandler/
 │   └── without_event_source_id.ts
 └── when_handling/
     ├── empty_events_collection.ts
-    ├── single_event_collection.ts
     └── multiple_events_collection.ts
 ```
 
-Each test uses the `given` function that takes the type of the context to use. **IMPORTANT**: Import the `given` function from the root of the package (e.g., `import { given } from '../../../given';` when in a `when_behavior/` folder):
+## BDD Pattern with `given()` Helper
+
+The `given()` function is the TypeScript equivalent of the C# `Specification` base class. It instantiates a context class (the "given"), passes it to the test suite, and ensures setup runs before assertions. This keeps the Establish/Because/should pattern consistent across both stacks.
 
 ```typescript
 import { an_events_command_response_value_handler } from '../given/an_events_command_response_value_handler';
-import { given } from '../../../given'; // Import the given function from the package root
-import { expect } from 'chai';
+import { given } from '../../../given';
 
-describe("when checking can handle with valid events collection", given(an_events_command_response_value_handler, context => {
-    let events: object[];
+describe('when checking can handle with valid events collection', given(an_events_command_response_value_handler, context => {
     let result: boolean;
 
     beforeEach(() => {
-        events = [new TestEvent("Test"), new AnotherTestEvent(42)];
-
-        result = context.handler.CanHandle(context.commandContext, events);
+        result = context.handler.canHandle(context.commandContext, [new TestEvent('Test')]);
     });
 
-    it("should return true", () => {
+    it('should return true', () => {
         result.should.be.true;
     });
 }));
 ```
 
-> Note: For multiple outcomes, include the 'when <behavior>' as a prefix in the `describe` text.
+For behaviors with multiple outcomes, include "when \<behavior\>" as a prefix in the `describe` text.
 
-The context would be defined as follows:
+## Reusable Context Classes
+
+Context classes play the same role as `given/` classes in C# — they capture preconditions that multiple specs share. Unlike C# (where fields are `protected`), TypeScript context properties are public because tests access them directly through the `context` parameter.
 
 ```typescript
 export class an_events_command_response_value_handler {
-    handler: EventsCommandResponseValueHandler; // Public for access in tests
-    commandContext: CommandContext; // Public for access in tests
+    handler: EventsCommandResponseValueHandler;
+    commandContext: CommandContext;
 
     constructor() {
-        this.commandContext = /* setup command context */;
-        this.handler = new EventsCommandResponseValueHandler(/* dependencies */);
+        this.commandContext = /* setup */;
+        this.handler = new EventsCommandResponseValueHandler(/* deps */);
     }
 }
 ```
 
-## Test Naming Conventions
+- Properties are public (not protected) — tests access them via `context.propertyName`.
+- Import `given` from the package root: `import { given } from '../../given';`.
+- Simple tests without shared setup don't need a reusable context.
 
-- **IMPORTANT**: Use spaces (not underscores) in `it()` statement descriptions.
-  - ✅ Correct: `it("should return invalid result", () => ...)`
-  - ❌ Incorrect: `it("should_return_invalid_result", () => ...)`
-- Test descriptions should be readable as natural language.
-- Start with "should" followed by the expected behavior.
+## Simple Test Pattern (without context)
 
-## Reusable Context
+```typescript
+describe('when replacing route parameters', () => {
+    let result: { route: string; unusedParameters: object };
 
-- Context can be encapsulated into reusable contexts that can be leveraged between specs.
-- Create a `given` folder within the unit folder (e.g., `for_<Unit>/given/`)
-- Add reusable context classes with descriptive names starting with `a_` or `an_` (e.g., `an_events_command_response_value_handler.ts`)
-- **IMPORTANT**: Import the `given` function from the package root: `import { given } from '../../given';` (adjust path as needed)
-- Make context properties public (not protected) so tests can access them via `context.propertyName`
-- Use the `given` function for tests that benefit from shared setup and state
-- Simple tests without complex setup don't need to use the reusable context
+    beforeEach(() => {
+        result = UrlHelpers.replaceRouteParameters('/api/items/{id}', { id: '123' });
+    });
+
+    it('should replace the route parameter', () => {
+        result.route.should.equal('/api/items/123');
+    });
+});
+```
+
+## Naming Conventions
+
+TypeScript specs use spaces in `it()` descriptions (unlike C# which uses underscores) because they appear in test runner output as human-readable sentences.
+
+- Use **spaces** (not underscores) in `it()` descriptions:
+  - ✅ `it('should return invalid result', ...)`
+  - ❌ `it('should_return_invalid_result', ...)`
+- Start `it()` descriptions with "should".
+- `describe()` text describes the scenario in natural language.
+
+## Assertions — Chai Fluent Interface
+
+**Always use the `.should` fluent interface. Never use `expect()`.** The `.should` style reads as a natural English sentence — `value.should.equal(expected)` vs `expect(value).to.equal(expected)` — and matches the project's preference for code that reads like prose.
+
+```typescript
+value.should.equal(expected);
+value.should.be.true;
+value.should.be.false;
+value.should.be.null;
+value.should.not.be.null;
+value.should.deep.equal(expected);
+value.should.be.instanceOf(Type);
+array.should.contain(item);
+array.should.have.lengthOf(3);
+(() => throwingFn()).should.throw(ErrorType);
+```
+
+## Mocking with Sinon
+
+```typescript
+import sinon from 'sinon';
+
+const stub = sinon.createStubInstance(ConcreteClass);
+const fetchStub = sinon.stub(globalThis, 'fetch');
+fetchStub.resolves({ ok: true, json: async () => ({ /* data */ }) });
+```
 
 ## Async
 
-- Any of the methods (`beforeEach`, `afterEach`) can be async if needed.
-
-## Substitutes
-
-- Use sinon for creating substitutes/mocks.
-- Pass constructor parameters as needed when substituting concrete classes. For example, `sinon.createStubInstance(ConcreteClass, { param1, param2 })`.
-
-## Test Utilities
-
-- Never use the expect() method for assertions. Always use the fluent interface from Chai.
-    - `value.should.equal(expected);`
-    - `value.should.be.true;`
-    - `value.should.be.false;`
-    - `value.should.be.null;`
-    - `value.should.not.be.null;`
-    - `value.should.deep.equal(expected);`
-    - `value.should.be.instanceOf(Type);`
-    - `array.should.contain(item);`
-    - `array.should.have.lengthOf(number);`
-    - `function.should.throw(ErrorType);`
+`beforeEach`, `afterEach`, and `it` callbacks can all be `async` when needed.

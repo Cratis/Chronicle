@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
+using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
@@ -32,67 +33,191 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     /// <returns>The default <see cref="DefaultClientArtifactsProvider"/>.</returns>
     public static readonly DefaultClientArtifactsProvider Default = new(new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance));
 
+#if NET8_0
+    readonly object _initLock = new();
+#else
+    readonly Lock _initLock = new();
+#endif
     bool _initialized;
+    IEnumerable<Type> _eventTypes = [];
+    IEnumerable<Type> _projections = [];
+    IEnumerable<Type> _modelBoundProjections = [];
+    IEnumerable<Type> _reactors = [];
+    IEnumerable<Type> _reducers = [];
+    IEnumerable<Type> _reactorMiddlewares = [];
+    IEnumerable<Type> _complianceForTypesProviders = [];
+    IEnumerable<Type> _complianceForPropertiesProviders = [];
+    IEnumerable<Type> _additionalEventInformationProviders = [];
+    IEnumerable<Type> _constraintTypes = [];
+    IEnumerable<Type> _uniqueConstraints = [];
+    IEnumerable<Type> _uniqueEventTypeConstraints = [];
+    IEnumerable<Type> _eventSeeders = [];
+    IEnumerable<Type> _eventTypeMigrators = [];
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventTypes { get; private set; } = [];
+    public virtual IEnumerable<Type> EventTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventTypes;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Projections { get; private set; } = [];
+    public virtual IEnumerable<Type> Projections
+    {
+        get
+        {
+            EnsureInitialized();
+            return _projections;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ModelBoundProjections { get; private set; } = [];
+    public virtual IEnumerable<Type> ModelBoundProjections
+    {
+        get
+        {
+            EnsureInitialized();
+            return _modelBoundProjections;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reactors { get; private set; } = [];
+    public virtual IEnumerable<Type> Reactors
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reactors;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> Reducers { get; private set; } = [];
+    public virtual IEnumerable<Type> Reducers
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reducers;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ReactorMiddlewares { get; private set; } = [];
+    public virtual IEnumerable<Type> ReactorMiddlewares
+    {
+        get
+        {
+            EnsureInitialized();
+            return _reactorMiddlewares;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForTypesProviders { get; private set; } = [];
+    public virtual IEnumerable<Type> ComplianceForTypesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _complianceForTypesProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ComplianceForPropertiesProviders { get; private set; } = [];
+    public virtual IEnumerable<Type> ComplianceForPropertiesProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _complianceForPropertiesProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> AdditionalEventInformationProviders { get; private set; } = [];
+    public virtual IEnumerable<Type> AdditionalEventInformationProviders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _additionalEventInformationProviders;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> ConstraintTypes { get; private set; } = [];
+    public virtual IEnumerable<Type> ConstraintTypes
+    {
+        get
+        {
+            EnsureInitialized();
+            return _constraintTypes;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueConstraints { get; private set; } = [];
+    public virtual IEnumerable<Type> UniqueConstraints
+    {
+        get
+        {
+            EnsureInitialized();
+            return _uniqueConstraints;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> UniqueEventTypeConstraints { get; private set; } = [];
+    public virtual IEnumerable<Type> UniqueEventTypeConstraints
+    {
+        get
+        {
+            EnsureInitialized();
+            return _uniqueEventTypeConstraints;
+        }
+    }
 
     /// <inheritdoc/>
-    public virtual IEnumerable<Type> EventSeeders { get; private set; } = [];
+    public virtual IEnumerable<Type> EventSeeders
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventSeeders;
+        }
+    }
 
     /// <inheritdoc/>
-    public void Initialize()
+    public virtual IEnumerable<Type> EventTypeMigrators
+    {
+        get
+        {
+            EnsureInitialized();
+            return _eventTypeMigrators;
+        }
+    }
+
+    void EnsureInitialized()
     {
         if (_initialized) return;
 
-        assembliesProvider.Initialize();
-        EventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
-        ComplianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
-        ComplianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
-        Projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
-        ModelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
-        Reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
-        ReactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
-        Reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
-        AdditionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
-        ConstraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
-        UniqueConstraints = EventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
-        UniqueEventTypeConstraints = EventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
-        EventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
+        lock (_initLock)
+        {
+            if (_initialized) return;
 
-        _initialized = true;
+            _initialized = true;
+            assembliesProvider.Initialize();
+            _eventTypes = assembliesProvider.DefinedTypes.Where(_ => _.HasAttribute<EventTypeAttribute>()).ToArray();
+            _complianceForTypesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForType) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForType))).ToArray();
+            _complianceForPropertiesProviders = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(ICanProvideComplianceMetadataForProperty) && _.IsAssignableTo(typeof(ICanProvideComplianceMetadataForProperty))).ToArray();
+            _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
+            _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
+            _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
+            _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
+            _reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
+            _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
+            _constraintTypes = assembliesProvider.DefinedTypes.Where(_ => _ != typeof(IConstraint) && _.IsAssignableTo(typeof(IConstraint))).ToArray();
+            _uniqueConstraints = _eventTypes.Where(_ => _.GetProperties().Any(p => p.HasAttribute<UniqueAttribute>())).ToArray();
+            _uniqueEventTypeConstraints = _eventTypes.Where(_ => _.HasAttribute<UniqueAttribute>()).ToArray();
+            _eventSeeders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanSeedEvents>()).ToArray();
+            _eventTypeMigrators = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IEventTypeMigrationFor<>))).ToArray();
+        }
     }
 }

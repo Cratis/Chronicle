@@ -48,12 +48,9 @@ public class EventTypesStorage(
     {
         logger.Registering(type.Id, type.Generation, eventStore);
 
-        // If we have a schema for the event type on the given generation and the schemas differ - throw an exception (only in production)
-        // .. if they're the same. Ignore saving.
-        // If this is a new generation, there must be an upcaster and downcaster associated with the schema
-        // .. do not allow generational gaps
-        // if (await HasFor(type.Id, type.Generation)) return;
         var generationAsString = type.Generation.ToString();
+
+        // Check if we already have this exact schema stored - if so, skip
         var existingEventType = _eventTypes
             .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(generationAsString));
 
@@ -66,17 +63,38 @@ public class EventTypesStorage(
             }
         }
 
-        var eventSchema = new EventTypeSchema(type, owner, source, schema);
+        // Build the merged event type: preserve all existing schemas and add/update the current one
+        var schemas = new Dictionary<string, BsonDocument>();
+        var migrations = new List<EventTypeMigration>();
+
+        var currentFromMemory = _eventTypes.FirstOrDefault(_ => _.Id == type.Id);
+        if (currentFromMemory is not null)
+        {
+            foreach (var (key, value) in currentFromMemory.Schemas)
+            {
+                schemas[key] = value;
+            }
+
+            if (currentFromMemory.Migrations is not null)
+            {
+                migrations.AddRange(currentFromMemory.Migrations);
+            }
+        }
+
+        schemas[generationAsString] = BsonDocument.Parse(schema.ToJson());
+
+        var mongoEventType = new EventType(type.Id, owner, source, type.Tombstone, schemas, migrations);
+
         if (_eventTypes.Any(_ => _.Id == type.Id))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
         }
-        var mongoEventSchema = eventSchema.ToMongoDB();
-        _eventTypes.Add(mongoEventSchema);
+
+        _eventTypes.Add(mongoEventType);
 
         await GetCollection().ReplaceOneAsync(
-            _ => _.Id == mongoEventSchema.Id,
-            mongoEventSchema,
+            _ => _.Id == mongoEventType.Id,
+            mongoEventType,
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
     }
 
@@ -109,9 +127,10 @@ public class EventTypesStorage(
     {
         generation ??= EventTypeGeneration.First;
         var generationAsString = generation.ToString();
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
+        var cached = _eventTypes.FirstOrDefault(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString));
+        if (cached is not null)
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)).ToKernel();
+            return cached.ToKernel(generation);
         }
 
         var filter = GetFilterForSpecificEventType(type);
@@ -126,7 +145,7 @@ public class EventTypesStorage(
                 generation);
         }
 
-        return schemas[0].ToKernel();
+        return schemas[0].ToKernel(generation);
     }
 
     /// <inheritdoc/>
@@ -144,6 +163,50 @@ public class EventTypesStorage(
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = result.ToList();
         return schemas.Count == 1;
+    }
+
+    /// <inheritdoc/>
+    public async Task Register(EventTypeDefinition definition)
+    {
+        logger.Registering(definition.Id, EventTypeGeneration.First, eventStore);
+
+        var mongoEventType = definition.ToMongoDB();
+
+        // Merge into existing event types in memory
+        _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != definition.Id));
+        _eventTypes.Add(mongoEventType);
+
+        await GetCollection().ReplaceOneAsync(
+            _ => _.Id == definition.Id,
+            mongoEventType,
+            new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions()
+    {
+        using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
+        return result.ToList().Select(_ => _.ToDefinition());
+    }
+
+    /// <inheritdoc/>
+    public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
+    {
+        var filter = GetFilterForSpecificEventType(eventTypeId);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var eventType = result.FirstOrDefault();
+        if (eventType is null)
+        {
+            var schema = await GetFor(eventTypeId);
+            return new EventTypeDefinition(
+                eventTypeId,
+                EventTypeOwner.None,
+                false,
+                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                []);
+        }
+
+        return eventType.ToDefinition();
     }
 
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);

@@ -19,7 +19,7 @@ public class ReducerDefinitionStorageProvider(IStorage storage) : IGrainStorage
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
-        var reducerKey = ReducerKey.Parse(grainId.Key.ToString()!);
+        var reducerKey = ReducerKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(reducerKey.EventStore);
         return eventStore.Reducers.Delete(reducerKey.ReducerId);
     }

@@ -13,5 +13,5 @@ public class GetOccurrencesResponse
     /// Gets or sets collection of <see cref="ReadModelOccurrence"/>.
     /// </summary>
     [ProtoMember(1, IsRequired = true)]
-    public IEnumerable<ReadModelOccurrence> Occurrences { get; set; } = [];
+    public IList<ReadModelOccurrence> Occurrences { get; set; } = [];
 }

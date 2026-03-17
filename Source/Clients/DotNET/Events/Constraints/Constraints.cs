@@ -51,6 +51,12 @@ public class Constraints(
     /// <inheritdoc/>
     public ConstraintViolation ResolveMessageFor(ConstraintViolation violation)
     {
+        // Schema validation and other built-in constraints don't have user-defined constraint definitions
+        if (!HasFor(violation.ConstraintName))
+        {
+            return violation;
+        }
+
         var constraint = GetFor(violation.ConstraintName);
         var message = constraint.MessageCallback(violation);
 

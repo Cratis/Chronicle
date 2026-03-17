@@ -3,6 +3,7 @@ export * from './AllObservers';
 export * from './FailedPartition';
 export * from './FailedPartitionAttempt';
 export * from './GetObservers';
+export * from './GetReplayableObserversForEventTypes';
 export * from './ObserverInformation';
 export * from './ObserverOwner';
 export * from './ObserverRunningState';

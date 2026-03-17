@@ -6,7 +6,7 @@ import { NamespacesViewModel } from './NamespacesViewModel';
 import { AllNamespaces, AllNamespacesParameters } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';

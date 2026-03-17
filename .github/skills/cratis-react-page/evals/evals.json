@@ -1,0 +1,34 @@
+{
+  "skill_name": "cratis-react-page",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Build a React page for managing employees. It should list all employees in a table (name, department, start date columns). There should be an 'Add Employee' button in the toolbar that opens a dialog to create a new employee (fields: firstName, lastName, department). Assume the proxies AllEmployees (query) and RegisterEmployee (command) already exist.",
+      "expected_output": "A TSX file using DataPage with query prop, columns, MenuItemGroup/MenuItem for Add, and CommandDialog with InputTextField fields. useDialog for wiring the dialog. CommandForm fields for all employee properties.",
+      "files": [],
+      "assertions": [
+        "Output uses DataPage component (not a raw table)",
+        "Output uses useDialog for dialog state management",
+        "Output uses CommandDialog (not a manual Dialog/Button setup)",
+        "Output uses MenuItemGroup and MenuItem for the Add action",
+        "Output uses InputTextField or similar CommandForm fields inside the dialog",
+        "Output does NOT manually manage open/close boolean state for the dialog",
+        "Output imports from correct packages (@cratis/components, @cratis/arc.react/dialogs)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need a React page that shows a real-time list of active orders (observable query: AllOrdersLive). When clicking an order, show a detail panel on the side. There's a 'Cancel Order' action that should open a confirmation dialog. Use MVVM pattern since we have complex selection state.",
+      "expected_output": "TSX using DataPage with observableQuery, detailPanel prop, withViewModel from @cratis/arc.react.mvvm with @injectable() view model, and CommandDialog for cancel action.",
+      "files": [],
+      "assertions": [
+        "Output uses observableQuery prop (not query) for real-time data",
+        "Output uses withViewModel from @cratis/arc.react.mvvm",
+        "View model class has @injectable() decorator",
+        "View model class calls makeAutoObservable(this)",
+        "Output uses detailPanel prop on DataPage",
+        "Output uses CommandDialog for the cancel action"
+      ]
+    }
+  ]
+}

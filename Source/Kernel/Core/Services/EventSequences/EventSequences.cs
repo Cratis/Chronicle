@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.Services.Auditing;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.EventSequences.Concurrency;
@@ -13,6 +14,7 @@ using Cratis.Chronicle.Services.Identities;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using ProtoBuf.Grpc;
+using static Cratis.Chronicle.EventSequences.EventSequencesGrainFactoryExtensions;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 
@@ -45,7 +47,8 @@ internal sealed class EventSequences(
             request.Causation.ToChronicle(),
             request.CausedBy.ToChronicle(),
             request.Tags.Select(t => new Tag(t)).ToArray(),
-            request.ConcurrencyScope.ToChronicle());
+            request.ConcurrencyScope.ToChronicle(),
+            request.Occurred);
 
         return result.ToContract();
     }
@@ -113,6 +116,22 @@ internal sealed class EventSequences(
     }
 
     /// <inheritdoc/>
+    public async Task Revise(ReviseRequest request, CallContext context = default)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
+        await systemEventSequence.Append(
+            (EventSourceId)request.EventSequenceId,
+            new EventRevised(
+                request.EventSequenceId,
+                request.SequenceNumber,
+                request.EventType.ToChronicle(),
+                request.Content),
+            correlationId: request.CorrelationId,
+            causation: request.Causation.ToChronicle(),
+            causedBy: request.CausedBy.ToChronicle());
+    }
+
+    /// <inheritdoc/>
     public async Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(
         GetFromEventSequenceNumberRequest request,
         CallContext context = default)
@@ -151,6 +170,23 @@ internal sealed class EventSequences(
         {
             Events = events
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<RedactResponse> Redact(RedactRequest request, CallContext context = default)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
+        await systemEventSequence.Append(
+            (EventSourceId)request.EventSequenceId,
+            new EventRedactionRequested(
+                request.EventSequenceId,
+                request.SequenceNumber,
+                request.Reason),
+            correlationId: request.CorrelationId,
+            causation: request.Causation.ToChronicle(),
+            causedBy: request.CausedBy.ToChronicle());
+
+        return new RedactResponse();
     }
 
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>

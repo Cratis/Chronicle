@@ -20,4 +20,25 @@ public class AppendedEvent
     /// </summary>
     [ProtoMember(2)]
     public string Content { get; set; }
+
+    /// <summary>
+    /// Gets or sets the original JSON content before any revisions were applied.
+    /// Only populated when the event has been revised.
+    /// </summary>
+    [ProtoMember(3)]
+    public string OriginalContent { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the revisions applied to this event, if any.
+    /// </summary>
+    [ProtoMember(4)]
+    public IList<EventRevision> Revisions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the content for each generation stored for this event.
+    /// Keys are generation numbers; values are the JSON content for that generation.
+    /// </summary>
+    [ProtoMember(5, IsRequired = true)]
+    public IDictionary<int, string> GenerationalContent { get; set; } = new Dictionary<int, string>();
 }
+

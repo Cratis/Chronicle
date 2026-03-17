@@ -21,9 +21,11 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
         public ReducerState ReducerState;
         public EventSequenceNumber LastEventSequenceNumberAfterDisconnect;
         public IEnumerable<FailedPartition> FailedPartitions;
+        public int HandledEventsBefore;
 
         async Task Establish()
         {
+            HandledEventsBefore = Reducer.HandledEvents;
             await EventStore.ReadModels.Register<SomeReadModel>();
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await reducer.WaitTillSubscribed();
@@ -45,6 +47,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
             var reducer = await EventStore.Reducers.Register<ReducerWithoutDelay, SomeReadModel>();
             await reducer.WaitTillSubscribed();
             await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
+            await Reducer.WaitTillHandledEventReaches(HandledEventsBefore + FirstEvents.Count + CatchupEvents.Count);
             ReducerState = await reducer.GetState();
             FailedPartitions = await reducer.GetFailedPartitions();
         }
@@ -57,5 +60,5 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
     void should_catch_up_all_events_added_while_disconnected() => Context.ReducerState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAfterDisconnect.Value);
 
     [Fact]
-    void should_process_all_events() => Context.Reducer.HandledEvents.ShouldEqual(Context.FirstEvents.Count + Context.CatchupEvents.Count);
+    void should_process_all_events() => (Context.Reducer.HandledEvents - Context.HandledEventsBefore).ShouldEqual(Context.FirstEvents.Count + Context.CatchupEvents.Count);
 }

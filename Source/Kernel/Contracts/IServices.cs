@@ -4,9 +4,11 @@
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
@@ -89,6 +91,11 @@ public interface IServices
     IWebhooks Webhooks { get; }
 
     /// <summary>
+    /// Gets the <see cref="IEventStoreSubscriptions"/> service.
+    /// </summary>
+    IEventStoreSubscriptions EventStoreSubscriptions { get; }
+
+    /// <summary>
     /// Gets the <see cref="IReadModels"/> service.
     /// </summary>
     IReadModels ReadModels { get; }
@@ -112,4 +119,9 @@ public interface IServices
     /// Gets the <see cref="IApplications"/> service.
     /// </summary>
     IApplications Applications { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IServer"/> service.
+    /// </summary>
+    IServer Server { get; }
 }

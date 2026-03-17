@@ -1,128 +1,269 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Column } from 'primereact/column';
-import { TreeNode } from 'primereact/treenode';
-import { TreeTable } from 'primereact/treetable';
+import { useState, useMemo } from 'react';
+import { TabView, TabPanel } from 'primereact/tabview';
+import { Dropdown } from 'primereact/dropdown';
 import { AppendedEvent } from 'Api/Events';
-import { IDetailsComponentProps } from 'Components';
+import { EventRevision } from 'Api/Events/EventRevision';
+import { IDetailsComponentProps } from '@cratis/components/DataPage';
+import { AllEventTypesWithSchemas } from 'Api/EventTypes/AllEventTypesWithSchemas';
+import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
+import { EventTypeRegistration } from 'Api/Events/EventTypeRegistration';
+import { ObjectContentEditor as _OCE } from '@cratis/components';
+const ObjectContentEditor = _OCE.ObjectContentEditor;
+import type { Json } from '@cratis/components/types';
+import { useParams } from 'react-router-dom';
+import { type EventStoreParams } from 'Shared';
+import strings from 'Strings';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const addContent = (node: TreeNode, current: any, currentLevel: string) => {
-    for (const key in current) {
-        if (current.hasOwnProperty(key)) {
-            const value = current[key];
-            const keyNode: TreeNode = {
-                key: `${currentLevel}-${key}`,
-                data: {
-                    name: key,
-                    value: value
-                },
-                children: []
-            };
-            node.children?.push(keyNode);
-            if (typeof value === 'object') {
-                addContent(keyNode, value, `${currentLevel}-${key}`);
+interface RevisionOption {
+    label: string;
+    value: number;
+}
+
+interface GenerationOption {
+    label: string;
+    value: number;
+}
+
+export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
+    const params = useParams<EventStoreParams>();
+    const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
+    const [allGenerations] = AllEventTypeGenerations.use({ eventStore: params.eventStore!, eventTypeId: item.context.eventType.id });
+    const [selectedRevision, setSelectedRevision] = useState<number>(-1);
+    const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
+
+    const revisions: EventRevision[] = item.revisions ?? [];
+    const isRevised = revisions.length > 0;
+
+    const generationEntries = item.generationalContent ?? [];
+    const hasMultipleGenerations = generationEntries.length > 1;
+
+    // Build revision options: -1 = latest (default), 0 = original, 1..N = revision entries
+    const revisionOptions: RevisionOption[] = useMemo(() => {
+        if (!isRevised) return [];
+
+        const options: RevisionOption[] = [
+            { label: strings.eventStore.namespaces.sequences.details.originalRevision, value: 0 }
+        ];
+        revisions.forEach((_, index) => {
+            const isLatest = index === revisions.length - 1;
+            const label = isLatest
+                ? `${strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1))} (latest)`
+                : strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1));
+            options.push({ label, value: index + 1 });
+        });
+        return options;
+    }, [revisions, isRevised]);
+
+    // Build generation options from available generational content
+    const generationOptions: GenerationOption[] = useMemo(() => {
+        if (!hasMultipleGenerations) return [];
+        return generationEntries
+            .slice()
+            .sort((a, b) => a.key - b.key)
+            .map(({ key }) => {
+                const isStored = key === item.context.eventType.generation;
+                const baseLabel = strings.eventStore.namespaces.sequences.details.generationLabel.replace('{n}', String(key));
+                return { label: isStored ? `${baseLabel} (stored)` : baseLabel, value: key };
+            });
+    }, [generationEntries, hasMultipleGenerations, item.context.eventType.generation]);
+
+    // Default to latest revision when revised
+    const effectiveRevision = selectedRevision === -1 && isRevised ? revisions.length : selectedRevision;
+
+    // Effective generation for content display
+    const effectiveGeneration = selectedGeneration ?? item.context.eventType.generation;
+
+    // Get current revision content
+    const currentContent = useMemo(() => {
+        // When a specific generation is selected and there are multiple generations, show that generation's raw content
+        if (hasMultipleGenerations && selectedGeneration !== null) {
+            const entry = generationEntries.find(g => g.key === effectiveGeneration);
+            if (entry?.value) {
+                try { return JSON.parse(entry.value); } catch { return entry.value; }
             }
         }
-    }
-};
-
-const buildContextNode = (event: AppendedEvent) => {
-    const contextNode: TreeNode = {
-        key: '0',
-        data: {
-            name: 'Context'
-        },
-        children: [
-            {
-                key: '0-0',
-                data: {
-                    name: 'occurred',
-                    value: event.context.occurred.toLocaleString()
-                }
-            },
-            {
-                key: '0-1',
-                data: {
-                    name: 'eventSourceId',
-                    value: event.context.eventSourceId
-                }
-            },
-            {
-                key: '0-2',
-                data: {
-                    name: 'correlationId',
-                    value: event.context.correlationId.toString()
-                }
-            },
-            {
-                key: '0-3',
-                data: {
-                    name: 'caused by',
-                    value: event.context.causedBy.name
-                }
+        if (!isRevised || effectiveRevision === 0) {
+            const rawContent = effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content;
+            try {
+                return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+            } catch {
+                return rawContent;
             }
-        ],
-    };
+        }
+        const revision = revisions[effectiveRevision - 1];
+        if (!revision) return {};
+        try {
+            return typeof revision.content === 'string' ? JSON.parse(revision.content) : revision.content;
+        } catch {
+            return revision.content;
+        }
+    }, [effectiveRevision, effectiveGeneration, selectedGeneration, generationEntries, hasMultipleGenerations, isRevised, item.content, item.originalContent, revisions]);
 
-    const causationNode: TreeNode = {
-        key: '0-4',
-        data: {
-            name: 'Causation'
-        },
-        children: event.context.causation.map((causation, index) => {
-            const node: TreeNode = {
-                key: `0-4-${index}`,
-                data: {
-                    name: causation.type,
-                },
-                children: []
+    // Get metadata (occurred, correlationId, causedBy) for the current revision
+    const currentMetadata = useMemo(() => {
+        if (!isRevised || effectiveRevision === 0) {
+            return {
+                occurred: item.context.occurred,
+                correlationId: item.context.correlationId,
+                causedBy: item.context.causedBy
             };
+        }
+        const revision = revisions[effectiveRevision - 1];
+        if (!revision) return { occurred: item.context.occurred, correlationId: item.context.correlationId, causedBy: item.context.causedBy };
+        return {
+            occurred: revision.occurred,
+            correlationId: revision.correlationId,
+            causedBy: revision.causedBy
+        };
+    }, [effectiveRevision, isRevised, item.context, revisions]);
 
-            let propertyIndex = 0;
-            for( const property in causation.properties) {
-                const propertyNode: TreeNode = {
-                    key: `0-4-${index}-${propertyIndex}`,
-                    data: {
-                        name: property,
-                        value: causation.properties[property]
-                    }
-                };
-                node.children!.push(propertyNode);
-                propertyIndex++;
-            }
+    // Schema: look for an exact generation match in allGenerations (historical) then in AllEventTypesWithSchemas (latest).
+    // Never fall back to a different generation — that would show wrong property labels.
+    // When no schema is registered for this generation, derive a basic schema from the content keys.
+    const effectiveEventType = useMemo(() => {
+        const fromGenerations = allGenerations.data?.find(
+            (et: EventTypeRegistration) => et.type.generation === effectiveGeneration
+        );
+        if (fromGenerations) return fromGenerations;
+        return eventTypes.data?.find(
+            (et: EventTypeRegistration) => et.type.id === item.context.eventType.id && et.type.generation === effectiveGeneration
+        );
+    }, [allGenerations.data, eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 
-            return node;
-        })
-    };
-    contextNode.children!.push(causationNode);
-    return contextNode;
-};
+    const schema = useMemo(() => {
+        if (effectiveEventType) return JSON.parse(effectiveEventType.schema);
+        // No registered schema for this generation — derive from the content's own keys
+        if (currentContent && typeof currentContent === 'object' && !Array.isArray(currentContent)) {
+            return {
+                properties: Object.fromEntries(
+                    Object.keys(currentContent).map(key => [key, { type: 'string' }])
+                )
+            };
+        }
+        return { properties: {} };
+    }, [effectiveEventType, currentContent]);
 
-export const EventDetails = (props: IDetailsComponentProps<AppendedEvent>) => {
-    const contextNodes: TreeNode[] = [];
-
-    contextNodes.push(buildContextNode(props.item));
-
-    const contentNode: TreeNode = {
-        key: '1',
-        data: {
-            name: 'Content'
+    // Build context object for display - metadata reflects the current revision
+    const contextObject = {
+        eventType: item.context.eventType.id,
+        generation: item.context.eventType.generation,
+        eventSourceType: item.context.eventSourceType,
+        eventSourceId: item.context.eventSourceId,
+        sequenceNumber: item.context.sequenceNumber,
+        eventStreamType: item.context.eventStreamType,
+        eventStreamId: item.context.eventStreamId,
+        occurred: currentMetadata.occurred instanceof Date
+            ? (currentMetadata.occurred as Date).toISOString()
+            : new Date(currentMetadata.occurred as string).toISOString(),
+        correlationId: currentMetadata.correlationId?.toString() ?? '',
+        causedBy: {
+            name: currentMetadata.causedBy?.name ?? '',
+            subject: currentMetadata.causedBy?.subject ?? ''
         },
-        children: [],
+        causation: item.context.causation.map(c => ({
+            type: c.type,
+            occurred: c.occurred instanceof Date ? (c.occurred as Date).toISOString() : new Date(c.occurred as string).toISOString(),
+            properties: c.properties
+        }))
     };
 
-    contextNodes.push(contentNode);
+    const contextSchema = {
+        type: 'object',
+        properties: {
+            eventType: { type: 'string', title: 'Event Type' },
+            generation: { type: 'number', title: 'Generation' },
+            eventSourceType: { type: 'string', title: 'Event Source Type' },
+            eventSourceId: { type: 'string', title: 'Event Source ID' },
+            sequenceNumber: { type: 'number', title: 'Sequence Number' },
+            eventStreamType: { type: 'string', title: 'Event Stream Type' },
+            eventStreamId: { type: 'string', title: 'Event Stream ID' },
+            occurred: { type: 'string', title: 'Occurred', format: 'date-time' },
+            correlationId: { type: 'string', title: 'Correlation ID' },
+            causedBy: {
+                type: 'object',
+                title: 'Caused By',
+                properties: {
+                    name: { type: 'string', title: 'Name' },
+                    subject: { type: 'string', title: 'Subject' }
+                }
+            },
+            causation: {
+                type: 'array',
+                title: 'Causation',
+                items: {
+                    type: 'object',
+                    properties: {
+                        type: { type: 'string', title: 'Type' },
+                        occurred: { type: 'string', title: 'Occurred', format: 'date-time' },
+                        properties: { type: 'object', title: 'Properties' }
+                    }
+                }
+            }
+        }
+    };
 
-    const current = JSON.parse(props.item.content);
-    const currentLevel = '1';
-    addContent(contentNode, current, currentLevel);
+    const revisionPlaceholder = isRevised ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
+    const generationPlaceholder = hasMultipleGenerations ? generationOptions.find(o => o.value === item.context.eventType.generation)?.label : undefined;
 
     return (
-        <TreeTable value={contextNodes} showGridlines={false} >
-            <Column field='name' header='Property' expander />
-            <Column field='value' header='Value' />
-        </TreeTable>
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px' }}>
+            <h2 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-color)' }}>
+                {item.context.eventType.id}
+            </h2>
+            {(isRevised || hasMultipleGenerations) && (
+                <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    {isRevised && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
+                                {strings.eventStore.namespaces.sequences.details.revision}:
+                            </label>
+                            <Dropdown
+                                value={effectiveRevision}
+                                options={revisionOptions}
+                                onChange={(e) => setSelectedRevision(e.value)}
+                                placeholder={revisionPlaceholder}
+                                style={{ minWidth: '200px' }}
+                            />
+                        </div>
+                    )}
+                    {hasMultipleGenerations && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ color: 'var(--text-color-secondary)', fontSize: '0.875rem' }}>
+                                {strings.eventStore.namespaces.sequences.details.generation}:
+                            </label>
+                            <Dropdown
+                                value={selectedGeneration ?? item.context.eventType.generation}
+                                options={generationOptions}
+                                onChange={(e) => setSelectedGeneration(e.value)}
+                                placeholder={generationPlaceholder}
+                                style={{ minWidth: '200px' }}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+            <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <TabPanel header="Context">
+                    <div style={{ height: '100%', overflow: 'auto' }}>
+                        <ObjectContentEditor
+                            object={contextObject as Json}
+                            schema={contextSchema}
+                        />
+                    </div>
+                </TabPanel>
+                <TabPanel header="Content">
+                    <div style={{ height: '100%', overflow: 'auto' }}>
+                        <ObjectContentEditor
+                            object={currentContent}
+                            schema={schema}
+                        />
+                    </div>
+                </TabPanel>
+            </TabView>
+        </div>
     );
 };
+

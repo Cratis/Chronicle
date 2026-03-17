@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
@@ -50,6 +51,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _disableTls;
+    readonly SemaphoreSlim _connectLock = new(1, 1);
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -135,6 +137,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public void Dispose()
     {
+        _connectLock.Dispose();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
         if (_tokenProvider is IDisposable disposableTokenProvider)
@@ -151,6 +154,24 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
+        await _connectLock.WaitAsync(_cancellationToken);
+        try
+        {
+            if (Lifecycle.IsConnected)
+            {
+                return;
+            }
+
+            await ConnectInternal();
+        }
+        finally
+        {
+            _connectLock.Release();
+        }
+    }
+
+    async Task ConnectInternal()
+    {
         _logger.Connecting(_connectionString);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
@@ -160,6 +181,40 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var callInvoker = _channel
             .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
             .Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
+
+        // Perform compatibility check before establishing connection
+        var tempConnectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
+
+        try
+        {
+            var serverSchemaResponse = await tempConnectionService.GetDescriptorSet();
+            var clientSchema = CompatibilityValidator.GenerateClientSchema();
+            var compatibilityResult = CompatibilityValidator.Validate(
+                clientSchema,
+                serverSchemaResponse.SchemaDefinition,
+                _logger);
+
+            if (!compatibilityResult.IsCompatible)
+            {
+                var errorMessage = string.Join("; ", compatibilityResult.Errors);
+                _logger.IncompatibleWithServer(errorMessage);
+                throw new IncompatibleServerException($"Client is incompatible with server: {errorMessage}");
+            }
+
+            _logger.CompatibilityCheckPassed();
+        }
+        catch (IncompatibleServerException)
+        {
+            throw;
+        }
+        catch (RpcException ex)
+        {
+            _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
+
+            // Don't fail the connection if we can't retrieve the schema
+            // This allows backward compatibility with older servers that don't support this feature
+        }
+
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -187,6 +242,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 callInvoker.CreateGrpcService<IReducers>(clientFactory),
                 callInvoker.CreateGrpcService<IProjections>(clientFactory),
                 callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
+                callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
                 callInvoker.CreateGrpcService<IReadModels>(clientFactory),
                 callInvoker.CreateGrpcService<IJobs>(clientFactory),
                 callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),

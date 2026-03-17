@@ -50,8 +50,7 @@ public interface IEventSequenceStorage
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
     /// <param name="tags">Collection of tags associated with the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
-    /// <param name="content">The content of the event.</param>
-    /// <param name="hash">The <see cref="EventHash"/> of the event content.</param>
+    /// <param name="content">The content of the event per generation.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
@@ -65,8 +64,7 @@ public interface IEventSequenceStorage
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        ExpandoObject content,
-        EventHash hash);
+        IDictionary<EventTypeGeneration, ExpandoObject> content);
 
     /// <summary>
     /// Append multiple events to the event store transactional.
@@ -76,17 +74,18 @@ public interface IEventSequenceStorage
     Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events);
 
     /// <summary>
-    /// Compensate a single event to the event store.
+    /// Revise a single event in the event store.
     /// </summary>
     /// <param name="sequenceNumber">The unique <see cref="EventSequenceNumber">sequence number</see> within the event sequence.</param>
-    /// <param name="eventType">The <see cref="EventType">type of event</see> to append.</param>
+    /// <param name="eventType">The <see cref="EventType">type of event</see> to revise.</param>
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="causation">Collection of <see cref="Causation"/>.</param>
     /// <param name="causedByChain">The chain of <see cref="IdentityId"/> representing the person, system or service that caused the event.</param>
-    /// <param name="occurred">The date and time the compensation occurred.</param>
+    /// <param name="occurred">The date and time the revision occurred.</param>
     /// <param name="content">The content of the event.</param>
+    /// <param name="hash">The <see cref="EventHash"/> of the revised event content.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content);
+    Task Revise(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content, EventHash hash);
 
     /// <summary>
     /// Redact an event at a specific sequence number.
@@ -237,4 +236,14 @@ public interface IEventSequenceStorage
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = default,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replace the generational content for an event at a specific sequence number.
+    /// Used during event type migration when new generations are added and existing events
+    /// need their content updated with the migrated content for all generations.
+    /// </summary>
+    /// <param name="sequenceNumber">The <see cref="EventSequenceNumber"/> of the event to update.</param>
+    /// <param name="content">The new content per <see cref="EventTypeGeneration"/>.</param>
+    /// <returns>Awaitable <see cref="Task"/>.</returns>
+    Task ReplaceGenerationContent(EventSequenceNumber sequenceNumber, IDictionary<EventTypeGeneration, ExpandoObject> content);
 }

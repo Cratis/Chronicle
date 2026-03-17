@@ -122,7 +122,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             using var cts = new CancellationTokenSource(timeout);
 
             var pipeline = new EmptyPipelineDefinition<ChangeStreamDocument<BsonDocument>>()
-                .Match(change =>
+                    .Match(change =>
                     change.OperationType == ChangeStreamOperationType.Insert &&
                     change.FullDocument["username"] == DefaultAdminUsername);
 

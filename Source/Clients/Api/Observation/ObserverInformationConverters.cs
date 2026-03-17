@@ -25,7 +25,8 @@ internal static class ObserverInformationConverters
             observerInformation.NextEventSequenceNumber,
             observerInformation.LastHandledEventSequenceNumber,
             (ObserverRunningState)(int)observerInformation.RunningState,
-            observerInformation.IsSubscribed);
+            observerInformation.IsSubscribed,
+            observerInformation.IsReplayable);
 
     /// <summary>
     /// Converts a collection of <see cref="ObserverInformation"/> to an API representation.

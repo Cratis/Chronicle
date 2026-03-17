@@ -61,4 +61,13 @@ public interface IObservers
     /// <returns>An observable of a collection of <see cref="ObserverInformation"/>.</returns>
     [Operation]
     IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all replayable observers for specific event types.
+    /// </summary>
+    /// <param name="request">The <see cref="GetReplayableObserversForEventTypesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ObserverInformation"/> for observers that support replay and observe the given event types.</returns>
+    [Operation]
+    Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default);
 }

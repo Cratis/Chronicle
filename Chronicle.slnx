@@ -2,6 +2,7 @@
 <Solution>
     <Folder Name="/Source/Clients/">
         <Project Path="Source/Clients/Api/Api.csproj" />
+        <Project Path="Source/Clients/Aspire/Aspire.csproj" />
         <Project Path="Source/Clients/AspNetCore/AspNetCore.csproj" />
         <Project Path="Source/Clients/AspNetCore.Specs/AspNetCore.Specs.csproj" />
         <Project Path="Source/Clients/Connections/Connections.csproj" />

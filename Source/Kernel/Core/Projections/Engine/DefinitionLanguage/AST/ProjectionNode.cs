@@ -9,13 +9,18 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 /// Represents a projection definition.
 /// </summary>
 /// <param name="Name">The projection name.</param>
-/// <param name="ReadModelType">The target read model type.</param>
+/// <param name="ReadModelType">The target read model type. When null, the read model is inferred from event types.</param>
 /// <param name="Directives">Collection of projection-level directives and blocks.</param>
 public record ProjectionNode(
     string Name,
-    TypeRef ReadModelType,
+    TypeRef? ReadModelType,
     IReadOnlyList<ProjectionDirective> Directives) : AstNode
 {
+    /// <summary>
+    /// Gets whether this projection has an explicitly specified read model type.
+    /// </summary>
+    public bool HasExplicitReadModel => ReadModelType is not null;
+
     /// <summary>
     /// Validates the projection.
     /// </summary>

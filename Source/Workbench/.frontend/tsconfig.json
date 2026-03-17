@@ -1,0 +1,97 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "types": [
+            "vite/client"
+        ],
+        "lib": [
+            "ES2020",
+            "ES2021.WeakRef",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "baseUrl": "..",
+        "paths": {
+            "Api": [
+                "./Api"
+            ],
+            "Api/*": [
+                "Api/*"
+            ],
+            "assets": [
+                "./assets"
+            ],
+            "assets/*": [
+                "./assets/*"
+            ],
+            "Shared/*": [
+                "Shared/*"
+            ],
+            "Shared": [
+                "Shared/index"
+            ],
+            "State/*": [
+                "State/*"
+            ],
+            "Components/*": [
+                "Components/*"
+            ],
+            "Components": [
+                "Components/index"
+            ],
+            "Icons/*": [
+                "Icons/*"
+            ],
+            "Icons": [
+                "Icons/index"
+            ],
+            "Browser": [
+                "./Infrastructure/Browser"
+            ],
+            "Browser/*": [
+                "./Infrastructure/Browser/*"
+            ],
+            "Layout/*": [
+                "Layout/*"
+            ],
+            "Features/*": [
+                "Features/*"
+            ],
+            "Strings": [
+                "./Strings"
+            ],
+            "Strings/*": [
+                "./Strings/*"
+            ],
+            "given": [
+                "./given.ts"
+            ]
+        }
+    },
+    "include": [
+        "../**/*.ts",
+        "../**/*.tsx"
+    ],
+    "exclude": [
+        "vite.config.ts"
+    ],
+    "references": [
+        {
+            "path": "./tsconfig.node.json"
+        }
+    ]
+}

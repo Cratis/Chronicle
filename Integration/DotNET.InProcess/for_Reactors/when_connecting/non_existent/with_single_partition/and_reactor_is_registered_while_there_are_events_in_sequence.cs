@@ -18,9 +18,11 @@ public class and_reactor_is_registered_while_there_are_events_in_sequence(contex
         public ReactorState ReactorState;
 
         public EventSequenceNumber LastEventSequenceNumberAppended;
+        public int HandledEventsBefore;
 
         async Task Establish()
         {
+            HandledEventsBefore = Reactor.HandledEvents;
             Events = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(Events);
             LastEventSequenceNumberAppended = result.SequenceNumbers.Last();
@@ -31,7 +33,7 @@ public class and_reactor_is_registered_while_there_are_events_in_sequence(contex
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillSubscribed();
             await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
-            await Reactor.WaitTillHandledEventReaches(Events.Count);
+            await Reactor.WaitTillHandledEventReaches(HandledEventsBefore + Events.Count);
 
             ReactorState = await reactor.GetState();
         }
@@ -44,5 +46,5 @@ public class and_reactor_is_registered_while_there_are_events_in_sequence(contex
     void should_catch_up_all_events_added_while_disconnected() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumberAppended.Value);
 
     [Fact]
-    void should_process_all_events() => Context.Reactor.HandledEvents.ShouldEqual(Context.Events.Count);
+    void should_process_all_events() => (Context.Reactor.HandledEvents - Context.HandledEventsBefore).ShouldEqual(Context.Events.Count);
 }

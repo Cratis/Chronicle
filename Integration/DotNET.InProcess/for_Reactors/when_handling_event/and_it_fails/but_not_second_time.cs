@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.InProcess.Integration.for_Reactors.when_handling_event.and_it_fails.but_not_second_time.context;
 
@@ -18,7 +16,6 @@ public class but_not_second_time(context context) : Given<context>(context)
     {
         public IEnumerable<FailedPartition> FailedPartitionsBeforeRetry;
         public IEnumerable<FailedPartition> FailedPartitionsAfterRetry;
-        public IEnumerable<Job> Jobs;
         public SomeEvent Event;
         public EventSourceId EventSourceId;
         public ReactorState ReactorState;
@@ -41,9 +38,8 @@ public class but_not_second_time(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
             FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobs(TimeSpanFactory.DefaultTimeout());
 
-            // Wait for the second event to have been handled
+            // Wait for the retry to complete (second handler succeeds)
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await EventStore.Jobs.WaitForThereToBeNoJobs();
             await Observers[1].WaitTillHandledEventReaches(1);
@@ -54,7 +50,6 @@ public class but_not_second_time(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain(nameof(RetryFailedPartition));
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(0ul);

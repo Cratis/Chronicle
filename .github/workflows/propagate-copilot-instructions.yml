@@ -1,0 +1,20 @@
+name: Propagate Copilot Instructions
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/copilot-instructions.md"
+      - ".github/instructions/**"
+      - ".github/agents/**"
+      - ".github/skills/**"
+      - ".github/prompts/**"
+      - ".github/hooks/**"
+  workflow_dispatch:
+
+jobs:
+  propagate:
+    uses: Cratis/Workflows/.github/workflows/propagate-copilot-instructions.yml@main
+    with:
+      event_name: ${{ github.event_name }}
+    secrets: inherit

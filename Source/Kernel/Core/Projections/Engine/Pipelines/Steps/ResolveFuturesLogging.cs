@@ -15,7 +15,7 @@ internal static partial class ResolveFuturesLogging
     [LoggerMessage(LogLevel.Debug, "Found {Count} pending futures for projection {ProjectionId}")]
     internal static partial void FoundPendingFutures(this ILogger<ResolveFutures> logger, int count, ProjectionId projectionId);
 
-    [LoggerMessage(LogLevel.Information, "Resolved future {FutureId} for projection {ProjectionId}")]
+    [LoggerMessage(LogLevel.Debug, "Resolved future {FutureId} for projection {ProjectionId}")]
     internal static partial void ResolvedFuture(this ILogger<ResolveFutures> logger, ProjectionFutureId futureId, ProjectionId projectionId);
 
     [LoggerMessage(LogLevel.Warning, "Failed to resolve future {FutureId} for projection {ProjectionId}")]

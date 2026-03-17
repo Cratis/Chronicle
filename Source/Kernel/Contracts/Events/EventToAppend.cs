@@ -50,4 +50,10 @@ public class EventToAppend
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
     public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional occurred time. If not set, the server will set it to approximately the time of append.
+    /// </summary>
+    [ProtoMember(8)]
+    public SerializableDateTimeOffset? Occurred { get; set; }
 }

@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Observation.States;
 /// <param name="namespace"><see cref="EventStoreNamespaceName"/> the state is for.</param>
 /// <param name="eventSequenceId"><see cref="EventSequenceId"/> being observed.</param>
 /// <param name="definitionState">Persistent state <see cref="ObserverDefinition"/> for the observer.</param>
+/// <param name="eventSequence"><see cref="IEventSequence"/> for checking missed events.</param>
 /// <param name="logger">Logger for logging.</param>
 public class Observing(
     IAppendedEventsQueues appendedEventsQueues,
@@ -26,6 +27,7 @@ public class Observing(
     EventStoreNamespaceName @namespace,
     EventSequenceId eventSequenceId,
     IPersistentState<ObserverDefinition> definitionState,
+    IEventSequence eventSequence,
     ILogger<Observing> logger) : BaseObserverState
 {
     AppendedEventsQueueSubscription? _subscription;
@@ -52,6 +54,24 @@ public class Observing(
         var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
         _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes);
 
+        // Only check for missed events when there is no active catch-up in progress and no failed partitions.
+        // When partitions are being caught up, the catch-up job handles historical events
+        // while the queue subscription handles new events arriving in real time.
+        // When there are failed partitions, the retry-failed-partition job handles recovery.
+        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.HasFailedPartitions())
+        {
+            var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
+            if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
+            {
+                var nextUnhandled = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, definitionState.State.EventTypes);
+                if (nextUnhandled.Match(n => n.IsActualValue, _ => false))
+                {
+                    logger.EventsMissedAfterSubscription(state.NextEventSequenceNumber, tailSequenceNumber);
+                    await StateMachine.TransitionTo<Routing>();
+                }
+            }
+        }
+
         return state;
     }
 
@@ -60,7 +80,7 @@ public class Observing(
     {
         if (_subscription is not null)
         {
-            await appendedEventsQueues.Unsubscribe(_subscription!);
+            await appendedEventsQueues.Unsubscribe(_subscription);
         }
         return state;
     }

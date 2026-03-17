@@ -26,7 +26,7 @@
 
 .sidebarClosed .appOutlet,
 .sidebarHidden .appOutlet {
-    padding-left: calc(4.5rem + 3px);
+    padding-left: calc(4.5rem + 3px + 1.5rem);
 }
 
 .appHeader {
@@ -44,7 +44,10 @@
     width: calc(100vw);
     height: calc(100vh - var(--topbar-height) - var(--footer-height));
     margin-top: var(--topbar-height);
-    padding-left: var(--sidebar-width);
+    padding-left: calc(var(--sidebar-width) + 1.5rem);
+    padding-right: 1.5rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
     margin-bottom: var(--footer-height);
     overflow: auto;
     transition: padding-left 0.3s;

@@ -16,6 +16,8 @@
   href: functions.md
 - name: Composite keys
   href: composite-keys.md
+- name: Constant key
+  href: constant-key.md
 - name: Event context
   href: event-context.md
 - name: FromEvery

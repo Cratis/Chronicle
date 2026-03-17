@@ -24,5 +24,7 @@
   href: removal.md
 - name: Expressions
   href: expressions.md
+- name: Ad-hoc Querying
+  href: adhoc-querying.md
 - name: Grammar (EBNF)
   href: grammar.md

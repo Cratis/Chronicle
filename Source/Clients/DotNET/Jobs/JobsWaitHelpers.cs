@@ -36,6 +36,31 @@ public static class JobsWaitHelpers
     }
 
     /// <summary>
+    /// Waits for a job whose type contains the specified substring.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> system.</param>
+    /// <param name="typeSubstring">Substring to match against <see cref="Job.Type"/>.</param>
+    /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
+    /// <returns>The matching jobs.</returns>
+    public static async Task<IEnumerable<Job>> WaitForThereToBeJobOfType(this IJobs jobs, string typeSubstring, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        var matching = Enumerable.Empty<Job>();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (!matching.Any() && !cts.IsCancellationRequested)
+        {
+            var currentJobs = await jobs.GetJobs();
+            matching = currentJobs.Where(j => j.Type.Value.Contains(typeSubstring, StringComparison.Ordinal));
+            if (!matching.Any())
+            {
+                await Task.Delay(DefaultDelay);
+            }
+        }
+
+        return matching;
+    }
+
+    /// <summary>
     /// Waits for there to be no jobs in the system.
     /// </summary>
     /// <param name="jobs"><see cref="IJobs"/> system.</param>

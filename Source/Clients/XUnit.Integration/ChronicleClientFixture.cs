@@ -101,6 +101,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> EventTypes => GetArtifactTypes(provider => provider.EventTypes);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> EventTypeMigrators => GetArtifactTypes(provider => provider.EventTypeMigrators);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Projections => GetArtifactTypes(provider => provider.Projections);
 
     /// <inheritdoc/>
@@ -247,6 +250,13 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     internal IEventSequenceStorage GetEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetEventLogStorage(namespaceName);
 
     /// <summary>
+    /// Gets the <see cref="IEventSequenceStorage"/> for the system event log storage.
+    /// </summary>
+    /// <param name="namespaceName">Namespace to get for.</param>
+    /// <returns>The <see cref="IEventSequenceStorage"/> for the system event log storage.</returns>
+    internal IEventSequenceStorage GetSystemEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => (this as IChronicleSetupFixture).GetSystemEventLogStorage(namespaceName);
+
+    /// <summary>
     /// Gets the grain storage for the specified key.
     /// </summary>
     /// <typeparam name="TStorage">The type of the grain storage.</typeparam>
@@ -335,7 +345,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
         {
             return [];
         }
-        _defaultClientArtifactsProvider.Initialize();
         return getTypes(_defaultClientArtifactsProvider);
     }
 }

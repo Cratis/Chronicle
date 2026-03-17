@@ -30,6 +30,11 @@ public record EventSequenceId(string Value) : ConceptAs<string>(Value)
     public static readonly EventSequenceId Outbox = WellKnownEventSequences.Outbox;
 
     /// <summary>
+    /// Gets the virtual <see cref="EventSequenceId"/> representing all inboxes.
+    /// </summary>
+    public static readonly EventSequenceId Inbox = WellKnownEventSequences.Inbox;
+
+    /// <summary>
     /// Gets the prefix for inbox event sequences.
     /// </summary>
     public static readonly string InboxPrefix = "inbox-";

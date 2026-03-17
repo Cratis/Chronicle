@@ -49,6 +49,14 @@ public interface IEventTypes
     Type GetClrTypeFor(EventTypeId eventTypeId);
 
     /// <summary>
+    /// Get a <see cref="Type">Clr Type</see> for a specific <see cref="EventTypeId"/> and <see cref="EventTypeGeneration"/>.
+    /// </summary>
+    /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>
+    /// <param name="generation"><see cref="EventTypeGeneration"/> to get for.</param>
+    /// <returns>The <see cref="Type">Clr Type</see>.</returns>
+    Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation);
+
+    /// <summary>
     /// Get the <see cref="JsonSchema"/> for an <see cref="EventTypeId"/>.
     /// </summary>
     /// <param name="eventTypeId"><see cref="EventTypeId"/> to get for.</param>

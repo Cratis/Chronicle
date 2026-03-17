@@ -90,6 +90,13 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     internal IEventSequenceStorage GetEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.Log);
 
     /// <summary>
+    /// Internal: Gets the <see cref="IEventSequenceStorage"/> for the system event log.
+    /// </summary>
+    /// <param name="namespaceName">The namespace name.</param>
+    /// <returns>The <see cref="IEventSequenceStorage"/>.</returns>
+    internal IEventSequenceStorage GetSystemEventLogStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName? namespaceName = null) => GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId.System);
+
+    /// <summary>
     /// Gets the <see cref="IGrainStorage"/> for the specified key.
     /// </summary>
     /// <typeparam name="TStorage">The type of the storage.</typeparam>

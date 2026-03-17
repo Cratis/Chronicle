@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Collections;
 using Cratis.Reactive;
@@ -38,8 +39,11 @@ public class IdentityStorage(
         _identitiesByIdentityId = allIdentities.ToDictionary(_ => (IdentityId)_.Id, _ => new Identity(_.Subject, _.Name, _.UserName));
         _identityIdsBySubject = _identitiesByIdentityId
                                     .Where(_ => !string.IsNullOrEmpty(_.Value.Subject))
-                                    .ToDictionary(_ => _.Value.Subject, _ => _.Key);
-        _identityIdsByUserName = _identitiesByIdentityId.ToDictionary(_ => _.Value.UserName.ToLowerInvariant(), _ => _.Key);
+                                    .GroupBy(_ => _.Value.Subject)
+                                    .ToDictionary(_ => _.Key, _ => _.Last().Key);
+        _identityIdsByUserName = _identitiesByIdentityId
+                                    .GroupBy(_ => _.Value.UserName.ToLowerInvariant())
+                                    .ToDictionary(_ => _.Key, _ => _.Last().Key);
         _identityIdsByUserName.ForEach(_ => logger.IdentityRegisteredByUserName(_.Key, _.Value));
     }
 
@@ -86,6 +90,11 @@ public class IdentityStorage(
     public async Task<IdentityId> GetSingleFor(Identity identity)
     {
         var userName = identity.UserName.ToLowerInvariant();
+        if (string.IsNullOrEmpty(userName))
+        {
+            logger.IdentityHasNoUserName(identity.Subject);
+            userName = Username.Unknown;
+        }
 
         if (TryGetSingleFor(identity, out var identityId)) return identityId;
         await Populate();
@@ -119,7 +128,8 @@ public class IdentityStorage(
     public async Task<IEnumerable<Identity>> GetAll()
     {
         using var result = await GetCollection().FindAsync(_ => true);
-        return result.ToEnumerable().Select(_ => new Identity(_.Subject, _.Name, _.UserName));
+        var all = await result.ToListAsync();
+        return all.Select(_ => new Identity(_.Subject, _.Name, _.UserName));
     }
 
     /// <inheritdoc/>
