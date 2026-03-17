@@ -54,10 +54,11 @@ public class Observing(
         var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
         _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes);
 
-        // Only check for missed events when there is no active catch-up in progress.
+        // Only check for missed events when there is no active catch-up in progress and no failed partitions.
         // When partitions are being caught up, the catch-up job handles historical events
         // while the queue subscription handles new events arriving in real time.
-        if (!state.CatchingUpPartitions.Any())
+        // When there are failed partitions, the retry-failed-partition job handles recovery.
+        if (!state.CatchingUpPartitions.Any() && !await Observer.IsPreparingCatchup() && !await Observer.HasFailedPartitions())
         {
             var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
             if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)
