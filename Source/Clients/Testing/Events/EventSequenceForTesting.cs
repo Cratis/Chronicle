@@ -100,5 +100,5 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] eventTypes) => Task.CompletedTask;
+    public Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes) => Task.CompletedTask;
 }
