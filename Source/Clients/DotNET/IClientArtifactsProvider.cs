@@ -71,6 +71,11 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> UniqueEventTypeConstraints { get; }
 
     /// <summary>
+    /// Gets all event types that carry a <see cref="RemoveConstraintAttribute"/>, indicating they release a named constraint.
+    /// </summary>
+    IEnumerable<Type> RemoveConstraintEventTypes { get; }
+
+    /// <summary>
     /// Gets all the available event type migrators.
     /// </summary>
     IEnumerable<Type> EventTypeMigrators { get; }

@@ -37,6 +37,9 @@ public class UniqueConstraintProvider(
         var constraints = new List<IConstraintDefinition>();
         foreach (var constraint in uniqueConstraints)
         {
+            var removalEventType = clientArtifactsProvider.RemoveConstraintEventTypes
+                .FirstOrDefault(t => t.GetRemoveConstraints().Any(a => constraint.Key == (ConstraintName)a.ConstraintName));
+
             var builder = new ConstraintBuilder(eventTypes, namingPolicy);
             builder.Unique(unique =>
             {
@@ -46,6 +49,11 @@ public class UniqueConstraintProvider(
                 foreach (var constrainedProperty in constraint)
                 {
                     unique.On(eventTypes.GetEventTypeFor(constrainedProperty.EventType), [constrainedProperty.Property.Name]);
+                }
+
+                if (removalEventType is not null)
+                {
+                    unique.RemovedWith(eventTypes.GetEventTypeFor(removalEventType));
                 }
             });
             constraints.AddRange(builder.Build());
