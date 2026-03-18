@@ -29,7 +29,20 @@ public class a_single_event_via_event_sequence(context context) : Given<context>
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
             await EventStore.EventLog.Redact(EventSequenceNumber.First, "test reason");
-            StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
+
+            // The redaction is performed asynchronously by EventSequencesReactor — poll until it completes.
+            var storage = GetEventLogStorage();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            do
+            {
+                StoredEvent = await storage.GetEventAt(EventSequenceNumber.First.Value);
+                if (StoredEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction)
+                {
+                    await Task.Delay(50);
+                }
+            }
+            while (StoredEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction && !cts.IsCancellationRequested);
+
             var systemStorage = GetSystemEventLogStorage();
             var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
             SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
