@@ -189,6 +189,22 @@ internal sealed class EventSequences(
         return new RedactResponse();
     }
 
+    /// <inheritdoc/>
+    public async Task RedactForEventSource(RedactForEventSourceRequest request, CallContext context = default)
+    {
+        var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore, request.Namespace);
+        await systemEventSequence.Append(
+            (EventSourceId)request.EventSequenceId,
+            new EventsRedactedForEventSource(
+                request.EventSequenceId,
+                (EventSourceId)request.EventSourceId,
+                request.EventTypes.ToChronicle(),
+                (RedactionReason)request.Reason),
+            correlationId: request.CorrelationId,
+            causation: request.Causation.ToChronicle(),
+            causedBy: request.CausedBy.ToChronicle());
+    }
+
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>
         storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).GetEventSequence(request.EventSequenceId);
 
