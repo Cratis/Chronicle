@@ -16,14 +16,10 @@ For direct `ChronicleClient` usage outside of a hosted application, configure th
 
 ```csharp
 var options = new ChronicleOptions();
-#pragma warning disable CS0618
 options.NamingPolicy = new CamelCaseNamingPolicy();
-#pragma warning restore CS0618
 
 var client = new ChronicleClient(options);
 ```
-
-> **Note:** Setting `NamingPolicy` directly on `ChronicleOptions` is deprecated. For hosted applications (ASP.NET Core, worker services), configure the naming policy on the `IChronicleBuilder` instead as shown in the sections below.
 
 ## Using ASP.NET Core
 
@@ -145,4 +141,3 @@ If you see inconsistent property naming in your read models:
 1. Verify that Chronicle is configured with the camel case naming policy via `IChronicleBuilder.WithCamelCaseNamingPolicy()`.
 2. Check if any custom property mappings are overriding the global naming policy.
 3. Ensure all projection definitions are rebuilt after changing the naming policy.
-

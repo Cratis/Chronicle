@@ -70,9 +70,7 @@ internal static class ChronicleClientServiceCollectionExtensions
 
             if (chronicleBuilder?.NamingPolicy is not null)
             {
-#pragma warning disable CS0618 // Setting NamingPolicy on options for ChronicleClient which reads it internally
                 options.NamingPolicy = chronicleBuilder.NamingPolicy;
-#pragma warning restore CS0618
             }
 
             return connection is null ?
