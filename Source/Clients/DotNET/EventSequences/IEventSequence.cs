@@ -167,7 +167,7 @@ public interface IEventSequence
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
     /// <param name="reason">Reason for redacting.</param>
-    /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <param name="clrEventTypes">Optionally any specific event types.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] eventTypes);
+    Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
 }
