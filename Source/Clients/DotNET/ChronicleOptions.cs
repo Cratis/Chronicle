@@ -111,20 +111,23 @@ public class ChronicleOptions(
 
     /// <summary>
     /// Gets or sets a value indicating whether event type generation validation is disabled.
-    /// When <see langword="true"/>, Chronicle will not enforce that every generation step
-    /// from 1 to the current generation has a migration defined, and will not require
-    /// sequential generation numbering.
+    /// When <see langword="true"/>, the client asks the Kernel to bypass migration chain
+    /// validation when registering event types at generation 2 or higher. Defaults to <see langword="true"/>.
     /// </summary>
     /// <remarks>
-    /// This property is only honoured in DEVELOPMENT builds of the Kernel. In all other
-    /// configurations the value sent to the server is ignored, ensuring that production
-    /// deployments never silently skip migration chain validation.
+    /// <para>
+    /// The Kernel only honours this flag when running the development image (built with the
+    /// <c>DEVELOPMENT</c> preprocessor symbol). The <c>DEVELOPMENT</c> symbol is exclusively
+    /// used by the Kernel; it is not applicable to client builds. The production Kernel image
+    /// always enforces validation unconditionally, regardless of the value sent by the client.
+    /// </para>
+    /// <para>
+    /// The default is <see langword="true"/> so that early-stage schema development works without
+    /// any explicit configuration. Set to <see langword="false"/> to opt into strict migration
+    /// chain validation on the development Kernel image.
+    /// </para>
     /// </remarks>
-#if DEVELOPMENT
-    public bool DisableEventTypeGenerationValidation { get; set; }
-#else
-    public bool DisableEventTypeGenerationValidation => false;
-#endif
+    public bool DisableEventTypeGenerationValidation { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the TLS configuration.
