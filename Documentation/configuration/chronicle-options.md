@@ -51,7 +51,7 @@ Asks the Kernel to bypass migration chain validation when registering event type
 | Type | `bool` |
 | Default | `true` |
 
-> **Kernel restriction:** The `DEVELOPMENT` preprocessor symbol is used exclusively in **Kernel** builds — it has no effect on client assemblies. The development Kernel image honours this flag; the production Kernel image always ignores it and validates unconditionally, regardless of what the client sends. This makes it impossible to accidentally skip migration chain validation in production even if the client has this flag set to `true`.
+> **Image restriction:** This flag is only honoured by the **development image** of the Kernel. The production image always ignores it and validates unconditionally, regardless of what the client sends. This makes it impossible to accidentally skip migration chain validation in production even if the client has this flag set to `true`.
 
 To opt in to strict validation during development (recommended once your event schemas are stable), set the flag to `false`:
 

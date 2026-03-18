@@ -116,10 +116,8 @@ public class ChronicleOptions(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The Kernel only honours this flag when running the development image (built with the
-    /// <c>DEVELOPMENT</c> preprocessor symbol). The <c>DEVELOPMENT</c> symbol is exclusively
-    /// used by the Kernel; it is not applicable to client builds. The production Kernel image
-    /// always enforces validation unconditionally, regardless of the value sent by the client.
+    /// The Kernel only honours this flag when running the development image.
+    /// The production image always enforces validation unconditionally, regardless of the value sent by the client.
     /// </para>
     /// <para>
     /// The default is <see langword="true"/> so that early-stage schema development works without

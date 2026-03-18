@@ -83,9 +83,7 @@ The fix is always to introduce a new generation and a corresponding migrator rat
 
 ## Relaxing validation for development
 
-Strict validation is **always enforced in production Kernel images**. The development Kernel image relaxes this by honouring the `DisableEventTypeGenerationValidation` flag sent from the client.
-
-The `DEVELOPMENT` preprocessor symbol is used exclusively by the **Kernel** — it is not applicable to client builds. The client always forwards whatever value is configured, but only the development Kernel image acts on it.
+Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `DisableEventTypeGenerationValidation` flag sent from the client.
 
 `DisableEventTypeGenerationValidation` defaults to `true` in `ChronicleOptions`, so no extra configuration is needed during early development. When your event schemas are stable, opt into strict validation by setting it to `false`:
 
