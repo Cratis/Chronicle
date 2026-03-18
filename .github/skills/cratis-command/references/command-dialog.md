@@ -12,25 +12,21 @@
 
 ---
 
-## Dialog pattern with `useDialog`
+## Dialog pattern with `useDialog` and `DialogProps`
 
 ```tsx
-import { useDialog, useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { DialogProps, DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField, NumberField } from '@cratis/components/CommandForm';
 import { CreateProduct } from '../api/Products/CreateProduct';
-import { CommandResult } from '@cratis/arc/commands';
 
-// 1. Define the dialog
-const CreateProductDialog = () => {
-    const { closeDialog } = useDialogContext<CommandResult<string>>();
+// 1. Define the dialog component
+export const CreateProductDialog = ({ closeDialog }: DialogProps) => {
     return (
         <CommandDialog<CreateProduct>
             command={CreateProduct}
             title="Create product"
             okLabel="Create"
-            onConfirm={async (result) => closeDialog(DialogResult.Ok, result)}
-            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<CreateProduct> value={c => c.name} label="Name" />
             <NumberField<CreateProduct> value={c => c.price} label="Price" />
@@ -42,10 +38,9 @@ const CreateProductDialog = () => {
 const [CreateProductDialogWrapper, showCreateProduct] = useDialog(CreateProductDialog);
 
 const handleCreate = async () => {
-    const [dialogResult, commandResult] = await showCreateProduct();
-    if (dialogResult === DialogResult.Ok && commandResult?.isSuccess) {
+    const [result] = await showCreateProduct();
+    if (result === DialogResult.Ok) {
         refreshProducts();
-        if (commandResult.response) navigateTo(`/products/${commandResult.response}`);
     }
 };
 
@@ -58,21 +53,24 @@ return (
 );
 ```
 
+`DialogProps` provides `closeDialog` as a prop to the dialog component. `CommandDialog` automatically executes the command on confirm and closes the dialog.
+
 ---
 
 ## Edit dialog (pre-populate with existing values)
 
 ```tsx
-const EditProductDialog = ({ product }: { product: Product }) => {
-    const { closeDialog } = useDialogContext();
+interface EditProductDialogProps extends DialogProps {
+    product: Product;
+}
+
+export const EditProductDialog = ({ closeDialog, product }: EditProductDialogProps) => {
     return (
         <CommandDialog<UpdateProduct>
             command={UpdateProduct}
             title="Edit product"
             currentValues={{ name: product.name, price: product.price }}
             initialValues={{ productId: product.id }}
-            onConfirm={() => closeDialog(DialogResult.Ok)}
-            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<UpdateProduct> value={c => c.name} label="Name" />
             <NumberField<UpdateProduct> value={c => c.price} label="Price" />

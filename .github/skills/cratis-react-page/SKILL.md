@@ -14,9 +14,9 @@ description: Step-by-step guidance for building a React page in a Cratis Arc app
 Imports you will need:
 
 ```tsx
-import { DataPage } from '@cratis/components';
-import { CommandDialog } from '@cratis/components';
-import { useDialog } from '@cratis/arc.react/dialogs';
+import { DataPage, MenuItemGroup, MenuItem } from '@cratis/components';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { useDialog, DialogProps } from '@cratis/arc.react/dialogs';
 ```
 
 ---
@@ -46,18 +46,38 @@ export const AccountsPage = () => {
 
 ### Step 3 — Add menu actions
 
-Menu items appear in the toolbar above the table.
+Menu items appear in the toolbar above the table. Create a separate dialog component using `DialogProps`, then wire it up with `useDialog`.
+
+**Dialog component (`CreateAccountDialog.tsx`):**
+
+```tsx
+import { DialogProps } from '@cratis/arc.react/dialogs';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField } from '@cratis/components/CommandForm';
+import { CreateAccount } from './commands/CreateAccount';
+
+export const CreateAccountDialog = ({ closeDialog }: DialogProps) => {
+    return (
+        <CommandDialog<CreateAccount>
+            command={CreateAccount}
+            title="Create Account"
+            okLabel="Create"
+        >
+            <InputTextField<CreateAccount> value={c => c.name} label="Account Name" />
+        </CommandDialog>
+    );
+};
+```
+
+**Page component:**
 
 ```tsx
 import { DataPage, MenuItemGroup, MenuItem } from '@cratis/components';
-import { useDialog, IDialogMediatorRequest } from '@cratis/arc.react/dialogs';
-import { CommandDialog } from '@cratis/components';
-import { CreateAccount } from './commands/CreateAccount';
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { CreateAccountDialog } from './CreateAccountDialog';
 
 export const AccountsPage = () => {
-    const [createDialog, openCreate] = useDialog<{}, CreateAccount>(
-        async (_, command) => { /* post-confirm callback (optional) */ }
-    );
+    const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog);
 
     return (
         <>
@@ -68,50 +88,63 @@ export const AccountsPage = () => {
                 ]}
                 menuItems={
                     <MenuItemGroup>
-                        <MenuItem label="Add Account" onClick={openCreate} />
+                        <MenuItem label="Add Account" onClick={() => showCreateAccount()} />
                     </MenuItemGroup>
                 }
             />
-            <CommandDialog
-                dialogMediator={createDialog}
-                title="Create Account"
-                command={CreateAccount}
-            >
-                {/* CommandForm fields */}
-            </CommandDialog>
+            <CreateAccountWrapper />
         </>
     );
 };
 ```
 
-See `references/dialogs.md` for `useDialog`/`useDialogContext` API detail.
+See `references/dialogs.md` for the full dialog pattern guide.
 
 ---
 
 ### Step 4 — Row selection and edit dialog
 
-Pass a selected-row handler and an edit dialog. The selected item becomes the initial values for the edit command.
+Pass a selected-row handler and an edit dialog. Supply the row data as props to the dialog component.
+
+**Edit dialog component (`EditAccountDialog.tsx`):**
 
 ```tsx
-const [editDialog, openEdit] = useDialog<AccountSummary, EditAccount>(
-    async (row, command) => {
-        command.accountId = row.id;
-    }
-);
+import { DialogProps, DialogResult } from '@cratis/arc.react/dialogs';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField } from '@cratis/components/CommandForm';
+import { EditAccount } from './commands/EditAccount';
+
+interface EditAccountDialogProps extends DialogProps {
+    accountId: string;
+    name: string;
+}
+
+export const EditAccountDialog = ({ closeDialog, accountId, name }: EditAccountDialogProps) => {
+    return (
+        <CommandDialog<EditAccount>
+            command={EditAccount}
+            title="Edit Account"
+            okLabel="Save"
+            initialValues={{ accountId }}
+            currentValues={{ name }}
+        >
+            <InputTextField<EditAccount> value={c => c.name} label="Account Name" />
+        </CommandDialog>
+    );
+};
+```
+
+**Page component:**
+
+```tsx
+const [EditAccountWrapper, showEditAccount] = useDialog(EditAccountDialog);
 
 <DataPage
     ...
-    onRowSelected={(row) => openEdit(row)}
+    onRowSelected={(row) => showEditAccount({ accountId: row.id, name: row.name })}
 />
 
-<CommandDialog
-    dialogMediator={editDialog}
-    title="Edit Account"
-    command={EditAccount}
-    initialValuesMapper={(row) => ({ accountId: row.id, name: row.name })}
->
-    ...
-</CommandDialog>
+<EditAccountWrapper />
 ```
 
 ---
@@ -176,7 +209,7 @@ See `references/mvvm.md` for full MVVM guidance.
 | Read-only list | `DataPage` with `query` |
 | Real-time updates | `DataPage` with `observableQuery` |
 | Add / create action | `MenuItem` + `CommandDialog` + `useDialog` |
-| Edit selected row | Row selection + `CommandDialog` + `initialValuesMapper` |
+| Edit selected row | Row selection + `CommandDialog` + `currentValues`/`initialValues` |
 | Side detail panel | `detailPanel` prop on `DataPage` |
 | Complex page logic | `withViewModel` MVVM wrapper |
 
@@ -184,5 +217,5 @@ See `references/mvvm.md` for full MVVM guidance.
 
 - `references/data-page.md` — DataPage props, MenuItems, Columns, detailPanel
 - `references/data-table.md` — Standalone DataTableForQuery / DataTableForObservableQuery
-- `references/dialogs.md` — `useDialog`, `useDialogContext`, `CommandDialog` full API
+- `references/dialogs.md` — `useDialog`, `DialogProps`, `CommandDialog` full API
 - `references/mvvm.md` — `withViewModel`, `@injectable`, `IHandleProps`, reactive props
