@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
-- name: C# usage
-  href: dotnet-client.md
+- name: "[Unique] attribute"
+  href: attribute.md
+- name: Declarative (IConstraint)
+  href: declarative.md
 
