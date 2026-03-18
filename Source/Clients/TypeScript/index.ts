@@ -42,4 +42,5 @@ export * from './ChronicleConnection';
 export * from './ChronicleConnectionString';
 export * from './ChronicleServices';
 export * from './TokenProvider';
+export * from './DateTimeOffset';
 

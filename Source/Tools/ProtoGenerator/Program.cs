@@ -58,6 +58,9 @@ foreach (var group in servicesByNamespace)
         // with an UPPER_SNAKE_CASE version of their parent enum name.
         schema = ProtoSchemaHelper.FixEnumValueConflicts(schema);
 
+        // Add ISO 8601 format comment to SerializableDateTimeOffset message definitions.
+        schema = ProtoSchemaHelper.AddSerializableDateTimeOffsetComment(schema);
+
         var fileName = packageName.Replace("Cratis.Chronicle.Contracts.", string.Empty).Replace('.', '_').ToLowerInvariant();
         if (string.IsNullOrEmpty(fileName))
         {

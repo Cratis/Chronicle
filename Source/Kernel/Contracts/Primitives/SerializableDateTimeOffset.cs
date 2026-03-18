@@ -1,90 +1,81 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+
 namespace Cratis.Chronicle.Contracts.Primitives;
 
 /// <summary>
-/// Proto contract that represents a <see cref="DateTimeOffset"/>.
+/// Proto contract that represents a <see cref="DateTimeOffset"/> as an ISO 8601 string.
 /// </summary>
 /// <remarks>
-/// Based on implementation found here: https://stackoverflow.com/a/68572913/26049.
+/// The value is serialized using the round-trip format specifier "O",
+/// producing strings in the form yyyy-MM-ddTHH:mm:ss.fffffffzzz
+/// (e.g., "2024-01-15T12:30:00.0000000+02:00").
 /// </remarks>
 [ProtoContract]
 public class SerializableDateTimeOffset
 {
     /// <summary>
-    /// Gets or sets the Utc ticks.
+    /// Gets or sets the ISO 8601 string representation of the <see cref="DateTimeOffset"/>.
+    /// Format: yyyy-MM-ddTHH:mm:ss.fffffffzzz (e.g., "2024-01-15T12:30:00.0000000+02:00").
     /// </summary>
     [ProtoMember(1)]
-    public long Ticks { get; set; }
+    public string Value { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the UTC offset in minutes.
-    /// </summary>
-    [ProtoMember(2)]
-    public double OffsetMinutes { get; set; }
-
-    /// <summary>
-    /// Operator to cast <see cref="SerializableDateTimeOffset"/> to <see cref="DateTimeOffset"/>.
+    /// Implicitly converts a <see cref="SerializableDateTimeOffset"/> to a nullable <see cref="DateTimeOffset"/>.
     /// </summary>
     /// <param name="protoDateTimeOffset"><see cref="SerializableDateTimeOffset"/> to convert from.</param>
-    /// <returns>A converted <see cref="DateTimeOffset"/>.</returns>
+    /// <returns>A converted <see cref="DateTimeOffset"/>, or null if the input is null or empty.</returns>
     public static implicit operator DateTimeOffset?(SerializableDateTimeOffset? protoDateTimeOffset)
     {
-        if (protoDateTimeOffset == null)
+        if (protoDateTimeOffset is null || string.IsNullOrEmpty(protoDateTimeOffset.Value))
         {
             return null;
         }
 
-        return new DateTimeOffset(protoDateTimeOffset.Ticks, TimeSpan.FromMinutes(protoDateTimeOffset.OffsetMinutes));
+        return DateTimeOffset.Parse(protoDateTimeOffset.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
     }
 
     /// <summary>
-    /// Implicitly convert <see cref="DateTimeOffset"/> to <see cref="SerializableDateTimeOffset"/>.
+    /// Implicitly converts a <see cref="SerializableDateTimeOffset"/> to a <see cref="DateTimeOffset"/>.
     /// </summary>
     /// <param name="protoDateTimeOffset"><see cref="SerializableDateTimeOffset"/> to convert from.</param>
-    /// <returns>A converted <see cref="DateTimeOffset"/>.</returns>
+    /// <returns>A converted <see cref="DateTimeOffset"/>, or <see cref="DateTimeOffset.MinValue"/> if the input is null or empty.</returns>
     public static implicit operator DateTimeOffset(SerializableDateTimeOffset? protoDateTimeOffset)
     {
-        if (protoDateTimeOffset == null)
+        if (protoDateTimeOffset is null || string.IsNullOrEmpty(protoDateTimeOffset.Value))
         {
             return default;
         }
 
-        return new DateTimeOffset(protoDateTimeOffset.Ticks, TimeSpan.FromMinutes(protoDateTimeOffset.OffsetMinutes));
+        return DateTimeOffset.Parse(protoDateTimeOffset.Value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
     }
 
     /// <summary>
-    /// Implicitly convert <see cref="DateTimeOffset"/> to <see cref="SerializableDateTimeOffset"/>.
+    /// Implicitly converts a nullable <see cref="DateTimeOffset"/> to a <see cref="SerializableDateTimeOffset"/>.
     /// </summary>
     /// <param name="dateTimeOffset"><see cref="DateTimeOffset"/> to convert from.</param>
-    /// <returns>A converted <see cref="SerializableDateTimeOffset"/>.</returns>
+    /// <returns>A <see cref="SerializableDateTimeOffset"/> with an ISO 8601 value, or null if the input is null.</returns>
     public static implicit operator SerializableDateTimeOffset?(DateTimeOffset? dateTimeOffset)
     {
-        if (dateTimeOffset == null)
+        if (dateTimeOffset is null)
         {
             return null;
         }
 
-        return new SerializableDateTimeOffset
-        {
-            OffsetMinutes = dateTimeOffset.Value.Offset.TotalMinutes,
-            Ticks = dateTimeOffset.Value.Ticks
-        };
+        return new SerializableDateTimeOffset { Value = dateTimeOffset.Value.ToString("O", CultureInfo.InvariantCulture) };
     }
 
     /// <summary>
-    /// Implicitly convert <see cref="DateTimeOffset"/> (non-nullable) to <see cref="SerializableDateTimeOffset"/>.
+    /// Implicitly converts a <see cref="DateTimeOffset"/> to a <see cref="SerializableDateTimeOffset"/>.
     /// </summary>
     /// <param name="dateTimeOffset"><see cref="DateTimeOffset"/> to convert from.</param>
-    /// <returns>A converted <see cref="SerializableDateTimeOffset"/>.</returns>
+    /// <returns>A <see cref="SerializableDateTimeOffset"/> with an ISO 8601 value.</returns>
     public static implicit operator SerializableDateTimeOffset(DateTimeOffset dateTimeOffset) =>
-        new()
-        {
-            OffsetMinutes = dateTimeOffset.Offset.TotalMinutes,
-            Ticks = dateTimeOffset.Ticks
-        };
+        new() { Value = dateTimeOffset.ToString("O", CultureInfo.InvariantCulture) };
 
     /// <inheritdoc/>
-    public override string ToString() => ((DateTimeOffset?)this)?.ToString() ?? string.Empty;
+    public override string ToString() => Value ?? string.Empty;
 }
