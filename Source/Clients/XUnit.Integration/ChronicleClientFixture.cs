@@ -5,6 +5,7 @@ extern alias KernelCore;
 extern alias KernelConcepts;
 
 using System.Reflection;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
@@ -135,6 +136,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> RemoveConstraintEventTypes => GetArtifactTypes(provider => provider.RemoveConstraintEventTypes);
 
     /// <inheritdoc/>
     public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
