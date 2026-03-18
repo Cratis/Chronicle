@@ -67,15 +67,11 @@ internal static class ChronicleClientServiceCollectionExtensions
             var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-
-            if (chronicleBuilder?.NamingPolicy is not null)
-            {
-                options.NamingPolicy = chronicleBuilder.NamingPolicy;
-            }
+            var namingPolicy = chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy();
 
             return connection is null ?
-                new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory) :
-                new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory);
+                new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy) :
+                new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
         });
 
         services.AddScoped(sp =>

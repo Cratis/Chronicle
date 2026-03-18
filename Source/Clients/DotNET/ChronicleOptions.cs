@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle;
 
@@ -17,14 +16,12 @@ namespace Cratis.Chronicle;
 /// client credentials. This is intended for local development and testing only.
 /// </remarks>
 /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
-/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
 /// <param name="concurrencyOptions">Optional <see cref="ConcurrencyOptions"/> to use. Will revert to default if not configured.</param>
 /// <param name="autoDiscoverAndRegister">Optional disable automatic discovery of artifacts and registering these.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 public class ChronicleOptions(
     ChronicleConnectionString connectionString,
-    INamingPolicy? namingPolicy = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
     ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
@@ -77,11 +74,6 @@ public class ChronicleOptions(
     /// Gets the <see cref="ConcurrencyOptions"/> to use for concurrency management.
     /// </summary>
     public ConcurrencyOptions ConcurrencyOptions { get; set; } = concurrencyOptions ?? new ConcurrencyOptions();
-
-    /// <summary>
-    /// Gets the <see cref="INamingPolicy"/> to use.
-    /// </summary>
-    public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new DefaultNamingPolicy();
 
     /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
