@@ -91,6 +91,7 @@ The project's voice is **direct, practical, and opinionated**. Write like an exp
 - Use headings, lists, and code blocks to organize content — dense paragraphs lose readers.
 - Focus on public APIs and features — never internal implementation.
 - Do not document third-party libraries.
+- **American English only.** Always use US spellings: `color` not `colour`, `behavior` not `behaviour`, `customize` not `customise`, `organize` not `organise`, `recognize` not `recognise`, `analyze` not `analyse`, `initialize` not `initialise`.
 
 ## Code Examples
 
