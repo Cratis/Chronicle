@@ -33,9 +33,24 @@ public class all_events_for_an_event_source_via_event_sequence(context context) 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
             await EventStore.EventLog.Redact(EventSourceId, "test reason");
+
+            // The redaction is performed asynchronously by EventSequencesReactor — poll until it completes.
             var storage = GetEventLogStorage();
-            StoredFirstEvent = await storage.GetEventAt(EventSequenceNumber.First.Value);
-            StoredSecondEvent = await storage.GetEventAt((EventSequenceNumber.First + 1).Value);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            do
+            {
+                StoredFirstEvent = await storage.GetEventAt(EventSequenceNumber.First.Value);
+                StoredSecondEvent = await storage.GetEventAt((EventSequenceNumber.First + 1).Value);
+                if (StoredFirstEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction ||
+                    StoredSecondEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction)
+                {
+                    await Task.Delay(50);
+                }
+            }
+            while ((StoredFirstEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction ||
+                    StoredSecondEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction) &&
+                   !cts.IsCancellationRequested);
+
             var systemStorage = GetSystemEventLogStorage();
             var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
             SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
