@@ -24,7 +24,7 @@ When the agent finishes a session, automatically build every affected project in
    ```
    Run from the package root that owns the changed files.
 
-4. **If any build fails**:
+4. **If any build fails or any warnings are reported**:
    - Report the full compiler output.
    - Fix all errors and warnings before considering the session complete.
    - Re-run the Release build to confirm it is clean.
@@ -34,3 +34,4 @@ When the agent finishes a session, automatically build every affected project in
 - Always run the Release build — never skip it even if the Debug build already passed earlier in the session.
 - A session is not complete until `dotnet build -c Release` (and `yarn build` if applicable) exits with code `0` and **zero** warnings.
 - Treat Release-only warnings (nullable annotations, unused variables stripped by the analyzer, etc.) as errors — fix them.
+- **Never** use `/clp:ErrorsOnly` or any flag that suppresses warning output. Warnings that are hidden are warnings that are never fixed. Always let the full diagnostic output through so that zero warnings can be confirmed.
