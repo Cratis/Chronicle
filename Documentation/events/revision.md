@@ -23,8 +23,8 @@ The Workbench provides a UI for revising events in the event log:
 1. Open the **Event Log** view for the event store and namespace you want to manage.
 2. Select the event you want to correct.
 3. Click the **Revise** button in the event detail panel.
-4. Edit the JSON content to reflect the correct values.
-5. Submit the revision.
+4. In the dialog that appears, change the values you want to correct.
+5. Click **OK** to submit the revision.
 
 The corrected content is stored alongside the original event. All subsequent reads of that event return the revised content. The original payload remains accessible in the full event history.
 
