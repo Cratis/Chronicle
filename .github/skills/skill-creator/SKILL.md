@@ -138,6 +138,13 @@ Output: feat(auth): implement JWT-based authentication
 
 Try to explain to the model why things are important in lieu of heavy-handed musty MUSTs. Use theory of mind and try to make the skill general and not super-narrow to specific examples. Start by writing a draft and then look at it with fresh eyes and improve it.
 
+### Quality Gate Before Finalizing
+
+Before saving any SKILL.md, do a quick self-check:
+
+- **American English only** — this project enforces US spelling throughout all code, comments, and documentation. Scan for common UK variants and replace: `behaviour→behavior`, `colour→color`, `customisation→customization`, `customising→customizing`, `organisation→organization`, `recognise→recognize`, `favour→favor`, `neighbour→neighbor`, `analyse→analyze`, `initialise→initialize`, `finalise→finalize`.
+- All examples follow the project's coding conventions (naming, formatting, structure).
+
 ### Test Cases
 
 After writing the skill draft, come up with 2-3 realistic test prompts — the kind of thing a real user would actually say. Share them with the user: [you don't have to use this exact language] "Here are a few test cases I'd like to try. Do these look right, or do you want to add more?" Then run them.
