@@ -73,6 +73,18 @@ public class SerializableDateTimeOffset
         };
     }
 
+    /// <summary>
+    /// Implicitly convert <see cref="DateTimeOffset"/> (non-nullable) to <see cref="SerializableDateTimeOffset"/>.
+    /// </summary>
+    /// <param name="dateTimeOffset"><see cref="DateTimeOffset"/> to convert from.</param>
+    /// <returns>A converted <see cref="SerializableDateTimeOffset"/>.</returns>
+    public static implicit operator SerializableDateTimeOffset(DateTimeOffset dateTimeOffset) =>
+        new()
+        {
+            OffsetMinutes = dateTimeOffset.Offset.TotalMinutes,
+            Ticks = dateTimeOffset.Ticks
+        };
+
     /// <inheritdoc/>
     public override string ToString() => ((DateTimeOffset?)this)?.ToString() ?? string.Empty;
 }

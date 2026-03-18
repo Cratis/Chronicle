@@ -83,8 +83,6 @@ message ConstraintViolation {
    string Message = 5;
    map<string,string> Details = 6;
 }
-message DateTimeOffset {
-}
 message EventContext {
    EventType EventType = 1;
    string EventSourceType = 2;
@@ -114,7 +112,7 @@ message EventRevision {
    uint32 Generation = 1;
    string CorrelationId = 2;
    Identity CausedBy = 3;
-   DateTimeOffset Occurred = 4;
+   SerializableDateTimeOffset Occurred = 4;
    string Content = 5;
 }
 message EventToAppend {

@@ -15,8 +15,6 @@ message Causation {
    string Type = 2;
    map<string,string> Properties = 3;
 }
-message DateTimeOffset {
-}
 message DehydrateSessionRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -54,7 +52,7 @@ message EventRevision {
    uint32 Generation = 1;
    string CorrelationId = 2;
    Identity CausedBy = 3;
-   DateTimeOffset Occurred = 4;
+   SerializableDateTimeOffset Occurred = 4;
    string Content = 5;
 }
 message EventType {
