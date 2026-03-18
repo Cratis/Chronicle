@@ -123,7 +123,9 @@ The commit SHA of the entry assembly, extracted from the `+commit` part of `Asse
 
 ### NamingPolicy
 
-Controls how C# type and property names are converted when building projection definitions and persisting read models. See [Camel Casing](camel-casing.md) for the common use case.
+> **Obsolete.** Configure the naming policy on `IChronicleBuilder` instead using `WithCamelCaseNamingPolicy()` or by setting `IChronicleBuilder.NamingPolicy` directly. See [Camel Casing](camel-casing.md) for details.
+
+Controls how C# type and property names are converted when building projection definitions and persisting read models.
 
 | | |
 |---|---|

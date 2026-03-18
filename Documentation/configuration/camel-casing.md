@@ -12,28 +12,18 @@ By default, Chronicle uses property names as they appear in C# (PascalCase). Ena
 
 ## Using a Regular Client
 
-Configure the client with camel case naming policy by passing options:
+For direct `ChronicleClient` usage outside of a hosted application, configure the naming policy on `ChronicleOptions`:
 
 ```csharp
 var options = new ChronicleOptions();
-options.WithCamelCaseNamingPolicy();
+#pragma warning disable CS0618
+options.NamingPolicy = new CamelCaseNamingPolicy();
+#pragma warning restore CS0618
 
 var client = new ChronicleClient(options);
 ```
 
-### Configuration with Additional Options
-
-You can combine camel case naming policy with other Chronicle configuration options:
-
-```csharp
-var options = new ChronicleOptions
-{
-    EventStore = "MyEventStore"
-};
-options.WithCamelCaseNamingPolicy();
-
-var client = new ChronicleClient(options);
-```
+> **Note:** Setting `NamingPolicy` directly on `ChronicleOptions` is deprecated. For hosted applications (ASP.NET Core, worker services), configure the naming policy on the `IChronicleBuilder` instead as shown in the sections below.
 
 ## Using ASP.NET Core
 
@@ -41,15 +31,13 @@ When building ASP.NET Core applications, use the dependency injection extensions
 
 ### Basic Configuration
 
-In your `Program.cs` file, configure Chronicle with camel case naming policy:
+In your `Program.cs` file, configure Chronicle with camel case naming policy using the `IChronicleBuilder` callback:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddCratisChronicle(options =>
-{
-    options.WithCamelCaseNamingPolicy();
-});
+builder.AddCratisChronicle(
+    configure: chronicleBuilder => chronicleBuilder.WithCamelCaseNamingPolicy());
 
 var app = builder.Build();
 ```
@@ -61,13 +49,24 @@ You can combine camel case naming policy with other Chronicle configuration opti
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddCratisChronicle(options =>
-{
-    options.EventStore = "MyEventStore";
-    options.WithCamelCaseNamingPolicy();
-});
+builder.AddCratisChronicle(
+    configureOptions: options => options.EventStore = "MyEventStore",
+    configure: chronicleBuilder => chronicleBuilder.WithCamelCaseNamingPolicy());
 
 var app = builder.Build();
+```
+
+## Using .NET Host (Worker Services)
+
+For worker services or other non-web hosts using `IHostApplicationBuilder`:
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.AddCratisChronicle(
+    configure: chronicleBuilder => chronicleBuilder.WithCamelCaseNamingPolicy());
+
+var host = builder.Build();
 ```
 
 ## Impact on Projections
@@ -135,7 +134,7 @@ The resulting read model data will have camel case property names: `firstName`, 
 
 If projection property names are not being converted to camel case:
 
-1. Verify that `WithCamelCaseNamingPolicy()` is called during Chronicle configuration.
+1. Verify that `WithCamelCaseNamingPolicy()` is called on the `IChronicleBuilder` during Chronicle configuration.
 2. Ensure the configuration is applied before Chronicle services are initialized.
 3. Check that all projections are using the same Chronicle client instance.
 
@@ -143,7 +142,7 @@ If projection property names are not being converted to camel case:
 
 If you see inconsistent property naming in your read models:
 
-1. Verify that Chronicle is configured with the camel case naming policy.
+1. Verify that Chronicle is configured with the camel case naming policy via `IChronicleBuilder.WithCamelCaseNamingPolicy()`.
 2. Check if any custom property mappings are overriding the global naming policy.
 3. Ensure all projection definitions are rebuilt after changing the naming policy.
 

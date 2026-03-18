@@ -17,7 +17,7 @@ namespace Cratis.Chronicle;
 /// client credentials. This is intended for local development and testing only.
 /// </remarks>
 /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
-/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
+/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties. Obsolete: configure on <see cref="IChronicleBuilder"/> instead.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
 /// <param name="concurrencyOptions">Optional <see cref="ConcurrencyOptions"/> to use. Will revert to default if not configured.</param>
 /// <param name="autoDiscoverAndRegister">Optional disable automatic discovery of artifacts and registering these.</param>
@@ -81,6 +81,11 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets the <see cref="INamingPolicy"/> to use.
     /// </summary>
+    /// <remarks>
+    /// This property is obsolete. Configure the naming policy on the <see cref="IChronicleBuilder"/>
+    /// using <c>builder.WithCamelCaseNamingPolicy()</c> or by setting <see cref="IChronicleBuilder.NamingPolicy"/> directly.
+    /// </remarks>
+    [Obsolete("Configure the naming policy on IChronicleBuilder using WithCamelCaseNamingPolicy() or by setting IChronicleBuilder.NamingPolicy directly.")]
     public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new DefaultNamingPolicy();
 
     /// <summary>

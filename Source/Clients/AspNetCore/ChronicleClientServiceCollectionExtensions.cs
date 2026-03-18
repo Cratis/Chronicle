@@ -72,6 +72,13 @@ public static class ChronicleClientServiceCollectionExtensions
             var correlationIdAccessor = sp.GetRequiredService<ICorrelationIdAccessor>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
 
+            if (chronicleBuilder?.NamingPolicy is not null)
+            {
+#pragma warning disable CS0618 // Setting NamingPolicy on options for ChronicleClient which reads it internally
+                options.NamingPolicy = chronicleBuilder.NamingPolicy;
+#pragma warning restore CS0618
+            }
+
             return connection is null ?
                 new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory) :
                 new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory);
@@ -106,7 +113,7 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
 
         services.AddSingleton<IClientArtifactsProvider>(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
-        services.AddSingleton<INamingPolicy>(sp => sp.GetRequiredService<IOptions<ChronicleAspNetCoreOptions>>().Value.NamingPolicy);
+        services.AddSingleton<INamingPolicy>(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton<ICorrelationIdAccessor>(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
 
         return services;

@@ -211,7 +211,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             CausationManager,
             _identityProvider,
             _jsonSchemaGenerator,
+#pragma warning disable CS0618 // NamingPolicy is read from Options internally; callers configure it via IChronicleBuilder
             Options.NamingPolicy,
+#pragma warning restore CS0618
             _serviceProvider,
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
@@ -254,7 +256,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var complianceMetadataResolver = new ComplianceMetadataResolver(
             new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, _serviceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, _serviceProvider));
+#pragma warning disable CS0618 // NamingPolicy is read from Options internally; callers configure it via IChronicleBuilder
         var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
+#pragma warning restore CS0618
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);
 
@@ -281,9 +285,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     void InitializeJsonSerializationOptions()
     {
+#pragma warning disable CS0618 // NamingPolicy is read from Options internally; callers configure it via IChronicleBuilder
         Options.JsonSerializerOptions = new JsonSerializerOptions(Options.JsonSerializerOptions)
         {
             PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy,
+#pragma warning restore CS0618
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = false
         };

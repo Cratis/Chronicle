@@ -107,7 +107,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
                     services.AddSingleton<IClientArtifactsProvider>(_fixture);
-                    services.AddSingleton(sp => sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.NamingPolicy);
+                    services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
                         sp.GetRequiredService<ILogger<IdentityProvider>>()));
@@ -121,7 +121,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var identityProvider = new IdentityProvider(
                             sp.GetRequiredService<IHttpContextAccessor>(),
                             sp.GetRequiredService<ILogger<IdentityProvider>>());
-                        options.NamingPolicy = sp.GetRequiredService<INamingPolicy>();
 
                         var grainFactory = sp.GetRequiredService<IGrainFactory>();
                         var chronicleServices = sp.GetRequiredService<IServices>();
