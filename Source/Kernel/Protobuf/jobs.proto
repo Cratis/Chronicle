@@ -107,9 +107,9 @@ message ResumeJob {
    string Namespace = 2;
    .bcl.Guid JobId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
 }
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
-   int64 Ticks = 1;
-   double OffsetMinutes = 2;
+   string Value = 1;
 }
 message StopJob {
    string EventStore = 1;

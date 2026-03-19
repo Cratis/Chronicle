@@ -50,9 +50,9 @@ message RemoveUser {
 message RequirePasswordChange {
    .bcl.Guid UserId = 1;
 }
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
-   int64 Ticks = 1;
-   double OffsetMinutes = 2;
+   string Value = 1;
 }
 message SetInitialAdminPassword {
    .bcl.Guid UserId = 1;
