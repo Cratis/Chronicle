@@ -10,6 +10,16 @@ By default, Chronicle uses property names as they appear in C# (PascalCase). Ena
 - Determine the property names used when projections update read models
 - Keep naming consistent across projection and read model data
 
+## Using a Direct Client
+
+For direct `ChronicleClient` usage outside of a hosted application, pass a `CamelCaseNamingPolicy` instance via the named `namingPolicy` constructor argument:
+
+```csharp
+var client = new ChronicleClient(
+    options: new ChronicleOptions(),
+    namingPolicy: new CamelCaseNamingPolicy());
+```
+
 ## Using ASP.NET Core
 
 When building ASP.NET Core applications, use the dependency injection extensions to configure Chronicle with camel case naming policy.
