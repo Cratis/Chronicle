@@ -121,15 +121,6 @@ The commit SHA of the entry assembly, extracted from the `+commit` part of `Asse
 | Type | `string` |
 | Default | Resolved from the entry assembly at startup |
 
-### NamingPolicy
-
-Controls how C# type and property names are converted when building projection definitions and persisting read models. See [Camel Casing](camel-casing.md) for the common use case.
-
-| | |
-|---|---|
-| Type | `INamingPolicy` |
-| Default | `DefaultNamingPolicy` (PascalCase, no conversion) |
-
 ### ClaimsBasedNamespaceResolverClaimType
 
 The JWT claim type used by `ClaimsBasedNamespaceResolver` when namespace resolution is configured via `WithClaimsBasedNamespaceResolver`.

@@ -13,6 +13,7 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
+using Cratis.Serialization;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
@@ -44,6 +45,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly IEventStoreNamespaceResolver _namespaceResolver;
     readonly ILoggerFactory _loggerFactory;
     readonly IEventTypeMigrators _eventTypeMigrators;
+    readonly INamingPolicy _namingPolicy;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -87,6 +89,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Defaults to <see cref="CorrelationIdAccessor"/> if not provided.</param>
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
+    /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
     public ChronicleClient(
         ChronicleOptions options,
         IClientArtifactsProvider? artifactsProvider = null,
@@ -94,7 +97,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
         IIdentityProvider? identityProvider = null,
         ICorrelationIdAccessor? correlationIdAccessor = null,
         IEventStoreNamespaceResolver? namespaceResolver = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        INamingPolicy? namingPolicy = null)
     {
         Options = options;
         _artifactsProvider = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
@@ -103,6 +107,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _correlationIdAccessor = correlationIdAccessor ?? new CorrelationIdAccessor();
         _namespaceResolver = namespaceResolver ?? new DefaultEventStoreNamespaceResolver();
         _loggerFactory = loggerFactory ?? new LoggerFactory();
+        _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
 
         var result = InitializeInternal();
         CausationManager = result.CausationManager;
@@ -148,6 +153,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="correlationIdAccessor">Optional <see cref="ICorrelationIdAccessor"/>. Defaults to <see cref="CorrelationIdAccessor"/> if not provided.</param>
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
+    /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
     public ChronicleClient(
         IChronicleConnection connection,
         ChronicleOptions options,
@@ -156,7 +162,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
         IIdentityProvider? identityProvider = null,
         ICorrelationIdAccessor? correlationIdAccessor = null,
         IEventStoreNamespaceResolver? namespaceResolver = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        INamingPolicy? namingPolicy = null)
     {
         Options = options;
         _artifactsProvider = artifactsProvider ?? DefaultClientArtifactsProvider.Default;
@@ -165,6 +172,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _correlationIdAccessor = correlationIdAccessor ?? new CorrelationIdAccessor();
         _namespaceResolver = namespaceResolver ?? new DefaultEventStoreNamespaceResolver();
         _loggerFactory = loggerFactory ?? new LoggerFactory();
+        _namingPolicy = namingPolicy ?? new DefaultNamingPolicy();
 
         var result = InitializeInternal();
         CausationManager = result.CausationManager;
@@ -211,7 +219,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             CausationManager,
             _identityProvider,
             _jsonSchemaGenerator,
-            Options.NamingPolicy,
+            _namingPolicy,
             _serviceProvider,
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
@@ -254,7 +262,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var complianceMetadataResolver = new ComplianceMetadataResolver(
             new InstancesOf<ICanProvideComplianceMetadataForType>(Types.Types.Instance, _serviceProvider),
             new InstancesOf<ICanProvideComplianceMetadataForProperty>(Types.Types.Instance, _serviceProvider));
-        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, Options.NamingPolicy);
+        var jsonSchemaGenerator = new JsonSchemaGenerator(complianceMetadataResolver, _namingPolicy);
         var concurrencyScopeStrategies = new ConcurrencyScopeStrategies(Options.ConcurrencyOptions, _serviceProvider);
         var artifactActivator = new ClientArtifactsActivator(_serviceProvider, _loggerFactory);
 
@@ -283,7 +291,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         Options.JsonSerializerOptions = new JsonSerializerOptions(Options.JsonSerializerOptions)
         {
-            PropertyNamingPolicy = Options.NamingPolicy.JsonPropertyNamingPolicy,
+            PropertyNamingPolicy = _namingPolicy.JsonPropertyNamingPolicy,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = false
         };
