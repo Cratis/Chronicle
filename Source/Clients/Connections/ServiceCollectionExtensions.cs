@@ -24,6 +24,8 @@ public static class ServiceCollectionExtensions
     /// <param name="disableTls">Whether to disable TLS for the connection.</param>
     /// <param name="certificatePath">Path to the TLS certificate file.</param>
     /// <param name="certificatePassword">Password for the TLS certificate file.</param>
+    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients such as CLIs.</param>
+    /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients such as CLIs.</param>
     /// <returns><see cref="IServiceCollection"/> for continuation.</returns>
     /// <remarks>
     /// If the <paramref name="connectionString"/> is not specified, it will use the <paramref name="connectionStringFactory"/> if specified, if not, it defaults to <see cref="ChronicleConnectionString.Default"/>.
@@ -34,7 +36,9 @@ public static class ServiceCollectionExtensions
         Func<IServiceProvider, ChronicleConnectionString>? connectionStringFactory = default,
         bool? disableTls = null,
         string? certificatePath = null,
-        string? certificatePassword = null)
+        string? certificatePassword = null,
+        bool skipCompatibilityCheck = false,
+        bool skipKeepAlive = false)
     {
         services.TryAddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
         services.AddSingleton<IChronicleConnection>(sp =>
@@ -62,8 +66,8 @@ public static class ServiceCollectionExtensions
                 disableTls.Value,
                 certificatePath,
                 certificatePassword,
-                skipCompatibilityCheck: false,
-                skipKeepAlive: false);
+                skipCompatibilityCheck: skipCompatibilityCheck,
+                skipKeepAlive: skipKeepAlive);
         });
 
         services.AddSingleton(sp =>
