@@ -17,8 +17,8 @@
         "build-storybook": "storybook build -c .frontend/.storybook"
     },
     "dependencies": {
-        "@cratis/arc.react.mvvm": "^19.9.8",
-        "@cratis/arc.vite": "^19.9.8",
+        "@cratis/arc.react.mvvm": "^19.11.0",
+        "@cratis/arc.vite": "^19.11.0",
         "@cratis/components": "^1.4.15",
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",
@@ -83,6 +83,10 @@
         "vite-plugin-commonjs": "0.10.4",
         "vite-tsconfig-paths": "6.1.1",
         "vitest": "4.0.18"
+    },
+    "resolutions": {
+        "@cratis/arc.react": "^19.11.0",
+        "@cratis/arc": "^19.11.0"
     },
     "packageManager": "yarn@4.5.3"
 }
