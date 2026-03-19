@@ -25,9 +25,15 @@ public class CompositeKeyBuilder<TKeyType, TEvent>(INamingPolicy namingPolicy) :
         var targetType = typeof(TProperty);
         var primitive = targetType.IsAPrimitiveType() || targetType.IsConcept();
 
+        var propertyPath = namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
+        {
+            throw new DuplicatePropertyInProjection(propertyPath);
+        }
+
         var setBuilder = new SetBuilder<TKeyType, TEvent, TProperty, ICompositeKeyBuilder<TKeyType, TEvent>>(
             this,
-            namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath()),
+            propertyPath,
             namingPolicy,
             !primitive);
         _propertyExpressions.Add(setBuilder);

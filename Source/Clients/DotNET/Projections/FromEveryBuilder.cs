@@ -21,7 +21,13 @@ public class FromEveryBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromEve
     /// <inheritdoc/>
     public IAllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>> Set<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
     {
-        var setBuilder = new AllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath()), namingPolicy);
+        var propertyPath = namingPolicy.GetPropertyName(readModelPropertyAccessor.GetPropertyPath());
+        if (_propertyExpressions.Exists(b => b.TargetProperty == propertyPath))
+        {
+            throw new DuplicatePropertyInProjection(propertyPath);
+        }
+
+        var setBuilder = new AllSetBuilder<TReadModel, IFromEveryBuilder<TReadModel>>(this, propertyPath, namingPolicy);
         _propertyExpressions.Add(setBuilder);
         return setBuilder;
     }
