@@ -3,4 +3,10 @@
 
 using BenchmarkDotNet.Running;
 
-BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.AppendBenchmark).Assembly).Run(args);
+var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
+BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.AppendBenchmark).Assembly).Run(benchmarkArguments);
+
+static bool HasFilter(string[] arguments) =>
+    arguments.Any(argument =>
+        argument.Equals("--filter", StringComparison.Ordinal) ||
+        argument.StartsWith("--filter=", StringComparison.Ordinal));

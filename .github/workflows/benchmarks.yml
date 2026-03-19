@@ -32,12 +32,13 @@ jobs:
         working-directory: ./Benchmarks/Chronicle.Benchmarks
         run: |
           dotnet build -c Release /p:TreatWarningsAsErrors=false
-          dotnet run -c Release --no-build -- --exporters json
+          dotnet run -c Release --no-build -- --filter '*' --exporters json --artifacts BenchmarkDotNet.Artifacts
 
       - name: Find and Copy Results
         run: |
           mkdir -p Benchmarks/results
-          find Benchmarks/Chronicle.Benchmarks/BenchmarkDotNet.Artifacts -name "*.json" -type f -exec cp {} Benchmarks/results/ \;
+          find Benchmarks/Chronicle.Benchmarks -path "*/BenchmarkDotNet.Artifacts/results/*.json" -type f -exec cp {} Benchmarks/results/ \;
+          test -n "$(find Benchmarks/results -maxdepth 1 -name '*.json' -print -quit)" || { echo "No benchmark JSON files were produced"; exit 1; }
           ls -la Benchmarks/results/
 
       - name: Store benchmark result
