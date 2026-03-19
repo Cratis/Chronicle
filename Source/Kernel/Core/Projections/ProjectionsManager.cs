@@ -116,7 +116,7 @@ public class ProjectionsManager(
         await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
-        foreach (var projectionDefinition in State.Projections)
+        await Task.WhenAll(State.Projections.Select(async projectionDefinition =>
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
@@ -125,11 +125,11 @@ public class ProjectionsManager(
             if (readModelDefinition is null)
             {
                 logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
-                continue;
+                return;
             }
 
             await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
-        }
+        }));
     }
 
     async Task SetDefinitionAndSubscribeForAllProjections()
@@ -137,17 +137,17 @@ public class ProjectionsManager(
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
-        foreach (var definition in State.Projections)
+        await Task.WhenAll(State.Projections.Select(async definition =>
         {
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
             if (readModelDefinition is null)
             {
                 logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
-                continue;
+                return;
             }
 
             await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
-        }
+        }));
     }
 
     async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
@@ -162,10 +162,7 @@ public class ProjectionsManager(
             return;
         }
 
-        foreach (var namespaceName in namespaces)
-        {
-            await SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName);
-        }
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName)));
     }
 
     async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)

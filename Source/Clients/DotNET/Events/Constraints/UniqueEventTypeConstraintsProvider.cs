@@ -15,9 +15,19 @@ public class UniqueEventTypeConstraintsProvider(IClientArtifactsProvider clientA
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Provide() =>
         clientArtifactsProvider.UniqueEventTypeConstraints
-            .Select(eventType => new UniqueEventTypeConstraintDefinition(
-                eventType.GetConstraintName(),
-                et => eventType.GetConstraintMessage() ?? string.Empty,
-                eventTypes.GetEventTypeFor(eventType).Id,
-                null) as IConstraintDefinition).ToImmutableList();
+            .Select<Type, IConstraintDefinition>(eventType =>
+            {
+                var constraintName = eventType.GetConstraintName();
+                var removalEventType = clientArtifactsProvider.RemoveConstraintEventTypes
+                    .FirstOrDefault(t => t.GetRemoveConstraints().Any(a => constraintName == (ConstraintName)a.ConstraintName));
+                var removedWith = removalEventType is not null
+                    ? eventTypes.GetEventTypeFor(removalEventType).Id
+                    : null;
+
+                return new UniqueEventTypeConstraintDefinition(
+                    constraintName,
+                    et => eventType.GetConstraintMessage() ?? string.Empty,
+                    eventTypes.GetEventTypeFor(eventType).Id,
+                    removedWith);
+            }).ToImmutableList();
 }

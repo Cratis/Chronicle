@@ -97,8 +97,8 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
     public Task<bool> HasEventsFor(EventSourceId eventSourceId) => Task.FromResult(_events.Any(_ => _.Context.EventSourceId == eventSourceId));
 
     /// <inheritdoc/>
-    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => Task.CompletedTask;
+    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => Task.CompletedTask;
+    public Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes) => Task.CompletedTask;
 }

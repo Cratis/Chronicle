@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Transactions;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -259,7 +260,11 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetNextSequenceNumber() => throw new NotImplementedException();
+    public async Task<EventSequenceNumber> GetNextSequenceNumber()
+    {
+        var tail = await GetTailSequenceNumber();
+        return tail.IsUnavailable ? EventSequenceNumber.First : tail.Value + 1;
+    }
 
     /// <inheritdoc/>
     public async Task<EventSequenceNumber> GetTailSequenceNumber(
@@ -285,13 +290,49 @@ public class EventSequence(
     }
 
     /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type) => throw new NotImplementedException();
+    public async Task<EventSequenceNumber> GetTailSequenceNumberForObserver(Type type)
+    {
+        var observerEventTypes = ReactorInvoker.GetEventTypesFor(eventTypes, type);
+        return await GetTailSequenceNumber(filterEventTypes: observerEventTypes);
+    }
 
     /// <inheritdoc/>
-    public Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = null) => throw new NotImplementedException();
+    public async Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason)
+    {
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        await _servicesAccessor.Services.EventSequences.Redact(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            SequenceNumber = sequenceNumber,
+            Reason = reason,
+            CorrelationId = correlationIdAccessor.Current,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+    }
 
     /// <inheritdoc/>
-    public Task Redact(EventSourceId eventSourceId, RedactionReason? reason = null, params Type[] eventTypes) => throw new NotImplementedException();
+    public async Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes)
+    {
+        var eventTypeContracts = clrEventTypes.Select(t => eventTypes.GetEventTypeFor(t).ToContract()).ToList();
+        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var identity = identityProvider.GetCurrent();
+        await _servicesAccessor.Services.EventSequences.RedactForEventSource(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventSourceId = eventSourceId,
+            Reason = reason,
+            EventTypes = eventTypeContracts,
+            CorrelationId = correlationIdAccessor.Current,
+            Causation = causationChain,
+            CausedBy = identity.ToContract()
+        });
+    }
 
     static void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
     {
