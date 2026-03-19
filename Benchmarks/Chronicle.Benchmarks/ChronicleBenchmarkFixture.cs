@@ -69,8 +69,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .UntilInternalTcpPortIsAvailable(27017)
             .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
 
-        _container = new ContainerBuilder()
-            .WithImage(imageName)
+        _container = new ContainerBuilder(imageName)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
@@ -91,7 +90,8 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
 
     async Task StartContainerAsync()
     {
-        if (_started || _container is null) return;
+        var container = _container;
+        if (_started || container is null) return;
 
         var retryCount = 0;
         Exception? failure;
@@ -99,9 +99,10 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         {
             try
             {
-                Console.WriteLine($"Starting Chronicle container with image '{_container.Image.FullName}'...");
+                var imageFullName = container.Image?.FullName ?? "[unknown]";
+                Console.WriteLine($"Starting Chronicle container with image '{imageFullName}'...");
                 failure = null;
-                await _container.StartAsync();
+                await container.StartAsync();
             }
             catch (Exception e)
             {
@@ -110,12 +111,9 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 await Task.Delay(2000);
             }
 
-            if (_container != null)
-            {
-                var logs = await _container.GetLogsAsync();
-                Console.WriteLine(logs.Stdout);
-                Console.WriteLine(logs.Stderr);
-            }
+            var logs = await container.GetLogsAsync();
+            Console.WriteLine(logs.Stdout);
+            Console.WriteLine(logs.Stderr);
         }
         while (failure is not null && ++retryCount < 10);
 
@@ -124,10 +122,8 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
             throw failure;
         }
-        else
-        {
-            _started = true;
-            Console.WriteLine("Chronicle container started successfully.");
-        }
+
+        _started = true;
+        Console.WriteLine("Chronicle container started successfully.");
     }
 }

@@ -1,13 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Benchmarks;
 
+/// <summary>
+/// Provides Chronicle client access for the benchmark suite.
+/// </summary>
 public class ChronicleClientHelper : IDisposable
 {
     readonly ChronicleClient _client;
@@ -15,6 +17,10 @@ public class ChronicleClientHelper : IDisposable
     readonly ILoggerFactory _loggerFactory;
     readonly ChronicleBenchmarkFixture _fixture;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleClientHelper"/> class.
+    /// </summary>
+    /// <param name="fixture">The fixture that manages the Chronicle test container.</param>
     public ChronicleClientHelper(ChronicleBenchmarkFixture fixture)
     {
         _fixture = fixture;
@@ -22,18 +28,23 @@ public class ChronicleClientHelper : IDisposable
 
         var options = new ChronicleOptions(
             connectionString: new ChronicleConnectionString(_fixture.ChronicleUrl),
-            connectTimeout: 30,
-            loggerFactory: _loggerFactory);
+            connectTimeout: 30);
 
-        _client = new ChronicleClient(options);
+        _client = new ChronicleClient(options, loggerFactory: _loggerFactory);
         _eventStore = _client.GetEventStore("benchmarks").GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Gets the event log used by the benchmarks.
+    /// </summary>
     public IEventLog EventLog => _eventStore.EventLog;
 
+    /// <summary>
+    /// Waits until the Chronicle connection is ready to accept requests.
+    /// </summary>
+    /// <returns>A task that completes when the Chronicle connection is ready.</returns>
     public async Task WaitForConnection()
     {
-        // Attempt a simple operation to verify connection is ready
         const int retries = 5;
         var delay = 200;
 
@@ -44,19 +55,19 @@ public class ChronicleClientHelper : IDisposable
                 await _eventStore.EventLog.GetTailSequenceNumber();
                 return;
             }
-            catch
+            catch (Exception) when (i < retries - 1)
             {
-                if (i == retries - 1) throw;
                 await Task.Delay(delay);
                 delay *= 2;
             }
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
-        _client?.Dispose();
-        _loggerFactory?.Dispose();
+        _client.Dispose();
+        _loggerFactory.Dispose();
         GC.SuppressFinalize(this);
     }
 }

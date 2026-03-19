@@ -3,4 +3,4 @@
 
 using BenchmarkDotNet.Running;
 
-BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.AppendBenchmark).Assembly).Run(args);
