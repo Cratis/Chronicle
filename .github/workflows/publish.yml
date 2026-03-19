@@ -31,6 +31,12 @@ on:
         - info
         - warning
         - debug
+  push:
+    branches:
+      - "main"
+    paths:
+      - "Source/**"
+
 
 permissions:
   contents: write
