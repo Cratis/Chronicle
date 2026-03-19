@@ -1,152 +1,163 @@
 # Dialogs — Reference
 
-## Core pattern
+## useDialog
 
-Dialogs are **separate components** that receive `closeDialog` as a prop via `DialogProps`. The parent uses `useDialog(DialogComponent)` to get a wrapper and a `show` function.
+`useDialog` wires up a dialog component without needing to manage open/close state yourself.
 
 ```tsx
-import { DialogProps } from '@cratis/arc.react/dialogs';
-import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField } from '@cratis/components/CommandForm';
-import { CreateAccount } from './commands/CreateAccount';
+import { useDialog } from '@cratis/arc.react/dialogs';
 
-// 1. Define the dialog component
-export const CreateAccountDialog = ({ closeDialog }: DialogProps) => {
+const [DialogWrapper, showDialog] = useDialog<TResult>(DialogComponent);
+```
+
+- `TResult` — the value type returned when the dialog closes (e.g. `CommandResult<string>` or a data object)
+- `DialogWrapper` — render this once in JSX; it mounts the dialog when `showDialog()` is called
+- `showDialog()` — call to open the dialog; returns a `Promise<[DialogResult, TResult | undefined]>`
+
+```tsx
+const [result, value] = await showDialog();
+if (result === DialogResult.Ok) {
+    // use value
+}
+```
+
+Pass data to the dialog by calling `showDialog` with a props object:
+
+```tsx
+await showDialog({ account: selectedAccount });
+```
+
+## useDialogContext
+
+Inside a dialog component, call `useDialogContext<TResult>()` to get the `closeDialog` function:
+
+```tsx
+import { useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+
+const MyDialog = () => {
+    const { closeDialog } = useDialogContext<MyResult>();
+
+    return (
+        <Dialog
+            title="My Dialog"
+            onConfirm={() => closeDialog(DialogResult.Ok, resultValue)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
+        >
+            {/* content */}
+        </Dialog>
+    );
+};
+```
+
+## CommandDialog
+
+`CommandDialog` (from `@cratis/components/CommandDialog`) executes a command when the user confirms. Use it inside a component that calls `useDialogContext` for the close function.
+
+```tsx
+import { useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField, NumberField } from '@cratis/components/CommandForm';
+import { CreateAccount } from '../api/Accounts/CreateAccount';
+
+const CreateAccountDialog = () => {
+    const { closeDialog } = useDialogContext();
     return (
         <CommandDialog<CreateAccount>
             command={CreateAccount}
             title="Create Account"
             okLabel="Create"
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<CreateAccount> value={c => c.name} label="Account Name" />
+            <NumberField<CreateAccount> value={c => c.initialBalance} label="Initial Balance" />
         </CommandDialog>
     );
 };
-```
 
-```tsx
-// 2. Wire it up in the parent
-import { useDialog } from '@cratis/arc.react/dialogs';
-import { CreateAccountDialog } from './CreateAccountDialog';
-
+// Parent component
 export const AccountsPage = () => {
-    const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog);
+    const [CreateDialogWrapper, showCreate] = useDialog(CreateAccountDialog);
 
     return (
         <>
-            <DataPage ... />
-            <CreateAccountWrapper />
+            <button onClick={showCreate}>Create account</button>
+            <CreateDialogWrapper />
         </>
     );
 };
 ```
 
-`showCreateAccount()` opens the dialog. `closeDialog` (injected into the dialog component by the framework) closes it.
+`CommandDialog` calls `onConfirm` only after a successful `command.execute()`, so you do not need to check `isSuccess` yourself.
 
----
+## Dialog (data collection without a command)
 
-## `useDialog`
-
-```tsx
-import { useDialog } from '@cratis/arc.react/dialogs';
-
-const [DialogWrapper, showDialog] = useDialog(MyDialogComponent);
-```
-
-- `DialogWrapper` — render this once in the JSX tree; it controls visibility
-- `showDialog(props?)` — call to open; returns a `Promise<[DialogResult, TResponse?]>`
+`Dialog` (from `@cratis/components/Dialogs`) is for collecting data or confirming an action without executing a command.
 
 ```tsx
-const [result, response] = await showDialog({ someInitialProp: value });
-if (result === DialogResult.Ok) {
-    // handle confirmed result
-}
-```
+import { useState } from 'react';
+import { useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { Dialog } from '@cratis/components/Dialogs';
+import { InputText } from 'primereact/inputtext';
 
-Pass props to `showDialog()` when the dialog needs context from the parent (e.g. a selected row to edit).
+type CreateProjectResult = { name: string };
 
----
+const AddProjectDialog = () => {
+    const { closeDialog } = useDialogContext<CreateProjectResult>();
+    const [name, setName] = useState('');
+    const isValid = name.trim().length > 0;
 
-## Passing props to a dialog
-
-Define the dialog's props interface extending `DialogProps`:
-
-```tsx
-interface EditAccountDialogProps extends DialogProps {
-    accountId: string;
-    name: string;
-}
-
-export const EditAccountDialog = ({ closeDialog, accountId, name }: EditAccountDialogProps) => {
     return (
-        <CommandDialog<EditAccount>
-            command={EditAccount}
-            title="Edit Account"
-            initialValues={{ accountId }}
-            currentValues={{ name }}
+        <Dialog
+            title="Add Project"
+            width="32rem"
+            isValid={isValid}
+            onConfirm={() => closeDialog(DialogResult.Ok, { name })}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
-            <InputTextField<EditAccount> value={c => c.name} label="Account Name" />
-        </CommandDialog>
+            <InputText
+                value={name}
+                onChange={e => setName(e.target.value)}
+                autoFocus
+            />
+        </Dialog>
     );
 };
 ```
 
-Then in the parent:
+## CommandDialog props
 
-```tsx
-const [EditAccountWrapper, showEditAccount] = useDialog(EditAccountDialog);
-
-// Pass the selected row when opening
-<DataPage onRowSelected={(row) => showEditAccount({ accountId: row.id, name: row.name })} ... />
-<EditAccountWrapper />
-```
-
----
-
-## CommandDialog
-
-Use for dialogs that execute a command on confirm. Import from `@cratis/components/CommandDialog`.
-
-```tsx
-import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField, NumberField } from '@cratis/components/CommandForm';
-```
-
-**Key props:**
-
-| Prop | Purpose |
-| --- | --- |
-| `command` | Command constructor (proxy-generated class) |
-| `title` | Dialog header text |
-| `okLabel` | Confirm button text (default: `"Ok"`) |
-| `cancelLabel` | Cancel button text (default: `"Cancel"`) |
-| `initialValues` | Values set as the change-tracking baseline (e.g. injected IDs) |
-| `currentValues` | Values to pre-populate the fields for editing |
-| `isValid` | Extra validity gate in addition to field-level validation |
-| `onBeforeExecute` | Transform command values just before `.execute()` |
-
-`CommandDialog` automatically disables the confirm button until all required fields are filled.
-
-Use `initialValues` for values that must be present but not visible (e.g. a parent entity ID). Do **not** set them in `onBeforeExecute` — they won't be visible to form validation.
-
----
+| Prop | Required | Purpose |
+| ---- | -------- | ------- |
+| `command` | ✓ | Command constructor (proxy-generated class) |
+| `title` | ✓ | Dialog header text |
+| `initialValues` | | Values set as the change-tracking baseline (supply injected IDs here) |
+| `currentValues` | | Values to pre-populate the fields (use for edit dialogs) |
+| `onConfirm` | | Called after successful execution |
+| `onCancel` | | Called when cancelled/dismissed |
+| `okLabel` | | Confirm button text (default: `"Ok"`) |
+| `cancelLabel` | | Cancel button text (default: `"Cancel"`) |
+| `isValid` | | Extra validity gate combined with command form validity |
+| `onBeforeExecute` | | Transform command values just before `.execute()` (do not use for required fields — it runs after validation) |
+| `onFieldChange` | | Callback on every field change |
+| `buttons` | | Override button set (`DialogButtons` enum or custom ReactNode) |
 
 ## CommandForm field components
 
-All field components come from `@cratis/components/CommandForm`. Pass the command type as the generic parameter so `value` is fully typed.
+All fields from `@cratis/components/CommandForm`. Pass the command type as a generic parameter so the `value` accessor is fully typed:
 
 ```tsx
 import {
-    InputTextField,  // text input
-    NumberField,     // number input
-    CheckboxField,   // boolean toggle
-    DateField,       // date picker
-    DropdownField,   // select from options list
-    TextAreaField,   // multi-line text
+    InputTextField,
+    NumberField,
+    CheckboxField,
+    DateField,
+    DropdownField,
+    TextAreaField,
 } from '@cratis/components/CommandForm';
 
 <InputTextField<MyCommand> value={c => c.title} label="Title" />
-<NumberField<MyCommand> value={c => c.quantity} label="Qty" min={1} />
+<NumberField<MyCommand> value={c => c.quantity} label="Qty" />
 <CheckboxField<MyCommand> value={c => c.isActive} label="Active" />
 <DateField<MyCommand> value={c => c.dueDate} label="Due date" />
 <DropdownField<MyCommand>
@@ -159,38 +170,31 @@ import {
 <TextAreaField<MyCommand> value={c => c.notes} label="Notes" rows={3} />
 ```
 
-The `value` prop takes a function `(commandInstance) => property`. This drives both reading the value and writing it back on change.
+## Edit dialog pattern
 
----
-
-## Dialog (data-only, no command)
-
-Use when the dialog collects data and returns it without executing a command.
+Pre-populate fields with `currentValues` and set identity keys with `initialValues`:
 
 ```tsx
-import { DialogProps, DialogResult } from '@cratis/arc.react/dialogs';
-import { Dialog } from '@cratis/components/Dialogs';
-import { InputText } from 'primereact/inputtext';
-import { useState } from 'react';
-
-export const RenameDialog = ({ closeDialog }: DialogProps<{ name: string }>) => {
-    const [name, setName] = useState('');
-
+const EditAccountDialog = ({ account }: { account: AccountSummary }) => {
+    const { closeDialog } = useDialogContext();
     return (
-        <Dialog
-            title="Rename"
-            isValid={name.trim().length > 0}
-            onConfirm={() => closeDialog(DialogResult.Ok, { name })}
+        <CommandDialog<UpdateAccount>
+            command={UpdateAccount}
+            title="Edit Account"
+            initialValues={{ accountId: account.id }}
+            currentValues={{ name: account.name }}
+            onConfirm={() => closeDialog(DialogResult.Ok)}
             onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
-            <InputText
-                value={name}
-                onChange={event => setName(event.target.value)}
-                autoFocus
-            />
-        </Dialog>
+            <InputTextField<UpdateAccount> value={c => c.name} label="Account Name" />
+        </CommandDialog>
     );
 };
+
+// Pass the selected account as props when opening
+const [EditDialogWrapper, showEdit] = useDialog(EditAccountDialog);
+await showEdit({ account: selectedAccount });
 ```
 
-Never import `Dialog` from `primereact/dialog` — always use `@cratis/components/Dialogs`.
+- `initialValues` — sets the change-tracking baseline; use for IDs that must be present for validity but are not user-entered
+- `currentValues` — pre-populates field display values; use for editable fields that should show existing data

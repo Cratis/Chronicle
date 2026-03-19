@@ -14,30 +14,35 @@ description: Step-by-step guidance for building a React page in a Cratis Arc app
 Imports you will need:
 
 ```tsx
-import { DataPage, MenuItemGroup, MenuItem } from '@cratis/components';
+import { DataPage, MenuItem, MenuItems, Columns } from '@cratis/components';
 import { CommandDialog } from '@cratis/components/CommandDialog';
-import { useDialog, DialogProps } from '@cratis/arc.react/dialogs';
+import { useDialog, useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { Column } from 'primereact/column';
 ```
 
 ---
 
 ### Step 2 — Basic DataPage setup
 
-`DataPage` combines a toolbar/menu, a data table, and an optional detail panel into one component.
+`DataPage` combines a page header, data table, and optional detail panel. Define columns using `<DataPage.Columns>` with PrimeReact `<Column>` elements as children. The `title` and `emptyMessage` props are required.
 
 ```tsx
-import { DataPage, Column } from '@cratis/components';
+import { DataPage } from '@cratis/components';
+import { Column } from 'primereact/column';
 import { AllAccounts } from './queries/AllAccounts';
 
 export const AccountsPage = () => {
     return (
         <DataPage
+            title="Accounts"
             query={AllAccounts}
-            columns={[
-                { header: 'Name', field: 'name' },
-                { header: 'Balance', field: 'balance' },
-            ]}
-        />
+            emptyMessage="No accounts found."
+        >
+            <DataPage.Columns>
+                <Column field="name" header="Name" />
+                <Column field="balance" header="Balance" />
+            </DataPage.Columns>
+        </DataPage>
     );
 };
 ```
@@ -46,137 +51,170 @@ export const AccountsPage = () => {
 
 ### Step 3 — Add menu actions
 
-Menu items appear in the toolbar above the table. Create a separate dialog component using `DialogProps`, then wire it up with `useDialog`.
-
-**Dialog component (`CreateAccountDialog.tsx`):**
+Wrap `<MenuItem>` elements in `<DataPage.MenuItems>` to populate the toolbar above the table.
 
 ```tsx
-import { DialogProps } from '@cratis/arc.react/dialogs';
+import { DataPage, MenuItem } from '@cratis/components';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
+import { useDialog, useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { Column } from 'primereact/column';
 import { CreateAccount } from './commands/CreateAccount';
+import { AllAccounts } from './queries/AllAccounts';
 
-export const CreateAccountDialog = ({ closeDialog }: DialogProps) => {
+const CreateAccountDialog = () => {
+    const { closeDialog } = useDialogContext();
     return (
         <CommandDialog<CreateAccount>
             command={CreateAccount}
             title="Create Account"
             okLabel="Create"
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<CreateAccount> value={c => c.name} label="Account Name" />
         </CommandDialog>
     );
 };
-```
-
-**Page component:**
-
-```tsx
-import { DataPage, MenuItemGroup, MenuItem } from '@cratis/components';
-import { useDialog } from '@cratis/arc.react/dialogs';
-import { CreateAccountDialog } from './CreateAccountDialog';
 
 export const AccountsPage = () => {
-    const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog);
+    const [CreateAccountDialogWrapper, showCreate] = useDialog(CreateAccountDialog);
 
     return (
         <>
             <DataPage
+                title="Accounts"
                 query={AllAccounts}
-                columns={[
-                    { header: 'Name', field: 'name' },
-                ]}
-                menuItems={
-                    <MenuItemGroup>
-                        <MenuItem label="Add Account" onClick={() => showCreateAccount()} />
-                    </MenuItemGroup>
-                }
-            />
-            <CreateAccountWrapper />
+                emptyMessage="No accounts found."
+            >
+                <DataPage.MenuItems>
+                    <MenuItem label="Create Account" icon="pi pi-plus" command={showCreate} />
+                </DataPage.MenuItems>
+                <DataPage.Columns>
+                    <Column field="name" header="Name" />
+                    <Column field="balance" header="Balance" />
+                </DataPage.Columns>
+            </DataPage>
+            <CreateAccountDialogWrapper />
         </>
     );
 };
 ```
 
-See `references/dialogs.md` for the full dialog pattern guide.
+See `references/dialogs.md` for `useDialog`/`useDialogContext` API detail.
 
 ---
 
 ### Step 4 — Row selection and edit dialog
 
-Pass a selected-row handler and an edit dialog. Supply the row data as props to the dialog component.
-
-**Edit dialog component (`EditAccountDialog.tsx`):**
+Use `onSelectionChange` to track the selected row and pass it to an edit dialog. Use `disableOnUnselected` on the edit/delete menu items to disable them when nothing is selected.
 
 ```tsx
-import { DialogProps, DialogResult } from '@cratis/arc.react/dialogs';
+import { useState } from 'react';
+import { DataPage, MenuItem } from '@cratis/components';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
+import { useDialog, useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { DataTableSelectionSingleChangeEvent } from 'primereact/datatable';
+import { Column } from 'primereact/column';
 import { EditAccount } from './commands/EditAccount';
+import { AllAccounts } from './queries/AllAccounts';
 
-interface EditAccountDialogProps extends DialogProps {
-    accountId: string;
-    name: string;
-}
-
-export const EditAccountDialog = ({ closeDialog, accountId, name }: EditAccountDialogProps) => {
+const EditAccountDialog = ({ account }: { account: AccountSummary }) => {
+    const { closeDialog } = useDialogContext();
     return (
         <CommandDialog<EditAccount>
             command={EditAccount}
             title="Edit Account"
-            okLabel="Save"
-            initialValues={{ accountId }}
-            currentValues={{ name }}
+            initialValues={{ accountId: account.id }}
+            currentValues={{ name: account.name }}
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<EditAccount> value={c => c.name} label="Account Name" />
         </CommandDialog>
     );
 };
-```
 
-**Page component:**
+export const AccountsPage = () => {
+    const [selectedAccount, setSelectedAccount] = useState<AccountSummary | undefined>();
+    const [EditAccountDialogWrapper, showEdit] = useDialog(EditAccountDialog);
 
-```tsx
-const [EditAccountWrapper, showEditAccount] = useDialog(EditAccountDialog);
+    const handleEdit = () => {
+        if (selectedAccount) showEdit({ account: selectedAccount });
+    };
 
-<DataPage
-    ...
-    onRowSelected={(row) => showEditAccount({ accountId: row.id, name: row.name })}
-/>
-
-<EditAccountWrapper />
+    return (
+        <>
+            <DataPage
+                title="Accounts"
+                query={AllAccounts}
+                emptyMessage="No accounts found."
+                selection={selectedAccount}
+                onSelectionChange={(e: DataTableSelectionSingleChangeEvent<AccountSummary>) => setSelectedAccount(e.value)}
+            >
+                <DataPage.MenuItems>
+                    <MenuItem label="Edit" icon="pi pi-pencil" disableOnUnselected command={handleEdit} />
+                </DataPage.MenuItems>
+                <DataPage.Columns>
+                    <Column field="name" header="Name" />
+                </DataPage.Columns>
+            </DataPage>
+            <EditAccountDialogWrapper />
+        </>
+    );
+};
 ```
 
 ---
 
 ### Step 5 — Choose observable vs standard query
 
-Use an **observable query** when the data updates in real time without user-triggered refresh:
+Use an **observable query** when the data updates in real time without a user-triggered refresh. Pass it as the `query` prop — `DataPage` detects the query type automatically.
 
 ```tsx
+import { AllAccountsLive } from './queries/AllAccountsLive';
+
 <DataPage
-    observableQuery={AllAccountsLive}  // use observableQuery instead of query
-    ...
-/>
+    title="Accounts"
+    query={AllAccountsLive}
+    emptyMessage="No accounts found."
+>
+    <DataPage.Columns>
+        <Column field="name" header="Name" />
+    </DataPage.Columns>
+</DataPage>
 ```
 
-Observable query results push updates automatically. You cannot call `requery()` on observable queries.
-
-Use a **standard query** for data that only changes when the user takes an action (and use `useEffect`/`refresh` to invalidate after a command).
+Observable query results push updates automatically. Use a standard (`IQueryFor`) query for data that only changes when the user takes an explicit action.
 
 ---
 
 ### Step 6 — Detail panel (optional)
 
-A detail panel renders beside the table when a row is selected.
+Provide a `detailsComponent` to render a side panel when a row is selected. It receives `item` (the selected row) and an optional `onRefresh` callback.
 
 ```tsx
+const AccountDetail = ({ item }: { item: AccountSummary }) => (
+    <div className="p-4">
+        <h2>{item.name}</h2>
+        <p>Balance: {item.balance}</p>
+    </div>
+);
+
 <DataPage
+    title="Accounts"
     query={AllAccounts}
-    detailPanel={(row) => <AccountDetail account={row} />}
-    ...
-/>
+    emptyMessage="No accounts found."
+    detailsComponent={AccountDetail}
+>
+    <DataPage.Columns>
+        <Column field="name" header="Name" />
+    </DataPage.Columns>
+</DataPage>
 ```
+
+The detail panel is hidden when no row is selected.
 
 ---
 
@@ -194,7 +232,15 @@ class AccountsViewModel {
 }
 
 export const AccountsPage = withViewModel(AccountsViewModel, ({ viewModel }) => (
-    <DataPage ... />
+    <DataPage
+        title="Accounts"
+        query={AllAccounts}
+        emptyMessage="No accounts found."
+    >
+        <DataPage.Columns>
+            <Column field="name" header="Name" />
+        </DataPage.Columns>
+    </DataPage>
 ));
 ```
 
@@ -206,16 +252,16 @@ See `references/mvvm.md` for full MVVM guidance.
 
 | Need | Use |
 | --- | --- |
-| Read-only list | `DataPage` with `query` |
-| Real-time updates | `DataPage` with `observableQuery` |
-| Add / create action | `MenuItem` + `CommandDialog` + `useDialog` |
-| Edit selected row | Row selection + `CommandDialog` + `currentValues`/`initialValues` |
-| Side detail panel | `detailPanel` prop on `DataPage` |
+| Read-only list | `DataPage` with standard `query` |
+| Real-time updates | `DataPage` with observable `query` |
+| Add / create action | `DataPage.MenuItems` + `MenuItem` + `CommandDialog` + `useDialog` |
+| Edit selected row | `disableOnUnselected` + `onSelectionChange` + `CommandDialog` |
+| Side detail panel | `detailsComponent` prop on `DataPage` |
 | Complex page logic | `withViewModel` MVVM wrapper |
 
 ## Reference files
 
-- `references/data-page.md` — DataPage props, MenuItems, Columns, detailPanel
+- `references/data-page.md` — DataPage props, MenuItems, Columns, detailsComponent
 - `references/data-table.md` — Standalone DataTableForQuery / DataTableForObservableQuery
-- `references/dialogs.md` — `useDialog`, `DialogProps`, `CommandDialog` full API
+- `references/dialogs.md` — `useDialog`, `useDialogContext`, `CommandDialog` full API
 - `references/mvvm.md` — `withViewModel`, `@injectable`, `IHandleProps`, reactive props
