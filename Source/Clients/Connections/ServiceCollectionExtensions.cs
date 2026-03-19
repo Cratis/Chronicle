@@ -61,7 +61,9 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ILogger<ChronicleConnection>>(),
                 disableTls.Value,
                 certificatePath,
-                certificatePassword);
+                certificatePassword,
+                skipCompatibilityCheck: false,
+                skipKeepAlive: false);
         });
 
         services.AddSingleton(sp =>
