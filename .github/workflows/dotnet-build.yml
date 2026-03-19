@@ -9,13 +9,6 @@ env:
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
-    paths:
-      - "Source/**"
-      - "Integration/**"
-      - "!Source/Node/**"
-      - "!Source/Workbench/**"
   pull_request:
     branches:
       - "**"

@@ -2,8 +2,7 @@ name: Benchmarks
 
 on:
   workflow_dispatch:
-
-  push:
+  pull_request:
     branches:
       - main
     paths:
@@ -21,6 +20,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
@@ -44,12 +47,17 @@ jobs:
           tool: 'benchmarkdotnet'
           output-file-path: Benchmarks/results/*.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          # Show alert with commit comment on detecting possible performance regression
+          auto-push: false
           alert-threshold: '120%'
           comment-on-alert: true
           fail-on-alert: true
           alert-comment-cc-users: '@einari'
-          gh-pages-branch: 'main'
-          skip-fetch-gh-pages: true
           benchmark-data-dir-path: 'Documentation/benchmarks'
+
+      - name: Commit updated benchmark results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add Documentation/benchmarks/
+          git diff --staged --quiet || git commit -m "Update benchmark results"
+          git push

@@ -1,11 +1,6 @@
 name: Workbench Build
 
 on:
-  push:
-    branches:
-      - "main"
-    paths:
-      - "Source/Workbench/**"
   pull_request:
     branches:
       - "**"
