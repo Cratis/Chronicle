@@ -4,34 +4,30 @@
     {
       "id": 1,
       "prompt": "Build a React page for managing employees. It should list all employees in a table (name, department, start date columns). There should be an 'Add Employee' button in the toolbar that opens a dialog to create a new employee (fields: firstName, lastName, department). Assume the proxies AllEmployees (query) and RegisterEmployee (command) already exist.",
-      "expected_output": "A TSX file using DataPage with query prop, DataPage.Columns with PrimeReact Column children, DataPage.MenuItems with MenuItem for Add, and CommandDialog with InputTextField fields. useDialog and useDialogContext for wiring the dialog.",
+      "expected_output": "A TSX file using DataPage with query prop, columns, MenuItemGroup/MenuItem for Add, and CommandDialog with InputTextField fields. useDialog for wiring the dialog. CommandForm fields for all employee properties.",
       "files": [],
       "assertions": [
         "Output uses DataPage component (not a raw table)",
         "Output uses useDialog for dialog state management",
-        "Output uses useDialogContext inside the dialog component",
         "Output uses CommandDialog (not a manual Dialog/Button setup)",
-        "Output uses DataPage.MenuItems and MenuItem for the Add action",
-        "Output uses DataPage.Columns with PrimeReact Column children (not a columns array prop)",
-        "Output uses InputTextField or similar CommandForm fields with typed value accessor (e.g. value={c => c.firstName})",
+        "Output uses MenuItemGroup and MenuItem for the Add action",
+        "Output uses InputTextField or similar CommandForm fields inside the dialog",
         "Output does NOT manually manage open/close boolean state for the dialog",
-        "Output does NOT use dialogMediator prop on CommandDialog",
-        "Output imports from correct packages (@cratis/components, @cratis/components/CommandDialog, @cratis/components/CommandForm, @cratis/arc.react/dialogs)"
+        "Output imports from correct packages (@cratis/components, @cratis/arc.react/dialogs)"
       ]
     },
     {
       "id": 2,
       "prompt": "I need a React page that shows a real-time list of active orders (observable query: AllOrdersLive). When clicking an order, show a detail panel on the side. There's a 'Cancel Order' action that should open a confirmation dialog. Use MVVM pattern since we have complex selection state.",
-      "expected_output": "TSX using DataPage with the AllOrdersLive observable query passed to query prop, detailsComponent prop with a detail component, withViewModel from @cratis/arc.react.mvvm with @injectable() view model, and CommandDialog for cancel action.",
+      "expected_output": "TSX using DataPage with observableQuery, detailPanel prop, withViewModel from @cratis/arc.react.mvvm with @injectable() view model, and CommandDialog for cancel action.",
       "files": [],
       "assertions": [
-        "Output uses DataPage with AllOrdersLive passed to the query prop (DataPage detects observable queries automatically)",
+        "Output uses observableQuery prop (not query) for real-time data",
         "Output uses withViewModel from @cratis/arc.react.mvvm",
         "View model class has @injectable() decorator",
         "View model class calls makeAutoObservable(this)",
-        "Output uses detailsComponent prop on DataPage (not detailPanel)",
-        "Output uses CommandDialog for the cancel action",
-        "Output uses useDialog and useDialogContext for the dialog wiring"
+        "Output uses detailPanel prop on DataPage",
+        "Output uses CommandDialog for the cancel action"
       ]
     }
   ]
