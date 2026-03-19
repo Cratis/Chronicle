@@ -31,9 +31,10 @@ on:
         - info
         - warning
         - debug
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - "main"
+      - "**"
     paths:
       - "Source/**"
 
