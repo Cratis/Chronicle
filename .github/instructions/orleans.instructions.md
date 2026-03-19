@@ -5,6 +5,9 @@ applyTo: "**/*.cs"
 
 # Orleans Conventions
 
+> **⚠️ APPLIES ONLY TO PROJECTS USING MICROSOFT ORLEANS**
+> If your project does not reference `Microsoft.Orleans` or any Orleans packages, **ignore this entire file**. These rules are irrelevant outside of Orleans contexts.
+
 These conventions apply to projects that use Microsoft Orleans for distributed grain-based actors.
 
 ## General

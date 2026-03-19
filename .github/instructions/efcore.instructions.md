@@ -4,6 +4,9 @@ applyTo: "**/*.cs"
 
 # Entity Framework Core Instructions
 
+> **⚠️ APPLIES ONLY TO PROJECTS USING ENTITY FRAMEWORK CORE**
+> If your project does not reference `Microsoft.EntityFrameworkCore` or any EF Core packages, **ignore this entire file**. These rules are irrelevant outside of EF Core contexts.
+
 ## Project Structure
 
 Responsibilities are split across three projects:

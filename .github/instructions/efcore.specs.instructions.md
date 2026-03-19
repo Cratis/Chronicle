@@ -4,6 +4,9 @@ applyTo: "**/for_*/**/*.cs, **/when_*/**/*.cs"
 
 # Entity Framework Core Specs
 
+> **⚠️ APPLIES ONLY TO PROJECTS USING ENTITY FRAMEWORK CORE**
+> If your project does not reference `Microsoft.EntityFrameworkCore` or any EF Core packages, **ignore this entire file**. These rules are irrelevant outside of EF Core contexts.
+
 EF Core specs verify database interaction logic — migrations, queries, and error handling. They use SQLite in-memory databases, which are fast, isolated, and disposable. This keeps specs independent of any real database server.
 
 These specs are for code that interacts directly with `DbContext`. For event-sourcing integration specs (testing commands against Chronicle), use the Chronicle integration spec pattern in [specs.csharp.instructions.md](./specs.csharp.instructions.md) instead.
