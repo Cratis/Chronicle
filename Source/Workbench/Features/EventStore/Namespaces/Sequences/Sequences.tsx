@@ -15,7 +15,7 @@ import { DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AppendEventDialog } from './Add/AppendEventDialog';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
 import { GetReplayableObserversForEventTypes } from 'Api/Observation';
@@ -142,6 +142,8 @@ export const Sequences = () => {
         eventStore: params.eventStore!
     });
 
+    const [eventsResult] = AppendedEvents.use(queryArgs);
+
     const handler = new PropertyPathResolverProxyHandler();
     const proxy = new Proxy({}, handler);
     const accessor = (et: AppendedEvent) => et.context.eventType.id;
@@ -153,6 +155,37 @@ export const Sequences = () => {
             setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
         }
     };
+
+    const handleExportEvents = useCallback(() => {
+        if (!eventsResult.hasData || eventsResult.data.length === 0) return;
+
+        const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+        const exportData = eventsResult.data.map(event => ({
+            eventType: event.context.eventType.id,
+            eventSourceId: event.context.eventSourceId,
+            sequenceNumber: event.context.sequenceNumber,
+            occurred: event.context.occurred,
+            content: (() => {
+                try {
+                    return JSON.parse(event.content);
+                } catch {
+                    return event.content;
+                }
+            })()
+        }));
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `events-${sanitize(params.eventStore!)}-${sanitize(params.namespace!)}-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [eventsResult.hasData, eventsResult.data, params.eventStore, params.namespace]);
 
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (
@@ -200,6 +233,11 @@ export const Sequences = () => {
                         icon={faIcons.FaArrowsRotate}
                         disableOnUnselected
                         command={handleReviseEvent} />
+                    <MenuItem
+                        id='exportEvents'
+                        label={strings.eventStore.namespaces.sequences.actions.export}
+                        icon={faIcons.FaFileExport}
+                        command={handleExportEvents} />
                 </DataPage.MenuItems>
 
                 <DataPage.Columns>
