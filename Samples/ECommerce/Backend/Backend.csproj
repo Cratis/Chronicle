@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>ECommerce.Backend</AssemblyName>
+        <RootNamespace>ECommerce</RootNamespace>
+        <OutputType>Library</OutputType>
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Fundamentals" />
+        <PackageReference Include="OneOf" />
+        <PackageReference Include="System.Reactive" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Source/Clients/Grpc/Grpc.csproj" />
+    </ItemGroup>
+</Project>

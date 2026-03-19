@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Grpc</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Grpc</RootNamespace>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+</Project>
