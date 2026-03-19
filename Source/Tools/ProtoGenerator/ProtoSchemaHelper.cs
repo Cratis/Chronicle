@@ -172,6 +172,20 @@ internal static partial class ProtoSchemaHelper
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Adds an ISO 8601 format comment above each <c>message SerializableDateTimeOffset</c> block
+    /// in the proto schema so that consumers know the expected wire format.
+    /// </summary>
+    /// <param name="schema">The proto schema string to process.</param>
+    /// <returns>The schema with comments added to <c>SerializableDateTimeOffset</c> message definitions.</returns>
+    public static string AddSerializableDateTimeOffsetComment(string schema)
+    {
+        const string messageDeclaration = "message SerializableDateTimeOffset {";
+        const string comment = "// Represents a DateTimeOffset value as an ISO 8601 string (e.g., \"2024-01-15T12:30:00.0000000+02:00\").\n";
+
+        return schema.Replace(messageDeclaration, comment + messageDeclaration);
+    }
+
     [GeneratedRegex(@"^package\s+(?<name>[\w.]+)\s*;", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PackageDeclarationRegex();
 

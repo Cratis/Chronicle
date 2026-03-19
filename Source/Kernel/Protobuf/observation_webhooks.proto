@@ -53,6 +53,13 @@ message TestOAuthAuthorizationResponse {
    bool Success = 1;
    string ErrorMessage = 2;
 }
+message TestWebhookRequest {
+   WebhookTarget Target = 1;
+}
+message TestWebhookResponse {
+   bool Success = 1;
+   string ErrorMessage = 2;
+}
 message WebhookDefinition {
    string EventSequenceId = 1;
    string Identifier = 2;
@@ -72,4 +79,5 @@ service Webhooks {
    rpc ObserveWebhooks (GetWebhooksRequest) returns (stream IEnumerable_WebhookDefinition);
    rpc Remove (RemoveWebhooks) returns (.google.protobuf.Empty);
    rpc TestOAuthAuthorization (TestOAuthAuthorizationRequest) returns (TestOAuthAuthorizationResponse);
+   rpc TestWebhook (TestWebhookRequest) returns (TestWebhookResponse);
 }

@@ -33,7 +33,7 @@ public class EventRevision
     /// Gets or sets when the revision occurred.
     /// </summary>
     [ProtoMember(4)]
-    public DateTimeOffset Occurred { get; set; }
+    public SerializableDateTimeOffset Occurred { get; set; }
 
     /// <summary>
     /// Gets or sets the JSON content of the revising event.

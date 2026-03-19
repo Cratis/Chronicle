@@ -6,6 +6,9 @@ import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .
 message AppendedEvent {
    EventContext Context = 1;
    string Content = 2;
+   string OriginalContent = 3;
+   repeated EventRevision Revisions = 4;
+   map<int32,string> GenerationalContent = 5;
 }
 message Causation {
    SerializableDateTimeOffset Occurred = 1;
@@ -44,6 +47,13 @@ enum EventObservationState {
    HeadOfReplay = 2;
    Replay = 4;
    TailOfReplay = 8;
+}
+message EventRevision {
+   uint32 Generation = 1;
+   string CorrelationId = 2;
+   Identity CausedBy = 3;
+   SerializableDateTimeOffset Occurred = 4;
+   string Content = 5;
 }
 message EventType {
    string Id = 1;
@@ -183,9 +193,9 @@ message RegisterSingleRequest {
    ReadModelDefinition ReadModel = 3;
    ReadModelSource Source = 4; // default value could not be applied: Code
 }
+// Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
-   int64 Ticks = 1;
-   double OffsetMinutes = 2;
+   string Value = 1;
 }
 message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
