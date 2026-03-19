@@ -83,14 +83,14 @@ The fix is always to introduce a new generation and a corresponding migrator rat
 
 ## Relaxing validation for development
 
-Strict validation is the default and is always enforced in non-development Kernel builds. During early development — before you have finalised your event schemas — you can disable the checks temporarily.
+Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `EnableEventTypeGenerationValidation` flag sent from the client.
 
-Set `DisableEventTypeGenerationValidation` in your `ChronicleOptions`:
+`EnableEventTypeGenerationValidation` defaults to `false` in `ChronicleOptions`, so no extra configuration is needed during early development. When your event schemas are stable, opt into strict validation by setting it to `true`:
 
 ```csharp
 builder.AddCratisChronicle(configureOptions: options =>
 {
-    options.DisableEventTypeGenerationValidation = true;
+    options.EnableEventTypeGenerationValidation = true;
 });
 ```
 
@@ -100,13 +100,13 @@ Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section
 {
   "Cratis": {
     "Chronicle": {
-      "DisableEventTypeGenerationValidation": true
+      "EnableEventTypeGenerationValidation": true
     }
   }
 }
 ```
 
-This value is forwarded to the Kernel as part of the event-type registration request. The Kernel only honours it when running the **development image** — the production image always ignores the flag and validates unconditionally. This makes it impossible to accidentally disable validation in a production deployment even if the client sends `DisableValidation = true`.
+This value is forwarded to the Kernel as part of the event-type registration request. The Kernel only honours it when running the **development image** — the production image always validates unconditionally regardless of what the client sends. This makes it impossible to accidentally disable validation in a production deployment.
 
 ## What happens when validation fires
 

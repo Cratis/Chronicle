@@ -38,15 +38,17 @@ public class ProjectionsManager(
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
     EventStoreName _eventStoreName = EventStoreName.NotSet;
+    IGrainTimer? _subscribeTimer;
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
-        await SetDefinitionAndSubscribeForAllProjections();
+        ScheduleSetDefinitionAndSubscribe();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -71,7 +73,7 @@ public class ProjectionsManager(
 
         State.Projections = existingProjections;
         await WriteStateAsync();
-        await SetDefinitionAndSubscribeForAllProjections();
+        ScheduleSetDefinitionAndSubscribe();
     }
 
     /// <inheritdoc/>
@@ -190,4 +192,17 @@ public class ProjectionsManager(
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;
+
+    void ScheduleSetDefinitionAndSubscribe()
+    {
+        _subscribeTimer?.Dispose();
+        _subscribeTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                _subscribeTimer?.Dispose();
+                _subscribeTimer = null;
+                await SetDefinitionAndSubscribeForAllProjections();
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+    }
 }
