@@ -110,9 +110,10 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
-    /// Gets or sets a value indicating whether event type generation validation is disabled.
-    /// When <see langword="true"/>, the client asks the Kernel to bypass migration chain
-    /// validation when registering event types at generation 2 or higher. Defaults to <see langword="true"/>.
+    /// Gets or sets a value indicating whether event type generation validation is enabled.
+    /// When <see langword="false"/> (the default), the client asks the Kernel to bypass migration
+    /// chain validation when registering event types at generation 2 or higher. Set to
+    /// <see langword="true"/> to opt into strict migration chain validation.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -120,12 +121,12 @@ public class ChronicleOptions(
     /// The production image always enforces validation unconditionally, regardless of the value sent by the client.
     /// </para>
     /// <para>
-    /// The default is <see langword="true"/> so that early-stage schema development works without
-    /// any explicit configuration. Set to <see langword="false"/> to opt into strict migration
+    /// The default is <see langword="false"/> so that early-stage schema development works without
+    /// any explicit configuration. Set to <see langword="true"/> to opt into strict migration
     /// chain validation on the development Kernel image.
     /// </para>
     /// </remarks>
-    public bool DisableEventTypeGenerationValidation { get; set; } = true;
+    public bool EnableEventTypeGenerationValidation { get; set; }
 
     /// <summary>
     /// Gets or sets the TLS configuration.

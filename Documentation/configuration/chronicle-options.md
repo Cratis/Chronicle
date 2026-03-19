@@ -20,7 +20,7 @@ All bindable settings live under `Cratis:Chronicle`:
     "Chronicle": {
       "ConnectionString": "chronicle://localhost:35000",
       "EventStore": "my-store",
-      "DisableEventTypeGenerationValidation": true,
+      "EnableEventTypeGenerationValidation": false,
       "ConnectTimeout": 5,
       "AutoDiscoverAndRegister": true,
       "MaxReceiveMessageSize": 104857600,
@@ -42,27 +42,27 @@ All bindable settings live under `Cratis:Chronicle`:
 
 ## ChronicleOptions properties
 
-### DisableEventTypeGenerationValidation
+### EnableEventTypeGenerationValidation
 
-Asks the Kernel to bypass migration chain validation when registering event types at generation 2 or higher. The value is forwarded as part of the registration request.
+Asks the Kernel to enforce strict migration chain validation when registering event types at generation 2 or higher. The value is forwarded as part of the registration request.
 
 | | |
 |---|---|
 | Type | `bool` |
-| Default | `true` |
+| Default | `false` |
 
-> **Image restriction:** This flag is only honoured by the **development image** of the Kernel. The production image always ignores it and validates unconditionally, regardless of what the client sends. This makes it impossible to accidentally skip migration chain validation in production even if the client has this flag set to `true`.
+> **Image restriction:** This flag is only honoured by the **development image** of the Kernel. The production image always ignores it and validates unconditionally, regardless of what the client sends. This makes it impossible to accidentally skip migration chain validation in production even if the client has this flag set to `false`.
 
-To opt in to strict validation during development (recommended once your event schemas are stable), set the flag to `false`:
+To opt in to strict validation during development (recommended once your event schemas are stable), set the flag to `true`:
 
 ```csharp
 builder.AddCratisChronicle(configureOptions: options =>
 {
-    options.DisableEventTypeGenerationValidation = false;
+    options.EnableEventTypeGenerationValidation = true;
 });
 ```
 
-In `appsettings.json`: `"DisableEventTypeGenerationValidation": false`.
+In `appsettings.json`: `"EnableEventTypeGenerationValidation": true`.
 
 See [Generation Validation](../migrations/validation.md) for the full ruleset.
 

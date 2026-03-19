@@ -216,7 +216,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
-            Options.DisableEventTypeGenerationValidation,
+            Options.EnableEventTypeGenerationValidation,
             _loggerFactory);
         _eventStores[key] = eventStore;
 

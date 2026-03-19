@@ -22,7 +22,7 @@ public class EventTypes : IEventTypes
     readonly IClientArtifactsProvider _clientArtifacts;
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly IChronicleServicesAccessor _servicesAccessor;
-    readonly bool _disableEventTypeGenerationValidation;
+    readonly bool _enableEventTypeGenerationValidation;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EventTypes"/>.
@@ -31,20 +31,20 @@ public class EventTypes : IEventTypes
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas from types.</param>
     /// <param name="clientArtifacts">Optional <see cref="IClientArtifactsProvider"/> for the client artifacts.</param>
     /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for discovering event type migrators.</param>
-    /// <param name="disableEventTypeGenerationValidation">Whether to disable event type generation chain validation on the server. Defaults to <see langword="false"/>.</param>
+    /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation on the server. Defaults to <see langword="false"/>.</param>
     public EventTypes(
         IEventStore eventStore,
         IJsonSchemaGenerator jsonSchemaGenerator,
         IClientArtifactsProvider clientArtifacts,
         IEventTypeMigrators eventTypeMigrators,
-        bool disableEventTypeGenerationValidation = false)
+        bool enableEventTypeGenerationValidation = false)
     {
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _jsonSchemaGenerator = jsonSchemaGenerator;
         _clientArtifacts = clientArtifacts;
         _eventTypeMigrators = eventTypeMigrators;
-        _disableEventTypeGenerationValidation = disableEventTypeGenerationValidation;
+        _enableEventTypeGenerationValidation = enableEventTypeGenerationValidation;
     }
 
     /// <inheritdoc/>
@@ -159,7 +159,7 @@ public class EventTypes : IEventTypes
         {
             EventStore = _eventStore.Name,
             Types = registrations,
-            DisableValidation = _disableEventTypeGenerationValidation
+            DisableValidation = !_enableEventTypeGenerationValidation
         });
     }
 

@@ -83,14 +83,14 @@ The fix is always to introduce a new generation and a corresponding migrator rat
 
 ## Relaxing validation for development
 
-Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `DisableEventTypeGenerationValidation` flag sent from the client.
+Strict validation is **always enforced in the production image** of the Kernel. The development image relaxes this by honouring the `EnableEventTypeGenerationValidation` flag sent from the client.
 
-`DisableEventTypeGenerationValidation` defaults to `true` in `ChronicleOptions`, so no extra configuration is needed during early development. When your event schemas are stable, opt into strict validation by setting it to `false`:
+`EnableEventTypeGenerationValidation` defaults to `false` in `ChronicleOptions`, so no extra configuration is needed during early development. When your event schemas are stable, opt into strict validation by setting it to `true`:
 
 ```csharp
 builder.AddCratisChronicle(configureOptions: options =>
 {
-    options.DisableEventTypeGenerationValidation = false;
+    options.EnableEventTypeGenerationValidation = true;
 });
 ```
 
@@ -100,7 +100,7 @@ Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section
 {
   "Cratis": {
     "Chronicle": {
-      "DisableEventTypeGenerationValidation": false
+      "EnableEventTypeGenerationValidation": true
     }
   }
 }
