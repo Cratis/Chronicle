@@ -6,13 +6,6 @@ env:
 
 "on":
   workflow_dispatch:
-  push:
-    branches: ["main"]
-    paths:
-      - "Source/Clients/TypeScript/**"
-      - "Source/Kernel/Contracts/**"
-      - "Source/Kernel/Protobuf/**"
-      - "Source/Tools/ProtoGenerator/**"
   pull_request:
     branches:
       - "**"
