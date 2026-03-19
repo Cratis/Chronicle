@@ -43,7 +43,7 @@ internal static class FailedPartitionConverters
     {
         return new FailedPartitionAttempt
         {
-            Occurred = failedPartitionAttempt.Occurred!,
+            Occurred = failedPartitionAttempt.Occurred,
             SequenceNumber = failedPartitionAttempt.SequenceNumber,
             Messages = failedPartitionAttempt.Messages,
             StackTrace = failedPartitionAttempt.StackTrace
