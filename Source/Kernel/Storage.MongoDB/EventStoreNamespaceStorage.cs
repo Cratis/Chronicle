@@ -30,7 +30,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -64,7 +63,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-    /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
+    /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
     /// <param name="jobTypes"><see cref="IJobTypes"/>.</param>
     /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -77,7 +76,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IJsonComplianceManager complianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
-        IInstancesOf<ISinkFactory> sinkFactories,
+        ISinks sinks,
         IJobTypes jobTypes,
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
@@ -100,7 +99,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
-        Sinks = new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
+        Sinks = sinks;
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);

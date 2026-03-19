@@ -58,7 +58,6 @@ These guides contain the full rules, examples, and rationale for each topic. The
    - [Reactors](./instructions/reactors.instructions.md)
    - [Orleans](./instructions/orleans.instructions.md)
 
-## Header
 
 All files should start with the following header:
 

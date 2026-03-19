@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
+using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
