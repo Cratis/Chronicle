@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Json;
 

@@ -6,7 +6,6 @@ using System.Dynamic;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

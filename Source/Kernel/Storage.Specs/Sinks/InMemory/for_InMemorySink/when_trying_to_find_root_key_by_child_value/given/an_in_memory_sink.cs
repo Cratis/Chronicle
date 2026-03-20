@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks.InMemory;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.Sinks.InMemory.for_InMemorySink.when_trying_to_find_root_key_by_child_value.given;
 

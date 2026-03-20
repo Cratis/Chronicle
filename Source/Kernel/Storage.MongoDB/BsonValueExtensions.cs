@@ -7,7 +7,6 @@ using Cratis.Arc.MongoDB;
 using Cratis.Reflection;
 using Cratis.Types;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

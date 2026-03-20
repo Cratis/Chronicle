@@ -12,7 +12,6 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using NJsonSchema;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;

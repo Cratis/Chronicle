@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Services.Sinks;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.ReadModels;
 

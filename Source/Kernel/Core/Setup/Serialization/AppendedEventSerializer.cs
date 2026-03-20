@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Strings;
-using NJsonSchema;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Cloning;

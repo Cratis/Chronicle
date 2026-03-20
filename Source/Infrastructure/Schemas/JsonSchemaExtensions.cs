@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Properties;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -77,7 +76,7 @@ public static class JsonSchemaExtensions
             {
                 if (schemaProperty.IsArray)
                 {
-                    schema = schemaProperty.Item!.Reference!;
+                    schema = schemaProperty.Item!.Reference ?? schemaProperty.Item;
                 }
                 else
                 {
@@ -113,7 +112,7 @@ public static class JsonSchemaExtensions
 
                 if (schemaProperty.IsArray)
                 {
-                    schema = schemaProperty.Item!.Reference!;
+                    schema = schemaProperty.Item!.Reference ?? schemaProperty.Item;
                 }
                 else
                 {
@@ -159,7 +158,7 @@ public static class JsonSchemaExtensions
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
                     schemaProperty.Reference?.Type ??
                         (schemaProperty.HasOneOfSchemaReference ?
-                            schemaProperty.OneOf.First().Reference!.Type :
+                            schemaProperty.OneOf[0].Reference?.Type ?? JsonObjectType.None :
                             JsonObjectType.None) :
                     schemaProperty.Type;
 
@@ -219,10 +218,24 @@ public static class JsonSchemaExtensions
 
     static void CollectPropertiesFrom(JsonSchema schema, List<JsonSchemaProperty> properties)
     {
-        properties.AddRange(schema.ActualProperties.Select(_ => _.Value));
-        if (schema.InheritedSchema is not null)
+        // Direct properties on this schema
+        properties.AddRange(schema.Properties.Values);
+
+        // Traverse allOf schemas (handles both inheritance refs and inline property groups)
+        foreach (var allOfSchema in schema.AllOf)
         {
-            CollectPropertiesFrom(schema.InheritedSchema, properties);
+            if (allOfSchema.HasReference)
+            {
+                var resolved = allOfSchema.Reference;
+                if (resolved is not null)
+                {
+                    CollectPropertiesFrom(resolved, properties);
+                }
+            }
+            else
+            {
+                CollectPropertiesFrom(allOfSchema, properties);
+            }
         }
     }
 }

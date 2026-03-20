@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Sinks;
-using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
 namespace Cratis.Chronicle.Api.ReadModelTypes;

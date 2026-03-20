@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Serialization;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 

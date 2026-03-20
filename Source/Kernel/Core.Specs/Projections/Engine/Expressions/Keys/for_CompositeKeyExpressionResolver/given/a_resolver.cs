@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Microsoft.Extensions.Logging.Abstractions;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys.for_CompositeKeyExpressionResolver.given;
 

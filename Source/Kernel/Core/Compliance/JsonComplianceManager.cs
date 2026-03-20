@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Schemas;
 using Cratis.DependencyInjection;
 using Cratis.Types;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Compliance;
 

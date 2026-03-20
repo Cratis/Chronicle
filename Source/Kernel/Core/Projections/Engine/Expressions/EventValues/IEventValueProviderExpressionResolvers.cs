@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 

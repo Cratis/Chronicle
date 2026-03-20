@@ -5,8 +5,6 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
-using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.given;

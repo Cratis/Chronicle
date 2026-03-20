@@ -15,7 +15,6 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 using Orleans.Providers;
 using Orleans.Streams;
 

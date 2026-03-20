@@ -11,7 +11,6 @@ using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 

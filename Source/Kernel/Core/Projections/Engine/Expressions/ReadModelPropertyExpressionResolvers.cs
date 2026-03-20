@@ -8,7 +8,6 @@ using Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions;
 

@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeMigrations;
 

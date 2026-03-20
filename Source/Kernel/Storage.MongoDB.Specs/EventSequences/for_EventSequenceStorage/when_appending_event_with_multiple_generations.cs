@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStorage;
 
