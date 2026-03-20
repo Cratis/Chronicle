@@ -33,6 +33,7 @@ public class ChronicleClientHelper : IDisposable
             connectTimeout: 30);
 
         _client = new ChronicleClient(options, loggerFactory: _loggerFactory);
+        _eventStore = _client.GetEventStore("benchmarks").GetAwaiter().GetResult();
     }
 
     /// <summary>
