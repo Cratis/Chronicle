@@ -32,7 +32,7 @@ internal static class RecommendationConverters
             Name = recommendation.Name,
             Description = recommendation.Description,
             Type = recommendation.Type,
-            Occurred = recommendation.Occurred!
+            Occurred = recommendation.Occurred
         };
     }
 
@@ -57,7 +57,7 @@ internal static class RecommendationConverters
             Name = recommendation.Name,
             Description = recommendation.Description,
             Type = recommendation.Type,
-            Occurred = recommendation.Occurred!
+            Occurred = recommendation.Occurred
         };
     }
 }

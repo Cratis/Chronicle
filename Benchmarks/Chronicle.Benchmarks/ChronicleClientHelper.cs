@@ -22,10 +22,9 @@ public class ChronicleClientHelper : IDisposable
 
         var options = new ChronicleOptions(
             connectionString: new ChronicleConnectionString(_fixture.ChronicleUrl),
-            connectTimeout: 30,
-            loggerFactory: _loggerFactory);
+            connectTimeout: 30);
 
-        _client = new ChronicleClient(options);
+        _client = new ChronicleClient(options, loggerFactory: _loggerFactory);
         _eventStore = _client.GetEventStore("benchmarks").GetAwaiter().GetResult();
     }
 
