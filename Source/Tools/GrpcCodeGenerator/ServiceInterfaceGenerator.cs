@@ -124,6 +124,15 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             return fileName;
         }
 
+        // Ensure we only ever work with a plain file name (no directory components)
+        fileName = Path.GetFileName(fileName);
+
+        // As an extra safeguard, avoid returning a rooted path
+        if (Path.IsPathRooted(fileName))
+        {
+            fileName = Path.GetFileName(fileName);
+        }
+
         var invalidChars = Path.GetInvalidFileNameChars();
         var builder = new StringBuilder(fileName.Length);
         foreach (var ch in fileName)
