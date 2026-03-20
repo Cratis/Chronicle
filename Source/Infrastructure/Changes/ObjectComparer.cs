@@ -120,7 +120,7 @@ public class ObjectComparer : IObjectComparer
         }
     }
 
-    void CompareEnumerableValues(Type type, object leftValue, object rightValue, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
+    void CompareEnumerableValues(object leftValue, object rightValue, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
         var leftValueAsEnumerable = (leftValue as IEnumerable)!;
         var rightValueAsEnumerable = (rightValue as IEnumerable)!;
@@ -135,7 +135,7 @@ public class ObjectComparer : IObjectComparer
 
         if (mode == ObjectComparerMode.Loose)
         {
-            CompareEnumerableValuesLoose(type, leftValue, rightValue, leftElements, rightElements, propertyPath, mode, differences);
+            CompareEnumerableValuesLoose(leftValue, rightValue, leftElements, rightElements, propertyPath, mode, differences);
             return;
         }
 
@@ -260,7 +260,7 @@ public class ObjectComparer : IObjectComparer
         }
         else if (leftValue is not null && rightValue is not null && type.IsEnumerable())
         {
-            CompareEnumerableValues(type, leftValue, rightValue, propertyPath, mode, differences);
+            CompareEnumerableValues(leftValue, rightValue, propertyPath, mode, differences);
         }
         else
         {
