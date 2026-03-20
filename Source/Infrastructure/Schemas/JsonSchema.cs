@@ -575,11 +575,7 @@ public class JsonSchema
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() =>
             Keys.Select(k => new KeyValuePair<string, object?>(k, this[k])).GetEnumerator();
 
-        public bool Remove(string key)
-        {
-            _node.Remove(key);
-            return true;
-        }
+        public bool Remove(string key) => _node.Remove(key);
 
         public bool Remove(KeyValuePair<string, object?> item) => Remove(item.Key);
 
