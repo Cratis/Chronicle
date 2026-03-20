@@ -122,7 +122,7 @@ public class when_identifying_model_key_from_parent_hierarchy_with_four_levels :
             _keyResolvers.FromEventSourceId,
             _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
             "childId")(_storage, _sink, _forthLevelEvent);
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(RootKey);

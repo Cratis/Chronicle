@@ -23,7 +23,7 @@ public class with_middle_page(context context) : Given<context>(context)
             {
                 EventStore = Constants.EventStore,
                 Namespace = "Default",
-                ReadModel = typeof(SomeReadModel).FullName!,
+                ReadModel = typeof(SomeReadModel).FullName,
                 Page = 1,
                 PageSize = 2
             });
