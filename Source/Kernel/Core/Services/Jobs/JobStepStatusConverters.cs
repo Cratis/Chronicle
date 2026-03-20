@@ -20,7 +20,7 @@ internal static class JobStepStatusConverters
         new()
         {
             Status = (JobStepStatus)(int)jobStepStatus.Status,
-            Occurred = jobStepStatus.Occurred!,
+            Occurred = jobStepStatus.Occurred,
             ExceptionMessages = jobStepStatus.ExceptionMessages,
             ExceptionStackTrace = jobStepStatus.ExceptionStackTrace,
         };
