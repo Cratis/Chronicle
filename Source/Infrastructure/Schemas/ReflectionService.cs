@@ -3,9 +3,9 @@
 
 using Cratis.Concepts;
 using Namotion.Reflection;
-using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
+using NJsonSchemaJsonSchema = NJsonSchema.JsonSchema;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Schemas;
 public class ReflectionService(IReflectionService existing) : IReflectionService
 {
     /// <inheritdoc/>
-    public void GenerateProperties(JsonSchema schema, ContextualType contextualType, JsonSchemaGeneratorSettings settings, NJsonSchemaGenerator schemaGenerator, JsonSchemaResolver schemaResolver) =>
+    public void GenerateProperties(NJsonSchemaJsonSchema schema, ContextualType contextualType, JsonSchemaGeneratorSettings settings, NJsonSchemaGenerator schemaGenerator, JsonSchemaResolver schemaResolver) =>
         existing.GenerateProperties(schema, contextualType, settings, schemaGenerator, schemaResolver);
 
     /// <inheritdoc/>
