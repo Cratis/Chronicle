@@ -24,7 +24,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
 
     static ChronicleBenchmarkFixture()
     {
-        var certificateDirectory = Path.Combine(Path.GetTempPath(), "chronicle-benchmark-certs");
+        var certificateDirectory = Path.Join(Path.GetTempPath(), "chronicle-benchmark-certs");
         _certificatePath = Path.Combine(certificateDirectory, "chronicle-benchmark.pfx");
         BenchmarkCertificateGenerator.GenerateAndSaveCertificate(_certificatePath, CertificatePassword);
     }
