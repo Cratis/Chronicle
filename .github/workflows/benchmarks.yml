@@ -2,12 +2,12 @@ name: Benchmarks
 
 on:
   workflow_dispatch:
-  # pull_request:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'Benchmarks/**'
-  #     - 'Source/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Benchmarks/**'
+      - 'Source/**'
 
 permissions:
   contents: write
