@@ -312,7 +312,10 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
     {
         var segments = sourceNamespace.Split('.');
         var skipped = segments.Skip(skipNamespaceSegments).ToArray();
+        var safeSegments = skipped
+            .Select(s => s.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            .ToArray();
 
-        return Path.Combine([outputDirectory, .. skipped]);
+        return Path.Combine([outputDirectory, .. safeSegments]);
     }
 }
