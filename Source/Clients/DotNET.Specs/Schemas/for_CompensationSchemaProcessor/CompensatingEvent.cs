@@ -6,7 +6,8 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Schemas.for_CompensationSchemaProcessor;
 
 [EventType]
-public class OriginalEvent
+[CompensationFor<OriginalEvent>]
+public class CompensatingEvent
 {
     public string Value { get; init; } = string.Empty;
 }
