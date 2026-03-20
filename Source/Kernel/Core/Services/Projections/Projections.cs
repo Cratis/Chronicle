@@ -17,7 +17,6 @@ using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
-using NJsonSchema;
 using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;

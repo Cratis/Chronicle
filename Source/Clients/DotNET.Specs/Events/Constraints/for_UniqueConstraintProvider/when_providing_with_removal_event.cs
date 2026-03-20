@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Serialization;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 

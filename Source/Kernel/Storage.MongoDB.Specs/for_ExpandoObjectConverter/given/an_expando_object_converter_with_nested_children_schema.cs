@@ -3,8 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
-using NJsonSchema.Generation;
 using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
 namespace Cratis.Chronicle.Storage.MongoDB.for_ExpandoObjectConverter.given;

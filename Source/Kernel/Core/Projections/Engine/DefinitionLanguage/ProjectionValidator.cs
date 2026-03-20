@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Properties;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 

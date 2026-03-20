@@ -9,7 +9,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 

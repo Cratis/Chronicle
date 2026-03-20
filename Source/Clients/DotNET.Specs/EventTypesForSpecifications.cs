@@ -3,9 +3,10 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Schema;
 using Cratis.Chronicle.Events;
-using NJsonSchema;
-using NJsonSchema.Generation;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle;
 
@@ -18,6 +19,16 @@ public class EventTypesForSpecifications : IEventTypes
     readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
     readonly Dictionary<EventTypeId, JsonSchema> _jsonSchemasByEventType = [];
 
+    static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    static readonly JsonSchemaExporterOptions _exporterOptions = new()
+    {
+        TreatNullObliviousAsNonNullable = true
+    };
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.
     /// </summary>
@@ -29,12 +40,66 @@ public class EventTypesForSpecifications : IEventTypes
         _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
         _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
 
-        var generator = new JsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
-        _jsonSchemasByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => generator.Generate(_.Key));
+        _jsonSchemasByEventType = _eventTypes.ToDictionary(
+            _ => _.Value.Id,
+            _ => new JsonSchema(JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, _.Key, _exporterOptions).AsObject()));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
         All = _eventTypes.Values.ToImmutableList();
     }
+
+    /// <inheritdoc/>
+    public IImmutableList<Type> AllClrTypes { get; }
+
+    /// <inheritdoc/>
+    public IImmutableList<EventType> All { get; }
+
+    /// <inheritdoc/>
+    public Task Discover() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task Register() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Type GetClrTypeFor(EventTypeId eventTypeId) => _clrTypesByEventType[eventTypeId];
+
+    /// <inheritdoc/>
+    public Type GetClrTypeFor(EventTypeId eventTypeId, EventTypeGeneration generation) => _clrTypesByEventType[eventTypeId];
+
+    /// <inheritdoc/>
+    public EventType GetEventTypeFor(Type clrType)
+    {
+        EnsureEventType(clrType);
+        return _eventTypes[clrType];
+    }
+
+    /// <inheritdoc/>
+    public JsonSchema GetSchemaFor(EventTypeId eventTypeId) => _jsonSchemasByEventType[eventTypeId];
+
+    /// <inheritdoc/>
+    public bool HasFor(EventTypeId eventTypeId) => _clrTypesByEventType.ContainsKey(eventTypeId);
+
+    /// <inheritdoc/>
+    public bool HasFor(Type clrType)
+    {
+        EnsureEventType(clrType);
+        return _eventTypes.ContainsKey(clrType);
+    }
+
+    void EnsureEventType(Type clrType)
+    {
+        if (!_eventTypes.ContainsKey(clrType))
+        {
+            var eventTypeAttribute = clrType.GetCustomAttribute<EventTypeAttribute>();
+            if (eventTypeAttribute is not null)
+            {
+                var eventType = clrType.GetEventType();
+                _eventTypes[clrType] = eventType;
+                _clrTypesByEventType[eventType.Id] = clrType;
+            }
+        }
+    }
+}
 
     /// <inheritdoc/>
     public IImmutableList<Type> AllClrTypes { get; }

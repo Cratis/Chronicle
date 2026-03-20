@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 

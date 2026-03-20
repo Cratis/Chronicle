@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine;
 
