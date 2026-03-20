@@ -102,7 +102,8 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             sb.AppendLine("}");
         }
 
-        var interfaceFilePath = Path.Combine(folderPath, $"I{serviceDefinition.ServiceName}.cs");
+        var fileName = GetSafeFileName($"I{serviceDefinition.ServiceName}.cs");
+        var interfaceFilePath = Path.Combine(folderPath, fileName);
         File.WriteAllText(interfaceFilePath, sb.ToString());
     }
 
@@ -114,6 +115,23 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         }
 
         return char.ToUpperInvariant(name[0]) + name[1..];
+    }
+
+    static string GetSafeFileName(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return fileName;
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var builder = new StringBuilder(fileName.Length);
+        foreach (var ch in fileName)
+        {
+            builder.Append(Array.IndexOf(invalidChars, ch) >= 0 ? '_' : ch);
+        }
+
+        return builder.ToString();
     }
 
     static string? GenerateCommandRequestType(
