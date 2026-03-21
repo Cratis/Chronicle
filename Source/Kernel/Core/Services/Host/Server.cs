@@ -27,7 +27,10 @@ internal sealed class Server(IClusterClient clusterClient) : IServer
     /// <inheritdoc/>
     public Task<ServerVersionInfo> GetVersionInfo()
     {
-        var serverAssembly = typeof(Server).Assembly;
+        // The entry assembly is the Chronicle server executable, which is versioned with the
+        // actual release version by the publish pipeline (-p:Version=). The Core assembly
+        // (typeof(Server).Assembly) is a library dependency whose version defaults to 1.0.0.
+        var serverAssembly = Assembly.GetEntryAssembly() ?? typeof(Server).Assembly;
         var informational = serverAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         var informationalVersion = informational?.InformationalVersion
             ?? serverAssembly.GetName().Version?.ToString()
