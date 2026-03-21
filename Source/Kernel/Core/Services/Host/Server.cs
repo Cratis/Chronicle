@@ -28,40 +28,42 @@ internal sealed class Server(IClusterClient clusterClient) : IServer
     public Task<ServerVersionInfo> GetVersionInfo()
     {
         var serverAssembly = typeof(Server).Assembly;
+        var informational = serverAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var informationalVersion = informational?.InformationalVersion
+            ?? serverAssembly.GetName().Version?.ToString()
+            ?? "0.0.0";
 
         return Task.FromResult(new ServerVersionInfo
         {
-            Version = GetVersionFromAssembly(serverAssembly),
-            CommitSha = GetCommitShaFromAssembly(serverAssembly)
+            Version = ParseVersionFromInformationalVersion(informationalVersion),
+            CommitSha = ParseCommitShaFromInformationalVersion(informationalVersion)
         });
     }
 
-    static string GetVersionFromAssembly(Assembly assembly)
+    /// <summary>
+    /// Parses the version portion from an assembly informational version string.
+    /// Strips any build metadata or commit SHA (everything after the '+' separator).
+    /// </summary>
+    /// <param name="informationalVersion">The informational version string (e.g. "15.9.0+abc123").</param>
+    /// <returns>The version portion before any '+' separator, or the full string if none is present.</returns>
+    internal static string ParseVersionFromInformationalVersion(string informationalVersion)
     {
-        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        if (informational is not null)
-        {
-            var version = informational.InformationalVersion;
-            var plusIndex = version.IndexOf('+');
-
-            return plusIndex > 0 ? version[..plusIndex] : version;
-        }
-
-        return assembly.GetName().Version?.ToString() ?? "0.0.0";
+        var plusIndex = informationalVersion.IndexOf('+');
+        return plusIndex > 0 ? informationalVersion[..plusIndex] : informationalVersion;
     }
 
-    static string GetCommitShaFromAssembly(Assembly assembly)
+    /// <summary>
+    /// Parses the commit SHA from an assembly informational version string.
+    /// Extracts the build metadata portion after the '+' separator.
+    /// </summary>
+    /// <param name="informationalVersion">The informational version string (e.g. "15.9.0+abc123").</param>
+    /// <returns>The commit SHA after the '+' separator, or an empty string if none is present.</returns>
+    internal static string ParseCommitShaFromInformationalVersion(string informationalVersion)
     {
-        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        if (informational is not null)
+        var plusIndex = informationalVersion.IndexOf('+');
+        if (plusIndex >= 0 && plusIndex < informationalVersion.Length - 1)
         {
-            var version = informational.InformationalVersion;
-            var plusIndex = version.IndexOf('+');
-
-            if (plusIndex >= 0 && plusIndex < version.Length - 1)
-            {
-                return version[(plusIndex + 1)..];
-            }
+            return informationalVersion[(plusIndex + 1)..];
         }
 
         return string.Empty;
