@@ -285,7 +285,8 @@
                 "actions": {
                     "appendEvent": "Append Event",
                     "redact": "Redact",
-                    "revise": "Revise"
+                    "revise": "Revise",
+                    "export": "Export"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
