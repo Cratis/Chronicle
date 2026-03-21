@@ -66,7 +66,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
             if (schemaProperty is null && name == "id")
             {
-                schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+                var pascalCaseSchemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+                if (pascalCaseSchemaProperty is not null)
+                {
+                    schemaProperty = pascalCaseSchemaProperty;
+                    name = "Id";
+                }
             }
 
             if (schemaProperty is null)
