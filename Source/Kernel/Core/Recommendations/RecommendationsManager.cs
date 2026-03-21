@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Storage;
 
@@ -20,6 +21,20 @@ public class RecommendationsManager(IStorage storage) : Grain, IRecommendationsM
         where TRecommendation : IRecommendation<TRequest>
         where TRequest : class, IRecommendationRequest
     {
+        var key = GetRecommendationKey();
+        var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
+        var recommendationType = (RecommendationType)typeof(TRecommendation);
+        var existingRecommendations = await recommendationStorage.GetAll();
+        var requestAsJson = JsonSerializer.Serialize((object)request);
+        var existing = existingRecommendations.FirstOrDefault(r =>
+            r.Type == recommendationType &&
+            JsonSerializer.Serialize((object)r.Request) == requestAsJson);
+
+        if (existing is not null)
+        {
+            return existing.Id;
+        }
+
         var id = RecommendationId.New();
         var recommendation = GrainFactory.GetGrain<TRecommendation>(id, keyExtension: GetRecommendationKey());
         await recommendation.Initialize(description, request);
