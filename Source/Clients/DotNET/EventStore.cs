@@ -274,12 +274,16 @@ public class EventStore : IEventStore
             EventTypes.Register(),
             ReadModels.Register());
 
+        // Register all observers before seeding to prevent race conditions where
+        // seeded events arrive at the kernel before observers are registered
         await Task.WhenAll(
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register(),
-            Seeding.Register());
+            Projections.Register());
+
+        // Seed events only after all observers are registered
+        await Seeding.Register();
     }
 
     /// <inheritdoc/>

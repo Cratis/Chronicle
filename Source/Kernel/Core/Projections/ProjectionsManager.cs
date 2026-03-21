@@ -73,7 +73,10 @@ public class ProjectionsManager(
 
         State.Projections = existingProjections;
         await WriteStateAsync();
-        ScheduleSetDefinitionAndSubscribe();
+
+        // Subscribe projections immediately so that seeded events appended after registration
+        // are not missed due to the asynchronous timer-based subscription scheduling
+        await SetDefinitionAndSubscribeForAllProjections();
     }
 
     /// <inheritdoc/>
