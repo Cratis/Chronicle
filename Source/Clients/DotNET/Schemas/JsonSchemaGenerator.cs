@@ -11,6 +11,7 @@ using Cratis.Concepts;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -37,7 +38,8 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         _serializerOptions = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
+            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy ?? JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             Converters =
             {
                 new EnumerableConceptAsJsonConverterFactory(),

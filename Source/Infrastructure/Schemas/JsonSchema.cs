@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -449,7 +450,11 @@ public class JsonSchema
     /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
     public static JsonSchema FromType(Type type)
     {
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
         var exporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
         var node = JsonSchemaExporter.GetJsonSchemaAsNode(options, type, exporterOptions);
         return new JsonSchema(node.AsObject());

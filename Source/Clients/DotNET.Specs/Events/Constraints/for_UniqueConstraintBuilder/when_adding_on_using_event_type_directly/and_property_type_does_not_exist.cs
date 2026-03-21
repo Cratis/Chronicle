@@ -1,17 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using System.Text.Json.Schema;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.when_adding_on_using_event_type_directly;
 
 public class and_property_type_does_not_exist : given.a_unique_constraint_builder_with_owner
 {
-    static readonly JsonSerializerOptions _options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    static readonly JsonSchemaExporterOptions _exporterOptions = new() { TreatNullObliviousAsNonNullable = true };
-
     EventType _eventType;
 
     PropertyDoesNotExistOnEventType _result;
@@ -19,7 +14,7 @@ public class and_property_type_does_not_exist : given.a_unique_constraint_builde
     void Establish()
     {
         _eventType = new EventType(nameof(EventWithStringProperty), EventTypeGeneration.First);
-        var firstEventTypeSchema = new JsonSchema(JsonSchemaExporter.GetJsonSchemaAsNode(_options, typeof(EventWithStringProperty), _exporterOptions).AsObject());
+        var firstEventTypeSchema = JsonSchema.FromType<EventWithStringProperty>();
         _eventTypes.GetSchemaFor(_eventType.Id).Returns(firstEventTypeSchema);
     }
 

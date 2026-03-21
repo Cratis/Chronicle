@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Schemas;
 
@@ -21,7 +22,8 @@ public class EventTypesForSpecifications : IEventTypes
 
     static readonly JsonSerializerOptions _serializerOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
     };
 
     static readonly JsonSchemaExporterOptions _exporterOptions = new()
