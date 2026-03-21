@@ -9,6 +9,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_HandleEvent.given;
 

@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Serializers;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 

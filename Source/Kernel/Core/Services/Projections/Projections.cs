@@ -21,6 +21,7 @@ using ProtoBuf.Grpc;
 using ContractProjectionDefinitionParsingErrors = Cratis.Chronicle.Contracts.Projections.ProjectionDeclarationParsingErrors;
 using ContractProjectionPreview = Cratis.Chronicle.Contracts.Projections.ProjectionPreview;
 using WellKnownSinkTypes = Cratis.Chronicle.Concepts.Sinks.WellKnownSinkTypes;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Projections;
 

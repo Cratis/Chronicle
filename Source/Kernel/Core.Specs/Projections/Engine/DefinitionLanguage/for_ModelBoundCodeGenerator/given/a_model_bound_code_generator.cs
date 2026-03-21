@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.given;
 

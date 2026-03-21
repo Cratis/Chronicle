@@ -9,7 +9,7 @@ public class when_validating_with_missing_method_on_server : Specification
 {
     CompatibilityCheckResult _result;
 
-    const string _clientSchema = """
+    const string ClientSchema = """
         syntax = "proto3";
         service MyService {
           rpc DoSomething (MyRequest) returns (MyResponse);
@@ -19,7 +19,7 @@ public class when_validating_with_missing_method_on_server : Specification
         message MyResponse {}
         """;
 
-    const string _serverSchema = """
+    const string ServerSchema = """
         syntax = "proto3";
         service MyService {
           rpc DoSomething (MyRequest) returns (MyResponse);
@@ -28,7 +28,7 @@ public class when_validating_with_missing_method_on_server : Specification
         message MyResponse {}
         """;
 
-    void Because() => _result = CompatibilityValidator.Validate(_clientSchema, _serverSchema, NullLogger.Instance);
+    void Because() => _result = CompatibilityValidator.Validate(ClientSchema, ServerSchema, NullLogger.Instance);
 
     [Fact] void should_not_be_compatible() => _result.IsCompatible.ShouldBeFalse();
     [Fact] void should_have_error_about_missing_method() => _result.Errors.ShouldContain(e => e.Contains("DoSomethingElse") && e.Contains("missing"));

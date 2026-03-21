@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Events;
 

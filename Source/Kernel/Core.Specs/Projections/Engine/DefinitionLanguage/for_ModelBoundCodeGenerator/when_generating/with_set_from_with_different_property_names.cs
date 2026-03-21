@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.when_generating;
 
@@ -45,7 +46,7 @@ public class with_set_from_with_different_property_names : given.a_model_bound_c
     [Fact] void should_have_set_from_attribute()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var balanceParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "Balance");
+        var balanceParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "Balance");
         var hasSetFrom = balanceParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .Any(a => a.Name.ToString().Contains("SetFrom"));
@@ -55,13 +56,13 @@ public class with_set_from_with_different_property_names : given.a_model_bound_c
     [Fact] void should_have_nameof_expression_for_different_property_name()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var balanceParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "Balance");
+        var balanceParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "Balance");
         var setFromAttr = balanceParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("SetFrom"));
 
         setFromAttr.ArgumentList.ShouldNotBeNull();
-        var code = setFromAttr.ArgumentList!.ToString();
+        var code = setFromAttr.ArgumentList.ToString();
         code.ShouldContain("nameof");
         code.ShouldContain("InitialBalance");
     }

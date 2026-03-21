@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -84,6 +85,44 @@ public class JsonSchema
             else
             {
                 _node["format"] = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the title of the schema.
+    /// </summary>
+    public string? Title
+    {
+        get => _node["title"]?.GetValue<string>();
+        set
+        {
+            if (value is null)
+            {
+                _node.Remove("title");
+            }
+            else
+            {
+                _node["title"] = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the description of the schema.
+    /// </summary>
+    public string? Description
+    {
+        get => _node["description"]?.GetValue<string>();
+        set
+        {
+            if (value is null)
+            {
+                _node.Remove("description");
+            }
+            else
+            {
+                _node["description"] = value;
             }
         }
     }
@@ -337,6 +376,48 @@ public class JsonSchema
     public string ToJson() => _node.ToJsonString();
 
     /// <summary>
+    /// Validates a JSON string against this schema (basic type and required property checks).
+    /// </summary>
+    /// <param name="json">The JSON string to validate.</param>
+    /// <returns>A list of <see cref="JsonSchemaValidationError"/> describing any validation errors.</returns>
+    public IList<JsonSchemaValidationError> Validate(string json)
+    {
+        var errors = new List<JsonSchemaValidationError>();
+        try
+        {
+            var node = JsonNode.Parse(json);
+            if (node is not JsonObject obj)
+            {
+                if (Type != JsonObjectType.None && !Type.HasFlag(JsonObjectType.Object))
+                {
+                    errors.Add(new JsonSchemaValidationError(null, JsonSchemaValidationErrorKind.WrongPropertyType, $"Expected object but got {node?.GetType().Name ?? "null"}."));
+                }
+
+                return errors;
+            }
+
+            // Check required properties
+            if (_node["required"] is JsonArray required)
+            {
+                foreach (var req in required)
+                {
+                    var propName = req?.GetValue<string>();
+                    if (propName is not null && !obj.ContainsKey(propName))
+                    {
+                        errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new JsonSchemaValidationError(null, JsonSchemaValidationErrorKind.Unknown, ex.Message));
+        }
+
+        return errors;
+    }
+
+    /// <summary>
     /// Parses a JSON Schema from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string.</param>
@@ -353,6 +434,26 @@ public class JsonSchema
     /// <param name="json">The JSON string.</param>
     /// <returns>A completed task containing the parsed <see cref="JsonSchema"/>.</returns>
     public static Task<JsonSchema> FromJsonAsync(string json) => Task.FromResult(FromJson(json));
+
+    /// <summary>
+    /// Generates a JSON Schema for the given CLR type using camelCase naming.
+    /// </summary>
+    /// <typeparam name="T">The CLR type to generate a schema for.</typeparam>
+    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
+    public static JsonSchema FromType<T>() => FromType(typeof(T));
+
+    /// <summary>
+    /// Generates a JSON Schema for the given CLR type using camelCase naming.
+    /// </summary>
+    /// <param name="type">The CLR type to generate a schema for.</param>
+    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
+    public static JsonSchema FromType(Type type)
+    {
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var exporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
+        var node = JsonSchemaExporter.GetJsonSchemaAsNode(options, type, exporterOptions);
+        return new JsonSchema(node.AsObject());
+    }
 
     List<JsonSchema> BuildSchemaList(string key)
     {

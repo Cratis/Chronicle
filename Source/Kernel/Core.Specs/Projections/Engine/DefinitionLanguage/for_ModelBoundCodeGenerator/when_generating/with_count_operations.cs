@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.when_generating;
 
@@ -45,7 +46,7 @@ public class with_count_operations : given.a_model_bound_code_generator
     [Fact] void should_have_count_attribute()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var totalOrdersParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "TotalOrders");
+        var totalOrdersParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "TotalOrders");
         var hasCount = totalOrdersParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .Any(a => a.Name.ToString().Contains("Count"));
@@ -55,7 +56,7 @@ public class with_count_operations : given.a_model_bound_code_generator
     [Fact] void should_have_order_placed_event_in_count()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var totalOrdersParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "TotalOrders");
+        var totalOrdersParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "TotalOrders");
         var countAttr = totalOrdersParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("Count"));

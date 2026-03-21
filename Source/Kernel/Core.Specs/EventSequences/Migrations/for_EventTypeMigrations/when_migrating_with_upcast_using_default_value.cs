@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.EventSequences.Migrations.for_EventTypeMigrations;
 
@@ -70,7 +71,7 @@ public class when_migrating_with_upcast_using_default_value : given.all_dependen
 
     [Fact] void should_have_applied_default_value_in_gen2_content() =>
         _expandoObjectConverter.Received().ToExpandoObject(
-            Arg.Is<JsonObject>(j => j.ContainsKey("status") && j["status"]!.GetValue<string>() == "pending"),
+            Arg.Is<JsonObject>(j => j.ContainsKey("status") && j["status"] != null && j["status"]!.GetValue<string>() == "pending"),
             Arg.Any<JsonSchema>());
 
     [Fact] void should_have_preserved_existing_property_in_gen2_content() =>

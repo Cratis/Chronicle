@@ -51,9 +51,13 @@
         <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true' and $([System.IO.Path]::IsPathRooted('$(OutputPath)'))">
+        <CratisProxiesOutputPath></CratisProxiesOutputPath>
+    </PropertyGroup>
+
     <Target Name="EmbedXmlDocs" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
-        <Message Text="Embedded XML documentation : $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll" Importance="high" />
-        <Exec Command="dotnet run $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).dll $(MSBuildThisFileDirectory)$(OutputPath)$(AssemblyName).xml" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
+        <Message Text="Embedded XML documentation : $(TargetDir)$(AssemblyName).dll" Importance="high" />
+        <Exec Command="dotnet run &quot;$(TargetDir)$(AssemblyName).dll&quot; &quot;$(TargetDir)$(AssemblyName).xml&quot;" WorkingDirectory="$(MSBuildProjectDirectory)/../../Tools/ResourceEmbedder" />
     </Target>
 
     <ItemGroup>

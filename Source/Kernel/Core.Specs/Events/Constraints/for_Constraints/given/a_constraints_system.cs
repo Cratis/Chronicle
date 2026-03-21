@@ -34,7 +34,7 @@ public class a_constraints_system : Specification
         _stateStorage = _silo.StorageManager.GetStorage<ConstraintsState>(typeof(Constraints).FullName);
         _stateStorage.State = new ConstraintsState();
 
-        _storageStats = _silo.StorageStats<Constraints, ConstraintsState>()!;
+        _storageStats = _silo.StorageStats<Constraints, ConstraintsState>();
 
         _broadcastChannelWriter = Substitute.For<IBroadcastChannelWriter<ConstraintsChanged>>();
         _broadcastChannelProvider.GetChannelWriter<ConstraintsChanged>(Arg.Any<ChannelId>()).Returns(_broadcastChannelWriter);

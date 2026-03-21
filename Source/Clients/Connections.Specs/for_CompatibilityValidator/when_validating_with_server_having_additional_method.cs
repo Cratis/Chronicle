@@ -14,7 +14,7 @@ public class when_validating_with_server_having_additional_method : Specificatio
 {
     CompatibilityCheckResult _result;
 
-    const string _clientSchema = """
+    const string ClientSchema = """
         syntax = "proto3";
         service MyService {
           rpc DoSomething (MyRequest) returns (MyResponse);
@@ -23,7 +23,7 @@ public class when_validating_with_server_having_additional_method : Specificatio
         message MyResponse {}
         """;
 
-    const string _serverSchema = """
+    const string ServerSchema = """
         syntax = "proto3";
         service MyService {
           rpc DoSomething (MyRequest) returns (MyResponse);
@@ -33,7 +33,7 @@ public class when_validating_with_server_having_additional_method : Specificatio
         message MyResponse {}
         """;
 
-    void Because() => _result = CompatibilityValidator.Validate(_clientSchema, _serverSchema, NullLogger.Instance);
+    void Because() => _result = CompatibilityValidator.Validate(ClientSchema, ServerSchema, NullLogger.Instance);
 
     [Fact] void should_be_compatible() => _result.IsCompatible.ShouldBeTrue();
     [Fact] void should_have_no_errors() => _result.Errors.ShouldBeEmpty();

@@ -73,7 +73,10 @@ public class ProjectionsManager(
 
         State.Projections = existingProjections;
         await WriteStateAsync();
-        ScheduleSetDefinitionAndSubscribe();
+
+        // Subscribe projections immediately so that seeded events appended after registration
+        // are not missed due to the asynchronous timer-based subscription scheduling
+        await SetDefinitionAndSubscribeForAllProjections();
     }
 
     /// <inheritdoc/>
@@ -139,17 +142,17 @@ public class ProjectionsManager(
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
-        await Task.WhenAll(State.Projections.Select(async definition =>
+        foreach (var definition in State.Projections)
         {
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
             if (readModelDefinition is null)
             {
                 logger.MissingReadModelDefinitionForProjection(definition.Identifier, definition.ReadModel);
-                return;
+                continue;
             }
 
             await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition);
-        }));
+        }
     }
 
     async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
@@ -164,7 +167,10 @@ public class ProjectionsManager(
             return;
         }
 
-        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName)));
+        foreach (var namespaceName in namespaces)
+        {
+            await SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName);
+        }
     }
 
     async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)

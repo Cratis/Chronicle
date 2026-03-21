@@ -22,6 +22,7 @@ using Cratis.Collections;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers;
 

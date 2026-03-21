@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.when_generating;
 
@@ -53,7 +54,7 @@ public class with_increment_and_decrement_operations : given.a_model_bound_code_
     [Fact] void should_have_increment_attribute()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var loginCountParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "LoginCount");
+        var loginCountParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "LoginCount");
         var hasIncrement = loginCountParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .Any(a => a.Name.ToString().Contains("Increment"));
@@ -63,7 +64,7 @@ public class with_increment_and_decrement_operations : given.a_model_bound_code_
     [Fact] void should_have_decrement_attribute()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var loginCountParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "LoginCount");
+        var loginCountParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "LoginCount");
         var hasDecrement = loginCountParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .Any(a => a.Name.ToString().Contains("Decrement"));
@@ -73,7 +74,7 @@ public class with_increment_and_decrement_operations : given.a_model_bound_code_
     [Fact] void should_have_user_logged_in_event_in_increment()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var loginCountParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "LoginCount");
+        var loginCountParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "LoginCount");
         var incrementAttr = loginCountParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("Increment"));
@@ -83,7 +84,7 @@ public class with_increment_and_decrement_operations : given.a_model_bound_code_
     [Fact] void should_have_user_logged_out_event_in_decrement()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var loginCountParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "LoginCount");
+        var loginCountParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "LoginCount");
         var decrementAttr = loginCountParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("Decrement"));

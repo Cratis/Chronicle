@@ -17,6 +17,7 @@ using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using ProjectionChangeset = Cratis.Chronicle.Projections.ProjectionChangeset;
 using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.ReadModels;
 
@@ -410,7 +411,7 @@ internal sealed class ReadModels(
             {
                 ReadModel = readModel,
                 Events = orderedEvents.ToContract(jsonSerializerOptions),
-                Occurred = firstOccurred!,
+                Occurred = firstOccurred,
                 CorrelationId = correlationId
             });
         }

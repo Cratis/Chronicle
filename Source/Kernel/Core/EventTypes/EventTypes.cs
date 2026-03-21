@@ -13,6 +13,7 @@ using Cratis.DependencyInjection;
 using Cratis.Serialization;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.EventTypes;
 

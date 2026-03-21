@@ -14,6 +14,7 @@ using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Codecs;
 using Orleans.Serialization.Serializers;
 using Orleans.Serialization.WireProtocol;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 

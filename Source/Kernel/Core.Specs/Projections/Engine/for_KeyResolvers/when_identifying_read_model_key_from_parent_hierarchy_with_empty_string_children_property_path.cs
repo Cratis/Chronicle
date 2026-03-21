@@ -69,7 +69,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
         // Set ChildrenPropertyPath to empty string instead of NotSet
         _parentProjection.ChildrenPropertyPath.Returns((PropertyPath)string.Empty);
         _parentProjection.HasParent.Returns(false);
-        _parentProjection.Parent.Returns((IProjection)null!);
+        _parentProjection.Parent.Returns((IProjection)null);
 
         _childProjection = Substitute.For<IProjection>();
         _childProjection.HasParent.Returns(true);

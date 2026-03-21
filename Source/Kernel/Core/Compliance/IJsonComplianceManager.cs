@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Compliance;
 

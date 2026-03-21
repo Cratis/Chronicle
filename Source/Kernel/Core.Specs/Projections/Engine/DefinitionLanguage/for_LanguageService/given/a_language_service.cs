@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 

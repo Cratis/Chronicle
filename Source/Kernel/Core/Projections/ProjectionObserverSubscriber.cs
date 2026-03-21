@@ -17,6 +17,7 @@ using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Streams;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections;
 

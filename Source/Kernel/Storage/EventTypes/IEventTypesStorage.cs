@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.EventTypes;
 

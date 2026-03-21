@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 using MongoDB.Bson;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 

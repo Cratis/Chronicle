@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties.for_SetExpressionResolver;
 

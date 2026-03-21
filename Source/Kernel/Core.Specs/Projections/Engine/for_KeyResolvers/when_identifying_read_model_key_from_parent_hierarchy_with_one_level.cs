@@ -100,7 +100,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_one_leve
             _keyResolvers.FromEventSourceId,
             _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("parentId")),
             "childId")(_storage, _sink, _event);
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact] void should_return_expected_key() => _result.Value.ShouldEqual(ParentKey);

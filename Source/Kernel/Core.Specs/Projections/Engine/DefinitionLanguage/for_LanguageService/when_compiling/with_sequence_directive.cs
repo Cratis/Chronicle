@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.when_compiling;
 

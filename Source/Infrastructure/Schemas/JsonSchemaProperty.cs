@@ -35,6 +35,12 @@ public class JsonSchemaProperty : JsonSchema
     public string Name { get; }
 
     /// <summary>
+    /// Gets the actual resolved schema for this property (follows $ref and allOf).
+    /// Equivalent to <see cref="JsonSchema.ActualTypeSchema"/>.
+    /// </summary>
+    public JsonSchema ActualSchema => ActualTypeSchema;
+
+    /// <summary>
     /// Gets whether any of the OneOf schemas has a $ref.
     /// </summary>
     public bool HasOneOfSchemaReference => OneOf.Any(s => s.HasReference);

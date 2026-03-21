@@ -6,8 +6,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Events;
 using Cratis.Concepts;
 using Cratis.DependencyInjection;
+using Cratis.Json;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Schemas;
@@ -87,6 +89,17 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             _metadataResolver.HasMetadataFor(propInfo))
         {
             AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
+        }
+
+        // Add compensation metadata — only applies to top-level type schema (no property context)
+        if (context.PropertyInfo is null)
+        {
+            var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
+            if (compensationAttribute is not null)
+            {
+                var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
+                schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+            }
         }
 
         return schema;
