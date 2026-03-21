@@ -25,8 +25,7 @@ public class when_converting_bson_document_with_id_and_Id_properties_to_expando_
 
     void Because() => _result = converter.ToExpandoObject(_source, schema);
 
-    [Fact] void should_have_camel_case_id_property() => ((IDictionary<string, object>)_result).ContainsKey("id").ShouldBeTrue();
     [Fact] void should_have_pascal_case_id_property() => ((IDictionary<string, object>)_result).ContainsKey("Id").ShouldBeTrue();
-    [Fact] void should_set_camel_case_id_from_document_id() => ((Guid)_result.id).ShouldEqual(_camelCaseId);
-    [Fact] void should_set_pascal_case_id_from_document_id() => ((Guid)_result.Id).ShouldEqual(_pascalCaseId);
+    [Fact] void should_not_have_camel_case_id_property() => ((IDictionary<string, object>)_result).ContainsKey("id").ShouldBeFalse();
+    [Fact] void should_set_pascal_case_id_from_explicit_id_field() => ((Guid)_result.Id).ShouldEqual(_pascalCaseId);
 }
