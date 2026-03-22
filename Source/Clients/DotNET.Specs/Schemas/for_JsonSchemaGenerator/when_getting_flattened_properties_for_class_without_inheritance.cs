@@ -15,5 +15,5 @@ public class when_getting_flattened_properties_for_class_without_inheritance : g
 
     void Because() => _result = _schema.GetFlattenedProperties();
 
-    [Fact] void should_get_the_properties_on_the_type() => _result.Select(_ => _.Name).ShouldContainOnly("someInteger", "someString");
+    [Fact] void should_get_the_properties_on_the_type() => _result.Select(_ => _.Name).ShouldContainOnly(nameof(SimpleType.SomeInteger), nameof(SimpleType.SomeString));
 }

@@ -38,7 +38,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         _serializerOptions = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy ?? JsonNamingPolicy.CamelCase,
+            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
             TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             Converters =
             {

@@ -19,8 +19,8 @@ public class when_getting_flattened_properties_for_class_with_inheritance : give
 
     [Fact]
     void should_get_all_properties() => _result.Select(_ => _.Name).ShouldContainOnly(
-            "someInteger",
-            "someString",
-            "baseInteger",
-            "baseString");
+            nameof(SimpleType.SomeInteger),
+            nameof(SimpleType.SomeString),
+            nameof(BaseType.BaseInteger),
+            nameof(BaseType.BaseString));
 }
