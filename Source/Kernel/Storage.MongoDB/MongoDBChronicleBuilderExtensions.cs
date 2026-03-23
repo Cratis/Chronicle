@@ -49,6 +49,8 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
             services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
             services.AddSingleton<IClusterStorage, ClusterStorage>();
+            services.AddSingleton<ISystemStorage, SystemStorage>();
+            services.AddSingleton<IStorage, Storage.Storage>();
         });
 
         return builder;
