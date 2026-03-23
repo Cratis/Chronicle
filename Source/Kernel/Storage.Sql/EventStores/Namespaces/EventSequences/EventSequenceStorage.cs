@@ -62,8 +62,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events as IQueryable<EventEntry>;
-
+        var query = scope.DbContext.Events.AsQueryable();
         if (lastEventSequenceNumber is not null)
         {
             query = query.Where(e => e.SequenceNumber <= lastEventSequenceNumber);
@@ -334,8 +333,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events as IQueryable<EventEntry>;
-
+        var query = scope.DbContext.Events.AsQueryable();
         if (eventTypes?.Any() == true)
         {
             var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
@@ -366,7 +364,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events as IQueryable<EventEntry>;
+        var query = scope.DbContext.Events.AsQueryable();
 
         if (eventTypes?.Any() == true)
         {
