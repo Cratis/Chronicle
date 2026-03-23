@@ -74,7 +74,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     {
         await using var scope = await database.EventStore(eventStore);
         var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
-        return eventTypes.Select(_ => _.ToDefinition()).ToList();
+        return eventTypes.ConvertAll(static eventType => eventType.ToDefinition());
     }
 
     /// <inheritdoc/>

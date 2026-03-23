@@ -129,10 +129,9 @@ public static class EventEntryConverter
     {
         var contentDict = string.IsNullOrEmpty(entry.Content)
             ? new Dictionary<string, JsonElement>()
-            : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions) ?? new Dictionary<string, JsonElement>();
+            : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions) ?? [];
 
-        var contentElement = JsonSerializer.SerializeToElement(content, _jsonSerializerOptions);
-        contentDict[((uint)generation).ToString()] = contentElement;
+        contentDict[((uint)generation).ToString()] = JsonSerializer.SerializeToElement(content, _jsonSerializerOptions);
         entry.Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions);
     }
 
