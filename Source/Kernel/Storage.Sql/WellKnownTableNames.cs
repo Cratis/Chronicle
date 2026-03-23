@@ -129,6 +129,31 @@ public static class WellKnownTableNames
     public const string ReadModelDefinitions = "ReadModels";
 
     /// <summary>
+    /// The table that holds users.
+    /// </summary>
+    public const string Users = "Users";
+
+    /// <summary>
+    /// The table that holds OAuth applications.
+    /// </summary>
+    public const string Applications = "Applications";
+
+    /// <summary>
+    /// The table that holds data protection keys.
+    /// </summary>
+    public const string DataProtectionKeys = "DataProtectionKeys";
+
+    /// <summary>
+    /// The table that holds applied patches.
+    /// </summary>
+    public const string Patches = "Patches";
+
+    /// <summary>
+    /// The table that holds system information.
+    /// </summary>
+    public const string SystemInformation = "SystemInformation";
+
+    /// <summary>
     /// The table that holds changesets.
     /// </summary>
     public const string Changesets = "Changesets";
