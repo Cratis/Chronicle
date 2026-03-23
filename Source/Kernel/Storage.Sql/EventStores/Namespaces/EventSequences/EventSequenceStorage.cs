@@ -184,77 +184,6 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
-        EventSequenceNumber sequenceNumber,
-        EventSourceType eventSourceType,
-        EventSourceId eventSourceId,
-        EventStreamType eventStreamType,
-        EventStreamId eventStreamId,
-        EventType eventType,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain,
-        IEnumerable<Tag> tags,
-        DateTimeOffset occurred,
-        ExpandoObject content,
-        EventHash hash)
-    {
-        try
-        {
-            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-
-            // Check if sequence number already exists
-            var existingEvent = await scope.DbContext.Events
-                .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
-
-            if (existingEvent is not null)
-            {
-                return new DuplicateEventSequenceNumber(sequenceNumber);
-            }
-
-            var eventEntry = EventEntryConverter.ToEventEntry(
-                sequenceNumber,
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                eventType,
-                correlationId,
-                causation,
-                causedByChain,
-                occurred,
-                content);
-
-            scope.DbContext.Events.Add(eventEntry);
-            await scope.DbContext.SaveChangesAsync();
-
-            // Create AppendedEvent
-            var eventContext = new EventContext(
-                eventType,
-                eventSourceType,
-                eventSourceId,
-                eventStreamType,
-                eventStreamId,
-                sequenceNumber,
-                occurred,
-                eventStore,
-                @namespace,
-                correlationId,
-                causation,
-                await identityStorage.GetFor(causedByChain),
-                tags,
-                hash);
-
-            return new AppendedEvent(eventContext, content);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedToAppendEvent(ex, sequenceNumber, eventSequenceId);
-            throw;
-        }
-    }
-
-    /// <inheritdoc/>
     public async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events)
     {
         var eventsArray = events.ToArray();
@@ -321,41 +250,6 @@ public class EventSequenceStorage(
             logger.FailedToAppendEvent(ex, EventSequenceNumber.Unavailable, eventSequenceId);
             throw;
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task Compensate(EventSequenceNumber sequenceNumber, EventType eventType, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> causedByChain, DateTimeOffset occurred, ExpandoObject content)
-    {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
-
-        // Get the original event to compensate
-        var originalEvent = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
-
-        // Get the next sequence number for the compensation event
-        var state = await GetState();
-        var compensationSequenceNumber = state.SequenceNumber + 1;
-
-        // Create compensation event entry
-        var compensationEntry = EventEntryConverter.ToEventEntry(
-            compensationSequenceNumber,
-            new EventSourceType(originalEvent.EventSourceType),
-            new EventSourceId(originalEvent.EventSourceId),
-            new EventStreamType(originalEvent.EventStreamType),
-            new EventStreamId(originalEvent.EventStreamId),
-            eventType,
-            correlationId,
-            causation,
-            causedByChain,
-            occurred,
-            content);
-
-        scope.DbContext.Events.Add(compensationEntry);
-
-        // Update state
-        state.SequenceNumber = compensationSequenceNumber;
-        await SaveState(state);
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
