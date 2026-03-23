@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Coordinator
 description: >
@@ -147,5 +146,3 @@ Always output a plan before starting any delegation:
 ```
 
 Then delegate each task in order, respecting phase boundaries.
-
-````

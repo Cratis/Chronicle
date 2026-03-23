@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Frontend Developer
 description: >
@@ -241,5 +240,3 @@ Before handing back to the planner:
 - [ ] Composition page updated to include the new component
 - [ ] Routing updated if a new page was added
 - [ ] README.md created or updated for complex component folders
-
-````

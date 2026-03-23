@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Code Reviewer
 description: >
@@ -163,5 +162,3 @@ Then list issues grouped by file:
 ```
 
 End with a checklist of passed / failed items so the developer knows what was verified.
-
-````

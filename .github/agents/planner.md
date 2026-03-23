@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Vertical Slice Planner
 description: >
@@ -125,5 +124,3 @@ Each task entry must include the delegating agent in square brackets, e.g.:
 - [ ] [code-reviewer] Review all changed files
 - [ ] [security-reviewer] Security review of all changed files
 ```
-
-````
