@@ -10,8 +10,8 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
 using Cratis.Chronicle.Setup;
-using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProtoBuf.Grpc.Configuration;
@@ -108,28 +108,49 @@ builder.WebHost.UseKestrel(options =>
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
-builder.Host
-   .UseDefaultServiceProvider(_ =>
+var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+
+var hostBuilder = builder.Host
+.UseDefaultServiceProvider(_ =>
+{
+    _.ValidateScopes = false;
+    _.ValidateOnBuild = false;
+})
+.AddCratisArc(options =>
+{
+    options.GeneratedApis.RoutePrefix = "api";
+    options.GeneratedApis.SegmentsToSkipForRoute = 3;
+})
+.AddCratisMongoDB(
+   configureOptions: mongo =>
    {
-       _.ValidateScopes = false;
-       _.ValidateOnBuild = false;
-   })
-    .AddCratisArc(options =>
-    {
-        options.GeneratedApis.RoutePrefix = "api";
-        options.GeneratedApis.SegmentsToSkipForRoute = 3;
-    })
-   .AddCratisMongoDB(
-       configureOptions: mongo =>
+       if (!isSqlStorage)
        {
            mongo.Server = chronicleOptions.Storage.ConnectionDetails;
-           mongo.Database = WellKnownDatabaseNames.Chronicle;
-       },
-       builder => builder.WithCamelCaseNamingPolicy())
+           mongo.Database = Cratis.Chronicle.Storage.MongoDB.WellKnownDatabaseNames.Chronicle;
+       }
+       else
+       {
+           // Placeholder values required to pass MongoDBOptions validation.
+           // MongoDB services are removed from the DI container in SQL mode and will not connect.
+           mongo.Server = "mongodb://localhost:27017";
+           mongo.Database = "chronicle_placeholder";
+       }
+   },
+   builder => builder.WithCamelCaseNamingPolicy());
+
+hostBuilder
    .UseOrleans(_ => _
         .UseLocalhostClustering()
-        .AddChronicleToSilo(_ => _
-           .WithMongoDB(chronicleOptions)))
+        .AddChronicleToSilo(chronicleBuilder =>
+        {
+            if (isSqlStorage)
+                chronicleBuilder.WithSql(chronicleOptions);
+            else
+                chronicleBuilder.WithMongoDB(chronicleOptions);
+        }))
    .ConfigureServices((context, services) =>
    {
        services.AddCodeFirstGrpcReflection();
@@ -143,6 +164,19 @@ builder.Host
 
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
+
+       if (isSqlStorage)
+       {
+           // Convention binding and authentication setup auto-register MongoDB storage implementations
+           // alongside SQL ones. Orleans resolves IEnumerable<T> returning all, so MongoDB implementations
+           // must be removed to prevent DI failures (they require MongoDB infrastructure not available
+           // in SQL mode). This removal runs last to catch any MongoDB types added by all extensions.
+           var mongoStorageDescriptors = services
+               .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.MongoDB") == true)
+               .ToList();
+           foreach (var descriptor in mongoStorageDescriptors)
+               services.Remove(descriptor);
+       }
    });
 
 var app = builder.Build();

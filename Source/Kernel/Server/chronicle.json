@@ -11,8 +11,8 @@
         "changesetStorage": false
     },
     "storage": {
-        "type": "sqlite",
-        "connectionDetails": "Data Source=data/chronicle.db"
+        "type": "MongoDB",
+        "connectionDetails": "mongodb://localhost:27017"
     },
     "observers": {
         "subscriberTimeout": 5,
