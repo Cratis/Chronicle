@@ -60,7 +60,7 @@ public class EventStore : IEventStore
     /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="disableEventTypeGenerationValidation">Whether to disable event type generation chain validation. Defaults to <see langword="false"/>.</param>
+    /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation. Defaults to <see langword="false"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
@@ -78,7 +78,7 @@ public class EventStore : IEventStore
         IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
-        bool disableEventTypeGenerationValidation,
+        bool enableEventTypeGenerationValidation,
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
@@ -92,7 +92,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, disableEventTypeGenerationValidation);
+        EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
 
@@ -274,12 +274,16 @@ public class EventStore : IEventStore
             EventTypes.Register(),
             ReadModels.Register());
 
+        // Register all observers before seeding to prevent race conditions where
+        // seeded events arrive at the kernel before observers are registered
         await Task.WhenAll(
             Constraints.Register(),
             Reactors.Register(),
             Reducers.Register(),
-            Projections.Register(),
-            Seeding.Register());
+            Projections.Register());
+
+        // Seed events only after all observers are registered
+        await Seeding.Register();
     }
 
     /// <inheritdoc/>

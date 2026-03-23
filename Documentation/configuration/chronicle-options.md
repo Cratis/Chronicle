@@ -20,6 +20,7 @@ All bindable settings live under `Cratis:Chronicle`:
     "Chronicle": {
       "ConnectionString": "chronicle://localhost:35000",
       "EventStore": "my-store",
+      "EnableEventTypeGenerationValidation": false,
       "ConnectTimeout": 5,
       "AutoDiscoverAndRegister": true,
       "MaxReceiveMessageSize": 104857600,
@@ -40,6 +41,30 @@ All bindable settings live under `Cratis:Chronicle`:
 ```
 
 ## ChronicleOptions properties
+
+### EnableEventTypeGenerationValidation
+
+Asks the Kernel to enforce strict migration chain validation when registering event types at generation 2 or higher. The value is forwarded as part of the registration request.
+
+| | |
+|---|---|
+| Type | `bool` |
+| Default | `false` |
+
+> **Image restriction:** This flag is only honoured by the **development image** of the Kernel. The production image always ignores it and validates unconditionally, regardless of what the client sends. This makes it impossible to accidentally skip migration chain validation in production even if the client has this flag set to `false`.
+
+To opt in to strict validation during development (recommended once your event schemas are stable), set the flag to `true`:
+
+```csharp
+builder.AddCratisChronicle(configureOptions: options =>
+{
+    options.EnableEventTypeGenerationValidation = true;
+});
+```
+
+In `appsettings.json`: `"EnableEventTypeGenerationValidation": true`.
+
+See [Generation Validation](../migrations/validation.md) for the full ruleset.
 
 ### ConnectionString
 
@@ -121,15 +146,6 @@ The commit SHA of the entry assembly, extracted from the `+commit` part of `Asse
 | Type | `string` |
 | Default | Resolved from the entry assembly at startup |
 
-### NamingPolicy
-
-Controls how C# type and property names are converted when building projection definitions and persisting read models. See [Camel Casing](camel-casing.md) for the common use case.
-
-| | |
-|---|---|
-| Type | `INamingPolicy` |
-| Default | `DefaultNamingPolicy` (PascalCase, no conversion) |
-
 ### ClaimsBasedNamespaceResolverClaimType
 
 The JWT claim type used by `ClaimsBasedNamespaceResolver` when namespace resolution is configured via `WithClaimsBasedNamespaceResolver`.
@@ -165,18 +181,6 @@ OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle i
 | Nested property | Type | Description |
 |---|---|---|
 | `Authority` | `string?` | OAuth/OIDC authority URL |
-
-### DisableEventTypeGenerationValidation
-
-Tells the Kernel to bypass migration chain validation when registering event types at generation 2 or higher. The value is forwarded as part of the registration request; it is only honoured by the **development image** of the Kernel. The production image always ignores the flag and validates unconditionally. See [Generation Validation](../migrations/validation.md) for the full ruleset and when this is appropriate.
-
-| | |
-|---|---|
-| Type | `bool` |
-| Default | `false` |
-| Image restriction | **Development image only.** The production image ignores this flag — validation is always enforced in production regardless of what is set in code or `appsettings.json`. |
-
-> **Important:** Only use this during early schema development. Never rely on it in production.
 
 ## ChronicleClientOptions properties
 

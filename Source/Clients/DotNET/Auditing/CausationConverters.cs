@@ -24,7 +24,7 @@ internal static class CausationConverters
     internal static Contracts.Auditing.Causation ToContract(this Causation causation) =>
         new()
         {
-            Occurred = causation.Occurred!,
+            Occurred = causation.Occurred,
             Type = causation.Type,
             Properties = causation.Properties
         };

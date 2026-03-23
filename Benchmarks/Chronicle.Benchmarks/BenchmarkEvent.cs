@@ -5,5 +5,11 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Benchmarks;
 
+/// <summary>
+/// Represents the event payload appended by the benchmark suite.
+/// </summary>
+/// <param name="Name">The event name.</param>
+/// <param name="Value">The benchmark value.</param>
+/// <param name="Timestamp">The time the event was created.</param>
 [EventType("c0b93c8e-3f3f-4f3f-8f3f-3f3f3f3f3f3f")]
 public record BenchmarkEvent(string Name, int Value, DateTimeOffset Timestamp);

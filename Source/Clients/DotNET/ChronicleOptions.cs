@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
-using Cratis.Serialization;
 
 namespace Cratis.Chronicle;
 
@@ -17,14 +16,12 @@ namespace Cratis.Chronicle;
 /// client credentials. This is intended for local development and testing only.
 /// </remarks>
 /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to use.</param>
-/// <param name="namingPolicy">Optional <see cref="INamingPolicy"/> to use for converting names of types and properties.</param>
 /// <param name="jsonSerializerOptions">Optional <see cref="JsonSerializerOptions"/> to use. Will revert to defaults if not configured.</param>
 /// <param name="concurrencyOptions">Optional <see cref="ConcurrencyOptions"/> to use. Will revert to default if not configured.</param>
 /// <param name="autoDiscoverAndRegister">Optional disable automatic discovery of artifacts and registering these.</param>
 /// <param name="connectTimeout">Optional timeout when connecting in seconds. Defaults to 5.</param>
 public class ChronicleOptions(
     ChronicleConnectionString connectionString,
-    INamingPolicy? namingPolicy = null,
     JsonSerializerOptions? jsonSerializerOptions = null,
     ConcurrencyOptions? concurrencyOptions = null,
     bool autoDiscoverAndRegister = true,
@@ -79,11 +76,6 @@ public class ChronicleOptions(
     public ConcurrencyOptions ConcurrencyOptions { get; set; } = concurrencyOptions ?? new ConcurrencyOptions();
 
     /// <summary>
-    /// Gets the <see cref="INamingPolicy"/> to use.
-    /// </summary>
-    public INamingPolicy NamingPolicy { get; set; } = namingPolicy ?? new DefaultNamingPolicy();
-
-    /// <summary>
     /// Gets a value indicating whether to automatically discover and register artifacts.
     /// </summary>
     public bool AutoDiscoverAndRegister { get; set; } = autoDiscoverAndRegister;
@@ -110,21 +102,23 @@ public class ChronicleOptions(
     public string ClaimsBasedNamespaceResolverClaimType { get; set; } = "tenant_id";
 
     /// <summary>
-    /// Gets or sets a value indicating whether event type generation validation is disabled.
-    /// When <see langword="true"/>, Chronicle will not enforce that every generation step
-    /// from 1 to the current generation has a migration defined, and will not require
-    /// sequential generation numbering.
+    /// Gets or sets a value indicating whether event type generation validation is enabled.
+    /// When <see langword="false"/> (the default), the client asks the Kernel to bypass migration
+    /// chain validation when registering event types at generation 2 or higher. Set to
+    /// <see langword="true"/> to opt into strict migration chain validation.
     /// </summary>
     /// <remarks>
-    /// This property is only honoured in DEVELOPMENT builds of the Kernel. In all other
-    /// configurations the value sent to the server is ignored, ensuring that production
-    /// deployments never silently skip migration chain validation.
+    /// <para>
+    /// The Kernel only honours this flag when running the development image.
+    /// The production image always enforces validation unconditionally, regardless of the value sent by the client.
+    /// </para>
+    /// <para>
+    /// The default is <see langword="false"/> so that early-stage schema development works without
+    /// any explicit configuration. Set to <see langword="true"/> to opt into strict migration
+    /// chain validation on the development Kernel image.
+    /// </para>
     /// </remarks>
-#if DEVELOPMENT
-    public bool DisableEventTypeGenerationValidation { get; set; }
-#else
-    public bool DisableEventTypeGenerationValidation => false;
-#endif
+    public bool EnableEventTypeGenerationValidation { get; set; }
 
     /// <summary>
     /// Gets or sets the TLS configuration.

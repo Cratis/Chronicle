@@ -69,13 +69,11 @@ public static class EventSequenceMutationExtensions
     /// </summary>
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="sequenceNumber">The sequence number of the event to redact.</param>
-    /// <param name="reason">Optional reason for the redaction.</param>
+    /// <param name="reason">Reason for the redaction.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task RedactEvent(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, string? reason = null)
+    public static async Task RedactEvent(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, string reason)
     {
-        var redactionReason = reason is null
-            ? KernelRedactionReason.Unknown
-            : new KernelRedactionReason(reason);
+        var redactionReason = new KernelRedactionReason(reason);
 
         var correlationId = KernelCorrelationId.New();
         var systemEventSequence = fixture.GetEventSequenceGrain(KernelEventSequenceId.System);
@@ -102,14 +100,12 @@ public static class EventSequenceMutationExtensions
     /// </summary>
     /// <param name="fixture">The fixture to use.</param>
     /// <param name="eventSourceId">The event source to redact events for.</param>
-    /// <param name="reason">Optional reason for the redaction.</param>
+    /// <param name="reason">Reason for the redaction.</param>
     /// <param name="eventTypes">Optional event type CLR types to restrict the redaction to.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task RedactEventsForEventSource(this IChronicleSetupFixture fixture, EventSourceId eventSourceId, string? reason = null, params Type[] eventTypes)
+    public static async Task RedactEventsForEventSource(this IChronicleSetupFixture fixture, EventSourceId eventSourceId, string reason, params Type[] eventTypes)
     {
-        var redactionReason = reason is null
-            ? KernelRedactionReason.Unknown
-            : new KernelRedactionReason(reason);
+        var redactionReason = new KernelRedactionReason(reason);
 
         var kernelEventTypes = eventTypes
             .Select(fixture.EventStore.EventTypes.GetEventTypeFor)

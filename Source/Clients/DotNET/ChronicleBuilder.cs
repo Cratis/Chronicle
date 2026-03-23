@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Identities;
+using Cratis.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,4 +33,7 @@ public class ChronicleBuilder(IServiceCollection services, IConfiguration config
 
     /// <inheritdoc/>
     public IEventStoreNamespaceResolver? NamespaceResolver { get; set; }
+
+    /// <inheritdoc/>
+    public INamingPolicy? NamingPolicy { get; set; }
 }

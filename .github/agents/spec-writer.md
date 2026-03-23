@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Spec Writer
 description: >
@@ -177,5 +176,3 @@ Before handing back to the planner:
 - [ ] `yarn test` passes with zero failures (if TypeScript specs were written)
 - [ ] Spec folder follows `when_<behavior>/` naming convention
 - [ ] No spec exists for a simple property getter or constructor parameter passthrough
-
-````

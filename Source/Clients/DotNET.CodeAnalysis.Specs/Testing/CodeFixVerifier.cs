@@ -30,7 +30,7 @@ public static class CodeFixVerifier<TAnalyzer, TCodeFix>
         var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
 
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new TAnalyzer());
-        var compilationWithAnalyzers = compilation!.WithAnalyzers(analyzers);
+        var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync().ConfigureAwait(false);
         var orderedDiagnostics = diagnostics.OrderBy(d => d.Location.SourceSpan.Start).ToArray();
 
@@ -41,7 +41,7 @@ public static class CodeFixVerifier<TAnalyzer, TCodeFix>
 
         var actions = new List<CodeAction>();
         var codeFixProvider = new TCodeFix();
-        var context = new CodeFixContext(document, diagnostic!, (action, _) => actions.Add(action), CancellationToken.None);
+        var context = new CodeFixContext(document, diagnostic, (action, _) => actions.Add(action), CancellationToken.None);
         await codeFixProvider.RegisterCodeFixesAsync(context).ConfigureAwait(false);
 
         actions.ShouldNotBeEmpty();
@@ -50,11 +50,11 @@ public static class CodeFixVerifier<TAnalyzer, TCodeFix>
         var applyChanges = operations.OfType<ApplyChangesOperation>().FirstOrDefault();
         applyChanges.ShouldNotBeNull();
 
-        var newSolution = applyChanges!.ChangedSolution;
+        var newSolution = applyChanges.ChangedSolution;
         var newDocument = newSolution.GetDocument(document.Id);
         newDocument.ShouldNotBeNull();
 
-        var newText = await newDocument!.GetTextAsync().ConfigureAwait(false);
+        var newText = await newDocument.GetTextAsync().ConfigureAwait(false);
         NormalizeWhitespace(newText.ToString()).ShouldEqual(NormalizeWhitespace(fixedSource));
     }
 

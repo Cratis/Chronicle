@@ -31,9 +31,13 @@ on:
         - info
         - warning
         - debug
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - "main"
+      - "**"
+    paths:
+      - "Source/**"
+
 
 permissions:
   contents: write
@@ -265,8 +269,10 @@ jobs:
       - name: Build and Create NuGet packages
         run: |
           for project in $(find ./Source/Clients -name "*.csproj" ! -name "*.Specs.csproj"); do
-            dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
+            dotnet pack "$project" --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
           done
+          # Also pack the Contracts project from Kernel
+          dotnet pack ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
@@ -364,7 +370,7 @@ jobs:
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -o out/x64
+          dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
   dotnet-arm64-development:
     if: needs.release.outputs.publish == 'true'
@@ -392,7 +398,7 @@ jobs:
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
-          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -o out/arm64
+          dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'

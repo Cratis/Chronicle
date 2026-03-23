@@ -42,7 +42,7 @@ internal static class EventContextConverters
         SequenceNumber = context.SequenceNumber,
         EventStreamType = context.EventStreamType,
         EventStreamId = context.EventStreamId,
-        Occurred = context.Occurred!,
+        Occurred = context.Occurred,
         CorrelationId = context.CorrelationId,
         Causation = context.Causation.ToContract(),
         CausedBy = context.CausedBy.ToContract(),

@@ -30,6 +30,6 @@ public class a_webhooks_manager_grain : Specification
         _silo.AddProbe(_ => _webhookGrain);
 
         _grain = await _silo.CreateGrainAsync<Webhooks>("test-event-store");
-        _stateStorage = _silo.StorageManager.GetStorage<WebhooksState>(typeof(Webhooks).FullName!);
+        _stateStorage = _silo.StorageManager.GetStorage<WebhooksState>(typeof(Webhooks).FullName);
     }
 }

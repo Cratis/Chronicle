@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Identities;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle;
 
@@ -55,6 +56,17 @@ public static class ChronicleBuilderExtensions
     public static IChronicleBuilder WithNamespaceResolver(this IChronicleBuilder builder, IEventStoreNamespaceResolver resolver)
     {
         builder.NamespaceResolver = resolver;
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the <see cref="IChronicleBuilder"/> to use CamelCase naming policy for type and property names.
+    /// </summary>
+    /// <param name="builder"><see cref="IChronicleBuilder"/> to configure.</param>
+    /// <returns>The same <see cref="IChronicleBuilder"/> for continuation.</returns>
+    public static IChronicleBuilder WithCamelCaseNamingPolicy(this IChronicleBuilder builder)
+    {
+        builder.NamingPolicy = new CamelCaseNamingPolicy();
         return builder;
     }
 }

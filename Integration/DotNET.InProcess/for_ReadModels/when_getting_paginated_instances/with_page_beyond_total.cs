@@ -23,7 +23,7 @@ public class with_page_beyond_total(context context) : Given<context>(context)
             {
                 EventStore = Constants.EventStore,
                 Namespace = "Default",
-                ReadModel = typeof(SomeReadModel).FullName!,
+                ReadModel = typeof(SomeReadModel).FullName,
                 Page = 10,
                 PageSize = 2
             });

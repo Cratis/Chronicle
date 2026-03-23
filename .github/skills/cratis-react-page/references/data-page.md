@@ -71,8 +71,11 @@ The detail panel receives the currently selected row. It is hidden when no row i
 ## Full example
 
 ```tsx
+import { useDialog } from '@cratis/arc.react/dialogs';
+import { CreateAccountDialog } from './CreateAccountDialog';
+
 export const AccountsPage = () => {
-    const [createDialog, openCreate] = useDialog();
+    const [CreateAccountWrapper, showCreateAccount] = useDialog(CreateAccountDialog);
 
     return (
         <>
@@ -85,16 +88,16 @@ export const AccountsPage = () => {
                 ]}
                 menuItems={
                     <MenuItemGroup>
-                        <MenuItem label="Create Account" onClick={openCreate} />
+                        <MenuItem label="Create Account" onClick={() => showCreateAccount()} />
                     </MenuItemGroup>
                 }
                 detailPanel={(row) => <AccountDetail account={row} />}
                 noDataMessage="No accounts found."
             />
-            <CommandDialog dialogMediator={createDialog} title="Create Account" command={CreateAccount}>
-                ...
-            </CommandDialog>
+            <CreateAccountWrapper />
         </>
     );
 };
 ```
+
+`CreateAccountDialog` is a separate component that receives `closeDialog` via `DialogProps` and renders a `CommandDialog`. See `dialogs.md` for the full dialog pattern.

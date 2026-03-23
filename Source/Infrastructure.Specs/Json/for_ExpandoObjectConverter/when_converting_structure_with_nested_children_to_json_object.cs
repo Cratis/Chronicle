@@ -47,17 +47,17 @@ public class when_converting_structure_with_nested_children_to_json_object : giv
 
     void Because() => _result = converter.ToJsonObject(_source, schema);
 
-    [Fact] void should_set_parent_id() => _result["id"]!.GetValue<Guid>().ShouldEqual((Guid)_sourceDynamic.id);
-    [Fact] void should_set_parent_name() => _result["name"]!.GetValue<string>().ShouldEqual((string)_sourceDynamic.name);
+    [Fact] void should_set_parent_id() => _result["id"].GetValue<Guid>().ShouldEqual((Guid)_sourceDynamic.id);
+    [Fact] void should_set_parent_name() => _result["name"].GetValue<string>().ShouldEqual((string)_sourceDynamic.name);
     [Fact] void should_have_configurations_array() => _result["configurations"].ShouldNotBeNull();
-    [Fact] void should_have_two_configurations() => _result["configurations"]!.AsArray().Count.ShouldEqual(2);
+    [Fact] void should_have_two_configurations() => _result["configurations"].AsArray().Count.ShouldEqual(2);
     [Fact] void should_not_have_hubs_array_on_root_object() => _result.ContainsKey("hubs").ShouldBeFalse();
-    [Fact] void should_have_first_configuration_with_correct_id() => _result["configurations"]![0]!["configurationId"]!.GetValue<Guid>().ShouldEqual(Guid.Parse("22222222-2222-2222-2222-222222222222"));
-    [Fact] void should_have_first_configuration_with_correct_name() => _result["configurations"]![0]!["name"]!.GetValue<string>().ShouldEqual("Config 1");
-    [Fact] void should_have_first_configuration_with_correct_distance() => _result["configurations"]![0]!["distance"]!.GetValue<double>().ShouldEqual(100.5);
-    [Fact] void should_have_first_configuration_with_hubs_array() => _result["configurations"]![0]!["hubs"].ShouldNotBeNull();
-    [Fact] void should_have_first_configuration_with_two_hubs() => _result["configurations"]![0]!["hubs"]!.AsArray().Count.ShouldEqual(2);
-    [Fact] void should_have_first_hub_with_correct_id() => _result["configurations"]![0]!["hubs"]![0]!["hubId"]!.GetValue<Guid>().ShouldEqual(Guid.Parse("33333333-3333-3333-3333-333333333333"));
-    [Fact] void should_have_first_hub_with_correct_name() => _result["configurations"]![0]!["hubs"]![0]!["name"]!.GetValue<string>().ShouldEqual("Hub 1");
-    [Fact] void should_have_second_configuration_with_empty_hubs_array() => _result["configurations"]![1]!["hubs"]!.AsArray().Count.ShouldEqual(0);
+    [Fact] void should_have_first_configuration_with_correct_id() => _result["configurations"][0]["configurationId"].GetValue<Guid>().ShouldEqual(Guid.Parse("22222222-2222-2222-2222-222222222222"));
+    [Fact] void should_have_first_configuration_with_correct_name() => _result["configurations"][0]["name"].GetValue<string>().ShouldEqual("Config 1");
+    [Fact] void should_have_first_configuration_with_correct_distance() => _result["configurations"][0]["distance"].GetValue<double>().ShouldEqual(100.5);
+    [Fact] void should_have_first_configuration_with_hubs_array() => _result["configurations"][0]["hubs"].ShouldNotBeNull();
+    [Fact] void should_have_first_configuration_with_two_hubs() => _result["configurations"][0]["hubs"].AsArray().Count.ShouldEqual(2);
+    [Fact] void should_have_first_hub_with_correct_id() => _result["configurations"][0]["hubs"][0]["hubId"].GetValue<Guid>().ShouldEqual(Guid.Parse("33333333-3333-3333-3333-333333333333"));
+    [Fact] void should_have_first_hub_with_correct_name() => _result["configurations"][0]["hubs"][0]["name"].GetValue<string>().ShouldEqual("Hub 1");
+    [Fact] void should_have_second_configuration_with_empty_hubs_array() => _result["configurations"][1]["hubs"].AsArray().Count.ShouldEqual(0);
 }

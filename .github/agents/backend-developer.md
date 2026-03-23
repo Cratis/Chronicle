@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Backend Developer
 description: >
@@ -124,5 +123,3 @@ Before handing back to the planner:
 - [ ] No separate handler classes were created
 - [ ] `[EventType]` has no arguments
 - [ ] `.AutoMap()` is used before `.From<>()` in all projections
-
-````

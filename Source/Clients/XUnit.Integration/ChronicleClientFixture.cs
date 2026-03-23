@@ -137,6 +137,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> UniqueEventTypeConstraints => GetArtifactTypes(provider => provider.UniqueEventTypeConstraints);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> RemoveConstraintEventTypes => GetArtifactTypes(provider => provider.RemoveConstraintEventTypes);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> EventSeeders => GetArtifactTypes(provider => provider.EventSeeders);
 
     /// <summary>

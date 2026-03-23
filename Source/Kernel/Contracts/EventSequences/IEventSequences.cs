@@ -80,4 +80,13 @@ public interface IEventSequences
     /// <returns>The <see cref="RedactResponse"/>.</returns>
     [Operation]
     Task<RedactResponse> Redact(RedactRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Redact all events for a specific event source.
+    /// </summary>
+    /// <param name="request">The <see cref="RedactForEventSourceRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>An awaitable task.</returns>
+    [Operation]
+    Task RedactForEventSource(RedactForEventSourceRequest request, CallContext context = default);
 }

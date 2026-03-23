@@ -217,24 +217,21 @@ See Step 6 and `references/command-dialog.md`.
 
 ## Step 6 — Wrap in a CommandDialog (optional)
 
-For modal dialogs, this is the quickest path:
+For modal dialogs, create a dialog component using `DialogProps` and wire it up with `useDialog`:
 
 ```tsx
-import { useDialog, useDialogContext, DialogResult } from '@cratis/arc.react/dialogs';
+import { DialogProps } from '@cratis/arc.react/dialogs';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
 import { OpenDebitAccount } from '../api/Accounts/OpenDebitAccount';
 
 // --- Dialog component ---
-const OpenAccountDialog = () => {
-    const { closeDialog } = useDialogContext();
+export const OpenAccountDialog = ({ closeDialog }: DialogProps) => {
     return (
-        <CommandDialog
+        <CommandDialog<OpenDebitAccount>
             command={OpenDebitAccount}
             title="Open account"
             okLabel="Open"
-            onConfirm={() => closeDialog(DialogResult.Ok)}
-            onCancel={() => closeDialog(DialogResult.Cancelled)}
         >
             <InputTextField<OpenDebitAccount> value={c => c.name} label="Name" />
         </CommandDialog>
@@ -242,6 +239,9 @@ const OpenAccountDialog = () => {
 };
 
 // --- Parent component ---
+import { useDialog, DialogResult } from '@cratis/arc.react/dialogs';
+import { OpenAccountDialog } from './OpenAccountDialog';
+
 export const AccountsPage = () => {
     const [OpenAccountDialogWrapper, showOpenAccount] = useDialog(OpenAccountDialog);
 
@@ -261,7 +261,38 @@ export const AccountsPage = () => {
 };
 ```
 
-`CommandDialog` calls `onConfirm` only after a successful `command.execute()`, so you don't need to check `isSuccess` yourself. See `references/command-dialog.md` for the full props list and edit-dialog patterns.
+**How it works:**
+- `useDialog(OpenAccountDialog)` returns a wrapper component and a `show` function
+- `showOpenAccount()` opens the dialog; it returns a Promise that resolves when the dialog closes
+- `CommandDialog` executes the command when the user confirms; it closes automatically
+- `DialogProps` provides `closeDialog` — needed when you want to pass a response back or handle cancel explicitly
+
+**Edit dialog (pre-populate with existing values):**
+
+```tsx
+interface EditAccountDialogProps extends DialogProps {
+    accountId: string;
+    name: string;
+}
+
+export const EditAccountDialog = ({ closeDialog, accountId, name }: EditAccountDialogProps) => {
+    return (
+        <CommandDialog<UpdateAccount>
+            command={UpdateAccount}
+            title="Edit account"
+            initialValues={{ accountId }}
+            currentValues={{ name }}
+        >
+            <InputTextField<UpdateAccount> value={c => c.name} label="Name" />
+        </CommandDialog>
+    );
+};
+```
+
+- `initialValues` — sets the change-tracking baseline (e.g. IDs that must be present for the command but are not user-entered)
+- `currentValues` — pre-populates the visible field values
+
+`CommandDialog` calls `onConfirm` only after a successful `command.execute()`, so you don't need to check `isSuccess` yourself. See `references/command-dialog.md` for the full props list.
 
 ---
 

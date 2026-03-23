@@ -30,5 +30,5 @@ public class when_getting_system_information : given.a_system_storage
         Arg.Any<FindOptions<MongoDBSystemInformation>>(),
         Arg.Any<CancellationToken>());
 
-    [Fact] void should_return_system_information_with_correct_version() => _result!.Version.ShouldEqual(new SemanticVersion(1, 2, 3));
+    [Fact] void should_return_system_information_with_correct_version() => _result.Version.ShouldEqual(new SemanticVersion(1, 2, 3));
 }

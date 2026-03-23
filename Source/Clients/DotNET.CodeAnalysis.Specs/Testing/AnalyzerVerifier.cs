@@ -24,7 +24,7 @@ public static class AnalyzerVerifier<TAnalyzer>
         var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
 
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new TAnalyzer());
-        var compilationWithAnalyzers = compilation!.WithAnalyzers(analyzers);
+        var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync().ConfigureAwait(false);
         var orderedDiagnostics = diagnostics.OrderBy(d => d.Location.SourceSpan.Start).ToArray();
 

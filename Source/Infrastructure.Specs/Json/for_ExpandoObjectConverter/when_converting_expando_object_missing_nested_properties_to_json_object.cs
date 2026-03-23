@@ -22,8 +22,8 @@ public class when_converting_expando_object_missing_nested_properties_to_json_ob
 
     void Because() => _result = converter.ToJsonObject(_source, schema);
 
-    [Fact] void should_set_parent_id() => _result["id"]!.GetValue<Guid>().ShouldEqual(Guid.Parse("11111111-1111-1111-1111-111111111111"));
-    [Fact] void should_set_parent_name() => _result["name"]!.GetValue<string>().ShouldEqual("Parent Name");
+    [Fact] void should_set_parent_id() => _result["id"].GetValue<Guid>().ShouldEqual(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+    [Fact] void should_set_parent_name() => _result["name"].GetValue<string>().ShouldEqual("Parent Name");
     [Fact] void should_not_add_configurations_property_when_missing_from_source() => _result.ContainsKey("configurations").ShouldBeFalse();
     [Fact] void should_not_have_hubs_property_from_nested_child_schema() => _result.ContainsKey("hubs").ShouldBeFalse();
     [Fact] void should_not_have_configurationId_from_child_schema() => _result.ContainsKey("configurationId").ShouldBeFalse();

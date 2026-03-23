@@ -9,7 +9,8 @@ Add a business rule or event-store constraint to an existing command.
 
 | Scenario                                           | Use                                           |
 |----------------------------------------------------|-----------------------------------------------|
-| Uniqueness that must survive concurrent writes     | `IConstraint`                                 |
+| Single-event uniqueness (most cases)               | `[Unique]` attribute on the event type        |
+| Multi-event uniqueness or needs `RemovedWith`      | `IConstraint`                                 |
 | Rule requiring Chronicle event-sourced state       | ReadModel as `Handle()` parameter (DCB)       |
 | Simple sync invariant (format, range, required)    | `CommandValidator<T>`                         |
 
@@ -69,9 +70,40 @@ public record AddItemToCart(CartId CartId, ItemId ItemId)
 - Throw a **custom exception** (never a built-in one) to signal violation — the framework converts it to an error result.
 - One parameter per logical read model; if you need multiple reads, use multiple parameters.
 
-## Event-Store Constraints (`IConstraint`)
+## Event-Store Constraints — `[Unique]` attribute (preferred)
 
-Enforced by Chronicle at append time. Use for uniqueness that must hold across concurrent writes.
+For the common case of enforcing uniqueness on a single event type, adorn the event type class or one of its properties with `[Unique]`. No separate constraint class is needed.
+
+**Event-type uniqueness** — only one event of this type per event source:
+
+```csharp
+[EventType]
+[Unique(message: "A project with this name already exists.")]
+public record ProjectCreated(string Name, string Description);
+```
+
+**Property uniqueness** — the value of a specific property must be unique:
+
+```csharp
+[EventType]
+public record UserRegistered([Unique(name: "UniqueEmail", message: "Email already registered.")] string Email, string DisplayName);
+```
+
+**Releasing a constraint** — apply `[RemoveConstraint]` to the event that deletes the domain object:
+
+```csharp
+[EventType]
+[RemoveConstraint("UniqueEmail")]
+public record UserRemoved(UserId UserId);
+```
+
+Multiple attributes can be stacked to release more than one constraint from the same event type.
+
+Constraints are discovered and enforced automatically — no registration or attribute on the command needed.
+
+## Event-Store Constraints — `IConstraint` (advanced)
+
+Use `IConstraint` when the uniqueness rule spans event types with different property names, or when a `RemovedWith` event must release the constraint.
 
 ```csharp
 public class Unique<PropertyName> : IConstraint
@@ -84,7 +116,7 @@ public class Unique<PropertyName> : IConstraint
 }
 ```
 
-**Example — unique project name:**
+**Example — unique project name with removal:**
 
 ```csharp
 public class UniqueProjectName : IConstraint

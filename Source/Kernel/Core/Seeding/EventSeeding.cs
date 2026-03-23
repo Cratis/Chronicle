@@ -28,6 +28,14 @@ public class EventSeeding(
     IPersistentState<EventSeeds> state,
     ILogger<EventSeeding> logger) : Grain, IEventSeeding
 {
+    /// <summary>
+    /// The maximum number of events to append in a single batch during seeding.
+    /// </summary>
+    /// <remarks>
+    /// Batching prevents overwhelming the event sequence grain when seeding a large number of events.
+    /// </remarks>
+    const int SeedingBatchSize = 100;
+
     EventSeedingKey _key = EventSeedingKey.NotSet;
     IEventSequence? _eventSequence;
 
@@ -105,12 +113,16 @@ public class EventSeeding(
                 logger.AppendingSeededEvents(eventsToAppend.Count);
                 var causation = new Causation[] { new(DateTimeOffset.UtcNow, "event-seeding", new Dictionary<string, string>()) };
 
-                await _eventSequence.AppendMany(
-                    eventsToAppend,
-                    CorrelationId.New(),
-                    causation,
-                    Identity.System,
-                    new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+                // Append in batches to avoid overwhelming the event sequence grain with too many events at once
+                foreach (var batch in eventsToAppend.Chunk(SeedingBatchSize))
+                {
+                    await _eventSequence.AppendMany(
+                        batch,
+                        CorrelationId.New(),
+                        causation,
+                        Identity.System,
+                        new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+                }
 
                 await state.WriteStateAsync();
             }

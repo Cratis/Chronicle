@@ -2,6 +2,11 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Host;
 import "google/protobuf/empty.proto";
 
+message ServerVersionInfo {
+   string Version = 1;
+   string CommitSha = 2;
+}
 service Server {
+   rpc GetVersionInfo (.google.protobuf.Empty) returns (ServerVersionInfo);
    rpc ReloadState (.google.protobuf.Empty) returns (.google.protobuf.Empty);
 }

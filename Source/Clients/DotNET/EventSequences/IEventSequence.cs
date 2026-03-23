@@ -158,16 +158,16 @@ public interface IEventSequence
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
-    /// <param name="reason">Optional reason for redacting. Will default to <see cref="RedactionReason.Unknown"/> if not specified.</param>
+    /// <param name="reason">Reason for redacting.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason? reason = default);
+    Task Redact(EventSequenceNumber sequenceNumber, RedactionReason reason);
 
     /// <summary>
     /// Redact all events for a specific <see cref="EventSourceId"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to redact.</param>
-    /// <param name="reason">Optional reason for redacting. Will default to <see cref="RedactionReason.Unknown"/> if not specified.</param>
-    /// <param name="eventTypes">Optionally any specific event types.</param>
+    /// <param name="reason">Reason for redacting.</param>
+    /// <param name="clrEventTypes">Optionally any specific event types.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task Redact(EventSourceId eventSourceId, RedactionReason? reason = default, params Type[] eventTypes);
+    Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
 }
