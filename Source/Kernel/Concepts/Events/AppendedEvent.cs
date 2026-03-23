@@ -13,6 +13,28 @@ namespace Cratis.Chronicle.Concepts.Events;
 public record AppendedEvent(EventContext Context, ExpandoObject Content)
 {
     /// <summary>
+    /// Gets the original content of the event as a JSON string, before any revisions were applied.
+    /// Only populated when the event has been revised.
+    /// </summary>
+    public string OriginalContent { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the revisions applied to this event, if any.
+    /// </summary>
+    public IEnumerable<EventRevision> Revisions { get; init; } = [];
+
+    /// <summary>
+    /// Gets the content for each generation stored for this event.
+    /// Keys are generation numbers; values are the JSON content for that generation.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> GenerationalContent { get; init; } = new Dictionary<int, string>();
+
+    /// <summary>
+    /// Gets whether this event has been revised.
+    /// </summary>
+    public bool IsRevised => Revisions.Any();
+
+    /// <summary>
     /// Creates an empty <see cref="AppendedEvent"/> with no content and no context.
     /// </summary>
     /// <returns>An empty <see cref="AppendedEvent"/>.</returns>

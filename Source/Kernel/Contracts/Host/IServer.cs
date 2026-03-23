@@ -15,4 +15,11 @@ public interface IServer
     /// <returns>Awaitable task.</returns>
     [Operation]
     Task ReloadState();
+
+    /// <summary>
+    /// Gets version information about the running server instance.
+    /// </summary>
+    /// <returns>A <see cref="ServerVersionInfo"/> with server and contracts versions.</returns>
+    [Operation]
+    Task<ServerVersionInfo> GetVersionInfo();
 }

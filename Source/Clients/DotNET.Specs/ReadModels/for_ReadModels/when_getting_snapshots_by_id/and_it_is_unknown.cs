@@ -26,5 +26,5 @@ public class and_it_is_unknown : given.all_dependencies
     [Fact] void should_check_if_projection_exists() => _projections.Received(1).HasFor<MyReadModel>();
     [Fact] void should_check_if_reducer_exists() => _reducers.Received(1).HasReducerFor(typeof(MyReadModel));
     [Fact] void should_throw_unknown_read_model() => _exception.ShouldBeOfExactType<UnknownReadModel>();
-    [Fact] void should_include_read_model_type_in_exception() => (_exception as UnknownReadModel)!.ReadModelType.ShouldEqual(typeof(MyReadModel));
+    [Fact] void should_include_read_model_type_in_exception() => (_exception as UnknownReadModel).ReadModelType.ShouldEqual(typeof(MyReadModel));
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Connections;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -12,12 +13,21 @@ namespace Cratis.Chronicle.Benchmarks;
 /// </summary>
 public class ChronicleBenchmarkFixture : IAsyncDisposable
 {
+    const string CertificatePassword = "TestPassword123";
     const int MongoDBPort = 27018;
     const int ChroniclePort = 35001;
+    static readonly string _certificatePath;
 
     INetwork? _network;
     IContainer? _container;
     bool _started;
+
+    static ChronicleBenchmarkFixture()
+    {
+        var certificateDirectory = Path.Join(Path.GetTempPath(), "chronicle-benchmark-certs");
+        _certificatePath = Path.Combine(certificateDirectory, "chronicle-benchmark.pfx");
+        BenchmarkCertificateGenerator.GenerateAndSaveCertificate(_certificatePath, CertificatePassword);
+    }
 
     /// <summary>
     /// Gets the Chronicle container.
@@ -35,9 +45,14 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets the Chronicle URL for connecting.
+    /// Gets the Chronicle connection string for connecting.
     /// </summary>
-    public string ChronicleUrl => $"chronicle://localhost:{ChroniclePort}";
+    public string ChronicleUrl => new ChronicleConnectionStringBuilder()
+        .WithHost("localhost")
+        .WithPort(ChroniclePort)
+        .WithDevelopmentCredentials()
+        .WithTlsDisabled()
+        .Build();
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
@@ -67,16 +82,21 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
 
         var waitStrategy = Wait.ForUnixContainer()
             .UntilInternalTcpPortIsAvailable(27017)
-            .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
+            .UntilInternalTcpPortIsAvailable(35000)
+            .AddCustomWaitStrategy(new HttpsHealthWait(8080));
 
-        _container = new ContainerBuilder()
-            .WithImage(imageName)
+        _container = new ContainerBuilder(imageName)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(ChroniclePort, 35000)
             .WithHostname("chronicle")
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
+            .WithBindMount(_certificatePath, "/app/certs/chronicle.pfx")
+            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
+            .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
+            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
+            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword)
             .WithNetwork(_network)
             .WithWaitStrategy(waitStrategy)
             .WithStartupCallback((container, ct) =>
@@ -91,7 +111,8 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
 
     async Task StartContainerAsync()
     {
-        if (_started || _container is null) return;
+        var container = _container;
+        if (_started || container is null) return;
 
         var retryCount = 0;
         Exception? failure;
@@ -99,9 +120,10 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         {
             try
             {
-                Console.WriteLine($"Starting Chronicle container with image '{_container.Image.FullName}'...");
+                var imageFullName = container.Image?.FullName ?? "[unknown]";
+                Console.WriteLine($"Starting Chronicle container with image '{imageFullName}'...");
                 failure = null;
-                await _container.StartAsync();
+                await container.StartAsync();
             }
             catch (Exception e)
             {
@@ -110,12 +132,9 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
                 await Task.Delay(2000);
             }
 
-            if (_container != null)
-            {
-                var logs = await _container.GetLogsAsync();
-                Console.WriteLine(logs.Stdout);
-                Console.WriteLine(logs.Stderr);
-            }
+            var logs = await container.GetLogsAsync();
+            Console.WriteLine(logs.Stdout);
+            Console.WriteLine(logs.Stderr);
         }
         while (failure is not null && ++retryCount < 10);
 
@@ -124,10 +143,8 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
             throw failure;
         }
-        else
-        {
-            _started = true;
-            Console.WriteLine("Chronicle container started successfully.");
-        }
+
+        _started = true;
+        Console.WriteLine("Chronicle container started successfully.");
     }
 }

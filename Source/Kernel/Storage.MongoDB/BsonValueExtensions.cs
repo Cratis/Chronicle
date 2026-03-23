@@ -172,7 +172,7 @@ public static class BsonValueExtensions
 
             if (value is BsonString bsonString)
             {
-                return Guid.Parse(bsonString.ToString()!);
+                return Guid.Parse(bsonString.ToString());
             }
 
             if (value is BsonBinaryData bsonBinaryData)
@@ -190,7 +190,7 @@ public static class BsonValueExtensions
 
             if (value is BsonString bsonString)
             {
-                return DateTimeOffset.ParseExact(bsonString.ToString()!, DateTimeOffsetSupportingBsonDateTimeSerializer.StringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
+                return DateTimeOffset.ParseExact(bsonString.ToString(), DateTimeOffsetSupportingBsonDateTimeSerializer.StringSerializationFormat, DateTimeFormatInfo.InvariantInfo);
             }
         }
 

@@ -45,9 +45,9 @@ public class with_single_from_event : given.a_model_bound_code_generator
 
     [Fact] void should_have_using_directives() => _result.Usings.Count.ShouldEqual(2);
 
-    [Fact] void should_have_keys_using() => _result.Usings.Any(u => u.Name!.ToString() == "Cratis.Chronicle.Keys").ShouldBeTrue();
+    [Fact] void should_have_keys_using() => _result.Usings.Any(u => u.Name.ToString() == "Cratis.Chronicle.Keys").ShouldBeTrue();
 
-    [Fact] void should_have_model_bound_using() => _result.Usings.Any(u => u.Name!.ToString() == "Cratis.Chronicle.Projections.ModelBound").ShouldBeTrue();
+    [Fact] void should_have_model_bound_using() => _result.Usings.Any(u => u.Name.ToString() == "Cratis.Chronicle.Projections.ModelBound").ShouldBeTrue();
 
     [Fact] void should_generate_record() => _result.Members.OfType<RecordDeclarationSyntax>().ShouldNotBeEmpty();
 
@@ -65,19 +65,19 @@ public class with_single_from_event : given.a_model_bound_code_generator
     [Fact] void should_have_id_parameter()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        record.ParameterList!.Parameters.Any(p => p.Identifier.Text == "Id").ShouldBeTrue();
+        record.ParameterList.Parameters.Any(p => p.Identifier.Text == "Id").ShouldBeTrue();
     }
 
     [Fact] void should_have_name_parameter()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        record.ParameterList!.Parameters.Any(p => p.Identifier.Text == "Name").ShouldBeTrue();
+        record.ParameterList.Parameters.Any(p => p.Identifier.Text == "Name").ShouldBeTrue();
     }
 
     [Fact] void should_have_key_attribute_on_id()
     {
         var record = _result.Members.OfType<RecordDeclarationSyntax>().First();
-        var idParam = record.ParameterList!.Parameters.First(p => p.Identifier.Text == "Id");
+        var idParam = record.ParameterList.Parameters.First(p => p.Identifier.Text == "Id");
         var hasKeyAttr = idParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .Any(a => a.Name.ToString() == "Key");

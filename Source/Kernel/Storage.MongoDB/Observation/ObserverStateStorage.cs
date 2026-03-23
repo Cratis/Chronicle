@@ -47,7 +47,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     public async Task Save(Chronicle.Storage.Observation.ObserverState state) =>
         await _collection.ReplaceOneAsync(
             os => os.Id == state.Identifier,
-            state!.ToMongoDB(),
+            state.ToMongoDB(),
             new ReplaceOptions { IsUpsert = true }).ConfigureAwait(false);
 
     /// <inheritdoc/>

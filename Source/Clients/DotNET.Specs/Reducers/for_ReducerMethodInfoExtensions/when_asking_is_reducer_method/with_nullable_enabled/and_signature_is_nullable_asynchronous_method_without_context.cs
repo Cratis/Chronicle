@@ -16,7 +16,7 @@ public class and_signature_is_nullable_asynchronous_method_without_context : Spe
 
     bool _result;
 
-    void Because() => _result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something))!.IsReducerMethod(typeof(ReadModel), []);
+    void Because() => _result = typeof(MyReducer).GetMethod(nameof(MyReducer.Something)).IsReducerMethod(typeof(ReadModel), []);
 
     [Fact] void should_be_considered_a_reducer_method() => _result.ShouldBeTrue();
 }

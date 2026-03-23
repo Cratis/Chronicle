@@ -5,6 +5,7 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
@@ -81,6 +82,11 @@ public interface IEventStore
     /// Gets the <see cref="IWebhooks"/> for the event store.
     /// </summary>
     IWebhooks Webhooks { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IEventStoreSubscriptions"/> for the event store.
+    /// </summary>
+    IEventStoreSubscriptions Subscriptions { get; }
 
     /// <summary>
     /// Gets the <see cref="IFailedPartitions"/> for the event store.

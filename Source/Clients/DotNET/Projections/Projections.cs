@@ -40,6 +40,7 @@ public class Projections(
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     Dictionary<Type, IProjectionHandler> _handlersByType = new();
     Dictionary<Type, IProjectionHandler> _handlersByModelType = new();
+    Dictionary<Type, IProjectionHandler> _modelBoundHandlers = new();
     Dictionary<Type, ProjectionDefinition> _definitionsByType = new();
 
     /// <summary>
@@ -57,7 +58,7 @@ public class Projections(
     public bool HasFor(Type readModelType) => _handlersByModelType.ContainsKey(readModelType);
 
     /// <inheritdoc/>
-    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByModelType.Values;
+    public IEnumerable<IProjectionHandler> GetAllHandlers() => _handlersByType.Values.Concat(_modelBoundHandlers.Values);
 
     /// <inheritdoc/>
     public IProjectionHandler GetHandlerFor<TProjection>()
@@ -134,10 +135,18 @@ public class Projections(
                 kvp => kvp.Key,
                 kvp => new ProjectionHandler(eventStore, kvp.Value.Identifier, kvp.Key.GetReadModelType(), kvp.Value.ReadModel, kvp.Value.EventSequenceId) as IProjectionHandler);
 
-        _handlersByModelType = _handlersByType.ToDictionary(
-            _ => _.Key.GetReadModelType(),
-            _ => _.Value);
-        _handlersByModelType = _handlersByModelType.Concat(modelBoundHandlers).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        _modelBoundHandlers = modelBoundHandlers;
+
+        _handlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        foreach (var kvp in _handlersByType)
+        {
+            _handlersByModelType.TryAdd(kvp.Key.GetReadModelType(), kvp.Value);
+        }
+
+        foreach (var kvp in _modelBoundHandlers)
+        {
+            _handlersByModelType.TryAdd(kvp.Key, kvp.Value);
+        }
 
         Definitions =
             ((IEnumerable<ProjectionDefinition>)[
@@ -157,6 +166,26 @@ public class Projections(
             Owner = ProjectionOwner.Client,
             Projections = [.. Definitions]
         });
+    }
+
+    /// <inheritdoc/>
+    public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
+    {
+        var result = await _servicesAccessor.Services.Projections.Preview(new Contracts.Projections.PreviewProjectionRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            EventSequenceId = eventSequenceId,
+            Declaration = declaration
+        });
+
+        if (result.Value1 is not null)
+        {
+            throw new UnableToQueryProjection(result.Value1.Errors.Select(e => e.Message));
+        }
+
+        var queryResult = result.Value0!;
+        return new ProjectionQueryResult([.. queryResult.ReadModelEntries]);
     }
 
     Dictionary<Type, ProjectionDefinition> FindAllProjectionDefinitions(

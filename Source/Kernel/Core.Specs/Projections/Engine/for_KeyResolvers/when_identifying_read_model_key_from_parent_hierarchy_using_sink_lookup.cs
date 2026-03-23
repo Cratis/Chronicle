@@ -70,7 +70,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_using_sink_lo
         _parentProjection.Path.Returns((ProjectionPath)"configurations");
         _parentProjection.ChildrenPropertyPath.Returns(PropertyPath.NotSet);
         _parentProjection.HasParent.Returns(false);
-        _parentProjection.Parent.Returns((IProjection)null!);
+        _parentProjection.Parent.Returns((IProjection)null);
 
         _childProjection = Substitute.For<IProjection>();
         _childProjection.HasParent.Returns(true);

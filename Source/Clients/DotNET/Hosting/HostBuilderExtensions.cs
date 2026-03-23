@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -15,21 +14,11 @@ public static class HostBuilderExtensions
     /// Configures the usage of Cratis for the app.
     /// </summary>
     /// <param name="hostBuilder"><see cref="IHostBuilder"/> to build on.</param>
-    /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>.</param>
     /// <returns><see cref="IHostBuilder"/> for configuration continuation.</returns>
     public static IHostBuilder AddCratisChronicle(
-        this IHostBuilder hostBuilder,
-        ILoggerFactory? loggerFactory = default)
+        this IHostBuilder hostBuilder)
     {
         ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        loggerFactory ??= LoggerFactory.Create(builder => builder.AddConsole());
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
-        hostBuilder.ConfigureServices((context, services) =>
-        {
-        });
         return hostBuilder;
     }
 }

@@ -12,4 +12,7 @@ public sealed class IncrementAttribute<TEvent> : Attribute, IProjectionAnnotatio
 {
     /// <inheritdoc/>
     public Type EventType => typeof(TEvent);
+
+    /// <inheritdoc/>
+    public string? ConstantKey { get; init; }
 }

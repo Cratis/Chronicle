@@ -1,0 +1,35 @@
+{
+  "skill_name": "cratis-command",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a command to register a new employee with a first name, last name, and department. Duplicate employee names (same first+last) should be prevented. Include everything needed: the event, constraint, validator, and command with Handle().",
+      "expected_output": "A single C# file containing: [EventType] EmployeeRegistered record, UniqueEmployeeName IConstraint, RegisterEmployeeValidator CommandValidator<T>, and [Command] RegisterEmployee record with Handle() that returns (EmployeeId, EmployeeRegistered). Correct namespacing and file header.",
+      "files": [],
+      "assertions": [
+        "Output contains [Command] attribute on a record",
+        "Output contains a Handle() method directly on the command record (not a separate handler class)",
+        "[EventType] attribute has no arguments (no GUID, no string)",
+        "Output contains an IConstraint implementation for uniqueness",
+        "Output contains a CommandValidator<T> using FluentValidation",
+        "Output uses ConceptAs<T> for EmployeeId (not raw Guid)",
+        "File uses file-scoped namespace declaration",
+        "File starts with the Cratis copyright header"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need a command to change the email address of an existing customer. The command should validate the email format. Show me the full backend slice file.",
+      "expected_output": "A single C# slice file containing: [EventType] CustomerEmailChanged record, a validator checking email format, and [Command] ChangeCustomerEmail record with Handle() returning the event. Uses ConceptAs<T> for ids.",
+      "files": [],
+      "assertions": [
+        "Output contains [Command] attribute on a record",
+        "Handle() is defined directly on the command record",
+        "Output contains CommandValidator<T> with email format validation",
+        "[EventType] attribute has no arguments",
+        "Output uses ConceptAs<T> for identity types (not raw Guid or string)",
+        "File uses file-scoped namespace"
+      ]
+    }
+  ]
+}

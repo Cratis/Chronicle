@@ -19,6 +19,6 @@ public class and_method_is_synchronous : given.a_reducer_invoker_for<SyncReducer
 
     async Task Because() => _result = await _invoker.Invoke(_serviceProvider, [new(_event, _eventContext)], null);
 
-    [Fact] void should_return_read_model_with_count_of_one() => ((ReadModel)_result.ReadModelState!).Count.ShouldEqual(1);
+    [Fact] void should_return_read_model_with_count_of_one() => ((ReadModel)_result.ReadModelState).Count.ShouldEqual(1);
     [Fact] void should_be_successful() => _result.IsSuccess.ShouldBeTrue();
 }

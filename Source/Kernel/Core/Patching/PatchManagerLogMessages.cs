@@ -11,19 +11,19 @@ namespace Cratis.Chronicle.Patching;
 /// </summary>
 internal static partial class PatchManagerLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Starting patch application process")]
+    [LoggerMessage(LogLevel.Debug, "Starting patch application process")]
     internal static partial void StartingPatchApplication(this ILogger<PatchManager> logger);
 
-    [LoggerMessage(LogLevel.Information, "Current system version: {Version}")]
+    [LoggerMessage(LogLevel.Trace, "Current system version: {Version}")]
     internal static partial void CurrentSystemVersion(this ILogger<PatchManager> logger, SemanticVersion version);
 
-    [LoggerMessage(LogLevel.Information, "No patches to apply")]
+    [LoggerMessage(LogLevel.Debug, "No patches to apply")]
     internal static partial void NoPatchesToApply(this ILogger<PatchManager> logger);
 
-    [LoggerMessage(LogLevel.Information, "Found {Count} patches to apply")]
+    [LoggerMessage(LogLevel.Debug, "Found {Count} patches to apply")]
     internal static partial void FoundPatchesToApply(this ILogger<PatchManager> logger, int count);
 
-    [LoggerMessage(LogLevel.Information, "Patch {PatchName} already applied, skipping")]
+    [LoggerMessage(LogLevel.Debug, "Patch {PatchName} already applied, skipping")]
     internal static partial void PatchAlreadyApplied(this ILogger<PatchManager> logger, string patchName);
 
     [LoggerMessage(LogLevel.Information, "Applying patch {PatchName} for version {Version}")]
@@ -35,9 +35,9 @@ internal static partial class PatchManagerLogMessages
     [LoggerMessage(LogLevel.Error, "Failed to apply patch {PatchName}")]
     internal static partial void PatchApplicationFailed(this ILogger<PatchManager> logger, string patchName, Exception exception);
 
-    [LoggerMessage(LogLevel.Information, "Updated system version to {Version}")]
+    [LoggerMessage(LogLevel.Trace, "Updated system version to {Version}")]
     internal static partial void UpdatedSystemVersion(this ILogger<PatchManager> logger, SemanticVersion version);
 
-    [LoggerMessage(LogLevel.Information, "Patch application process completed")]
+    [LoggerMessage(LogLevel.Debug, "Patch application process completed")]
     internal static partial void PatchApplicationCompleted(this ILogger<PatchManager> logger);
 }

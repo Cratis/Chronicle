@@ -89,6 +89,11 @@ public static class WellKnownCollectionNames
     public const string WebhookDefinitions = "webhooks";
 
     /// <summary>
+    /// The collection that holds event store subscription definitions.
+    /// </summary>
+    public const string EventStoreSubscriptionDefinitions = "event-store-subscriptions";
+
+    /// <summary>
     /// The collection that holds reducer definitions.
     /// </summary>
     public const string ReducerDefinitions = "reducers";

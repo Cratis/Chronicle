@@ -3,13 +3,16 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Recommendations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Placement;
 using Orleans.Providers;
 
@@ -20,12 +23,14 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// </summary>
 /// <param name="reactorDefinitionComparer"><see cref="IReactorDefinitionComparer"/> for comparing reactor definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reactors)]
 [PreferLocalPlacement]
 public class Reactor(
     IReactorDefinitionComparer reactorDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
+    IOptions<ChronicleOptions> options,
     ILogger<Reactor> logger) : Grain<ReactorDefinition>, IReactor
 {
     IConnectedClients? _connectedClients;
@@ -61,7 +66,15 @@ public class Reactor(
                 _subscribed = false;
             }
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
-            await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+
+            if (options.Value.Observers.ReplayOnDefinitionChange)
+            {
+                await ReplayForAllNamespaces(key, namespaceNames);
+            }
+            else
+            {
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+            }
         }
 
         if (!_subscribed)
@@ -91,9 +104,29 @@ public class Reactor(
 
         var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
         var observer = GrainFactory.GetGrain<IObserver>(key);
+
+        var subscription = await observer.GetSubscription();
+        if (subscription.IsSubscribed &&
+            subscription.Arguments is ConnectedClient connectedClient &&
+            connectedClient.ConnectionId != _observerKey!.ConnectionId)
+        {
+            _subscribed = false;
+            return;
+        }
+
         await observer.Unsubscribe();
 
         _subscribed = false;
+    }
+
+    async Task ReplayForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        foreach (var @namespace in namespaces)
+        {
+            logger.AutoReplayingReactor(key.EventStore, key.ReactorId, key.EventSequenceId, @namespace);
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReactorId, key.EventStore, @namespace, key.EventSequenceId));
+            await observer.Replay();
+        }
     }
 
     async Task AddReplayRecommendationForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)

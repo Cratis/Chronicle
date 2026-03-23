@@ -20,4 +20,9 @@ public sealed class FromEventAttribute<TEvent>(string? key = default) : Attribut
     /// Gets the property name on the event that identifies the read model instance.
     /// </summary>
     public string? Key { get; } = key;
+
+    /// <summary>
+    /// Gets or sets a constant value to use as the key. All events of this type will update the same read model instance.
+    /// </summary>
+    public string? ConstantKey { get; init; }
 }

@@ -2,49 +2,48 @@
 applyTo: "Documentation/**/*.md"
 ---
 
-# 🧪 How to Write Documentation
+# How to Write Documentation
 
-- All documentation files live in the `Documentation/` folder.
-- Use [Markdown](https://www.markdownguide.org/basic-syntax/) for formatting.
-- Use [GitHub Flavored Markdown](https://github.github.com/gfm/) for additional features.
-- Use [Mermaid](https://mermaid-js.github.io/mermaid/#/) for diagrams.
-- Use [PlantUML](https://plantuml.com/) for UML diagrams.
+Documentation exists for one audience: **developers who need to use the framework** — not the team that built it. Write from the reader's perspective. They want to know *what this does*, *why they should care*, and *how to use it* — in that order.
+
+Every page should answer: "If I were a developer encountering this concept for the first time, what would I need to understand to use it correctly?"
+
+## General
+
+- All documentation lives in the `Documentation/` folder.
 - Site is built using [DocFX](https://dotnet.github.io/docfx/).
-- Follow the [DocFX Markdown](https://dotnet.github.io/docfx/markdown/) guidelines for additional syntax.
-- Generate and maintain correct [DocFX TOC files](https://dotnet.github.io/docfx/docs/dotnet-yaml-format.html) for navigation.
-- Be consistent with formatting and style.
-- Use clear and concise language.
-- Be concise and to the point.
-- Be specific and avoid ambiguity.
-- Use examples and code snippets to illustrate concepts.
-- Do not add extraneous information.
-- Do not document the obvious.
-- Do not add documentation for internal or private APIs.
-- Do not document internal implementation details.
-- Focus on the public APIs and features of the project.
-- Do not document third party libraries or tools.
-- Use active voice and present tense.
-- Use proper grammar and spelling.
-- Use a friendly and approachable tone.
-- Create focused and well-scoped documents.
-- Use consistent terminology throughout the documentation.
-- Follow a logical structure and flow.
-- Don't be too verbose.
-- Use headings, lists, and code blocks to organize content.
-- Include links to relevant resources and references.
-- Always add an index.md file in each folder to serve as the landing page.
-- Maintain the index.md file to include links to all relevant subtopics.
-- Use relative links for internal documentation references.
-- Ensure all links are valid and up-to-date.
-- Use images and diagrams to enhance understanding.
-- Emphasize why something is done, not just how.
-- Always end the generated markdown with a single empty line as the last line of the file content. This newline must be included directly in the markdown text when creating or editing files, not added through separate commands.
-- Never use shell commands or external tools to modify files after writing them. All content, including any trailing newlines, must be part of the file content when using file creation or editing tools.
-- Every folder should have its own `toc.yml` file to define the structure of the documentation within that folder.
-- When linking to a folder in a `toc.yml` file, link to the `toc.yml` file in that folder, not to an `index.md` file.
-- Ensure that documentation is accurate according to the public APIs and features of the project.
-- When writing documentation that involves specifying an event type with the `[EventType]` attribute, never add an explicit name - just keep it as `[EventType]`.
-- Never include code from the repository to explain public APIs - these might change and become outdated.
-- Always write documentation from the perspective of an end user of the public APIs and features of the project.
-- We prefer `record` types for data structures such as events, commands, and read models in code examples within the documentation.
-- Run verify-markdown.sh script in the Documentation folder after writing documentation to ensure that all links are valid and that the markdown is well-formed.
+- Use [Markdown](https://www.markdownguide.org/) with [GitHub Flavored Markdown](https://github.github.com/gfm/).
+- Use [Mermaid](https://mermaid-js.github.io/mermaid/#/) for diagrams — architecture flows, state transitions, and sequence diagrams are far clearer as visuals than as prose.
+- Follow [DocFX Markdown](https://dotnet.github.io/docfx/markdown/) guidelines.
+
+## Structure
+
+- Every folder must have its own `toc.yml` for navigation.
+- Every folder must have an `index.md` as a landing page with links to subtopics.
+- When linking to a folder in `toc.yml`, link to the folder's `toc.yml`, not to `index.md`.
+- Use relative links for internal references.
+
+## Writing Style
+
+The project's voice is **direct, practical, and opinionated**. Write like an experienced colleague explaining something to a capable developer — confident but never condescending.
+
+- **Active voice, present tense.** "Chronicle appends the event" not "The event is appended by Chronicle."
+- **Emphasize *why* before *how*.** The reason behind a design choice is more valuable than the steps to implement it. A developer who understands the *why* can handle edge cases the docs don't cover.
+- **Don't document the obvious.** If the API is self-explanatory, a code example is enough. Save prose for concepts that are genuinely non-obvious or where the reasoning is important.
+- Use headings, lists, and code blocks to organize content — dense paragraphs lose readers.
+- Use consistent terminology throughout. If it's called an "event source" in one place, don't call it an "event stream" elsewhere.
+- Focus on public APIs and features — not internal implementation.
+- Do not document third-party libraries.
+
+## Code Examples
+
+- Prefer `record` types for data structures (events, commands, read models) — this matches the actual codebase.
+- When specifying `[EventType]`, never add an explicit name argument — just `[EventType]`.
+- Never include verbatim code from the repository — APIs may change. Write purpose-built examples.
+- Every code example must be complete and correct — no pseudo-code, no `// ...` elisions that leave the reader guessing.
+
+## File Rules
+
+- Always end generated markdown with a single trailing newline in the file content itself.
+- Never use shell commands to modify files after writing them.
+- Run `verify-markdown.sh` in the Documentation folder after writing to validate links and formatting.

@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Services.Specs" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
@@ -49,6 +50,7 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="NJsonSchema" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -56,6 +58,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
 </Project>

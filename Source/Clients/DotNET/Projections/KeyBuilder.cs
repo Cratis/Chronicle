@@ -46,4 +46,11 @@ public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuil
         _keyExpression = compositeKeyBuilder.Build();
         return (this as TBuilder)!;
     }
+
+    /// <inheritdoc/>
+    public TBuilder UsingConstantKey(string value)
+    {
+        _keyExpression = new ValueExpression(value).Build();
+        return (this as TBuilder)!;
+    }
 }

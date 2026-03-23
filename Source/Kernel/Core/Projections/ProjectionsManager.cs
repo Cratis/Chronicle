@@ -38,15 +38,17 @@ public class ProjectionsManager(
     ILogger<ProjectionsManager> logger) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed
 {
     EventStoreName _eventStoreName = EventStoreName.NotSet;
+    IGrainTimer? _subscribeTimer;
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStoreName = this.GetPrimaryKeyString();
-        await SetDefinitionAndSubscribeForAllProjections();
+        ScheduleSetDefinitionAndSubscribe();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -71,6 +73,9 @@ public class ProjectionsManager(
 
         State.Projections = existingProjections;
         await WriteStateAsync();
+
+        // Subscribe projections immediately so that seeded events appended after registration
+        // are not missed due to the asynchronous timer-based subscription scheduling
         await SetDefinitionAndSubscribeForAllProjections();
     }
 
@@ -116,7 +121,7 @@ public class ProjectionsManager(
         await projectionsService.NamespaceAdded(_eventStoreName, added.Namespace);
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
 
-        foreach (var projectionDefinition in State.Projections)
+        await Task.WhenAll(State.Projections.Select(async projectionDefinition =>
         {
             var key = new ProjectionKey(projectionDefinition.Identifier, _eventStoreName);
             var projection = GrainFactory.GetGrain<IProjection>(key);
@@ -125,11 +130,11 @@ public class ProjectionsManager(
             if (readModelDefinition is null)
             {
                 logger.MissingReadModelDefinitionForProjection(projectionDefinition.Identifier, projectionDefinition.ReadModel);
-                continue;
+                return;
             }
 
             await SubscribeIfNotSubscribed(projectionDefinition, readModelDefinition, added.Namespace);
-        }
+        }));
     }
 
     async Task SetDefinitionAndSubscribeForAllProjections()
@@ -193,4 +198,17 @@ public class ProjectionsManager(
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;
+
+    void ScheduleSetDefinitionAndSubscribe()
+    {
+        _subscribeTimer?.Dispose();
+        _subscribeTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                _subscribeTimer?.Dispose();
+                _subscribeTimer = null;
+                await SetDefinitionAndSubscribeForAllProjections();
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+    }
 }

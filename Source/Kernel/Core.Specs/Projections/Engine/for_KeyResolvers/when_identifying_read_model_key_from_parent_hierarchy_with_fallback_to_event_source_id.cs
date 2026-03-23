@@ -114,7 +114,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
             _keyResolvers.FromEventValueProvider(EventValueProviders.EventContent("childId")),
             parentKeyResolver,
             "childId")(_storage, _sink, _childEvent);
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact] void should_return_parent_key_as_the_root_key() => _result.Value.ShouldEqual(ParentKey);

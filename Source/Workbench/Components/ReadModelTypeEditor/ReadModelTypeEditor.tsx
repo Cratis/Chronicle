@@ -4,8 +4,10 @@
 import React, { useEffect, useState } from 'react';
 import { InputText } from 'primereact/inputtext';
 import pluralize from 'pluralize';
-import { SchemaEditor } from '../SchemaEditor/SchemaEditor';
-import { JsonSchema } from 'Components/JsonSchema';
+import { SchemaEditor as _SE } from '@cratis/components';
+const SchemaEditor = _SE.SchemaEditor;
+import { AllTypeFormats } from 'Api/TypeFormats';
+import type { JsonSchema } from '@cratis/components/types';
 import strings from 'Strings';
 
 interface ReadModelTypeEditorProps {
@@ -49,6 +51,7 @@ export const ReadModelTypeEditor: React.FC<ReadModelTypeEditorProps> = ({
     const [identifierEdited, setIdentifierEdited] = useState(false);
     const [containerNameEdited, setContainerNameEdited] = useState(false);
     const [schema, setSchema] = useState<JsonSchema>(initialSchema ?? createDefaultSchema(initialDisplayName));
+    const [typeFormatsQuery] = AllTypeFormats.use();
 
     useEffect(() => {
         setDisplayName(initialDisplayName);
@@ -144,6 +147,7 @@ export const ReadModelTypeEditor: React.FC<ReadModelTypeEditorProps> = ({
                     editMode={true}
                     saveDisabled={true}
                     cancelDisabled={true}
+                    typeFormats={typeFormatsQuery.data}
                 />
             </div>
         </div>

@@ -112,7 +112,7 @@ internal sealed class ReadModels(
         var definition = await readModel.GetDefinition();
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
         var sink = sinks.GetFor(definition);
-        var skip = request.Page * request.PageSize;
+        var skip = Math.Max(0, request.Page * request.PageSize);
 
         Concepts.ReadModels.ReadModelContainerName? occurrence = null;
         if (!string.IsNullOrEmpty(request.Occurrence))
@@ -125,7 +125,7 @@ internal sealed class ReadModels(
             skip,
             request.PageSize);
 
-        var instancesAsJson = instances.Select(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)).ToList() ?? [];
         return new()
         {
             Instances = instancesAsJson,
@@ -261,7 +261,7 @@ internal sealed class ReadModels(
 
         // Process events to get all instances grouped by event source ID
         var result = await projection.Process(request.Namespace, events);
-        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToArray();
+        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToList();
 
         return new GetAllInstancesResponse
         {
@@ -411,7 +411,7 @@ internal sealed class ReadModels(
             {
                 ReadModel = readModel,
                 Events = orderedEvents.ToContract(jsonSerializerOptions),
-                Occurred = firstOccurred!,
+                Occurred = firstOccurred,
                 CorrelationId = correlationId
             });
         }

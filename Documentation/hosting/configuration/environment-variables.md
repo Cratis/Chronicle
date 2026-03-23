@@ -44,6 +44,10 @@ All configuration options can be set using environment variables with the prefix
 | Cratis__Chronicle__Jobs__MaxParallelSteps | Maximum parallel job steps |
 | Cratis__Chronicle__Tls__CertificatePath | TLS certificate path (PFX) |
 | Cratis__Chronicle__Tls__CertificatePassword | TLS certificate password |
+| OTEL_EXPORTER_OTLP_ENDPOINT | OTLP receiver endpoint for telemetry export |
+| OTEL_EXPORTER_OTLP_PROTOCOL | OTLP export protocol (`grpc` or `http/protobuf`) |
+| OTEL_EXPORTER_OTLP_HEADERS | Additional headers for the OTLP exporter |
+| OTEL_SERVICE_NAME | Service name reported to the telemetry backend |
 
 ## Port Configuration
 
@@ -129,4 +133,22 @@ Cratis__Chronicle__Authentication__DefaultAdminUsername=admin
 # Should be changed in production
 Cratis__Chronicle__Authentication__DefaultAdminPassword=your-secure-password
 ```
+
+## Open Telemetry
+
+```bash
+# OTLP receiver endpoint (e.g. local Aspire Dashboard or OpenTelemetry Collector)
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+# Export protocol: grpc (default) or http/protobuf
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+
+# Additional headers, e.g. API keys for cloud backends
+OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
+
+# Override the service name reported to the telemetry backend
+OTEL_SERVICE_NAME=Chronicle
+```
+
+See the [Open Telemetry](open-telemetry.md) configuration page for full details.
 

@@ -64,6 +64,7 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionsManager, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Webhooks, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.WebhooksManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhooksStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventStoreSubscriptionsManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionFutures, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionFuturesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reactors, CreateResilientStorageFor<Cratis.Chronicle.Observation.Reactors.ReactorDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reducers, CreateResilientStorageFor<Cratis.Chronicle.Observation.Reducers.Clients.ReducerDefinitionStorageProvider>);

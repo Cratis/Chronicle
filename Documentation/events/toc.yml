@@ -14,4 +14,8 @@
   href: concurrency.md
 - name: Cross-cutting properties
   href: cross-cutting-properties.md
+- name: Revision
+  href: revision.md
+- name: Redaction
+  href: redaction.md
 

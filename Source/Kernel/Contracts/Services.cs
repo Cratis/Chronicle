@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
@@ -35,12 +36,13 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Reducers"><see cref="IReducers"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
+/// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
-/// <param name="server"><see cref="IServer"/> instance.</param>
+/// <param name="Server"><see cref="IServer"/> instance.</param>
 public sealed record Services(
     IEventStores EventStores,
     INamespaces Namespaces,
@@ -55,9 +57,10 @@ public sealed record Services(
     IReducers Reducers,
     IProjections Projections,
     IWebhooks Webhooks,
+    IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
     IJobs Jobs,
     IEventSeeding Seeding,
     IUsers Users,
     IApplications Applications,
-    IServer server) : IServices;
+    IServer Server) : IServices;

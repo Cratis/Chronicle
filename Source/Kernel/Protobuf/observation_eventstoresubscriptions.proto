@@ -1,0 +1,33 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
+import "google/protobuf/empty.proto";
+
+message AddEventStoreSubscriptions {
+   string TargetEventStore = 1;
+   repeated EventStoreSubscriptionDefinition Subscriptions = 2;
+}
+message EventStoreSubscriptionDefinition {
+   string Identifier = 1;
+   string SourceEventStore = 2;
+   repeated EventType EventTypes = 3;
+}
+message EventType {
+   string Id = 1;
+   uint32 Generation = 2;
+   bool Tombstone = 3;
+}
+message GetEventStoreSubscriptionsRequest {
+   string TargetEventStore = 1;
+}
+message IEnumerable_EventStoreSubscriptionDefinition {
+   repeated EventStoreSubscriptionDefinition items = 1;
+}
+message RemoveEventStoreSubscriptions {
+   string TargetEventStore = 1;
+   repeated string SubscriptionIds = 2;
+}
+service EventStoreSubscriptions {
+   rpc Add (AddEventStoreSubscriptions) returns (.google.protobuf.Empty);
+   rpc GetSubscriptions (GetEventStoreSubscriptionsRequest) returns (IEnumerable_EventStoreSubscriptionDefinition);
+   rpc Remove (RemoveEventStoreSubscriptions) returns (.google.protobuf.Empty);
+}

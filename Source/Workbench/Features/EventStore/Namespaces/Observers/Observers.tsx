@@ -12,7 +12,7 @@ import strings from 'Strings';
 import { AllObservers, AllObserversParameters, ObserverOwner } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { DataPage, MenuItem } from 'Components';
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
 import * as faIcons from 'react-icons/fa6';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 

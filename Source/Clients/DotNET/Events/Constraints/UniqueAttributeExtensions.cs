@@ -23,4 +23,12 @@ public static class UniqueAttributeExtensions
     /// <param name="member">Type to get for that has <see cref="UniqueAttribute"/>.</param>
     /// <returns>Message for constraint, if defined, default if not.</returns>
     public static ConstraintViolationMessage GetConstraintMessage(this MemberInfo member) => member.GetCustomAttribute<UniqueAttribute>()?.Message ?? ConstraintViolationMessage.NotDefined;
+
+    /// <summary>
+    /// Get all <see cref="RemoveConstraintAttribute"/> instances applied to an event type.
+    /// </summary>
+    /// <param name="type">Event type to inspect.</param>
+    /// <returns>All <see cref="RemoveConstraintAttribute"/> instances on the type.</returns>
+    public static IEnumerable<RemoveConstraintAttribute> GetRemoveConstraints(this Type type) =>
+        type.GetCustomAttributes<RemoveConstraintAttribute>();
 }

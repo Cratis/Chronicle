@@ -5,10 +5,15 @@ using Cratis.Chronicle.Projections;
 
 namespace Cratis.Chronicle.Benchmarks;
 
-public record BenchmarkProjectionModel(string Id, string Name, int Value, DateTimeOffset Timestamp);
-
+/// <summary>
+/// Projects benchmark events into a simple read model for future observer benchmarks.
+/// </summary>
 public class BenchmarkProjection : IProjectionFor<BenchmarkProjectionModel>
 {
+    /// <summary>
+    /// Defines the projection mapping for <see cref="BenchmarkEvent"/>.
+    /// </summary>
+    /// <param name="builder">The projection builder.</param>
     public void Define(IProjectionBuilderFor<BenchmarkProjectionModel> builder)
     {
         builder

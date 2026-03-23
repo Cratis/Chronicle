@@ -40,10 +40,15 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, 
         var exists = await storage.HasEventStore(eventStoreName);
         _ = storage.GetEventStore(eventStoreName);
 
+        // Always register server event types, even if the store already exists.
+        // Storage.GetEventStore() upserts the record on every call, so HasEventStore may return
+        // true for a store that was implicitly created (e.g. by an observable query) before
+        // Ensure was called — causing DiscoverAndRegister to be skipped and leaving server
+        // types such as EventRedactionRequested unregistered.
+        await eventTypes.DiscoverAndRegister(eventStoreName);
+
         if (!exists)
         {
-            await eventTypes.DiscoverAndRegister(eventStoreName);
-
             var systemEventSequence = grainFactory.GetSystemEventSequence(Concepts.EventStoreName.System);
             var eventStoreAdded = new EventStoreAdded(eventStoreName);
             await systemEventSequence.Append(eventStoreName.Value, eventStoreAdded);

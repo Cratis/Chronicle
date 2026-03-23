@@ -151,9 +151,12 @@ internal sealed class Reactors(
             finally
             {
                 reactorMediator.Disconnected(observerId, connectionId);
-                reactorResultTcs.Values.ForEach(_ => _.SetResult(ObserverSubscriberResult.Disconnected()));
-                await clientObserver!.Unsubscribe();
-                clientObserver = null!;
+                reactorResultTcs.Values.ForEach(_ => _.TrySetResult(ObserverSubscriberResult.Disconnected()));
+                if (clientObserver is not null)
+                {
+                    await clientObserver.Unsubscribe();
+                    clientObserver = null!;
+                }
             }
         });
 
@@ -165,7 +168,6 @@ internal sealed class Reactors(
             observableObserver?.OnCompleted();
             clientObserver?.Unsubscribe().GetAwaiter().GetResult();
             reactorMediator.Disconnected(observerId, connectionId);
-            reactorResultTcs.Values.ForEach(_ => _.TrySetCanceled());
             register?.Dispose();
         });
 

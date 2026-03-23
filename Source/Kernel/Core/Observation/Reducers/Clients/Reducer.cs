@@ -3,13 +3,16 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Recommendations;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Placement;
 using Orleans.Providers;
 
@@ -23,12 +26,14 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// </remarks>
 /// <param name="reducerDefinitionComparer"><see cref="IReducerDefinitionComparer"/> for comparing reducer definitions.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting information about the silo this grain is on.</param>
+/// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for accessing Chronicle configuration.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 [PreferLocalPlacement]
 public class Reducer(
     IReducerDefinitionComparer reducerDefinitionComparer,
     ILocalSiloDetails localSiloDetails,
+    IOptions<ChronicleOptions> options,
     ILogger<Reducer> logger) : Grain<ReducerDefinition>, IReducer
 {
     IObserver? _observer;
@@ -62,7 +67,15 @@ public class Reducer(
                 _subscribed = false;
             }
             var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
-            await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+
+            if (options.Value.Observers.ReplayOnDefinitionChange)
+            {
+                await ReplayForAllNamespaces(key, namespaceNames);
+            }
+            else
+            {
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+            }
         }
 
         if (!_subscribed && definition.IsActive)
@@ -100,9 +113,36 @@ public class Reducer(
 
             var key = new ObserverKey(_observerKey.ObserverId, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId);
             var observer = GrainFactory.GetGrain<IObserver>(key);
-            DeactivateOnIdle();
+            try
+            {
+                DeactivateOnIdle();
+            }
+            catch (InvalidOperationException)
+            {
+                // Grain activation may already be invalid during silo shutdown.
+            }
+
+            var subscription = await observer.GetSubscription();
+            if (subscription.IsSubscribed &&
+                subscription.Arguments is ConnectedClient connectedClient &&
+                connectedClient.ConnectionId != _observerKey!.ConnectionId)
+            {
+                _subscribed = false;
+                return;
+            }
+
             await observer.Unsubscribe();
             _subscribed = false;
+        }
+    }
+
+    async Task ReplayForAllNamespaces(ReducerKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        foreach (var @namespace in namespaces)
+        {
+            logger.AutoReplayingReducer(key.EventStore, key.ReducerId, key.EventSequenceId, @namespace);
+            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId));
+            await observer.Replay();
         }
     }
 

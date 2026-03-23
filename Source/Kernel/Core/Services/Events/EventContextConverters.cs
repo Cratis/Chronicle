@@ -25,7 +25,7 @@ internal static class EventContextConverters
         EventStreamType = context.EventStreamType,
         EventStreamId = context.EventStreamId,
         SequenceNumber = context.SequenceNumber,
-        Occurred = context.Occurred!,
+        Occurred = context.Occurred,
         EventStore = context.EventStore,
         Namespace = context.Namespace,
         CorrelationId = context.CorrelationId,

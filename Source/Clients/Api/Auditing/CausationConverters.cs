@@ -33,7 +33,7 @@ internal static class CausationConverters
     /// <returns>Converted <see cref="Contracts.Auditing.Causation"/>.</returns>
     public static Contracts.Auditing.Causation ToContract(this Causation causation) => new()
     {
-        Occurred = causation.Occurred!,
+        Occurred = causation.Occurred,
         Type = causation.Type,
         Properties = causation.Properties.ToDictionary(x => x.Key, x => x.Value)
     };

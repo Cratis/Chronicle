@@ -1,87 +1,71 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult } from '@cratis/arc.react/dialogs';
 import { AddApplication } from 'Api/Security';
 import { Button } from 'primereact/button';
-import { Dialog } from 'Components/Dialogs';
-import { InputText } from 'primereact/inputtext';
 import { useState } from 'react';
 import strings from 'Strings';
 import { generatePassword } from '../../PasswordHelpers';
+import { CommandDialog } from '@cratis/components/CommandDialog';
+import { InputTextField, useCommandFormContext } from '@cratis/components/CommandForm';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
-export const AddApplicationDialog = () => {
-    const [id] = useState(crypto.randomUUID());
-    const [clientId, setClientId] = useState('');
-    const [clientSecret, setClientSecret] = useState('');
-    const [showSecret, setShowSecret] = useState(false);
-    const [addApplication] = AddApplication.use();
+interface SecretActionsProps {
+    showSecret: boolean;
+    onToggleShow: () => void;
+}
 
-    const handleGenerateSecret = () => {
-        setClientSecret(generatePassword(32));
-    };
+const SecretActions = ({ showSecret, onToggleShow }: SecretActionsProps) => {
+    const { setCommandValues } = useCommandFormContext<AddApplication>();
 
-    const handleClose = async (result: DialogResult) => {
-        if (result !== DialogResult.Ok) {
-            return true;
-        }
-
-        if (clientId && clientSecret) {
-            addApplication.id = id;
-            addApplication.clientId = clientId;
-            addApplication.clientSecret = clientSecret;
-            const executeResult = await addApplication.execute();
-            return executeResult.isSuccess;
-        }
-
-        return false;
+    const handleGenerate = () => {
+        setCommandValues({ clientSecret: generatePassword(32) } as unknown as AddApplication);
     };
 
     return (
-        <Dialog
-            title={strings.eventStore.system.applications.dialogs.addApplication.title}
-            onClose={handleClose}
-            isValid={clientId.trim() !== '' && clientSecret.trim() !== ''}>
-            <div className="card flex flex-column gap-3 mb-3">
-                <div className="p-inputgroup flex-1">
-                    <span className="p-inputgroup-addon">
-                        <i className="pi pi-user"></i>
-                    </span>
-                    <InputText
-                        placeholder={strings.eventStore.system.applications.dialogs.addApplication.clientId}
-                        value={clientId}
-                        onChange={e => setClientId(e.target.value)}
-                    />
-                </div>
-            </div>
+        <div className="flex gap-2 mt-2">
+            <Button
+                icon={showSecret ? 'pi pi-eye-slash' : 'pi pi-eye'}
+                onClick={onToggleShow}
+                className="p-button-text"
+                type="button"
+                tooltip={showSecret ? strings.eventStore.system.applications.dialogs.addApplication.hideSecret : strings.eventStore.system.applications.dialogs.addApplication.showSecret}
+            />
+            <Button
+                icon="pi pi-refresh"
+                onClick={handleGenerate}
+                className="p-button-text"
+                type="button"
+                tooltip={strings.eventStore.system.applications.dialogs.addApplication.generateSecret}
+            />
+        </div>
+    );
+};
 
-            <div className="card flex flex-column gap-3 mb-3">
-                <div className="p-inputgroup flex-1">
-                    <span className="p-inputgroup-addon">
-                        <i className="pi pi-lock"></i>
-                    </span>
-                    <InputText
-                        type={showSecret ? 'text' : 'password'}
-                        placeholder={strings.eventStore.system.applications.dialogs.addApplication.clientSecret}
-                        value={clientSecret}
-                        onChange={e => setClientSecret(e.target.value)}
-                    />
-                    <Button
-                        icon={showSecret ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                        onClick={() => setShowSecret(!showSecret)}
-                        className="p-button-text"
-                        type="button"
-                        tooltip={showSecret ? strings.eventStore.system.applications.dialogs.addApplication.hideSecret : strings.eventStore.system.applications.dialogs.addApplication.showSecret}
-                    />
-                    <Button
-                        icon="pi pi-refresh"
-                        onClick={handleGenerateSecret}
-                        className="p-button-text"
-                        type="button"
-                        tooltip={strings.eventStore.system.applications.dialogs.addApplication.generateSecret}
-                    />
-                </div>
-            </div>
-        </Dialog>
+export const AddApplicationDialog = () => {
+    const [id] = useState(crypto.randomUUID());
+    const [showSecret, setShowSecret] = useState(false);
+    const { closeDialog } = useDialogContext<object>();
+
+    return (
+        <CommandDialog
+            command={AddApplication}
+            initialValues={{ id }}
+            title={strings.eventStore.system.applications.dialogs.addApplication.title}
+            okLabel={strings.general.buttons.ok}
+            cancelLabel={strings.general.buttons.cancel}
+            onConfirm={() => closeDialog(DialogResult.Ok)}
+            onCancel={() => closeDialog(DialogResult.Cancelled)}>
+            <InputTextField<AddApplication>
+                value={c => c.clientId}
+                title={strings.eventStore.system.applications.dialogs.addApplication.clientId}
+                icon={<i className="pi pi-user" />} />
+            <InputTextField<AddApplication>
+                value={c => c.clientSecret}
+                title={strings.eventStore.system.applications.dialogs.addApplication.clientSecret}
+                type={showSecret ? 'text' : 'password'}
+                icon={<i className="pi pi-lock" />} />
+            <SecretActions showSecret={showSecret} onToggleShow={() => setShowSecret(v => !v)} />
+        </CommandDialog>
     );
 };

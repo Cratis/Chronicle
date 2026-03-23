@@ -13,6 +13,7 @@ using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
@@ -50,6 +51,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _disableTls;
+    readonly bool _skipCompatibilityCheck;
+    readonly bool _skipKeepAlive;
+    readonly SemaphoreSlim _connectLock = new(1, 1);
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     DateTimeOffset _lastKeepAlive = DateTimeOffset.MinValue;
@@ -74,6 +78,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="certificatePath">Optional path to the certificate file.</param>
     /// <param name="certificatePassword">Optional password for the certificate file.</param>
     /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
+    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect. Useful for short-lived clients like CLIs.</param>
+    /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect. Useful for short-lived clients like CLIs.</param>
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
@@ -90,9 +96,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         bool disableTls,
         string? certificatePath = null,
         string? certificatePassword = null,
-        ITokenProvider? tokenProvider = null)
+        ITokenProvider? tokenProvider = null,
+        bool skipCompatibilityCheck = false,
+        bool skipKeepAlive = false)
     {
         _disableTls = disableTls;
+        _skipCompatibilityCheck = skipCompatibilityCheck;
+        _skipKeepAlive = skipKeepAlive;
         GrpcClientFactory.AllowUnencryptedHttp2 = _disableTls;
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
@@ -135,6 +145,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <inheritdoc/>
     public void Dispose()
     {
+        _connectLock.Dispose();
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
         if (_tokenProvider is IDisposable disposableTokenProvider)
@@ -151,6 +162,24 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
+        await _connectLock.WaitAsync(_cancellationToken);
+        try
+        {
+            if (Lifecycle.IsConnected)
+            {
+                return;
+            }
+
+            await ConnectInternal();
+        }
+        finally
+        {
+            _connectLock.Release();
+        }
+    }
+
+    async Task ConnectInternal()
+    {
         _logger.Connecting(_connectionString);
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
@@ -160,6 +189,72 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var callInvoker = _channel
             .Intercept(new AuthenticationClientInterceptor(_tokenProvider, _loggerFactory.CreateLogger<AuthenticationClientInterceptor>()))
             .Intercept(new CorrelationIdClientInterceptor(_correlationIdAccessor));
+
+        // Perform compatibility check before establishing connection
+        if (!_skipCompatibilityCheck)
+        {
+            var tempConnectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
+
+            try
+            {
+                var serverSchemaResponse = await tempConnectionService.GetDescriptorSet();
+                var clientSchema = CompatibilityValidator.GenerateClientSchema();
+                var compatibilityResult = CompatibilityValidator.Validate(
+                    clientSchema,
+                    serverSchemaResponse.SchemaDefinition,
+                    _logger);
+
+                if (!compatibilityResult.IsCompatible)
+                {
+                    var errorMessage = string.Join("; ", compatibilityResult.Errors);
+                    _logger.IncompatibleWithServer(errorMessage);
+                    throw new IncompatibleServerException($"Client is incompatible with server: {errorMessage}");
+                }
+
+                _logger.CompatibilityCheckPassed();
+            }
+            catch (IncompatibleServerException)
+            {
+                throw;
+            }
+            catch (RpcException ex)
+            {
+                _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
+
+                // Don't fail the connection if we can't retrieve the schema
+                // This allows backward compatibility with older servers that don't support this feature
+            }
+        }
+
+        _services = new Services(
+            callInvoker.CreateGrpcService<IEventStores>(clientFactory),
+            callInvoker.CreateGrpcService<INamespaces>(clientFactory),
+            callInvoker.CreateGrpcService<IRecommendations>(clientFactory),
+            callInvoker.CreateGrpcService<IIdentities>(clientFactory),
+            callInvoker.CreateGrpcService<IEventSequences>(clientFactory),
+            callInvoker.CreateGrpcService<IEventTypes>(clientFactory),
+            callInvoker.CreateGrpcService<IConstraints>(clientFactory),
+            callInvoker.CreateGrpcService<IObservers>(clientFactory),
+            callInvoker.CreateGrpcService<IFailedPartitions>(clientFactory),
+            callInvoker.CreateGrpcService<IReactors>(clientFactory),
+            callInvoker.CreateGrpcService<IReducers>(clientFactory),
+            callInvoker.CreateGrpcService<IProjections>(clientFactory),
+            callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
+            callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
+            callInvoker.CreateGrpcService<IReadModels>(clientFactory),
+            callInvoker.CreateGrpcService<IJobs>(clientFactory),
+            callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
+            callInvoker.CreateGrpcService<IUsers>(clientFactory),
+            callInvoker.CreateGrpcService<IApplications>(clientFactory),
+            callInvoker.CreateGrpcService<IServer>(clientFactory));
+
+        if (_skipKeepAlive)
+        {
+            _logger.Connected();
+            await Lifecycle.Connected();
+            return;
+        }
+
         _connectionService = callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
         _lastKeepAlive = DateTimeOffset.UtcNow;
         _connectTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -173,27 +268,6 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         try
         {
-            _services = new Services(
-                callInvoker.CreateGrpcService<IEventStores>(clientFactory),
-                callInvoker.CreateGrpcService<INamespaces>(clientFactory),
-                callInvoker.CreateGrpcService<IRecommendations>(clientFactory),
-                callInvoker.CreateGrpcService<IIdentities>(clientFactory),
-                callInvoker.CreateGrpcService<IEventSequences>(clientFactory),
-                callInvoker.CreateGrpcService<IEventTypes>(clientFactory),
-                callInvoker.CreateGrpcService<IConstraints>(clientFactory),
-                callInvoker.CreateGrpcService<IObservers>(clientFactory),
-                callInvoker.CreateGrpcService<IFailedPartitions>(clientFactory),
-                callInvoker.CreateGrpcService<IReactors>(clientFactory),
-                callInvoker.CreateGrpcService<IReducers>(clientFactory),
-                callInvoker.CreateGrpcService<IProjections>(clientFactory),
-                callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
-                callInvoker.CreateGrpcService<IReadModels>(clientFactory),
-                callInvoker.CreateGrpcService<IJobs>(clientFactory),
-                callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
-                callInvoker.CreateGrpcService<IUsers>(clientFactory),
-                callInvoker.CreateGrpcService<IApplications>(clientFactory),
-                callInvoker.CreateGrpcService<IServer>(clientFactory));
-
             await _connectTcs.Task.WaitAsync(TimeSpan.FromSeconds(_connectTimeout));
             _logger.Connected();
             await Lifecycle.Connected();
