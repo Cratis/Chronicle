@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
+using Cratis.Chronicle.Integration.Specifications.Projections.Events;
+using Cratis.Chronicle.Integration.Specifications.Projections.ProjectionTypes;
 using Cratis.Chronicle.Observation;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_registering_multiple_projections.all_become_active.context;
 

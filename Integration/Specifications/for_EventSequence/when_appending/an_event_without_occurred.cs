@@ -2,14 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending.an_event_without_occurred.context;
+using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.an_event_without_occurred.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending;
 
 [Collection(ChronicleCollection.Name)]
 public class an_event_without_occurred(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : Specification<ChronicleFixture>(chronicleInProcessFixture)
     {
         public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent Event { get; private set; }

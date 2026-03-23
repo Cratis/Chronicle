@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending.many_events_with_occurred.context;
+using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.many_events_with_occurred.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending;
 
 [Collection(ChronicleCollection.Name)]
 public class many_events_with_occurred(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : Specification<ChronicleFixture>(chronicleInProcessFixture)
     {
         public Events.EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }

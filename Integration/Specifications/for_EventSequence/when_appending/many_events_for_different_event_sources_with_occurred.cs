@@ -3,14 +3,14 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.EventSequences;
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending.many_events_for_different_event_sources_with_occurred.context;
+using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.many_events_for_different_event_sources_with_occurred.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending;
 
 [Collection(ChronicleCollection.Name)]
 public class many_events_for_different_event_sources_with_occurred(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : Specification<ChronicleFixture>(chronicleInProcessFixture)
     {
         public IList<EventForEventSourceId> Events { get; private set; }
         public DateTimeOffset FirstOccurred { get; private set; }

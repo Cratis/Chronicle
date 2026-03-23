@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Integration.Specifications.Projections.Events;
 using Cratis.Chronicle.Integration.Specifications.Projections.ProjectionTypes;
 using Cratis.Chronicle.Integration.Specifications.Projections.ReadModels;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_properties.using_constant_key_with_increment.context;
+using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_properties.using_constant_key_with_increment.context;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_properties;
 
