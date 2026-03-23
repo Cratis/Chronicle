@@ -23,7 +23,9 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
         Directory.CreateDirectory(outputDir);
         _generatedCode = _generator.Generate(_serviceDefinition, outputDir);
 
-        // Force-load assemblies that the generated code depends on so they appear in AppDomain
+        // Ensure protobuf-net.Grpc assemblies appear in AppDomain before enumerating loaded assemblies
+        // for Roslyn references — they may not be loaded yet since no protobuf-net type has been
+        // referenced in this test process up to this point.
         _ = typeof(ProtoBuf.Grpc.CallContext).Assembly;
         _ = typeof(ProtoBuf.Grpc.Configuration.ServiceAttribute).Assembly;
 
@@ -52,11 +54,12 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
         using var ms = new MemoryStream();
         var emitResult = compilation.Emit(ms);
 
-        // Collect all errors from both semantic analysis and emit
+        // Collect all errors from both semantic analysis and emit; use DistinctBy(Id) to
+        // avoid duplicates that may appear in both GetDiagnostics() and emitResult.Diagnostics.
         _diagnostics = compilation.GetDiagnostics()
             .Concat(emitResult.Diagnostics)
             .Where(d => d.Severity == DiagnosticSeverity.Error)
-            .Distinct()
+            .DistinctBy(d => d.Id)
             .ToList();
 
         if (emitResult.Success)
