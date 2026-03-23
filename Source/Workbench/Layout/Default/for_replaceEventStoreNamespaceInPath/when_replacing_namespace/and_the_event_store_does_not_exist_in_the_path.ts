@@ -5,14 +5,14 @@ import { given } from 'given';
 import { an_event_store_path } from './given/an_event_store_path';
 import { replaceEventStoreNamespaceInPath } from '../../replaceEventStoreNamespaceInPath';
 
-describe('when replacing namespace and the current namespace does not exist after the event store', given(an_event_store_path, (context) => {
+describe('when replacing namespace and the event store does not exist in the path', given(an_event_store_path, (context) => {
     let result: string;
 
     beforeEach(() => {
-        result = replaceEventStoreNamespaceInPath('/event-store/store-a/observers', context.eventStore, context.currentNamespace, context.nextNamespace);
+        result = replaceEventStoreNamespaceInPath('/event-store/another-store/Default/observers', context.eventStore, context.currentNamespace, context.nextNamespace);
     });
 
     it('should return the original path', () => {
-        result.should.equal('/event-store/store-a/observers');
+        result.should.equal('/event-store/another-store/Default/observers');
     });
 }));

@@ -12,7 +12,12 @@ export const replaceEventStoreNamespaceInPath = (
     }
 
     const pathSegments = pathname.split('/');
-    const startIndex = eventStore ? pathSegments.findIndex(segment => segment === eventStore) + 1 : 0;
+    const eventStoreIndex = eventStore ? pathSegments.findIndex(segment => segment === eventStore) : -1;
+    if (eventStore && eventStoreIndex < 0) {
+        return pathname;
+    }
+
+    const startIndex = eventStoreIndex >= 0 ? eventStoreIndex + 1 : 0;
     const namespaceIndex = pathSegments.findIndex((segment, index) => index >= startIndex && segment === currentNamespace);
 
     if (namespaceIndex < 0) {
