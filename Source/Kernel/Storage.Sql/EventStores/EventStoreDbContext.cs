@@ -77,4 +77,13 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// Gets or sets the event seeds DbSet.
     /// </summary>
     public DbSet<EventSeedsEntity> EventSeeds { get; set; }
+
+    /// <inheritdoc/>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // WebhookTarget is a value object serialized as JSON via [Json] on WebhookDefinition.Target.
+        // Ignore it as an entity type so EF Core does not try to create a table or require a primary key.
+        modelBuilder.Ignore<WebhookTarget>();
+        base.OnModelCreating(modelBuilder);
+    }
 }
