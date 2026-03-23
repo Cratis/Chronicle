@@ -8,6 +8,7 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
 using Microsoft.Extensions.DependencyInjection;
+using SqlStorage = Cratis.Chronicle.Storage.Sql.SystemStorage;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -37,6 +38,8 @@ public static class SqlChronicleBuilderExtensions
         });
 
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
+        builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
+        builder.Services.AddSingleton<IStorage, Storage.Storage>();
         return builder;
     }
 }
