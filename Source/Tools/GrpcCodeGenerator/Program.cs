@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Runtime.Loader;
 using Cratis.Chronicle.Tools.GrpcCodeGenerator;
 
 Console.WriteLine("\nGrpc Code Generator\n");
@@ -39,19 +38,7 @@ if (!File.Exists(assemblyPath))
 
 Directory.CreateDirectory(outputDirectory);
 
-var loadContext = new AssemblyLoadContext("GrpcCodeGenerator", isCollectible: true);
-loadContext.Resolving += (context, name) =>
-{
-    var assemblyDir = Path.GetDirectoryName(assemblyPath)!;
-    var dllPath = Path.Combine(assemblyDir, $"{name.Name}.dll");
-
-    if (File.Exists(dllPath))
-    {
-        return context.LoadFromAssemblyPath(dllPath);
-    }
-
-    return null;
-};
+var loadContext = new IsolatedAssemblyLoadContext(assemblyPath);
 
 Assembly assembly;
 try
