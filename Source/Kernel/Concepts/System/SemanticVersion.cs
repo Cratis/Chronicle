@@ -21,6 +21,9 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
     /// </summary>
     public static readonly SemanticVersion NotSet = new(0, 0, 0);
 
+    [GeneratedRegex(@"^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$", RegexOptions.None, 1000)]
+    private static partial Regex SemanticVersionRegex { get; }
+
     /// <summary>
     /// Implicit conversion from string to <see cref="SemanticVersion"/>.
     /// </summary>
@@ -71,7 +74,7 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
     /// <exception cref="ArgumentException">Thrown if the version string is invalid.</exception>
     public static SemanticVersion Parse(string version)
     {
-        var match = SemanticVersionRegex().Match(version);
+        var match = SemanticVersionRegex.Match(version);
         if (!match.Success)
         {
             throw new ArgumentException($"Invalid semantic version: {version}", nameof(version));
@@ -177,7 +180,4 @@ public partial record SemanticVersion(int Major, int Minor, int Patch, string Pr
 
         return version;
     }
-
-    [GeneratedRegex(@"^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$", RegexOptions.None, 1000)]
-    private static partial Regex SemanticVersionRegex();
 }
