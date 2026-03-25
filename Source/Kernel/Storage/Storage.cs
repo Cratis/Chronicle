@@ -51,11 +51,14 @@ public class Storage(
         }
 
         // TODO: This logic should be replaced by formalizing event stores as a Grain and it ensuring existence. Service layer should do this.
-        var eventStores = clusterStorage.GetEventStores().GetAwaiter().GetResult();
+        // Use Task.Run to avoid deadlocking Orleans grain task schedulers: the async continuations inside these
+        // methods must not be posted back to the Orleans ActivationTaskScheduler, which would be the case if called
+        // directly with GetAwaiter().GetResult() from within a grain method.
+        var eventStores = Task.Run(clusterStorage.GetEventStores).GetAwaiter().GetResult();
         var existingEventStore = eventStores.SingleOrDefault(e => e == eventStore);
         if (existingEventStore is null)
         {
-            clusterStorage.SaveEventStore(eventStore).GetAwaiter().GetResult();
+            Task.Run(() => clusterStorage.SaveEventStore(eventStore)).GetAwaiter().GetResult();
         }
 
         return _eventStores[eventStore] =
