@@ -143,6 +143,22 @@ Wraps multiple command-using components, aggregating their `hasChanges` state an
 
 Declarative form component with built-in field types, validation timing (`validateOn: blur|change|both`), and automatic server-side validation feedback.
 
+## Language — American English Only
+
+All identifiers, comments, JSDoc, and string literals must use **American English** spelling. This applies to variable names, function names, type names, enum members, and documentation. Common mistakes to avoid:
+
+| Wrong (UK) | Correct (US) |
+|---|---|
+| initialise, serialise, normalise | initialize, serialize, normalize |
+| behaviour, colour, favour, honour | behavior, color, favor, honor |
+| organisation, authorisation | organization, authorization |
+| centre, fibre | center, fiber |
+| modelling, signalling, cancelling | modeling, signaling, canceling |
+| dialogue, catalogue | dialog, catalog |
+| licence, defence | license, defense |
+| judgement, acknowledgement | judgment, acknowledgment |
+| grey | gray |
+
 ## Variables and Naming
 
 - Prefer `const` over `let` over `var` when declaring variables.
