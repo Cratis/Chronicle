@@ -94,6 +94,9 @@ public static class ProtoMemberIndexReader
                 }
 
                 var firstArg = arguments.Value[0];
+
+                // Only literal integer arguments are supported; constant expressions (e.g. MyConstants.X)
+                // are intentionally not parsed — the generator always emits plain integer literals.
                 if (firstArg.Expression is LiteralExpressionSyntax literal &&
                     literal.Token.Value is int intValue)
                 {

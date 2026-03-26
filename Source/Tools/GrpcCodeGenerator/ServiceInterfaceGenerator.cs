@@ -177,7 +177,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
             if (!requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
             {
-                requestResponseTypes.Add((requestTypeName, props!));
+                requestResponseTypes.Add((requestTypeName, props));
             }
 
             parameters.Add(
@@ -208,7 +208,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         List<(string PropName, string PropType)> properties,
         IReadOnlyDictionary<string, int> existingIndexes)
     {
-        var nextIndex = existingIndexes.Count > 0 ? existingIndexes.Values.Max() + 1 : 1;
+        var nextIndex = existingIndexes.Values.DefaultIfEmpty(0).Max() + 1;
 
         var propertyMembers = new List<MemberDeclarationSyntax>();
         foreach (var (propName, propType) in properties)
@@ -327,7 +327,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
         }).ToList();
 
-        requestResponseTypes.Add((requestTypeName, properties!));
+        requestResponseTypes.Add((requestTypeName, properties));
         return requestTypeName;
     }
 
@@ -398,7 +398,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
                 return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
             })
-            .ToList()!;
+            .ToList();
     }
 
     string BuildTargetNamespace(string sourceNamespace)

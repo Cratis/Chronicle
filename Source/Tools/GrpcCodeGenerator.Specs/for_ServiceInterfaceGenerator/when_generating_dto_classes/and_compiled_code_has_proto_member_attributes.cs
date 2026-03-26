@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator.for_ServiceInterfaceGenerator
 public class and_compiled_code_has_proto_member_attributes : given.a_generated_service_interface_with_output_dir
 {
     IReadOnlyList<Diagnostic> _diagnostics = null!;
-    Type _requestType = null!;
+    Type? _requestType;
 
     void Because()
     {
@@ -58,11 +58,12 @@ public class and_compiled_code_has_proto_member_attributes : given.a_generated_s
             ms.Seek(0, SeekOrigin.Begin);
             var compiledAssembly = Assembly.Load(ms.ToArray());
             _requestType = compiledAssembly.GetType(
-                $"Generated.{_serviceDefinition.Namespace}.RegisterProductRequest")!;
+                $"Generated.{_serviceDefinition.Namespace}.RegisterProductRequest");
         }
     }
 
     [Fact] void should_compile_without_errors() => _diagnostics.ShouldBeEmpty();
+    [Fact] void should_load_request_type() => _requestType.ShouldNotBeNull();
     [Fact] void should_have_proto_contract_attribute() =>
         _requestType?.GetCustomAttributesData()
             .ShouldContain(a => a.AttributeType.Name == "ProtoContractAttribute");
