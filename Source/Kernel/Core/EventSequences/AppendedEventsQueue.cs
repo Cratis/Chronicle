@@ -241,18 +241,35 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
     {
-        foreach (var group in events.GroupBy(@event => @event.Context.EventSourceId))
+        // Sort events by sequence number and deliver consecutive same-partition batches.
+        // This prevents a race condition where processing one partition's events first
+        // advances the observer's NextEventSequenceNumber past lower-numbered events
+        // from other partitions, causing those events to be incorrectly skipped.
+        var sorted = events.OrderBy(e => e.Context.SequenceNumber).ToList();
+
+        var index = 0;
+        while (index < sorted.Count)
         {
+            var partition = sorted[index].Context.EventSourceId;
+            var start = index;
+            while (index < sorted.Count && sorted[index].Context.EventSourceId == partition)
+            {
+                index++;
+            }
+
+            var partitionEvents = sorted.GetRange(start, index - start);
+
             var tasks = new List<Task>();
             foreach (var subscription in _subscriptions)
             {
-                var actualEvents = group.Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id)).ToList();
+                var actualEvents = partitionEvents
+                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+                    .ToList();
                 if (actualEvents.Count == 0)
                 {
                     continue;
                 }
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                var partition = group.Key;
                 tasks.Add(observer.Handle(partition, actualEvents));
             }
 
