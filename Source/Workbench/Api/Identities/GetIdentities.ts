@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Identity } from './Identity';
 
@@ -133,9 +133,5 @@ export class GetIdentities extends QueryFor<Identity[], GetIdentitiesParameters>
 
     static useSuspenseWithPaging(pageSize: number, args?: GetIdentitiesParameters, sorting?: Sorting): [QueryResultWithState<Identity[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<Identity[], GetIdentities>(GetIdentities, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<GetIdentities, Identity[], GetIdentitiesParameters> {
-        return new QueryWhen<GetIdentities, Identity[], GetIdentitiesParameters>(GetIdentities, condition);
     }
 }

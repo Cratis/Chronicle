@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 
 class AllNamespacesSortBy {
@@ -81,9 +81,5 @@ export class AllNamespaces extends ObservableQueryFor<string[], AllNamespacesPar
 
     static useSuspenseWithPaging(pageSize: number, args?: AllNamespacesParameters, sorting?: Sorting): [QueryResultWithState<string[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<string[], AllNamespaces>(AllNamespaces, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllNamespaces, string[], AllNamespacesParameters> {
-        return new ObservableQueryWhen<AllNamespaces, string[], AllNamespacesParameters>(AllNamespaces, condition);
     }
 }

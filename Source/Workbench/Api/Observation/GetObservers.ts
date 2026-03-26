@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
 
@@ -115,9 +115,5 @@ export class GetObservers extends QueryFor<ObserverInformation[], GetObserversPa
 
     static useSuspenseWithPaging(pageSize: number, args?: GetObserversParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<ObserverInformation[], GetObservers>(GetObservers, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<GetObservers, ObserverInformation[], GetObserversParameters> {
-        return new QueryWhen<GetObservers, ObserverInformation[], GetObserversParameters>(GetObservers, condition);
     }
 }

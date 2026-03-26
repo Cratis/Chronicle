@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Application } from './Application';
 
@@ -69,9 +69,5 @@ export class AllApplications extends ObservableQueryFor<Application[]> {
 
     static useSuspenseWithPaging(pageSize: number, sorting?: Sorting): [QueryResultWithState<Application[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<Application[], AllApplications>(AllApplications, new Paging(0, pageSize), undefined, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllApplications, Application[]> {
-        return new ObservableQueryWhen<AllApplications, Application[]>(AllApplications, condition);
     }
 }

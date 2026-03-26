@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Recommendation } from './Recommendation';
 
@@ -142,9 +142,5 @@ export class GetRecommendations extends QueryFor<Recommendation[], GetRecommenda
 
     static useSuspenseWithPaging(pageSize: number, args?: GetRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<Recommendation[], GetRecommendations>(GetRecommendations, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<GetRecommendations, Recommendation[], GetRecommendationsParameters> {
-        return new QueryWhen<GetRecommendations, Recommendation[], GetRecommendationsParameters>(GetRecommendations, condition);
     }
 }

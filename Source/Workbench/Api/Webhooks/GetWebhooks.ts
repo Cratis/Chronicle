@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { WebhookDefinition } from './WebhookDefinition';
 
@@ -161,9 +161,5 @@ export class GetWebhooks extends QueryFor<WebhookDefinition[], GetWebhooksParame
 
     static useSuspenseWithPaging(pageSize: number, args?: GetWebhooksParameters, sorting?: Sorting): [QueryResultWithState<WebhookDefinition[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<WebhookDefinition[], GetWebhooks>(GetWebhooks, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<GetWebhooks, WebhookDefinition[], GetWebhooksParameters> {
-        return new QueryWhen<GetWebhooks, WebhookDefinition[], GetWebhooksParameters>(GetWebhooks, condition);
     }
 }

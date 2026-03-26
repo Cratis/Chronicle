@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator } from '@cratis/arc/queries';
-import { useQuery, useSuspenseQuery, PerformQuery, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useSuspenseQuery, PerformQuery } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { SeedData } from './SeedData';
 
@@ -63,9 +63,5 @@ export class GlobalSeedData extends QueryFor<SeedData, GlobalSeedDataParameters>
     static useSuspense(args?: GlobalSeedDataParameters): [QueryResultWithState<SeedData>, PerformQuery<GlobalSeedDataParameters>] {
         const [result, perform] = useSuspenseQuery<SeedData, GlobalSeedData, GlobalSeedDataParameters>(GlobalSeedData, args);
         return [result, perform];
-    }
-
-    static when(condition: boolean): QueryWhen<GlobalSeedData, SeedData, GlobalSeedDataParameters> {
-        return new QueryWhen<GlobalSeedData, SeedData, GlobalSeedDataParameters>(GlobalSeedData, condition);
     }
 }

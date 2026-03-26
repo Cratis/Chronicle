@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { EventType } from '../Events/EventType';
 
@@ -116,9 +116,5 @@ export class AllEventTypes extends QueryFor<EventType[], AllEventTypesParameters
 
     static useSuspenseWithPaging(pageSize: number, args?: AllEventTypesParameters, sorting?: Sorting): [QueryResultWithState<EventType[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<EventType[], AllEventTypes>(AllEventTypes, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<AllEventTypes, EventType[], AllEventTypesParameters> {
-        return new QueryWhen<AllEventTypes, EventType[], AllEventTypesParameters>(AllEventTypes, condition);
     }
 }

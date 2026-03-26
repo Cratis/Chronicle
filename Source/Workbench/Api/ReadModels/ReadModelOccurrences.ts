@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ReadModelOccurrence } from './ReadModelOccurrence';
 
@@ -132,9 +132,5 @@ export class ReadModelOccurrences extends QueryFor<ReadModelOccurrence[], ReadMo
 
     static useSuspenseWithPaging(pageSize: number, args?: ReadModelOccurrencesParameters, sorting?: Sorting): [QueryResultWithState<ReadModelOccurrence[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<ReadModelOccurrence[], ReadModelOccurrences>(ReadModelOccurrences, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<ReadModelOccurrences, ReadModelOccurrence[], ReadModelOccurrencesParameters> {
-        return new QueryWhen<ReadModelOccurrences, ReadModelOccurrence[], ReadModelOccurrencesParameters>(ReadModelOccurrences, condition);
     }
 }

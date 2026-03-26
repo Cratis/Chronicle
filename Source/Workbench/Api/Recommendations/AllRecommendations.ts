@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Recommendation } from './Recommendation';
 
@@ -135,9 +135,5 @@ export class AllRecommendations extends ObservableQueryFor<Recommendation[], All
 
     static useSuspenseWithPaging(pageSize: number, args?: AllRecommendationsParameters, sorting?: Sorting): [QueryResultWithState<Recommendation[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<Recommendation[], AllRecommendations>(AllRecommendations, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllRecommendations, Recommendation[], AllRecommendationsParameters> {
-        return new ObservableQueryWhen<AllRecommendations, Recommendation[], AllRecommendationsParameters>(AllRecommendations, condition);
     }
 }

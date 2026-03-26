@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { AppendedEvent } from '../Events/AppendedEvent';
 
@@ -157,9 +157,5 @@ export class AppendedEvents extends QueryFor<AppendedEvent[], AppendedEventsPara
 
     static useSuspenseWithPaging(pageSize: number, args?: AppendedEventsParameters, sorting?: Sorting): [QueryResultWithState<AppendedEvent[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<AppendedEvent[], AppendedEvents>(AppendedEvents, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<AppendedEvents, AppendedEvent[], AppendedEventsParameters> {
-        return new QueryWhen<AppendedEvents, AppendedEvent[], AppendedEventsParameters>(AppendedEvents, condition);
     }
 }

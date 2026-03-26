@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Projection } from './Projection';
 
@@ -98,9 +98,5 @@ export class AllProjections extends QueryFor<Projection[], AllProjectionsParamet
 
     static useSuspenseWithPaging(pageSize: number, args?: AllProjectionsParameters, sorting?: Sorting): [QueryResultWithState<Projection[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<Projection[], AllProjections>(AllProjections, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<AllProjections, Projection[], AllProjectionsParameters> {
-        return new QueryWhen<AllProjections, Projection[], AllProjectionsParameters>(AllProjections, condition);
     }
 }

@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator } from '@cratis/arc/queries';
-import { useQuery, useSuspenseQuery, PerformQuery, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useSuspenseQuery, PerformQuery } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { InitialAdminPasswordSetupStatus } from './InitialAdminPasswordSetupStatus';
 
@@ -49,9 +49,5 @@ export class GetStatus extends QueryFor<InitialAdminPasswordSetupStatus> {
     static useSuspense(): [QueryResultWithState<InitialAdminPasswordSetupStatus>, PerformQuery] {
         const [result, perform] = useSuspenseQuery<InitialAdminPasswordSetupStatus, GetStatus>(GetStatus);
         return [result, perform];
-    }
-
-    static when(condition: boolean): QueryWhen<GetStatus, InitialAdminPasswordSetupStatus> {
-        return new QueryWhen<GetStatus, InitialAdminPasswordSetupStatus>(GetStatus, condition);
     }
 }

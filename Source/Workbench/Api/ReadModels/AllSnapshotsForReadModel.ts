@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ReadModelSnapshot } from './ReadModelSnapshot';
 
@@ -149,9 +149,5 @@ export class AllSnapshotsForReadModel extends QueryFor<ReadModelSnapshot[], AllS
 
     static useSuspenseWithPaging(pageSize: number, args?: AllSnapshotsForReadModelParameters, sorting?: Sorting): [QueryResultWithState<ReadModelSnapshot[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<ReadModelSnapshot[], AllSnapshotsForReadModel>(AllSnapshotsForReadModel, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<AllSnapshotsForReadModel, ReadModelSnapshot[], AllSnapshotsForReadModelParameters> {
-        return new QueryWhen<AllSnapshotsForReadModel, ReadModelSnapshot[], AllSnapshotsForReadModelParameters>(AllSnapshotsForReadModel, condition);
     }
 }

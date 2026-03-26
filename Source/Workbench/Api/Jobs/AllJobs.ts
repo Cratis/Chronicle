@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { Job } from './Job';
 
@@ -153,9 +153,5 @@ export class AllJobs extends ObservableQueryFor<Job[], AllJobsParameters> {
 
     static useSuspenseWithPaging(pageSize: number, args?: AllJobsParameters, sorting?: Sorting): [QueryResultWithState<Job[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<Job[], AllJobs>(AllJobs, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllJobs, Job[], AllJobsParameters> {
-        return new ObservableQueryWhen<AllJobs, Job[], AllJobsParameters>(AllJobs, condition);
     }
 }

@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { EventTypeRegistration } from '../Events/EventTypeRegistration';
 
@@ -118,9 +118,5 @@ export class AllEventTypesWithSchemas extends ObservableQueryFor<EventTypeRegist
 
     static useSuspenseWithPaging(pageSize: number, args?: AllEventTypesWithSchemasParameters, sorting?: Sorting): [QueryResultWithState<EventTypeRegistration[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<EventTypeRegistration[], AllEventTypesWithSchemas>(AllEventTypesWithSchemas, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllEventTypesWithSchemas, EventTypeRegistration[], AllEventTypesWithSchemasParameters> {
-        return new ObservableQueryWhen<AllEventTypesWithSchemas, EventTypeRegistration[], AllEventTypesWithSchemasParameters>(AllEventTypesWithSchemas, condition);
     }
 }

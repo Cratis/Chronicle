@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator } from '@cratis/arc/queries';
-import { useQuery, useSuspenseQuery, PerformQuery, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useSuspenseQuery, PerformQuery } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { SeedData } from './SeedData';
 
@@ -71,9 +71,5 @@ export class NamespaceSeedData extends QueryFor<SeedData, NamespaceSeedDataParam
     static useSuspense(args?: NamespaceSeedDataParameters): [QueryResultWithState<SeedData>, PerformQuery<NamespaceSeedDataParameters>] {
         const [result, perform] = useSuspenseQuery<SeedData, NamespaceSeedData, NamespaceSeedDataParameters>(NamespaceSeedData, args);
         return [result, perform];
-    }
-
-    static when(condition: boolean): QueryWhen<NamespaceSeedData, SeedData, NamespaceSeedDataParameters> {
-        return new QueryWhen<NamespaceSeedData, SeedData, NamespaceSeedDataParameters>(NamespaceSeedData, condition);
     }
 }

@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { ObservableQueryFor, QueryResultWithState, Sorting, SortingActions, SortingActionsForObservableQuery, Paging } from '@cratis/arc/queries';
-import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize, ObservableQueryWhen } from '@cratis/arc.react/queries';
+import { useObservableQuery, useObservableQueryWithPaging, useSuspenseObservableQuery, useSuspenseObservableQueryWithPaging, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { FailedPartition } from './FailedPartition';
 
@@ -133,9 +133,5 @@ export class AllFailedPartitions extends ObservableQueryFor<FailedPartition[], A
 
     static useSuspenseWithPaging(pageSize: number, args?: AllFailedPartitionsParameters, sorting?: Sorting): [QueryResultWithState<FailedPartition[]>, SetSorting, SetPage, SetPageSize] {
         return useSuspenseObservableQueryWithPaging<FailedPartition[], AllFailedPartitions>(AllFailedPartitions, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): ObservableQueryWhen<AllFailedPartitions, FailedPartition[], AllFailedPartitionsParameters> {
-        return new ObservableQueryWhen<AllFailedPartitions, FailedPartition[], AllFailedPartitionsParameters>(AllFailedPartitions, condition);
     }
 }

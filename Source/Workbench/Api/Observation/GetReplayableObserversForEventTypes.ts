@@ -6,7 +6,7 @@
 /* eslint-disable sort-imports */
 // eslint-disable-next-line header/header
 import { QueryFor, QueryResultWithState, QueryValidator, Sorting, SortingActions, SortingActionsForQuery, Paging } from '@cratis/arc/queries';
-import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize, QueryWhen } from '@cratis/arc.react/queries';
+import { useQuery, useQueryWithPaging, useSuspenseQuery, useSuspenseQueryWithPaging, PerformQuery, SetSorting, SetPage, SetPageSize } from '@cratis/arc.react/queries';
 import { ParameterDescriptor } from '@cratis/arc/reflection';
 import { ObserverInformation } from './ObserverInformation';
 
@@ -132,9 +132,5 @@ export class GetReplayableObserversForEventTypes extends QueryFor<ObserverInform
 
     static useSuspenseWithPaging(pageSize: number, args?: GetReplayableObserversForEventTypesParameters, sorting?: Sorting): [QueryResultWithState<ObserverInformation[]>, PerformQuery, SetSorting, SetPage, SetPageSize] {
         return useSuspenseQueryWithPaging<ObserverInformation[], GetReplayableObserversForEventTypes>(GetReplayableObserversForEventTypes, new Paging(0, pageSize), args, sorting);
-    }
-
-    static when(condition: boolean): QueryWhen<GetReplayableObserversForEventTypes, ObserverInformation[], GetReplayableObserversForEventTypesParameters> {
-        return new QueryWhen<GetReplayableObserversForEventTypes, ObserverInformation[], GetReplayableObserversForEventTypesParameters>(GetReplayableObserversForEventTypes, condition);
     }
 }
