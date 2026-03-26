@@ -3,9 +3,6 @@
 
 using System.Text.Json;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
-using NJsonSchema.Generation;
-using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
 namespace Cratis.Chronicle.Storage.MongoDB.for_ExpandoObjectConverter.given;
 
@@ -16,14 +13,8 @@ public class an_expando_object_converter_with_children_having_id_pascal_case_sch
 
     void Establish()
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new JsonSerializerOptions()
-        };
         var typeFormats = new TypeFormats();
-        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(typeFormats));
-        var generator = new NJsonSchemaGenerator(settings);
-        schema = generator.Generate(typeof(ParentWithChildrenHavingId));
+        schema = JsonSchema.FromType(typeof(ParentWithChildrenHavingId), new JsonSerializerOptions());
         converter = new(typeFormats);
     }
 }
