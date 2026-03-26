@@ -19,7 +19,7 @@
     "dependencies": {
         "@cratis/arc.react.mvvm": "^20.0.0",
         "@cratis/arc.vite": "^20.0.0",
-        "@cratis/components": "^1.4.15",
+        "@cratis/components": "^1.5.1",
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",
         "chart.js": "^4.5.1",
