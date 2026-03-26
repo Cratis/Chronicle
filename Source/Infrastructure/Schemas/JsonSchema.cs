@@ -390,10 +390,11 @@ public class JsonSchema
             // Check required properties
             if (_node["required"] is JsonArray required)
             {
-                foreach (var req in required)
+                foreach (var propName in required
+                    .Select(req => req?.GetValue<string>())
+                    .Where(propName => propName is not null))
                 {
-                    var propName = req?.GetValue<string>();
-                    if (propName is not null && !obj.ContainsKey(propName))
+                    if (!obj.ContainsKey(propName))
                     {
                         errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
                     }
