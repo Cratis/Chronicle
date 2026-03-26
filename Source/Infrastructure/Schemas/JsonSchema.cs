@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
-using System.Linq;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -25,7 +24,7 @@ public class JsonSchema
     readonly JsonObject _node;
     readonly JsonSchema? _root;
 
-    // Lazy caches
+    /// <summary>Lazy caches for parsed schema components.</summary>
     SyncedPropertiesDictionary? _propertiesCache;
     List<JsonSchema>? _allOfCache;
     List<JsonSchema>? _anyOfCache;
@@ -52,16 +51,6 @@ public class JsonSchema
         _node = node;
         _root = root;
     }
-
-    /// <summary>
-    /// Gets the root schema for $ref resolution.
-    /// </summary>
-    internal JsonSchema Root => _root ?? this;
-
-    /// <summary>
-    /// Gets the internal JSON node.
-    /// </summary>
-    internal JsonObject Node => _node;
 
     /// <summary>
     /// Gets or sets the JSON object type.
@@ -321,9 +310,8 @@ public class JsonSchema
             var allOf = AllOf;
             if (allOf.Count > 0)
             {
-                var inlineSchema = allOf.FirstOrDefault(s => !s.HasReference && s._node["properties"] is not null);
-                if (inlineSchema is not null) return inlineSchema;
-                return allOf[0].HasReference ? allOf[0].Reference ?? this : allOf[0];
+                return allOf.FirstOrDefault(s => !s.HasReference && s._node["properties"] is not null)
+                    ?? (allOf[0].HasReference ? allOf[0].Reference ?? this : allOf[0]);
             }
 
             var anyOf = AnyOf;
@@ -358,6 +346,62 @@ public class JsonSchema
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the root schema for $ref resolution.
+    /// </summary>
+    internal JsonSchema Root => _root ?? this;
+
+    /// <summary>
+    /// Gets the internal JSON node.
+    /// </summary>
+    internal JsonObject Node => _node;
+
+    /// <summary>
+    /// Parses a JSON Schema from a JSON string.
+    /// </summary>
+    /// <param name="json">The JSON string.</param>
+    /// <returns>The parsed <see cref="JsonSchema"/>.</returns>
+    public static JsonSchema FromJson(string json)
+    {
+        var node = JsonNode.Parse(json)!.AsObject();
+        return new JsonSchema(node);
+    }
+
+    /// <summary>
+    /// Parses a JSON Schema from a JSON string (async-compatible, runs synchronously).
+    /// </summary>
+    /// <param name="json">The JSON string.</param>
+    /// <returns>A completed task containing the parsed <see cref="JsonSchema"/>.</returns>
+    public static Task<JsonSchema> FromJsonAsync(string json)
+    {
+        var node = JsonNode.Parse(json)!.AsObject();
+        return Task.FromResult(new JsonSchema(node));
+    }
+
+    /// <summary>
+    /// Generates a JSON Schema for the given CLR type using camelCase naming.
+    /// </summary>
+    /// <typeparam name="T">The CLR type to generate a schema for.</typeparam>
+    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
+    public static JsonSchema FromType<T>() => FromType(typeof(T));
+
+    /// <summary>
+    /// Generates a JSON Schema for the given CLR type using camelCase naming.
+    /// </summary>
+    /// <param name="type">The CLR type to generate a schema for.</param>
+    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
+    public static JsonSchema FromType(Type type)
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
+        var exporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
+        var node = options.GetJsonSchemaAsNode(type, exporterOptions);
+        return new JsonSchema(node.AsObject());
     }
 
     /// <summary>
@@ -409,48 +453,6 @@ public class JsonSchema
         return errors;
     }
 
-    /// <summary>
-    /// Parses a JSON Schema from a JSON string.
-    /// </summary>
-    /// <param name="json">The JSON string.</param>
-    /// <returns>The parsed <see cref="JsonSchema"/>.</returns>
-    public static JsonSchema FromJson(string json)
-    {
-        var node = JsonNode.Parse(json)!.AsObject();
-        return new JsonSchema(node);
-    }
-
-    /// <summary>
-    /// Parses a JSON Schema from a JSON string (async-compatible, runs synchronously).
-    /// </summary>
-    /// <param name="json">The JSON string.</param>
-    /// <returns>A completed task containing the parsed <see cref="JsonSchema"/>.</returns>
-    public static Task<JsonSchema> FromJsonAsync(string json) => Task.FromResult(FromJson(json));
-
-    /// <summary>
-    /// Generates a JSON Schema for the given CLR type using camelCase naming.
-    /// </summary>
-    /// <typeparam name="T">The CLR type to generate a schema for.</typeparam>
-    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
-    public static JsonSchema FromType<T>() => FromType(typeof(T));
-
-    /// <summary>
-    /// Generates a JSON Schema for the given CLR type using camelCase naming.
-    /// </summary>
-    /// <param name="type">The CLR type to generate a schema for.</param>
-    /// <returns>A <see cref="JsonSchema"/> representing the type.</returns>
-    public static JsonSchema FromType(Type type)
-    {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-        };
-        var exporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
-        var node = JsonSchemaExporter.GetJsonSchemaAsNode(options, type, exporterOptions);
-        return new JsonSchema(node.AsObject());
-    }
-
     List<JsonSchema> BuildSchemaList(string key)
     {
         var list = new List<JsonSchema>();
@@ -470,14 +472,14 @@ public class JsonSchema
     JsonSchema? ResolveRef()
     {
         var refValue = _node["$ref"]?.GetValue<string>();
-        if (refValue is null || !refValue.StartsWith('#')) return null;
+        if (refValue?.StartsWith('#') != true) return null;
 
         var parts = refValue.TrimStart('#').TrimStart('/').Split('/');
         if (parts.Length < 2) return null;
 
         var root = Root;
         var defsKey = parts[0]; // "$defs" or "definitions"
-        var typeName = string.Join("/", parts.Skip(1));
+        var typeName = string.Join('/', parts.Skip(1));
 
         if (root._node[defsKey] is JsonObject defs && defs[typeName] is JsonObject defObj)
         {
@@ -550,22 +552,8 @@ public class JsonSchema
     /// <summary>
     /// A dictionary that syncs property changes back to the underlying JSON node.
     /// </summary>
-    sealed class SyncedPropertiesDictionary : Dictionary<string, JsonSchemaProperty>
+    sealed class SyncedPropertiesDictionary(JsonObject parentNode) : Dictionary<string, JsonSchemaProperty>(StringComparer.Ordinal)
     {
-        readonly JsonObject _parentNode;
-
-        public SyncedPropertiesDictionary(JsonObject parentNode) : base(StringComparer.Ordinal)
-        {
-            _parentNode = parentNode;
-        }
-
-        /// <summary>
-        /// Loads a property into the cache without updating the parent node (used during initialization from existing JSON).
-        /// </summary>
-        /// <param name="key">The property name.</param>
-        /// <param name="value">The property schema.</param>
-        internal void LoadWithoutSync(string key, JsonSchemaProperty value) => base[key] = value;
-
         public new JsonSchemaProperty this[string key]
         {
             get => base[key];
@@ -575,6 +563,13 @@ public class JsonSchema
                 EnsurePropertiesNode()[key] = value.Node.DeepClone();
             }
         }
+
+        /// <summary>
+        /// Loads a property into the cache without updating the parent node (used during initialization from existing JSON).
+        /// </summary>
+        /// <param name="key">The property name.</param>
+        /// <param name="value">The property schema.</param>
+        internal void LoadWithoutSync(string key, JsonSchemaProperty value) => base[key] = value;
 
         public new void Add(string key, JsonSchemaProperty value)
         {
@@ -591,7 +586,7 @@ public class JsonSchema
         public new bool Remove(string key)
         {
             var result = base.Remove(key);
-            if (result && _parentNode["properties"] is JsonObject propsObj)
+            if (result && parentNode["properties"] is JsonObject propsObj)
             {
                 propsObj.Remove(key);
             }
@@ -601,15 +596,15 @@ public class JsonSchema
         public new void Clear()
         {
             base.Clear();
-            _parentNode.Remove("properties");
+            parentNode.Remove("properties");
         }
 
         JsonObject EnsurePropertiesNode()
         {
-            if (_parentNode["properties"] is not JsonObject propsObj)
+            if (parentNode["properties"] is not JsonObject propsObj)
             {
                 propsObj = new JsonObject();
-                _parentNode["properties"] = propsObj;
+                parentNode["properties"] = propsObj;
             }
             return propsObj;
         }
@@ -618,34 +613,27 @@ public class JsonSchema
     /// <summary>
     /// A dictionary that provides access to extension data stored in the JSON node.
     /// </summary>
-    sealed class ExtensionDataDictionary : IDictionary<string, object?>
+    sealed class ExtensionDataDictionary(JsonObject node) : IDictionary<string, object?>
     {
-        readonly JsonObject _node;
+        public ICollection<string> Keys =>
+            [.. node.Select(kvp => kvp.Key).Where(k => !_knownSchemaKeys.Contains(k))];
 
-        public ExtensionDataDictionary(JsonObject node)
-        {
-            _node = node;
-        }
+        public ICollection<object?> Values => [.. Keys.Select(k => this[k])];
+        public int Count => Keys.Count;
+        public bool IsReadOnly => false;
 
         public object? this[string key]
         {
             get
             {
-                if (_node[key] is JsonNode nodeVal)
+                if (node[key] is JsonNode nodeVal)
                 {
                     return DeserializeValue(nodeVal);
                 }
                 return null;
             }
-            set => _node[key] = SerializeValue(value);
+            set => node[key] = SerializeValue(value);
         }
-
-        public ICollection<string> Keys =>
-            [.. _node.Select(kvp => kvp.Key).Where(k => !_knownSchemaKeys.Contains(k))];
-
-        public ICollection<object?> Values => [.. Keys.Select(k => this[k])];
-        public int Count => Keys.Count;
-        public bool IsReadOnly => false;
 
         public void Add(string key, object? value) => this[key] = value;
         public void Add(KeyValuePair<string, object?> item) => this[item.Key] = item.Value;
@@ -654,31 +642,31 @@ public class JsonSchema
         {
             foreach (var key in Keys.ToList())
             {
-                _node.Remove(key);
+                node.Remove(key);
             }
         }
 
         public bool Contains(KeyValuePair<string, object?> item) => ContainsKey(item.Key);
-        public bool ContainsKey(string key) => _node[key] is not null && !_knownSchemaKeys.Contains(key);
+        public bool ContainsKey(string key) => node[key] is not null && !_knownSchemaKeys.Contains(key);
 
         public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex)
         {
-            foreach (var key in Keys)
+            foreach (var k in Keys)
             {
-                array[arrayIndex++] = new KeyValuePair<string, object?>(key, this[key]);
+                array[arrayIndex++] = new KeyValuePair<string, object?>(k, this[k]);
             }
         }
 
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() =>
             Keys.Select(k => new KeyValuePair<string, object?>(k, this[k])).GetEnumerator();
 
-        public bool Remove(string key) => _node.Remove(key);
+        public bool Remove(string key) => node.Remove(key);
 
         public bool Remove(KeyValuePair<string, object?> item) => Remove(item.Key);
 
         public bool TryGetValue(string key, out object? value)
         {
-            if (_node[key] is JsonNode nodeVal)
+            if (node[key] is JsonNode nodeVal)
             {
                 value = DeserializeValue(nodeVal);
                 return true;
@@ -692,13 +680,13 @@ public class JsonSchema
         static JsonNode? SerializeValue(object? value)
         {
             if (value is null) return null;
-            if (value is JsonNode node) return node.DeepClone();
+            if (value is JsonNode jsonNode) return jsonNode.DeepClone();
             return JsonSerializer.SerializeToNode(value);
         }
 
-        static object? DeserializeValue(JsonNode node)
+        static object? DeserializeValue(JsonNode jsonNode)
         {
-            if (node is JsonValue val)
+            if (jsonNode is JsonValue val)
             {
                 if (val.TryGetValue<string>(out var s)) return s;
                 if (val.TryGetValue<bool>(out var b)) return b;
@@ -706,7 +694,7 @@ public class JsonSchema
                 if (val.TryGetValue<long>(out var l)) return l;
                 if (val.TryGetValue<double>(out var d)) return d;
             }
-            return node;
+            return jsonNode;
         }
     }
 }

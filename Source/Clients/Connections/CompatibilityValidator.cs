@@ -13,6 +13,12 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 internal static partial class CompatibilityValidator
 {
+    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ServicePattern { get; }
+
+    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcPattern { get; }
+
     /// <summary>
     /// Validates that the client's schema is compatible with the server's schema.
     /// </summary>
@@ -87,12 +93,6 @@ internal static partial class CompatibilityValidator
         return string.Join('\n', schemas);
     }
 
-    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ServicePattern();
-
-    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex RpcPattern();
-
     static Dictionary<string, Dictionary<string, string>> ParseSchemaToServices(string schema)
     {
         var services = new Dictionary<string, Dictionary<string, string>>();
@@ -100,8 +100,8 @@ internal static partial class CompatibilityValidator
         string? currentService = null;
         var currentServiceMethods = new Dictionary<string, string>();
 
-        var servicePattern = ServicePattern();
-        var rpcPattern = RpcPattern();
+        var servicePattern = ServicePattern;
+        var rpcPattern = RpcPattern;
 
         foreach (var line in lines)
         {

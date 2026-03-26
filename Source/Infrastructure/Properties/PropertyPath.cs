@@ -80,7 +80,7 @@ public partial class PropertyPath
     /// </summary>
     public bool IsSet => !string.IsNullOrEmpty(Path) && !Path.Equals(NotSetValue);
 
-    static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator();
+    static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator;
 
     /// <summary>
     /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>.
@@ -339,7 +339,7 @@ public partial class PropertyPath
     public override int GetHashCode() => Path.GetHashCode();
 
     [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    internal static partial Regex ArrayIndexRegexGenerator();
+    internal static partial Regex ArrayIndexRegexGenerator { get; }
 
     static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {

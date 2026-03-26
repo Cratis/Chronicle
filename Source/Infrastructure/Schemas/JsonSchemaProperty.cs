@@ -13,7 +13,7 @@ public class JsonSchemaProperty : JsonSchema
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchemaProperty"/> class (for object initializer usage).
     /// </summary>
-    public JsonSchemaProperty() : base()
+    public JsonSchemaProperty()
     {
         Name = string.Empty;
     }

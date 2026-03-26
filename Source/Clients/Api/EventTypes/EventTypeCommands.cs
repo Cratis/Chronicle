@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
+using Cratis.Chronicle.Schemas;
 using ContractsEventType = Cratis.Chronicle.Contracts.Events.EventType;
 using ContractsEventTypeRegistration = Cratis.Chronicle.Contracts.Events.EventTypeRegistration;
 using IEventTypesService = Cratis.Chronicle.Contracts.Events.IEventTypes;

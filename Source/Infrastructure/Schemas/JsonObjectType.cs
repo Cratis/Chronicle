@@ -7,29 +7,30 @@ namespace Cratis.Chronicle.Schemas;
 /// Represents the JSON object type flags.
 /// </summary>
 [Flags]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "JSON Schema type names must match the specification")]
 public enum JsonObjectType
 {
     /// <summary>No type.</summary>
     None = 0,
 
     /// <summary>Array type.</summary>
-    Array = 1,
+    Array = 1 << 0,
 
     /// <summary>Boolean type.</summary>
-    Boolean = 2,
+    Boolean = 1 << 1,
 
     /// <summary>Integer type.</summary>
-    Integer = 4,
+    Integer = 1 << 2,
 
     /// <summary>Null type.</summary>
-    Null = 8,
+    Null = 1 << 3,
 
     /// <summary>Number type.</summary>
-    Number = 16,
+    Number = 1 << 4,
 
     /// <summary>Object type.</summary>
-    Object = 32,
+    Object = 1 << 5,
 
     /// <summary>String type.</summary>
-    String = 64
+    String = 1 << 6,
 }

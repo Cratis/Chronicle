@@ -16,20 +16,20 @@ public enum JsonSchemaValidationErrorKind
     /// <summary>
     /// A required property is missing.
     /// </summary>
-    PropertyRequired,
+    PropertyRequired = 1,
 
     /// <summary>
     /// The value type does not match the expected type.
     /// </summary>
-    WrongPropertyType,
+    WrongPropertyType = 2,
 
     /// <summary>
     /// An additional property is not allowed.
     /// </summary>
-    AdditionalPropertiesNotAllowed,
+    AdditionalPropertiesNotAllowed = 3,
 
     /// <summary>
     /// The value does not match the expected format.
     /// </summary>
-    FormatMismatch,
+    FormatMismatch = 4,
 }
