@@ -22,18 +22,16 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class SubtractExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = SubtractRegEx();
+    [GeneratedRegex($"\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex SubtractRegEx { get; }
 
     /// <inheritdoc/>
-    public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(PropertyPath targetProperty, string expression) => SubtractRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
-        var match = _regularExpression.Match(expression);
+        var match = SubtractRegEx.Match(expression);
         return PropertyMappers.SubtractWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
     }
-
-    [GeneratedRegex($"\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression}*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex SubtractRegEx();
 }

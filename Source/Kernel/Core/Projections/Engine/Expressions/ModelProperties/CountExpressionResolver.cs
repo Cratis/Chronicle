@@ -17,15 +17,14 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class CountExpressionResolver(ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = CountRegEx();
     readonly ITypeFormats _typeFormats = typeFormats;
 
+    [GeneratedRegex($"\\{WellKnownExpressions.Count}", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex CountRegEx { get; }
+
     /// <inheritdoc/>
-    public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(PropertyPath targetProperty, string expression) => CountRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Count(_typeFormats, targetProperty, targetPropertySchema);
-
-    [GeneratedRegex($"\\{WellKnownExpressions.Count}", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CountRegEx();
 }
