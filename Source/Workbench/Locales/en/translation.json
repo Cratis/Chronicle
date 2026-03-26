@@ -340,6 +340,7 @@
             "observers": {
                 "title": "Observers",
                 "empty": "No observers found",
+                "search": "Search observers...",
                 "actions": {
                     "replay": "Replay"
                 },

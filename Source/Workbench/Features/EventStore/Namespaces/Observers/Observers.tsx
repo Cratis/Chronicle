@@ -1,12 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { useState } from 'react';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { ObserversViewModel } from './ObserversViewModel';
 import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
-import { DataTableFilterMeta } from 'primereact/datatable';
+import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
 import { FilterMatchMode } from 'primereact/api';
 import { Dropdown } from 'primereact/dropdown';
+import { Menubar } from 'primereact/menubar';
+import { IconField } from 'primereact/iconfield';
+import { InputIcon } from 'primereact/inputicon';
+import { InputText } from 'primereact/inputtext';
 import { ObserverType } from 'Api/Observation/ObserverType';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
 import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
@@ -14,7 +19,7 @@ import strings from 'Strings';
 import { AllObservers, AllObserversParameters, ObserverOwner } from 'Api/Observation';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 
@@ -103,77 +108,119 @@ const runningStateFilterTemplate = (options: ColumnFilterElementTemplateOptions)
     />
 );
 
-const defaultFilters: DataTableFilterMeta = {
-    type: { value: null, matchMode: FilterMatchMode.EQUALS },
-    owner: { value: null, matchMode: FilterMatchMode.EQUALS },
-    runningState: { value: null, matchMode: FilterMatchMode.EQUALS },
-};
-
 export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [searchText, setSearchText] = useState('');
+    const [filters, setFilters] = useState<DataTableFilterMeta>({
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        type: { value: null, matchMode: FilterMatchMode.EQUALS },
+        owner: { value: null, matchMode: FilterMatchMode.EQUALS },
+        runningState: { value: null, matchMode: FilterMatchMode.EQUALS },
+        eventSequenceId: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    });
+
     const queryArgs: AllObserversParameters = {
         eventStore: params.eventStore!,
         namespace: viewModel.currentNamespace
     };
 
+    const [observers] = AllObservers.use(queryArgs);
+
+    const handleSearch = (value: string) => {
+        setSearchText(value);
+        setFilters(prev => ({
+            ...prev,
+            global: { value: value || null, matchMode: FilterMatchMode.CONTAINS }
+        }));
+    };
+
+    const menuItems = [
+        {
+            label: strings.eventStore.namespaces.observers.actions.replay,
+            icon: <faIcons.FaArrowsRotate className='mr-2' />,
+            disabled: !viewModel.selectedObserver,
+            command: () => viewModel.replay()
+        }
+    ];
+
+    const searchInput = (
+        <IconField iconPosition='left'>
+            <InputIcon className='pi pi-search' />
+            <InputText
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder={strings.eventStore.namespaces.observers.search}
+            />
+        </IconField>
+    );
+
     return (
-        <DataPage
-            title={strings.eventStore.namespaces.observers.title}
-            query={AllObservers}
-            queryArguments={queryArgs}
-            emptyMessage={strings.eventStore.namespaces.observers.empty}
-            defaultFilters={defaultFilters}
-            globalFilterFields={['id', 'eventSequenceId']}
-            clientFiltering
-            dataKey='id'
-            onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}>
-            <DataPage.MenuItems>
-                <MenuItem
-                    id="replay"
-                    label={strings.eventStore.namespaces.observers.actions.replay} icon={faIcons.FaArrowsRotate}
-                    disableOnUnselected
-                    command={() => viewModel.replay()} />
-            </DataPage.MenuItems>
-            <DataPage.Columns>
-                <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
-                <Column field='eventSequenceId' header={strings.eventStore.namespaces.observers.columns.sequence} sortable />
-                <Column
-                    field='type'
-                    header={strings.eventStore.namespaces.observers.columns.observerType}
-                    sortable
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField='type'
-                    filterElement={observerTypeFilterTemplate}
-                    body={observerType} />
-                <Column
-                    field='owner'
-                    header={strings.eventStore.namespaces.observers.columns.owner}
-                    sortable
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField='owner'
-                    filterElement={observerOwnerFilterTemplate}
-                    body={observerOwner} />
-                <Column
-                    field='nextEventSequenceNumber'
-                    dataType='numeric'
-                    header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                    sortable />
-                <Column
-                    field='runningState'
-                    dataType='numeric'
-                    header={strings.eventStore.namespaces.observers.columns.state}
-                    sortable
-                    showFilterMatchModes={false}
-                    filter
-                    filterMenuStyle={{ width: '14rem' }}
-                    filterField='runningState'
-                    filterElement={runningStateFilterTemplate}
-                    body={runningState} />
-            </DataPage.Columns>
-        </DataPage>
+        <Page title={strings.eventStore.namespaces.observers.title}>
+            <div className='px-4 py-2'>
+                <Menubar model={menuItems} end={searchInput} />
+            </div>
+            <div className='flex-1 overflow-hidden px-4 pb-4'>
+                <DataTable
+                    value={observers.data}
+                    selectionMode='single'
+                    selection={viewModel.selectedObserver}
+                    onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
+                    dataKey='id'
+                    filters={filters}
+                    filterDisplay='menu'
+                    onFilter={(e) => setFilters(e.filters)}
+                    globalFilterFields={['id', 'eventSequenceId']}
+                    emptyMessage={strings.eventStore.namespaces.observers.empty}
+                    scrollable
+                    scrollHeight='flex'
+                    style={{ height: '100%' }}>
+                    <Column field='id' header={strings.eventStore.namespaces.observers.columns.id} sortable />
+                    <Column
+                        field='eventSequenceId'
+                        header={strings.eventStore.namespaces.observers.columns.sequence}
+                        sortable
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='eventSequenceId' />
+                    <Column
+                        field='type'
+                        header={strings.eventStore.namespaces.observers.columns.observerType}
+                        sortable
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='type'
+                        filterElement={observerTypeFilterTemplate}
+                        body={observerType} />
+                    <Column
+                        field='owner'
+                        header={strings.eventStore.namespaces.observers.columns.owner}
+                        sortable
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='owner'
+                        filterElement={observerOwnerFilterTemplate}
+                        body={observerOwner} />
+                    <Column
+                        field='nextEventSequenceNumber'
+                        dataType='numeric'
+                        header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
+                        sortable />
+                    <Column
+                        field='runningState'
+                        dataType='numeric'
+                        header={strings.eventStore.namespaces.observers.columns.state}
+                        sortable
+                        showFilterMatchModes={false}
+                        filter
+                        filterMenuStyle={{ width: '14rem' }}
+                        filterField='runningState'
+                        filterElement={runningStateFilterTemplate}
+                        body={runningState} />
+                </DataTable>
+            </div>
+        </Page>
     );
 });
