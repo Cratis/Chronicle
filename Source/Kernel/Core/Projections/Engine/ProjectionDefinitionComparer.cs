@@ -38,7 +38,7 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
         first = first with { ReadModel = null!, InitialModelState = null! };
         second = second with { ReadModel = null!, InitialModelState = null! };
 
-        return objectComparer.Compare(first, second, out _)
+        return objectComparer.Compare(first, second, ObjectComparerMode.Loose, out _)
             ? ProjectionDefinitionCompareResult.Same
             : ProjectionDefinitionCompareResult.Different;
     }

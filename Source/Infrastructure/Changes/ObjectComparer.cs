@@ -20,7 +20,11 @@ namespace Cratis.Chronicle.Changes;
 public class ObjectComparer : IObjectComparer
 {
     /// <inheritdoc/>
-    public bool Compare(object? left, object? right, out IEnumerable<PropertyDifference> differences)
+    public bool Compare(object? left, object? right, out IEnumerable<PropertyDifference> differences) =>
+        Compare(left, right, ObjectComparerMode.Strict, out differences);
+
+    /// <inheritdoc/>
+    public bool Compare(object? left, object? right, ObjectComparerMode mode, out IEnumerable<PropertyDifference> differences)
     {
         var allDifferences = new List<PropertyDifference>();
         differences = allDifferences;
@@ -33,17 +37,17 @@ public class ObjectComparer : IObjectComparer
 
         if (type.IsAssignableTo(typeof(IDictionary<string, object>)))
         {
-            CompareDictionaryValues((left as IDictionary<string, object>)!, (right as IDictionary<string, object>)!, new PropertyPath(string.Empty), allDifferences);
+            CompareDictionaryValues((left as IDictionary<string, object>)!, (right as IDictionary<string, object>)!, new PropertyPath(string.Empty), mode, allDifferences);
         }
         else
         {
-            ComparePropertiesFor(type, left, right, new PropertyPath(string.Empty), allDifferences);
+            ComparePropertiesFor(type, left, right, new PropertyPath(string.Empty), mode, allDifferences);
         }
 
         return allDifferences.Count == 0;
     }
 
-    void ComparePropertiesFor(Type type, object? left, object? right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
+    void ComparePropertiesFor(Type type, object? left, object? right, PropertyPath currentPropertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
         foreach (var property in type.GetProperties())
         {
@@ -52,11 +56,11 @@ public class ObjectComparer : IObjectComparer
             if (leftValue is null && rightValue is null) continue;
 
             var propertyPath = currentPropertyPath + (type.IsEnumerable() ? $"[{property.Name}]" : property.Name);
-            CompareValues(property.PropertyType, leftValue, rightValue, propertyPath, differences);
+            CompareValues(property.PropertyType, leftValue, rightValue, propertyPath, mode, differences);
         }
     }
 
-    void CompareDictionaryValues(IDictionary<string, object> left, IDictionary<string, object> right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
+    void CompareDictionaryValues(IDictionary<string, object> left, IDictionary<string, object> right, PropertyPath currentPropertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
         left ??= new Dictionary<string, object>();
         right ??= new Dictionary<string, object>();
@@ -82,11 +86,11 @@ public class ObjectComparer : IObjectComparer
             }
 
             var propertyPath = currentPropertyPath.AddProperty(key, type);
-            CompareValues(type, leftValue, rightValue, propertyPath, differences);
+            CompareValues(type, leftValue, rightValue, propertyPath, mode, differences);
         }
     }
 
-    void CompareDictionaryValues(IEnumerable left, IEnumerable right, PropertyPath currentPropertyPath, List<PropertyDifference> differences)
+    void CompareDictionaryValues(IEnumerable left, IEnumerable right, PropertyPath currentPropertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
         var leftDictionary = left.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
         var rightDictionary = right.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
@@ -112,11 +116,102 @@ public class ObjectComparer : IObjectComparer
             }
 
             var propertyPath = currentPropertyPath.AddProperty(key, type);
-            CompareValues(type, leftValue, rightValue, propertyPath, differences);
+            CompareValues(type, leftValue, rightValue, propertyPath, mode, differences);
         }
     }
 
-    void CompareValues(Type type, object? leftValue, object? rightValue, PropertyPath propertyPath, List<PropertyDifference> differences)
+    void CompareEnumerableValues(object leftValue, object rightValue, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
+    {
+        var leftValueAsEnumerable = (leftValue as IEnumerable)!;
+        var rightValueAsEnumerable = (rightValue as IEnumerable)!;
+        if (leftValueAsEnumerable.CountElements() != rightValueAsEnumerable.CountElements())
+        {
+            differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            return;
+        }
+
+        var leftElements = leftValueAsEnumerable.ToObjectArray();
+        var rightElements = rightValueAsEnumerable.ToObjectArray();
+
+        if (mode == ObjectComparerMode.Loose)
+        {
+            CompareEnumerableValuesLoose(leftValue, rightValue, leftElements, rightElements, propertyPath, mode, differences);
+            return;
+        }
+
+        CompareEnumerableValuesStrict(leftValueAsEnumerable, rightValueAsEnumerable, leftElements, rightElements, propertyPath, mode, differences);
+    }
+
+    void CompareEnumerableValuesStrict(IEnumerable leftValueAsEnumerable, IEnumerable rightValueAsEnumerable, object[] leftElements, object[] rightElements, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
+    {
+        var leftElementType = leftValueAsEnumerable.GetType().GetElementType();
+        var rightElementType = rightValueAsEnumerable.GetType().GetElementType();
+
+        if (leftElementType == rightElementType &&
+            (leftElementType?.IsPrimitive == true || leftElementType == typeof(string)))
+        {
+            for (var i = 0; i < leftElements.Length; i++)
+            {
+                var elementDifferences = new List<PropertyDifference>();
+                CompareValues(leftElementType, leftElements[i], rightElements[i], propertyPath, mode, elementDifferences);
+                differences.AddRange(elementDifferences);
+
+                if (elementDifferences.Count > 0) break;
+            }
+        }
+        else
+        {
+            for (var i = 0; i < leftElements.Length; i++)
+            {
+                var elementDifferences = new List<PropertyDifference>();
+                CompareValues(
+                    leftElements[i]?.GetType() ?? rightElements[i]?.GetType() ?? typeof(object),
+                    leftElements[i],
+                    rightElements[i],
+                    propertyPath,
+                    mode,
+                    elementDifferences);
+                differences.AddRange(elementDifferences);
+
+                if (elementDifferences.Count > 0) break;
+            }
+        }
+    }
+
+    void CompareEnumerableValuesLoose(object leftValue, object rightValue, object[] leftElements, object[] rightElements, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
+    {
+        // In loose mode, every element from the left must have a matching element in the right (and vice versa),
+        // regardless of position.
+        var rightMatched = new bool[rightElements.Length];
+
+        foreach (var leftElement in leftElements)
+        {
+            var found = false;
+            for (var j = 0; j < rightElements.Length; j++)
+            {
+                if (rightMatched[j]) continue;
+
+                var elementDifferences = new List<PropertyDifference>();
+                var elementType = leftElement?.GetType() ?? rightElements[j]?.GetType() ?? typeof(object);
+                CompareValues(elementType, leftElement, rightElements[j], propertyPath, mode, elementDifferences);
+
+                if (elementDifferences.Count == 0)
+                {
+                    rightMatched[j] = true;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+                return;
+            }
+        }
+    }
+
+    void CompareValues(Type type, object? leftValue, object? rightValue, PropertyPath propertyPath, ObjectComparerMode mode, List<PropertyDifference> differences)
     {
         if (leftValue is null && rightValue is null) return;
 
@@ -127,7 +222,7 @@ public class ObjectComparer : IObjectComparer
         }
         else if (type.IsAssignableTo(typeof(ExpandoObject)))
         {
-            CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, differences);
+            CompareDictionaryValues((leftValue as IDictionary<string, object>)!, (rightValue as IDictionary<string, object>)!, propertyPath, mode, differences);
         }
         else if (type.IsAssignableTo(typeof(IOneOf)))
         {
@@ -138,7 +233,7 @@ public class ObjectComparer : IObjectComparer
 
             if (oneOfValueType is not null)
             {
-                CompareValues(oneOfValueType, leftOneOfValue, rightOneOfValue, propertyPath, differences);
+                CompareValues(oneOfValueType, leftOneOfValue, rightOneOfValue, propertyPath, mode, differences);
             }
             else if (!Equals(leftOneOfValue, rightOneOfValue))
             {
@@ -148,7 +243,7 @@ public class ObjectComparer : IObjectComparer
         else if (type.IsDictionary())
         {
             var dictionaryDifferences = new List<PropertyDifference>();
-            CompareDictionaryValues((leftValue as IEnumerable)!, (rightValue as IEnumerable)!, propertyPath, dictionaryDifferences);
+            CompareDictionaryValues((leftValue as IEnumerable)!, (rightValue as IEnumerable)!, propertyPath, mode, dictionaryDifferences);
             if (dictionaryDifferences.Count > 0)
             {
                 differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
@@ -161,52 +256,11 @@ public class ObjectComparer : IObjectComparer
           !type.IsEnumerable() &&
           !type.IsComparable())
         {
-            ComparePropertiesFor(type, leftValue, rightValue, propertyPath, differences);
+            ComparePropertiesFor(type, leftValue, rightValue, propertyPath, mode, differences);
         }
         else if (leftValue is not null && rightValue is not null && type.IsEnumerable())
         {
-            var leftValueAsEnumerable = (leftValue as IEnumerable)!;
-            var rightValueAsEnumerable = (rightValue as IEnumerable)!;
-            if (leftValueAsEnumerable.CountElements() != rightValueAsEnumerable.CountElements())
-            {
-                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
-            }
-            else
-            {
-                var leftElementType = leftValueAsEnumerable.GetType().GetElementType();
-                var rightElementType = rightValueAsEnumerable.GetType().GetElementType();
-                var leftElements = leftValueAsEnumerable.ToObjectArray();
-                var rightElements = rightValueAsEnumerable.ToObjectArray();
-
-                if (leftElementType == rightElementType &&
-                    (leftElementType?.IsPrimitive == true || leftElementType == typeof(string)))
-                {
-                    for (var i = 0; i < leftElements.Length; i++)
-                    {
-                        var elementDifferences = new List<PropertyDifference>();
-                        CompareValues(leftElementType, leftElements[i], rightElements[i], propertyPath, elementDifferences);
-                        differences.AddRange(elementDifferences);
-
-                        if (elementDifferences.Count > 0) break;
-                    }
-                }
-                else
-                {
-                    for (var i = 0; i < leftElements.Length; i++)
-                    {
-                        var elementDifferences = new List<PropertyDifference>();
-                        CompareValues(
-                            leftElements[i]?.GetType() ?? rightElements[i]?.GetType() ?? typeof(object),
-                            leftElements[i],
-                            rightElements[i],
-                            propertyPath,
-                            elementDifferences);
-                        differences.AddRange(elementDifferences);
-
-                        if (elementDifferences.Count > 0) break;
-                    }
-                }
-            }
+            CompareEnumerableValues(leftValue, rightValue, propertyPath, mode, differences);
         }
         else
         {
