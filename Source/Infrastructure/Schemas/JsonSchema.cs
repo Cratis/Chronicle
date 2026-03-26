@@ -400,7 +400,7 @@ public class JsonSchema
                 }
             }
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             errors.Add(new JsonSchemaValidationError(null, JsonSchemaValidationErrorKind.Unknown, ex.Message));
         }
