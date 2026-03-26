@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 public class when_getting_flattened_properties_for_class_with_inheritance : given.a_json_schema_generator

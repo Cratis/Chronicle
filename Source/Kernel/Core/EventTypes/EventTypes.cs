@@ -8,12 +8,10 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
-using Cratis.Concepts;
 using Cratis.DependencyInjection;
-using Cratis.Serialization;
+using Cratis.Json;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using Cratis.Json;
 
 namespace Cratis.Chronicle.EventTypes;
 
@@ -30,7 +28,7 @@ public class EventTypes : IEventTypes
     readonly ITypes _types;
     readonly IStorage _storage;
     readonly ILogger<EventTypes> _logger;
-    readonly ITypeFormats _typeFormats = new TypeFormats();
+    readonly TypeFormats _typeFormats = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
@@ -96,7 +94,7 @@ public class EventTypes : IEventTypes
                 continue;
             }
 
-            var schemaNode = JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, eventType, _exporterOptions);
+            var schemaNode = _serializerOptions.GetJsonSchemaAsNode(eventType, _exporterOptions);
             var schema = new JsonSchema(schemaNode.AsObject());
             _schemaByType[eventType] = schema;
             _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
@@ -112,7 +110,7 @@ public class EventTypes : IEventTypes
         if (type.IsConcept())
         {
             var underlyingType = type.GetConceptValueType();
-            return JsonSchemaExporter.GetJsonSchemaAsNode(context.TypeInfo.Options, underlyingType, _exporterOptions);
+            return context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
         }
 
         // Add format for known types

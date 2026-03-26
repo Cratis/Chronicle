@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.given;
 

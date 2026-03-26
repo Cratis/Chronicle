@@ -5,13 +5,11 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
-using Cratis.Concepts;
-using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Serialization;
-using System.Text.Json.Serialization.Metadata;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -24,7 +22,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
-    readonly ITypeFormats _typeFormats;
+    readonly TypeFormats _typeFormats;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
@@ -57,8 +55,23 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <inheritdoc/>
     public JsonSchema Generate(Type type)
     {
-        var node = JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, type, _exporterOptions);
+        var node = _serializerOptions.GetJsonSchemaAsNode(type, _exporterOptions);
         return new JsonSchema(node.AsObject());
+    }
+
+    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
+    {
+        if (!schema.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey))
+        {
+            schema[ComplianceJsonSchemaExtensions.ComplianceKey] = new JsonArray();
+        }
+
+        var complianceArr = schema[ComplianceJsonSchemaExtensions.ComplianceKey]!.AsArray();
+        foreach (var item in metadata)
+        {
+            complianceArr.Add(JsonSerializer.SerializeToNode(
+                new ComplianceSchemaMetadata(item.MetadataType.Value, item.Details)));
+        }
     }
 
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
@@ -69,7 +82,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (type.IsConcept())
         {
             var underlyingType = type.GetConceptValueType();
-            return JsonSchemaExporter.GetJsonSchemaAsNode(context.TypeInfo.Options, underlyingType, _exporterOptions);
+            return context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
         }
 
         if (schema is not JsonObject schemaObj) return schema;
@@ -105,20 +118,5 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         return schema;
-    }
-
-    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
-    {
-        if (!schema.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey))
-        {
-            schema[ComplianceJsonSchemaExtensions.ComplianceKey] = new JsonArray();
-        }
-
-        var complianceArr = schema[ComplianceJsonSchemaExtensions.ComplianceKey]!.AsArray();
-        foreach (var item in metadata)
-        {
-            complianceArr.Add(JsonSerializer.SerializeToNode(
-                new ComplianceSchemaMetadata(item.MetadataType.Value, item.Details)));
-        }
     }
 }

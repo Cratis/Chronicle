@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
-using MongoDB.Bson;
 using Cratis.Chronicle.Schemas;
+using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

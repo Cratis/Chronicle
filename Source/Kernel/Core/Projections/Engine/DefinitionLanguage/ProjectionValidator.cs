@@ -472,6 +472,18 @@ public class ProjectionValidator(
             {
                 keySchema = keyProperty.ActualSchema;
             }
+            else
+            {
+                // Fallback: search for a property whose schema title matches the type name.
+                // This handles cases where the property name differs from the type name
+                // (e.g., property "key" of type "KeywordKey").
+                var matchByTitle = readModelSchema.Properties
+                    .FirstOrDefault(p => string.Equals(p.Value.ActualSchema.Title, typeName, StringComparison.Ordinal));
+                if (matchByTitle.Value is not null)
+                {
+                    keySchema = matchByTitle.Value.ActualSchema;
+                }
+            }
         }
 
         if (keySchema is null)

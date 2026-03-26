@@ -13,11 +13,11 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 using Orleans.Streams;
-using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections;
 

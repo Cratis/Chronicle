@@ -71,7 +71,7 @@ public static class JsonSchemaExtensions
         foreach (var segment in propertyPath.Segments)
         {
             var properties = schema!.GetFlattenedProperties();
-            var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
+            var schemaProperty = properties.SingleOrDefault(_ => _.Name.Equals(segment.Value, StringComparison.OrdinalIgnoreCase));
             if (schemaProperty is not null)
             {
                 if (schemaProperty.IsArray)
@@ -102,7 +102,7 @@ public static class JsonSchemaExtensions
             var properties = schema!.GetFlattenedProperties();
             var segment = segments[segmentIndex];
 
-            var schemaProperty = properties.SingleOrDefault(_ => _.Name == segment.Value);
+            var schemaProperty = properties.SingleOrDefault(_ => _.Name.Equals(segment.Value, StringComparison.OrdinalIgnoreCase));
             if (schemaProperty is not null)
             {
                 if (segmentIndex == segments.Length - 1)

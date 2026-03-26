@@ -16,10 +16,6 @@ namespace Cratis.Chronicle;
 /// </summary>
 public class EventTypesForSpecifications : IEventTypes
 {
-    readonly Dictionary<Type, EventType> _eventTypes = [];
-    readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
-    readonly Dictionary<EventTypeId, JsonSchema> _jsonSchemasByEventType = [];
-
     static readonly JsonSerializerOptions _serializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -30,6 +26,10 @@ public class EventTypesForSpecifications : IEventTypes
     {
         TreatNullObliviousAsNonNullable = true
     };
+
+    readonly Dictionary<Type, EventType> _eventTypes = [];
+    readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
+    readonly Dictionary<EventTypeId, JsonSchema> _jsonSchemasByEventType = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.
@@ -44,7 +44,7 @@ public class EventTypesForSpecifications : IEventTypes
 
         _jsonSchemasByEventType = _eventTypes.ToDictionary(
             _ => _.Value.Id,
-            _ => new JsonSchema(JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, _.Key, _exporterOptions).AsObject()));
+            _ => new JsonSchema(_serializerOptions.GetJsonSchemaAsNode(_.Key, _exporterOptions).AsObject()));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
         All = _eventTypes.Values.ToImmutableList();

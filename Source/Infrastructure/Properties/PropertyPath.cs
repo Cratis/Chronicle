@@ -80,6 +80,8 @@ public partial class PropertyPath
     /// </summary>
     public bool IsSet => !string.IsNullOrEmpty(Path) && !Path.Equals(NotSetValue);
 
+    [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    internal static partial Regex ArrayIndexRegexGenerator { get; }
 
     static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator;
 
@@ -338,9 +340,6 @@ public partial class PropertyPath
 
     /// <inheritdoc/>
     public override int GetHashCode() => Path.GetHashCode();
-
-    [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    internal static partial Regex ArrayIndexRegexGenerator { get; }
 
     static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {
