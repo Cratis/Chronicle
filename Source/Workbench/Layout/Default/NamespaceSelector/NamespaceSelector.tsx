@@ -12,14 +12,13 @@ import { INamespaceSelectorProps, NamespaceSelectorViewModel } from './Namespace
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import css from './NamespaceSelector.module.css';
 
-export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, INamespaceSelectorProps>(NamespaceSelectorViewModel, ({ viewModel, props }) => {
+export const NamespaceSelector = withViewModel<NamespaceSelectorViewModel, INamespaceSelectorProps>(NamespaceSelectorViewModel, ({ viewModel }) => {
     const { layoutConfig } = useLayoutContext();
     const [search, setSearch] = useState<string>('');
 
     const op = useRef<OverlayPanel>(null);
 
     const selectNamespace = (namespace: string) => {
-        props.onNamespaceSelected(namespace);
         viewModel.onNamespaceSelected(namespace);
         op?.current?.hide();
     };
