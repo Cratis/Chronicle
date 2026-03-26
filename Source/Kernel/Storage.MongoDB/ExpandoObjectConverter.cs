@@ -65,7 +65,18 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
             if (schemaProperty is null && name == "id")
             {
-                schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+                var pascalCaseSchemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == "Id");
+                if (pascalCaseSchemaProperty is not null)
+                {
+                    schemaProperty = pascalCaseSchemaProperty;
+                    name = "Id";
+                }
+                else
+                {
+                    // Schema has neither 'id' nor 'Id' — keep MongoDB's own '_id' name so that
+                    // callers can distinguish the document primary key from user-defined fields.
+                    name = element.Name;
+                }
             }
 
             if (schemaProperty is null)

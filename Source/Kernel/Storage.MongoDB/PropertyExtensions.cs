@@ -23,7 +23,7 @@ public static class PropertyExtensions
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check.</param>
     /// <returns>True if it is the key property, false if not.</returns>
-    public static bool IsMongoDBKey(this PropertyPath propertyPath) => propertyPath == "_id" || propertyPath == "id";
+    public static bool IsMongoDBKey(this PropertyPath propertyPath) => propertyPath.Path == "_id" || string.Equals(propertyPath.Path, "id", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Convert a <see cref="PropertyPath"/> to a MongoDB-compatible path string.
