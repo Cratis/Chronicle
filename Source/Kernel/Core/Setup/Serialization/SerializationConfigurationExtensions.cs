@@ -10,10 +10,10 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Properties;
 using Cratis.Json;
 using Microsoft.Extensions.DependencyInjection;
-using NJsonSchema;
 using Orleans.Serialization;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Serializers;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 

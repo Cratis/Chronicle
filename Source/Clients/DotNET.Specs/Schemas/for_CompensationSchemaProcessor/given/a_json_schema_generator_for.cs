@@ -2,25 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
 
-namespace Cratis.Chronicle.Events.Constraints.for_UniqueConstraintBuilder.given;
+namespace Cratis.Chronicle.Schemas.for_CompensationSchemaProcessor.given;
 
-public class all_dependencies : Specification
+public class a_json_schema_generator_for<T> : Specification
 {
-    protected IEventTypes _eventTypes;
+    protected JsonSchema _schema;
     protected JsonSchemaGenerator _generator;
-    protected INamingPolicy _namingPolicy;
 
     void Establish()
     {
-        _namingPolicy = new DefaultNamingPolicy();
-        _eventTypes = Substitute.For<IEventTypes>();
-        _generator = new JsonSchemaGenerator(
+        _generator = new(
             new ComplianceMetadataResolver(
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
-            _namingPolicy);
+            new DefaultNamingPolicy());
+
+        _schema = _generator.Generate(typeof(T));
     }
 }

@@ -3,7 +3,7 @@
 
 using System.Dynamic;
 using MongoDB.Bson;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

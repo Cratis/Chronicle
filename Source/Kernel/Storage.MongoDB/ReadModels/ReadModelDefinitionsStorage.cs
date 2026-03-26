@@ -5,7 +5,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Projections;
 

@@ -3,9 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Events;
-using NJsonSchema;
-using NJsonSchema.Generation;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle;
 
@@ -18,6 +20,17 @@ public class EventTypesForSpecifications : IEventTypes
     readonly Dictionary<EventTypeId, Type> _clrTypesByEventType = [];
     readonly Dictionary<EventTypeId, JsonSchema> _jsonSchemasByEventType = [];
 
+    static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+    };
+
+    static readonly JsonSchemaExporterOptions _exporterOptions = new()
+    {
+        TreatNullObliviousAsNonNullable = true
+    };
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypesForSpecifications"/> class.
     /// </summary>
@@ -29,8 +42,9 @@ public class EventTypesForSpecifications : IEventTypes
         _eventTypes = types.ToDictionary(_ => _, _ => _.GetEventType());
         _clrTypesByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => _.Key);
 
-        var generator = new JsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
-        _jsonSchemasByEventType = _eventTypes.ToDictionary(_ => _.Value.Id, _ => generator.Generate(_.Key));
+        _jsonSchemasByEventType = _eventTypes.ToDictionary(
+            _ => _.Value.Id,
+            _ => new JsonSchema(JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, _.Key, _exporterOptions).AsObject()));
 
         AllClrTypes = _clrTypesByEventType.Values.ToImmutableList();
         All = _eventTypes.Values.ToImmutableList();
@@ -81,7 +95,7 @@ public class EventTypesForSpecifications : IEventTypes
             var eventTypeAttribute = clrType.GetCustomAttribute<EventTypeAttribute>();
             if (eventTypeAttribute is not null)
             {
-                var eventType = clrType.GetEventType(); // Use the extension method for consistency
+                var eventType = clrType.GetEventType();
                 _eventTypes[clrType] = eventType;
                 _clrTypesByEventType[eventType.Id] = clrType;
             }

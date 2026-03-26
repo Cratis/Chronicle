@@ -43,7 +43,6 @@
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
-        <PackageReference Include="NJsonSchema" />
     </ItemGroup>
 
     <ItemGroup>

@@ -8,13 +8,13 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Strings;
-using NJsonSchema;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Cloning;
 using Orleans.Serialization.Codecs;
 using Orleans.Serialization.Serializers;
 using Orleans.Serialization.WireProtocol;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization;
 

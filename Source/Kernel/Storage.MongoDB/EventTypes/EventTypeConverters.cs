@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 

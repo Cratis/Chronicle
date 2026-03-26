@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Serialization;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -36,7 +36,7 @@ public class when_providing_with_removal_event : Specification
         _clientArtifactsProvider.UniqueConstraints.Returns([typeof(EventWithConstraint)]);
         _clientArtifactsProvider.RemoveConstraintEventTypes.Returns([typeof(ConstraintRemovalEvent)]);
 
-        _namingPolicy = new DefaultNamingPolicy();
+        _namingPolicy = new CamelCaseNamingPolicy();
         _provider = new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes, _namingPolicy);
     }
 

@@ -12,12 +12,12 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using NJsonSchema;
 using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using ProjectionChangeset = Cratis.Chronicle.Projections.ProjectionChangeset;
 using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.ReadModels;
 

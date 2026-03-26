@@ -8,7 +8,6 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine;
 

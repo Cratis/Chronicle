@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.when_converting_to_update_definition;
@@ -34,7 +35,7 @@ public class and_there_is_a_child_added : given.a_changeset_converter
             .Returns(new MongoDBProperty("Children", []));
         _mongoDBConverter.ToBsonValue(_eventSequenceNumber)
             .Returns(_expectedBsonValue);
-        _expandoObjectConverter.ToBsonDocument(Arg.Any<ExpandoObject>(), Arg.Any<NJsonSchema.JsonSchema>())
+        _expandoObjectConverter.ToBsonDocument(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>())
             .Returns(new BsonDocument());
     }
 

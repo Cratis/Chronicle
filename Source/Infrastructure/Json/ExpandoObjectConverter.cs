@@ -9,7 +9,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Types;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Json;
 

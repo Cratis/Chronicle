@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 

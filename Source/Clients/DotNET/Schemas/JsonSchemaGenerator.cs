@@ -1,12 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Events;
+using Cratis.Concepts;
+using Cratis.DependencyInjection;
+using Cratis.Json;
 using Cratis.Serialization;
-using NJsonSchema;
-using NJsonSchema.Generation;
-using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -16,8 +21,10 @@ namespace Cratis.Chronicle.Schemas;
 [Singleton]
 public class JsonSchemaGenerator : IJsonSchemaGenerator
 {
-    readonly NJsonSchemaGenerator _generator;
-    readonly INamingPolicy _namingPolicy;
+    readonly JsonSerializerOptions _serializerOptions;
+    readonly JsonSchemaExporterOptions _exporterOptions;
+    readonly IComplianceMetadataResolver _metadataResolver;
+    readonly ITypeFormats _typeFormats;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchemaGenerator"/> class.
@@ -26,50 +33,92 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy)
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings()
+        _metadataResolver = metadataResolver;
+        _typeFormats = new TypeFormats();
+
+        _serializerOptions = new JsonSerializerOptions
         {
-            AllowReferencesWithProperties = true,
-            SerializerOptions = new JsonSerializerOptions
+            PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            Converters =
             {
-                PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
+                new EnumerableConceptAsJsonConverterFactory(),
+                new ConceptAsJsonConverterFactory()
             }
         };
-        settings.ReflectionService = new ReflectionService(settings.ReflectionService);
-        settings.SchemaProcessors.Add(new ComplianceMetadataSchemaProcessor(metadataResolver));
-        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
-        settings.SchemaProcessors.Add(new CompensationSchemaProcessor());
-        _generator = new NJsonSchemaGenerator(settings);
-        _namingPolicy = namingPolicy;
+
+        _exporterOptions = new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = TransformNode
+        };
     }
 
     /// <inheritdoc/>
     public JsonSchema Generate(Type type)
     {
-        var schema = _generator.Generate(type);
+        var node = JsonSchemaExporter.GetJsonSchemaAsNode(_serializerOptions, type, _exporterOptions);
+        return new JsonSchema(node.AsObject());
+    }
 
-        // Note: NJsonSchema will ignore the camel case instruction when a complex type with properties implements IEnumerable
-        // All the properties within it will then just be as original.
-        HandlePropertyNames(schema);
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
+    {
+        var type = context.TypeInfo.Type;
+
+        // Handle concept types - redirect to the underlying primitive type's schema
+        if (type.IsConcept())
+        {
+            var underlyingType = type.GetConceptValueType();
+            return JsonSchemaExporter.GetJsonSchemaAsNode(context.TypeInfo.Options, underlyingType, _exporterOptions);
+        }
+
+        if (schema is not JsonObject schemaObj) return schema;
+
+        // Add format for known types
+        if (_typeFormats.IsKnown(type))
+        {
+            schemaObj["format"] = _typeFormats.GetFormatForType(type);
+        }
+
+        // Add compliance metadata for the type
+        if (_metadataResolver.HasMetadataFor(type))
+        {
+            AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(type));
+        }
+
+        // Add compliance metadata for the property
+        if (context.PropertyInfo?.AttributeProvider is PropertyInfo propInfo &&
+            _metadataResolver.HasMetadataFor(propInfo))
+        {
+            AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
+        }
+
+        // Add compensation metadata — only applies to top-level type schema (no property context)
+        if (context.PropertyInfo is null)
+        {
+            var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
+            if (compensationAttribute is not null)
+            {
+                var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
+                schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+            }
+        }
+
         return schema;
     }
 
-    void HandlePropertyNames(JsonSchema schema)
+    static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
     {
-        var properties = schema.Properties.ToDictionary(kvp => _namingPolicy.GetPropertyName(kvp.Key), kvp => kvp.Value);
-        schema.Properties.Clear();
-        foreach (var kvp in properties)
+        if (!schema.ContainsKey(ComplianceJsonSchemaExtensions.ComplianceKey))
         {
-            schema.Properties.Add(kvp);
+            schema[ComplianceJsonSchemaExtensions.ComplianceKey] = new JsonArray();
         }
 
-        foreach (var allOfSchema in schema.AllOf)
+        var complianceArr = schema[ComplianceJsonSchemaExtensions.ComplianceKey]!.AsArray();
+        foreach (var item in metadata)
         {
-            HandlePropertyNames(allOfSchema);
-        }
-
-        if (schema.HasReference)
-        {
-            HandlePropertyNames(schema.Reference!);
+            complianceArr.Add(JsonSerializer.SerializeToNode(
+                new ComplianceSchemaMetadata(item.MetadataType.Value, item.Details)));
         }
     }
 }

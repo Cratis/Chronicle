@@ -4,7 +4,6 @@
 using System.Dynamic;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.when_converting_to_bson_value_with_schema_info;
 

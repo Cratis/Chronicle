@@ -11,8 +11,8 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reactive;
-using NJsonSchema;
 using ProtoBuf.Grpc;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Events;
 
