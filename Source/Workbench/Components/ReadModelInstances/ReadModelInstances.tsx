@@ -31,7 +31,17 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
         let current: Json = data;
         for (const segment of path) {
             if (current === null || current === undefined) return null;
-            if (typeof current === 'object' && !Array.isArray(current) && current !== null) {
+            if (Array.isArray(current)) {
+                // When traversing through an intermediate array, collect the property from
+                // every element and flatten one level so deeper paths keep working.
+                const collected = (current as Json[])
+                    .filter(el => el !== null && typeof el === 'object' && !Array.isArray(el))
+                    .flatMap(el => {
+                        const val = (el as { [k: string]: Json })[segment];
+                        return val !== undefined ? [val] : [];
+                    });
+                current = collected as unknown as Json;
+            } else if (typeof current === 'object' && current !== null) {
                 current = (current as { [key: string]: Json })[segment];
             } else {
                 return null;
@@ -79,6 +89,27 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
                         ...(value as { [k: string]: Json })
                     } as Json);
                 }
+            } else if (Array.isArray(parentValue)) {
+                // parentValue is a flattened array produced by traversing through one or more
+                // intermediate arrays (e.g. Root → configurations[] → hubs[]).
+                // Collect `lastKey` from every element inside it.
+                (parentValue as Json[]).forEach((element: Json) => {
+                    if (element && typeof element === 'object' && !Array.isArray(element)) {
+                        const value = (element as { [k: string]: Json })[lastKey];
+                        if (Array.isArray(value)) {
+                            result.push(...value.map((val: Json, idx: number) => ({
+                                __arrayIndex: idx,
+                                __sourceInstance: item.instance as Json,
+                                ...(typeof val === 'object' && val !== null ? (val as { [k: string]: Json }) : {})
+                            }) as Json));
+                        } else if (value && typeof value === 'object') {
+                            result.push({
+                                __sourceInstance: item.instance as Json,
+                                ...(value as { [k: string]: Json })
+                            } as Json);
+                        }
+                    }
+                });
             }
         });
 

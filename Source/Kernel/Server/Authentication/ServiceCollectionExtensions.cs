@@ -3,8 +3,10 @@
 
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +31,14 @@ public static class ServiceCollectionExtensions
     /// <exception cref="InvalidOperationException">Thrown if an encryption certificate is not configured in production.</exception>
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
-        services.AddSingleton<IUserStorage, UserStorage>();
+        var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+
+        if (isSqlStorage)
+            services.AddSingleton<IUserStorage>(sp => sp.GetRequiredService<ISystemStorage>().Users);
+        else
+            services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 

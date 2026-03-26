@@ -25,6 +25,7 @@
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
+        <Project Path="Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
