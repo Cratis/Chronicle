@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using System.Linq;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -120,19 +121,15 @@ public static class ComplianceJsonSchemaExtensions
 
     static List<ComplianceSchemaMetadata> ParseFromJsonArray(JsonArray arr)
     {
-        var metadata = new List<ComplianceSchemaMetadata>();
-        foreach (var item in arr)
-        {
-            if (item is JsonObject obj)
+        return arr
+            .OfType<JsonObject>()
+            .Select(obj => new
             {
-                var metadataTypeStr = obj[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>();
-                var details = obj[nameof(ComplianceSchemaMetadata.details)]?.GetValue<string>();
-                if (metadataTypeStr is not null && details is not null)
-                {
-                    metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataTypeStr), details));
-                }
-            }
-        }
-        return metadata;
+                MetadataTypeStr = obj[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>(),
+                Details = obj[nameof(ComplianceSchemaMetadata.details)]?.GetValue<string>()
+            })
+            .Where(x => x.MetadataTypeStr is not null && x.Details is not null)
+            .Select(x => new ComplianceSchemaMetadata(Guid.Parse(x.MetadataTypeStr!), x.Details!))
+            .ToList();
     }
 }
