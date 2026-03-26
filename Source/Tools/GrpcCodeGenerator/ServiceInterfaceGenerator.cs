@@ -58,8 +58,18 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
             .WithLeadingTrivia(BuildXmlDoc($"Defines the gRPC service contract for {serviceDefinition.ServiceName}."))
             .AddMembers([.. interfaceMembers]);
 
+        // All DTOs for a service are written to the same I{ServiceName}.cs file.
+        // The path is computed once here so each DTO class can read the existing
+        // [ProtoMember] indexes from the previous generation before we overwrite it.
+        var fileName = GetSafeFileName($"I{serviceDefinition.ServiceName}.cs");
+        var interfaceFilePath = Path.Combine(folderPath, fileName);
+
         var dtoClasses = requestResponseTypes
-            .Select(rt => BuildDtoClass(rt.TypeName, rt.Properties))
+            .Select(rt =>
+            {
+                var existingIndexes = ProtoMemberIndexReader.ReadExistingIndexes(interfaceFilePath, rt.TypeName);
+                return BuildDtoClass(rt.TypeName, rt.Properties, existingIndexes);
+            })
             .Cast<MemberDeclarationSyntax>()
             .ToArray();
 
@@ -71,6 +81,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         UsingDirectiveSyntax[] usings =
         [
+            SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("ProtoBuf")),
             SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("ProtoBuf.Grpc")),
             SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("ProtoBuf.Grpc.Configuration")),
         ];
@@ -82,8 +93,6 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
         var code = CopyrightHeader + compilationUnit.ToFullString();
 
-        var fileName = GetSafeFileName($"I{serviceDefinition.ServiceName}.cs");
-        var interfaceFilePath = Path.Combine(folderPath, fileName);
         File.WriteAllText(interfaceFilePath, code);
 
         return code;
@@ -196,24 +205,43 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
 
     static ClassDeclarationSyntax BuildDtoClass(
         string typeName,
-        List<(string PropName, string PropType)> properties)
+        List<(string PropName, string PropType)> properties,
+        IReadOnlyDictionary<string, int> existingIndexes)
     {
-        var propertyMembers = properties
-            .Select(p => BuildDtoProperty(p.PropName, p.PropType))
-            .Cast<MemberDeclarationSyntax>()
-            .ToArray();
+        var nextIndex = existingIndexes.Count > 0 ? existingIndexes.Values.Max() + 1 : 1;
+
+        var propertyMembers = new List<MemberDeclarationSyntax>();
+        foreach (var (propName, propType) in properties)
+        {
+            var pascalName = ToPascalCase(propName);
+            var index = existingIndexes.TryGetValue(pascalName, out var existing) ? existing : nextIndex++;
+            propertyMembers.Add(BuildDtoProperty(propName, propType, index));
+        }
 
         return SyntaxFactory.ClassDeclaration(typeName)
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+            .AddAttributeLists(
+                SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
+                    SyntaxFactory.Attribute(SyntaxFactory.ParseName("ProtoContract")))))
             .WithLeadingTrivia(BuildXmlDoc($"Represents the {typeName} message."))
-            .AddMembers(propertyMembers);
+            .AddMembers([.. propertyMembers]);
     }
 
-    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType) =>
+    static PropertyDeclarationSyntax BuildDtoProperty(string propName, string propType, int protoMemberIndex) =>
         SyntaxFactory.PropertyDeclaration(
                 SyntaxFactory.ParseTypeName(propType),
                 SyntaxFactory.Identifier(ToPascalCase(propName)))
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+            .AddAttributeLists(
+                SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
+                    SyntaxFactory.Attribute(
+                        SyntaxFactory.ParseName("ProtoMember"),
+                        SyntaxFactory.AttributeArgumentList(
+                            SyntaxFactory.SingletonSeparatedList(
+                                SyntaxFactory.AttributeArgument(
+                                    SyntaxFactory.LiteralExpression(
+                                        SyntaxKind.NumericLiteralExpression,
+                                        SyntaxFactory.Literal(protoMemberIndex)))))))))
             .AddAccessorListAccessors(
                 SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
                     .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),

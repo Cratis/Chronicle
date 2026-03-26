@@ -26,6 +26,7 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
         // Ensure protobuf-net.Grpc assemblies appear in AppDomain before enumerating loaded assemblies
         // for Roslyn references — they may not be loaded yet since no protobuf-net type has been
         // referenced in this test process up to this point.
+        _ = typeof(ProtoBuf.ProtoContractAttribute).Assembly;
         _ = typeof(ProtoBuf.Grpc.CallContext).Assembly;
         _ = typeof(ProtoBuf.Grpc.Configuration.ServiceAttribute).Assembly;
 
