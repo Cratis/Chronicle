@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
+using System.Linq;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -164,19 +165,8 @@ public class JsonSchema
     /// <summary>
     /// Gets the inherited schema (first resolved $ref in allOf, if any).
     /// </summary>
-    public JsonSchema? InheritedSchema
-    {
-        get
-        {
-            var allOf = AllOf;
-            if (allOf.Count == 0) return null;
-            foreach (var s in allOf)
-            {
-                if (s.HasReference) return s.Reference;
-            }
-            return null;
-        }
-    }
+    public JsonSchema? InheritedSchema =>
+        AllOf.FirstOrDefault(s => s.HasReference)?.Reference;
 
     /// <summary>
     /// Gets the AllOf schemas.
