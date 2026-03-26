@@ -34,9 +34,9 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
         logger.ComparingDefinitions(projectionKey.ProjectionId);
 
         // Note: Ignore the model and initial model state as they are not relevant for comparison and also have potential for recursive comparison
-        // that can potentially lead to a stack overflow.
-        first = first with { ReadModel = null!, InitialModelState = null! };
-        second = second with { ReadModel = null!, InitialModelState = null! };
+        // that can potentially lead to a stack overflow. LastUpdated is also ignored since it is metadata, not structural definition.
+        first = first with { ReadModel = null!, InitialModelState = null!, LastUpdated = null };
+        second = second with { ReadModel = null!, InitialModelState = null!, LastUpdated = null };
 
         return objectComparer.Compare(first, second, ObjectComparerMode.Loose, out _)
             ? ProjectionDefinitionCompareResult.Same
