@@ -360,6 +360,13 @@
                     "reducer": "Reducer",
                     "external": "External"
                 },
+                "sequenceTypes": {
+                    "eventLog": "Event log",
+                    "system": "System",
+                    "outbox": "Outbox",
+                    "inbox": "Inbox",
+                    "custom": "Custom"
+                },
                 "owners": {
                     "none": "None",
                     "client": "Client",
