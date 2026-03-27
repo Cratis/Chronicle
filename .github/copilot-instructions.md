@@ -36,6 +36,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
+- For PR descriptions, use short release-note bullets with issue references and never include Copilot "Original prompt" blocks.
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 
@@ -64,6 +65,7 @@ These guides contain the full rules, examples, and rationale for each topic. The
    - [Reactors](./instructions/reactors.instructions.md)
    - [Orleans](./instructions/orleans.instructions.md)
 
+## Header
 
 All files should start with the following header:
 
