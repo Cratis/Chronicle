@@ -22,6 +22,53 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
+import { ObserverSequenceType } from './ObserverSequenceType';
+
+const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
+
+const observerSequenceTypeOrder = [
+    ObserverSequenceType.eventLog,
+    ObserverSequenceType.system,
+    ObserverSequenceType.outbox,
+    ObserverSequenceType.inbox,
+    ObserverSequenceType.custom,
+];
+
+const getObserverSequenceType = (eventSequenceId: string) => {
+    switch (eventSequenceId) {
+        case '':
+        case 'event-log':
+        case legacyEventLogSequenceId:
+            return ObserverSequenceType.eventLog;
+        case 'system':
+            return ObserverSequenceType.system;
+        case 'outbox':
+            return ObserverSequenceType.outbox;
+        case 'inbox':
+            return ObserverSequenceType.inbox;
+    }
+
+    if (eventSequenceId.startsWith('inbox-')) {
+        return ObserverSequenceType.inbox;
+    }
+
+    return ObserverSequenceType.custom;
+};
+
+const getObserverSequenceTypeLabel = (sequenceType: ObserverSequenceType) => {
+    switch (sequenceType) {
+        case ObserverSequenceType.eventLog:
+            return strings.eventStore.namespaces.observers.sequenceTypes.eventLog;
+        case ObserverSequenceType.system:
+            return strings.eventStore.namespaces.observers.sequenceTypes.system;
+        case ObserverSequenceType.outbox:
+            return strings.eventStore.namespaces.observers.sequenceTypes.outbox;
+        case ObserverSequenceType.inbox:
+            return strings.eventStore.namespaces.observers.sequenceTypes.inbox;
+        case ObserverSequenceType.custom:
+            return strings.eventStore.namespaces.observers.sequenceTypes.custom;
+    }
+};
 
 const observerType = (observer: ObserverInformation) => {
     switch (observer.type) {
@@ -116,7 +163,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         type: { value: null, matchMode: FilterMatchMode.EQUALS },
         owner: { value: null, matchMode: FilterMatchMode.EQUALS },
         runningState: { value: null, matchMode: FilterMatchMode.EQUALS },
-        eventSequenceId: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        sequenceType: { value: null, matchMode: FilterMatchMode.EQUALS },
     });
 
     const queryArgs: AllObserversParameters = {
@@ -125,6 +172,18 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     };
 
     const [observers] = AllObservers.use(queryArgs);
+
+    const observerRows = (observers.data ?? []).map(observer => ({
+        ...observer,
+        sequenceType: getObserverSequenceType(observer.eventSequenceId),
+    }));
+
+    const observerSequenceTypeOptions = observerSequenceTypeOrder
+        .filter(sequenceType => observerRows.some(observer => observer.sequenceType === sequenceType))
+        .map(sequenceType => ({
+            label: getObserverSequenceTypeLabel(sequenceType),
+            value: sequenceType,
+        }));
 
     const handleSearch = (value: string) => {
         setSearchText(value);
@@ -154,6 +213,18 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         </IconField>
     );
 
+    const observerSequenceTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => (
+        <Dropdown
+            value={options.value}
+            options={observerSequenceTypeOptions}
+            onChange={(e) => options.filterCallback(e.value)}
+            optionLabel='label'
+            placeholder='All'
+            showClear
+            className='p-column-filter'
+        />
+    );
+
     return (
         <Page title={strings.eventStore.namespaces.observers.title}>
             <div className='px-4 py-2'>
@@ -161,7 +232,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             </div>
             <div className='flex-1 overflow-hidden px-4 pb-4'>
                 <DataTable
-                    value={observers.data}
+                    value={observerRows}
                     selectionMode='single'
                     selection={viewModel.selectedObserver}
                     onSelectionChange={(e) => (viewModel.selectedObserver = e.value as ObserverInformation)}
@@ -182,7 +253,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         showFilterMatchModes={false}
                         filter
                         filterMenuStyle={{ width: '14rem' }}
-                        filterField='eventSequenceId' />
+                        filterField='sequenceType'
+                        filterElement={observerSequenceTypeFilterTemplate} />
                     <Column
                         field='type'
                         header={strings.eventStore.namespaces.observers.columns.observerType}
