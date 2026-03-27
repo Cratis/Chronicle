@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -118,6 +119,12 @@ public class ProjectionObserverSubscriber(
             if (changeset?.HasChanges == true && State.IsActive)
             {
                 var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
+
+                // Mirror the metadata field that the storage sink writes so that watched models
+                // match what a direct read from the underlying store returns.
+                model[WellKnownProperties.LasHandledEventSequenceNumber] =
+                    JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
+
                 await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), model));
             }
 
