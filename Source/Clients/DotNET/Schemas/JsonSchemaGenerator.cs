@@ -74,6 +74,24 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
+    static bool IsNullableConceptProperty(JsonSchemaExporterContext context)
+    {
+        var nullabilityCtx = new NullabilityInfoContext();
+        switch (context.PropertyInfo?.AttributeProvider)
+        {
+            case ParameterInfo paramInfo:
+                var paramNullability = nullabilityCtx.Create(paramInfo);
+                return paramNullability.ReadState == NullabilityState.Nullable ||
+                       paramNullability.WriteState == NullabilityState.Nullable;
+            case PropertyInfo propInfo:
+                var propNullability = nullabilityCtx.Create(propInfo);
+                return propNullability.ReadState == NullabilityState.Nullable ||
+                       propNullability.WriteState == NullabilityState.Nullable;
+            default:
+                return false;
+        }
+    }
+
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
         var type = context.TypeInfo.Type;
@@ -82,7 +100,25 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (type.IsConcept())
         {
             var underlyingType = type.GetConceptValueType();
-            return context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
+            var conceptSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
+
+            // Preserve nullable marker for concept types (e.g. EventSequenceNumber?).
+            // STJ's JsonSchemaExporter does not propagate NRT nullable markers through custom converters,
+            // so we check the actual property nullability via NullabilityInfoContext. When the property
+            // is nullable we append '?' to the format so that IsNullable() returns true and
+            // GetDefaultValue() returns null rather than the primitive default (e.g. 0 for ulong).
+            if (IsNullableConceptProperty(context) &&
+                conceptSchema is JsonObject conceptSchemaObj &&
+                conceptSchemaObj.TryGetPropertyValue("format", out var format))
+            {
+                var formatStr = format!.GetValue<string>();
+                if (!formatStr.EndsWith('?'))
+                {
+                    conceptSchemaObj["format"] = formatStr + "?";
+                }
+            }
+
+            return conceptSchema;
         }
 
         if (schema is not JsonObject schemaObj) return schema;
