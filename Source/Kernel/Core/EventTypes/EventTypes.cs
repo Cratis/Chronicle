@@ -44,6 +44,7 @@ public class EventTypes : IEventTypes
         _serializerOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
             Converters =
             {
                 new EnumerableConceptAsJsonConverterFactory(),
