@@ -286,7 +286,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cratis/fundamentals@npm:^7.7.1, @cratis/fundamentals@npm:^7.7.3":
+"@cratis/fundamentals@npm:^7.7.3":
   version: 7.7.3
   resolution: "@cratis/fundamentals@npm:7.7.3"
   dependencies:
