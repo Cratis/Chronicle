@@ -41,7 +41,6 @@ public partial class PropertyPath
     /// </summary>
     public static readonly PropertyPath NotSet = NotSetValue;
 
-    static Regex? _arrayIndexRegex;
     readonly IPropertyPathSegment[] _segments = [];
 
     /// <summary>
@@ -79,11 +78,6 @@ public partial class PropertyPath
     /// Gets whether or not the value is set.
     /// </summary>
     public bool IsSet => !string.IsNullOrEmpty(Path) && !Path.Equals(NotSetValue);
-
-    [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    internal static partial Regex ArrayIndexRegexGenerator { get; }
-
-    static Regex ArrayIndexRegex => _arrayIndexRegex ??= ArrayIndexRegexGenerator;
 
     /// <summary>
     /// Implicitly convert from <see cref="PropertyPath"/> to <see cref="string"/>.
@@ -341,9 +335,14 @@ public partial class PropertyPath
     /// <inheritdoc/>
     public override int GetHashCode() => Path.GetHashCode();
 
+#pragma warning disable MA0190
+    [GeneratedRegex("\\[(?<property>[\\w-_]*)\\]", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    internal static partial Regex ArrayIndexRegexGenerator();
+#pragma warning restore MA0190
+
     static IPropertyPathSegment ResolvePropertyPathSegment(string segment)
     {
-        var match = ArrayIndexRegex.Match(segment);
+        var match = ArrayIndexRegexGenerator().Match(segment);
         if (match.Success)
         {
             return new ArrayProperty(match.Groups["property"].Value);
