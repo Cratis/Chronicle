@@ -4,10 +4,10 @@
 using System.Collections;
 using System.Globalization;
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Schemas;
 using Cratis.Reflection;
 using Cratis.Types;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB;
 

@@ -6,9 +6,9 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.EntityFrameworkCore;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 

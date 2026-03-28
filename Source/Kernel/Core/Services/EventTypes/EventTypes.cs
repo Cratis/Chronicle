@@ -8,10 +8,10 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reactive;
-using NJsonSchema;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Events;

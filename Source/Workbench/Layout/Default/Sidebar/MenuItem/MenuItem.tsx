@@ -31,7 +31,7 @@ export const MenuItem = ({ item, basePath, ...rest }: IMenuItemProps) => {
     const location = useLocation();
     const ctx = useContext(MenuContext);
     const itemPath = cleanupPath(basePath) + item.url;
-    const resolvedPath = generatePath(itemPath ?? '', Object.assign({}, ctx.paramsFallback, params));
+    const resolvedPath = generatePath(itemPath ?? '', Object.assign({}, params, ctx.paramsFallback));
 
     const [labelClass, setLabelClass] = useState(css.label);
     useEffect(() => {

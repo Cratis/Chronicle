@@ -9,7 +9,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Reflection;
 using Cratis.Types;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Json;
 
@@ -234,6 +233,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         switch (type)
         {
             case JsonObjectType.String:
+                var genericArgs = value.GetType().GetGenericArguments();
+                if (genericArgs.Length == 1 && genericArgs[0] == typeof(Guid))
+                {
+                    return value.GetValue<Guid>();
+                }
                 var valueAsString = value.GetValue<string>();
                 return schemaProperty.Format == "guid" ?
                         Guid.Parse(valueAsString) :

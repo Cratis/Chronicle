@@ -19,7 +19,6 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine;
 

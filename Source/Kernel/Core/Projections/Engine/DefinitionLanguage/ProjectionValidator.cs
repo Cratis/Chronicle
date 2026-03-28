@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Properties;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 
@@ -471,6 +471,18 @@ public class ProjectionValidator(
             if (readModelSchema.Properties.TryGetValue(camelCaseTypeName, out var keyProperty))
             {
                 keySchema = keyProperty.ActualSchema;
+            }
+            else
+            {
+                // Fallback: search for a property whose schema title matches the type name.
+                // This handles cases where the property name differs from the type name
+                // (e.g., property "key" of type "KeywordKey").
+                var matchByTitle = readModelSchema.Properties
+                    .FirstOrDefault(p => string.Equals(p.Value.ActualSchema.Title, typeName, StringComparison.Ordinal));
+                if (matchByTitle.Value is not null)
+                {
+                    keySchema = matchByTitle.Value.ActualSchema;
+                }
             }
         }
 

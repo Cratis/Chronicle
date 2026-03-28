@@ -17,10 +17,10 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
 

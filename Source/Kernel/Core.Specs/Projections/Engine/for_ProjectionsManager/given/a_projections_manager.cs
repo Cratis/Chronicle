@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionsManager.given;
@@ -86,7 +87,7 @@ public class a_projections_manager : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
+            new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
 
         _secondReadModelDefinition = new ReadModelDefinition(
@@ -98,7 +99,7 @@ public class a_projections_manager : Specification
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
             SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, NJsonSchema.JsonSchema>(),
+            new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
     }
 }

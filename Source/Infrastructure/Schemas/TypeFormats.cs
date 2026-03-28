@@ -8,6 +8,11 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public class TypeFormats : ITypeFormats
 {
+    static readonly Dictionary<string, string> _formatAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "uuid", "guid" }
+    };
+
     readonly Dictionary<Type, string> _typesFormatInfo = new()
     {
         { typeof(short), "int16" },
@@ -33,7 +38,7 @@ public class TypeFormats : ITypeFormats
     /// <inheritdoc/>
     public bool IsKnown(string format)
     {
-        format = StripNullable(format);
+        format = NormalizeFormat(format);
         return _typesFormatInfo.ContainsValue(format);
     }
 
@@ -43,7 +48,7 @@ public class TypeFormats : ITypeFormats
     /// <inheritdoc/>
     public Type GetTypeForFormat(string format)
     {
-        format = StripNullable(format);
+        format = NormalizeFormat(format);
         return _typesFormatInfo.First(_ => _.Value == format).Key;
     }
 
@@ -101,11 +106,16 @@ public class TypeFormats : ITypeFormats
         return "string";
     }
 
-    static string StripNullable(string? format)
+    static string NormalizeFormat(string? format)
     {
         if (format?.EndsWith('?') ?? false)
         {
             format = format[..^1];
+        }
+
+        if (format is not null && _formatAliases.TryGetValue(format, out var canonical))
+        {
+            format = canonical;
         }
 
         return format!;

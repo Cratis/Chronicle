@@ -6,8 +6,9 @@ import { Button } from 'primereact/button';
 import { useState } from 'react';
 import strings from 'Strings';
 import { generatePassword } from '../../PasswordHelpers';
+import { useCommandFormContext } from '@cratis/arc.react/commands';
 import { CommandDialog } from '@cratis/components/CommandDialog';
-import { InputTextField, useCommandFormContext } from '@cratis/components/CommandForm';
+import { InputTextField } from '@cratis/components/CommandForm';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
 interface SecretActionsProps {

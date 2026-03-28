@@ -11,10 +11,11 @@ import css from './DefaultLayout.module.css';
 import { TopBar } from './TopBar/TopBar';
 import { Footer } from './Footer';
 import { ErrorBoundary } from '@cratis/components/Common';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as Shared from 'Shared';
 import { WorkbenchProvider } from './context/WorkbenchContext';
+import { replaceEventStoreNamespaceInPath } from './replaceEventStoreNamespaceInPath';
 
 interface IDefaultLayoutProps {
     menu?: IMenuItemGroup[];
@@ -27,12 +28,18 @@ export const DefaultLayout = (props: IDefaultLayoutProps) => {
     const layoutContext = useContext(LayoutContext);
     const navigate = useNavigate();
     const location = useLocation();
-    const [namespace, setNamespace] = useState('');
+    const [namespace, setNamespace] = useState(params.namespace ?? '');
+
+    useEffect(() => {
+        setNamespace(params.namespace ?? '');
+    }, [params.namespace]);
 
     const namespaceSelected = (namespace: string) => {
         setNamespace(namespace);
-        const newRoute = location.pathname.replace(params.namespace!, namespace);
-        navigate(newRoute);
+        const newRoute = replaceEventStoreNamespaceInPath(location.pathname, params.eventStore, params.namespace, namespace);
+        if (newRoute !== location.pathname) {
+            navigate(newRoute);
+        }
     };
 
     return (

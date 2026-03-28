@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -36,7 +36,7 @@ public class when_providing_with_removal_event : Specification
         _clientArtifactsProvider.UniqueConstraints.Returns([typeof(EventWithConstraint)]);
         _clientArtifactsProvider.RemoveConstraintEventTypes.Returns([typeof(ConstraintRemovalEvent)]);
 
-        _namingPolicy = new DefaultNamingPolicy();
+        _namingPolicy = new CamelCaseNamingPolicy();
         _provider = new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes, _namingPolicy);
     }
 

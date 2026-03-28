@@ -6,8 +6,8 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging.Abstractions;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.for_Projection.given;
 

@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
-using NJsonSchema;
 using IReadModelsService = Cratis.Chronicle.Contracts.ReadModels.IReadModels;
 
 namespace Cratis.Chronicle.Api.ReadModelTypes;

@@ -15,7 +15,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField, DropdownField, CheckboxField } from '@cratis/components/CommandForm';
-import { useCommandInstance } from '@cratis/components/CommandForm';
+import { useCommandInstance } from '@cratis/arc.react/commands';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 
 interface TestButtonProps {
