@@ -1,0 +1,12 @@
+name: Cleanup PR Artifacts
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    uses: Cratis/Workflows/.github/workflows/cleanup-pr-artifacts.yml@main
+    with:
+      pull_request: ${{ github.event.pull_request.number }}
+    secrets: inherit
