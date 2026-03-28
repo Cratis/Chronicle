@@ -20,24 +20,22 @@ public class subscription_states_after_subscribing(ChronicleInProcessFixture chr
 
         // The EventStoreSubscriptionsReactor is a kernel-side system reactor registered asynchronously
         // via ReactorsReactor processing EventStoreAdded. Wait until it is available.
-        var tcs = new TaskCompletionSource<IReactorHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        cts.Token.Register(() => tcs.TrySetCanceled());
-        _ = Task.Run(async () =>
+        IReactorHandler? subscriptionsReactor = null;
+        var deadline = DateTimeOffset.UtcNow.Add(TimeSpanFactory.FromSeconds(60));
+        while (DateTimeOffset.UtcNow < deadline)
         {
-            while (!cts.IsCancellationRequested && !tcs.Task.IsCompleted)
+            try
             {
-                try
-                {
-                    tcs.TrySetResult(EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor"));
-                }
-                catch (UnknownReactorId)
-                {
-                    await Task.Delay(100);
-                }
+                subscriptionsReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor");
+                break;
             }
-        });
-        var subscriptionsReactor = await tcs.Task;
+            catch (UnknownReactorId)
+            {
+                await Task.Delay(100);
+            }
+        }
+
+        subscriptionsReactor.ShouldNotBeNull();
         var systemStorage = GetSystemEventLogStorage();
         var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
         await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
