@@ -1,9 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.InProcess.Integration.Projections.Events;
-using Cratis.Chronicle.InProcess.Integration.Projections.ProjectionTypes;
-using Cratis.Chronicle.InProcess.Integration.Projections.ReadModels;
+using Cratis.Chronicle.Integration.Specifications.Projections.Events;
+using given = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;
+using Cratis.Chronicle.Integration.Specifications.Projections.ProjectionTypes;
+using Cratis.Chronicle.Integration.Specifications.Projections.ReadModels;
 using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_functions.incrementing_with_multiple_events.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_functions;
