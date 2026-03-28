@@ -11,6 +11,7 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="FluentValidation" />
+    <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
         <PackageReference Include="OneOf" />
