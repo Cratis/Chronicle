@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Tools.GrpcCodeGenerator.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Tools.GrpcCodeGenerator</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);SA1600</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Arc.Core" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="System.Reactive" />
+    </ItemGroup>
+</Project>
