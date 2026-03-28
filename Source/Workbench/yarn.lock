@@ -286,6 +286,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cratis/fundamentals@npm:^7.7.1, @cratis/fundamentals@npm:^7.7.3":
+  version: 7.7.3
+  resolution: "@cratis/fundamentals@npm:7.7.3"
+  dependencies:
+    reflect-metadata: "npm:^0.2.2"
+  checksum: 10/125761097db6aba4321a0970d707017214133781a6342bb0480ae437054fb9a4997ba468ffa956d89299ae98e920495fc80c3199e6c4e4f3e7536ab8949d0b72
+  languageName: node
+  linkType: hard
+
 "@cspotcode/source-map-support@npm:^0.8.0":
   version: 0.8.1
   resolution: "@cspotcode/source-map-support@npm:0.8.1"
@@ -7280,6 +7289,7 @@ __metadata:
     "@cratis/arc.react.mvvm": "npm:^20.1.1"
     "@cratis/arc.vite": "npm:^20.1.1"
     "@cratis/components": "npm:^1.6.7"
+    "@cratis/fundamentals": "npm:^7.7.3"
     "@eslint/eslintrc": "npm:3.3.5"
     "@eslint/js": "npm:10.0.1"
     "@monaco-editor/react": "npm:^4.7.0"
