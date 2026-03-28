@@ -13,12 +13,6 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 internal static partial class CompatibilityValidator
 {
-    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ServicePattern();
-
-    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex RpcPattern();
-
     /// <summary>
     /// Validates that the client's schema is compatible with the server's schema.
     /// </summary>
@@ -144,4 +138,12 @@ internal static partial class CompatibilityValidator
 
         return services;
     }
+
+#pragma warning disable MA0190
+    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ServicePattern();
+
+    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcPattern();
+#pragma warning restore MA0190
 }
