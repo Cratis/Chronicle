@@ -35,7 +35,7 @@ public record Application(
             .ObserveAll()
             .TransformSubject(apps => apps.Select(ToApplication));
 
-    static Application ToApplication(Storage.Security.Application app) =>
+    private static Application ToApplication(Storage.Security.Application app) =>
         new(
             (Guid)app.Id,
             (string)app.ClientId,

@@ -169,21 +169,29 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         if (method.Parameters.Count > 0)
         {
             var requestTypeName = $"{method.Name}Request";
-            var props = method.Parameters.Select(p =>
-            {
-                var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
-                return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
-            }).ToList();
 
-            if (!requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
+            // Filter out DI-injected parameters (interfaces and abstract classes are resolved from the
+            // service container and must not appear as gRPC wire-level request properties).
+            var props = method.Parameters
+                .Where(p => !p.ParameterType.IsInterface && !p.ParameterType.IsAbstract)
+                .Select(p =>
+                {
+                    var unwrapped = TypeHelper.UnwrapConceptType(p.ParameterType);
+                    return (p.Name ?? "value", TypeHelper.GetTypeName(unwrapped));
+                }).ToList();
+
+            if (props.Count > 0 && !requestResponseTypes.Exists(r => r.TypeName == requestTypeName))
             {
                 requestResponseTypes.Add((requestTypeName, props));
             }
 
-            parameters.Add(
-                SyntaxFactory.Parameter(SyntaxFactory.Identifier("request"))
-                    .WithType(SyntaxFactory.ParseTypeName(requestTypeName)));
-            paramDocs.Add(("request", "The query request parameters."));
+            if (props.Count > 0)
+            {
+                parameters.Add(
+                    SyntaxFactory.Parameter(SyntaxFactory.Identifier("request"))
+                        .WithType(SyntaxFactory.ParseTypeName(requestTypeName)));
+                paramDocs.Add(("request", "The query request parameters."));
+            }
         }
 
         parameters.Add(BuildCallContextParameter());

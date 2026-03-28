@@ -73,14 +73,14 @@ public record ObserverInformation(
         return subject;
     }
 
-    static IEnumerable<ObserverInformation> Join(
+    private static IEnumerable<ObserverInformation> Join(
         IEnumerable<ObserverDefinition> definitions,
         IEnumerable<ObserverState> states) =>
         from definition in definitions
         join state in states on definition.Identifier equals state.Identifier
         select ToObserverInformation(definition, state);
 
-    static ObserverInformation ToObserverInformation(ObserverDefinition definition, ObserverState state) =>
+    private static ObserverInformation ToObserverInformation(ObserverDefinition definition, ObserverState state) =>
         new(
             definition.Identifier,
             definition.EventSequenceId,

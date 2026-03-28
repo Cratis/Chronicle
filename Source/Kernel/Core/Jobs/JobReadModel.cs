@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable SA1649, MA0048
+
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -53,9 +55,9 @@ public record Job(
         return new ReplaySubject<IEnumerable<Job>>(1);
     }
 
-    static IEnumerable<Job> ToJobs(IEnumerable<JobState> jobs) => jobs.Select(ToJob);
+    private static IEnumerable<Job> ToJobs(IEnumerable<JobState> jobs) => jobs.Select(ToJob);
 
-    static Job ToJob(JobState job) =>
+    private static Job ToJob(JobState job) =>
         new(
             (Guid)job.Id,
             job.Details,
@@ -65,16 +67,16 @@ public record Job(
             job.StatusChanges.Select(ToStatusChanged),
             ToProgress(job.Progress));
 
-    static JobStatusChanged ToStatusChanged(Concepts.Jobs.JobStatusChanged sc) =>
+    private static JobStatusChanged ToStatusChanged(Concepts.Jobs.JobStatusChanged sc) =>
         new()
         {
             Status = (JobStatus)(int)sc.Status,
             Occurred = sc.Occurred,
-            ExceptionMessages = sc.ExceptionMessages,
+            ExceptionMessages = sc.ExceptionMessages.ToList(),
             ExceptionStackTrace = sc.ExceptionStackTrace
         };
 
-    static JobProgress ToProgress(Concepts.Jobs.JobProgress p) =>
+    private static JobProgress ToProgress(Concepts.Jobs.JobProgress p) =>
         new()
         {
             TotalSteps = p.TotalSteps,

@@ -113,6 +113,12 @@ public class TypeDiscovery(Assembly assembly)
                 continue;
             }
 
+            // Skip private static helpers — only public and internal (assembly) static methods define query contracts
+            if (method.IsPrivate)
+            {
+                continue;
+            }
+
             methods.Add(new QueryMethodDefinition(method));
         }
 

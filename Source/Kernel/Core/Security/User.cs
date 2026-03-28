@@ -39,7 +39,7 @@ public record User(
             .ObserveAll()
             .TransformSubject(users => users.Select(ToUser));
 
-    static User ToUser(Storage.Security.User user) =>
+    private static User ToUser(Storage.Security.User user) =>
         new(
             (Guid)user.Id,
             user.Username,
