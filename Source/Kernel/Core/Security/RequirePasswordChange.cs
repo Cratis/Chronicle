@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
-using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Security;
@@ -23,6 +22,6 @@ public record RequirePasswordChange(Guid UserId)
     {
         var @event = new PasswordChangeRequired();
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((UserId)UserId, @event);
+        await eventSequence.Append(UserId, @event);
     }
 }

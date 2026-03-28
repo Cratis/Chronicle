@@ -44,6 +44,6 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
         var passwordHash = new PasswordHasher<object>().HashPassword(null!, Password);
         var @event = new UserPasswordChanged((UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((UserId)UserId, @event);
+        await eventSequence.Append(UserId, @event);
     }
 }

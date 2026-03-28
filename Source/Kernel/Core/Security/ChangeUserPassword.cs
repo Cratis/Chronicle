@@ -52,6 +52,6 @@ public record ChangeUserPassword(Guid UserId, string OldPassword, string Passwor
         var passwordHash = passwordHasher.HashPassword(null!, Password);
         var @event = new UserPasswordChanged((UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((UserId)UserId, @event);
+        await eventSequence.Append(UserId, @event);
     }
 }

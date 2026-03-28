@@ -29,6 +29,6 @@ public record AddUser(Guid UserId, string Username, string Email, string Passwor
         var passwordHash = passwordHasher.HashPassword(null!, Password);
         var @event = new UserAdded((Username)Username, (UserEmail)Email, (UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((UserId)UserId, @event);
+        await eventSequence.Append(UserId, @event);
     }
 }
