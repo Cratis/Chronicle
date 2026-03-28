@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Identity;
 
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Password">The plain-text password to set.</param>
 /// <param name="ConfirmedPassword">Confirmation of the password; must match <paramref name="Password"/>.</param>
 [Command]
+[BelongsTo(WellKnownServices.Users)]
 public record SetInitialAdminPassword(Guid UserId, string Password, string ConfirmedPassword)
 {
     /// <summary>

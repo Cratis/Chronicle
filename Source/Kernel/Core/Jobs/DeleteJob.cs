@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="Namespace">The namespace the job belongs to.</param>
 /// <param name="JobId">The unique identifier of the job to delete.</param>
 [Command]
+[BelongsTo(WellKnownServices.Jobs)]
 public record DeleteJob(string EventStore, string Namespace, Guid JobId)
 {
     /// <summary>

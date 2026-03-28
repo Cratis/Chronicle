@@ -9,6 +9,8 @@ using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
 using ContractDeleteJob = Cratis.Chronicle.Contracts.Jobs.DeleteJob;
+using ContractJob = Cratis.Chronicle.Contracts.Jobs.Job;
+using ContractJobStep = Cratis.Chronicle.Contracts.Jobs.JobStep;
 using ContractResumeJob = Cratis.Chronicle.Contracts.Jobs.ResumeJob;
 using ContractStopJob = Cratis.Chronicle.Contracts.Jobs.StopJob;
 
@@ -34,7 +36,7 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
         grainFactory.GetJobsManager(command.EventStore, command.Namespace).Delete(command.JobId);
 
     /// <inheritdoc/>
-    public async Task<OneOf<Job, Contracts.Jobs.JobError>> GetJob(GetJobRequest request, CallContext context = default)
+    public async Task<OneOf<ContractJob, Contracts.Jobs.JobError>> GetJob(GetJobRequest request, CallContext context = default)
     {
         grainFactory.GetJobsManager(request.EventStore, request.Namespace);
 
@@ -44,18 +46,18 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
 
         if (result.IsSuccess)
         {
-            return new OneOf<Job, Contracts.Jobs.JobError>(result.AsT0.ToContract());
+            return new OneOf<ContractJob, Contracts.Jobs.JobError>(result.AsT0.ToContract());
         }
 
-        return new OneOf<Job, Contracts.Jobs.JobError>((Contracts.Jobs.JobError)(int)result.AsT1);
+        return new OneOf<ContractJob, Contracts.Jobs.JobError>((Contracts.Jobs.JobError)(int)result.AsT1);
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default) =>
+    public async Task<IEnumerable<ContractJob>> GetJobs(GetJobsRequest request, CallContext context = default) =>
         (await grainFactory.GetJobsManager(request.EventStore, request.Namespace).GetAllJobs()).ToContract();
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default)
+    public IObservable<IEnumerable<ContractJob>> ObserveJobs(GetJobsRequest request, CallContext context = default)
     {
         var catchOrObserve = storage
             .GetEventStore(request.EventStore)
@@ -67,11 +69,11 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
             return catchOrObserve.AsT0.CompletedBy(context.CancellationToken).Select(_ => _.ToContract());
         }
 
-        return Observable.Empty<IEnumerable<Job>>();
+        return Observable.Empty<IEnumerable<ContractJob>>();
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<JobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default)
+    public async Task<IEnumerable<ContractJobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default)
     {
         var catchOrObserve = await storage
             .GetEventStore(request.EventStore)

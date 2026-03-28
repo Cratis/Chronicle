@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Namespaces;
 
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Namespaces;
 /// <param name="EventStore">The name of the event store.</param>
 /// <param name="Namespace">The name of the namespace to ensure.</param>
 [Command]
+[BelongsTo(WellKnownServices.Namespaces)]
 public record EnsureNamespace(string EventStore, string Namespace)
 {
     /// <summary>

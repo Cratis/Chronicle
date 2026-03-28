@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
 namespace Cratis.Chronicle.Security;
@@ -12,6 +13,7 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="Id">The unique identifier of the application to remove.</param>
 [Command]
+[BelongsTo(WellKnownServices.Applications)]
 public record RemoveApplication(Guid Id)
 {
     /// <summary>

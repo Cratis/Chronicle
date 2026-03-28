@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
 using Microsoft.AspNetCore.Identity;
 
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Password">The new plain-text password.</param>
 /// <param name="ConfirmedPassword">Confirmation of the new password; must match <paramref name="Password"/>.</param>
 [Command]
+[BelongsTo(WellKnownServices.Users)]
 public record ChangeUserPassword(Guid UserId, string OldPassword, string Password, string ConfirmedPassword)
 {
     /// <summary>

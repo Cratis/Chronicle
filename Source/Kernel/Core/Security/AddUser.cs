@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using Microsoft.AspNetCore.Identity;
 
 namespace Cratis.Chronicle.Security;
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Email">The email address.</param>
 /// <param name="Password">The plain-text password to be hashed and stored.</param>
 [Command]
+[BelongsTo(WellKnownServices.Users)]
 public record AddUser(Guid UserId, string Username, string Email, string Password)
 {
     /// <summary>

@@ -34,6 +34,24 @@
         <Exec Command="dotnet run -- &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Core.dll&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
 
+    <PropertyGroup>
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <CratisProxiesOutputPath>$(MSBuildThisFileDirectory)../../Workbench/Api</CratisProxiesOutputPath>
+        <CratisProxiesSegmentsToSkip>2</CratisProxiesSegmentsToSkip>
+        <CratisProxiesSkipOutputDeletion>true</CratisProxiesSkipOutputDeletion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true' and $([System.IO.Path]::IsPathRooted('$(OutputPath)'))">
+        <CratisProxiesOutputPath></CratisProxiesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
+        <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Metrics.Roslyn" />

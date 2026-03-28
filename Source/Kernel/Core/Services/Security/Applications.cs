@@ -10,6 +10,7 @@ using Cratis.Reactive;
 using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
 using ContractAddApplication = Cratis.Chronicle.Contracts.Security.AddApplication;
+using ContractApplication = Cratis.Chronicle.Contracts.Security.Application;
 using ContractChangeApplicationSecret = Cratis.Chronicle.Contracts.Security.ChangeApplicationSecret;
 using ContractRemoveApplication = Cratis.Chronicle.Contracts.Security.RemoveApplication;
 

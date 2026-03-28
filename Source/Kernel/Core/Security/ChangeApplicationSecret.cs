@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using Microsoft.AspNetCore.Identity;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 using ClientSecret = Cratis.Chronicle.Concepts.Security.ClientSecret;
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="Id">The unique identifier of the application.</param>
 /// <param name="ClientSecret">The new plain-text client secret to be hashed and stored.</param>
 [Command]
+[BelongsTo(WellKnownServices.Applications)]
 public record ChangeApplicationSecret(Guid Id, string ClientSecret)
 {
     /// <summary>

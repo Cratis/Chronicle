@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 using Microsoft.AspNetCore.Identity;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 using ClientId = Cratis.Chronicle.Concepts.Security.ClientId;
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="ClientId">The OAuth client identifier.</param>
 /// <param name="ClientSecret">The plain-text client secret to be hashed and stored.</param>
 [Command]
+[BelongsTo(WellKnownServices.Applications)]
 public record AddApplication(Guid Id, string ClientId, string ClientSecret)
 {
     /// <summary>

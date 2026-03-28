@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.EventStores;
 /// </summary>
 /// <param name="Name">The name of the event store to ensure.</param>
 [Command]
+[BelongsTo(WellKnownServices.EventStores)]
 public record EnsureEventStore(string Name)
 {
     /// <summary>

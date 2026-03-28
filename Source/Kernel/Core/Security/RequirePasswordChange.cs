@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Security;
 
@@ -11,6 +12,7 @@ namespace Cratis.Chronicle.Security;
 /// </summary>
 /// <param name="UserId">The unique identifier of the user.</param>
 [Command]
+[BelongsTo(WellKnownServices.Users)]
 public record RequirePasswordChange(Guid UserId)
 {
     /// <summary>

@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -15,6 +16,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="ObserverId">The unique identifier of the observer to replay.</param>
 /// <param name="EventSequenceId">The identifier of the event sequence; defaults to the event log when empty.</param>
 [Command]
+[BelongsTo(WellKnownServices.Observers)]
 public record ReplayObserver(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
     /// <summary>

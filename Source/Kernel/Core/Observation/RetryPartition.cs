@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Grpc;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -16,6 +17,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="EventSequenceId">The identifier of the event sequence; defaults to the event log when empty.</param>
 /// <param name="Partition">The partition identifier to retry.</param>
 [Command]
+[BelongsTo(WellKnownServices.Observers)]
 public record RetryPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {
     /// <summary>
