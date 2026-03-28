@@ -9,6 +9,10 @@ using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
+using ContractAddApplication = Cratis.Chronicle.Contracts.Security.AddApplication;
+using ContractApplication = Cratis.Chronicle.Contracts.Security.Application;
+using ContractChangeApplicationSecret = Cratis.Chronicle.Contracts.Security.ChangeApplicationSecret;
+using ContractRemoveApplication = Cratis.Chronicle.Contracts.Security.RemoveApplication;
 
 namespace Cratis.Chronicle.Services.Security;
 
@@ -22,7 +26,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     static readonly PasswordHasher<object> _passwordHasher = new();
 
     /// <inheritdoc/>
-    public async Task Add(AddApplication command)
+    public async Task Add(ContractAddApplication command)
     {
         var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
 
@@ -37,7 +41,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     }
 
     /// <inheritdoc/>
-    public async Task Remove(RemoveApplication command)
+    public async Task Remove(ContractRemoveApplication command)
     {
         var @event = new ApplicationRemoved();
 
@@ -49,7 +53,7 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     }
 
     /// <inheritdoc/>
-    public async Task ChangeSecret(ChangeApplicationSecret command)
+    public async Task ChangeSecret(ContractChangeApplicationSecret command)
     {
         var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
 
