@@ -15,6 +15,11 @@ namespace Cratis.Chronicle.Jobs;
 [Command]
 public record DeleteJob(string EventStore, string Namespace, Guid JobId)
 {
+    /// <summary>
+    /// Handles the command by invoking <see cref="IJobsManager.Delete"/> on the jobs manager grain.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get jobs manager grains with.</param>
+    /// <returns>Awaitable task.</returns>
     internal Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetJobsManager((EventStoreName)EventStore, (EventStoreNamespaceName)Namespace).Delete((Concepts.Jobs.JobId)JobId);
 }

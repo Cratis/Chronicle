@@ -15,6 +15,11 @@ namespace Cratis.Chronicle.Jobs;
 [Command]
 public record ResumeJob(string EventStore, string Namespace, Guid JobId)
 {
+    /// <summary>
+    /// Handles the command by invoking <see cref="IJobsManager.Resume"/> on the jobs manager grain.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get jobs manager grains with.</param>
+    /// <returns>Awaitable task.</returns>
     internal Task Handle(IGrainFactory grainFactory) =>
         grainFactory.GetJobsManager((EventStoreName)EventStore, (EventStoreNamespaceName)Namespace).Resume((Concepts.Jobs.JobId)JobId);
 }

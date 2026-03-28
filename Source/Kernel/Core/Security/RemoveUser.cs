@@ -14,10 +14,15 @@ namespace Cratis.Chronicle.Security;
 [Command]
 public record RemoveUser(Guid UserId)
 {
+    /// <summary>
+    /// Handles the command by appending a <see cref="UserRemoved"/> event to the event log.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
+    /// <returns>Awaitable task.</returns>
     internal async Task Handle(IGrainFactory grainFactory)
     {
         var @event = new UserRemoved();
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((Concepts.Security.UserId)UserId, @event);
+        await eventSequence.Append((UserId)UserId, @event);
     }
 }

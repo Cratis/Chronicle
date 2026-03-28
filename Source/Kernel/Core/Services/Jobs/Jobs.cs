@@ -8,6 +8,9 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
+using ContractDeleteJob = Cratis.Chronicle.Contracts.Jobs.DeleteJob;
+using ContractResumeJob = Cratis.Chronicle.Contracts.Jobs.ResumeJob;
+using ContractStopJob = Cratis.Chronicle.Contracts.Jobs.StopJob;
 
 namespace Cratis.Chronicle.Services.Jobs;
 
@@ -19,15 +22,15 @@ namespace Cratis.Chronicle.Services.Jobs;
 internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
 {
     /// <inheritdoc/>
-    public Task Stop(StopJob command, CallContext context = default) =>
+    public Task Stop(ContractStopJob command, CallContext context = default) =>
         grainFactory.GetJobsManager(command.EventStore, command.Namespace).Stop(command.JobId);
 
     /// <inheritdoc/>
-    public Task Resume(ResumeJob command, CallContext context = default) =>
+    public Task Resume(ContractResumeJob command, CallContext context = default) =>
         grainFactory.GetJobsManager(command.EventStore, command.Namespace).Resume(command.JobId);
 
     /// <inheritdoc/>
-    public Task Delete(DeleteJob command, CallContext context = default) =>
+    public Task Delete(ContractDeleteJob command, CallContext context = default) =>
         grainFactory.GetJobsManager(command.EventStore, command.Namespace).Delete(command.JobId);
 
     /// <inheritdoc/>

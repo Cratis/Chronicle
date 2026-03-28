@@ -17,6 +17,13 @@ namespace Cratis.Chronicle.EventStores;
 [Command]
 public record EnsureEventStore(string Name)
 {
+    /// <summary>
+    /// Handles the command by registering server event types and, if new, appending an <see cref="EventStoreAdded"/> event.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get grain references with.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to check and provision the event store in.</param>
+    /// <param name="eventTypes">The <see cref="IEventTypes"/> to discover and register event types with.</param>
+    /// <returns>Awaitable task.</returns>
     internal async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes)
     {
         var eventStoreName = new EventStoreName(Name);

@@ -3,7 +3,6 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation;
@@ -19,10 +18,15 @@ namespace Cratis.Chronicle.Observation;
 [Command]
 public record ReplayPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {
+    /// <summary>
+    /// Handles the command by invoking <see cref="IObserver.ReplayPartition"/> on the target observer grain.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
+    /// <returns>Awaitable task.</returns>
     internal Task Handle(IGrainFactory grainFactory)
     {
         var eventSequenceId = string.IsNullOrEmpty(EventSequenceId) ? Concepts.EventSequences.EventSequenceId.Log : (Concepts.EventSequences.EventSequenceId)EventSequenceId;
-        var key = new ObserverKey((Concepts.Observation.ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
+        var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
         return grainFactory.GetGrain<IObserver>(key).ReplayPartition(Partition);
     }
 }

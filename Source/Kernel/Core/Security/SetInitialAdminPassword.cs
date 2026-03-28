@@ -18,6 +18,15 @@ namespace Cratis.Chronicle.Security;
 [Command]
 public record SetInitialAdminPassword(Guid UserId, string Password, string ConfirmedPassword)
 {
+    /// <summary>
+    /// Handles the command by verifying the user has not yet logged in and appending a <see cref="UserPasswordChanged"/> event.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get event sequence grains with.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to load the user record from.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="Services.Security.PasswordConfirmationMismatch">Thrown when the confirmed password does not match the password.</exception>
+    /// <exception cref="Services.Security.UserNotFound">Thrown when the specified user does not exist.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the user has already logged in and has an initial password set.</exception>
     internal async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         if (Password != ConfirmedPassword)
@@ -35,6 +44,6 @@ public record SetInitialAdminPassword(Guid UserId, string Password, string Confi
         var passwordHash = new PasswordHasher<object>().HashPassword(null!, Password);
         var @event = new UserPasswordChanged((UserPassword)passwordHash);
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append((Concepts.Security.UserId)UserId, @event);
+        await eventSequence.Append((UserId)UserId, @event);
     }
 }

@@ -14,6 +14,11 @@ namespace Cratis.Chronicle.Namespaces;
 [Command]
 public record EnsureNamespace(string EventStore, string Namespace)
 {
+    /// <summary>
+    /// Handles the command by invoking <see cref="INamespaces.Ensure"/> on the target namespaces grain.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get namespace grains with.</param>
+    /// <returns>Awaitable task.</returns>
     internal async Task Handle(IGrainFactory grainFactory)
     {
         var namespaces = grainFactory.GetGrain<INamespaces>((EventStoreName)EventStore);

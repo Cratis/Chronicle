@@ -9,6 +9,11 @@ using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
+using ContractAddUser = Cratis.Chronicle.Contracts.Security.AddUser;
+using ContractChangeUserPassword = Cratis.Chronicle.Contracts.Security.ChangeUserPassword;
+using ContractRemoveUser = Cratis.Chronicle.Contracts.Security.RemoveUser;
+using ContractRequirePasswordChange = Cratis.Chronicle.Contracts.Security.RequirePasswordChange;
+using ContractSetInitialAdminPassword = Cratis.Chronicle.Contracts.Security.SetInitialAdminPassword;
 
 namespace Cratis.Chronicle.Services.Security;
 
@@ -24,7 +29,7 @@ internal sealed class Users(
     static readonly PasswordHasher<object> _passwordHasher = new();
 
     /// <inheritdoc/>
-    public async Task Add(AddUser command)
+    public async Task Add(ContractAddUser command)
     {
         var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
 
@@ -38,7 +43,7 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task Remove(RemoveUser command)
+    public async Task Remove(ContractRemoveUser command)
     {
         var @event = new UserRemoved();
         var eventSequence = grainFactory.GetEventLog();
@@ -49,7 +54,7 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task ChangePassword(ChangeUserPassword command)
+    public async Task ChangePassword(ContractChangeUserPassword command)
     {
         if (command.Password != command.ConfirmedPassword)
         {
@@ -80,7 +85,7 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task RequirePasswordChange(RequirePasswordChange command)
+    public async Task RequirePasswordChange(ContractRequirePasswordChange command)
     {
         var @event = new PasswordChangeRequired();
         var eventSequence = grainFactory.GetEventLog();
@@ -91,7 +96,7 @@ internal sealed class Users(
     }
 
     /// <inheritdoc/>
-    public async Task SetInitialAdminPassword(SetInitialAdminPassword command)
+    public async Task SetInitialAdminPassword(ContractSetInitialAdminPassword command)
     {
         if (command.Password != command.ConfirmedPassword)
         {
