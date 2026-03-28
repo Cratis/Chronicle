@@ -4,10 +4,10 @@
 using Cratis.Arc.Commands;
 using FluentValidation;
 
-namespace Cratis.Chronicle.Api.Security;
+namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents a validator for <see cref="RemoveUser"/>.
+/// Represents the validator for <see cref="RemoveUser"/>.
 /// </summary>
 internal class RemoveUserValidator : CommandValidator<RemoveUser>
 {
@@ -16,8 +16,6 @@ internal class RemoveUserValidator : CommandValidator<RemoveUser>
     /// </summary>
     public RemoveUserValidator()
     {
-        RuleFor(_ => _.UserId)
-            .NotEmpty()
-            .WithMessage("User identifier is required.");
+        RuleFor(_ => _.UserId).NotEmpty().WithMessage("User identifier is required.");
     }
 }

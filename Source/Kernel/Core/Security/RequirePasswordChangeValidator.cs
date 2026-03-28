@@ -4,10 +4,10 @@
 using Cratis.Arc.Commands;
 using FluentValidation;
 
-namespace Cratis.Chronicle.Api.Security;
+namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents a validator for <see cref="RequirePasswordChange"/>.
+/// Represents the validator for <see cref="RequirePasswordChange"/>.
 /// </summary>
 internal class RequirePasswordChangeValidator : CommandValidator<RequirePasswordChange>
 {
@@ -16,8 +16,6 @@ internal class RequirePasswordChangeValidator : CommandValidator<RequirePassword
     /// </summary>
     public RequirePasswordChangeValidator()
     {
-        RuleFor(_ => _.UserId)
-            .NotEmpty()
-            .WithMessage("User identifier is required.");
+        RuleFor(_ => _.UserId).NotEmpty().WithMessage("User identifier is required.");
     }
 }

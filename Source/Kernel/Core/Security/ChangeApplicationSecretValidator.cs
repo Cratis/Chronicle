@@ -4,10 +4,10 @@
 using Cratis.Arc.Commands;
 using FluentValidation;
 
-namespace Cratis.Chronicle.Api.Security;
+namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents a validator for <see cref="ChangeApplicationSecret"/>.
+/// Represents the validator for <see cref="ChangeApplicationSecret"/>.
 /// </summary>
 internal class ChangeApplicationSecretValidator : CommandValidator<ChangeApplicationSecret>
 {
@@ -16,12 +16,7 @@ internal class ChangeApplicationSecretValidator : CommandValidator<ChangeApplica
     /// </summary>
     public ChangeApplicationSecretValidator()
     {
-        RuleFor(_ => _.Id)
-            .NotEmpty()
-            .WithMessage("Application identifier is required.");
-
-        RuleFor(_ => _.ClientSecret)
-            .NotEmpty()
-            .WithMessage("Client secret is required.");
+        RuleFor(_ => _.Id).NotEmpty().WithMessage("Application identifier is required.");
+        RuleFor(_ => _.ClientSecret).NotEmpty().WithMessage("Client secret is required.");
     }
 }

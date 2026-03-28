@@ -1,0 +1,39 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Arc.Commands.ModelBound;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Storage;
+
+namespace Cratis.Chronicle.EventStores;
+
+/// <summary>
+/// Represents the command for ensuring an event store exists, creating it if it does not.
+/// </summary>
+/// <param name="Name">The name of the event store to ensure.</param>
+[Command]
+public record EnsureEventStore(string Name)
+{
+    internal async Task Handle(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes)
+    {
+        var eventStoreName = new EventStoreName(Name);
+        var exists = await storage.HasEventStore(eventStoreName);
+        _ = storage.GetEventStore(eventStoreName);
+
+        // Always register server event types, even if the store already exists, so that
+        // built-in types such as EventRedactionRequested are always up to date.
+        await eventTypes.DiscoverAndRegister(eventStoreName);
+
+        if (!exists)
+        {
+            var systemEventSequence = grainFactory.GetSystemEventSequence(EventStoreName.System);
+            await systemEventSequence.Append(eventStoreName.Value, new EventStoreAdded(eventStoreName));
+        }
+
+        var namespaces = grainFactory.GetGrain<INamespaces>(eventStoreName);
+        await namespaces.EnsureDefault();
+    }
+}

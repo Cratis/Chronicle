@@ -4,10 +4,10 @@
 using Cratis.Arc.Commands;
 using FluentValidation;
 
-namespace Cratis.Chronicle.Api.Security;
+namespace Cratis.Chronicle.Security;
 
 /// <summary>
-/// Represents a validator for <see cref="RemoveApplication"/>.
+/// Represents the validator for <see cref="RemoveApplication"/>.
 /// </summary>
 internal class RemoveApplicationValidator : CommandValidator<RemoveApplication>
 {
@@ -16,8 +16,6 @@ internal class RemoveApplicationValidator : CommandValidator<RemoveApplication>
     /// </summary>
     public RemoveApplicationValidator()
     {
-        RuleFor(_ => _.Id)
-            .NotEmpty()
-            .WithMessage("Application identifier is required.");
+        RuleFor(_ => _.Id).NotEmpty().WithMessage("Application identifier is required.");
     }
 }
