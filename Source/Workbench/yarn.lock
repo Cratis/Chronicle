@@ -228,14 +228,14 @@ __metadata:
   linkType: hard
 
 "@cratis/arc.react@npm:^20.1.0":
-  version: 20.1.0
-  resolution: "@cratis/arc.react@npm:20.1.0"
+  version: 20.1.1
+  resolution: "@cratis/arc.react@npm:20.1.1"
   dependencies:
-    "@cratis/arc": "npm:20.1.0"
+    "@cratis/arc": "npm:20.1.1"
     tsyringe: "npm:^4.10.0"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
-  checksum: 10/6e8dd4400bc3f28d9841d3358075a7dd8a2e7aa097d625f38de3bac08881a85f1733ef91eac0383be31a4c612c0a34d4ca28b6afc937ef7ee000b24e436e21be
+  checksum: 10/08a50ae27ef6a379ca28504469e348800503035d9b85b2a7db3a2b93d685d430b00ea57dbab703f00a41085a96a64c65c31d58fb2068566cff93421611a595d3
   languageName: node
   linkType: hard
 
@@ -251,11 +251,11 @@ __metadata:
   linkType: hard
 
 "@cratis/arc@npm:^20.1.0":
-  version: 20.1.0
-  resolution: "@cratis/arc@npm:20.1.0"
-  dependencies:
-    "@cratis/fundamentals": "npm:^7.7.1"
-  checksum: 10/58abef541ae900077ff02bf2df2fd3020c9c94d8f1dcf04393ce3643b1faf6a9f8300ef3690c47d41c955a6c98e4f6edc5b283f3dc781acab3e3ad9f5956c30a
+  version: 20.1.1
+  resolution: "@cratis/arc@npm:20.1.1"
+  peerDependencies:
+    "@cratis/fundamentals": ^7.7.1
+  checksum: 10/7f874ea6b2883d64d89edb6ddb21707cd25c41a02d0a553725b1208e38e08a220762412c4df9ace4e1dce9f055fb30f5e519bd46702ef1ce78f9ef4dbe873257
   languageName: node
   linkType: hard
 
@@ -283,15 +283,6 @@ __metadata:
     reflect-metadata: 0.2.2
     tsyringe: 4.10.0
   checksum: 10/5340a75b5a32b332ceb1ba08ad40033dd40e358f91840920e295756f9328c41df25ff7972405275b4bc248ac20159deeaa497e73628b1251246692281844b783
-  languageName: node
-  linkType: hard
-
-"@cratis/fundamentals@npm:^7.7.1":
-  version: 7.7.3
-  resolution: "@cratis/fundamentals@npm:7.7.3"
-  dependencies:
-    reflect-metadata: "npm:^0.2.2"
-  checksum: 10/125761097db6aba4321a0970d707017214133781a6342bb0480ae437054fb9a4997ba468ffa956d89299ae98e920495fc80c3199e6c4e4f3e7536ab8949d0b72
   languageName: node
   linkType: hard
 
