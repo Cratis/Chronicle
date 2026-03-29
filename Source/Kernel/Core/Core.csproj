@@ -35,7 +35,11 @@
     </Target>
 
     <PropertyGroup>
-        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">false</DisableProxyGenerator>
+        <!-- ProxyGenerator is disabled for Core because it is an Orleans grain project.
+             Orleans base types cannot be resolved in the ProxyGenerator's isolated assembly
+             load context, causing a hard crash. TypeScript proxy generation runs from the
+             API project instead (or a dedicated thin proxy-generation project). -->
+        <DisableProxyGenerator Condition="'$(DisableProxyGenerator)' == ''">true</DisableProxyGenerator>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(DisableProxyGenerator)' != 'true'">
