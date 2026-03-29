@@ -90,7 +90,36 @@ internal class ModelBoundProjectionBuilder(
         var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
         definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
 
+        if (fromEventSequenceAttr is null)
+        {
+            definition.EventSequenceId = InferEventSequenceId(modelType, definition);
+        }
+
         return definition;
+    }
+
+    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition)
+    {
+        var eventStores = definition.From.Keys
+            .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
+            .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
+            .Select(t => t.GetCustomAttribute<EventStoreAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.EventStore)
+            .Distinct()
+            .ToList();
+
+        if (eventStores.Count > 1)
+        {
+            throw new MultipleEventStoresDefined(modelType, eventStores);
+        }
+
+        if (eventStores.Count == 1)
+        {
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
+        }
+
+        return EventSequenceId.Log;
     }
 
     EventType GetOrCreateEventType(Type eventType)

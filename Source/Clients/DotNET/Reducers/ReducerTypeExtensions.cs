@@ -106,11 +106,18 @@ public static class ReducerTypeExtensions
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get from.</param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
+    /// <exception cref="MultipleEventStoresDefined">Thrown when the reducer handles event types from multiple event stores.</exception>
     public static EventSequenceId GetEventSequenceId(this Type type)
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
-        return reducerAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
+
+        if (reducerAttribute?.EventSequenceId is not null)
+        {
+            return reducerAttribute.EventSequenceId;
+        }
+
+        return InferEventSequenceIdFromHandlerMethods(type);
     }
 
     /// <summary>
@@ -123,6 +130,36 @@ public static class ReducerTypeExtensions
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
         return reducerAttribute?.IsActive ?? true;
+    }
+
+    static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType)
+    {
+        var eventParameterTypes = reducerType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(m => !m.IsSpecialName)
+            .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
+            .Where(t => t is not null && Attribute.IsDefined(t, typeof(EventTypeAttribute)))
+            .Distinct()
+            .ToList();
+
+        var eventStores = eventParameterTypes
+            .Select(t => t!.GetCustomAttribute<EventStoreAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.EventStore)
+            .Distinct()
+            .ToList();
+
+        if (eventStores.Count > 1)
+        {
+            throw new MultipleEventStoresDefined(reducerType, eventStores);
+        }
+
+        if (eventStores.Count == 1)
+        {
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
+        }
+
+        return EventSequenceId.Log;
     }
 
     static bool IsNullableType(Type returnType, Type readModelType)

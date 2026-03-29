@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.Validators;
 using Cratis.Reflection;
@@ -35,11 +36,18 @@ public static class ReactorTypeExtensions
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get from.</param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
+    /// <exception cref="MultipleEventStoresDefined">Thrown when the reactor handles event types from multiple event stores.</exception>
     public static EventSequenceId GetEventSequenceId(this Type type)
     {
         TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
         var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
-        return reactorAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
+
+        if (reactorAttribute?.EventSequenceId is not null)
+        {
+            return reactorAttribute.EventSequenceId;
+        }
+
+        return InferEventSequenceIdFromHandlerMethods(type);
     }
 
     /// <summary>
@@ -48,4 +56,34 @@ public static class ReactorTypeExtensions
     /// <param name="types">Collection of types.</param>
     /// <returns>Collection of types that are Reactors.</returns>
     public static IEnumerable<Type> AllReactors(this IEnumerable<Type> types) => types.Where(_ => _.HasAttribute<ReactorAttribute>()).ToArray();
+
+    static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reactorType)
+    {
+        var eventParameterTypes = reactorType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(m => !m.IsSpecialName)
+            .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
+            .Where(t => t is not null && Attribute.IsDefined(t, typeof(EventTypeAttribute)))
+            .Distinct()
+            .ToList();
+
+        var eventStores = eventParameterTypes
+            .Select(t => t!.GetCustomAttribute<EventStoreAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.EventStore)
+            .Distinct()
+            .ToList();
+
+        if (eventStores.Count > 1)
+        {
+            throw new MultipleEventStoresDefined(reactorType, eventStores);
+        }
+
+        if (eventStores.Count == 1)
+        {
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
+        }
+
+        return EventSequenceId.Log;
+    }
 }
