@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using StorageUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Server.Authentication.Controllers;
 
@@ -29,8 +30,8 @@ namespace Cratis.Chronicle.Server.Authentication.Controllers;
 [Route("connect")]
 [AllowAnonymous]
 public class AuthorizationController(
-    UserManager<User> userManager,
-    SignInManager<User> signInManager,
+    UserManager<StorageUser> userManager,
+    SignInManager<StorageUser> signInManager,
     IOpenIddictApplicationManager applicationManager,
     IGrainFactory grainFactory,
     ILogger<AuthorizationController> logger) : ControllerBase

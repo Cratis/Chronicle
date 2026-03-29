@@ -83,15 +83,18 @@ public class ReducerHandler(
     /// <inheritdoc/>
     public async Task<ReducerState> GetState()
     {
-        var request = new Contracts.Observation.GetObserverInformationRequest
-        {
-            ObserverId = Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId
-        };
         var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
+        var observers = await servicesAccessor.Services.Observers.AllObservers(new Contracts.Observation.AllObserversRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace
+        });
+        var state = observers.FirstOrDefault(o => o.Id == Id.ToString() && o.EventSequenceId == EventSequenceId.ToString());
+        if (state is null)
+        {
+            return new ReducerState(ObserverRunningState.Unknown, false, 0, 0);
+        }
+
         return new ReducerState(
             state.RunningState.ToClient(),
             state.IsSubscribed,

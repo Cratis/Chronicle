@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Namespaces;
@@ -31,5 +31,5 @@ public class NamespaceQueries : ControllerBase
     /// <returns>An observable for observing a collection of namespace names.</returns>
     [HttpGet]
     public ISubject<IEnumerable<string>> AllNamespaces([FromRoute] string eventStore) =>
-        _namespaces.InvokeAndWrapWithSubject(token => _namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token));
+        _namespaces.InvokeAndWrapWithSubject(token => _namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = eventStore }, token));
 }

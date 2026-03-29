@@ -27,12 +27,10 @@ public record ChangePasswordForUser(
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IUsers users) =>
-        users.ChangePassword(new()
+        users.ChangeUserPassword(new()
         {
             UserId = UserId,
-            OldPassword = oldPassword,
             Password = Password,
             ConfirmedPassword = ConfirmedPassword
         });
 }
-

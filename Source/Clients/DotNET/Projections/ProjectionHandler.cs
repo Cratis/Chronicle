@@ -39,15 +39,18 @@ public class ProjectionHandler(
     /// <inheritdoc/>
     public async Task<ProjectionState> GetState()
     {
-        var request = new Contracts.Observation.GetObserverInformationRequest
-        {
-            ObserverId = projectionId,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = eventSequenceId
-        };
         var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
+        var observers = await servicesAccessor.Services.Observers.AllObservers(new Contracts.Observation.AllObserversRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace
+        });
+        var state = observers.FirstOrDefault(o => o.Id == projectionId.ToString() && o.EventSequenceId == eventSequenceId.ToString());
+        if (state is null)
+        {
+            return new ProjectionState(ObserverRunningState.Unknown, false, 0, 0);
+        }
+
         return new ProjectionState(
             state.RunningState.ToClient(),
             state.IsSubscribed,

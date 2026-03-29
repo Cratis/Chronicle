@@ -4,17 +4,17 @@
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
-/// Extension methods for converting between <see cref="Contracts.Jobs.Job"/> and <see cref="Job"/>.
+/// Extension methods for converting between <see cref="Contracts.Jobs.JobResponse"/> and <see cref="Job"/>.
 /// </summary>
 internal static class JobsConverters
 {
     /// <summary>
-    /// Convert from <see cref="Contracts.Jobs.Job"/> to <see cref="Job"/>.
+    /// Convert from <see cref="Contracts.Jobs.JobResponse"/> to <see cref="Job"/>.
     /// </summary>
-    /// <param name="job"><see cref="Contracts.Jobs.Job"/> to convert from.</param>
+    /// <param name="job"><see cref="Contracts.Jobs.JobResponse"/> to convert from.</param>
     /// <param name="eventStore">EventStore the job belongs to.</param>
     /// <returns>Converted <see cref="Job"/>.</returns>
-    public static Job ToClient(this Contracts.Jobs.Job job, IEventStore eventStore) =>
+    public static Job ToClient(this Contracts.Jobs.JobResponse job, IEventStore eventStore) =>
         new(eventStore)
         {
             Id = job.Id,
@@ -22,15 +22,15 @@ internal static class JobsConverters
             Type = job.Type,
             Status = (JobStatus)(int)job.Status,
             Created = job.Created,
-            StatusChanges = job.StatusChanges.ToClient(),
-            Progress = job.Progress.ToClient()
+            StatusChanges = job.StatusChanges?.ToClient() ?? [],
+            Progress = job.Progress?.ToClient() ?? new()
         };
 
     /// <summary>
-    /// Convert from <see cref="IEnumerable{JobState}"/> to <see cref="IEnumerable{Job}"/>.
+    /// Convert from <see cref="IEnumerable{JobResponse}"/> to <see cref="IEnumerable{Job}"/>.
     /// </summary>
-    /// <param name="jobs">Collection of <see cref="Contracts.Jobs.Job"/> to convert from.</param>
+    /// <param name="jobs">Collection of <see cref="Contracts.Jobs.JobResponse"/> to convert from.</param>
     /// <param name="eventStore">EventStore the job belongs to.</param>
     /// <returns>Converted collection of <see cref="Job"/>.</returns>
-    public static IEnumerable<Job> ToClient(this IEnumerable<Contracts.Jobs.Job> jobs, IEventStore eventStore) => jobs.Select(_ => _.ToClient(eventStore)).ToArray();
+    public static IEnumerable<Job> ToClient(this IEnumerable<Contracts.Jobs.JobResponse> jobs, IEventStore eventStore) => jobs.Select(_ => _.ToClient(eventStore)).ToArray();
 }

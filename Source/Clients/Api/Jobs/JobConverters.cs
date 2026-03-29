@@ -4,16 +4,16 @@
 namespace Cratis.Chronicle.Api.Jobs;
 
 /// <summary>
-/// Converters between <see cref="Job"/> to a <see cref="Job"/> for the API.
+/// Converters between <see cref="Contracts.Jobs.JobResponse"/> to a <see cref="Job"/> for the API.
 /// </summary>
 internal static class JobConverters
 {
     /// <summary>
-    /// Converts a <see cref="Contracts.Jobs.Job"/> to a <see cref="Job"/> for the API.
+    /// Converts a <see cref="Contracts.Jobs.JobResponse"/> to a <see cref="Job"/> for the API.
     /// </summary>
     /// <param name="job">The job to convert.</param>
     /// <returns>The converted job.</returns>
-    public static Job ToApi(this Contracts.Jobs.Job job) => new(
+    public static Job ToApi(this Contracts.Jobs.JobResponse job) => new(
         job.Id,
         job.Details,
         job.Type,
@@ -23,10 +23,10 @@ internal static class JobConverters
         job.Progress.ToApi());
 
     /// <summary>
-    /// Converts a collection of <see cref="Contracts.Jobs.Job"/> to a collection of <see cref="Job"/> for the API.
+    /// Converts a collection of <see cref="Contracts.Jobs.JobResponse"/> to a collection of <see cref="Job"/> for the API.
     /// </summary>
     /// <param name="jobs">The collection of jobs to convert.</param>
     /// <returns>The converted collection of jobs.</returns>
-    public static IEnumerable<Job> ToApi(this IEnumerable<Contracts.Jobs.Job> jobs) =>
+    public static IEnumerable<Job> ToApi(this IEnumerable<Contracts.Jobs.JobResponse> jobs) =>
         jobs.Select(ToApi).ToArray();
 }

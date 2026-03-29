@@ -19,8 +19,8 @@ public static class GrpcServiceRegistrations
     {
         services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
 
-        services.AddSingleton<Contracts.IEventStores, Services.EventStores>();
-        services.AddSingleton<Contracts.INamespaces, Services.Namespaces>();
+        services.AddSingleton<Contracts.EventStores.IEventStores, Services.EventStores>();
+        services.AddSingleton<Contracts.Namespaces.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
         services.AddSingleton<Contracts.Identities.IIdentities, Services.Identities.Identities>();
         services.AddSingleton<Contracts.EventSequences.IEventSequences, Services.EventSequences.EventSequences>();
