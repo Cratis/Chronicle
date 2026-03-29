@@ -1,18 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
-using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
-using ContractAddApplication = Cratis.Chronicle.Contracts.Security.AddApplication;
-using ContractApplication = Cratis.Chronicle.Contracts.Security.Application;
-using ContractChangeApplicationSecret = Cratis.Chronicle.Contracts.Security.ChangeApplicationSecret;
-using ContractRemoveApplication = Cratis.Chronicle.Contracts.Security.RemoveApplication;
 
 namespace Cratis.Chronicle.Services.Security;
 
@@ -23,68 +15,33 @@ namespace Cratis.Chronicle.Services.Security;
 /// <param name="storage">The <see cref="IStorage"/> for working with applications.</param>
 internal sealed class Applications(IGrainFactory grainFactory, IStorage storage) : IApplications
 {
-    static readonly PasswordHasher<object> _passwordHasher = new();
+    /// <inheritdoc/>
+    public Task AddApplication(AddApplicationRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.AddApplication(request.Id, request.ClientId, request.ClientSecret)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task Add(ContractAddApplication command)
-    {
-        var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
-
-        var @event = new ApplicationAdded(
-            command.ClientId,
-            clientSecret);
-
-        var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(
-            command.Id,
-            @event);
-    }
+    public Task ChangeApplicationSecret(ChangeApplicationSecretRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.ChangeApplicationSecret(request.Id, request.ClientSecret)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task Remove(ContractRemoveApplication command)
-    {
-        var @event = new ApplicationRemoved();
-
-        var eventSequence = grainFactory.GetEventLog();
-
-        await eventSequence.Append(
-            command.Id,
-            @event);
-    }
+    public Task RemoveApplication(RemoveApplicationRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.RemoveApplication(request.Id)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task ChangeSecret(ContractChangeApplicationSecret command)
+    public IObservable<IEnumerable<ApplicationResponse>> AllApplications(CallContext callContext = default) =>
+        Chronicle.Security.Application.AllApplications(storage)
+            .CompletedBy(callContext.CancellationToken)
+            .Select(apps => (IEnumerable<ApplicationResponse>)apps.Select(a => ToResponse(a)).ToList());
+
+    static ApplicationResponse ToResponse(Chronicle.Security.Application app) => new()
     {
-        var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
-
-        var @event = new ApplicationSecretChanged(clientSecret);
-
-        var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(
-            command.Id,
-            @event);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IList<ContractApplication>> GetAll()
-    {
-        var clients = await storage.System.Applications.GetAll();
-        return clients.Select(ToContract).ToList();
-    }
-
-    /// <inheritdoc/>
-    public IObservable<IList<ContractApplication>> ObserveAll(CallContext context = default) =>
-        storage.System.Applications
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .Select(apps => apps.Select(ToContract).ToList());
-
-    static ContractApplication ToContract(Storage.Security.Application client) => new()
-    {
-        Id = client.Id,
-        ClientId = client.ClientId,
-        IsActive = true,
-        CreatedAt = DateTimeOffset.UtcNow,
-        LastModifiedAt = null
+        Id = app.Id,
+        ClientId = app.ClientId,
+        IsActive = app.IsActive,
+        CreatedAt = app.CreatedAt,
+        LastModifiedAt = app.LastModifiedAt
     };
 }

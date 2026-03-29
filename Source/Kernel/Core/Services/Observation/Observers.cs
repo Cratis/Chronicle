@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -19,79 +16,44 @@ namespace Cratis.Chronicle.Services.Observation;
 internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
 {
     /// <inheritdoc/>
-    public Task RetryPartition(RetryPartition command, CallContext context = default) =>
-        grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
+    public Task ReplayObserver(ReplayObserverRequest request, CallContext callContext = default) =>
+        new Chronicle.Observation.ReplayObserver(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public Task Replay(Replay command, CallContext context = default) =>
-        grainFactory.GetObserver(command).Replay();
+    public Task ReplayPartition(ReplayPartitionRequest request, CallContext callContext = default) =>
+        new Chronicle.Observation.ReplayPartition(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId, request.Partition)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
-        grainFactory.GetObserver(command).ReplayPartition(command.Partition);
+    public Task RetryPartition(RetryPartitionRequest request, CallContext callContext = default) =>
+        new Chronicle.Observation.RetryPartition(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId, request.Partition)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
+    public async Task<IEnumerable<ObserverInformationResponse>> AllObservers(AllObserversRequest request, CallContext callContext = default)
     {
-        var observer = grainFactory.GetObserver(request);
-        var definition = await observer.GetDefinition();
-        var state = await observer.GetState();
-        var subscribed = await observer.IsSubscribed();
-        return new ObserverInformation
-        {
-            Id = request.ObserverId,
-            EventSequenceId = definition.EventSequenceId,
-            Type = definition.Type.ToContract(),
-            Owner = definition.Owner.ToContract(),
-            EventTypes = definition.EventTypes.ToContract(),
-            NextEventSequenceNumber = state.NextEventSequenceNumber,
-            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
-            RunningState = state.RunningState.ToContract(),
-            IsSubscribed = subscribed,
-            IsReplayable = definition.IsReplayable
-        };
+        var observers = await Chronicle.Observation.ObserverInformation.AllObservers(request.EventStore, request.Namespace, storage);
+        return observers.Select(ToResponse);
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
-    {
-        var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
-        var observers =
-            from definition in observerDefinitions
-            join state in observerStates on definition.Identifier equals state.Identifier
-            select (definition, state);
-        return observers.ToContract();
-    }
+    public IObservable<IEnumerable<ObserverInformationResponse>> ObserveObservers(ObserveObserversRequest request, CallContext callContext = default) =>
+        Chronicle.Observation.ObserverInformation.ObserveObservers(request.EventStore, request.Namespace, storage)
+            .CompletedBy(callContext.CancellationToken)
+            .Select(observers => (IEnumerable<ObserverInformationResponse>)observers.Select(o => ToResponse(o)).ToList());
 
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        storage
-            .GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).Observers
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .Select(observerStates =>
-            {
-                // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                var observerDefinitions = storage.GetEventStore(request.EventStore).Observers.GetAll().GetAwaiter().GetResult();
-                var observers =
-                    from definition in observerDefinitions
-                    join state in observerStates on definition.Identifier equals state.Identifier
-                    select (definition, state);
-                return observers.ToContract();
-            });
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
+    static ObserverInformationResponse ToResponse(Chronicle.Observation.ObserverInformation info) => new()
     {
-        var eventTypes = request.EventTypes.ToChronicle();
-        var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
-        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
-        var observers =
-            from definition in observerDefinitions
-            join state in observerStates on definition.Identifier equals state.Identifier
-            select (definition, state);
-        return observers.ToContract();
-    }
+        Id = info.Id,
+        EventSequenceId = info.EventSequenceId,
+        Type = info.Type,
+        Owner = info.Owner,
+        EventTypes = info.EventTypes,
+        NextEventSequenceNumber = info.NextEventSequenceNumber,
+        LastHandledEventSequenceNumber = info.LastHandledEventSequenceNumber,
+        RunningState = info.RunningState,
+        IsSubscribed = info.IsSubscribed,
+        IsReplayable = info.IsReplayable
+    };
 }

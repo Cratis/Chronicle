@@ -1,20 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
-using ContractAddUser = Cratis.Chronicle.Contracts.Security.AddUser;
-using ContractChangeUserPassword = Cratis.Chronicle.Contracts.Security.ChangeUserPassword;
-using ContractRemoveUser = Cratis.Chronicle.Contracts.Security.RemoveUser;
-using ContractRequirePasswordChange = Cratis.Chronicle.Contracts.Security.RequirePasswordChange;
-using ContractSetInitialAdminPassword = Cratis.Chronicle.Contracts.Security.SetInitialAdminPassword;
-using ContractUser = Cratis.Chronicle.Contracts.Security.User;
 
 namespace Cratis.Chronicle.Services.Security;
 
@@ -30,127 +22,48 @@ internal sealed class Users(
     static readonly PasswordHasher<object> _passwordHasher = new();
 
     /// <inheritdoc/>
-    public async Task Add(ContractAddUser command)
-    {
-        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
-
-        var @event = new UserAdded(
-            command.Username,
-            command.Email,
-            passwordHash);
-
-        var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(command.UserId, @event);
-    }
+    public Task AddUser(AddUserRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.AddUser(request.UserId, request.Username, request.Email, request.Password)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task Remove(ContractRemoveUser command)
-    {
-        var @event = new UserRemoved();
-        var eventSequence = grainFactory.GetEventLog();
-
-        await eventSequence.Append(
-            command.UserId,
-            @event);
-    }
+    public Task ChangeUserPassword(ChangeUserPasswordRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.ChangeUserPassword(request.UserId, request.OldPassword, request.Password, request.ConfirmedPassword)
+            .Handle(grainFactory, storage);
 
     /// <inheritdoc/>
-    public async Task ChangePassword(ContractChangeUserPassword command)
+    public Task RemoveUser(RemoveUserRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.RemoveUser(request.UserId)
+            .Handle(grainFactory);
+
+    /// <inheritdoc/>
+    public Task RequirePasswordChange(RequirePasswordChangeRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.RequirePasswordChange(request.UserId)
+            .Handle(grainFactory);
+
+    /// <inheritdoc/>
+    public Task SetInitialAdminPassword(SetInitialAdminPasswordRequest request, CallContext callContext = default) =>
+        new Chronicle.Security.SetInitialAdminPassword(request.UserId, request.Password, request.ConfirmedPassword)
+            .Handle(grainFactory, storage);
+
+    /// <inheritdoc/>
+    public async Task<AdminPasswordStatusResponse> GetStatus(CallContext callContext = default)
     {
-        if (command.Password != command.ConfirmedPassword)
+        var status = await Chronicle.Security.AdminPasswordStatus.GetStatus(storage);
+        return new AdminPasswordStatusResponse
         {
-            throw new PasswordConfirmationMismatch();
-        }
-
-        var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
-
-        if (user.PasswordHash is null || _passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, command.OldPassword) != PasswordVerificationResult.Success)
-        {
-            throw new InvalidOldPassword();
-        }
-
-        if (_passwordHasher.VerifyHashedPassword(null!, user.PasswordHash, command.Password) == PasswordVerificationResult.Success)
-        {
-            throw new NewPasswordMustBeDifferent();
-        }
-
-        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
-
-        var @event = new UserPasswordChanged(passwordHash);
-
-        var eventSequence = grainFactory.GetEventLog();
-
-        await eventSequence.Append(
-            command.UserId,
-            @event);
-    }
-
-    /// <inheritdoc/>
-    public async Task RequirePasswordChange(ContractRequirePasswordChange command)
-    {
-        var @event = new PasswordChangeRequired();
-        var eventSequence = grainFactory.GetEventLog();
-
-        await eventSequence.Append(
-            command.UserId,
-            @event);
-    }
-
-    /// <inheritdoc/>
-    public async Task SetInitialAdminPassword(ContractSetInitialAdminPassword command)
-    {
-        if (command.Password != command.ConfirmedPassword)
-        {
-            throw new PasswordConfirmationMismatch();
-        }
-
-        var user = await storage.System.Users.GetById(command.UserId) ?? throw new UserNotFound(command.UserId);
-
-        // Ensure this is only for users who haven't logged in yet
-        if (user.HasLoggedIn)
-        {
-            throw new InvalidOperationException("Setting initial admin password is only allowed for users who haven't set their initial password.");
-        }
-
-        var passwordHash = _passwordHasher.HashPassword(null!, command.Password);
-
-        var @event = new UserPasswordChanged(passwordHash);
-
-        var eventSequence = grainFactory.GetEventLog();
-
-        await eventSequence.Append(
-            command.UserId,
-            @event);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IList<ContractUser>> GetAll()
-    {
-        var users = await storage.System.Users.GetAll();
-        return users.Select(ToContract).ToList();
-    }
-
-    /// <inheritdoc/>
-    public IObservable<IList<ContractUser>> ObserveAll(CallContext context = default) =>
-        storage.System.Users
-            .ObserveAll()
-            .CompletedBy(context.CancellationToken)
-            .Select(users => users.Select(ToContract).ToList());
-
-    /// <inheritdoc/>
-    public async Task<InitialAdminPasswordSetupStatus> GetInitialAdminPasswordSetupStatus()
-    {
-        var users = await storage.System.Users.GetAll();
-        var adminUser = users.FirstOrDefault(u => u.Username == "admin" && !u.HasLoggedIn);
-
-        return new InitialAdminPasswordSetupStatus
-        {
-            IsRequired = adminUser is not null,
-            AdminUserId = adminUser is not null ? (Guid)adminUser.Id : null
+            IsRequired = status.IsRequired,
+            AdminUserId = status.AdminUserId
         };
     }
 
-    static ContractUser ToContract(Storage.Security.User user) => new()
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<UserResponse>> AllUsers(CallContext callContext = default) =>
+        Chronicle.Security.User.AllUsers(storage)
+            .CompletedBy(callContext.CancellationToken)
+            .Select(users => (IEnumerable<UserResponse>)users.Select(u => ToResponse(u)).ToList());
+
+    static UserResponse ToResponse(Chronicle.Security.User user) => new()
     {
         Id = user.Id,
         Username = user.Username,

@@ -84,12 +84,12 @@ public record ObserverInformation(
         new(
             definition.Identifier,
             definition.EventSequenceId,
-            Services.Observation.ObserverInformationConverters.ToContract(definition.Type),
-            Services.Observation.ObserverInformationConverters.ToContract(definition.Owner),
+            (ObserverType)(int)definition.Type,
+            (ObserverOwner)(int)definition.Owner,
             definition.EventTypes.Select(et => et.Id.Value),
             state.NextEventSequenceNumber,
             state.LastHandledEventSequenceNumber,
-            Services.Observation.ObserverInformationConverters.ToContract(state.RunningState),
+            (ObserverRunningState)(int)state.RunningState,
             false,
             definition.IsReplayable);
 }

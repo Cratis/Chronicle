@@ -1,18 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Primitives;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
-using ContractDeleteJob = Cratis.Chronicle.Contracts.Jobs.DeleteJob;
-using ContractJob = Cratis.Chronicle.Contracts.Jobs.Job;
-using ContractJobStep = Cratis.Chronicle.Contracts.Jobs.JobStep;
-using ContractResumeJob = Cratis.Chronicle.Contracts.Jobs.ResumeJob;
-using ContractStopJob = Cratis.Chronicle.Contracts.Jobs.StopJob;
 
 namespace Cratis.Chronicle.Services.Jobs;
 
@@ -24,67 +16,34 @@ namespace Cratis.Chronicle.Services.Jobs;
 internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
 {
     /// <inheritdoc/>
-    public Task Stop(ContractStopJob command, CallContext context = default) =>
-        grainFactory.GetJobsManager(command.EventStore, command.Namespace).Stop(command.JobId);
+    public Task DeleteJob(DeleteJobRequest request, CallContext callContext = default) =>
+        new Chronicle.Jobs.DeleteJob(request.EventStore, request.Namespace, request.JobId)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public Task Resume(ContractResumeJob command, CallContext context = default) =>
-        grainFactory.GetJobsManager(command.EventStore, command.Namespace).Resume(command.JobId);
+    public Task ResumeJob(ResumeJobRequest request, CallContext callContext = default) =>
+        new Chronicle.Jobs.ResumeJob(request.EventStore, request.Namespace, request.JobId)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public Task Delete(ContractDeleteJob command, CallContext context = default) =>
-        grainFactory.GetJobsManager(command.EventStore, command.Namespace).Delete(command.JobId);
+    public Task StopJob(StopJobRequest request, CallContext callContext = default) =>
+        new Chronicle.Jobs.StopJob(request.EventStore, request.Namespace, request.JobId)
+            .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public async Task<OneOf<ContractJob, Contracts.Jobs.JobError>> GetJob(GetJobRequest request, CallContext context = default)
+    public IObservable<IEnumerable<JobResponse>> AllJobs(AllJobsRequest request, CallContext callContext = default) =>
+        Chronicle.Jobs.Job.AllJobs(request.EventStore, request.Namespace, storage)
+            .CompletedBy(callContext.CancellationToken)
+            .Select(jobs => (IEnumerable<JobResponse>)jobs.Select(j => ToResponse(j)).ToList());
+
+    static JobResponse ToResponse(Chronicle.Jobs.Job job) => new()
     {
-        grainFactory.GetJobsManager(request.EventStore, request.Namespace);
-
-        var result = await storage.GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).Jobs
-            .GetJob(request.JobId);
-
-        if (result.IsSuccess)
-        {
-            return new OneOf<ContractJob, Contracts.Jobs.JobError>(result.AsT0.ToContract());
-        }
-
-        return new OneOf<ContractJob, Contracts.Jobs.JobError>((Contracts.Jobs.JobError)(int)result.AsT1);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ContractJob>> GetJobs(GetJobsRequest request, CallContext context = default) =>
-        (await grainFactory.GetJobsManager(request.EventStore, request.Namespace).GetAllJobs()).ToContract();
-
-    /// <inheritdoc/>
-    public IObservable<IEnumerable<ContractJob>> ObserveJobs(GetJobsRequest request, CallContext context = default)
-    {
-        var catchOrObserve = storage
-            .GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).Jobs
-            .ObserveJobs();
-
-        if (catchOrObserve.IsSuccess)
-        {
-            return catchOrObserve.AsT0.CompletedBy(context.CancellationToken).Select(_ => _.ToContract());
-        }
-
-        return Observable.Empty<IEnumerable<ContractJob>>();
-    }
-
-    /// <inheritdoc/>
-    public async Task<IEnumerable<ContractJobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default)
-    {
-        var catchOrObserve = await storage
-            .GetEventStore(request.EventStore)
-            .GetNamespace(request.Namespace).JobSteps
-            .GetForJob(request.JobId, request.Statuses.Select(_ => (Concepts.Jobs.JobStepStatus)(int)_).ToArray());
-
-        if (catchOrObserve.IsSuccess)
-        {
-            return catchOrObserve.AsT0.ToContract();
-        }
-
-        return [];
-    }
+        Id = job.Id,
+        Details = job.Details,
+        Type = job.Type,
+        Status = job.Status,
+        Created = job.Created,
+        StatusChanges = job.StatusChanges,
+        Progress = job.Progress
+    };
 }
