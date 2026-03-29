@@ -10,6 +10,7 @@ import { useCommandFormContext } from '@cratis/arc.react/commands';
 import { CommandDialog } from '@cratis/components/CommandDialog';
 import { InputTextField } from '@cratis/components/CommandForm';
 import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
+import { Guid } from '@cratis/fundamentals';
 
 interface SecretActionsProps {
     showSecret: boolean;
@@ -44,7 +45,7 @@ const SecretActions = ({ showSecret, onToggleShow }: SecretActionsProps) => {
 };
 
 export const AddApplicationDialog = () => {
-    const [id] = useState(crypto.randomUUID());
+    const [id] = useState(crypto.randomUUID() as unknown as Guid);
     const [showSecret, setShowSecret] = useState(false);
     const { closeDialog } = useDialogContext<object>();
 
