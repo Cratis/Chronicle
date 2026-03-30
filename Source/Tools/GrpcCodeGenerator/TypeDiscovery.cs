@@ -24,7 +24,18 @@ public class TypeDiscovery(Assembly assembly)
     {
         var services = new Dictionary<string, ServiceDefinition>();
 
-        foreach (var type in assembly.GetTypes())
+        IEnumerable<Type> types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            Console.WriteLine("  WARNING: Some types could not be loaded (missing dependencies). Continuing with loadable types only.");
+            types = ex.Types.OfType<Type>();
+        }
+
+        foreach (var type in types)
         {
             if (!type.IsClass || type.IsAbstract)
             {
