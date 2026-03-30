@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// </summary>
 internal static class ProjectionReadModelProcessor
 {
-    static readonly KernelProjectionEngine::IProjectionFactory _projectionFactory;
+    static readonly KernelProjectionEngine::ProjectionFactory _projectionFactory;
     static readonly IObjectComparer _objectComparer;
 
     static ProjectionReadModelProcessor()
@@ -77,7 +77,7 @@ internal static class ProjectionReadModelProcessor
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model schema.</param>
     /// <param name="initialState">Optional initial read model state.</param>
-    /// <returns>The projected read model, or <c>null</c> if the projection did not apply any changes.</returns>
+    /// <returns>The projected read model, or <see langword="null"/> if the projection did not apply any changes.</returns>
     public static async Task<TReadModel?> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<object> events,

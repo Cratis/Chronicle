@@ -23,7 +23,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// dependency on <see cref="IEventSequenceStorage"/> in the projection engine. Projections that use
 /// joins may call some of these operations; basic projections without joins will not.
 /// </remarks>
-internal class NullEventSequenceStorage : IEventSequenceStorage
+internal sealed class NullEventSequenceStorage : IEventSequenceStorage
 {
     /// <summary>
     /// Gets the singleton instance of <see cref="NullEventSequenceStorage"/>.

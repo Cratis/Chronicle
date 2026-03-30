@@ -27,21 +27,25 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Usage:
 /// <code>
 /// var scenario = new ReadModelScenario&lt;MyReadModel&gt;();
-/// scenario.Given([new SomeEvent(), new SomeOtherEvent()]);
+/// await scenario.Given([new SomeEvent(), new SomeOtherEvent()]);
 /// scenario.Instance.SomeProperty.ShouldBe(expectedValue);
 /// </code>
 /// </para>
 /// </remarks>
 /// <typeparam name="TReadModel">The type of read model under test.</typeparam>
-public class ReadModelScenario<TReadModel>
+/// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
+/// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
+public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults)
     where TReadModel : class
 {
-    readonly TReadModel? _initialState;
-    readonly INamingPolicy _namingPolicy;
-    readonly IEventTypes _eventTypes;
-    readonly IClientArtifactsProvider _clientArtifactsProvider;
-    readonly IClientArtifactsActivator _artifactsActivator;
-    readonly JsonSerializerOptions _jsonSerializerOptions;
+    readonly TReadModel? _initialState = initialState;
+    readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
+    readonly IEventTypes _eventTypes = defaults.EventTypes;
+    readonly IClientArtifactsProvider _clientArtifactsProvider = defaults.ClientArtifactsProvider;
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    readonly IClientArtifactsActivator _artifactsActivator = new ClientArtifactsActivator(new DefaultServiceProvider(), new NullLoggerFactory());
+#pragma warning restore CA2000 // Dispose objects before losing scope
+    readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     TReadModel? _instance;
 
     /// <summary>
@@ -54,25 +58,10 @@ public class ReadModelScenario<TReadModel>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class with a custom set of defaults.
-    /// </summary>
-    /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
-    /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
-    public ReadModelScenario(TReadModel? initialState, Defaults defaults)
-    {
-        _initialState = initialState;
-        _namingPolicy = new CamelCaseNamingPolicy();
-        _eventTypes = defaults.EventTypes;
-        _clientArtifactsProvider = defaults.ClientArtifactsProvider;
-        _artifactsActivator = new ClientArtifactsActivator(new DefaultServiceProvider(), new NullLoggerFactory());
-        _jsonSerializerOptions = Globals.JsonSerializerOptions;
-    }
-
-    /// <summary>
     /// Gets the current projected read model instance.
     /// </summary>
     /// <remarks>
-    /// This property returns <c>null</c> if <see cref="Given(object[])"/> has not been called yet or if
+    /// This property returns <see langword="null"/> if <see cref="Given(object[])"/> has not been called yet or if
     /// the events produced no state changes.
     /// </remarks>
     public TReadModel? Instance => _instance;
@@ -80,30 +69,27 @@ public class ReadModelScenario<TReadModel>
     /// <summary>
     /// Feeds the provided events through the read model's projection or reducer and updates <see cref="Instance"/>.
     /// </summary>
-    /// <remarks>
-    /// This method blocks synchronously using <c>GetAwaiter().GetResult()</c>. It is safe to call from
-    /// test code running under xUnit, Mocha, or similar frameworks that do not install a synchronization
-    /// context that could cause a deadlock.
-    /// </remarks>
     /// <param name="events">The event instances to process in order.</param>
-    public void Given(params object[] events)
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public async Task Given(params object[] events)
     {
-        _instance = GivenAsync(events).GetAwaiter().GetResult();
+        _instance = await ProcessEvents(events);
     }
 
-    async Task<TReadModel?> GivenAsync(IEnumerable<object> events)
+    async Task<TReadModel?> ProcessEvents(IEnumerable<object> events)
     {
         var readModelType = typeof(TReadModel);
 
         var reducerType = FindReducerType(readModelType);
         if (reducerType is not null)
         {
+            using var serviceProvider = new DefaultServiceProvider();
             return await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
                 events.Select(e => new EventForEventSourceId(EventSourceId.New(), e, Causation.Unknown())),
                 _eventTypes,
                 _artifactsActivator,
-                new DefaultServiceProvider(),
+                serviceProvider,
                 _namingPolicy);
         }
 

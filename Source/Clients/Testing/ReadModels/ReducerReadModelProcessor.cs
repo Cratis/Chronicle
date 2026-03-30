@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
@@ -26,7 +25,7 @@ internal static class ReducerReadModelProcessor
     /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for instantiating the reducer.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
-    /// <returns>The projected read model, or <c>null</c> if the reducer removed the instance.</returns>
+    /// <returns>The projected read model, or <see langword="null"/> if the reducer removed the instance.</returns>
     public static async Task<TReadModel?> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,

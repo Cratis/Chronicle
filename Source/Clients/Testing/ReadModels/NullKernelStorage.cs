@@ -34,50 +34,112 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Only the minimal storage chain needed by the projection engine is implemented.
 /// All other operations throw <see cref="NotSupportedException"/>.
 /// </remarks>
-internal class NullKernelStorage : IStorage, IEventStoreStorage, IEventStoreNamespaceStorage
+internal sealed class NullKernelStorage : IStorage, IEventStoreStorage, IEventStoreNamespaceStorage
 {
     /// <summary>
     /// Gets the singleton instance of <see cref="NullKernelStorage"/>.
     /// </summary>
     public static readonly NullKernelStorage Instance = new();
 
-    // IStorage
+    /// <inheritdoc/>
     ISystemStorage IStorage.System => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    KernelConceptsNs::EventStoreName IEventStoreStorage.EventStore => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    INamespaceStorage IEventStoreStorage.Namespaces => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IEventTypesStorage IEventStoreStorage.EventTypes => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IConstraintsStorage IEventStoreStorage.Constraints => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IObserverDefinitionsStorage IEventStoreStorage.Observers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IReactorDefinitionsStorage IEventStoreStorage.Reactors => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IReducerDefinitionsStorage IEventStoreStorage.Reducers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IProjectionDefinitionsStorage IEventStoreStorage.Projections => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IWebhookDefinitionsStorage IEventStoreStorage.Webhooks => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IEventStoreSubscriptionDefinitionsStorage IEventStoreStorage.EventStoreSubscriptions => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IReadModelDefinitionsStorage IEventStoreStorage.ReadModels => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IEventSeedingStorage IEventStoreStorage.EventSeeding => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IChangesetStorage IEventStoreNamespaceStorage.Changesets => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IIdentityStorage IEventStoreNamespaceStorage.Identities => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IJobStorage IEventStoreNamespaceStorage.Jobs => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IJobStepStorage IEventStoreNamespaceStorage.JobSteps => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IObserverStateStorage IEventStoreNamespaceStorage.Observers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IFailedPartitionsStorage IEventStoreNamespaceStorage.FailedPartitions => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IRecommendationStorage IEventStoreNamespaceStorage.Recommendations => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IObserverKeyIndexes IEventStoreNamespaceStorage.ObserverKeyIndexes => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IReplayContexts IEventStoreNamespaceStorage.ReplayContexts => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    ISinks IEventStoreNamespaceStorage.Sinks => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IReplayedReadModelsStorage IEventStoreNamespaceStorage.ReplayedReadModels => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IEventSeedingStorage IEventStoreNamespaceStorage.EventSeeding => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
+    IProjectionFuturesStorage IEventStoreNamespaceStorage.ProjectionFutures => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
     Task<IEnumerable<KernelConceptsNs::EventStoreName>> IStorage.GetEventStores() => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
     Task<bool> IStorage.HasEventStore(KernelConceptsNs::EventStoreName eventStore) => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
     ISubject<IEnumerable<KernelConceptsNs::EventStoreName>> IStorage.ObserveEventStores() => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
     IEventStoreStorage IStorage.GetEventStore(KernelConceptsNs::EventStoreName eventStore) => this;
 
-    // IEventStoreStorage
-    KernelConceptsNs::EventStoreName IEventStoreStorage.EventStore => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    INamespaceStorage IEventStoreStorage.Namespaces => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IEventTypesStorage IEventStoreStorage.EventTypes => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IConstraintsStorage IEventStoreStorage.Constraints => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IObserverDefinitionsStorage IEventStoreStorage.Observers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IReactorDefinitionsStorage IEventStoreStorage.Reactors => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IReducerDefinitionsStorage IEventStoreStorage.Reducers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IProjectionDefinitionsStorage IEventStoreStorage.Projections => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IWebhookDefinitionsStorage IEventStoreStorage.Webhooks => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IEventStoreSubscriptionDefinitionsStorage IEventStoreStorage.EventStoreSubscriptions => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IReadModelDefinitionsStorage IEventStoreStorage.ReadModels => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IEventSeedingStorage IEventStoreStorage.EventSeeding => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+    /// <inheritdoc/>
     IEventStoreNamespaceStorage IEventStoreStorage.GetNamespace(KernelConceptsNs::EventStoreNamespaceName @namespace) => this;
 
-    // IEventStoreNamespaceStorage
-    IChangesetStorage IEventStoreNamespaceStorage.Changesets => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IIdentityStorage IEventStoreNamespaceStorage.Identities => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IJobStorage IEventStoreNamespaceStorage.Jobs => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IJobStepStorage IEventStoreNamespaceStorage.JobSteps => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IObserverStateStorage IEventStoreNamespaceStorage.Observers => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IFailedPartitionsStorage IEventStoreNamespaceStorage.FailedPartitions => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IRecommendationStorage IEventStoreNamespaceStorage.Recommendations => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IObserverKeyIndexes IEventStoreNamespaceStorage.ObserverKeyIndexes => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IReplayContexts IEventStoreNamespaceStorage.ReplayContexts => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    ISinks IEventStoreNamespaceStorage.Sinks => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IReplayedReadModelsStorage IEventStoreNamespaceStorage.ReplayedReadModels => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IEventSeedingStorage IEventStoreNamespaceStorage.EventSeeding => throw new NotSupportedException("NullKernelStorage does not support this operation.");
-    IProjectionFuturesStorage IEventStoreNamespaceStorage.ProjectionFutures => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+    /// <inheritdoc/>
     IEventSequenceStorage IEventStoreNamespaceStorage.GetEventSequence(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) => NullEventSequenceStorage.Instance;
+
+    /// <inheritdoc/>
     IUniqueConstraintsStorage IEventStoreNamespaceStorage.GetUniqueConstraintsStorage(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) => throw new NotSupportedException("NullKernelStorage does not support this operation.");
+
+    /// <inheritdoc/>
     IUniqueEventTypesConstraintsStorage IEventStoreNamespaceStorage.GetUniqueEventTypesConstraints(KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) => throw new NotSupportedException("NullKernelStorage does not support this operation.");
 }
