@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="Progress">The current progress of the job.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Jobs)]
-public record Job(
+public record JobSummary(
     Guid Id,
     string Details,
     string Type,
@@ -40,7 +40,7 @@ public record Job(
     /// <param name="namespace">Namespace within the event store the job is for.</param>
     /// <param name="storage">The <see cref="IStorage"/> to observe jobs from.</param>
     /// <returns>An observable subject emitting collections of jobs.</returns>
-    internal static ISubject<IEnumerable<Job>> AllJobs(string eventStore, string @namespace, IStorage storage)
+    internal static ISubject<IEnumerable<JobSummary>> AllJobs(string eventStore, string @namespace, IStorage storage)
     {
         var catchOrObserve = storage
             .GetEventStore(eventStore)
@@ -52,12 +52,12 @@ public record Job(
             return catchOrObserve.AsT0.TransformSubject(ToJobs);
         }
 
-        return new ReplaySubject<IEnumerable<Job>>(1);
+        return new ReplaySubject<IEnumerable<JobSummary>>(1);
     }
 
-    private static IEnumerable<Job> ToJobs(IEnumerable<JobState> jobs) => jobs.Select(ToJob);
+    private static IEnumerable<JobSummary> ToJobs(IEnumerable<JobState> jobs) => jobs.Select(ToJob);
 
-    private static Job ToJob(JobState job) =>
+    private static JobSummary ToJob(JobState job) =>
         new(
             (Guid)job.Id,
             job.Details,

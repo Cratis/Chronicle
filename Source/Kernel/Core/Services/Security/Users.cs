@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
-using Microsoft.AspNetCore.Identity;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.Security;
@@ -20,7 +19,6 @@ internal sealed class Users(
     IGrainFactory grainFactory,
     IStorage storage) : IUsers
 {
-    static readonly PasswordHasher<object> _passwordHasher = new();
 
     /// <inheritdoc/>
     public Task AddUser(AddUserRequest request, CallContext callContext = default) =>

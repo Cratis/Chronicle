@@ -12,14 +12,14 @@ namespace Cratis.Chronicle.Tools.GrpcCodeGenerator;
 /// <param name="assemblyPath">The path to the assembly to load.</param>
 sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadContext(isCollectible: true)
 {
-    readonly AssemblyDependencyResolver _resolver = new(assemblyPath);
-
-    // Additional probe paths for NuGet packages that the resolver may not find.
+    /// <summary>Additional probe paths for NuGet packages that the resolver may not find.</summary>
     static readonly string[] _nugetProbePaths =
     [
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
         Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? string.Empty,
     ];
+
+    readonly AssemblyDependencyResolver _resolver = new(assemblyPath);
 
     /// <inheritdoc/>
     protected override Assembly? Load(AssemblyName assemblyName)
@@ -48,8 +48,7 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
                 }
 
                 // Take the latest (alphabetically last) version folder.
-                var versionFolders = Directory.GetDirectories(packageDir).OrderDescending();
-                foreach (var versionDir in versionFolders)
+                foreach (var versionDir in Directory.GetDirectories(packageDir).OrderDescending())
                 {
                     // Probe typical TFM library paths.
                     foreach (var tfm in new[] { "net10.0", "net9.0", "net8.0", "netstandard2.0" })

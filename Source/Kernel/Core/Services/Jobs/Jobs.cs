@@ -32,12 +32,12 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
             .Handle(grainFactory);
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<JobResponse>> AllJobs(AllJobsRequest request, CallContext callContext = default) =>
-        Chronicle.Jobs.Job.AllJobs(request.EventStore, request.Namespace, storage)
+    public IObservable<IEnumerable<JobSummaryResponse>> AllJobs(AllJobsRequest request, CallContext callContext = default) =>
+        Chronicle.Jobs.JobSummary.AllJobs(request.EventStore, request.Namespace, storage)
             .CompletedBy(callContext.CancellationToken)
-            .Select(jobs => (IEnumerable<JobResponse>)jobs.Select(j => ToResponse(j)).ToList());
+            .Select(jobs => (IEnumerable<JobSummaryResponse>)jobs.Select(j => ToResponse(j)).ToList());
 
-    static JobResponse ToResponse(Chronicle.Jobs.Job job) => new()
+    static JobSummaryResponse ToResponse(Chronicle.Jobs.JobSummary job) => new()
     {
         Id = job.Id,
         Details = job.Details,

@@ -45,7 +45,7 @@ public interface IJobs
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
-    IObservable<IEnumerable<JobResponse>> AllJobs(AllJobsRequest request, CallContext callContext = default);
+    IObservable<IEnumerable<JobSummaryResponse>> AllJobs(AllJobsRequest request, CallContext callContext = default);
 }
 
 /// <summary>
@@ -124,10 +124,10 @@ public class StopJobRequest
 }
 
 /// <summary>
-/// Represents the JobResponse message.
+/// Represents the JobSummaryResponse message.
 /// </summary>
 [ProtoContract]
-public class JobResponse
+public class JobSummaryResponse
 {
     /// <summary>
     /// Gets or sets the Id.
