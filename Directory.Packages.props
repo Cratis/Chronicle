@@ -45,7 +45,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.1.1" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.1.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <!-- Orleans -->
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.0.1" />
