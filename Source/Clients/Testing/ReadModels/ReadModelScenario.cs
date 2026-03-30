@@ -208,7 +208,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 activateResult.AsT0.Define(builder);
                 return builder.Build();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is TargetInvocationException)
             {
                 return ex;
             }
