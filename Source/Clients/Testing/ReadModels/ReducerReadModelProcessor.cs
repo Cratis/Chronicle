@@ -6,6 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Execution;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
@@ -49,7 +50,8 @@ internal static class ReducerReadModelProcessor
                 @event.EventSourceId,
                 @event.EventStreamType,
                 @event.EventStreamId,
-                EventSequenceNumber.First);
+                EventSequenceNumber.First,
+                CorrelationId.NotSet);
 
             return new EventAndContext(@event.Event, context);
         });

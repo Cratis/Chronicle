@@ -6,7 +6,9 @@ extern alias KernelConcepts;
 using System.Collections.Immutable;
 using System.Dynamic;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Execution;
 using Cratis.Monads;
+using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelAuditing = KernelConcepts::Cratis.Chronicle.Concepts.Auditing;
 using KernelEvents = KernelConcepts::Cratis.Chronicle.Concepts.Events;
 using KernelIdentities = KernelConcepts::Cratis.Chronicle.Concepts.Identities;
@@ -38,14 +40,14 @@ internal class NullEventSequenceStorage : IEventSequenceStorage
     public Task<KernelEvents::EventCount> GetCount(KernelEvents::EventSequenceNumber? lastEventSequenceNumber = null, IEnumerable<KernelEvents::EventType>? eventTypes = null) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
+    public Task<Result<KernelAppendedEvent, DuplicateEventSequenceNumber>> Append(
         KernelEvents::EventSequenceNumber sequenceNumber,
         KernelEvents::EventSourceType eventSourceType,
         KernelEvents::EventSourceId eventSourceId,
         KernelEvents::EventStreamType eventStreamType,
         KernelEvents::EventStreamId eventStreamId,
         KernelEvents::EventType eventType,
-        KernelAuditing::CorrelationId correlationId,
+        CorrelationId correlationId,
         IEnumerable<KernelAuditing::Causation> causation,
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         IEnumerable<KernelEvents::Tag> tags,
@@ -53,13 +55,13 @@ internal class NullEventSequenceStorage : IEventSequenceStorage
         IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
+    public Task<Result<IEnumerable<KernelAppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
     public Task Revise(
         KernelEvents::EventSequenceNumber sequenceNumber,
         KernelEvents::EventType eventType,
-        KernelAuditing::CorrelationId correlationId,
+        CorrelationId correlationId,
         IEnumerable<KernelAuditing::Causation> causation,
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         DateTimeOffset occurred,
@@ -67,10 +69,10 @@ internal class NullEventSequenceStorage : IEventSequenceStorage
         KernelEvents::EventHash hash) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<AppendedEvent> Redact(
+    public Task<KernelAppendedEvent> Redact(
         KernelEvents::EventSequenceNumber sequenceNumber,
-        RedactionReason reason,
-        KernelAuditing::CorrelationId correlationId,
+        KernelEvents::RedactionReason reason,
+        CorrelationId correlationId,
         IEnumerable<KernelAuditing::Causation> causation,
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         DateTimeOffset occurred) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
@@ -78,9 +80,9 @@ internal class NullEventSequenceStorage : IEventSequenceStorage
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEvents::EventType>> Redact(
         KernelEvents::EventSourceId eventSourceId,
-        RedactionReason reason,
+        KernelEvents::RedactionReason reason,
         IEnumerable<KernelEvents::EventType>? eventTypes,
-        KernelAuditing::CorrelationId correlationId,
+        CorrelationId correlationId,
         IEnumerable<KernelAuditing::Causation> causation,
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         DateTimeOffset occurred) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
@@ -109,16 +111,16 @@ internal class NullEventSequenceStorage : IEventSequenceStorage
     public Task<bool> HasEventsFor(KernelEvents::EventSourceId eventSourceId) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(
+    public Task<Catch<Option<KernelAppendedEvent>>> TryGetLastEventBefore(
         KernelEvents::EventTypeId eventTypeId,
         KernelEvents::EventSourceId eventSourceId,
         KernelEvents::EventSequenceNumber currentSequenceNumber) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<AppendedEvent> GetEventAt(KernelEvents::EventSequenceNumber sequenceNumber) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
+    public Task<KernelAppendedEvent> GetEventAt(KernelEvents::EventSequenceNumber sequenceNumber) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
-    public Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(KernelEvents::EventSourceId eventSourceId, IEnumerable<KernelEvents::EventTypeId> eventTypes) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
+    public Task<Option<KernelAppendedEvent>> TryGetLastInstanceOfAny(KernelEvents::EventSourceId eventSourceId, IEnumerable<KernelEvents::EventTypeId> eventTypes) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
     public Task<IEventCursor> GetFromSequenceNumber(
