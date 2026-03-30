@@ -14,6 +14,17 @@
         <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
+            <Aliases>KernelConcepts</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Core/Core.csproj">
+            <Aliases>KernelCore</Aliases>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="../../Kernel/Storage/Storage.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
