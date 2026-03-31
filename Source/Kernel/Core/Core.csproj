@@ -29,6 +29,11 @@
         </ProjectReference>
     </ItemGroup>
 
+    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' ">
+        <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
+        <Exec Command="dotnet run -- &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Core.dll&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+    </Target>
+
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Metrics.Roslyn" />

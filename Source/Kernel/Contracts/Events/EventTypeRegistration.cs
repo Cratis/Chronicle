@@ -42,4 +42,15 @@ public class EventTypeRegistration
     /// </summary>
     [ProtoMember(4, IsRequired = true)]
     public IList<EventTypeMigrationDefinition> Migrations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the name of the event store this event type originates from, if it originates from a foreign event store.
+    /// </summary>
+    /// <remarks>
+    /// When set, this indicates that the event type is produced by another event store and received via the inbox.
+    /// This corresponds to the value specified on the event type's <c>EventStoreAttribute</c>.
+    /// When empty, the event type belongs to the registering event store.
+    /// </remarks>
+    [ProtoMember(5)]
+    public string EventStore { get; set; } = string.Empty;
 }

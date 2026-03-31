@@ -15,3 +15,4 @@ Chronicle manages the subscription lifecycle on the Kernel side. Subscriptions s
 
 - [Event Store Subscriptions](event-store-subscriptions.md) — how to set up and manage subscriptions between event stores
 - [Outbox and Inbox](outbox-inbox.md) — the outbox/inbox concept and how events flow between stores
+- [Subscribing to External Event Stores](event-store-attribute.md) — annotating event types with `[EventStore]` for NuGet packages and automatic inbox routing

@@ -19,6 +19,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     readonly ProjectionId _identifier;
     readonly Type _projectionType;
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
+    bool _eventSequenceExplicitlySet;
     bool _isRewindable = true;
     bool _isActive = true;
 
@@ -47,6 +48,7 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     public IProjectionBuilderFor<TReadModel> FromEventSequence(EventSequenceId eventSequenceId)
     {
         _eventSequenceId = eventSequenceId;
+        _eventSequenceExplicitlySet = true;
         return this;
     }
 
@@ -75,10 +77,25 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
     /// Build the projection definition.
     /// </summary>
     /// <returns><see cref="ProjectionDefinition"/>.</returns>
-    internal ProjectionDefinition Build() =>
-        new()
+    /// <exception cref="MultipleEventStoresDefined">Thrown when event types from multiple event stores are used without an explicit event sequence.</exception>
+    internal ProjectionDefinition Build()
+    {
+        var eventSequenceId = _eventSequenceId;
+
+        if (!_eventSequenceExplicitlySet && _observedEventStores.Count > 0)
         {
-            EventSequenceId = _eventSequenceId,
+            var distinctStores = _observedEventStores.Distinct().ToList();
+            if (distinctStores.Count > 1)
+            {
+                throw new MultipleEventStoresDefined(_projectionType, distinctStores);
+            }
+
+            eventSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{distinctStores[0]}");
+        }
+
+        return new()
+        {
+            EventSequenceId = eventSequenceId,
             Identifier = _identifier,
             ReadModel = _readModelIdentifier,
             IsActive = _isActive,
@@ -92,4 +109,5 @@ public class ProjectionBuilderFor<TReadModel> : ProjectionBuilder<TReadModel, IP
             Tags = _projectionType.GetTags().ToArray(),
             AutoMap = (Contracts.Projections.AutoMap)_autoMap
         };
+    }
 }
