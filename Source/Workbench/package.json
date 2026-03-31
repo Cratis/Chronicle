@@ -17,8 +17,8 @@
         "build-storybook": "storybook build -c .frontend/.storybook"
     },
     "dependencies": {
-        "@cratis/arc.react.mvvm": "^20.1.1",
-        "@cratis/arc.vite": "^20.1.1",
+        "@cratis/arc.react.mvvm": "^20.1.3",
+        "@cratis/arc.vite": "^20.1.3",
         "@cratis/components": "^1.6.7",
         "@cratis/fundamentals": "^7.7.3",
         "@monaco-editor/react": "^4.7.0",

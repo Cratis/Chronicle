@@ -31,5 +31,7 @@ public class NamespaceQueries : ControllerBase
     /// <returns>An observable for observing a collection of namespace names.</returns>
     [HttpGet]
     public ISubject<IEnumerable<string>> AllNamespaces([FromRoute] string eventStore) =>
-        _namespaces.InvokeAndWrapWithSubject(token => _namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token));
+        _namespaces.InvokeAndWrapWithTransformSubject(
+            token => _namespaces.ObserveNamespaces(new() { EventStore = eventStore }, token),
+            ns => ns);
 }
