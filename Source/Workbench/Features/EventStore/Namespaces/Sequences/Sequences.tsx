@@ -16,6 +16,7 @@ import { FilterMatchMode } from 'primereact/api';
 import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AppendEventDialog } from './Add/AppendEventDialog';
 import { useState, useCallback } from 'react';
+import { Page } from 'Components/Common/Page';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
 import { GetReplayableObserversForEventTypes } from 'Api/Observation';
@@ -142,13 +143,6 @@ export const Sequences = () => {
         eventStore: params.eventStore!
     });
 
-    const [eventsResult] = AppendedEvents.use(queryArgs);
-
-    const handler = new PropertyPathResolverProxyHandler();
-    const proxy = new Proxy({}, handler);
-    const accessor = (et: AppendedEvent) => et.context.eventType.id;
-    accessor(proxy);
-
     const handleAppendEvent = async () => {
         const [result] = await showAppendEvent();
         if (result === DialogResult.Ok) {
@@ -156,12 +150,14 @@ export const Sequences = () => {
         }
     };
 
-    const handleExportEvents = useCallback(() => {
-        if (!eventsResult.hasData || eventsResult.data.length === 0) return;
+    const handleExportEvents = useCallback(async () => {
+        const query = new AppendedEvents();
+        const result = await query.perform(queryArgs);
+        if (!result.hasData || result.data.length === 0) return;
 
         const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 
-        const exportData = eventsResult.data.map(event => ({
+        const exportData = result.data.map(event => ({
             eventType: event.context.eventType.id,
             eventSourceId: event.context.eventSourceId,
             sequenceNumber: event.context.sequenceNumber,
@@ -185,7 +181,7 @@ export const Sequences = () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-    }, [eventsResult.hasData, eventsResult.data, params.eventStore, params.namespace]);
+    }, [queryArgs, params.eventStore, params.namespace]);
 
     const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
         return (
@@ -201,7 +197,7 @@ export const Sequences = () => {
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.namespaces.sequences.title}>
             <DataPage
                 key={refreshTrigger}
                 title={strings.eventStore.namespaces.sequences.title}
@@ -275,6 +271,6 @@ export const Sequences = () => {
             <AppendEventWrapper />
             <RedactEventWrapper />
             <ReviseWrapper />
-        </>
+        </Page>
     );
 };

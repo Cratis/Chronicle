@@ -4,6 +4,7 @@
 import { Column } from 'primereact/column';
 import { AllApplications, Application, RemoveApplication } from 'Api/Security';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { AddApplicationDialog } from './Add/AddApplicationDialog';
 import { ChangeSecretDialog, ChangeSecretDialogRequest } from './ChangeSecret';
@@ -51,7 +52,7 @@ export const Applications = () => {
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.system.applications.title}>
             <DataPage
                 title={strings.eventStore.system.applications.title}
                 query={AllApplications}
@@ -99,6 +100,6 @@ export const Applications = () => {
             </DataPage>
             <AddApplicationDialogWrapper />
             <ChangeSecretDialogWrapper applicationId={Guid.empty} />
-        </>
+        </Page>
     );
 };

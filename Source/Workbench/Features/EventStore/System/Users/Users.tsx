@@ -4,6 +4,7 @@
 import { Column } from 'primereact/column';
 import { AllUsers, User, RemoveUser, RequirePasswordChange } from 'Api/Security';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { AddUserDialog } from './Add/AddUserDialog';
 import { ChangePasswordDialog, ChangePasswordDialogRequest } from './ChangePassword';
@@ -67,7 +68,7 @@ export const Users = () => {
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.system.users.title}>
             <DataPage
                 title={strings.eventStore.system.users.title}
                 query={AllUsers}
@@ -122,6 +123,6 @@ export const Users = () => {
             </DataPage>
             <AddUserDialogWrapper />
             <ChangePasswordDialogWrapper userId={Guid.empty} />
-        </>
+        </Page>
     );
 };
