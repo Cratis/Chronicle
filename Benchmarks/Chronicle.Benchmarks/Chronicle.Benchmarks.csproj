@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" />
   </ItemGroup>
 
   <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true' and '$(ArtifactsPath)' == ''">
