@@ -1,16 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Cratis.Strings;
+using Cratis.Json;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
-using NJsonSchema.Generation;
 
 namespace Cratis.Chronicle.EventTypes;
 
@@ -20,12 +21,14 @@ namespace Cratis.Chronicle.EventTypes;
 [Singleton]
 public class EventTypes : IEventTypes
 {
-    readonly JsonSchemaGenerator _jsonSchemaGenerator;
+    readonly JsonSerializerOptions _serializerOptions;
+    readonly JsonSchemaExporterOptions _exporterOptions;
     readonly Dictionary<Type, JsonSchema> _schemaByType = new();
     readonly Dictionary<EventTypeId, Type> _typeByEventTypeId = new();
     readonly ITypes _types;
     readonly IStorage _storage;
     readonly ILogger<EventTypes> _logger;
+    readonly TypeFormats _typeFormats = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
@@ -38,13 +41,23 @@ public class EventTypes : IEventTypes
         IStorage storage,
         ILogger<EventTypes> logger)
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings()
+        _serializerOptions = new JsonSerializerOptions
         {
-            AllowReferencesWithProperties = true
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
+            Converters =
+            {
+                new EnumerableConceptAsJsonConverterFactory(),
+                new ConceptAsJsonConverterFactory()
+            }
         };
-        settings.ReflectionService = new ReflectionService(settings.ReflectionService);
-        settings.SchemaProcessors.Add(new TypeFormatSchemaProcessor(new TypeFormats()));
-        _jsonSchemaGenerator = new(settings);
+
+        _exporterOptions = new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = TransformNode
+        };
+
         _types = types;
         _storage = storage;
         _logger = logger;
@@ -82,61 +95,31 @@ public class EventTypes : IEventTypes
                 continue;
             }
 
-            var schema = _jsonSchemaGenerator.Generate(eventType);
-            ForceSchemaToBeCamelCase(schema);
+            var schemaNode = _serializerOptions.GetJsonSchemaAsNode(eventType, _exporterOptions);
+            var schema = new JsonSchema(schemaNode.AsObject());
             _schemaByType[eventType] = schema;
             _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
             await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
         }
     }
 
-    void ForceSchemaToBeCamelCase(JsonSchema schema)
+    JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
-        var properties = schema.Properties.ToDictionary(kvp => kvp.Key.ToCamelCase(), kvp => kvp.Value);
-        schema.Properties.Clear();
-        foreach (var kvp in properties)
+        var type = context.TypeInfo.Type;
+
+        // Handle concept types - redirect to the underlying primitive type's schema
+        if (type.IsConcept())
         {
-            schema.Properties.Add(kvp);
+            var underlyingType = type.GetConceptValueType();
+            return context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingType, _exporterOptions);
         }
 
-        foreach (var property in schema.Properties.Values)
+        // Add format for known types
+        if (_typeFormats.IsKnown(type) && schema is JsonObject schemaObj)
         {
-            ForceSchemaToBeCamelCase(property);
+            schemaObj["format"] = _typeFormats.GetFormatForType(type);
         }
 
-        if (schema.Item != null)
-        {
-            ForceSchemaToBeCamelCase(schema.Item);
-        }
-
-        foreach (var allOfSchema in schema.AllOf)
-        {
-            ForceSchemaToBeCamelCase(allOfSchema);
-        }
-
-        foreach (var anyOfSchema in schema.AnyOf)
-        {
-            ForceSchemaToBeCamelCase(anyOfSchema);
-        }
-
-        foreach (var oneOfSchema in schema.OneOf)
-        {
-            ForceSchemaToBeCamelCase(oneOfSchema);
-        }
-
-        if (schema.HasReference)
-        {
-            ForceSchemaToBeCamelCase(schema.Reference!);
-        }
-
-        if (schema.AdditionalPropertiesSchema != null)
-        {
-            ForceSchemaToBeCamelCase(schema.AdditionalPropertiesSchema);
-        }
-
-        foreach (var definition in schema.Definitions.Values)
-        {
-            ForceSchemaToBeCamelCase(definition);
-        }
+        return schema;
     }
 }

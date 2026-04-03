@@ -12,18 +12,16 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 /// </summary>
 public partial class EventContextPropertyExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = EventContextRegEx();
+    [GeneratedRegex("\\$eventContext\\((?<property>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex EventContextRegEx { get; }
 
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(string expression) => EventContextRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public ValueProvider<AppendedEvent> Resolve(string expression)
     {
-        var match = _regularExpression.Match(expression);
+        var match = EventContextRegEx.Match(expression);
         return EventValueProviders.EventContext(match.Groups["property"].Value);
     }
-
-    [GeneratedRegex("\\$eventContext\\((?<property>[A-Za-z.]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex EventContextRegEx();
 }

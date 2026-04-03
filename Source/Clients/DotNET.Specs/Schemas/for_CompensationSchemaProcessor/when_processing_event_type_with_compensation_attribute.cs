@@ -3,10 +3,8 @@
 
 namespace Cratis.Chronicle.Schemas.for_CompensationSchemaProcessor;
 
-public class when_processing_event_type_with_compensation_attribute : given.a_processor_and_a_context_for<CompensatingEvent>
+public class when_processing_event_type_with_compensation_attribute : given.a_json_schema_generator_for<CompensatingEvent>
 {
-    void Because() => _processor.Process(_context);
-
-    [Fact] void should_have_compensation_for_key_in_extension_data() => _context.Schema.IsCompensation().ShouldBeTrue();
-    [Fact] void should_have_correct_compensated_event_type_id() => _context.Schema.GetCompensationFor().ShouldEqual(nameof(OriginalEvent));
+    [Fact] void should_have_compensation_for_key_in_extension_data() => _schema.IsCompensation().ShouldBeTrue();
+    [Fact] void should_have_correct_compensated_event_type_id() => _schema.GetCompensationFor().ShouldEqual(nameof(OriginalEvent));
 }

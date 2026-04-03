@@ -4,9 +4,6 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
-using NJsonSchema.Generation;
-using NJsonSchemaGenerator = NJsonSchema.Generation.JsonSchemaGenerator;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 
@@ -19,8 +16,6 @@ public class a_mongodb_converter : Specification
 
     void Establish()
     {
-        var generator = new NJsonSchemaGenerator(new SystemTextJsonSchemaGeneratorSettings());
-
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _typeFormats = Substitute.For<ITypeFormats>();
         _model = new ReadModelDefinition(
@@ -34,7 +29,7 @@ public class a_mongodb_converter : Specification
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { ReadModelGeneration.First, generator.Generate(typeof(ReadModel)) },
+                { ReadModelGeneration.First, JsonSchema.FromType<ReadModel>() },
             },
             []);
         _converter = new(_expandoObjectConverter, _typeFormats, _model);

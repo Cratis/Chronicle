@@ -25,10 +25,13 @@
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
+        <Project Path="Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
         <Project Path="Source/Tools/GrpcClients/GrpcClients.csproj" />
+        <Project Path="Source/Tools/GrpcCodeGenerator/GrpcCodeGenerator.csproj" />
+        <Project Path="Source/Tools/GrpcCodeGenerator.Specs/GrpcCodeGenerator.Specs.csproj" />
         <Project Path="Source/Tools/InternalsVerifier/InternalsVerifier.csproj" />
         <Project Path="Source/Tools/ResourceEmbedder/ResourceEmbedder.csproj" />
     </Folder>

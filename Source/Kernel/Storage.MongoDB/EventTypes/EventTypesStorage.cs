@@ -6,12 +6,12 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Reactive;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
 
@@ -31,13 +31,16 @@ public class EventTypesStorage(
 {
     ConcurrentBag<EventType> _eventTypes = new();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Populates the event types storage with existing event types from the database.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task Populate()
     {
         logger.Populating(eventStore);
 
         using var findResult = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        _eventTypes = new ConcurrentBag<EventType>(findResult.ToList());
+        _eventTypes = new ConcurrentBag<EventType>(await findResult.ToListAsync());
     }
 
     /// <inheritdoc/>
@@ -99,7 +102,7 @@ public class EventTypesStorage(
     public async Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes()
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        var schemas = result.ToList();
+        var schemas = await result.ToListAsync();
         return schemas.Select(_ => _.ToKernel());
     }
 
@@ -115,7 +118,7 @@ public class EventTypesStorage(
         var collection = GetCollection();
         var filter = GetFilterForSpecificEventType(eventType.Id);
         using var result = await collection.FindAsync(filter).ConfigureAwait(false);
-        var schemas = result.ToList();
+        var schemas = await result.ToListAsync();
         return schemas.Select(_ => _.ToKernel());
     }
 
@@ -132,7 +135,7 @@ public class EventTypesStorage(
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-        var schemas = result.ToList();
+        var schemas = await result.ToListAsync();
 
         if (schemas.Count == 0)
         {
@@ -158,7 +161,7 @@ public class EventTypesStorage(
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-        var schemas = result.ToList();
+        var schemas = await result.ToListAsync();
         return schemas.Count == 1;
     }
 
@@ -183,7 +186,7 @@ public class EventTypesStorage(
     public async Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions()
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
-        return result.ToList().Select(_ => _.ToDefinition());
+        return (await result.ToListAsync()).Select(_ => _.ToDefinition());
     }
 
     /// <inheritdoc/>
@@ -191,7 +194,7 @@ public class EventTypesStorage(
     {
         var filter = GetFilterForSpecificEventType(eventTypeId);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-        var eventType = result.FirstOrDefault();
+        var eventType = await result.FirstOrDefaultAsync();
         if (eventType is null)
         {
             var schema = await GetFor(eventTypeId);

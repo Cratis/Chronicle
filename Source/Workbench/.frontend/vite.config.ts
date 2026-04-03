@@ -74,6 +74,9 @@ export default defineConfig({
             },
             '/swagger': {
                 target: 'http://localhost:8080'
+            },
+            '/.cratis': {
+                target: 'http://localhost:8080'
             }
         }
     },

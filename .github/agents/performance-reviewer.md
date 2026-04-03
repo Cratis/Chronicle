@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Performance Reviewer
 description: >
@@ -100,5 +99,3 @@ End with a summary table:
 | ASP.NET Core / Commands & Queries | ✅ / ⚠️ / ❌ |
 | React / TypeScript | ✅ / ⚠️ / ❌ |
 | General .NET | ✅ / ⚠️ / ❌ |
-
-````

@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 

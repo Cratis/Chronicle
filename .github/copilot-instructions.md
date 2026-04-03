@@ -16,31 +16,50 @@ When these instructions don't explicitly cover a situation, apply these values t
 
 ## General
 
-- When adding new instructions or rules, always place them in the most specific location that applies — the relevant `.instructions.md` file (e.g. `typescript.instructions.md`, `csharp.instructions.md`) or a `SKILL.md` if it relates to a specific workflow. Only add something to `copilot-instructions.md` if it genuinely applies to every file and every context in the project.
-- Always use American English spelling in all code, comments, and documentation (e.g. "color" not "colour", "behavior" not "behaviour").
+- **Always use American English spelling** in all code, comments, documentation, and XML docs — no exceptions.
+  - `-ize` not `-ise`: initialize, serialize, customize, normalize, organize, authorize, specialize, centralize, utilize
+  - `-or` not `-our`: behavior, color, favor, honor, humor, neighbor, flavor
+  - `-ization` not `-isation`: initialization, serialization, customization, normalization, organization, authorization
+  - `-er` not `-re`: center, fiber, meter
+  - `-og` not `-ogue`: dialog, catalog, analog
+  - `-ling` not `-lling`: modeling, signaling, labeling, canceling
+  - `-ense` not `-ence`: license, defense, offense
+  - `-ment` not `-ement`: judgment, acknowledgment
+  - Other: gray (not grey), program (not programme), fulfill (not fulfil), enroll (not enrol)
+  - When in doubt, use the US spelling — check a US dictionary.
 - Write clear and concise comments for each function.
 - Make only high confidence suggestions when reviewing code changes.
 - Never change global.json unless explicitly asked to.
 - Never change package.json or package-lock.json files unless explicitly asked to.
 - Never change NuGet.config files unless explicitly asked to.
-- Always ensure that the code compiles without warnings. **Warnings are treated as errors** — a build with warnings is a failing build.
+- Always ensure that the code compiles without warnings.
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
+- For PR descriptions, use short release-note bullets with issue references and never include Copilot "Original prompt" blocks.
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
-- **A task is not complete until the code has been built and every warning and error has been resolved.** Never hand back to the user with outstanding build warnings or errors.
+
+## Package Incompatibilities
+
+When a build or runtime failure is caused by incompatible package versions (regardless of language — NuGet, npm, etc.):
+- **Always prefer upgrading** the outdated or incompatible packages to a compatible version instead of working around the incompatibility by removing or restructuring code.
+- Never remove, replace, or restructure code just to accommodate an old package — fix the package version first.
+- Check the package's changelog or release notes to find the correct version that restores compatibility.
+- After upgrading, verify the full build and all tests pass before considering the fix complete.
 
 ## Development Workflow
 
-- After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors **and warnings** as they appear — never accumulate technical debt.
-- Before marking any task done, run a final build (`dotnet build` for C#, `yarn compile` for TypeScript) and confirm it exits with zero errors and zero warnings. If there are warnings or errors, fix them before considering the task complete.
+- After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
 
 ## Detailed Guides
 
 These guides contain the full rules, examples, and rationale for each topic. The sections above are the global defaults; the guides go deeper into each area:
+   - [Code Quality](./instructions/code-quality.instructions.md)
+   - [Code Quality — C#](./instructions/code-quality.csharp.instructions.md)
+   - [Code Quality — TypeScript](./instructions/code-quality.typescript.instructions.md)
    - [C# Conventions](./instructions/csharp.instructions.md)
    - [How to Write Specs](./instructions/specs.instructions.md)
    - [How to Write C# Specs](./instructions/specs.csharp.instructions.md)
@@ -49,7 +68,6 @@ These guides contain the full rules, examples, and rationale for each topic. The
    - [Entity Framework Core Specs](./instructions/efcore.specs.instructions.md)
    - [Concepts (ConceptAs)](./instructions/concepts.instructions.md)
    - [Documentation](./instructions/documentation.instructions.md)
-   - [Git Commits](./instructions/git-commits.instructions.md)
    - [Pull Requests](./instructions/pull-requests.instructions.md)
    - [Vertical Slices](./instructions/vertical-slices.instructions.md)
    - [TypeScript Conventions](./instructions/typescript.instructions.md)

@@ -15,10 +15,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReadmeFile Include="NJsonSchema" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,6 +29,11 @@
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
     </ItemGroup>
+
+    <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' ">
+        <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
+        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+    </Target>
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />
@@ -51,7 +53,6 @@
         <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="JsonCons.JmesPath" />
-        <PackageReference Include="NJsonSchema" />
         <PackageReference Include="OpenTelemetry" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />

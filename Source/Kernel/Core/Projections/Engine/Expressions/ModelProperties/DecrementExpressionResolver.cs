@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 
@@ -17,15 +16,14 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class DecrementExpressionResolver(ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    static readonly Regex _regularExpression = IncrementRegEx();
     readonly ITypeFormats _typeFormats = typeFormats;
 
+    [GeneratedRegex($"\\{WellKnownExpressions.Decrement}", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex IncrementRegEx { get; }
+
     /// <inheritdoc/>
-    public bool CanResolve(PropertyPath targetProperty, string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(PropertyPath targetProperty, string expression) => IncrementRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression) => PropertyMappers.Decrement(_typeFormats, targetProperty, targetPropertySchema);
-
-    [GeneratedRegex($"\\{WellKnownExpressions.Decrement}", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex IncrementRegEx();
 }

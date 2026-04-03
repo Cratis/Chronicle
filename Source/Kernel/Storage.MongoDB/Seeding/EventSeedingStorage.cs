@@ -36,7 +36,7 @@ public class EventSeedingStorage : IEventSeedingStorage
     {
         var filter = CreateFilter();
         using var cursor = await _collection.FindAsync(filter).ConfigureAwait(false);
-        return cursor.FirstOrDefault();
+        return await cursor.FirstOrDefaultAsync();
     }
 
     /// <inheritdoc/>

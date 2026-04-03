@@ -4,7 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.EventTypes;
 
@@ -13,12 +13,6 @@ namespace Cratis.Chronicle.Storage.EventTypes;
 /// </summary>
 public interface IEventTypesStorage
 {
-    /// <summary>
-    /// Populate the event types with existing schemas.
-    /// </summary>
-    /// <returns>Async task.</returns>
-    Task Populate();
-
     /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>

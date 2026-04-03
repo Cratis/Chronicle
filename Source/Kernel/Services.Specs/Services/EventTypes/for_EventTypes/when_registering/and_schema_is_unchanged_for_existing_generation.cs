@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Services.Events.for_EventTypes.when_registering;
 

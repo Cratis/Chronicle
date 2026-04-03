@@ -11,7 +11,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Strings;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 

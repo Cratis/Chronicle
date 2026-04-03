@@ -12,18 +12,16 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 /// </summary>
 public partial class ValueExpressionResolver : IEventValueProviderExpressionResolver
 {
-    static readonly Regex _regularExpression = ValueRegEx();
+    [GeneratedRegex("\\$value\\((?<value>[\\w ._/:\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex ValueRegEx { get; }
 
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(string expression) => ValueRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public ValueProvider<AppendedEvent> Resolve(string expression)
     {
-        var match = _regularExpression.Match(expression);
+        var match = ValueRegEx.Match(expression);
         return EventValueProviders.Value(match.Groups["value"].Value);
     }
-
-    [GeneratedRegex("\\$value\\((?<value>[\\w ._/:\\*\\+\\-]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ValueRegEx();
 }

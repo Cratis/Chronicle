@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Contracts.Events;
-using NJsonSchema;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Events;
 

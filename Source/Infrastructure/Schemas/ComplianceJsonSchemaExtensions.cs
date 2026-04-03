@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using NJsonSchema;
+using System.Text.Json.Nodes;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -23,32 +23,24 @@ public static class ComplianceJsonSchemaExtensions
     {
         lock (schema)
         {
-            if ((schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false) &&
-                schema.ExtensionData[ComplianceKey] is object[] complianceObjects)
-            {
-                var metadata = new List<ComplianceSchemaMetadata>();
-                foreach (var complianceObject in complianceObjects)
-                {
-                    if (complianceObject is Dictionary<string, object> properties)
-                    {
-                        var metadataType = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.metadataType));
-                        var details = properties.FirstOrDefault(kvp => kvp.Key == nameof(ComplianceSchemaMetadata.details));
-                        metadata.Add(new ComplianceSchemaMetadata(Guid.Parse(metadataType.Value.ToString()!), details.Value.ToString()!));
-                    }
-                }
+            ConvertComplianceIfNeeded(schema);
 
-                schema.ExtensionData[ComplianceKey] = metadata;
-            }
-
-            if (schema.Properties != default)
+            if (schema.Properties.Count > 0)
             {
                 foreach (var property in schema.Properties)
                 {
-                    property.Value.EnsureComplianceMetadata();
+                    ConvertComplianceIfNeeded(property.Value);
                 }
             }
         }
     }
+
+    /// <summary>
+    /// Ensure the compliance metadata is correct with correct types.
+    /// </summary>
+    /// <param name="property"><see cref="JsonSchemaProperty"/> to ensure.</param>
+    public static void EnsureComplianceMetadata(this JsonSchemaProperty property) =>
+        EnsureComplianceMetadata((JsonSchema)property);
 
     /// <summary>
     /// Get compliance metadata from schema. This is not recursive.
@@ -59,15 +51,28 @@ public static class ComplianceJsonSchemaExtensions
     {
         lock (schema)
         {
-            if ((schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false) &&
-                schema.ExtensionData[ComplianceKey] is IEnumerable<ComplianceSchemaMetadata> allMetadata)
-            {
-                return allMetadata;
-            }
+            if (schema.ExtensionData is null) return [];
+            if (!schema.ExtensionData.TryGetValue(ComplianceKey, out var value) || value is null) return [];
+
+            // Already typed
+            if (value is IEnumerable<ComplianceSchemaMetadata> typedMetadata)
+                return typedMetadata;
+
+            // Raw from JSON deserialization - JsonArray
+            if (value is JsonArray arr)
+                return ParseFromJsonArray(arr);
 
             return [];
         }
     }
+
+    /// <summary>
+    /// Get compliance metadata from property. This is not recursive.
+    /// </summary>
+    /// <param name="property"><see cref="JsonSchemaProperty"/> to get from.</param>
+    /// <returns>Collection of <see cref="ComplianceSchemaMetadata"/>.</returns>
+    public static IEnumerable<ComplianceSchemaMetadata> GetComplianceMetadata(this JsonSchemaProperty property) =>
+        GetComplianceMetadata((JsonSchema)property);
 
     /// <summary>
     /// Check recursively if the schema has compliance metadata.
@@ -78,7 +83,7 @@ public static class ComplianceJsonSchemaExtensions
     {
         var hasMetadata = schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
 
-        if (!hasMetadata && schema.Properties != default)
+        if (!hasMetadata && schema.Properties.Count > 0)
         {
             foreach (var property in schema.GetFlattenedProperties())
             {
@@ -88,5 +93,42 @@ public static class ComplianceJsonSchemaExtensions
         }
 
         return hasMetadata;
+    }
+
+    /// <summary>
+    /// Check if the property has compliance metadata.
+    /// </summary>
+    /// <param name="property"><see cref="JsonSchemaProperty"/> to check.</param>
+    /// <returns>True if it has, false if not.</returns>
+    public static bool HasComplianceMetadata(this JsonSchemaProperty property) =>
+        HasComplianceMetadata((JsonSchema)property);
+
+    static void ConvertComplianceIfNeeded(JsonSchema schema)
+    {
+        if (schema.ExtensionData is null) return;
+        if (!schema.ExtensionData.TryGetValue(ComplianceKey, out var value) || value is null) return;
+
+        // If it's already a typed list, nothing to do
+        if (value is IEnumerable<ComplianceSchemaMetadata>) return;
+
+        // Convert from JsonArray
+        if (value is JsonArray arr)
+        {
+            schema.ExtensionData[ComplianceKey] = ParseFromJsonArray(arr);
+        }
+    }
+
+    static List<ComplianceSchemaMetadata> ParseFromJsonArray(JsonArray arr)
+    {
+        return arr
+            .OfType<JsonObject>()
+            .Select(obj => new
+            {
+                MetadataTypeStr = obj[nameof(ComplianceSchemaMetadata.metadataType)]?.GetValue<string>(),
+                Details = obj[nameof(ComplianceSchemaMetadata.details)]?.GetValue<string>()
+            })
+            .Where(x => x.MetadataTypeStr is not null && x.Details is not null)
+            .Select(x => new ComplianceSchemaMetadata(Guid.Parse(x.MetadataTypeStr!), x.Details!))
+            .ToList();
     }
 }

@@ -285,7 +285,8 @@
                 "actions": {
                     "appendEvent": "Append Event",
                     "redact": "Redact",
-                    "revise": "Revise"
+                    "revise": "Revise",
+                    "export": "Export"
                 },
                 "columns": {
                     "sequenceNumber": "Sequence number",
@@ -340,6 +341,7 @@
             "observers": {
                 "title": "Observers",
                 "empty": "No observers found",
+                "search": "Search observers...",
                 "actions": {
                     "replay": "Replay"
                 },
@@ -357,6 +359,13 @@
                     "projection": "Projection",
                     "reducer": "Reducer",
                     "external": "External"
+                },
+                "sequenceTypes": {
+                    "eventLog": "Event log",
+                    "system": "System",
+                    "outbox": "Outbox",
+                    "inbox": "Inbox",
+                    "custom": "Custom"
                 },
                 "owners": {
                     "none": "None",

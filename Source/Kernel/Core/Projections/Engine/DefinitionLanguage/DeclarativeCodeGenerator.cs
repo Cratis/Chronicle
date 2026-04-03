@@ -70,6 +70,19 @@ public class DeclarativeCodeGenerator
             return $"ToEventContextProperty(c => c.{property})";
         }
 
+        // Constant values use ToValue
+        if (expression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && expression.EndsWith(')'))
+        {
+            var value = expression[(WellKnownExpressions.Value.Length + 1)..^1];
+
+            if (value == "null") return "ToValue(null)";
+            if (bool.TryParse(value, out _)) return $"ToValue({value.ToLowerInvariant()})";
+            if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _)) return $"ToValue({value})";
+            if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)) return $"ToValue({value})";
+
+            return $"ToValue(\"{value}\")";
+        }
+
         return $"To({ConvertExpression(expression)})";
     }
 

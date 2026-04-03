@@ -18,7 +18,24 @@ public class subscription_states_after_subscribing(ChronicleInProcessFixture chr
             await EventStore.Subscriptions.Subscribe(id, sourceEventStore, configure);
         }
 
-        var subscriptionsReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor");
+        // The EventStoreSubscriptionsReactor is a kernel-side system reactor registered asynchronously
+        // via ReactorsReactor processing EventStoreAdded. Wait until it is available.
+        IReactorHandler? subscriptionsReactor = null;
+        var deadline = DateTimeOffset.UtcNow.Add(TimeSpanFactory.FromSeconds(60));
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            try
+            {
+                subscriptionsReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor");
+                break;
+            }
+            catch (UnknownReactorId)
+            {
+                await Task.Delay(100);
+            }
+        }
+
+        subscriptionsReactor.ShouldNotBeNull();
         var systemStorage = GetSystemEventLogStorage();
         var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
         await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);

@@ -6,10 +6,10 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
 using MongoDB.Driver;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStorage;
 

@@ -5,8 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
-using NJsonSchema;
-using NJsonSchema.Generation;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
@@ -56,14 +55,7 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
     static ReadModelDefinition CreateReadModelDefinition<T>()
         where T : class
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-            }
-        };
-        var schema = JsonSchema.FromType<T>(settings);
+        var schema = JsonSchema.FromType<T>();
         var name = typeof(T).Name;
 
         return new ReadModelDefinition(
@@ -86,16 +78,9 @@ public abstract class a_language_service_with_schemas<TReadModel> : Specificatio
 
     static IEnumerable<EventTypeSchema> CreateEventTypeSchemas(IEnumerable<Type> eventTypes)
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings
-        {
-            SerializerOptions = new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-            }
-        };
         foreach (var eventType in eventTypes)
         {
-            var schema = JsonSchema.FromType(eventType, settings);
+            var schema = JsonSchema.FromType(eventType);
             yield return new EventTypeSchema(
                 (EventType)eventType.Name,
                 EventTypeOwner.Client,

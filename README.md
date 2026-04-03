@@ -290,10 +290,10 @@ Full documentation is available at **[https://cratis.io](https://cratis.io)**.
 
 | Section | Description |
 |---|---|
-| [Get Started](https://cratis.io/get-started) | Quick-start guides for Console, Worker Service, and ASP.NET Core |
-| [Concepts](https://cratis.io/concepts) | Events, projections, reactors, reducers, constraints, and more |
-| [Hosting](https://cratis.io/hosting) | Production and development deployment options |
-| [Configuration](https://cratis.io/configuration) | Client and server configuration reference |
+| [Get Started](https://cratis.io/docs/Guides/index.html) | Quick-start guides for Console, Worker Service, and ASP.NET Core |
+| [Concepts](https://cratis.io/docs/Chronicle/concepts) | Events, projections, reactors, reducers, constraints, and more |
+| [Hosting](https://cratis.io/docs/Chronicle/hosting) | Production and development deployment options |
+| [Configuration](https://cratis.io/docs/Chronicle/configuration) | Client and server configuration reference |
 | [Contributing](./Documentation/contributing/index.md) | How to build and contribute to Chronicle |
 
 ---

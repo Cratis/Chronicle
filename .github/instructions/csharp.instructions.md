@@ -26,6 +26,22 @@ These rules exist so that every file in the codebase reads the same way. When fo
 - Use `nameof` instead of string literals — it survives refactoring.
 - Place private class declarations at the bottom of the file — public API first, implementation details last.
 
+## Language — American English Only
+
+All identifiers, comments, XML docs, and string literals must use **American English** spelling. This applies to class names, method names, properties, parameters, variables, namespaces, and documentation. Common mistakes to avoid:
+
+| Wrong (UK) | Correct (US) |
+|---|---|
+| Initialise, Serialise, Normalise | Initialize, Serialize, Normalize |
+| Behaviour, Colour, Favour, Honour | Behavior, Color, Favor, Honor |
+| Organisation, Authorisation | Organization, Authorization |
+| Centre, Fibre | Center, Fiber |
+| Modelling, Signalling, Cancelling | Modeling, Signaling, Canceling |
+| Dialogue, Catalogue | Dialog, Catalog |
+| Licence, Defence | License, Defense |
+| Judgement, Acknowledgement | Judgment, Acknowledgment |
+| Grey | Gray |
+
 ## Naming
 
 - PascalCase for type names, method names, and public members.

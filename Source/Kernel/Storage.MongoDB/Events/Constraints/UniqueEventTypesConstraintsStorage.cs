@@ -24,7 +24,7 @@ public class UniqueEventTypesConstraintsStorage(IEventStoreNamespaceDatabase dat
         filter &= Builders<Event>.Filter.Eq(_ => _.EventSourceId, eventSourceId);
 
         using var result = await _collection.FindAsync(filter);
-        var existing = result.FirstOrDefault();
+        var existing = await result.FirstOrDefaultAsync();
         if (existing is not null)
         {
             return (false, existing.SequenceNumber);

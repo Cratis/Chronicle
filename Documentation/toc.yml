@@ -32,6 +32,8 @@
   href: reducers/toc.yml
 - name: Code Analysis
   href: code-analysis/toc.yml
+- name: Testing
+  href: testing/toc.yml
 - name: Hosting
   href: hosting/toc.yml
 - name: Contributing

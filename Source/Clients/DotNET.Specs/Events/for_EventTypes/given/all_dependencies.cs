@@ -5,7 +5,6 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Events.for_EventTypes.given;
 

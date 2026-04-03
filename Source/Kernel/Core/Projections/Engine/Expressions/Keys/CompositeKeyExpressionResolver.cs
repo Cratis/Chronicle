@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 
@@ -20,15 +19,16 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 /// <param name="keyResolvers"><see cref="IKeyResolvers" /> for resolving the <see cref="Key"/>.</param>
 public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressionResolvers resolvers, IKeyResolvers keyResolvers) : IKeyExpressionResolver
 {
-    static readonly Regex _regularExpression = CompositeKeyRegEx();
+    [GeneratedRegex("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    static partial Regex CompositeKeyRegEx { get; }
 
     /// <inheritdoc/>
-    public bool CanResolve(string expression) => _regularExpression.Match(expression).Success;
+    public bool CanResolve(string expression) => CompositeKeyRegEx.Match(expression).Success;
 
     /// <inheritdoc/>
     public KeyResolver Resolve(IProjection projection, string expression, PropertyPath identifiedByProperty)
     {
-        var match = _regularExpression.Match(expression);
+        var match = CompositeKeyRegEx.Match(expression);
         var rawExpressions = match.Groups["expressions"].Value;
         var expressions = rawExpressions.Split(',').Select(_ => _.Trim()).ToArray();
 
@@ -61,7 +61,4 @@ public partial class CompositeKeyExpressionResolver(IEventValueProviderExpressio
 
         return keyResolvers.Composite(propertiesWithKeyValueProviders);
     }
-
-    [GeneratedRegex("\\$composite\\((?<expressions>[\\w=$\\({\\)., ]*)\\)", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex CompositeKeyRegEx();
 }

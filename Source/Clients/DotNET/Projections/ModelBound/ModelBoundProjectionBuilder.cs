@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
@@ -90,7 +91,64 @@ internal class ModelBoundProjectionBuilder(
         var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
         definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
 
+        if (fromEventSequenceAttr is null)
+        {
+            definition.EventSequenceId = InferEventSequenceId(modelType, definition);
+        }
+
         return definition;
+    }
+
+    static string ConvertValueToInvariantString(object value)
+    {
+        var actualValue = value;
+
+        if (actualValue.GetType().IsEnum)
+        {
+            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
+            if (underlyingType == typeof(int))
+            {
+                actualValue = Convert.ChangeType(actualValue, underlyingType);
+            }
+            else
+            {
+                return actualValue.ToString()!;
+            }
+        }
+
+        return actualValue switch
+        {
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => actualValue.ToString()!
+        };
+    }
+
+    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition)
+    {
+        var eventStores = definition.From.Keys
+            .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
+            .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
+            .Select(t => t.GetCustomAttribute<EventStoreAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.EventStore)
+            .Distinct()
+            .ToList();
+
+        if (eventStores.Count > 1)
+        {
+            throw new MultipleEventStoresDefined(modelType, eventStores);
+        }
+
+        if (eventStores.Count == 1)
+        {
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
+        }
+
+        return EventSequenceId.Log;
     }
 
     EventType GetOrCreateEventType(Type eventType)
@@ -273,6 +331,18 @@ internal class ModelBoundProjectionBuilder(
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
+        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
+        {
+            allEventTypesReferencedByModel.Add(eventType);
+            var valueProperty = attr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+            var value = valueProperty?.GetValue(attr);
+            if (value is not null)
+            {
+                var invariantValue = ConvertValueToInvariantString(value);
+                targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
+        }
+
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
             targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
@@ -391,6 +461,18 @@ internal class ModelBoundProjectionBuilder(
             var propertyToValidate = contextPropertyName ?? property.Name;
             PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+        }
+
+        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<SetValueAttribute<object>>())
+        {
+            eventTypesReferencedByMember.Add(eventType);
+            var valueProperty = attr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+            var value = valueProperty?.GetValue(attr);
+            if (value is not null)
+            {
+                var invariantValue = ConvertValueToInvariantString(value);
+                targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())

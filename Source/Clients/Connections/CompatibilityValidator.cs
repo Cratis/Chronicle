@@ -87,12 +87,6 @@ internal static partial class CompatibilityValidator
         return string.Join('\n', schemas);
     }
 
-    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ServicePattern();
-
-    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex RpcPattern();
-
     static Dictionary<string, Dictionary<string, string>> ParseSchemaToServices(string schema)
     {
         var services = new Dictionary<string, Dictionary<string, string>>();
@@ -144,4 +138,12 @@ internal static partial class CompatibilityValidator
 
         return services;
     }
+
+#pragma warning disable MA0190
+    [GeneratedRegex(@"^\s*service\s+(?<name>\w+)\s*\{?", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ServicePattern();
+
+    [GeneratedRegex(@"^\s*rpc\s+(?<name>\w+)\s*\(", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcPattern();
+#pragma warning restore MA0190
 }

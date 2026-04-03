@@ -109,6 +109,21 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
+    /// Adds a set value mapping (constant) to the From definition for a given event type.
+    /// </summary>
+    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
+    /// <param name="getOrCreateEventType">Function to get or create a cached EventType instance.</param>
+    /// <param name="eventType">The event type to map from.</param>
+    /// <param name="propertyName">The property name on the projection model.</param>
+    /// <param name="invariantValue">The constant value as an invariant string.</param>
+    internal static void AddSetValueMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, Type eventType, string propertyName, string invariantValue)
+    {
+        var eventTypeId = getOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.Value}({invariantValue})";
+    }
+
+    /// <summary>
     /// Adds a context property mapping to the From definition for a given event type.
     /// </summary>
     /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>

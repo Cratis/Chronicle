@@ -9,5 +9,6 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Mono.Cecil" />
+    <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>

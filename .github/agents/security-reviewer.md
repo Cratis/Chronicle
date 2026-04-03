@@ -1,4 +1,3 @@
-````chatagent
 ---
 name: Security Reviewer
 description: >
@@ -109,5 +108,3 @@ End with a summary table:
 | Dependencies | ✅ / ⚠️ / ❌ |
 | Event Sourcing | ✅ / ⚠️ / ❌ |
 | Frontend | ✅ / ⚠️ / ❌ |
-
-````
