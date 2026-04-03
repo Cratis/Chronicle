@@ -28,7 +28,7 @@ export interface ProjectionEditorProps {
     onValidationChange?: (hasErrors: boolean) => void;
     readModels?: ReadModelDefinition[];
     readModelSchemas?: JsonSchema[];
-    eventSchemas?: JsonSchema[],
+    eventSchemas?: JsonSchema[] | Record<string, JsonSchema>,
     errors?: ProjectionDeclarationSyntaxError[];
     theme?: string;
     eventStore?: string;

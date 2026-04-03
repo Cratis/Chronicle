@@ -101,7 +101,15 @@ export const Projections = () => {
 
     const [readModels, refreshReadModels] = AllReadModelDefinitions.use({ eventStore: params.eventStore! });
     const [eventTypes] = AllEventTypesWithSchemas.use({ eventStore: params.eventStore! });
-    const eventSchemas = eventTypes.data?.map(eventType => JSON.parse(eventType.schema) as JsonSchema);
+    const eventSchemas = useMemo(() => {
+        if (!eventTypes.data) return undefined;
+        const out: Record<string, JsonSchema> = {};
+        for (const eventType of eventTypes.data) {
+            const schema = JSON.parse(eventType.schema) as JsonSchema;
+            out[schema.title || eventType.type.id] = schema;
+        }
+        return out;
+    }, [eventTypes.data]);
     const [readModelInstances, setReadModelInstances] = useState<ReadModelInstance[]>([]);
     const [syntaxErrors, setSyntaxErrors] = useState<ProjectionDeclarationSyntaxError[]>([]);
 
