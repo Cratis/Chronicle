@@ -48,7 +48,7 @@ public class Storage(
     {
         var collection = GetCollection();
         using var result = await collection.FindAsync(_ => true);
-        return result.ToList().Select(_ => _.Name);
+        return (await result.ToListAsync()).Select(_ => _.Name);
     }
 
     /// <inheritdoc/>

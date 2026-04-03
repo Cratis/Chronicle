@@ -29,7 +29,15 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
         "Cratis.Chronicle.Projections.ModelBound.RemovedWithJoinAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.JoinAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.ChildrenFromAttribute`1",
-        "Cratis.Chronicle.Projections.ModelBound.FromEveryAttribute`1"
+        "Cratis.Chronicle.Projections.ModelBound.FromEveryAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.SetFromAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.SetFromContextAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.SetValueAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.AddFromAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.SubtractFromAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.IncrementAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.DecrementAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.CountAttribute`1"
     ];
 
     /// <inheritdoc/>

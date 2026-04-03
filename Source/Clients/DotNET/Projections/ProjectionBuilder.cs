@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
@@ -38,6 +39,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
+    protected readonly List<string> _observedEventStores = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected AutoMap _autoMap = autoMap;
@@ -94,6 +96,9 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         {
             _fromDefinitions[eventTypesInProjection[0].ToContract()] = fromDefinition;
         }
+
+        CollectEventStore(type);
+
         return (this as TBuilder)!;
     }
 
@@ -170,5 +175,14 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         builderCallback(builder);
         _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;
+    }
+
+    void CollectEventStore(Type eventType)
+    {
+        var eventStoreAttribute = eventType.GetCustomAttribute<EventStoreAttribute>();
+        if (eventStoreAttribute is not null && !_observedEventStores.Contains(eventStoreAttribute.EventStore))
+        {
+            _observedEventStores.Add(eventStoreAttribute.EventStore);
+        }
     }
 }

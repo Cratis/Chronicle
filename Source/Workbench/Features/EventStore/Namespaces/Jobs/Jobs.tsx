@@ -11,6 +11,7 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { JobsViewModel } from './JobsViewModel';
+import { Page } from 'Components/Common/Page';
 
 const jobStatus = (job: Job) => {
     switch (job.status) {
@@ -52,6 +53,7 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
     };
 
     return (
+        <Page title={strings.eventStore.namespaces.jobs.title}>
         <DataPage
             title={strings.eventStore.namespaces.jobs.title}
             query={AllJobs}
@@ -93,5 +95,6 @@ export const Jobs = withViewModel(JobsViewModel, ({ viewModel }) => {
                     body={progress} />
             </DataPage.Columns>
         </DataPage>
+        </Page>
     );
 });

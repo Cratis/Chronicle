@@ -24,7 +24,7 @@ public class ReducerDefinitionsStorage(
     public async Task<IEnumerable<Concepts.Observation.Reducers.ReducerDefinition>> GetAll()
     {
         using var result = await Collection.FindAsync(FilterDefinition<ReducerDefinition>.Empty);
-        var definitions = result.ToList();
+        var definitions = await result.ToListAsync();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
 
@@ -36,7 +36,7 @@ public class ReducerDefinitionsStorage(
     public async Task<Concepts.Observation.Reducers.ReducerDefinition> Get(ReducerId id)
     {
         using var result = await Collection.FindAsync(definition => definition.Id == id);
-        return result.Single().ToKernel();
+        return (await result.SingleAsync()).ToKernel();
     }
 
     /// <inheritdoc/>

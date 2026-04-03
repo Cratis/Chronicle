@@ -24,13 +24,13 @@ public class ReplayContextsStorage(IEventStoreNamespaceDatabase database) : IRep
     }
 
     /// <inheritdoc/>
-    public Task<Result<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel)
+    public async Task<Result<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel)
     {
         var filter = Builders<ReplayContext>.Filter.Eq(_ => _.ReadModel, readModel);
-        var context = _collection.Find(filter).FirstOrDefault();
+        var context = await _collection.Find(filter).FirstOrDefaultAsync();
         return context == null ?
-            Task.FromResult(Result.Failed<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>(GetContextError.NotFound)) :
-            Task.FromResult(Result.Success<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>(context.ToChronicle()));
+            Result.Failed<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>(GetContextError.NotFound) :
+            Result.Success<Chronicle.Storage.ReadModels.ReplayContext, GetContextError>(context.ToChronicle());
     }
 
     /// <inheritdoc/>

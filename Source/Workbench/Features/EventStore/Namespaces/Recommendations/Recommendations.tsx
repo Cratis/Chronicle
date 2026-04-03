@@ -13,6 +13,7 @@ import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 
 const defaultFilters: DataTableFilterMeta = {
@@ -47,6 +48,7 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
     };
 
     return (
+        <Page title={strings.eventStore.namespaces.recommendations.title}>
         <DataPage
             title={strings.eventStore.namespaces.recommendations.title}
             query={AllRecommendations}
@@ -75,5 +77,6 @@ export const Recommendations = withViewModel(RecommendationsViewModel, ({ viewMo
                 <Column field='description' header={strings.eventStore.namespaces.recommendations.columns.description} />
                 <Column field='occurred' header={strings.eventStore.namespaces.recommendations.columns.occurred} body={occurred} />
             </DataPage.Columns>
-        </DataPage>);
+        </DataPage>
+        </Page>);
 });
