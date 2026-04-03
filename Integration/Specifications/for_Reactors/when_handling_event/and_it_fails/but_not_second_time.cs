@@ -6,6 +6,8 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.Specifications.for_Reactors.when_handling_event.and_it_fails.but_not_second_time.context;
 
+using Cratis.Chronicle.Jobs;
+
 namespace Cratis.Chronicle.Integration.Specifications.for_Reactors.when_handling_event.and_it_fails;
 
 [Collection(ChronicleCollection.Name)]
