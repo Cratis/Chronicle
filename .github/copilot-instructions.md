@@ -40,6 +40,14 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 
+## Package Incompatibilities
+
+When a build or runtime failure is caused by incompatible package versions (regardless of language — NuGet, npm, etc.):
+- **Always prefer upgrading** the outdated or incompatible packages to a compatible version instead of working around the incompatibility by removing or restructuring code.
+- Never remove, replace, or restructure code just to accommodate an old package — fix the package version first.
+- Check the package's changelog or release notes to find the correct version that restores compatibility.
+- After upgrading, verify the full build and all tests pass before considering the fix complete.
+
 ## Development Workflow
 
 - After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
