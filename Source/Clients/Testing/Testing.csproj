@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
         <IsTestProject>false</IsTestProject>
