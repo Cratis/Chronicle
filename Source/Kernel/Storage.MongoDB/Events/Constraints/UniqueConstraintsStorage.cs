@@ -28,7 +28,7 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
         }
 
         using var result = await collection.FindAsync(_ => _.Value == value, options);
-        var existing = result.FirstOrDefault();
+        var existing = await result.FirstOrDefaultAsync();
         if (existing is not null)
         {
             if (existing.EventSourceId == eventSourceId) return (true, existing.SequenceNumber);

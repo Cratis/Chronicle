@@ -42,7 +42,7 @@ public class SinkCollections(
     {
         var rewindName = ReplayCollectionName;
 
-        var collectionNames = (await database.ListCollectionNamesAsync()).ToList();
+        var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
         if (collectionNames.Contains(readModel.ContainerName))
         {
             await database.RenameCollectionAsync(readModel.ContainerName, context.RevertContainerName);

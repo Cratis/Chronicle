@@ -25,7 +25,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
     {
         var filter = GetIdFilter(recommendationId);
         using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-        return cursor.SingleOrDefault();
+        return await cursor.SingleOrDefaultAsync();
     }
 
     /// <inheritdoc/>
@@ -43,7 +43,7 @@ public class RecommendationStorage(IEventStoreNamespaceDatabase database) : IRec
     public async Task<IImmutableList<RecommendationState>> GetAll()
     {
         using var cursor = await Collection.FindAsync(_ => true).ConfigureAwait(false);
-        var deserialized = cursor.ToList();
+        var deserialized = await cursor.ToListAsync();
         return deserialized.ToImmutableList();
     }
 
