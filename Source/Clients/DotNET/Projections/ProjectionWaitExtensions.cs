@@ -23,7 +23,6 @@ public static class ProjectionWaitExtensions
     /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="TimeoutException">Thrown when the projection does not reach the expected running state within the timeout.</exception>
     public static async Task WaitForState(this IProjectionHandler projection, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -35,11 +34,6 @@ public static class ProjectionWaitExtensions
             var state = await projection.GetState();
             currentRunningState = state.RunningState;
             await Task.Delay(DefaultDelay, cts.Token);
-        }
-
-        if (currentRunningState != runningState)
-        {
-            throw new TimeoutException($"Projection did not reach running state '{runningState}' within {timeout}.");
         }
     }
 
@@ -80,7 +74,6 @@ public static class ProjectionWaitExtensions
     /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="TimeoutException">Thrown when the projection does not reach the expected event sequence number within the timeout.</exception>
     public static async Task WaitTillReachesEventSequenceNumber(this IProjectionHandler projection, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -91,11 +84,6 @@ public static class ProjectionWaitExtensions
             state = await projection.GetState();
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        if (state.LastHandledEventSequenceNumber != eventSequenceNumber)
-        {
-            throw new TimeoutException($"Projection did not reach event sequence number '{eventSequenceNumber}' within {timeout}.");
-        }
     }
 
     /// <summary>
@@ -104,7 +92,6 @@ public static class ProjectionWaitExtensions
     /// <param name="projection">Projection to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
-    /// <exception cref="TimeoutException">Thrown when the projection does not have failed partitions within the timeout.</exception>
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IProjectionHandler projection, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -115,12 +102,6 @@ public static class ProjectionWaitExtensions
             failedPartitions = await projection.GetFailedPartitions();
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        if (!failedPartitions.Any())
-        {
-            throw new TimeoutException($"Projection did not have failed partitions within {timeout}.");
-        }
-
         return failedPartitions;
     }
 
