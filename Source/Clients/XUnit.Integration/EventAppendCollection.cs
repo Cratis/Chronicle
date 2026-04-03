@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Linq;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -26,13 +27,10 @@ public class EventAppendCollection : IEventAppendCollection, IObserveEventAppend
     /// <param name="eventSequences">The event sequences to observe.</param>
     public EventAppendCollection(params IEventSequence[] eventSequences)
     {
-        foreach (var seq in eventSequences)
+        foreach (var observable in eventSequences.OfType<IObservableEventSequence>())
         {
-            if (seq is IObservableEventSequence observable)
-            {
-                observable.Subscribe(this);
-                _subscribed.Add(observable);
-            }
+            observable.Subscribe(this);
+            _subscribed.Add(observable);
         }
     }
 
