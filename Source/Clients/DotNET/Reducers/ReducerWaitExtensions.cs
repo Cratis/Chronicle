@@ -23,6 +23,7 @@ public static class ReducerWaitExtensions
     /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">Thrown when the reducer does not reach the expected running state within the timeout.</exception>
     public static async Task WaitForState(this IReducerHandler reducer, ObserverRunningState runningState, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -34,6 +35,11 @@ public static class ReducerWaitExtensions
             var state = await reducer.GetState();
             currentRunningState = state.RunningState;
             await Task.Delay(DefaultDelay, cts.Token);
+        }
+
+        if (currentRunningState != runningState)
+        {
+            throw new TimeoutException($"Reducer did not reach running state '{runningState}' within {timeout}.");
         }
     }
 
@@ -74,6 +80,7 @@ public static class ReducerWaitExtensions
     /// <param name="eventSequenceNumber">The expected <see cref="EventSequenceNumber"/> to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">Thrown when the reducer does not reach the expected event sequence number within the timeout.</exception>
     public static async Task WaitTillReachesEventSequenceNumber(this IReducerHandler reducer, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -84,6 +91,11 @@ public static class ReducerWaitExtensions
             state = await reducer.GetState();
             await Task.Delay(DefaultDelay, cts.Token);
         }
+
+        if (state.LastHandledEventSequenceNumber != eventSequenceNumber)
+        {
+            throw new TimeoutException($"Reducer did not reach event sequence number '{eventSequenceNumber}' within {timeout}.");
+        }
     }
 
     /// <summary>
@@ -92,6 +104,7 @@ public static class ReducerWaitExtensions
     /// <param name="reducer">Reducer to wait for.</param>
     /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">Thrown when the reducer does not have failed partitions within the timeout.</exception>
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IReducerHandler reducer, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
@@ -102,6 +115,12 @@ public static class ReducerWaitExtensions
             failedPartitions = await reducer.GetFailedPartitions();
             await Task.Delay(DefaultDelay, cts.Token);
         }
+
+        if (!failedPartitions.Any())
+        {
+            throw new TimeoutException($"Reducer did not have failed partitions within {timeout}.");
+        }
+
         return failedPartitions;
     }
 
