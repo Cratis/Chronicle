@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage.Security;
+using StorageApplication = Cratis.Chronicle.Storage.Security.Application;
 
 namespace Cratis.Chronicle.Security;
 
@@ -26,7 +27,7 @@ public class ApplicationsReactor(IApplicationStorage applicationStorage) : React
     /// <returns>Await Task.</returns>
     public async Task Added(ApplicationAdded @event, EventContext eventContext)
     {
-        var application = new Application
+        var application = new StorageApplication
         {
             Id = eventContext.EventSourceId,
             ClientId = @event.ClientId,

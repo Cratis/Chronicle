@@ -112,15 +112,18 @@ public class ReactorHandler(
     /// <returns>Current <see cref="ReactorState"/>.</returns>
     public async Task<ReactorState> GetState()
     {
-        var request = new Contracts.Observation.GetObserverInformationRequest
-        {
-            ObserverId = Id,
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            EventSequenceId = EventSequenceId
-        };
         var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-        var state = await servicesAccessor.Services.Observers.GetObserverInformation(request);
+        var observers = await servicesAccessor.Services.Observers.AllObservers(new Contracts.Observation.AllObserversRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace
+        });
+        var state = observers.FirstOrDefault(o => o.Id == Id.ToString() && o.EventSequenceId == EventSequenceId.ToString());
+        if (state is null)
+        {
+            return new ReactorState(Id, ObserverRunningState.Unknown, false, 0, 0);
+        }
+
         return new ReactorState(
             Id,
             state.RunningState.ToClient(),

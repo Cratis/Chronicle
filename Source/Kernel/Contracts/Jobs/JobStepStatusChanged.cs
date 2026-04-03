@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Contracts.Jobs;
 
 /// <summary>
-/// Represents a state change event.
+/// Represents a state change event for a job step.
 /// </summary>
 [ProtoContract]
 public class JobStepStatusChanged
@@ -24,12 +24,12 @@ public class JobStepStatusChanged
     /// <summary>
     /// Gets or sets any exception messages that happened during the job step - typically when it failed.
     /// </summary>
-    [ProtoMember(3)]
-    public IEnumerable<string> ExceptionMessages { get; set; }
+    [ProtoMember(3, IsRequired = true)]
+    public IList<string> ExceptionMessages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the stack trace for the exception that happened during the job step - typically when it failed.
     /// </summary>
     [ProtoMember(4)]
-    public string ExceptionStackTrace { get; set; }
+    public string ExceptionStackTrace { get; set; } = string.Empty;
 }

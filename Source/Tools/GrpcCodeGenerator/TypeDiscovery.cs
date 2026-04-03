@@ -24,9 +24,40 @@ public class TypeDiscovery(Assembly assembly)
     {
         var services = new Dictionary<string, ServiceDefinition>();
 
-        foreach (var type in assembly.GetTypes())
+        IEnumerable<Type> types;
+        try
         {
-            if (!type.IsClass || type.IsAbstract)
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // Some assemblies (e.g. Orleans grain assemblies) have types whose base-class
+            // chains cannot be fully loaded in the isolated context.  Use only the types
+            // that loaded successfully and emit a warning for each failure.
+            foreach (var loaderEx in ex.LoaderExceptions.OfType<Exception>())
+            {
+                Console.WriteLine($"  WARNING: Failed to load one or more types: {loaderEx.Message}");
+            }
+
+            types = ex.Types.OfType<Type>();
+        }
+
+        foreach (var type in types)
+        {
+            bool isClass;
+            bool isAbstract;
+            try
+            {
+                isClass = type.IsClass;
+                isAbstract = type.IsAbstract;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  WARNING: Skipping type '{type.FullName}' — could not determine class/abstract status: {ex.Message}");
+                continue;
+            }
+
+            if (!isClass || isAbstract)
             {
                 continue;
             }
@@ -34,7 +65,20 @@ public class TypeDiscovery(Assembly assembly)
             var belongsTo = GetBelongsToAttribute(type);
             if (belongsTo is null)
             {
-                if (HasCommandAttribute(type) || HasReadModelAttribute(type))
+                bool hasCommandAttr;
+                bool hasReadModelAttr;
+                try
+                {
+                    hasCommandAttr = HasCommandAttribute(type);
+                    hasReadModelAttr = HasReadModelAttribute(type);
+                }
+                catch
+                {
+                    hasCommandAttr = false;
+                    hasReadModelAttr = false;
+                }
+
+                if (hasCommandAttr || hasReadModelAttr)
                 {
                     Console.WriteLine($"  WARNING: Type '{type.FullName}' has [Command] or [ReadModel] but no [BelongsTo] attribute. Skipping.");
                 }
@@ -61,11 +105,23 @@ public class TypeDiscovery(Assembly assembly)
                     type.FullName ?? type.Name);
             }
 
-            if (HasCommandAttribute(type))
+            bool isCommand;
+            bool isReadModel;
+            try
+            {
+                isCommand = HasCommandAttribute(type);
+                isReadModel = HasReadModelAttribute(type);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (isCommand)
             {
                 serviceDefinition.Commands.Add(new CommandDefinition(type));
             }
-            else if (HasReadModelAttribute(type))
+            else if (isReadModel)
             {
                 var queryMethods = DiscoverQueryMethods(type);
                 if (queryMethods.Count > 0)
@@ -86,8 +142,21 @@ public class TypeDiscovery(Assembly assembly)
 
     static string? GetBelongsToAttribute(Type type)
     {
-        var attr = type.GetCustomAttributesData()
-            .FirstOrDefault(a => a.AttributeType.Name == BelongsToAttributeName);
+        IList<CustomAttributeData> attrs;
+        try
+        {
+            attrs = type.GetCustomAttributesData();
+        }
+        catch
+        {
+            return null;
+        }
+
+        var attr = attrs.FirstOrDefault(a =>
+        {
+            try { return a.AttributeType.Name == BelongsToAttributeName; }
+            catch { return false; }
+        });
 
         if (attr is null)
         {
@@ -109,6 +178,12 @@ public class TypeDiscovery(Assembly assembly)
             }
 
             if (method.IsSpecialName)
+            {
+                continue;
+            }
+
+            // Skip private static helpers — only public and internal (assembly) static methods define query contracts
+            if (method.IsPrivate)
             {
                 continue;
             }

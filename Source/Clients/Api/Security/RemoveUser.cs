@@ -18,7 +18,7 @@ public record RemoveUser(Guid UserId)
     /// <param name="users">The <see cref="IUsers"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IUsers users) =>
-        users.Remove(new()
+        users.RemoveUser(new()
         {
             UserId = UserId
         });
