@@ -23,7 +23,7 @@
     <ProjectReference Include="../../Source/Kernel/Server/Server.csproj" />
   </ItemGroup>
 
-  <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
+  <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true' and '$(ArtifactsPath)' == ''">
     <!-- Build the server in Debug so the DEVELOPMENT symbol is defined and dev credentials are seeded -->
     <Exec Command="dotnet build -c Debug $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj" />
     <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
