@@ -48,15 +48,33 @@ public class EventSequence(
     ICausationManager causationManager,
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider,
-    JsonSerializerOptions jsonSerializerOptions) : IEventSequence
+    JsonSerializerOptions jsonSerializerOptions) : IObservableEventSequence, IEventSequence
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
+    readonly List<IObserveEventAppended> _appendObservers = [];
+    readonly object _observerLock = new();
 
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
+
+    /// <inheritdoc/>
+    public IObservableEventSequence Subscribe(IObserveEventAppended observer)
+    {
+        lock (_observerLock)
+            _appendObservers.Add(observer);
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IObservableEventSequence Unsubscribe(IObserveEventAppended observer)
+    {
+        lock (_observerLock)
+            _appendObservers.Remove(observer);
+        return this;
+    }
 
     /// <inheritdoc/>
     public async Task<AppendResult> Append(
@@ -87,7 +105,8 @@ public class EventSequence(
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
-        var causationChain = causationManager.GetCurrentChain().ToContract();
+        var causation = causationManager.GetCurrentChain();
+        var causationChain = causation.ToContract();
         var identity = identityProvider.GetCurrent();
 
         // Merge static tags from the event type with dynamic tags
@@ -117,7 +136,9 @@ public class EventSequence(
             Occurred = occurred
         });
 
-        return ResolveViolationMessages(response.ToClient());
+        var result = ResolveViolationMessages(response.ToClient());
+        NotifyObserversOnAppend(correlationId ?? correlationIdAccessor.Current, eventSourceId, @event, causation, result);
+        return result;
     }
 
     /// <inheritdoc/>
@@ -132,7 +153,8 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default)
     {
-        var eventsToAppend = events.Select(@event =>
+        var eventsList = events.ToList();
+        var eventsToAppend = eventsList.ConvertAll(@event =>
         {
             var eventClrType = @event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
@@ -152,7 +174,7 @@ public class EventSequence(
                 Tags = allTags,
                 Occurred = occurred
             };
-        }).ToList();
+        });
 
         concurrencyScope ??= await concurrencyScopeStrategies
             .GetFor(this)
@@ -162,10 +184,11 @@ public class EventSequence(
             ? new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } }
             : new Dictionary<EventSourceId, ConcurrencyScope>();
 
-        return await AppendManyImplementation(
-            eventsToAppend,
-            correlationId ?? correlationIdAccessor.Current,
-            concurrencyScopes);
+        var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
+        var causation = causationManager.GetCurrentChain();
+        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes);
+        NotifyObserversOnAppendMany(resolvedCorrelationId, eventSourceId, eventsList, causation, result);
+        return result;
     }
 
     /// <inheritdoc/>
@@ -175,7 +198,8 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
-        var eventsToAppend = events.Select(@event =>
+        var eventsList = events.ToList();
+        var eventsToAppend = eventsList.ConvertAll(@event =>
         {
             var eventClrType = @event.Event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
@@ -195,12 +219,26 @@ public class EventSequence(
                 Tags = allTags,
                 Occurred = @event.Occurred
             };
-        }).ToList();
+        });
 
-        return await AppendManyImplementation(
-            eventsToAppend,
-            correlationId ?? correlationIdAccessor.Current,
-            concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
+        var causation = causationManager.GetCurrentChain();
+        var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
+        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
+
+        var sequenceNumbers = result.SequenceNumbers.ToList();
+        var offset = 0;
+        foreach (var group in eventsList.GroupBy(e => e.EventSourceId))
+        {
+            var groupEvents = group.Select(e => e.Event).ToList();
+            var groupSeqNums = sequenceNumbers.Skip(offset).Take(groupEvents.Count).ToList();
+            var groupResult = result.IsSuccess
+                ? AppendManyResult.Success(resolvedCorrelationId, groupSeqNums)
+                : result;
+            NotifyObserversOnAppendMany(resolvedCorrelationId, group.Key, groupEvents, causation, groupResult);
+            offset += groupEvents.Count;
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>
@@ -367,4 +405,24 @@ public class EventSequence(
     AppendResult ResolveViolationMessages(AppendResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     AppendManyResult ResolveViolationMessages(AppendManyResult result) => result with { ConstraintViolations = ResolveViolationMessages(result.ConstraintViolations) };
     ImmutableList<ConstraintViolation> ResolveViolationMessages(IEnumerable<ConstraintViolation> violations) => violations.Select(constraints.ResolveMessageFor).ToImmutableList();
+
+    void NotifyObserversOnAppend(CorrelationId correlationId, EventSourceId eventSourceId, object @event, IImmutableList<Causation> causationChain, AppendResult result)
+    {
+        IObserveEventAppended[] observers;
+        lock (_observerLock)
+            observers = [.. _appendObservers];
+
+        foreach (var observer in observers)
+            observer.OnAppend(correlationId, eventSourceId, @event, causationChain, result);
+    }
+
+    void NotifyObserversOnAppendMany(CorrelationId correlationId, EventSourceId eventSourceId, IEnumerable<object> events, IImmutableList<Causation> causationChain, AppendManyResult result)
+    {
+        IObserveEventAppended[] observers;
+        lock (_observerLock)
+            observers = [.. _appendObservers];
+
+        foreach (var observer in observers)
+            observer.OnAppendMany(correlationId, eventSourceId, events, causationChain, result);
+    }
 }

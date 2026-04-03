@@ -55,4 +55,40 @@ public record AppendManyResult : IAppendResult
         CorrelationId = correlationId,
         SequenceNumbers = sequenceNumbers.ToImmutableList()
     };
+
+    /// <summary>
+    /// Create a failed result with constraint violations.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violations">The violations.</param>
+    /// <returns>A new failed <see cref="AppendManyResult"/> instance.</returns>
+    public static AppendManyResult Failed(CorrelationId correlationId, IEnumerable<ConstraintViolation> violations) => new()
+    {
+        CorrelationId = correlationId,
+        ConstraintViolations = violations.ToImmutableList()
+    };
+
+    /// <summary>
+    /// Create a failed result with concurrency violations.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violations">The <see cref="ConcurrencyViolation"/> instances that occurred.</param>
+    /// <returns>A new failed <see cref="AppendManyResult"/> instance.</returns>
+    public static AppendManyResult Failed(CorrelationId correlationId, IEnumerable<ConcurrencyViolation> violations) => new()
+    {
+        CorrelationId = correlationId,
+        ConcurrencyViolations = violations.ToImmutableList()
+    };
+
+    /// <summary>
+    /// Create a failed result with errors.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="errors">The errors.</param>
+    /// <returns>A new failed <see cref="AppendManyResult"/> instance.</returns>
+    public static AppendManyResult Failed(CorrelationId correlationId, IEnumerable<AppendError> errors) => new()
+    {
+        CorrelationId = correlationId,
+        Errors = errors.ToImmutableList()
+    };
 }

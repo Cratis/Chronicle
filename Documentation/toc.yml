@@ -34,6 +34,8 @@
   href: code-analysis/toc.yml
 - name: Hosting
   href: hosting/toc.yml
+- name: Testing
+  href: testing/toc.yml
 - name: Contributing
   href: contributing/toc.yml
 - name: Statistics
