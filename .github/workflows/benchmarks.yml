@@ -47,14 +47,12 @@ jobs:
           name: Cratis Benchmarks
           tool: 'benchmarkdotnet'
           output-file-path: Benchmarks/results/combined.json
+          external-data-json-path: Documentation/benchmarks/benchmark-data.json
           github-token: ${{ secrets.GH_PROJECT_TOKEN }}
-          auto-push: false
-          skip-fetch-gh-pages: true
           alert-threshold: '120%'
           comment-on-alert: true
           fail-on-alert: true
           alert-comment-cc-users: '@einari'
-          benchmark-data-dir-path: 'Documentation/benchmarks'
 
       - name: Commit updated benchmark results
         run: |
