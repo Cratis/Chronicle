@@ -142,9 +142,14 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
         }
 
-        // Add compensation metadata — only applies to top-level type schema (no property context)
+        // Add title and compensation metadata — only applies to top-level type schema (no property context)
         if (context.PropertyInfo is null)
         {
+            if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
+            {
+                schemaObj["title"] = type.Name;
+            }
+
             var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
             if (compensationAttribute is not null)
             {
