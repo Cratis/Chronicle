@@ -327,6 +327,10 @@ public class ModelBoundCodeGenerator
             valueLiteral = LiteralExpression(
                 boolValue ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
         }
+        else if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var intValue))
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(intValue));
+        }
         else if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var longValue))
         {
             valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(longValue));
