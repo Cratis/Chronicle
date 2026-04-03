@@ -38,7 +38,7 @@ public static class ProjectionTypeExtensions
     {
         TypeMustImplementProjection.ThrowIfTypeDoesNotImplementProjection(type);
         var projectionAttribute = type.GetCustomAttribute<ProjectionAttribute>();
-        return projectionAttribute?.EventSequenceId.Value ?? EventSequenceId.Log;
+        return projectionAttribute?.EventSequenceId ?? EventSequenceId.Log;
     }
 
     /// <summary>

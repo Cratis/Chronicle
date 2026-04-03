@@ -24,7 +24,18 @@ public class TypeDiscovery(Assembly assembly)
     {
         var services = new Dictionary<string, ServiceDefinition>();
 
-        foreach (var type in assembly.GetTypes())
+        IEnumerable<Type> types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            Console.WriteLine("  Note: Some types could not be loaded (missing dependencies). Continuing with loadable types only.");
+            types = ex.Types.OfType<Type>();
+        }
+
+        foreach (var type in types)
         {
             if (!type.IsClass || type.IsAbstract)
             {
@@ -78,23 +89,48 @@ public class TypeDiscovery(Assembly assembly)
         return services;
     }
 
-    static bool HasCommandAttribute(Type type) =>
-        type.GetCustomAttributesData().Any(a => a.AttributeType.Name == CommandAttributeName);
+    static bool HasCommandAttribute(Type type)
+    {
+        try
+        {
+            return type.GetCustomAttributesData().Any(a => a.AttributeType.Name == CommandAttributeName);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
-    static bool HasReadModelAttribute(Type type) =>
-        type.GetCustomAttributesData().Any(a => a.AttributeType.Name == ReadModelAttributeName);
+    static bool HasReadModelAttribute(Type type)
+    {
+        try
+        {
+            return type.GetCustomAttributesData().Any(a => a.AttributeType.Name == ReadModelAttributeName);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     static string? GetBelongsToAttribute(Type type)
     {
-        var attr = type.GetCustomAttributesData()
-            .FirstOrDefault(a => a.AttributeType.Name == BelongsToAttributeName);
+        try
+        {
+            var attr = type.GetCustomAttributesData()
+                .FirstOrDefault(a => a.AttributeType.Name == BelongsToAttributeName);
 
-        if (attr is null)
+            if (attr is null)
+            {
+                return null;
+            }
+
+            return attr.ConstructorArguments.FirstOrDefault().Value as string;
+        }
+        catch (Exception)
         {
             return null;
         }
-
-        return attr.ConstructorArguments.FirstOrDefault().Value as string;
     }
 
     static List<QueryMethodDefinition> DiscoverQueryMethods(Type readModelType)

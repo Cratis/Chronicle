@@ -26,7 +26,7 @@ public class WebhookDefinitionsStorage(
     public async Task<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> GetAll()
     {
         using var result = await Collection.FindAsync(FilterDefinition<WebhookDefinition>.Empty);
-        var definitions = result.ToList();
+        var definitions = await result.ToListAsync();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
 
@@ -44,7 +44,7 @@ public class WebhookDefinitionsStorage(
     public async Task<Concepts.Observation.Webhooks.WebhookDefinition> Get(WebhookId id)
     {
         using var result = await Collection.FindAsync(definition => definition.Id == id);
-        return result.Single().ToKernel();
+        return (await result.SingleAsync()).ToKernel();
     }
 
     /// <inheritdoc/>

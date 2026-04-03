@@ -30,7 +30,10 @@ public class ChronicleClientHelper : IDisposable
 
         var options = new ChronicleOptions(
             connectionString: new ChronicleConnectionString(_fixture.ChronicleUrl),
-            connectTimeout: 30);
+            connectTimeout: 30)
+        {
+            ManagementPort = 8081
+        };
 
         _client = new ChronicleClient(options, loggerFactory: _loggerFactory);
         _eventStore = _client.GetEventStore("benchmarks").GetAwaiter().GetResult();

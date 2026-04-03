@@ -24,7 +24,7 @@ public class ReactorDefinitionsStorage(
     public async Task<IEnumerable<Concepts.Observation.Reactors.ReactorDefinition>> GetAll()
     {
         using var result = await Collection.FindAsync(FilterDefinition<ReactorDefinition>.Empty);
-        var definitions = result.ToList();
+        var definitions = await result.ToListAsync();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
 
@@ -36,7 +36,7 @@ public class ReactorDefinitionsStorage(
     public async Task<Concepts.Observation.Reactors.ReactorDefinition> Get(ReactorId id)
     {
         using var result = await Collection.FindAsync(definition => definition.Id == id);
-        return result.Single().ToKernel();
+        return (await result.SingleAsync()).ToKernel();
     }
 
     /// <inheritdoc/>

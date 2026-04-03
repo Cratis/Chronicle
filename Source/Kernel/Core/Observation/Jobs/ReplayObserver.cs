@@ -90,7 +90,12 @@ public class ReplayObserver(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replayed(EventSequenceNumber.Unavailable);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process Replayed().
+        _ = observer.Replayed(EventSequenceNumber.Unavailable);
     }
 
     /// <inheritdoc/>
@@ -112,7 +117,12 @@ public class ReplayObserver(
 
         // TODO: Do we need to do anything special if any replaying partitions failed?
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.Replayed(State.LastHandledEventSequenceNumber);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process Replayed().
+        _ = observer.Replayed(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

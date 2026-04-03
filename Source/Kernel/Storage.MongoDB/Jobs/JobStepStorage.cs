@@ -87,12 +87,12 @@ public class JobStepStorage(IEventStoreNamespaceDatabase database) : IJobStepSto
             if (ShouldBeStoredInFailedCollection(statuses) || includeAll)
             {
                 using var failedCursor = await FailedCollection.FindAsync(filter).ConfigureAwait(false);
-                failedJobSteps = failedCursor.ToList();
+                failedJobSteps = await failedCursor.ToListAsync();
             }
             if (!statuses.All(ShouldBeStoredInFailedCollection) || includeAll)
             {
                 using var cursor = await Collection.FindAsync(filter).ConfigureAwait(false);
-                jobSteps = cursor.ToList();
+                jobSteps = await cursor.ToListAsync();
             }
 
             return jobSteps.Concat(failedJobSteps).ToImmutableList();

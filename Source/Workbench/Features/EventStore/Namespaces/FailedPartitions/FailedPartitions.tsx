@@ -12,6 +12,7 @@ import { FailedPartition } from 'Api/Observation';
 import { withViewModel } from '@cratis/arc.react.mvvm';
 import { FailedPartitionsViewModel } from './FailedPartitionsViewModel';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 
 const defaultFilters: DataTableFilterMeta = {
@@ -40,6 +41,7 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
     };
 
     return (
+        <Page title={strings.eventStore.namespaces.failedPartitions.title}>
         <DataPage
             title={strings.eventStore.namespaces.failedPartitions.title}
             query={AllFailedPartitions}
@@ -65,5 +67,6 @@ export const FailedPartitions = withViewModel(FailedPartitionsViewModel, ({ view
                 <Column field='lastAttempt' header={strings.eventStore.namespaces.failedPartitions.columns.lastAttempt} sortable body={lastAttempt} />
             </DataPage.Columns>
         </DataPage>
+        </Page>
     );
 });

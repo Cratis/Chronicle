@@ -40,7 +40,7 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     {
         var aggregation = _collection.Aggregate().JoinWithFailedPartitions();
         var cursor = await aggregation.ToCursorAsync();
-        return cursor.ToList().ToKernel();
+        return (await cursor.ToListAsync()).ToKernel();
     }
 
     /// <inheritdoc/>

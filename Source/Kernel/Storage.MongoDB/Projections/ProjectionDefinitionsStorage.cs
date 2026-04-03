@@ -23,7 +23,7 @@ public class ProjectionDefinitionsStorage(
     public async Task<IEnumerable<ProjectionDefinition>> GetAll()
     {
         using var result = await Collection.FindAsync(FilterDefinition<Projection>.Empty);
-        var projections = result.ToList();
+        var projections = await result.ToListAsync();
         return projections.Select(projection => projection.Definitions.Last().Value.ToKernel()).ToArray();
     }
 
@@ -34,7 +34,7 @@ public class ProjectionDefinitionsStorage(
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
         using var result = await Collection.FindAsync(_ => _.Id == id);
-        var projection = result.Single();
+        var projection = await result.SingleAsync();
         return projection.Definitions.Last().Value.ToKernel();
     }
 

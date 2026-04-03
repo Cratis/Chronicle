@@ -2,3 +2,5 @@
   href: index.md
 - name: Event Append Collection
   href: event-append-collection.md
+- name: Read Models
+  href: read-models.md

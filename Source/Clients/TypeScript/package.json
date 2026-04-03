@@ -38,12 +38,12 @@
         "@grpc/grpc-js": "^1.12.4"
     },
     "devDependencies": {
-        "@types/node": "^22.10.5",
-        "rollup": "^4.30.1",
+        "@types/node": "^25.5.0",
+        "rollup": "^4.60.1",
         "rollup-plugin-commonjs": "^10.1.0",
         "rollup-plugin-peer-deps-external": "^2.2.4",
-        "rollup-plugin-typescript2": "^0.36.0",
-        "ts-proto": "^2.2.5",
-        "typescript": "^5.7.2"
+        "rollup-plugin-typescript2": "^0.37.0",
+        "ts-proto": "^2.11.6",
+        "typescript": "^6.0.2"
     }
 }

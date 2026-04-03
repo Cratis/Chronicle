@@ -51,7 +51,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
         .WithHost("localhost")
         .WithPort(ChroniclePort)
         .WithDevelopmentCredentials()
-        .WithTlsDisabled()
+        .WithCertificate(_certificatePath, CertificatePassword)
         .Build();
 
     /// <inheritdoc/>

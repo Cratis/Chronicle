@@ -21,7 +21,7 @@ public class EventStoreSubscriptionDefinitionsStorage(
     public async Task<IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition>> GetAll()
     {
         using var result = await Collection.FindAsync(FilterDefinition<EventStoreSubscriptionDefinition>.Empty);
-        return result.ToList().Select(definition => definition.ToKernel()).ToArray();
+        return (await result.ToListAsync()).Select(definition => definition.ToKernel()).ToArray();
     }
 
     /// <inheritdoc/>

@@ -20,7 +20,7 @@ function App() {
     const basePath = basePathElement?.content ?? '/';
 
     return (
-        <Arc development={isDevelopment} apiBasePath={basePath} basePath={basePath}>
+        <Arc development={isDevelopment} apiBasePath={basePath} basePath={basePath} queryDirectMode={true}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>

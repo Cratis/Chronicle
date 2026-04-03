@@ -7,6 +7,7 @@ import { DataPage } from '@cratis/components/DataPage';
 import { Column } from 'primereact/column';
 import { useParams } from 'react-router-dom';
 import { AllIdentities, AllIdentitiesParameters } from 'Api/Identities';
+import { Page } from 'Components/Common/Page';
 
 export const Identities = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -16,6 +17,7 @@ export const Identities = () => {
     };
 
     return (
+        <Page title={strings.eventStore.namespaces.identities.title}>
         <DataPage
             title={strings.eventStore.namespaces.identities.title}
             query={AllIdentities}
@@ -28,5 +30,6 @@ export const Identities = () => {
                 <Column field='name' header={strings.eventStore.namespaces.identities.columns.name} sortable />
                 <Column field='userName' header={strings.eventStore.namespaces.identities.columns.userName} sortable />
             </DataPage.Columns>
-        </DataPage>);
+        </DataPage>
+        </Page>);
 };

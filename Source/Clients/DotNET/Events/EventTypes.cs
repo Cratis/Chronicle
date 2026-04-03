@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reflection;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.Migrations;
@@ -88,12 +89,15 @@ public class EventTypes : IEventTypes
         {
             var latestEntry = group.OrderByDescending(_ => _.Key.Generation.Value).First();
             var latestEventType = latestEntry.Key;
+            var latestClrType = latestEntry.Value;
             var latestSchema = _schemasByEventType[latestEventType];
+            var eventStoreAttribute = latestClrType.GetCustomAttribute<EventStoreAttribute>();
 
             var registration = new EventTypeRegistration
             {
                 Type = latestEventType.ToContract(),
-                Schema = latestSchema.ToJson()
+                Schema = latestSchema.ToJson(),
+                EventStore = eventStoreAttribute?.EventStore ?? string.Empty
             };
 
             foreach (var (eventType, clrType) in group)

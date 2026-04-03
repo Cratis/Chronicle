@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { AddWebhookDialog } from './Add/AddWebhookDialog';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import * as faIcons from 'react-icons/fa6';
 import { useState } from 'react';
 import { WebhookDetails } from './WebhookDetails';
@@ -53,7 +54,7 @@ export const Webhooks = () => {
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.general.webhooks.title}>
             <DataPage
                 key={refreshTrigger}
                 title={strings.eventStore.general.webhooks.title}
@@ -105,7 +106,7 @@ export const Webhooks = () => {
                 </DataPage.Columns>
             </DataPage>
             <AddWebhookDialogWrapper />
-        </>
+        </Page>
     );
 };
 
