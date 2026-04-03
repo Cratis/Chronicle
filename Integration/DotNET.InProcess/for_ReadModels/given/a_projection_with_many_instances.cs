@@ -49,7 +49,7 @@ public class a_projection_with_many_instances(ChronicleInProcessFixture chronicl
     protected async Task AppendAllEvents()
     {
         var projection = EventStore.Projections.GetHandlerFor<SomeProjection>();
-        await projection.WaitTillActive();
+        await projection.WaitTillActive(TimeSpanFactory.FromSeconds(30));
 
         var lastSequenceNumber = EventSequenceNumber.First;
         for (var i = 0; i < TotalInstances; i++)
