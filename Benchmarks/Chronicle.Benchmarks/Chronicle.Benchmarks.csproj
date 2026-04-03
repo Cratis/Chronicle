@@ -24,9 +24,11 @@
   </ItemGroup>
 
   <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
+    <!-- Build the server in Debug so the DEVELOPMENT symbol is defined and dev credentials are seeded -->
+    <Exec Command="dotnet build -c Debug $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj" />
     <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
     <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-    <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
+    <Exec Command="cp -R -f $(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/Debug/net10.0/. $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/ 2>/dev/null" />
     <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
   </Target>
 
