@@ -11,7 +11,7 @@ PR descriptions serve two purposes: they help reviewers understand the change *n
 - Follow the [pull request template](../pull_request_template.md).
 - Focus on the **Added**, **Changed**, **Fixed**, **Removed**, **Security**, and **Deprecated** sections. Remove sections that are empty — don't leave blank headings.
 - Each bullet should be short, self-contained, and release-note ready.
-- Add an issue reference on every bullet point (e.g. `(#123)`) at the end.
+- Add an issue reference on every bullet point at the end. Always use the **actual GitHub issue number** that this PR resolves (e.g. `(#351)`). Never use a placeholder like `(#issue)` or leave the example number `(#123)` literally — look up the real issue number before writing the description.
 - Include a summary only if there is a cohesive theme across the changes. If you find yourself restating individual bullets in slightly different words, the summary adds no value — remove it.
 - Never include Copilot prompt content in the PR description. Remove any "Original prompt" / coding agent transcript blocks before publishing.
 
