@@ -78,4 +78,16 @@ public record AppendResult : IAppendResult
         CorrelationId = correlationId,
         Errors = errors.ToArray()
     };
+
+    /// <summary>
+    /// Create a failed result with a concurrency violation.
+    /// </summary>
+    /// <param name="correlationId"><see cref="CorrelationId"/> for the operation.</param>
+    /// <param name="violation">The <see cref="ConcurrencyViolation"/> that occurred.</param>
+    /// <returns>A new failed <see cref="AppendResult"/> instance.</returns>
+    public static AppendResult Failed(CorrelationId correlationId, ConcurrencyViolation violation) => new()
+    {
+        CorrelationId = correlationId,
+        ConcurrencyViolation = violation
+    };
 }

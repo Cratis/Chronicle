@@ -18,6 +18,17 @@ public interface IEventSequence
     EventSequenceId Id { get; }
 
     /// <summary>
+    /// Gets an observable that emits a collection of <see cref="AppendedEventWithResult"/> after each append operation.
+    /// </summary>
+    /// <remarks>
+    /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, Events.EventStreamType?, Events.EventStreamId?, Events.EventSourceType?, CorrelationId?, System.Collections.Generic.IEnumerable{string}?, Concurrency.ConcurrencyScope?, System.DateTimeOffset?)"/>
+    /// emit through this observable. A single-event append emits a collection of one element;
+    /// a batch append emits the full batch. Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
+    /// This observable does not fire for transactional appends through <see cref="ITransactionalEventSequence"/>.
+    /// </remarks>
+    IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations { get; }
+
+    /// <summary>
     /// Gets the transactional event sequence.
     /// </summary>
     /// <remarks>
