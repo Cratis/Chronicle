@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class using_constant_key_with_increment(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<IncrementWithConstantKeyProjection, CounterReadModel>(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<IncrementWithConstantKeyProjection, CounterReadModel>(chronicleFixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EmptyEvent)];
 

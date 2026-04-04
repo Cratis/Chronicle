@@ -34,8 +34,7 @@ public class an_event_without_occurred(context context) : Given<context>(context
     [Fact]
     async Task should_have_occurred_set_by_server_to_approximately_now()
     {
-        var eventLog = Context.GetEventLogStorage();
-        var @event = await eventLog.GetEventAt(0);
-        @event.Context.Occurred.ShouldBeInRange(Context.BeforeAppend, Context.AfterAppend);
+        var events = await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
+        events.First().Context.Occurred.ShouldBeInRange(Context.BeforeAppend, Context.AfterAppend);
     }
 }

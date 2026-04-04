@@ -35,7 +35,7 @@ public class and_reactor_is_registered_while_there_are_no_events_to_handle(conte
     void should_have_reactor_observer_be_in_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
     [Fact]
-    void should_not_catch_up_any_events() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(Concepts.Events.EventSequenceNumber.Unavailable.Value);
+    void should_not_catch_up_any_events() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(EventSequenceNumber.Unavailable.Value);
 
     [Fact]
     void should_set_next_event_sequence_number_to_first() => Context.ReactorState.NextEventSequenceNumber.Value.ShouldEqual(Context.LastEventSequenceNumber.Value);

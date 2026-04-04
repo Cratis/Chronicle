@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.Specifications.for_Reactors.when_handling_event.and_it_fails.and_needs_to_catch_up.context;
 
@@ -45,7 +44,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
 
             FailedPartitionsBeforeRetry = await reactor.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition));
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType("RetryFailedPartition");
 
             // Wait for the first event to be handled a second time (retry)
             await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
@@ -65,9 +64,9 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
     }
 
     [Fact] void should_fail_one_partition() => Context.FailedPartitionsBeforeRetry.Count().ShouldEqual(1);
-    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain(nameof(RetryFailedPartition));
+    [Fact] void should_start_replaying_job() => Context.Jobs.First().Type.Value.ShouldContain("RetryFailedPartition");
     [Fact] void should_recover_failed_partition() => Context.FailedPartitionsAfterRetry.ShouldBeEmpty();
-    [Fact] void should_start_catchup_for_partition_job() => Context.JobsWithCatchUp.SingleOrDefault(_ => _.Type == nameof(CatchUpObserverPartition)).ShouldNotBeNull();
+    [Fact] void should_start_catchup_for_partition_job() => Context.JobsWithCatchUp.SingleOrDefault(_ => _.Type == "CatchUpObserverPartition").ShouldNotBeNull();
     [Fact] void should_have_completed_all_jobs_at_the_end() => Context.JobsAfterCompleted.ShouldBeEmpty();
     [Fact] void should_have_the_active_observer_running_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_have_correct_last_handled_event_sequence_number() => Context.ReactorState.LastHandledEventSequenceNumber.Value.ShouldEqual(1ul);

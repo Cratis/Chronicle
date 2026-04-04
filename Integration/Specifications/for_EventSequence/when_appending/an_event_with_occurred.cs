@@ -34,8 +34,7 @@ public class an_event_with_occurred(context context) : Given<context>(context)
     [Fact]
     async Task should_have_the_correct_occurred()
     {
-        var eventLog = Context.GetEventLogStorage();
-        var @event = await eventLog.GetEventAt(0);
-        @event.Context.Occurred.ShouldEqual(Context.Occurred);
+        var events = await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
+        events.First().Context.Occurred.ShouldEqual(Context.Occurred);
     }
 }

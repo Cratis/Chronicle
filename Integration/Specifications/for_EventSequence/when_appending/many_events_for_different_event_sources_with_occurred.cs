@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.many_events_for_different_event_sources_with_occurred.context;
 
@@ -38,16 +39,14 @@ public class many_events_for_different_event_sources_with_occurred(context conte
     [Fact]
     async Task should_have_the_correct_occurred_for_first_event()
     {
-        var eventLog = Context.GetEventLogStorage();
-        var @event = await eventLog.GetEventAt(0);
-        @event.Context.Occurred.ShouldEqual(Context.FirstOccurred);
+        var events = await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
+        events[0].Context.Occurred.ShouldEqual(Context.FirstOccurred);
     }
 
     [Fact]
     async Task should_have_the_correct_occurred_for_second_event()
     {
-        var eventLog = Context.GetEventLogStorage();
-        var @event = await eventLog.GetEventAt(1);
-        @event.Context.Occurred.ShouldEqual(Context.SecondOccurred);
+        var events = await Context.EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
+        events[1].Context.Occurred.ShouldEqual(Context.SecondOccurred);
     }
 }

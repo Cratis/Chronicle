@@ -16,7 +16,7 @@ public class with_multiple_children_with_same_id(context context) : Given<contex
     const string GroupName2 = "Group2";
     const string UserName = "User";
 
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjectionWithMultipleJoins, Group>(chronicleFixture)
     {
         public UserId UserId;
         public EventSourceId GroupId;

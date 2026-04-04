@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.many_with_first_event_violating_unique_constraint.context;
 
