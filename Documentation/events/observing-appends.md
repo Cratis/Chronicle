@@ -37,14 +37,9 @@ Inject `IEventSequence` (or `IEventLog`) and subscribe to `AppendOperations`:
 ```csharp
 public class AppendMonitor(IEventLog eventLog) : IDisposable
 {
-    readonly IDisposable _subscription;
+    readonly IDisposable _subscription = eventLog.AppendOperations.Subscribe(OnAppended);
 
-    public AppendMonitor()
-    {
-        _subscription = eventLog.AppendOperations.Subscribe(OnAppended);
-    }
-
-    void OnAppended(IEnumerable<AppendedEventWithResult> operations)
+    static void OnAppended(IEnumerable<AppendedEventWithResult> operations)
     {
         foreach (var item in operations)
         {
@@ -63,4 +58,4 @@ Always dispose the subscription when you no longer need it to avoid resource lea
 The most common use of `AppendOperations` in application code is through the
 `IEventAppendCollection` helper provided by `Cratis.Chronicle.XUnit.Integration`. It subscribes
 internally and provides a ready-to-assert collection of `AppendedEventWithResult` entries.
-See [Event Append Collection](event-append-collection.md) for full details.
+See <xref:Chronicle.Testing.EventAppendCollection> for full details.
