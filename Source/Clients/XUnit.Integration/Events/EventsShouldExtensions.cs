@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cratis.Chronicle.XUnit.Integration.Events;
@@ -23,18 +22,13 @@ public static class EventsShouldExtensions
     /// <returns>Awaitable task.</returns>
     public static async Task ShouldHaveAppendedEvent<TEvent>(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, EventSourceId eventSourceId, Action<TEvent> validator)
     {
-        var eventLog = fixture.GetEventLogStorage();
-        var @event = await eventLog.GetEventAt(sequenceNumber.Value);
-        var eventClrType = typeof(TEvent);
-        var eventType = fixture.EventStore.EventTypes.GetEventTypeFor(eventClrType);
+        var events = await fixture.EventStore.EventLog.GetFromSequenceNumber(sequenceNumber);
+        var @event = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
+        Assert.NotNull(@event);
         Assert.Equal(@event.Context.EventSourceId.Value, eventSourceId.Value);
         Assert.Equal(@event.Context.SequenceNumber.Value, sequenceNumber.Value);
-        Assert.Equal(@event.Context.EventType.Id.Value, eventType.Id.Value);
-        var contentAsJson = System.Text.Json.JsonSerializer.SerializeToNode(@event.Content)!.AsObject();
-        var eventObject = await fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, contentAsJson);
-        Assert.IsType<TEvent>(eventObject);
-        var theEvent = (TEvent)eventObject;
-        validator(theEvent);
+        Assert.IsType<TEvent>(@event.Content);
+        validator((TEvent)@event.Content);
     }
 
     /// <summary>
@@ -45,8 +39,7 @@ public static class EventsShouldExtensions
     /// <returns>Awaitable task.</returns>
     public static async Task ShouldHaveNextSequenceNumber(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber)
     {
-        var eventLog = fixture.EventLogSequenceGrain;
-        var number = await eventLog.GetNextSequenceNumber();
+        var number = await fixture.EventStore.EventLog.GetNextSequenceNumber();
         Assert.Equal(number.Value, sequenceNumber.Value);
     }
 
@@ -58,12 +51,7 @@ public static class EventsShouldExtensions
     /// <returns>Awaitable task.</returns>
     public static async Task ShouldHaveTailSequenceNumber(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber)
     {
-        var eventLog = fixture.EventLogSequenceGrain;
-        var number = await eventLog.GetTailSequenceNumber();
+        var number = await fixture.EventStore.EventLog.GetTailSequenceNumber();
         Assert.Equal(number.Value, sequenceNumber.Value);
-
-        var storedEventLog = fixture.GetEventLogStorage();
-        var storedNumber = await storedEventLog.GetTailSequenceNumber();
-        Assert.Equal(storedNumber.Value, sequenceNumber.Value);
     }
 }

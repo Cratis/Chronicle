@@ -9,6 +9,8 @@ using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_re
 using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
 using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
 
+using Cratis.Chronicle.Jobs;
+
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_redacting;
 
 [Collection(ChronicleCollection.Name)]

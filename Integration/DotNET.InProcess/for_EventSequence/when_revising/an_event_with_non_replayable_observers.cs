@@ -7,6 +7,8 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_revising.an_event_with_non_replayable_observers.context;
 
+using Cratis.Chronicle.Jobs;
+
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_revising;
 
 [Collection(ChronicleCollection.Name)]
