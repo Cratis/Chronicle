@@ -291,20 +291,23 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
-        _sequences.GetOrAdd(id, static (key, state) => new EventSequence(
-            state._eventStoreName,
-            state.Namespace,
-            key,
-            state.Connection,
-            state.EventTypes,
-            state.Constraints,
-            state._eventSerializer,
-            state._correlationIdAccessor,
-            state._concurrencyScopeStrategies,
-            state._causationManager,
-            state.UnitOfWorkManager,
-            state._identityProvider,
-            state._jsonSerializerOptions), this);
+        _sequences.GetOrAdd(
+            id,
+            static (key, state) => new EventSequence(
+                state._eventStoreName,
+                state.Namespace,
+                key,
+                state.Connection,
+                state.EventTypes,
+                state.Constraints,
+                state._eventSerializer,
+                state._correlationIdAccessor,
+                state._concurrencyScopeStrategies,
+                state._causationManager,
+                state.UnitOfWorkManager,
+                state._identityProvider,
+                state._jsonSerializerOptions),
+            this);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)

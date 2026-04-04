@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Transactions;
-using Cratis.Execution;
 
 namespace Cratis.Chronicle.EventSequences;
 
