@@ -24,7 +24,7 @@ Chronicle and exposes a simple event collection API for asserting on what happen
 | Fixture base classes | `ChronicleInProcessFixture`, `ChronicleOrleansFixture` — handle startup, teardown, and database provisioning |
 | `IChronicleSetupFixture` | Interface available on all fixture types; exposes `EventStore`, `Services`, `ReadModelsDatabase`, and `StartCollectingAppends()` |
 | `IEventAppendCollection` | Scoped collector returned by `StartCollectingAppends()` — captures every event appended while it is active |
-| `CollectedEvent` | Snapshot of a single append: event object, sequence number, constraint violations, concurrency violations, and errors |
+| `AppendedEventWithResult` | Pairs an `AppendedEvent` with its `AppendResult` — exposes the event content, context metadata, and operation outcome |
 | `ReadModelScenario<TReadModel>` | In-process scenario runner for testing projections and reducers without infrastructure |
 
 ## How Tests Are Structured
@@ -36,11 +36,10 @@ The typical pattern is:
 
 1. Call `StartCollectingAppends()` on the fixture to open a new collection scope.
 2. Append the event that triggers the operation under test.
-3. Assert on `AppendedEventsCollector.All` or `AppendedEventsCollector.Last` immediately — no waiting needed.
-4. Dispose the scope in `Destroy()`.
-
-Because `EventStore.EventLog.Append(...)` is awaited, the append (and any synchronous side-effects visible
-in the collection) is complete by the time the `await` returns.
+3. Assert on `_appendedEventsCollector.All` or `_appendedEventsCollector.Last` immediately — no waiting needed
+   for direct appends.
+4. Use `WaitForCount()` when asserting on events appended asynchronously by a reactor.
+5. Dispose the scope in `Destroy()`.
 
 ## Topics
 
