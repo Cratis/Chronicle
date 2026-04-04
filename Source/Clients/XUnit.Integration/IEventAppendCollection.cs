@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
+
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
-/// Defines a scoped collection of <see cref="CollectedEvent"/> entries captured during a test operation.
+/// Defines a scoped collection of <see cref="AppendedEventWithResult"/> entries captured during a test operation.
 /// </summary>
 /// <remarks>
 /// Start a collection scope with <c>StartCollectingAppends()</c> on the test fixture, then append events. All
@@ -16,13 +18,13 @@ public interface IEventAppendCollection : IDisposable
     /// <summary>
     /// Gets a snapshot of all events collected so far.
     /// </summary>
-    IReadOnlyList<CollectedEvent> All { get; }
+    IReadOnlyList<AppendedEventWithResult> All { get; }
 
     /// <summary>
     /// Gets the most recently collected event.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when no events have been collected yet.</exception>
-    CollectedEvent Last { get; }
+    AppendedEventWithResult Last { get; }
 
     /// <summary>
     /// Waits until at least <paramref name="count"/> events have been collected.
