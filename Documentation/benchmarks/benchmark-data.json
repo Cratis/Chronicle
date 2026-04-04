@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775291060383,
+  "lastUpdate": 1775301168324,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -308,6 +308,50 @@
             "value": 533402890.2,
             "unit": "ns",
             "range": "± 120943729.29846498"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "1420ab72e3409f1d40752f01a2099ac9f1c789fe",
+          "message": "Improve testing",
+          "timestamp": "2026-04-04T10:13:37Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2968/commits/1420ab72e3409f1d40752f01a2099ac9f1c789fe"
+        },
+        "date": 1775301168323,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 13571476.991666669,
+            "unit": "ns",
+            "range": "± 1766826.6362672332"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 23022111.36,
+            "unit": "ns",
+            "range": "± 6592725.995897317"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 75779111.93333334,
+            "unit": "ns",
+            "range": "± 11793604.03289231"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 519275776.4,
+            "unit": "ns",
+            "range": "± 106085992.05066781"
           }
         ]
       }
