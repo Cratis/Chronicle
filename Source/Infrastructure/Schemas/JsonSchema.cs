@@ -131,7 +131,7 @@ public class JsonSchema
                 {
                     foreach (var (key, value) in propsNode)
                     {
-                        if (value?.AsObject() is JsonObject propObj)
+                        if (value is JsonObject propObj)
                         {
                             var propNode = (JsonObject)propObj.DeepClone();
                             var prop = new JsonSchemaProperty(key, propNode, Root);
