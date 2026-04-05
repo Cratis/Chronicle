@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775388186157,
+  "lastUpdate": 1775388845249,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -308,6 +308,50 @@
             "value": 456462916.5,
             "unit": "ns",
             "range": "± 30921196.207631648"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "c8ea6d9be9abb6d273761bae2aeb96a7c78d3fa5",
+          "message": "Allow EventStore to be assembly level attribute with automatic subscription registration and EventSequence attribution",
+          "timestamp": "2026-04-05T10:07:56Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2973/commits/c8ea6d9be9abb6d273761bae2aeb96a7c78d3fa5"
+        },
+        "date": 1775388845248,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 14537264.736363638,
+            "unit": "ns",
+            "range": "± 2627998.9690881693"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 15888659.20625,
+            "unit": "ns",
+            "range": "± 698264.5931221171"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 66838002.52857143,
+            "unit": "ns",
+            "range": "± 9612693.056453519"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 470810987.1111111,
+            "unit": "ns",
+            "range": "± 27093635.225665"
           }
         ]
       }
