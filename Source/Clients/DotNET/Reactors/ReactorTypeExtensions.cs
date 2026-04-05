@@ -68,9 +68,9 @@ public static class ReactorTypeExtensions
             .ToList();
 
         var eventStores = eventParameterTypes
-            .Select(t => t!.GetCustomAttribute<EventStoreAttribute>())
-            .Where(a => a is not null)
-            .Select(a => a!.EventStore)
+            .Select(t => t!.GetEventStoreName())
+            .Where(name => name is not null)
+            .Select(name => name!)
             .Distinct()
             .ToList();
 

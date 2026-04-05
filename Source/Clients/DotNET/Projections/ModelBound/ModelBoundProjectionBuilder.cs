@@ -132,9 +132,9 @@ internal class ModelBoundProjectionBuilder(
         var eventStores = definition.From.Keys
             .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
             .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
-            .Select(t => t.GetCustomAttribute<EventStoreAttribute>())
-            .Where(a => a is not null)
-            .Select(a => a!.EventStore)
+            .Select(t => t.GetEventStoreName())
+            .Where(name => name is not null)
+            .Select(name => name!)
             .Distinct()
             .ToList();
 

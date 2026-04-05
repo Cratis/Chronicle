@@ -4,7 +4,16 @@ When you publish event types as part of a NuGet package — so other event store
 
 ## The `[EventStore]` Attribute
 
-Apply `[EventStore]` to any event type that originates from a foreign event store:
+The attribute can be applied at two levels:
+
+- **Class level** — directly on an individual event type
+- **Assembly level** — once for all event types in a project
+
+Both approaches identify the same information: the name of the source event store. When both are present, the class-level attribute takes precedence over the assembly-level one.
+
+### Class-level attribute
+
+Apply `[EventStore]` directly to any event type that originates from a foreign event store:
 
 ```csharp
 [EventType]
@@ -21,11 +30,47 @@ await eventStore.Subscriptions.Subscribe(
     builder => builder.WithEventType<ShipmentDispatched>());
 ```
 
+### Assembly-level attribute
+
+When all event types in a project belong to the same source event store, you can apply the `[EventStore]` attribute once at the assembly level instead of repeating it on every event type class.
+
+**Preferred: configure via `.csproj`**
+
+Add the attribute through MSBuild so no C# source file is needed:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="Cratis.Chronicle.Events.EventStoreAttribute">
+      <_Parameter1>fulfillment-service</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
+```
+
+**Alternative: C# file with assembly attribute**
+
+You can also declare the attribute in a C# file (for example `AssemblyInfo.cs`):
+
+```csharp
+using Cratis.Chronicle.Events;
+
+[assembly: EventStore("fulfillment-service")]
+```
+
+With either approach, every event type in that assembly is automatically treated as belonging to `fulfillment-service` without any per-class annotation.
+
 ## Publishing Event Types in a NuGet Package
 
 A common pattern is to publish your public event contracts as a NuGet package. Consumers add a subscription and reference your package. The `[EventStore]` attribute on each event record provides all the routing information needed without any additional configuration in the consuming project.
 
-A typical public events package looks like this:
+### Using class-level attributes
+
+Each event type is annotated individually:
 
 ```csharp
 // FulfillmentService.Events/ShipmentDispatched.cs
@@ -40,11 +85,41 @@ public record ShipmentDispatched(Guid OrderId, string TrackingNumber);
 public record ShipmentFailed(Guid OrderId, string Reason);
 ```
 
-All event types in the package share the same `[EventStore]` name.
+### Using assembly-level attributes
+
+When all event types belong to the same event store, set the attribute once in the project file — no C# boilerplate needed:
+
+```xml
+<!-- FulfillmentService.Events/FulfillmentService.Events.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="Cratis.Chronicle.Events.EventStoreAttribute">
+      <_Parameter1>fulfillment-service</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
+```
+
+Event types then carry no `[EventStore]` annotation at all — cleaner and less repetitive:
+
+```csharp
+// FulfillmentService.Events/ShipmentDispatched.cs
+using Cratis.Chronicle.Events;
+
+[EventType]
+public record ShipmentDispatched(Guid OrderId, string TrackingNumber);
+
+[EventType]
+public record ShipmentFailed(Guid OrderId, string Reason);
+```
 
 ## Automatic Inbox Routing
 
-When every event type handled by an observer is annotated with the same `[EventStore]`, Chronicle automatically routes that observer to the corresponding inbox sequence — `inbox-{eventStoreName}`. You do not need to specify the event sequence explicitly.
+When every event type handled by an observer is annotated with the same `[EventStore]` — either directly or via the assembly attribute — Chronicle automatically routes that observer to the corresponding inbox sequence — `inbox-{eventStoreName}`. You do not need to specify the event sequence explicitly.
 
 ### Reactors
 
