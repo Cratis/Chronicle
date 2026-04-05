@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -17,7 +18,7 @@ public static class ModelBoundProjectionsExtensions
     /// <returns>True if the type has model-bound projection attributes; otherwise, false.</returns>
     public static bool HasModelBoundProjectionAttributes(this Type type)
     {
-        if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation))
+        if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation || attr is EventSequenceAttribute))
         {
             return true;
         }
@@ -40,3 +41,4 @@ public static class ModelBoundProjectionsExtensions
                                                   .Any(attr => attr is IProjectionAnnotation));
     }
 }
+

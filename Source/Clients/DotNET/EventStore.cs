@@ -317,25 +317,30 @@ public class EventStore : IEventStore
 
     async Task RegisterExternalEventStoreSubscriptionsAsync()
     {
-        // Collect external event types from reactor handler methods
+        var currentStoreName = _eventStoreName?.Value;
+
+        // Collect external event types from reactors (skip reactors with explicit event sequences and skip same-store types)
         var reactorExternalEventTypes = _clientArtifactsProvider.Reactors
-            .SelectMany(ReactorTypeExtensions.GetHandlerEventTypes);
+            .Where(r => !ReactorTypeExtensions.HasExplicitEventSequence(r))
+            .SelectMany(ReactorTypeExtensions.GetHandlerEventTypes)
+            .Where(t => t.GetEventStoreName() is { } s && s != currentStoreName);
 
-        // Collect external event types from reducer handler methods
+        // Collect external event types from reducers (skip reducers with explicit event sequences and skip same-store types)
         var reducerExternalEventTypes = _clientArtifactsProvider.Reducers
-            .SelectMany(ReducerTypeExtensions.GetHandlerEventTypes);
+            .Where(r => !ReducerTypeExtensions.HasExplicitEventSequence(r))
+            .SelectMany(ReducerTypeExtensions.GetHandlerEventTypes)
+            .Where(t => t.GetEventStoreName() is { } s && s != currentStoreName);
 
-        // Group reactor/reducer external event types by event store name (skip types without a store)
+        // Group reactor/reducer external event types by event store name
         var observersByStore = reactorExternalEventTypes
             .Concat(reducerExternalEventTypes)
-            .Select(t => (EventType: t, StoreName: t.GetEventStoreName()))
-            .Where(x => x.StoreName is not null)
-            .GroupBy(x => x.StoreName!, x => x.EventType)
+            .Select(t => (EventType: t, StoreName: t.GetEventStoreName()!))
+            .GroupBy(x => x.StoreName, x => x.EventType)
             .ToDictionary(
                 g => g.Key,
                 g => g.Select(t => EventTypes.GetEventTypeFor(t).Id).Distinct().ToList());
 
-        // Merge with projection external event store references
+        // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
         var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
         foreach (var kvp in observersByStore)
         {

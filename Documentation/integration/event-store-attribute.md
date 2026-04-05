@@ -121,6 +121,26 @@ public record ShipmentFailed(Guid OrderId, string Reason);
 
 When every event type handled by an observer is annotated with the same `[EventStore]` — either directly or via the assembly attribute — Chronicle automatically routes that observer to the corresponding inbox sequence — `inbox-{eventStoreName}`. You do not need to specify the event sequence explicitly.
 
+### Same-Store Events Route to the Event Log
+
+If the event store named in `[EventStore]` is the **same** event store as the one the observer is registered in, Chronicle routes the observer to the default **event log** rather than an inbox. This handles the case where event types are published in a shared library but consumed locally:
+
+```csharp
+// Events published in a shared library with [EventStore("my-service")]
+[EventType]
+[EventStore("my-service")]
+public record OrderPlaced(Guid OrderId, decimal Amount);
+
+// This reactor is in the "my-service" event store itself
+// → routed to event-log, not inbox-my-service
+[Reactor]
+public class LocalOrderReactor : IReactor
+{
+    public Task OrderPlaced(OrderPlaced @event, EventContext context)
+        => HandleLocalOrderAsync(@event.OrderId, @event.Amount);
+}
+```
+
 ### Reactors
 
 ```csharp
@@ -156,6 +176,67 @@ public class FulfillmentProjection : IProjectionFor<FulfillmentReadModel>
                 .Set(m => m.TrackingNumber).To(e => e.TrackingNumber));
 }
 ```
+
+## Explicit Event Sequence Override
+
+When the inferred event sequence is not what you need, you can override it explicitly. There are two attribute options in the `Cratis.Chronicle.EventSequences` namespace.
+
+### `[EventSequence]` Attribute
+
+Pin any observer (Reactor, Reducer, or model-bound Projection) to a specific event sequence by ID:
+
+```csharp
+using Cratis.Chronicle.EventSequences;
+
+[EventSequence("my-custom-sequence")]
+[Reactor]
+public class SpecialReactor : IReactor { ... }
+```
+
+This takes highest precedence over everything else — no auto-inbox routing or same-store detection applies.
+
+### `[EventLog]` Attribute
+
+A convenience attribute that pins the observer to the default event log (`event-log`). Use it when you want to be explicit that the observer reads from the local event log rather than any inbox:
+
+```csharp
+using Cratis.Chronicle.EventSequences;
+
+[EventLog]
+[Reactor]
+public class AlwaysLocalReactor : IReactor { ... }
+```
+
+Equivalent to `[EventSequence(EventSequenceId.LogId)]`.
+
+### Alternative: `[Reactor]` and `[Reducer]` attributes
+
+The `eventSequence` parameter on `[Reactor]` and `[Reducer]` is an alternative way to set the event sequence explicitly:
+
+```csharp
+[Reactor(eventSequence: "inbox-fulfillment-service")]
+public class ManuallyRoutedReactor : IReactor { ... }
+```
+
+All three explicit options — `[EventSequence]`, `[EventLog]`, and the `eventSequence` attribute parameter — suppress automatic inbox routing and auto-subscription registration for that observer.
+
+### Model-Bound Projections
+
+For model-bound projections, apply `[EventSequence]` or `[EventLog]` to the read model type:
+
+```csharp
+using Cratis.Chronicle.EventSequences;
+
+// Reads from a custom sequence
+[EventSequence("audit-log")]
+public record AuditRecord([Key] Guid Id, string Message);
+
+// Always reads from the event log
+[EventLog]
+public record LocalSnapshot([Key] Guid Id, string Data);
+```
+
+The old `[FromEventSequence]` attribute has been removed. Use `[EventSequence]` instead.
 
 ## Automatic Event Store Subscriptions
 

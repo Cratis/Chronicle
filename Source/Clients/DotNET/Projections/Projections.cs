@@ -136,7 +136,7 @@ public class Projections(
     /// <inheritdoc/>
     public Task Discover()
     {
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, eventStore.Name?.Value);
         var modelBoundDefinitions = modelBoundProjections.Discover();
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,

@@ -105,11 +105,24 @@ public static class ReducerTypeExtensions
     /// Get the event sequence id for a reducer type.
     /// </summary>
     /// <param name="type"><see cref="Type"/> to get from.</param>
+    /// <param name="currentEventStoreName">
+    /// The name of the event store the reducer is registered in.
+    /// When provided, event types that belong to the same store will resolve to the event log
+    /// rather than an inbox sequence.
+    /// </param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     /// <exception cref="MultipleEventStoresDefined">Thrown when the reducer handles event types from multiple event stores.</exception>
-    public static EventSequenceId GetEventSequenceId(this Type type)
+    public static EventSequenceId GetEventSequenceId(this Type type, string? currentEventStoreName = null)
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
+
+        // [EventSequence] / [EventLog] on the class takes highest priority
+        var eventSequenceAttr = type.GetCustomAttribute<EventSequenceAttribute>();
+        if (eventSequenceAttr is not null)
+        {
+            return eventSequenceAttr.Sequence;
+        }
+
         var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
 
         if (reducerAttribute?.EventSequenceId is not null)
@@ -117,7 +130,25 @@ public static class ReducerTypeExtensions
             return reducerAttribute.EventSequenceId;
         }
 
-        return InferEventSequenceIdFromHandlerMethods(type);
+        return InferEventSequenceIdFromHandlerMethods(type, currentEventStoreName);
+    }
+
+    /// <summary>
+    /// Get whether a reducer type has an explicit event sequence set.
+    /// </summary>
+    /// <param name="type"><see cref="Type"/> to check.</param>
+    /// <returns><see langword="true"/> if an explicit event sequence is configured; otherwise <see langword="false"/>.</returns>
+    public static bool HasExplicitEventSequence(this Type type)
+    {
+        TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
+
+        if (Attribute.IsDefined(type, typeof(EventSequenceAttribute)))
+        {
+            return true;
+        }
+
+        var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
+        return reducerAttribute?.EventSequenceId is not null;
     }
 
     /// <summary>
@@ -151,7 +182,7 @@ public static class ReducerTypeExtensions
             .Distinct()
             .ToList();
 
-    static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType)
+    static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType, string? currentEventStoreName)
     {
         var eventParameterTypes = reducerType
             .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
@@ -175,6 +206,12 @@ public static class ReducerTypeExtensions
 
         if (eventStores.Count == 1)
         {
+            // If the event types belong to the same store as the one we're in, use event-log instead of inbox
+            if (currentEventStoreName is not null && eventStores[0] == currentEventStoreName)
+            {
+                return EventSequenceId.Log;
+            }
+
             return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
         }
 

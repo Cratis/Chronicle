@@ -21,12 +21,18 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="currentEventStoreName">
+/// The name of the event store this builder is targeting.
+/// Used to detect when event types belong to the same store, which means event-log rather than inbox routing.
+/// </param>
 internal class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes) : IModelBoundProjectionBuilder
+    IEventTypes eventTypes,
+    string? currentEventStoreName = null) : IModelBoundProjectionBuilder
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
+    readonly string? _currentEventStoreName = currentEventStoreName;
     readonly Dictionary<string, EventType> _eventTypeCache = new();
     readonly List<(string PropertyName, FromEveryAttribute Attribute)> _fromEveryAttributes = [];
 
@@ -41,12 +47,12 @@ internal class ModelBoundProjectionBuilder(
 
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
-        var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
+        var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
 
         var definition = new ProjectionDefinition
         {
-            EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
+            EventSequenceId = fromEventSequenceAttr?.Sequence ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
             IsActive = !modelType.IsPassive(),
@@ -93,7 +99,7 @@ internal class ModelBoundProjectionBuilder(
 
         if (fromEventSequenceAttr is null)
         {
-            definition.EventSequenceId = InferEventSequenceId(modelType, definition);
+            definition.EventSequenceId = InferEventSequenceId(modelType, definition, _currentEventStoreName);
         }
 
         return definition;
@@ -127,7 +133,7 @@ internal class ModelBoundProjectionBuilder(
         };
     }
 
-    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition)
+    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {
         var eventStores = definition.From.Keys
             .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
@@ -145,6 +151,12 @@ internal class ModelBoundProjectionBuilder(
 
         if (eventStores.Count == 1)
         {
+            // If the event types belong to the same store as the one we're in, use event-log instead of inbox
+            if (currentEventStoreName is not null && eventStores[0] == currentEventStoreName)
+            {
+                return EventSequenceId.Log;
+            }
+
             return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
         }
 

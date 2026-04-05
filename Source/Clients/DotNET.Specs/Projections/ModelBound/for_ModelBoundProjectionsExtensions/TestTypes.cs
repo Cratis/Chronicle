@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.ReadModels;
 
@@ -15,8 +16,8 @@ public record AnotherEvent(int Amount);
 [FromEvent<SomeEvent>]
 public record TypeWithFromEventAttribute([Key] Guid Id, string Name);
 
-[FromEventSequence("custom-sequence")]
-public record TypeWithFromEventSequenceAttribute([Key] Guid Id, string Name);
+[EventSequence("custom-sequence")]
+public record TypeWithEventSequenceAttribute([Key] Guid Id, string Name);
 
 [Passive]
 public record TypeWithPassiveAttribute([Key] Guid Id, string Name);
