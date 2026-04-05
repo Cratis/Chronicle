@@ -70,6 +70,8 @@ public static class ReactorTypeExtensions
     /// <returns><see langword="true"/> if an explicit event sequence is configured; otherwise <see langword="false"/>.</returns>
     public static bool HasExplicitEventSequence(this Type type)
     {
+        TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
+
         if (Attribute.IsDefined(type, typeof(EventSequenceAttribute)))
         {
             return true;
