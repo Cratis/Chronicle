@@ -72,7 +72,7 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
             // Get the result
             var collection = ChronicleFixture.ReadModels.Database.GetCollection<Root>();
             var queryResult = await collection.FindAsync(filter => filter.Name == RootName);
-            Result = queryResult.FirstOrDefault();
+            Result = await queryResult.FirstOrDefaultAsync();
         }
     }
 

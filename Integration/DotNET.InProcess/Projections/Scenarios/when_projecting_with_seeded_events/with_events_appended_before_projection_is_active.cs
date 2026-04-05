@@ -47,7 +47,7 @@ public class with_events_appended_before_projection_is_active(context context) :
 
             var filter = Builders<ItemsReadModel>.Filter.Eq(new StringFieldDefinition<ItemsReadModel, string>("_id"), EventSourceId);
             var cursor = await _chronicleInProcessFixture.ReadModels.Database.GetCollection<ItemsReadModel>().FindAsync(filter);
-            Result = cursor.FirstOrDefault();
+            Result = await cursor.FirstOrDefaultAsync();
         }
     }
 

@@ -79,7 +79,7 @@ public static class WellKnownTypes
     /// Get the event store name from a type's <see cref="EventStoreAttributeName"/> attribute.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to check.</param>
-    /// <returns>The event store name, or <c>null</c> if the type does not have the attribute.</returns>
+    /// <returns>The event store name, or <c><see langword="null"/></c> if the type does not have the attribute.</returns>
     public static string? GetEventStoreName(ITypeSymbol typeSymbol)
     {
         var attribute = typeSymbol.GetAttributes()

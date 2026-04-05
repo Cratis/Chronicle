@@ -45,6 +45,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
+- At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
 
 ## Detailed Guides
 

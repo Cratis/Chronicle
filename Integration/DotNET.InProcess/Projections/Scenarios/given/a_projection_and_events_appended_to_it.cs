@@ -83,6 +83,6 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     {
         var filter = Builders<TReadModel>.Filter.Eq(new StringFieldDefinition<TReadModel, string>("_id"), eventSourceId);
         var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<TReadModel>().FindAsync(filter);
-        return result.FirstOrDefault();
+        return await result.FirstOrDefaultAsync();
     }
 }
