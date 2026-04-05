@@ -3,8 +3,8 @@
 
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 
@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Specs.for_EventStore.when_registering_external_event_
 
 public class and_external_event_types_are_discovered : Specification
 {
-    const string source_event_store = "StudioAdmin";
+    const string SourceEventStore = "StudioAdmin";
     static readonly MethodInfo _registerExternalSubscriptionsMethod =
         typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
@@ -44,8 +44,8 @@ public class and_external_event_types_are_discovered : Specification
 
     [Fact] void should_use_source_event_store_name_as_subscription_id() =>
         _subscriptions.Received(1).Subscribe(
-            Arg.Is<EventStoreSubscriptionId>(id => id.Value == source_event_store),
-            source_event_store,
+            Arg.Is<EventStoreSubscriptionId>(id => id.Value == SourceEventStore),
+            SourceEventStore,
             Arg.Any<Action<IEventStoreSubscriptionBuilder>>());
 
     [Fact] void should_not_use_auto_prefixed_subscription_id() =>
@@ -67,7 +67,7 @@ public class and_external_event_types_are_discovered : Specification
     }
 
     [EventType("f6d8a40f-db16-4474-9f1e-d7ce6f263a2f")]
-    [Events.EventStore(source_event_store)]
+    [Events.EventStore(SourceEventStore)]
     record external_user_invited;
 
     [Reactor]
