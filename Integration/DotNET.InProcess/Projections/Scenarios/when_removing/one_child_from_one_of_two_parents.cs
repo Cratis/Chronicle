@@ -40,7 +40,7 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
         async Task Because()
         {
             var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = result.ToList().ToArray();
+            Groups = (await result.ToListAsync()).ToArray();
             ResultingGroupIds = Groups.Select(_ => (EventSourceId)_.Id.Value).ToArray();
         }
     }
