@@ -52,7 +52,7 @@ Add the attribute through MSBuild so no C# source file is needed:
 </Project>
 ```
 
-**Alternative: C# file with assembly attribute**
+### Alternative: C# file with assembly attribute
 
 You can also declare the attribute in a C# file (for example `AssemblyInfo.cs`):
 
