@@ -80,7 +80,7 @@ public class and_resolves_through_second_event_type(context context) : Given<con
             // Get the result
             var collection = ChronicleFixture.ReadModels.Database.GetCollection<Root>();
             var queryResult = await collection.FindAsync(filter => filter.Name == UpdatedRootName);
-            Result = queryResult.FirstOrDefault();
+            Result = await queryResult.FirstOrDefaultAsync();
         }
     }
 

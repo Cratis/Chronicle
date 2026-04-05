@@ -68,7 +68,7 @@ public class and_parent_key_is_explicitly_provided(context context) : Given<cont
             // Get the result
             var collection = ChronicleFixture.ReadModels.Database.GetCollection<Simulation>();
             var queryResult = await collection.FindAsync(_ => true);
-            Result = queryResult.FirstOrDefault();
+            Result = await queryResult.FirstOrDefaultAsync();
         }
     }
 

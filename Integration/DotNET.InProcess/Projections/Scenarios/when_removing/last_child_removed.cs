@@ -35,7 +35,7 @@ public class last_child_removed(context context) : Given<context>(context)
         async Task Because()
         {
             var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = result.ToList().ToArray();
+            Groups = (await result.ToListAsync()).ToArray();
         }
     }
 
