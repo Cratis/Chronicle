@@ -40,6 +40,7 @@ public class EventStore : IEventStore
     readonly IIdentityProvider _identityProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEventSerializer _eventSerializer;
+    readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
 
     /// <summary>
@@ -86,6 +87,7 @@ public class EventStore : IEventStore
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _clientArtifactsProvider = clientArtifactsProvider;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -282,6 +284,9 @@ public class EventStore : IEventStore
             Reducers.Register(),
             Projections.Register());
 
+        // Auto-subscribe to any external event stores referenced by observers
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
         // Seed events only after all observers are registered
         await Seeding.Register();
     }
@@ -308,5 +313,62 @@ public class EventStore : IEventStore
     {
         var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+    }
+
+    async Task RegisterExternalEventStoreSubscriptionsAsync()
+    {
+        // Collect external event types from reactor handler methods
+        var reactorExternalEventTypes = _clientArtifactsProvider.Reactors
+            .SelectMany(ReactorTypeExtensions.GetHandlerEventTypes);
+
+        // Collect external event types from reducer handler methods
+        var reducerExternalEventTypes = _clientArtifactsProvider.Reducers
+            .SelectMany(ReducerTypeExtensions.GetHandlerEventTypes);
+
+        // Group reactor/reducer external event types by event store name (skip types without a store)
+        var observersByStore = reactorExternalEventTypes
+            .Concat(reducerExternalEventTypes)
+            .Select(t => (EventType: t, StoreName: t.GetEventStoreName()))
+            .Where(x => x.StoreName is not null)
+            .GroupBy(x => x.StoreName!, x => x.EventType)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(t => EventTypes.GetEventTypeFor(t).Id).Distinct().ToList());
+
+        // Merge with projection external event store references
+        var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
+        foreach (var kvp in observersByStore)
+        {
+            allByStore[kvp.Key] = [.. kvp.Value];
+        }
+
+        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
+        {
+            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
+            {
+                existing = [];
+                allByStore[subscription.EventStoreName] = existing;
+            }
+
+            foreach (var id in subscription.EventTypeIds)
+            {
+                existing.Add(id);
+            }
+        }
+
+        // Register a subscription for each external event store
+        foreach (var kvp in allByStore)
+        {
+            await Subscriptions.Subscribe(
+                new EventStoreSubscriptionId($"auto-{kvp.Key}"),
+                kvp.Key,
+                builder =>
+                {
+                    foreach (var id in kvp.Value)
+                    {
+                        builder.WithEventType(id);
+                    }
+                });
+        }
     }
 }

@@ -90,6 +90,12 @@ await eventStore.Subscriptions.Subscribe(
 await app.RunAsync();
 ```
 
+## Automatic Subscriptions
+
+If the event types you consume are annotated with the `[EventStore]` attribute — either at the type level or at the assembly level — Chronicle registers subscriptions for those event stores automatically during `RegisterAll()`. You do not need to call `Subscribe` manually in that case.
+
+See [Subscribing to Events from External Event Stores](event-store-attribute.md#automatic-event-store-subscriptions) for details.
+
 ## See Also
 
 - [Outbox and Inbox](outbox-inbox.md) — conceptual explanation of how events flow between stores

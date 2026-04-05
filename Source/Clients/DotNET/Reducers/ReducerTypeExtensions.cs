@@ -132,6 +132,25 @@ public static class ReducerTypeExtensions
         return reducerAttribute?.IsActive ?? true;
     }
 
+    /// <summary>
+    /// Get all event types used in the handler method signatures of a reducer type.
+    /// </summary>
+    /// <remarks>
+    /// A handler method is any non-special public or non-public instance method whose first parameter type
+    /// carries the <see cref="EventTypeAttribute"/>. Duplicates are removed so each event type appears at most once.
+    /// </remarks>
+    /// <param name="type"><see cref="Type"/> to get from.</param>
+    /// <returns>All event <see cref="Type">types</see> found as first parameters in handler methods.</returns>
+    public static IEnumerable<Type> GetHandlerEventTypes(this Type type) =>
+        type
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(m => !m.IsSpecialName)
+            .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
+            .Where(t => t is not null && Attribute.IsDefined(t, typeof(EventTypeAttribute)))
+            .Select(t => t!)
+            .Distinct()
+            .ToList();
+
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType)
     {
         var eventParameterTypes = reducerType

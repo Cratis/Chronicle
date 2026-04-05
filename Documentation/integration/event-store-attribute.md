@@ -157,6 +157,56 @@ public class FulfillmentProjection : IProjectionFor<FulfillmentReadModel>
 }
 ```
 
+## Automatic Event Store Subscriptions
+
+When a Reactor, Reducer, or Projection (declarative or model-bound) references event types that carry a `[EventStore]` attribute — either on the type itself or at the assembly level — Chronicle **automatically registers an event store subscription** for the referenced source event store during startup. You do not need to call `eventStore.Subscriptions.Subscribe(...)` manually.
+
+The auto-registered subscription:
+
+- Uses `auto-{sourceEventStoreName}` as the subscription identifier.
+- Includes all the event type identifiers referenced by observers from that store.
+- Is idempotent — calling `Subscribe` with the same ID is safe and produces no duplicate.
+
+### Example — no manual subscription needed
+
+Given the fulfillment events assembly published with the assembly-level `[EventStore]`:
+
+```xml
+<!-- FulfillmentService.Events/FulfillmentService.Events.csproj -->
+<ItemGroup>
+  <AssemblyAttribute Include="Cratis.Chronicle.Events.EventStoreAttribute">
+    <_Parameter1>fulfillment-service</_Parameter1>
+  </AssemblyAttribute>
+</ItemGroup>
+```
+
+And a reactor in your service:
+
+```csharp
+public class FulfillmentReactor : IReactor
+{
+    public Task ShipmentDispatched(ShipmentDispatched @event, EventContext context)
+        => HandleDispatchedAsync(@event.OrderId, @event.TrackingNumber);
+}
+```
+
+Chronicle detects that `ShipmentDispatched` belongs to `fulfillment-service` and registers a subscription for that event store automatically during `RegisterAll()`. No startup boilerplate is required.
+
+### Overriding the auto-subscription
+
+If you need different filtering or a different subscription identifier than the default `auto-{storeName}`, register the subscription manually before `RegisterAll()` runs and remove the automatic one:
+
+```csharp
+await eventStore.Subscriptions.Subscribe(
+    "my-custom-subscription",
+    "fulfillment-service",
+    builder => builder
+        .WithEventType<ShipmentDispatched>()
+        .WithEventType<ShipmentFailed>());
+```
+
+Manual and auto-registrations coexist — the auto-registration simply adds an additional subscription using its own identifier.
+
 ## Mixing Event Stores Is Not Allowed
 
 An observer may only handle event types from a **single** event store. Mixing types annotated with different `[EventStore]` values on the same observer throws `MultipleEventStoresDefined` at startup:
