@@ -365,7 +365,7 @@ public class EventStore : IEventStore
         foreach (var kvp in allByStore)
         {
             await Subscriptions.Subscribe(
-                new EventStoreSubscriptionId($"auto-{kvp.Key}"),
+                new EventStoreSubscriptionId(kvp.Key),
                 kvp.Key,
                 builder =>
                 {

@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775389398785,
+  "lastUpdate": 1775401128631,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -396,6 +396,50 @@
             "value": 458374766.8,
             "unit": "ns",
             "range": "± 45372912.83874997"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "d21f9e550c0a0928ed49e1e34c1ab79a941c4ecd",
+          "message": "Fix cross-store event store subscription regressions",
+          "timestamp": "2026-04-05T13:29:40Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2979/commits/d21f9e550c0a0928ed49e1e34c1ab79a941c4ecd"
+        },
+        "date": 1775401128630,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 14494743.992307689,
+            "unit": "ns",
+            "range": "± 1750282.2069671769"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 26775787.111111116,
+            "unit": "ns",
+            "range": "± 4898753.25673821"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 62147096.3625,
+            "unit": "ns",
+            "range": "± 13678821.565156208"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 577779970.9,
+            "unit": "ns",
+            "range": "± 53299778.55053149"
           }
         ]
       }
