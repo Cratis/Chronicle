@@ -103,7 +103,7 @@ public class Reducers : IReducers
                                 {
                                     var readModelType = reducerType.GetReadModelType();
                                     _reducerValidator.Validate(reducerType);
-                                    var eventSequenceId = reducerType.GetEventSequenceId(_eventStore.Name?.Value);
+                                    reducerType.GetEventSequenceId(_eventStore.Name?.Value);
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
 
