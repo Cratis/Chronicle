@@ -317,7 +317,7 @@ jobs:
           echo "Installed npm $NPM_VER"
           node -e "
             const v = '$NPM_VER'.split('.').map(Number);
-            if (v[0] < 11 || (v[0] === 11 && v[1] < 5) || (v[0] === 11 && v[1] === 5 && v[2] < 1)) {
+            if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) {
               console.error('npm >= 11.5.1 is required for trusted publishing, got $NPM_VER');
               process.exit(1);
             }
