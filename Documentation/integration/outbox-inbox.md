@@ -35,7 +35,7 @@ This means you can call `Subscribe` at application startup without worrying abou
 Source event store               Target event store
 ─────────────────                ─────────────────
       Outbox                           Inbox
-   ┌─────────┐    [subscription]   ┌─────────┐
+   ┌─────────┐   [subscription]   ┌─────────┐
    │ event A │ ─────────────────▶ │ event A │
    │ event B │ ─────────────────▶ │ event B │
    └─────────┘                    └─────────┘
