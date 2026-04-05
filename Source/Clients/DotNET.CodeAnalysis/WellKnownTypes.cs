@@ -16,6 +16,11 @@ public static class WellKnownTypes
     public const string EventTypeAttributeName = "Cratis.Chronicle.Concepts.Events.EventTypeAttribute";
 
     /// <summary>
+    /// The full name of the EventStore attribute.
+    /// </summary>
+    public const string EventStoreAttributeName = "Cratis.Chronicle.Events.EventStoreAttribute";
+
+    /// <summary>
     /// The full name of IEventSequence interface.
     /// </summary>
     public const string IEventSequenceName = "Cratis.Chronicle.EventSequences.IEventSequence";
@@ -68,5 +73,25 @@ public static class WellKnownTypes
     {
         var reducerInterface = compilation.GetTypeByMetadataName(IReducerName);
         return reducerInterface != null && typeSymbol.AllInterfaces.Contains(reducerInterface, SymbolEqualityComparer.Default);
+    }
+
+    /// <summary>
+    /// Get the event store name from a type's <see cref="EventStoreAttributeName"/> attribute.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <returns>The event store name, or <c>null</c> if the type does not have the attribute.</returns>
+    public static string? GetEventStoreName(ITypeSymbol typeSymbol)
+    {
+        var attribute = typeSymbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == EventStoreAttributeName);
+
+        if (attribute == null)
+        {
+            return null;
+        }
+
+        return attribute.ConstructorArguments.Length > 0
+            ? attribute.ConstructorArguments[0].Value as string
+            : null;
     }
 }
