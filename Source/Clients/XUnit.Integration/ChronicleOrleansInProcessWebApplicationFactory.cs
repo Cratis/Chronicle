@@ -3,6 +3,8 @@
 
 extern alias KernelCore;
 
+using System.Net;
+using System.Net.Sockets;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -85,9 +87,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             });
         builder.AddCratisChronicle();
 
+        var siloPort = GetFreePort();
+        var gatewayPort = GetFreePort();
+
         builder.UseOrleans(silo =>
             {
-                silo.UseLocalhostClustering();
+                silo.UseLocalhostClustering(siloPort, gatewayPort);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleOrleansInProcessWebApplicationFactory<TStartup>).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -156,5 +161,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             configureWebHost(b);
         });
         return builder;
+    }
+
+    static int GetFreePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 }
