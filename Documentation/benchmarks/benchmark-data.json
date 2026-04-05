@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775213726975,
+  "lastUpdate": 1775324624545,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -176,6 +176,138 @@
             "value": 498401183.5,
             "unit": "ns",
             "range": "± 54999620.21425986"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "6363a1304002e72fa68d77656d8c8090c183dba8",
+          "message": "Enable running integration specs across multiple test environments",
+          "timestamp": "2026-04-03T11:49:16Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2269/commits/6363a1304002e72fa68d77656d8c8090c183dba8"
+        },
+        "date": 1775297710934,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 12787183.833333336,
+            "unit": "ns",
+            "range": "± 832966.3656117242"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 22551346.82,
+            "unit": "ns",
+            "range": "± 3994489.0372412945"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 92892251.7,
+            "unit": "ns",
+            "range": "± 15073203.412886644"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 710257559.5,
+            "unit": "ns",
+            "range": "± 156720693.63009185"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "1c7b4721dd893a78d9e05172011cccc6bd6c726c",
+          "message": "Enable running integration specs across multiple test environments",
+          "timestamp": "2026-04-04T10:13:37Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2269/commits/1c7b4721dd893a78d9e05172011cccc6bd6c726c"
+        },
+        "date": 1775319368375,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 13015740.888888888,
+            "unit": "ns",
+            "range": "± 1277872.7403490893"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 25369067.757142857,
+            "unit": "ns",
+            "range": "± 5663145.598803865"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 67153652.14285713,
+            "unit": "ns",
+            "range": "± 12488897.04456574"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 525860020.7,
+            "unit": "ns",
+            "range": "± 68127048.14062622"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "5f3945f41980107559fa055ad1c0b2d79172125d",
+          "message": "Enable running integration specs across multiple test environments",
+          "timestamp": "2026-04-04T10:13:37Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2269/commits/5f3945f41980107559fa055ad1c0b2d79172125d"
+        },
+        "date": 1775324624544,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 13830945.983333334,
+            "unit": "ns",
+            "range": "± 1623370.2999045383"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 26261420.833333332,
+            "unit": "ns",
+            "range": "± 3062063.218373235"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 64217705.16666667,
+            "unit": "ns",
+            "range": "± 10589261.838952294"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 515222450.4,
+            "unit": "ns",
+            "range": "± 83070315.91926329"
           }
         ]
       }

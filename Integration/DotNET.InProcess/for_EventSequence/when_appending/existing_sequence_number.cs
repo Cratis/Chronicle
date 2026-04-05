@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending;
 using Cratis.Chronicle.Storage.MongoDB;
 using MongoDB.Bson;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending.existing_sequence_number.context;
@@ -11,7 +12,7 @@ namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appendin
 [Collection(ChronicleCollection.Name)]
 public class existing_sequence_number(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification(chronicleFixture)
     {
         public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent FirstEvent;
