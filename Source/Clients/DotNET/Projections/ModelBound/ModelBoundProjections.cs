@@ -14,10 +14,15 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <param name="clientArtifactsProvider">The <see cref="IClientArtifactsProvider"/> to use for discovering client artifacts.</param>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="currentEventStoreName">
+/// The name of the event store the projections belong to.
+/// Used to detect when event types belong to the same store, which means event-log rather than inbox routing.
+/// </param>
 internal class ModelBoundProjections(
     IClientArtifactsProvider clientArtifactsProvider,
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes) : IModelBoundProjections
+    IEventTypes eventTypes,
+    string? currentEventStoreName = null) : IModelBoundProjections
 {
     /// <summary>
     /// Discovers all model-bound projections.
@@ -35,7 +40,7 @@ internal class ModelBoundProjections(
         var typesUsedAsChildrenOrSubObjects = CollectTypesUsedAsChildrenOrSubObjects(allCandidateTypes);
         var rootProjectionTypes = allCandidateTypes.Except(typesUsedAsChildrenOrSubObjects).ToList();
 
-        var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes);
+        var builder = new ModelBoundProjectionBuilder(namingPolicy, eventTypes, currentEventStoreName);
         return rootProjectionTypes.ToDictionary(x => x, builder.Build);
     }
 

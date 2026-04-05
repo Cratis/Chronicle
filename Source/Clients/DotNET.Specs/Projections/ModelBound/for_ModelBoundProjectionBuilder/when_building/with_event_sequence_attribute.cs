@@ -5,7 +5,7 @@ using Cratis.Chronicle.Contracts.Projections;
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionBuilder.when_building;
 
-public class with_from_event_sequence : given.a_model_bound_projection_builder
+public class with_event_sequence_attribute : given.a_model_bound_projection_builder
 {
     ProjectionDefinition _result;
 

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
@@ -104,6 +105,16 @@ public interface IProjections
     /// <param name="projectionId"><see cref="ProjectionId"/> to replay.</param>
     /// <returns>Awaitable task.</returns>
     Task Replay(ProjectionId projectionId);
+
+    /// <summary>
+    /// Get the external event store subscription requirements derived from all discovered projection definitions.
+    /// </summary>
+    /// <remarks>
+    /// Returns one entry per external event store name, collecting all event type identifiers used by
+    /// projections whose event sequence is an inbox sequence for that store.
+    /// </remarks>
+    /// <returns>A collection of tuples mapping external event store names to their event type identifiers.</returns>
+    IEnumerable<(string EventStoreName, IEnumerable<EventTypeId> EventTypeIds)> GetExternalEventStoreSubscriptions();
 
     /// <summary>
     /// Discover all projections from entry assembly and dependencies.

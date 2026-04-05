@@ -11,6 +11,27 @@ namespace Cratis.Chronicle.Events;
 public static class EventTypeExtensions
 {
     /// <summary>
+    /// Get the event store name for an event type.
+    /// </summary>
+    /// <remarks>
+    /// First checks for a type-level <see cref="EventStoreAttribute"/>. If not found,
+    /// falls back to an assembly-level <see cref="EventStoreAttribute"/> on the type's declaring assembly.
+    /// </remarks>
+    /// <param name="type">Type to get for.</param>
+    /// <returns>The event store name, or <see langword="null"/> if neither the type nor its assembly has the attribute.</returns>
+    public static string? GetEventStoreName(this Type type)
+    {
+        var typeAttribute = type.GetCustomAttribute<EventStoreAttribute>();
+        if (typeAttribute is not null)
+        {
+            return typeAttribute.EventStore;
+        }
+
+        var assemblyAttribute = type.Assembly.GetCustomAttribute<EventStoreAttribute>();
+        return assemblyAttribute?.EventStore;
+    }
+
+    /// <summary>
     /// Check if a type is an event type.
     /// </summary>
     /// <param name="type">Type to check.</param>

@@ -76,22 +76,36 @@ public static class WellKnownTypes
     }
 
     /// <summary>
-    /// Get the event store name from a type's <see cref="EventStoreAttributeName"/> attribute.
+    /// Get the event store name from a type's <see cref="EventStoreAttributeName"/> attribute, or from its containing assembly.
     /// </summary>
+    /// <remarks>
+    /// First checks for a type-level <see cref="EventStoreAttributeName"/> attribute. If not found,
+    /// falls back to an assembly-level <see cref="EventStoreAttributeName"/> attribute on the type's containing assembly.
+    /// </remarks>
     /// <param name="typeSymbol">The type symbol to check.</param>
-    /// <returns>The event store name, or <c><see langword="null"/></c> if the type does not have the attribute.</returns>
+    /// <returns>The event store name, or <see langword="null"/> if neither the type nor its containing assembly has the attribute.</returns>
     public static string? GetEventStoreName(ITypeSymbol typeSymbol)
     {
-        var attribute = typeSymbol.GetAttributes()
+        var typeAttribute = typeSymbol.GetAttributes()
             .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == EventStoreAttributeName);
 
-        if (attribute == null)
+        if (typeAttribute is not null)
         {
-            return null;
+            return typeAttribute.ConstructorArguments.Length > 0
+                ? typeAttribute.ConstructorArguments[0].Value as string
+                : null;
         }
 
-        return attribute.ConstructorArguments.Length > 0
-            ? attribute.ConstructorArguments[0].Value as string
-            : null;
+        var assemblyAttribute = typeSymbol.ContainingAssembly?.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == EventStoreAttributeName);
+
+        if (assemblyAttribute is not null)
+        {
+            return assemblyAttribute.ConstructorArguments.Length > 0
+                ? assemblyAttribute.ConstructorArguments[0].Value as string
+                : null;
+        }
+
+        return null;
     }
 }

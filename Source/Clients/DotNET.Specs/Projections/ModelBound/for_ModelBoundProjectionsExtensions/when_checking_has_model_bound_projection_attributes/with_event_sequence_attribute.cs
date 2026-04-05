@@ -3,11 +3,11 @@
 
 namespace Cratis.Chronicle.Projections.ModelBound.for_ModelBoundProjectionsExtensions.when_checking_has_model_bound_projection_attributes;
 
-public class with_from_event_sequence_attribute : Specification
+public class with_event_sequence_attribute : Specification
 {
     bool _result;
 
-    void Because() => _result = typeof(TypeWithFromEventSequenceAttribute).HasModelBoundProjectionAttributes();
+    void Because() => _result = typeof(TypeWithEventSequenceAttribute).HasModelBoundProjectionAttributes();
 
     [Fact] void should_return_true() => _result.ShouldBeTrue();
 }

@@ -5,7 +5,9 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_ModelBoundProjection
 
 public class a_model_bound_projection_multiple_event_stores_analyzer : Specification
 {
-    protected static string CreateSource(string usage)
+    protected static string CreateSource(string usage) => CreateSource(usage, assemblyAttributes: string.Empty);
+
+    protected static string CreateSource(string usage, string assemblyAttributes)
     {
         return string.Join(Environment.NewLine,
         [
@@ -13,6 +15,8 @@ public class a_model_bound_projection_multiple_event_stores_analyzer : Specifica
             "using Cratis.Chronicle.Concepts.Events;",
             "using Cratis.Chronicle.Events;",
             "using Cratis.Chronicle.Projections.ModelBound;",
+            "",
+            assemblyAttributes,
             "",
             "namespace Cratis.Chronicle.Concepts.Events",
             "{",
@@ -24,7 +28,7 @@ public class a_model_bound_projection_multiple_event_stores_analyzer : Specifica
             "",
             "namespace Cratis.Chronicle.Events",
             "{",
-            "    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]",
+            "    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Assembly, AllowMultiple = false)]",
             "    public sealed class EventStoreAttribute : Attribute",
             "    {",
             "        public EventStoreAttribute(string eventStore) { }",

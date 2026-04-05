@@ -5,13 +5,17 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_DeclarativeProjectio
 
 public class a_declarative_projection_multiple_event_stores_analyzer : Specification
 {
-    protected static string CreateSource(string usage)
+    protected static string CreateSource(string usage) => CreateSource(usage, assemblyAttributes: string.Empty);
+
+    protected static string CreateSource(string usage, string assemblyAttributes)
     {
         return string.Join(Environment.NewLine,
         [
             "using System;",
             "using Cratis.Chronicle.Concepts.Events;",
             "using Cratis.Chronicle.Events;",
+            "",
+            assemblyAttributes,
             "",
             "namespace Cratis.Chronicle.Concepts.Events",
             "{",
@@ -23,7 +27,7 @@ public class a_declarative_projection_multiple_event_stores_analyzer : Specifica
             "",
             "namespace Cratis.Chronicle.Events",
             "{",
-            "    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]",
+            "    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Assembly, AllowMultiple = false)]",
             "    public sealed class EventStoreAttribute : Attribute",
             "    {",
             "        public EventStoreAttribute(string eventStore) { }",

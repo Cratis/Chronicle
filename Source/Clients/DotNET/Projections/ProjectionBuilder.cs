@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
@@ -179,10 +178,10 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 
     void CollectEventStore(Type eventType)
     {
-        var eventStoreAttribute = eventType.GetCustomAttribute<EventStoreAttribute>();
-        if (eventStoreAttribute is not null && !_observedEventStores.Contains(eventStoreAttribute.EventStore))
+        var eventStoreName = eventType.GetEventStoreName();
+        if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
         {
-            _observedEventStores.Add(eventStoreAttribute.EventStore);
+            _observedEventStores.Add(eventStoreName);
         }
     }
 }
