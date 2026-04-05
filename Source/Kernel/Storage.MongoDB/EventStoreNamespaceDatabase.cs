@@ -234,14 +234,5 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         }
     }
 
-    string GetCollectionNameFor(EventSequenceId eventSequenceId)
-    {
-        var collectionName = WellKnownCollectionNames.EventLog;
-        if (!eventSequenceId.IsEventLog && eventSequenceId == EventSequenceId.System)
-        {
-            collectionName = WellKnownCollectionNames.System;
-        }
-
-        return collectionName;
-    }
+    string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;
 }
