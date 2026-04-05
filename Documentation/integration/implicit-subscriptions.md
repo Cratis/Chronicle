@@ -118,6 +118,22 @@ global using Cratis.Chronicle.Events;
 [assembly: EventStore("fulfillment-service")]
 ```
 
+### Option 3: Using `<AssemblyAttribute>` in the .csproj (No C# File Needed)
+
+You can apply the assembly-level `[EventStore]` attribute directly from your `.csproj`, without creating any C# file. Add an `<AssemblyAttribute>` item to your project:
+
+```xml
+<ItemGroup>
+  <AssemblyAttribute Include="Cratis.Chronicle.Events.EventStoreAttribute">
+    <_Parameter1>fulfillment-service</_Parameter1>
+  </AssemblyAttribute>
+</ItemGroup>
+```
+
+MSBuild will emit `[assembly: Cratis.Chronicle.Events.EventStoreAttribute("fulfillment-service")]` in the auto-generated `AssemblyInfo.cs` file — no manual C# file required.
+
+> **Note:** This approach requires `<GenerateAssemblyInfo>` to be `true` (the default). If your project sets `<GenerateAssemblyInfo>false</GenerateAssemblyInfo>`, the `<AssemblyAttribute>` item will have no effect since it relies on the auto-generated file.
+
 ### Event Type Definitions
 
 Now your event types only need `[EventType]`:
