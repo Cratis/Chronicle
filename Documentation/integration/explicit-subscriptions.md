@@ -1,6 +1,5 @@
 ---
 uid: explicit-subscriptions
-title: Explicit Event Store Subscriptions
 ---
 
 # Explicit Event Store Subscriptions

@@ -1,6 +1,5 @@
 ---
 uid: implicit-subscriptions
-title: Implicit Event Store Subscriptions
 ---
 
 # Implicit Event Store Subscriptions
@@ -49,6 +48,119 @@ public record ShipmentDispatched(Guid OrderId, string TrackingNumber);
 [EventType]
 [EventStore("fulfillment-service")]
 public record ShipmentFailed(Guid OrderId, string Reason);
+```
+
+## Assembly-Level Configuration with `[EventStore]`
+
+To avoid repeating `[EventStore]` on every event type, apply the attribute once at the assembly level in your **GlobalUsings.cs** or **AssemblyInfo.cs** file. This is the **recommended approach** for creating reusable event contracts.
+
+### The `.Contracts` Project Pattern
+
+Create a separate, thin project with the naming convention `{ServiceName}.Events.Contracts` to publish your event types:
+
+```text
+FulfillmentService.Events.Contracts/
+├── AssemblyInfo.cs
+├── ShipmentDispatched.cs
+├── ShipmentFailed.cs
+└── FulfillmentService.Events.Contracts.csproj
+```
+
+This `.Contracts` project contains **only your event type definitions** and minimal dependencies. It's lightweight, fast to build, and safe to share as a NuGet package.
+
+### Project File Configuration
+
+Configure your `.Contracts` .csproj with appropriate metadata for sharing:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>FulfillmentService.Events.Contracts</AssemblyName>
+    <PackageId>FulfillmentService.Events.Contracts</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Title>Fulfillment Service Event Contracts</Title>
+    <Description>Shared event types published by FulfillmentService</Description>
+    <Authors>Your Team</Authors>
+    <RepositoryUrl>https://github.com/yourorg/FulfillmentService</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Cratis.Chronicle" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>
+```
+
+### Assembly-Level Attribute Definition
+
+In your `.Contracts` project, create an **AssemblyInfo.cs** file or use **GlobalUsings.cs** to apply `[EventStore]` once:
+
+### Option 1: Using AssemblyInfo.cs
+
+```csharp
+// FulfillmentService.Events.Contracts/AssemblyInfo.cs
+using Cratis.Chronicle.Events;
+
+[assembly: EventStore("fulfillment-service")]
+```
+
+### Option 2: Using GlobalUsings.cs (Recommended)
+
+```csharp
+// FulfillmentService.Events.Contracts/GlobalUsings.cs
+global using System;
+global using System.Collections.Generic;
+global using Cratis.Chronicle.Events;
+
+[assembly: EventStore("fulfillment-service")]
+```
+
+### Event Type Definitions
+
+Now your event types only need `[EventType]`:
+
+```csharp
+// FulfillmentService.Events.Contracts/ShipmentDispatched.cs
+namespace FulfillmentService.Events;
+
+[EventType]
+public record ShipmentDispatched(Guid OrderId, string TrackingNumber);
+
+[EventType]
+public record ShipmentFailed(Guid OrderId, string Reason);
+```
+
+All events in this assembly are automatically associated with the `fulfillment-service` event store.
+
+### Publishing and Consuming
+
+**In your FulfillmentService (source):**
+- Reference your own `.Contracts` project
+- Event types are published to `fulfillment-service` outbox
+
+**In consuming services:**
+- Add a NuGet reference to `FulfillmentService.Events.Contracts`
+- Create observers (reactors, projections, reducers) that handle the event types
+- Events are automatically routed to the `inbox-fulfillment-service` sequence
+- **No explicit subscription or configuration needed**
+
+Example consumer setup:
+
+```csharp
+// OrderService/Program.cs
+var builder = WebApplicationBuilder.CreateBuilder(args);
+
+builder.Services.AddChronicle(c => c
+    .UseMongoDB("mongodb://localhost:27017/order-service")
+    .UseEventStore("order-service"));
+
+// Just reference the events from the NuGet package
+using var app = builder.Build();
+// Reactors/projections that observe FulfillmentService.Events types
+// are automatically routed to the inbox
 ```
 
 ## Automatic Inbox Routing
