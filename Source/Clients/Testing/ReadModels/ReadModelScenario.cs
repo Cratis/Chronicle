@@ -67,16 +67,30 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public TReadModel? Instance => _instance;
 
     /// <summary>
-    /// Feeds the provided events through the read model's projection or reducer and updates <see cref="Instance"/>.
+    /// Gets the entry point of the fluent builder for seeding events into this scenario.
     /// </summary>
+    /// <remarks>
+    /// Usage:
+    /// <code>
+    /// await scenario.Given
+    ///     .ForEventSource(myId)
+    ///     .Events(new SomeEvent(), new SomeOtherEvent());
+    /// </code>
+    /// </remarks>
+    public ReadModelScenarioGivenBuilder<TReadModel> Given => new(this);
+
+    /// <summary>
+    /// Feeds the provided events for a specific event source through the read model's projection or reducer and updates <see cref="Instance"/>.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to process in order.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public async Task Given(params object[] events)
+    public async Task ProcessEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
     {
-        _instance = await ProcessEvents(events);
+        _instance = await ProcessEvents(eventSourceId, events);
     }
 
-    async Task<TReadModel?> ProcessEvents(IEnumerable<object> events)
+    async Task<TReadModel?> ProcessEvents(EventSourceId eventSourceId, IEnumerable<object> events)
     {
         var readModelType = typeof(TReadModel);
 
@@ -86,7 +100,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             using var serviceProvider = new DefaultServiceProvider();
             return await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
-                events.Select(e => new EventForEventSourceId(EventSourceId.New(), e, Causation.Unknown())),
+                events.Select(e => new EventForEventSourceId(eventSourceId, e, Causation.Unknown())),
                 _eventTypes,
                 _artifactsActivator,
                 serviceProvider,
