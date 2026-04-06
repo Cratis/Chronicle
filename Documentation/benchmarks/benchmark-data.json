@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775501073164,
+  "lastUpdate": 1775502120140,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -484,6 +484,50 @@
             "value": 507227819.4,
             "unit": "ns",
             "range": "± 93531851.26305294"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "30930cd1b8e19028e1c210acdee37efdf62f8bdf",
+          "message": "Bump vite from 8.0.3 to 8.0.5 in /Source/Workbench",
+          "timestamp": "2026-04-06T18:53:03Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2987/commits/30930cd1b8e19028e1c210acdee37efdf62f8bdf"
+        },
+        "date": 1775502120139,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 10018235.154513888,
+            "unit": "ns",
+            "range": "± 431762.06400283176"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 16499845.859375,
+            "unit": "ns",
+            "range": "± 1081385.1903296313"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 98243766.6388889,
+            "unit": "ns",
+            "range": "± 8960643.712042144"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 559646906.1,
+            "unit": "ns",
+            "range": "± 66841470.30773161"
           }
         ]
       }
