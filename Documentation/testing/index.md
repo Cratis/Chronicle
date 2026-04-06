@@ -10,3 +10,4 @@ Chronicle provides lightweight, in-process test utilities that let you verify re
 | Guide | Description |
 |-------|-------------|
 | [Read Models](read-models.md) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |
+| [Event Sequences](event-sequences.md) | Test event appends and constraint behavior in-process using `EventScenario` |
