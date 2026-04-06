@@ -1,7 +1,7 @@
 ---
-uid: Chronicle.Testing.ReadModels
+uid: Chronicle.Testing.ReadModels.Scenario
 ---
-# Testing Read Models
+# ReadModelScenario
 
 `ReadModelScenario<TReadModel>` is a lightweight, in-process test utility that lets you verify the output of read model projections and reducers without a running Chronicle server or database.
 

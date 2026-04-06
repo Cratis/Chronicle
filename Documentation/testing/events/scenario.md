@@ -1,7 +1,7 @@
 ---
-uid: Chronicle.Testing.EventSequences
+uid: Chronicle.Testing.Events.Scenario
 ---
-# Testing Event Sequences
+# EventScenario
 
 `EventScenario` is a lightweight, in-process test utility for exercising code that appends events to an `IEventLog` or `IEventSequence`. It runs entirely in memory with no Chronicle server, database, or network required.
 
@@ -54,42 +54,9 @@ await scenario.Given
     .Events(new AuthorRegistered("John Doe"));
 ```
 
-## Asserting on the result
-
-Every `Append` and `AppendMany` call returns an `IAppendResult`. Use the built-in `Should*` extension methods to assert on it:
-
-| Method | Asserts |
-|--------|---------|
-| `result.ShouldBeSuccessful()` | Operation succeeded with no violations or errors |
-| `result.ShouldBeFailed()` | Operation failed (any violation or error) |
-| `result.ShouldHaveConstraintViolations()` | At least one constraint violation is present |
-| `result.ShouldNotHaveConstraintViolations()` | No constraint violations are present |
-| `result.ShouldHaveConstraintViolationFor(name)` | A violation for the named constraint is present |
-| `result.ShouldHaveConcurrencyViolations()` | At least one concurrency violation is present |
-| `result.ShouldNotHaveConcurrencyViolations()` | No concurrency violations are present |
-| `result.ShouldHaveErrors()` | At least one error is present |
-| `result.ShouldNotHaveErrors()` | No errors are present |
-
-All `Should*` methods throw `AppendResultAssertionException` on failure, including a description of all violations or errors found.
-
-## Testing constraint violations
-
-Seed the pre-existing state with `Given` and then assert that a second append is rejected:
-
-```csharp
-var scenario = new EventScenario();
-
-// Pre-seed: this author name is already taken
-await scenario.Given
-    .ForEventSource(existingAuthorId)
-    .Events(new AuthorRegistered("John Doe"));
-
-// Act: attempt to register the same name for a different event source
-var result = await scenario.EventLog.Append(newAuthorId, new AuthorRegistered("John Doe"));
-
-result.ShouldBeFailed();
-result.ShouldHaveConstraintViolationFor("UniqueAuthorName");
-```
+**Rules:**
+- Call `Given` before the act phase — seeded events get monotonically increasing sequence numbers.
+- Do not put the act under test inside `Given`; only pre-existing state goes here.
 
 ## Testing AppendMany
 
@@ -131,3 +98,5 @@ public class when_adding_a_book_to_an_author
     }
 }
 ```
+
+For information on asserting the result of an append operation, see [Assertions](assertions.md).
