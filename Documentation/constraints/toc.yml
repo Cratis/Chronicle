@@ -1,7 +1,7 @@
 - name: Overview
   href: index.md
-- name: "[Unique] attribute"
-  href: attribute.md
-- name: Declarative (IConstraint)
-  href: declarative.md
+- name: Declarative
+  href: declarative/toc.yml
+- name: Model-Bound
+  href: model-bound/toc.yml
 
