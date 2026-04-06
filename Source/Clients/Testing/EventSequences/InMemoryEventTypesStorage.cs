@@ -7,6 +7,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventTypes;
 using KernelConcepts::Cratis.Chronicle.Concepts.Events;
+using KernelEventTypes = KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
@@ -29,12 +30,12 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
     public Task Register(EventTypeDefinition definition) => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() =>
-        Task.FromResult(Enumerable.Empty<EventTypeSchema>());
+    public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetLatestForAllEventTypes() =>
+        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() =>
-        new Subject<IEnumerable<EventTypeSchema>>();
+    public ISubject<IEnumerable<KernelEventTypes::EventTypeSchema>> ObserveLatestForAllEventTypes() =>
+        new Subject<IEnumerable<KernelEventTypes::EventTypeSchema>>();
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventTypeDefinition>> GetAllDefinitions() =>
@@ -45,17 +46,17 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
         Task.FromResult(new EventTypeDefinition(eventTypeId, EventTypeOwner.Client, false, [], []));
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType) =>
-        Task.FromResult(Enumerable.Empty<EventTypeSchema>());
+    public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType) =>
+        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
 
     /// <inheritdoc/>
     public Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default) =>
         Task.FromResult(true);
 
     /// <inheritdoc/>
-    public Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
+    public Task<KernelEventTypes::EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
-        return Task.FromResult(new EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
+        return Task.FromResult(new KernelEventTypes::EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
     }
 }

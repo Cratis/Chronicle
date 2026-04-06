@@ -189,4 +189,7 @@ sealed class InMemoryEventStoreNamespaceStorage(
 
     /// <inheritdoc/>
     public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(KernelEventSequences::EventSequenceId _) => uniqueEventTypesStorage;
+
+    /// <inheritdoc/>
+    public IProjectionFuturesStorage ProjectionFutures => throw new NotSupportedException("Projection futures storage is not needed for in-memory event sequence testing.");
 }
