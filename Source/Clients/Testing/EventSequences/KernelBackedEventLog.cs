@@ -108,13 +108,11 @@ internal sealed class KernelBackedEventLog(KernelEventSequences::EventSequence g
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetNextSequenceNumber() =>
-        Task.FromResult((EventSequenceNumber)grain.State.SequenceNumber.Value);
+        grain.GetNextSequenceNumber().ContinueWith(t => (EventSequenceNumber)t.Result.Value);
 
     /// <inheritdoc/>
     public Task<EventSequenceNumber> GetTailSequenceNumber() =>
-        Task.FromResult(grain.State.SequenceNumber.Value == 0
-            ? EventSequenceNumber.Unavailable
-            : (EventSequenceNumber)(grain.State.SequenceNumber.Value - 1));
+        grain.GetTailSequenceNumber().ContinueWith(t => (EventSequenceNumber)t.Result.Value);
 
     static AppendResult ToClientResult(KernelAppendResult kernelResult) =>
         new()

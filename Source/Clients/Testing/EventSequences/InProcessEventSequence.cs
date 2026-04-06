@@ -7,8 +7,11 @@ extern alias KernelConcepts;
 using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Types;
+using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
 using KernelEventSequences = KernelCore::Cratis.Chronicle.EventSequences;
+using KernelMigrations = KernelCore::Cratis.Chronicle.EventSequences.Migrations;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,10 +23,11 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Factory for creating and setting up a kernel <see cref="KernelEventSequences::EventSequence"/> grain for in-process testing.
 /// </summary>
 /// <remarks>
-/// The kernel grain runs fully in-process without a real Orleans silo. All business logic
-/// (constraint validation, hash calculation, event serialization, migration) is executed through
-/// the real <see cref="KernelEventSequences::EventSequence"/> implementation. Only the storage
-/// layer is replaced with in-memory adapters.
+/// The kernel grain runs fully in-process without a real Orleans silo. Real implementations are used for all
+/// dependencies except <see cref="KernelCore::Cratis.Chronicle.Storage.IStorage"/> (in-memory) and
+/// <see cref="Cratis.Metrics.IMeter{T}"/> / <see cref="Microsoft.Extensions.Logging.ILogger{T}"/> (null implementations).
+/// This means constraint validation, hash calculation, event serialization, migration, and compliance all run
+/// through the actual kernel code paths.
 /// </remarks>
 internal static class InProcessEventSequence
 {
@@ -64,14 +68,21 @@ internal static class InProcessEventSequence
         var typeFormats = new TypeFormats();
         var expandoObjectConverter = new ExpandoObjectConverter(typeFormats);
 
+        var eventTypeMigrations = new KernelMigrations::EventTypeMigrations(storage, expandoObjectConverter);
+        var jsonComplianceManager = new KernelCompliance::JsonComplianceManager(new KnownInstancesOf<KernelCompliance::IJsonCompliancePropertyValueHandler>());
+        var eventSerializer = new KernelEventSequences::EventSerializer(
+            new InMemoryKernelEventTypes(),
+            expandoObjectConverter,
+            global::Cratis.Json.Globals.JsonSerializerOptions ?? new global::System.Text.Json.JsonSerializerOptions());
+
         var grain = new KernelEventSequences::EventSequence(
             storage,
             new KernelConstraints::ConstraintValidationFactory(storage),
-            new NullEventTypeMigrations(),
+            eventTypeMigrations,
             null!,
-            new NullJsonComplianceManager(),
+            jsonComplianceManager,
             expandoObjectConverter,
-            new NullEventSerializer(),
+            eventSerializer,
             new KernelEventSequences::EventHashCalculator(),
             NullLogger<KernelEventSequences::EventSequence>.Instance);
 
