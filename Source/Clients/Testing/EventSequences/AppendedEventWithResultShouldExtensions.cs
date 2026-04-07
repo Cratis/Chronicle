@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Xunit;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
@@ -24,44 +23,44 @@ public static class AppendedEventWithResultShouldExtensions
     /// Asserts that the <see cref="AppendedEventWithResult"/> is not successful.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
-    public static void ShouldNotBeSuccessful(this AppendedEventWithResult appendedEvent) =>
-        appendedEvent.Result.ShouldNotBeSuccessful();
+    public static void ShouldBeFailed(this AppendedEventWithResult appendedEvent) =>
+        appendedEvent.Result.ShouldBeFailed();
 
     /// <summary>
     /// Asserts that the <see cref="AppendedEventWithResult"/> has at least one constraint violation.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
-    public static void ShouldHaveConstraintViolation(this AppendedEventWithResult appendedEvent) =>
-        appendedEvent.Result.ShouldHaveConstraintViolation();
+    public static void ShouldHaveConstraintViolations(this AppendedEventWithResult appendedEvent) =>
+        appendedEvent.Result.ShouldHaveConstraintViolations();
 
     /// <summary>
     /// Asserts that the <see cref="AppendedEventWithResult"/> has no constraint violations.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
-    public static void ShouldNotHaveConstraintViolation(this AppendedEventWithResult appendedEvent) =>
-        appendedEvent.Result.ShouldNotHaveConstraintViolation();
+    public static void ShouldNotHaveConstraintViolations(this AppendedEventWithResult appendedEvent) =>
+        appendedEvent.Result.ShouldNotHaveConstraintViolations();
 
     /// <summary>
     /// Asserts that the <see cref="AppendedEventWithResult"/> has a constraint violation with the given name.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
     /// <param name="constraintName">The expected <see cref="ConstraintName"/>.</param>
-    public static void ShouldHaveConstraintViolation(this AppendedEventWithResult appendedEvent, ConstraintName constraintName) =>
-        appendedEvent.Result.ShouldHaveConstraintViolation(constraintName);
+    public static void ShouldHaveConstraintViolationFor(this AppendedEventWithResult appendedEvent, ConstraintName constraintName) =>
+        appendedEvent.Result.ShouldHaveConstraintViolationFor(constraintName);
 
     /// <summary>
-    /// Asserts that the <see cref="AppendedEventWithResult"/> has a concurrency violation.
+    /// Asserts that the <see cref="AppendedEventWithResult"/> has at least one concurrency violation.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
-    public static void ShouldHaveConcurrencyViolation(this AppendedEventWithResult appendedEvent) =>
-        appendedEvent.Result.ShouldHaveConcurrencyViolation();
+    public static void ShouldHaveConcurrencyViolations(this AppendedEventWithResult appendedEvent) =>
+        appendedEvent.Result.ShouldHaveConcurrencyViolations();
 
     /// <summary>
-    /// Asserts that the <see cref="AppendedEventWithResult"/> has no concurrency violation.
+    /// Asserts that the <see cref="AppendedEventWithResult"/> has no concurrency violations.
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
-    public static void ShouldNotHaveConcurrencyViolation(this AppendedEventWithResult appendedEvent) =>
-        appendedEvent.Result.ShouldNotHaveConcurrencyViolation();
+    public static void ShouldNotHaveConcurrencyViolations(this AppendedEventWithResult appendedEvent) =>
+        appendedEvent.Result.ShouldNotHaveConcurrencyViolations();
 
     /// <summary>
     /// Asserts that the <see cref="AppendedEventWithResult"/> has errors.
@@ -83,10 +82,16 @@ public static class AppendedEventWithResultShouldExtensions
     /// <typeparam name="TEvent">The expected event type.</typeparam>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
     /// <param name="validate">Optional action to further validate the event content.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when the event content is not of the expected type.</exception>
     public static void ShouldHaveEvent<TEvent>(this AppendedEventWithResult appendedEvent, Action<TEvent>? validate = null)
     {
-        Assert.IsType<TEvent>(appendedEvent.Event.Content);
-        validate?.Invoke((TEvent)appendedEvent.Event.Content);
+        if (appendedEvent.Event.Content is not TEvent content)
+        {
+            throw new AppendResultAssertionException(
+                $"Expected event content to be of type '{typeof(TEvent).Name}', but was '{appendedEvent.Event.Content?.GetType().Name ?? "null"}'.");
+        }
+
+        validate?.Invoke(content);
     }
 
     /// <summary>
@@ -94,6 +99,13 @@ public static class AppendedEventWithResultShouldExtensions
     /// </summary>
     /// <param name="appendedEvent">The <see cref="AppendedEventWithResult"/> to assert on.</param>
     /// <param name="eventSourceId">The expected <see cref="EventSourceId"/>.</param>
-    public static void ShouldBeForEventSource(this AppendedEventWithResult appendedEvent, EventSourceId eventSourceId) =>
-        Assert.Equal(eventSourceId, appendedEvent.Event.Context.EventSourceId);
+    /// <exception cref="AppendResultAssertionException">Thrown when the event source does not match.</exception>
+    public static void ShouldBeForEventSource(this AppendedEventWithResult appendedEvent, EventSourceId eventSourceId)
+    {
+        if (appendedEvent.Event.Context.EventSourceId != eventSourceId)
+        {
+            throw new AppendResultAssertionException(
+                $"Expected event source '{eventSourceId}', but was '{appendedEvent.Event.Context.EventSourceId}'.");
+        }
+    }
 }
