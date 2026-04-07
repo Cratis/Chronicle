@@ -34,8 +34,36 @@
         invokes this target per TFM in inner builds, where $(TargetFramework) is set.
     -->
     <PropertyGroup Condition="'$(OutputType)' != 'Exe'">
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_SetupPrivateRefPackaging</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_SetupPrivateRefPackaging;_PackPrivateAssemblyGlobs</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
+
+    <!--
+        Runtime-only packaging for NuGet PackageReferences that should be embedded in the package
+        without becoming nuspec dependencies. Use this for packages like Orleans that the Testing
+        library needs at runtime but consumers should not have as explicit transitive dependencies.
+
+        Convention: declare a <PrivatePackageAssemblyGlob> item with a glob pattern (without path
+        or extension). The pattern is expanded against $(OutputPath) and matching DLLs are packed
+        into lib/{tfm}/ alongside other runtime-only assemblies.
+
+        Example:
+
+            <ItemGroup>
+                <PrivatePackageAssemblyGlob Include="Orleans.*" />
+                <PrivatePackageAssemblyGlob Include="Microsoft.Orleans.*" />
+            </ItemGroup>
+
+        The corresponding PackageReference must also carry <PrivateAssets>all</PrivateAssets> so
+        that NuGet does not emit a nuspec dependency for it.
+    -->
+    <Target Name="_PackPrivateAssemblyGlobs"
+            Condition="'@(PrivatePackageAssemblyGlob)' != ''">
+        <ItemGroup>
+            <_PrivateGlobDll Include="$(OutputPath)%(PrivatePackageAssemblyGlob.Identity).dll" />
+            <TfmSpecificPackageFile Include="@(_PrivateGlobDll)"
+                                    PackagePath="lib/$(TargetFramework)/" />
+        </ItemGroup>
+    </Target>
 
     <Target Name="_SetupPrivateRefPackaging"
             Condition="'@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
