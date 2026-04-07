@@ -39,6 +39,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - For PR descriptions, use short release-note bullets with the **actual** issue number (look up the real GitHub issue number the PR resolves, e.g. `(#351)`). Never use placeholder text like `(#issue)` or the literal example `(#123)`. Never include Copilot "Original prompt" blocks.
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
+- When asked to commit, push, create a PR, ship, or land changes, always use the **ship-changes** skill.
 
 ## Development Workflow
 
