@@ -124,22 +124,26 @@ public class EventSequence(
         });
 
         var result = ResolveViolationMessages(response.ToClient());
-        var context = EventContext.From(
-            eventStoreName,
-            @namespace,
-            eventType,
-            eventSourceType,
-            eventSourceId,
-            eventStreamType,
-            eventStreamId,
-            result.SequenceNumber,
-            correlationId,
-            occurred) with
+        if (_appendedEvents.HasObservers)
         {
-            Causation = causation,
-            CausedBy = identity
-        };
-        _appendedEvents.OnNext([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
+            var context = EventContext.From(
+                eventStoreName,
+                @namespace,
+                eventType,
+                eventSourceType,
+                eventSourceId,
+                eventStreamType,
+                eventStreamId,
+                result.SequenceNumber,
+                correlationId,
+                occurred) with
+            {
+                Causation = causation,
+                CausedBy = identity
+            };
+            _appendedEvents.OnNext([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
+        }
+
         return result;
     }
 
@@ -238,39 +242,43 @@ public class EventSequence(
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
 
-        var identity = identityProvider.GetCurrent();
-        var sequenceNumbers = result.SequenceNumbers.ToList();
-        var allResults = new List<AppendedEventWithResult>(eventsList.Count);
-
-        for (var i = 0; i < eventsList.Count; i++)
+        if (_appendedEvents.HasObservers)
         {
-            var evt = eventsList[i];
-            var eventClrType = evt.Event.GetType();
-            var evtType = eventTypes.GetEventTypeFor(eventClrType);
-            var sequenceNumber = result.IsSuccess && i < sequenceNumbers.Count
-                ? sequenceNumbers[i]
-                : EventSequenceNumber.Unavailable;
+            var identity = identityProvider.GetCurrent();
+            var sequenceNumbers = result.SequenceNumbers.ToList();
+            var allResults = new List<AppendedEventWithResult>(eventsList.Count);
 
-            var context = EventContext.From(
-                eventStoreName,
-                @namespace,
-                evtType,
-                evt.EventSourceType,
-                evt.EventSourceId,
-                evt.EventStreamType,
-                evt.EventStreamId,
-                sequenceNumber,
-                resolvedCorrelationId,
-                evt.Occurred) with
+            for (var i = 0; i < eventsList.Count; i++)
             {
-                Causation = causation,
-                CausedBy = identity
-            };
+                var evt = eventsList[i];
+                var eventClrType = evt.Event.GetType();
+                var evtType = eventTypes.GetEventTypeFor(eventClrType);
+                var sequenceNumber = result.IsSuccess && i < sequenceNumbers.Count
+                    ? sequenceNumbers[i]
+                    : EventSequenceNumber.Unavailable;
 
-            allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
+                var context = EventContext.From(
+                    eventStoreName,
+                    @namespace,
+                    evtType,
+                    evt.EventSourceType,
+                    evt.EventSourceId,
+                    evt.EventStreamType,
+                    evt.EventStreamId,
+                    sequenceNumber,
+                    resolvedCorrelationId,
+                    evt.Occurred) with
+                {
+                    Causation = causation,
+                    CausedBy = identity
+                };
+
+                allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
+            }
+
+            _appendedEvents.OnNext(allResults);
         }
 
-        _appendedEvents.OnNext(allResults);
         return result;
     }
 
@@ -476,6 +484,8 @@ public class EventSequence(
     {
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
+
+        if (!_appendedEvents.HasObservers) return;
 
         for (var i = 0; i < events.Count; i++)
         {
