@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventAppendCollection.when_a_reactor_handles_an_event.and_collecting_the_appended_event.context;
 

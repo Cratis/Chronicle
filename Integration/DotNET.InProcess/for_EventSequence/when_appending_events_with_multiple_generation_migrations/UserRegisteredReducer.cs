@@ -31,7 +31,7 @@ public class UserRegisteredReducer : IReducerFor<UserReadModel>
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEvents < count && !cts.IsCancellationRequested)
+        while (HandledEvents < count)
         {
             await Task.Delay(50, cts.Token);
         }

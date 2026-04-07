@@ -38,10 +38,10 @@ public class a_single_event_via_event_sequence(context context) : Given<context>
                 StoredEvent = await storage.GetEventAt(EventSequenceNumber.First.Value);
                 if (StoredEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction)
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(50, cts.Token);
                 }
             }
-            while (StoredEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction && !cts.IsCancellationRequested);
+            while (StoredEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction);
 
             var systemStorage = GetSystemEventLogStorage();
             var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();

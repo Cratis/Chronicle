@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventAppendCollection.when_committed_via_a_unit_of_work.and_collecting_the_appended_events.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventAppendCollection.when_committed_via_a_unit_of_work;

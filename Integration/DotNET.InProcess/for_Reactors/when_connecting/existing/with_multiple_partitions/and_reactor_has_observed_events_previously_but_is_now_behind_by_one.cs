@@ -32,6 +32,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
 
             await reactor.WaitTillReachesEventSequenceNumber(lastHandled);
             reactor.Disconnect();
+            await reactor.WaitForState(ObserverRunningState.Disconnected);
 
             CatchupEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 1).ToList();
             result = await EventStore.EventLog.AppendMany(CatchupEvents);

@@ -29,7 +29,7 @@ public static class ProjectionWaitExtensions
 
         var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState && !cts.IsCancellationRequested)
+        while (currentRunningState != runningState)
         {
             var state = await projection.GetState();
             currentRunningState = state.RunningState;
@@ -63,6 +63,7 @@ public static class ProjectionWaitExtensions
             {
                 break;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -79,7 +80,7 @@ public static class ProjectionWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var state = await projection.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
+        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
         {
             state = await projection.GetState();
             await Task.Delay(DefaultDelay, cts.Token);
@@ -97,11 +98,12 @@ public static class ProjectionWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var failedPartitions = await projection.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any() && !cts.IsCancellationRequested)
+        while (!failedPartitions.Any())
         {
             failedPartitions = await projection.GetFailedPartitions();
             await Task.Delay(DefaultDelay, cts.Token);
         }
+
         return failedPartitions;
     }
 
