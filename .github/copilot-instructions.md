@@ -36,7 +36,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
-- For PR descriptions, use short release-note bullets with the **actual** issue number (look up the real GitHub issue number the PR resolves, e.g. `(#351)`). Never use placeholder text like `(#issue)` or the literal example `(#123)`. Never include Copilot "Original prompt" blocks.
+- For PR descriptions, use short release-note bullets and append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks.
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 - When asked to commit, push, create a PR, ship, or land changes, always use the **ship-changes** skill.
