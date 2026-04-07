@@ -13,7 +13,7 @@ branch → commits → PR → merge → cleanup workflow.
 ## Inputs
 
 - **What changed** — brief description of the work (used for branch name and PR title)
-- **Label** — `patch`, `minor`, or `major` (based on semantic versioning impact)
+- **Label** — `patch`, `minor`, or `major`, or omit entirely if no label should be applied
 - **Related issue** — optional GitHub issue number; if unknown, search first
 
 Load and follow the full instructions from the `ship-changes` skill.
