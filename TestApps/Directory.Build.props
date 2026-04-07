@@ -7,6 +7,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <TargetFrameworks></TargetFrameworks>
         <NoWarn>$(NoWarn);MA0048,SA1649,SA1600,SA1402;SA0001</NoWarn>
+        <WarningsAsErrors>$(WarningsAsErrors);CHR0001;CHR0002;CHR0003;CHR0004;CHR0005;CHR0006;CHR0007;CHR0008;CHR0009;CHR0010;CHR0011</WarningsAsErrors>
     </PropertyGroup>
 
   <ItemGroup>
