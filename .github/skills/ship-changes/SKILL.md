@@ -17,7 +17,7 @@ project conventions for commits, PR descriptions, and labels.
 
 Collect the following before starting:
 
-- **Semantic label** — `patch`, `minor`, or `major`. Ask if not obvious from the change.
+- **Semantic label** — `patch`, `minor`, `major`, or none. Skip labeling entirely if the user says no label or omits the label. Do not ask — infer from the nature of the change or follow the user's explicit instruction.
 - **Branch name suffix** — short kebab-case description of the work, e.g. `fix/testing-orleans-runtime-assemblies`. Determine from the nature of the changes if not provided.
 - **Related GitHub issue** — search GitHub issues if the change likely relates to one; use the real number or omit the reference when none exists. Never invent or reuse example numbers.
 
@@ -152,9 +152,11 @@ mcp_github_github_search_issues  query="<keywords> repo:Cratis/Chronicle"
 
 If nothing relevant is found, omit the issue reference from affected bullets.
 
-## Step 6 — Add the label
+## Step 6 — Add the label (optional)
 
-Use `gh pr edit <number> --add-label "<label>"` to add one of:
+Skip this step entirely if the user said no label or did not provide one.
+
+Otherwise use `gh pr edit <number> --add-label "<label>"` with one of:
 
 | Label | When |
 |-------|------|
@@ -174,13 +176,11 @@ Use `mcp_github_github_merge_pull_request` with:
 ## Step 8 — Clean up the branch
 
 ```
-git checkout main
-git pull
-git branch -d <branch-name>
-git push origin --delete <branch-name>
+git checkout main && git pull && git branch -d <branch-name> && git push origin --delete <branch-name>
 ```
 
 Run all four commands in one shell invocation to avoid partial state.
+After this completes, `main` is fully up to date locally.
 
 ## Full example sequence
 
@@ -219,7 +219,7 @@ gh pr edit 2994 --add-label "patch"
 
 # 7. Merge (via mcp_github_github_merge_pull_request)
 
-# 8. Clean up
+# 8. Clean up (pulls main as part of the same command)
 git checkout main && git pull && git branch -d fix/testing-package-orleans-runtime-assemblies && git push origin --delete fix/testing-package-orleans-runtime-assemblies
 ```
 
