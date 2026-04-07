@@ -1,142 +1,197 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Xunit;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
 /// <summary>
-/// Should-style assertion extensions for <see cref="AppendResult"/> and <see cref="AppendManyResult"/>.
+/// Provides assertion extensions for <see cref="IAppendResult"/>, <see cref="AppendResult"/>, and <see cref="AppendManyResult"/>.
 /// </summary>
 public static class AppendResultShouldExtensions
 {
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> is successful.
+    /// Asserts that the result represents a successful operation.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldBeSuccessful(this AppendResult result) =>
-        Assert.True(result.IsSuccess, $"Expected append to succeed, but it failed. Constraint violations: [{string.Join(", ", result.ConstraintViolations)}]. Errors: [{string.Join(", ", result.Errors)}].");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when the result is not successful.</exception>
+    public static void ShouldBeSuccessful(this IAppendResult result)
+    {
+        if (result.IsSuccess)
+        {
+            return;
+        }
+
+        var message = new StringBuilder("Expected append result to be successful, but it failed.");
+
+        if (result.HasConstraintViolations)
+        {
+            message.AppendLine().Append("Constraint violations:");
+            foreach (var violation in result.ConstraintViolations)
+            {
+                message.AppendLine().Append($"  [{violation.ConstraintType}] {violation.ConstraintName}: {violation.Message}");
+            }
+        }
+
+        if (result.HasErrors)
+        {
+            message.AppendLine().Append("Errors:");
+            foreach (var error in result.Errors)
+            {
+                message.AppendLine().Append($"  {error}");
+            }
+        }
+
+        if (result.HasConcurrencyViolations)
+        {
+            message.AppendLine().Append("Concurrency violations occurred.");
+        }
+
+        throw new AppendResultAssertionException(message.ToString());
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> is not successful.
+    /// Asserts that the result represents a failed operation.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldNotBeSuccessful(this AppendResult result) =>
-        Assert.False(result.IsSuccess, "Expected append to fail, but it succeeded.");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when the result is successful.</exception>
+    public static void ShouldBeFailed(this IAppendResult result)
+    {
+        if (!result.IsSuccess)
+        {
+            return;
+        }
+
+        throw new AppendResultAssertionException("Expected append result to be failed, but it was successful.");
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has at least one constraint violation.
+    /// Asserts that the result has at least one constraint violation.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldHaveConstraintViolation(this AppendResult result) =>
-        Assert.True(result.HasConstraintViolations, "Expected append result to have constraint violations, but it did not.");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when there are no constraint violations.</exception>
+    public static void ShouldHaveConstraintViolations(this IAppendResult result)
+    {
+        if (result.HasConstraintViolations)
+        {
+            return;
+        }
+
+        throw new AppendResultAssertionException("Expected append result to have constraint violations, but none were present.");
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has no constraint violations.
+    /// Asserts that the result has no constraint violations.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldNotHaveConstraintViolation(this AppendResult result) =>
-        Assert.False(result.HasConstraintViolations, $"Expected append result to have no constraint violations, but found: [{string.Join(", ", result.ConstraintViolations)}].");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when constraint violations are present.</exception>
+    public static void ShouldNotHaveConstraintViolations(this IAppendResult result)
+    {
+        if (!result.HasConstraintViolations)
+        {
+            return;
+        }
+
+        var message = new StringBuilder("Expected append result to have no constraint violations, but found:");
+        foreach (var violation in result.ConstraintViolations)
+        {
+            message.AppendLine().Append($"  [{violation.ConstraintType}] {violation.ConstraintName}: {violation.Message}");
+        }
+
+        throw new AppendResultAssertionException(message.ToString());
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has a constraint violation with the given name.
+    /// Asserts that the result has at least one constraint violation for a specific <see cref="ConstraintName"/>.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    /// <param name="constraintName">The expected <see cref="ConstraintName"/>.</param>
-    public static void ShouldHaveConstraintViolation(this AppendResult result, ConstraintName constraintName) =>
-        Assert.Contains(result.ConstraintViolations, v => v.ConstraintName == constraintName);
+    /// <param name="result">The result to assert on.</param>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> to look for.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when the expected constraint violation is not present.</exception>
+    public static void ShouldHaveConstraintViolationFor(this IAppendResult result, ConstraintName constraintName)
+    {
+        if (result.ConstraintViolations.Any(v => v.ConstraintName == constraintName))
+        {
+            return;
+        }
+
+        var message = new StringBuilder($"Expected append result to have a constraint violation for '{constraintName}', but none was found.");
+        if (result.HasConstraintViolations)
+        {
+            message.AppendLine().Append("Actual constraint violations:");
+            foreach (var violation in result.ConstraintViolations)
+            {
+                message.AppendLine().Append($"  [{violation.ConstraintType}] {violation.ConstraintName}: {violation.Message}");
+            }
+        }
+
+        throw new AppendResultAssertionException(message.ToString());
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has a concurrency violation.
+    /// Asserts that the result has at least one concurrency violation.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldHaveConcurrencyViolation(this AppendResult result) =>
-        Assert.True(result.HasConcurrencyViolations, "Expected append result to have a concurrency violation, but it did not.");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when there are no concurrency violations.</exception>
+    public static void ShouldHaveConcurrencyViolations(this IAppendResult result)
+    {
+        if (result.HasConcurrencyViolations)
+        {
+            return;
+        }
+
+        throw new AppendResultAssertionException("Expected append result to have concurrency violations, but none were present.");
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has no concurrency violation.
+    /// Asserts that the result has no concurrency violations.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldNotHaveConcurrencyViolation(this AppendResult result) =>
-        Assert.False(result.HasConcurrencyViolations, "Expected append result to have no concurrency violation, but it did.");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when concurrency violations are present.</exception>
+    public static void ShouldNotHaveConcurrencyViolations(this IAppendResult result)
+    {
+        if (!result.HasConcurrencyViolations)
+        {
+            return;
+        }
+
+        throw new AppendResultAssertionException("Expected append result to have no concurrency violations, but some were present.");
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has errors.
+    /// Asserts that the result has at least one error.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldHaveErrors(this AppendResult result) =>
-        Assert.True(result.HasErrors, "Expected append result to have errors, but it did not.");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when there are no errors.</exception>
+    public static void ShouldHaveErrors(this IAppendResult result)
+    {
+        if (result.HasErrors)
+        {
+            return;
+        }
+
+        throw new AppendResultAssertionException("Expected append result to have errors, but none were present.");
+    }
 
     /// <summary>
-    /// Asserts that the <see cref="AppendResult"/> has no errors.
+    /// Asserts that the result has no errors.
     /// </summary>
-    /// <param name="result">The <see cref="AppendResult"/> to assert on.</param>
-    public static void ShouldNotHaveErrors(this AppendResult result) =>
-        Assert.False(result.HasErrors, $"Expected append result to have no errors, but found: [{string.Join(", ", result.Errors)}].");
+    /// <param name="result">The result to assert on.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when errors are present.</exception>
+    public static void ShouldNotHaveErrors(this IAppendResult result)
+    {
+        if (!result.HasErrors)
+        {
+            return;
+        }
 
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> is successful.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldBeSuccessful(this AppendManyResult result) =>
-        Assert.True(result.IsSuccess, $"Expected append to succeed, but it failed. Constraint violations: [{string.Join(", ", result.ConstraintViolations)}]. Errors: [{string.Join(", ", result.Errors)}].");
+        var message = new StringBuilder("Expected append result to have no errors, but found:");
+        foreach (var error in result.Errors)
+        {
+            message.AppendLine().Append($"  {error}");
+        }
 
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> is not successful.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldNotBeSuccessful(this AppendManyResult result) =>
-        Assert.False(result.IsSuccess, "Expected append to fail, but it succeeded.");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has at least one constraint violation.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldHaveConstraintViolation(this AppendManyResult result) =>
-        Assert.True(result.HasConstraintViolations, "Expected append result to have constraint violations, but it did not.");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has no constraint violations.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldNotHaveConstraintViolation(this AppendManyResult result) =>
-        Assert.False(result.HasConstraintViolations, $"Expected append result to have no constraint violations, but found: [{string.Join(", ", result.ConstraintViolations)}].");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has a constraint violation with the given name.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    /// <param name="constraintName">The expected <see cref="ConstraintName"/>.</param>
-    public static void ShouldHaveConstraintViolation(this AppendManyResult result, ConstraintName constraintName) =>
-        Assert.Contains(result.ConstraintViolations, v => v.ConstraintName == constraintName);
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has at least one concurrency violation.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldHaveConcurrencyViolation(this AppendManyResult result) =>
-        Assert.True(result.HasConcurrencyViolations, "Expected append result to have concurrency violations, but it did not.");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has no concurrency violations.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldNotHaveConcurrencyViolation(this AppendManyResult result) =>
-        Assert.False(result.HasConcurrencyViolations, "Expected append result to have no concurrency violations, but it did.");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has errors.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldHaveErrors(this AppendManyResult result) =>
-        Assert.True(result.HasErrors, "Expected append result to have errors, but it did not.");
-
-    /// <summary>
-    /// Asserts that the <see cref="AppendManyResult"/> has no errors.
-    /// </summary>
-    /// <param name="result">The <see cref="AppendManyResult"/> to assert on.</param>
-    public static void ShouldNotHaveErrors(this AppendManyResult result) =>
-        Assert.False(result.HasErrors, $"Expected append result to have no errors, but found: [{string.Join(", ", result.Errors)}].");
+        throw new AppendResultAssertionException(message.ToString());
+    }
 }

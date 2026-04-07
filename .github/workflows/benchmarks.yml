@@ -10,7 +10,7 @@ on:
       - 'Source/**'
 
 permissions:
-  contents: write
+  contents: read
   deployments: write
   pull-requests: write
 
@@ -55,18 +55,8 @@ jobs:
           fail-on-alert: false
           alert-comment-cc-users: '@einari'
 
-      - name: Commit updated benchmark results
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          cp -r Documentation/benchmarks/ /tmp/benchmark-results/
-          git restore .
-          git pull --rebase origin ${{ github.head_ref || github.ref_name }}
-          cp -r /tmp/benchmark-results/. Documentation/benchmarks/
-          git add Documentation/benchmarks/
-          if git diff --staged --quiet; then
-            echo "No benchmark result changes to commit"
-          else
-            git commit -m "Update benchmark results [skip ci]"
-            git push
-          fi
+      - name: Upload benchmark data
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-data
+          path: Documentation/benchmarks/benchmark-data.json

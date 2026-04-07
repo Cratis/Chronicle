@@ -43,4 +43,9 @@
         </PackageReference>
     </ItemGroup>
 
+    <!-- Pack Orleans runtime assemblies into lib/ so they are available without nuspec dependencies -->
+    <PropertyGroup>
+        <PrivatePackageRuntimeAssemblyRegex>^Orleans\..*\.dll$</PrivatePackageRuntimeAssemblyRegex>
+    </PropertyGroup>
+
 </Project>
