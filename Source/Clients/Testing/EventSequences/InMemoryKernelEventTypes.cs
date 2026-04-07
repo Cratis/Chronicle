@@ -1,13 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-extern alias KernelCore;
 extern alias KernelConcepts;
-
+extern alias KernelCore;
 using Cratis.Chronicle.Schemas;
-using KernelCore::Cratis.Chronicle.EventTypes;
 using KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConcepts::Cratis.Chronicle.Concepts.Events;
+using KernelCore::Cratis.Chronicle.EventTypes;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
 
@@ -30,5 +29,5 @@ internal sealed class InMemoryKernelEventTypes : IEventTypes
         throw new NotSupportedException("GetClrTypeFor is not supported in in-process testing; deserialization is not needed for event append scenarios.");
 
     /// <inheritdoc/>
-    public Task DiscoverAndRegister(EventStoreName eventStore) => Task.CompletedTask;
+    public Task DiscoverAndRegister(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName eventStore) => Task.CompletedTask;
 }

@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 internal sealed class InMemoryUniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    // Key: (EventSourceId, ConstraintName, UniqueConstraintValue) → SequenceNumber
+    /// <summary>Key: (EventSourceId, ConstraintName, UniqueConstraintValue) → SequenceNumber.</summary>
     readonly Dictionary<(string EventSourceId, string ConstraintName, string Value), KernelEvents::EventSequenceNumber> _index = [];
 
     /// <inheritdoc/>

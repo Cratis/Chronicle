@@ -7,6 +7,8 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Json;
+using Cratis.Serialization;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
@@ -48,19 +50,24 @@ public class EventScenario
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
     /// </summary>
+    /// <remarks>
+    /// Constraints are automatically discovered from all loaded assemblies using the same discovery
+    /// mechanism as the Chronicle client (<see cref="IConstraint"/> implementations, <c>[Unique]</c>
+    /// properties, and <c>[UniqueEventType]</c> attributes).
+    /// </remarks>
     public EventScenario()
         : this(
             EventSequenceId.Log,
             (KernelConceptsNs::EventStoreName)"test-event-store",
             (KernelConceptsNs::EventStoreNamespaceName)"default",
-            constraintProvider: null)
+            CreateDiscoveredConstraintProvider())
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class with an explicit constraint provider.
     /// </summary>
-    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <c>null</c> for no constraints.</param>
+    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
     public EventScenario(ICanProvideConstraints? constraintProvider)
         : this(
             EventSequenceId.Log,
@@ -76,7 +83,7 @@ public class EventScenario
     /// <param name="eventSequenceId">The event sequence identifier.</param>
     /// <param name="eventStoreName">The event store name.</param>
     /// <param name="namespaceName">The event store namespace name.</param>
-    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <c>null</c> for no constraints.</param>
+    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
     public EventScenario(
         EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
@@ -113,9 +120,9 @@ public class EventScenario
     {
         var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
 
-        var eventSequenceStorage = new InMemoryEventSequenceStorage();
+        var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
-        var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage();
+        var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
         var constraintsStorage = new InMemoryConstraintsStorage(constraintProvider ?? new EmptyConstraintProvider());
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
@@ -126,8 +133,7 @@ public class EventScenario
             uniqueEventTypesStorage,
             constraintsStorage,
             identityStorage,
-            eventTypesStorage,
-            kernelEventSequenceId);
+            eventTypesStorage);
 
         var grain = InProcessEventSequence.Create(
             storage,
@@ -138,8 +144,41 @@ public class EventScenario
         return new KernelBackedEventLog(grain);
     }
 
-    sealed class EmptyConstraintProvider : ICanProvideConstraints
+    static CompositeConstraintProvider CreateDiscoveredConstraintProvider()
     {
+        var defaults = Defaults.Instance;
+        var namingPolicy = new CamelCaseNamingPolicy();
+        using var serviceProvider = new DefaultServiceProvider();
+        using var loggerFactory = new NullLoggerFactory();
+        var artifactActivator = new ClientArtifactsActivator(serviceProvider, loggerFactory);
+        return new CompositeConstraintProvider(
+            new ConstraintsByBuilderProvider(
+                defaults.ClientArtifactsProvider,
+                defaults.EventTypes,
+                namingPolicy,
+                artifactActivator,
+                NullLogger<ConstraintsByBuilderProvider>.Instance),
+            new UniqueConstraintProvider(
+                defaults.ClientArtifactsProvider,
+                defaults.EventTypes,
+                namingPolicy),
+            new UniqueEventTypeConstraintsProvider(
+                defaults.ClientArtifactsProvider,
+                defaults.EventTypes));
+    }
+
+    sealed class CompositeConstraintProvider(params ICanProvideConstraints[] providers) : ICanProvideConstraints
+    {
+        /// <inheritdoc/>
+        public IImmutableList<IConstraintDefinition> Provide() =>
+            providers
+                .SelectMany(p => p.Provide())
+                .ToImmutableList();
+    }
+
+    sealed class EmptyConstraintProvider() : ICanProvideConstraints
+    {
+        /// <inheritdoc/>
         public IImmutableList<IConstraintDefinition> Provide() => ImmutableList<IConstraintDefinition>.Empty;
     }
 }

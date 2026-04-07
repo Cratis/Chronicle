@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// Represents an in-memory implementation of <see cref="IEventSequenceStorage"/> for use with the
 /// kernel event sequence during testing.
 /// </summary>
-/// <param name="eventSequenceId">The <see cref="KernelConcept::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId"/> this storage serves.</param>
+/// <param name="eventSequenceId">The <c>EventSequenceId</c> this storage serves.</param>
 internal sealed class InMemoryEventSequenceStorage(
     KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
 {
@@ -98,9 +98,14 @@ internal sealed class InMemoryEventSequenceStorage(
                 return Task.FromResult(Result<IEnumerable<KernelAppendedEvent>, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable)));
             }
 
+            var content = new Dictionary<KernelEvents::EventTypeGeneration, ExpandoObject>
+            {
+                { KernelEvents::EventTypeGeneration.First, e.Content }
+            };
+
             var appendedEvent = BuildAppendedEvent(
                 e.SequenceNumber, e.EventSourceType, e.EventSourceId, e.EventStreamType, e.EventStreamId,
-                e.EventType, e.CorrelationId, e.Causation, e.Tags, e.Occurred, e.Content);
+                e.EventType, e.CorrelationId, e.Causation, e.Tags, e.Occurred, content);
 
             _events.Add(appendedEvent);
             appended.Add(appendedEvent);

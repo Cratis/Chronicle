@@ -61,7 +61,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// Gets the current projected read model instance.
     /// </summary>
     /// <remarks>
-    /// This property returns <see langword="null"/> if <see cref="Given(object[])"/> has not been called yet or if
+    /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
     /// the events produced no state changes.
     /// </remarks>
     public TReadModel? Instance => _instance;

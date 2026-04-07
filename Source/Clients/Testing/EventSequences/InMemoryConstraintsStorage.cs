@@ -37,23 +37,33 @@ internal sealed class InMemoryConstraintsStorage(ClientConstraints.ICanProvideCo
     /// <inheritdoc/>
     public Task SaveDefinition(KernelConstraints::IConstraintDefinition definition) => Task.CompletedTask;
 
-    static KernelConstraints::IConstraintDefinition? ToKernel(ClientConstraints.IConstraintDefinition client) =>
-        client switch
+    static KernelConstraints::IConstraintDefinition? ToKernel(ClientConstraints.IConstraintDefinition client)
+    {
+        if (client is ClientConstraints.UniqueConstraintDefinition unique)
         {
-            ClientConstraints.UniqueConstraintDefinition unique => new KernelConstraints::UniqueConstraintDefinition(
-                (KernelConstraints::ConstraintName)unique.Name.Value,
-                unique.EventsWithProperties.Select(e => new KernelConstraints::UniqueConstraintEventDefinition(
+            var eventsWithProperties = unique.EventsWithProperties.Select(e =>
+                new KernelConstraints::UniqueConstraintEventDefinition(
                     (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)e.EventTypeId.Value,
-                    e.Properties)),
-                unique.RemovedWith is not null
-                    ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)unique.RemovedWith.Value.Value
-                    : null,
-                unique.IgnoreCasing),
+                    e.Properties));
 
-            ClientConstraints.UniqueEventTypeConstraintDefinition uniqueType => new KernelConstraints::UniqueEventTypeConstraintDefinition(
+            var removedWith = unique.RemovedWith is not null
+                ? (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId?)((KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)unique.RemovedWith.Value)
+                : null;
+
+            return new KernelConstraints::UniqueConstraintDefinition(
+                (KernelConstraints::ConstraintName)unique.Name.Value,
+                eventsWithProperties,
+                removedWith,
+                unique.IgnoreCasing);
+        }
+
+        if (client is ClientConstraints.UniqueEventTypeConstraintDefinition uniqueType)
+        {
+            return new KernelConstraints::UniqueEventTypeConstraintDefinition(
                 (KernelConstraints::ConstraintName)uniqueType.Name.Value,
-                (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)uniqueType.EventTypeId.Value),
+                (KernelConcepts::Cratis.Chronicle.Concepts.Events.EventTypeId)uniqueType.EventTypeId.Value);
+        }
 
-            _ => null
-        };
+        return null;
+    }
 }
