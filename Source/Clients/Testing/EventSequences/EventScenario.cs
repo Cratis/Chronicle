@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelConcepts;
+extern alias KernelCore;
 
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -26,9 +27,9 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The internal implementation wires the real client <see cref="EventLog"/> to an in-process
-/// <see cref="InProcessEventSequencesService"/> that delegates all append operations to the real
-/// kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
+/// The internal implementation wires the real client <see cref="EventLog"/> to the real kernel
+/// <c>EventSequences</c> service backed by an <see cref="InProcessGrainFactory"/> that returns the
+/// real kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
 /// layer is in-memory. All business logic (constraint validation, hash calculation, event serialization,
 /// migration, compliance) runs through the actual kernel code paths.
 /// </para>
@@ -151,8 +152,9 @@ public class EventScenario(
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var eventSequencesService = new InProcessEventSequencesService(
+        var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
+            storage,
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();
