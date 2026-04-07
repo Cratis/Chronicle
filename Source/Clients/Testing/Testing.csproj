@@ -40,10 +40,9 @@
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" PrivateAssets="all"/>
     </ItemGroup>
 
-    <!-- Pack Orleans assemblies into lib/ so they are available at runtime without becoming nuspec dependencies -->
-    <ItemGroup>
-        <PrivatePackageAssemblyGlob Include="Orleans.*" />
-        <PrivatePackageAssemblyGlob Include="Microsoft.Orleans.*" />
-    </ItemGroup>
+    <!-- Pack Orleans runtime assemblies into lib/ so they are available without nuspec dependencies -->
+    <PropertyGroup>
+        <PrivatePackageRuntimeAssemblyRegex>^Orleans\..*\.dll$</PrivatePackageRuntimeAssemblyRegex>
+    </PropertyGroup>
 
 </Project>
