@@ -4,8 +4,17 @@
 extern alias KernelConcepts;
 
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Transactions;
+using Cratis.Execution;
+using Cratis.Json;
 using Cratis.Serialization;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
@@ -17,9 +26,11 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The internal implementation uses the real kernel <c>EventSequence</c> grain instantiated directly — no Orleans silo
-/// or Chronicle server required. Only the storage layer is in-memory. All business logic (constraint validation,
-/// hash calculation, event serialization, migration, compliance) runs through the actual kernel code paths.
+/// The internal implementation wires the real client <see cref="EventLog"/> to an in-process
+/// <see cref="InProcessEventSequencesService"/> that delegates all append operations to the real
+/// kernel <c>EventSequence</c> grain — no Orleans silo or Chronicle server required. Only the storage
+/// layer is in-memory. All business logic (constraint validation, hash calculation, event serialization,
+/// migration, compliance) runs through the actual kernel code paths.
 /// </para>
 /// <para>
 /// Use the <see cref="Given"/> property to seed pre-existing events into the event log before
@@ -27,7 +38,8 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </para>
 /// <para>
 /// Create a new <see cref="EventScenario"/> instance per test to keep tests isolated; the in-memory
-/// event log accumulates state across calls on the same instance.
+/// event log accumulates state across calls on the same instance. Dispose the scenario when done to
+/// release the in-process connection.
 /// </para>
 /// <para>
 /// Usage:
@@ -47,11 +59,11 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
 public class EventScenario(
     EventSequenceId eventSequenceId,
-    KernelConceptsNs::EventStoreName eventStoreName,
-    KernelConceptsNs::EventStoreNamespaceName namespaceName,
-    ICanProvideConstraints? constraintProvider)
+    EventStoreName eventStoreName,
+    EventStoreNamespaceName namespaceName,
+    ICanProvideConstraints? constraintProvider) : IDisposable
 {
-    readonly KernelBackedEventLog _eventLog = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
+    readonly (EventLog EventLog, InProcessChronicleConnection Connection) _created = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
@@ -64,8 +76,8 @@ public class EventScenario(
     public EventScenario()
         : this(
             EventSequenceId.Log,
-            (KernelConceptsNs::EventStoreName)"test-event-store",
-            (KernelConceptsNs::EventStoreNamespaceName)"default",
+            "test-event-store",
+            "default",
             CreateDiscoveredConstraintProvider())
     {
     }
@@ -77,8 +89,8 @@ public class EventScenario(
     public EventScenario(ICanProvideConstraints? constraintProvider)
         : this(
             EventSequenceId.Log,
-            (KernelConceptsNs::EventStoreName)"test-event-store",
-            (KernelConceptsNs::EventStoreNamespaceName)"default",
+            "test-event-store",
+            "default",
             constraintProvider)
     {
     }
@@ -86,34 +98,39 @@ public class EventScenario(
     /// <summary>
     /// Gets the fluent builder used to seed pre-existing events into the event log before the act phase.
     /// </summary>
-    public EventScenarioGivenBuilder Given => new(_eventLog);
+    public EventScenarioGivenBuilder Given => new(_created.EventLog);
 
     /// <summary>
-    /// Gets the <see cref="IEventLog"/> backed by the real kernel event sequence grain for performing
-    /// <c>Append</c> and <c>AppendMany</c> operations.
+    /// Gets the <see cref="IEventLog"/> backed by the real kernel event sequence grain via the real client event log.
     /// </summary>
-    public IEventLog EventLog => _eventLog;
+    public IEventLog EventLog => _created.EventLog;
 
     /// <summary>
-    /// Gets the <see cref="IEventSequence"/> backed by the real kernel event sequence grain.
+    /// Gets the <see cref="IEventSequence"/> backed by the real kernel event sequence grain via the real client event log.
     /// </summary>
     /// <remarks>
     /// This is the same underlying instance as <see cref="EventLog"/>.
     /// </remarks>
-    public IEventSequence EventSequence => _eventLog;
+    public IEventSequence EventSequence => _created.EventLog;
 
-    static KernelBackedEventLog CreateEventLog(
+    /// <inheritdoc/>
+    public void Dispose() => _created.Connection.Dispose();
+
+    static (EventLog EventLog, InProcessChronicleConnection Connection) CreateEventLog(
         EventSequenceId eventSequenceId,
-        KernelConceptsNs::EventStoreName eventStoreName,
-        KernelConceptsNs::EventStoreNamespaceName namespaceName,
+        EventStoreName eventStoreName,
+        EventStoreNamespaceName namespaceName,
         ICanProvideConstraints? constraintProvider)
     {
         var kernelEventSequenceId = (KernelSequenceConcepts::EventSequenceId)(string)eventSequenceId;
+        var kernelEventStoreName = (KernelConceptsNs::EventStoreName)(string)eventStoreName;
+        var kernelNamespaceName = (KernelConceptsNs::EventStoreNamespaceName)(string)namespaceName;
 
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
-        var constraintsStorage = new InMemoryConstraintsStorage(constraintProvider ?? new EmptyConstraintProvider());
+        var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
+        var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
@@ -128,10 +145,39 @@ public class EventScenario(
         var grain = InProcessEventSequence.Create(
             storage,
             kernelEventSequenceId,
-            eventStoreName,
-            namespaceName).GetAwaiter().GetResult();
+            kernelEventStoreName,
+            kernelNamespaceName).GetAwaiter().GetResult();
 
-        return new KernelBackedEventLog(grain);
+        var grainFactory = new InProcessGrainFactory(grain);
+
+        var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
+        var eventSequencesService = new InProcessEventSequencesService(
+            grainFactory,
+            jsonSerializerOptions);
+
+        var constraintsService = new InProcessNoOpConstraintsService();
+        var services = new InProcessServices(eventSequencesService, constraintsService);
+        var connection = new InProcessChronicleConnection(services);
+
+        var defaults = Defaults.Instance;
+        var inProcessConstraints = new InProcessConstraints(resolvedConstraintProvider);
+        inProcessConstraints.Discover().GetAwaiter().GetResult();
+
+        var eventLog = new EventLog(
+            eventStoreName,
+            namespaceName,
+            connection,
+            defaults.EventTypes,
+            inProcessConstraints,
+            defaults.EventSerializer,
+            new Execution.CorrelationIdAccessor(),
+            new NoConcurrencyScopeStrategies(),
+            new CausationManager(),
+            new NoUnitOfWorkManager(),
+            new BaseIdentityProvider(),
+            jsonSerializerOptions);
+
+        return (eventLog, connection);
     }
 
     static CompositeConstraintProvider CreateDiscoveredConstraintProvider()
@@ -170,5 +216,47 @@ public class EventScenario(
     {
         /// <inheritdoc/>
         public IImmutableList<IConstraintDefinition> Provide() => ImmutableList<IConstraintDefinition>.Empty;
+    }
+
+    sealed class NoConcurrencyScopeStrategies : IConcurrencyScopeStrategies
+    {
+        /// <inheritdoc/>
+        public IConcurrencyScopeStrategy GetFor(IEventSequence eventSequence) => NoConcurrencyScopeStrategy.Instance;
+    }
+
+    sealed class NoConcurrencyScopeStrategy : IConcurrencyScopeStrategy
+    {
+        internal static readonly NoConcurrencyScopeStrategy Instance = new();
+
+        /// <inheritdoc/>
+        public Task<ConcurrencyScope> GetScope(
+            EventSourceId eventSourceId,
+            EventStreamType? eventStreamType = default,
+            EventStreamId? eventStreamId = default,
+            EventSourceType? eventSourceType = default,
+            IEnumerable<EventType>? eventTypes = default) =>
+            Task.FromResult(ConcurrencyScope.None);
+    }
+
+    sealed class NoUnitOfWorkManager : IUnitOfWorkManager
+    {
+        /// <inheritdoc/>
+        public IUnitOfWork Current => throw new NoUnitOfWorkHasBeenStarted();
+
+        /// <inheritdoc/>
+        public bool HasCurrent => false;
+
+        /// <inheritdoc/>
+        public bool TryGetFor(CorrelationId correlationId, [MaybeNullWhen(false)] out IUnitOfWork unitOfWork)
+        {
+            unitOfWork = null;
+            return false;
+        }
+
+        /// <inheritdoc/>
+        public IUnitOfWork Begin(CorrelationId correlationId) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
+
+        /// <inheritdoc/>
+        public void SetCurrent(IUnitOfWork unitOfWork) => throw new NotSupportedException("Unit of work is not supported in test scenarios.");
     }
 }
