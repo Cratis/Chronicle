@@ -104,8 +104,17 @@ internal sealed class InMemoryEventSequenceStorage(
             };
 
             var appendedEvent = BuildAppendedEvent(
-                e.SequenceNumber, e.EventSourceType, e.EventSourceId, e.EventStreamType, e.EventStreamId,
-                e.EventType, e.CorrelationId, e.Causation, e.Tags, e.Occurred, content);
+                e.SequenceNumber,
+                e.EventSourceType,
+                e.EventSourceId,
+                e.EventStreamType,
+                e.EventStreamId,
+                e.EventType,
+                e.CorrelationId,
+                e.Causation,
+                e.Tags,
+                e.Occurred,
+                content);
 
             _events.Add(appendedEvent);
             appended.Add(appendedEvent);

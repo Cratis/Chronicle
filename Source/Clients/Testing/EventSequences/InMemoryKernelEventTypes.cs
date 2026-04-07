@@ -4,7 +4,6 @@
 extern alias KernelConcepts;
 extern alias KernelCore;
 using Cratis.Chronicle.Schemas;
-using KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConcepts::Cratis.Chronicle.Concepts.Events;
 using KernelCore::Cratis.Chronicle.EventTypes;
 

@@ -4,10 +4,8 @@
 extern alias KernelConcepts;
 
 using System.Collections.Immutable;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Json;
 using Cratis.Serialization;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
@@ -43,9 +41,17 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </code>
 /// </para>
 /// </remarks>
-public class EventScenario
+/// <param name="eventSequenceId">The event sequence identifier.</param>
+/// <param name="eventStoreName">The event store name.</param>
+/// <param name="namespaceName">The event store namespace name.</param>
+/// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
+public class EventScenario(
+    EventSequenceId eventSequenceId,
+    KernelConceptsNs::EventStoreName eventStoreName,
+    KernelConceptsNs::EventStoreNamespaceName namespaceName,
+    ICanProvideConstraints? constraintProvider)
 {
-    readonly KernelBackedEventLog _eventLog;
+    readonly KernelBackedEventLog _eventLog = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventScenario"/> class.
@@ -75,22 +81,6 @@ public class EventScenario
             (KernelConceptsNs::EventStoreNamespaceName)"default",
             constraintProvider)
     {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventScenario"/> class with explicit event store coordinates and an optional constraint provider.
-    /// </summary>
-    /// <param name="eventSequenceId">The event sequence identifier.</param>
-    /// <param name="eventStoreName">The event store name.</param>
-    /// <param name="namespaceName">The event store namespace name.</param>
-    /// <param name="constraintProvider">The <see cref="ICanProvideConstraints"/> that supplies client-side constraint definitions. Pass <see langword="null"/> for no constraints.</param>
-    public EventScenario(
-        EventSequenceId eventSequenceId,
-        KernelConceptsNs::EventStoreName eventStoreName,
-        KernelConceptsNs::EventStoreNamespaceName namespaceName,
-        ICanProvideConstraints? constraintProvider)
-    {
-        _eventLog = CreateEventLog(eventSequenceId, eventStoreName, namespaceName, constraintProvider);
     }
 
     /// <summary>

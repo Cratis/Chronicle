@@ -7,8 +7,6 @@ using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
-using Microsoft.Extensions.Logging.Abstractions;
-using Orleans.Core;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
