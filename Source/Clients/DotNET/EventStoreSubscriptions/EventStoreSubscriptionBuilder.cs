@@ -24,6 +24,13 @@ public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSub
     }
 
     /// <inheritdoc/>
+    public IEventStoreSubscriptionBuilder WithEventType(EventTypeId eventTypeId)
+    {
+        _eventTypes.Add(eventTypeId);
+        return this;
+    }
+
+    /// <inheritdoc/>
     public EventStoreSubscriptionDefinition Build() =>
         new(
             subscriptionId,

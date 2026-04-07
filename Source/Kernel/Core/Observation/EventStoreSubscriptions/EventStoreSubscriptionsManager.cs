@@ -121,12 +121,11 @@ public class EventStoreSubscriptionsManager(
         if (!subscribed)
         {
             logger.Subscribing(definition.Identifier, namespaceName);
-            var key = new EventStoreSubscriptionKey(definition.Identifier, _targetEventStoreName);
             await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
                 ObserverType.External,
                 definition.EventTypes.ToArray(),
                 localSiloDetails.SiloAddress,
-                key.ToString());
+                _targetEventStoreName.Value);
             return;
         }
 

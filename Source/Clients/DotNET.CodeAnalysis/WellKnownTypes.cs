@@ -16,6 +16,11 @@ public static class WellKnownTypes
     public const string EventTypeAttributeName = "Cratis.Chronicle.Concepts.Events.EventTypeAttribute";
 
     /// <summary>
+    /// The full name of the EventStore attribute.
+    /// </summary>
+    public const string EventStoreAttributeName = "Cratis.Chronicle.Events.EventStoreAttribute";
+
+    /// <summary>
     /// The full name of IEventSequence interface.
     /// </summary>
     public const string IEventSequenceName = "Cratis.Chronicle.EventSequences.IEventSequence";
@@ -68,5 +73,39 @@ public static class WellKnownTypes
     {
         var reducerInterface = compilation.GetTypeByMetadataName(IReducerName);
         return reducerInterface != null && typeSymbol.AllInterfaces.Contains(reducerInterface, SymbolEqualityComparer.Default);
+    }
+
+    /// <summary>
+    /// Get the event store name from a type's <see cref="EventStoreAttributeName"/> attribute, or from its containing assembly.
+    /// </summary>
+    /// <remarks>
+    /// First checks for a type-level <see cref="EventStoreAttributeName"/> attribute. If not found,
+    /// falls back to an assembly-level <see cref="EventStoreAttributeName"/> attribute on the type's containing assembly.
+    /// </remarks>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <returns>The event store name, or <see langword="null"/> if neither the type nor its containing assembly has the attribute.</returns>
+    public static string? GetEventStoreName(ITypeSymbol typeSymbol)
+    {
+        var typeAttribute = typeSymbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == EventStoreAttributeName);
+
+        if (typeAttribute is not null)
+        {
+            return typeAttribute.ConstructorArguments.Length > 0
+                ? typeAttribute.ConstructorArguments[0].Value as string
+                : null;
+        }
+
+        var assemblyAttribute = typeSymbol.ContainingAssembly?.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == EventStoreAttributeName);
+
+        if (assemblyAttribute is not null)
+        {
+            return assemblyAttribute.ConstructorArguments.Length > 0
+                ? assemblyAttribute.ConstructorArguments[0].Value as string
+                : null;
+        }
+
+        return null;
     }
 }

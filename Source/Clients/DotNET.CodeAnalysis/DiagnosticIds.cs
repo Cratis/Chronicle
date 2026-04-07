@@ -42,4 +42,24 @@ public static class DiagnosticIds
     /// Reducer event parameter must have EventType attribute.
     /// </summary>
     public const string ReducerEventParameterMustHaveAttribute = "CHR0007";
+
+    /// <summary>
+    /// Reactor event types must all be from the same event store.
+    /// </summary>
+    public const string ReactorEventTypesMustBeFromSameEventStore = "CHR0008";
+
+    /// <summary>
+    /// Reducer event types must all be from the same event store.
+    /// </summary>
+    public const string ReducerEventTypesMustBeFromSameEventStore = "CHR0009";
+
+    /// <summary>
+    /// Model-bound projection event types must all be from the same event store.
+    /// </summary>
+    public const string ModelBoundProjectionEventTypesMustBeFromSameEventStore = "CHR0010";
+
+    /// <summary>
+    /// Declarative projection event types must all be from the same event store.
+    /// </summary>
+    public const string DeclarativeProjectionEventTypesMustBeFromSameEventStore = "CHR0011";
 }

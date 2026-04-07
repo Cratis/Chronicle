@@ -229,7 +229,7 @@ public class Reactors : IReactors
             _eventStore,
             reactorType.GetReactorId(),
             reactorType,
-            reactorType.GetEventSequenceId(),
+            reactorType.GetEventSequenceId(_eventStore.Name?.Value),
             eventTypes,
             _causationManager,
             _identityProvider);

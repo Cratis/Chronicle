@@ -42,7 +42,7 @@ public class child_removed_with_join(context context) : Given<context>(context)
         async Task Because()
         {
             var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
-            Users = result.ToList().ToArray();
+            Users = (await result.ToListAsync()).ToArray();
         }
     }
 

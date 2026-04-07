@@ -78,7 +78,7 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
             var filter = Builders<UserReadModel>.Filter.Eq(new StringFieldDefinition<UserReadModel, string>("_id"), EventSourceId.Value);
             var result = await _fixture.ReadModels.Database.GetCollection<UserReadModel>().FindAsync(filter);
-            ProjectionResult = result.FirstOrDefault();
+            ProjectionResult = await result.FirstOrDefaultAsync();
         }
     }
 

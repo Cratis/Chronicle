@@ -23,7 +23,7 @@ public sealed class ReactorAttribute(string id = "", string? eventSequence = def
     /// </summary>
     /// <remarks>
     /// When <see langword="null"/>, the event sequence is inferred from the event types handled by the reactor.
-    /// If all handled event types originate from the same event store (via <see cref="Cratis.Chronicle.Events.EventStoreAttribute"/>),
+    /// If all handled event types originate from the same event store (via <see cref="Events.EventStoreAttribute"/>),
     /// the reactor will automatically subscribe to the corresponding inbox event sequence.
     /// </remarks>
     public EventSequenceId? EventSequenceId { get; } = eventSequence is null ? null : new EventSequenceId(eventSequence);
