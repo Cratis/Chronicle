@@ -48,8 +48,7 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
             .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsStatic)
             .Select(m => m.Parameters.Length > 0 ? m.Parameters[0].Type : null)
             .Where(t => t is not null && WellKnownTypes.HasEventTypeAttribute(t))
-            .Select(t => WellKnownTypes.GetEventStoreName(t!))
-            .Where(name => name is not null)
+            .Select(t => WellKnownTypes.GetEventStoreNameOrDefault(t!))
             .Distinct()
             .ToList();
 
@@ -59,7 +58,7 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
                 Rule,
                 namedTypeSymbol.Locations.FirstOrDefault(),
                 namedTypeSymbol.Name,
-                string.Join(", ", eventStores));
+                string.Join(", ", eventStores.Select(WellKnownTypes.FormatEventStoreName)));
             context.ReportDiagnostic(diagnostic);
         }
     }

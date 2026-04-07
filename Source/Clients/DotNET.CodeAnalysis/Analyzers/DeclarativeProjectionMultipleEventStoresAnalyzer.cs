@@ -72,11 +72,7 @@ public class DeclarativeProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyz
                         continue;
                     }
 
-                    var eventStore = WellKnownTypes.GetEventStoreName(typeArgument);
-                    if (eventStore is null)
-                    {
-                        continue;
-                    }
+                    var eventStore = WellKnownTypes.GetEventStoreNameOrDefault(typeArgument);
 
                     if (!eventStoreNames.Contains(eventStore))
                     {
@@ -98,7 +94,7 @@ public class DeclarativeProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyz
                 endContext.ReportDiagnostic(Diagnostic.Create(
                     Rule,
                     firstConflictLocation ?? endContext.CodeBlock.GetLocation(),
-                    string.Join(", ", eventStoreNames)));
+                    string.Join(", ", eventStoreNames.Select(WellKnownTypes.FormatEventStoreName))));
             }
         });
     }
