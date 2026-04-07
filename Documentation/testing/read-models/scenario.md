@@ -1,7 +1,7 @@
 ---
-uid: Chronicle.Testing.ReadModels
+uid: Chronicle.Testing.ReadModels.Scenario
 ---
-# Testing Read Models
+# ReadModelScenario
 
 `ReadModelScenario<TReadModel>` is a lightweight, in-process test utility that lets you verify the output of read model projections and reducers without a running Chronicle server or database.
 
@@ -23,12 +23,14 @@ dotnet add package Cratis.Chronicle.Testing
 
 ```csharp
 var scenario = new ReadModelScenario<MyReadModel>();
-await scenario.Given([new SomeEvent("value"), new SomeOtherEvent(42)]);
+await scenario.Given
+    .ForEventSource(myId)
+    .Events(new SomeEvent("value"), new SomeOtherEvent(42));
 
 scenario.Instance.SomeProperty.ShouldBe("expected value");
 ```
 
-`Given` feeds the supplied events through the read model's projection or reducer in order and populates `Instance` with the resulting state. Call `await scenario.Given([...])` before asserting.
+`Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
 
 ## Optional initial state
 
@@ -37,7 +39,9 @@ Pass an initial state to the constructor when the read model starts from a non-d
 ```csharp
 var initial = new MyReadModel { Count = 10 };
 var scenario = new ReadModelScenario<MyReadModel>(initial);
-await scenario.Given([new ItemAdded()]);
+await scenario.Given
+    .ForEventSource(myId)
+    .Events(new ItemAdded());
 
 scenario.Instance.Count.ShouldBe(11);
 ```
@@ -67,12 +71,14 @@ public class OrderSummaryReducer : IReducerFor<OrderSummary>
 }
 
 // In your spec:
+var orderId = "order-1";
 var scenario = new ReadModelScenario<OrderSummary>();
-await scenario.Given([
-    new OrderCreated("order-1"),
-    new ItemAdded(9.99m),
-    new ItemAdded(4.50m)
-]);
+await scenario.Given
+    .ForEventSource(orderId)
+    .Events(
+        new OrderCreated("order-1"),
+        new ItemAdded(9.99m),
+        new ItemAdded(4.50m));
 
 scenario.Instance!.Total.ShouldBe(14.49m);
 ```
@@ -94,11 +100,13 @@ public class ProductViewProjection : IProjectionFor<ProductView>
 }
 
 // In your spec:
+var productId = "product-1";
 var scenario = new ReadModelScenario<ProductView>();
-await scenario.Given([
-    new ProductCreated("Widget"),
-    new StockAdjusted(100)
-]);
+await scenario.Given
+    .ForEventSource(productId)
+    .Events(
+        new ProductCreated("Widget"),
+        new StockAdjusted(100));
 
 scenario.Instance!.Name.ShouldBe("Widget");
 scenario.Instance!.Stock.ShouldBe(100);
@@ -114,11 +122,13 @@ public record DeliveryStatus(
     [FromEvent<ShipmentDelivered>] DateTimeOffset? DeliveredAt);
 
 // In your spec:
+var shipmentId = "shipment-1";
 var scenario = new ReadModelScenario<DeliveryStatus>();
-await scenario.Given([
-    new ShipmentDispatched("FedEx"),
-    new ShipmentDelivered(DateTimeOffset.UtcNow)
-]);
+await scenario.Given
+    .ForEventSource(shipmentId)
+    .Events(
+        new ShipmentDispatched("FedEx"),
+        new ShipmentDelivered(DateTimeOffset.UtcNow));
 
 scenario.Instance!.Carrier.ShouldBe("FedEx");
 scenario.Instance!.DeliveredAt.ShouldNotBeNull();
@@ -127,5 +137,5 @@ scenario.Instance!.DeliveredAt.ShouldNotBeNull();
 ## Notes
 
 - `Instance` is `null` until `Given` is called, or if no events were processed.
-- All events are applied to a single event source. Use separate scenarios to test multiple event sources.
+- Each `Given.ForEventSource(id).Events(...)` call applies events to the specified event source. Call it multiple times to simulate events from different event sources.
 - The `.ShouldBe()` assertions in the examples come from your test framework (e.g., [Cratis.Specifications](https://github.com/Cratis/Specifications), Shouldly, or FluentAssertions).
