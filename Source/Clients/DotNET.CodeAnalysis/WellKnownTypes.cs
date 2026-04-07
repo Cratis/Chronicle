@@ -11,14 +11,24 @@ namespace Cratis.Chronicle.CodeAnalysis;
 public static class WellKnownTypes
 {
     /// <summary>
-    /// The full name of the EventType attribute.
+    /// The full name of the kernel EventType attribute.
     /// </summary>
-    public const string EventTypeAttributeName = "Cratis.Chronicle.Concepts.Events.EventTypeAttribute";
+    public const string KernelEventTypeAttributeName = "Cratis.Chronicle.Concepts.Events.EventTypeAttribute";
+
+    /// <summary>
+    /// The full name of the client EventType attribute.
+    /// </summary>
+    public const string ClientEventTypeAttributeName = "Cratis.Chronicle.Events.EventTypeAttribute";
 
     /// <summary>
     /// The full name of the EventStore attribute.
     /// </summary>
     public const string EventStoreAttributeName = "Cratis.Chronicle.Events.EventStoreAttribute";
+
+    /// <summary>
+    /// The sentinel value representing the default event store.
+    /// </summary>
+    public const string DefaultEventStoreName = "";
 
     /// <summary>
     /// The full name of IEventSequence interface.
@@ -48,7 +58,11 @@ public static class WellKnownTypes
     public static bool HasEventTypeAttribute(ITypeSymbol typeSymbol)
     {
         return typeSymbol.GetAttributes().Any(attr =>
-            attr.AttributeClass?.ToDisplayString() == EventTypeAttributeName);
+        {
+            var attributeName = attr.AttributeClass?.ToDisplayString();
+            return attributeName == KernelEventTypeAttributeName ||
+                   attributeName == ClientEventTypeAttributeName;
+        });
     }
 
     /// <summary>
@@ -108,4 +122,20 @@ public static class WellKnownTypes
 
         return null;
     }
+
+    /// <summary>
+    /// Gets the explicit event store name for a type, or the default event store sentinel when none is defined.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to get the event store for.</param>
+    /// <returns>The explicit event store name, or <see cref="DefaultEventStoreName"/> when no attribute is defined.</returns>
+    public static string GetEventStoreNameOrDefault(ITypeSymbol typeSymbol) =>
+        GetEventStoreName(typeSymbol) ?? DefaultEventStoreName;
+
+    /// <summary>
+    /// Formats an event store name for diagnostics.
+    /// </summary>
+    /// <param name="eventStoreName">The event store name to format.</param>
+    /// <returns>A diagnostic-friendly event store display value.</returns>
+    public static string FormatEventStoreName(string eventStoreName) =>
+        eventStoreName.Length == 0 ? "<default>" : eventStoreName;
 }

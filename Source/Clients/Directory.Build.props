@@ -34,7 +34,7 @@
         invokes this target per TFM in inner builds, where $(TargetFramework) is set.
     -->
     <PropertyGroup Condition="'$(OutputType)' != 'Exe'">
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_SetupPrivateRefPackaging;_PackPrivateAssemblyGlobs</TargetsForTfmSpecificContentInPackage>
+            <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_SetupPrivateRefPackaging;_PackPrivateRuntimeAssemblyPrefixes</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
 
     <!--
@@ -42,28 +42,30 @@
         without becoming nuspec dependencies. Use this for packages like Orleans that the Testing
         library needs at runtime but consumers should not have as explicit transitive dependencies.
 
-        Convention: declare a <PrivatePackageAssemblyGlob> item with a glob pattern (without path
-        or extension). The pattern is expanded against $(OutputPath) and matching DLLs are packed
-        into lib/{tfm}/ alongside other runtime-only assemblies.
+        Convention: declare a <PrivatePackageRuntimeAssemblyRegex> property containing a regular
+        expression that matches the runtime assembly filenames to pack. The regex is matched against
+        resolved runtime assets from NuGet, not against $(OutputPath), because library projects do
+        not reliably copy package runtime assets into their own output directory.
 
         Example:
 
             <ItemGroup>
-                <PrivatePackageAssemblyGlob Include="Orleans.*" />
-                <PrivatePackageAssemblyGlob Include="Microsoft.Orleans.*" />
-            </ItemGroup>
+                <PrivatePackageRuntimeAssemblyRegex>^Orleans\..*\.dll$</PrivatePackageRuntimeAssemblyRegex>
+            </PropertyGroup>
 
         The corresponding PackageReference must also carry <PrivateAssets>all</PrivateAssets> so
         that NuGet does not emit a nuspec dependency for it.
     -->
-    <Target Name="_PackPrivateAssemblyGlobs"
-            Condition="'@(PrivatePackageAssemblyGlob)' != ''">
-        <ItemGroup>
-            <_PrivateGlobDll Include="$(OutputPath)%(PrivatePackageAssemblyGlob.Identity).dll" />
-            <TfmSpecificPackageFile Include="@(_PrivateGlobDll)"
-                                    PackagePath="lib/$(TargetFramework)/" />
-        </ItemGroup>
-    </Target>
+        <Target Name="_PackPrivateRuntimeAssemblyPrefixes"
+                DependsOnTargets="ResolveReferences"
+            Condition="'$(PrivatePackageRuntimeAssemblyRegex)' != ''">
+            <ItemGroup>
+                <_PrivateRuntimeAssembly Include="@(RuntimeCopyLocalItems)"
+                                     Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.Extension)').Equals('.dll', System.StringComparison.OrdinalIgnoreCase)) and $([System.Text.RegularExpressions.Regex]::IsMatch('%(RuntimeCopyLocalItems.DestinationSubPath)', '$(PrivatePackageRuntimeAssemblyRegex)', System.Text.RegularExpressions.RegexOptions.IgnoreCase))" />
+                <TfmSpecificPackageFile Include="@(_PrivateRuntimeAssembly)"
+                                        PackagePath="lib/$(TargetFramework)/" />
+            </ItemGroup>
+        </Target>
 
     <Target Name="_SetupPrivateRefPackaging"
             Condition="'@(ProjectReference->WithMetadataValue('PrivateAssets','all'))' != ''">
