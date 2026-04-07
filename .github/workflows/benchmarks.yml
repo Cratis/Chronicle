@@ -59,11 +59,13 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          cp -r Documentation/benchmarks/ /tmp/benchmark-results/
+          git pull --rebase origin ${{ github.head_ref || github.ref_name }}
+          cp -r /tmp/benchmark-results/. Documentation/benchmarks/
           git add Documentation/benchmarks/
           if git diff --staged --quiet; then
             echo "No benchmark result changes to commit"
           else
             git commit -m "Update benchmark results [skip ci]"
-            git pull --rebase origin ${{ github.head_ref || github.ref_name }}
             git push
           fi
