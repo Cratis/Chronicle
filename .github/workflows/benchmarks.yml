@@ -60,6 +60,7 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           cp -r Documentation/benchmarks/ /tmp/benchmark-results/
+          git restore .
           git pull --rebase origin ${{ github.head_ref || github.ref_name }}
           cp -r /tmp/benchmark-results/. Documentation/benchmarks/
           git add Documentation/benchmarks/
