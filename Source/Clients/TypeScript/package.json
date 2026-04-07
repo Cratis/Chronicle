@@ -6,7 +6,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/cratis/chronicle.git"
+        "url": "git+https://github.com/Cratis/Chronicle.git"
     },
     "publishConfig": {
         "access": "public"
