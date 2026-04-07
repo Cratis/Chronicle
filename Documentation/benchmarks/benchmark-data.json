@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775543354425,
+  "lastUpdate": 1775550039182,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -660,6 +660,50 @@
             "value": 541960560.1,
             "unit": "ns",
             "range": "± 101764105.52675211"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "0637d33c95709c991c7810cf92555557254f1117",
+          "message": "Add EventScenario for infrastructure-free testing backed by real kernel EventSequence grain",
+          "timestamp": "2026-04-06T19:05:05Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2983/commits/0637d33c95709c991c7810cf92555557254f1117"
+        },
+        "date": 1775550039181,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 13125922.406666668,
+            "unit": "ns",
+            "range": "± 1707181.424814616"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 25121269.18333333,
+            "unit": "ns",
+            "range": "± 2573162.5958532444"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 106410489.4,
+            "unit": "ns",
+            "range": "± 20732667.98059929"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 516967028.4,
+            "unit": "ns",
+            "range": "± 84651461.92118445"
           }
         ]
       }
