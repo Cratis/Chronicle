@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Reactive.Subjects;
+using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -49,16 +49,21 @@ public class EventSequence(
     ICausationManager causationManager,
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider,
-    JsonSerializerOptions jsonSerializerOptions) : IEventSequence, IDisposable
+    JsonSerializerOptions jsonSerializerOptions) : IEventSequence
 {
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
-    readonly Subject<IEnumerable<AppendedEventWithResult>> _appendedEvents = new();
+
+    IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
+    event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
 
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations => _appendedEvents;
+    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations =>
+        _appendOperations ??= Observable.FromEvent<IEnumerable<AppendedEventWithResult>>(
+            h => _appendedEventsRaised += h,
+            h => _appendedEventsRaised -= h);
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
@@ -124,7 +129,7 @@ public class EventSequence(
         });
 
         var result = ResolveViolationMessages(response.ToClient());
-        if (_appendedEvents.HasObservers)
+        if (_appendedEventsRaised is not null)
         {
             var context = EventContext.From(
                 eventStoreName,
@@ -141,7 +146,7 @@ public class EventSequence(
                 Causation = causation,
                 CausedBy = identity
             };
-            _appendedEvents.OnNext([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
+            _appendedEventsRaised([new AppendedEventWithResult(new AppendedEvent(context, @event), result)]);
         }
 
         return result;
@@ -242,7 +247,7 @@ public class EventSequence(
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
 
-        if (_appendedEvents.HasObservers)
+        if (_appendedEventsRaised is not null)
         {
             var identity = identityProvider.GetCurrent();
             var sequenceNumbers = result.SequenceNumbers.ToList();
@@ -276,7 +281,7 @@ public class EventSequence(
                 allResults.Add(new AppendedEventWithResult(new AppendedEvent(context, evt.Event), ToAppendResult(resolvedCorrelationId, sequenceNumber, result)));
             }
 
-            _appendedEvents.OnNext(allResults);
+            _appendedEventsRaised(allResults);
         }
 
         return result;
@@ -413,13 +418,6 @@ public class EventSequence(
         });
     }
 
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _appendedEvents.OnCompleted();
-        _appendedEvents.Dispose();
-    }
-
     static void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)
     {
         if (!eventTypes.HasFor(eventClrType))
@@ -485,7 +483,7 @@ public class EventSequence(
         var sequenceNumbers = result.SequenceNumbers.ToList();
         var results = new List<AppendedEventWithResult>(events.Count);
 
-        if (!_appendedEvents.HasObservers) return;
+        if (_appendedEventsRaised is null) return;
 
         for (var i = 0; i < events.Count; i++)
         {
@@ -514,6 +512,6 @@ public class EventSequence(
             results.Add(new AppendedEventWithResult(new AppendedEvent(context, events[i]), ToAppendResult(correlationId, sequenceNumber, result)));
         }
 
-        _appendedEvents.OnNext(results);
+        _appendedEventsRaised(results);
     }
 }
