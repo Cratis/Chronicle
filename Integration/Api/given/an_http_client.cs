@@ -17,7 +17,7 @@ public class an_http_client : Specification
         _fixture = fixture;
     }
 
-    protected HttpClient Client { get; private set; } = null!;
+    protected HttpClient Client { get; private set; }
 
     async Task Establish()
     {

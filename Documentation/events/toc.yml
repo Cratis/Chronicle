@@ -6,6 +6,8 @@
   href: appending-with-tags.md
 - name: Appending many
   href: appending-many.md
+- name: Observing appends
+  href: observing-appends.md
 - name: Getting events
   href: getting-events.md
 - name: Getting state

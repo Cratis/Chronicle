@@ -29,7 +29,7 @@ public static class ReducerWaitExtensions
 
         var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState && !cts.IsCancellationRequested)
+        while (currentRunningState != runningState)
         {
             var state = await reducer.GetState();
             currentRunningState = state.RunningState;
@@ -63,6 +63,7 @@ public static class ReducerWaitExtensions
             {
                 break;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -79,7 +80,7 @@ public static class ReducerWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var state = await reducer.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
+        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
         {
             state = await reducer.GetState();
             await Task.Delay(DefaultDelay, cts.Token);
@@ -97,11 +98,12 @@ public static class ReducerWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var failedPartitions = await reducer.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any() && !cts.IsCancellationRequested)
+        while (!failedPartitions.Any())
         {
             failedPartitions = await reducer.GetFailedPartitions();
             await Task.Delay(DefaultDelay, cts.Token);
         }
+
         return failedPartitions;
     }
 

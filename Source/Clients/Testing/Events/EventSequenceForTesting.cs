@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -26,6 +27,9 @@ public class EventSequenceForTesting(IEventTypes eventTypes, params EventForEven
 
     /// <inheritdoc/>
     public EventSequenceId Id => EventSequenceId.Log;
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations { get; } = Observable.Never<IEnumerable<AppendedEventWithResult>>();
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => throw new NotImplementedException();

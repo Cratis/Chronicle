@@ -44,12 +44,11 @@ public class all_events_for_an_event_source_via_event_sequence(context context) 
                 if (StoredFirstEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction ||
                     StoredSecondEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction)
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(50, cts.Token);
                 }
             }
-            while ((StoredFirstEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction ||
-                    StoredSecondEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction) &&
-                   !cts.IsCancellationRequested);
+            while (StoredFirstEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction ||
+                    StoredSecondEvent.Context.EventType.Id != KernelGlobalEventTypes.Redaction);
 
             var systemStorage = GetSystemEventLogStorage();
             var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();

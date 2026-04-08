@@ -29,7 +29,7 @@ public static class ReactorWaitExtensions
 
         var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState && !cts.IsCancellationRequested)
+        while (currentRunningState != runningState)
         {
             var state = await reactor.GetState();
             currentRunningState = state.RunningState;
@@ -63,6 +63,7 @@ public static class ReactorWaitExtensions
             {
                 break;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -79,7 +80,7 @@ public static class ReactorWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var state = await reactor.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber && !cts.IsCancellationRequested)
+        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
         {
             state = await reactor.GetState();
             await Task.Delay(DefaultDelay, cts.Token);
@@ -97,11 +98,12 @@ public static class ReactorWaitExtensions
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var failedPartitions = await reactor.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any() && !cts.IsCancellationRequested)
+        while (!failedPartitions.Any())
         {
             failedPartitions = await reactor.GetFailedPartitions();
             await Task.Delay(DefaultDelay, cts.Token);
         }
+
         return failedPartitions;
     }
 

@@ -26,10 +26,10 @@ public static class JobsWaitHelpers
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var currentJobs = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!currentJobs.Any() && !cts.IsCancellationRequested)
+        while (!currentJobs.Any())
         {
             currentJobs = await jobs.GetJobs();
-            await Task.Delay(DefaultDelay);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
 
         return currentJobs;
@@ -47,13 +47,13 @@ public static class JobsWaitHelpers
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var matching = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!matching.Any() && !cts.IsCancellationRequested)
+        while (!matching.Any())
         {
             var currentJobs = await jobs.GetJobs();
             matching = currentJobs.Where(j => j.Type.Value.Contains(typeSubstring, StringComparison.Ordinal));
             if (!matching.Any())
             {
-                await Task.Delay(DefaultDelay);
+                await Task.Delay(DefaultDelay, cts.Token);
             }
         }
 
@@ -73,11 +73,12 @@ public static class JobsWaitHelpers
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var currentJobs = await jobs.GetJobs();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentJobs.Any() && !currentJobs.All(_ => includeStatuses.Contains(_.Status)) && !cts.IsCancellationRequested)
+        while (currentJobs.Any() && !currentJobs.All(_ => includeStatuses.Contains(_.Status)))
         {
             currentJobs = await jobs.GetJobs();
-            await Task.Delay(DefaultDelay);
+            await Task.Delay(DefaultDelay, cts.Token);
         }
+
         return currentJobs;
     }
 
@@ -119,6 +120,7 @@ public static class JobsWaitHelpers
             {
                 return;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -142,6 +144,7 @@ public static class JobsWaitHelpers
             {
                 return currentJob;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }

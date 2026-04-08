@@ -5,6 +5,7 @@ extern alias KernelCore;
 extern alias KernelConcepts;
 
 using System.Reflection;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using DotNet.Testcontainers.Networks;
@@ -197,6 +198,17 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <param name="options">The <see cref="WebApplicationFactoryClientOptions"/>.</param>
     /// <returns>A new <see cref="HttpClient"/> instance.</returns>
     public HttpClient CreateClient(WebApplicationFactoryClientOptions options) => EnsureInitialized(() => _createClientWithOptionsMethod.Invoke(_webApplicationFactory, [options]) as HttpClient)!;
+
+    /// <summary>
+    /// Begins collecting appended events from this point forward.
+    /// </summary>
+    /// <remarks>
+    /// Returns a fresh <see cref="IEventAppendCollection"/> subscribed to the event log immediately.
+    /// Dispose the collection when done to stop accumulation and avoid cross-test contamination.
+    /// </remarks>
+    /// <returns>An active <see cref="IEventAppendCollection"/>.</returns>
+    public IEventAppendCollection StartCollectingAppends() =>
+        new EventAppendCollection(Services.GetRequiredService<IEventLog>());
 
     /// <summary>
     /// Create a new <see cref="HttpClient"/> instance.

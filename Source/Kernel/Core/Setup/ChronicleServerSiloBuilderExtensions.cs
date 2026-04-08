@@ -50,6 +50,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 
+        builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
         builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();

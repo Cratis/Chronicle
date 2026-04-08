@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -42,6 +43,7 @@ public class EventStore : IEventStore
     readonly IEventSerializer _eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
+    readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -125,6 +127,7 @@ public class EventStore : IEventStore
             UnitOfWorkManager,
             identityProvider,
             jsonSerializerOptions);
+        _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
 
@@ -293,20 +296,23 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
-        new EventSequence(
-            _eventStoreName,
-            Namespace,
+        _sequences.GetOrAdd(
             id,
-            Connection,
-            EventTypes,
-            Constraints,
-            _eventSerializer,
-            _correlationIdAccessor,
-            _concurrencyScopeStrategies,
-            _causationManager,
-            UnitOfWorkManager,
-            _identityProvider,
-            _jsonSerializerOptions);
+            static (key, state) => new EventSequence(
+                state._eventStoreName,
+                state.Namespace,
+                key,
+                state.Connection,
+                state.EventTypes,
+                state.Constraints,
+                state._eventSerializer,
+                state._correlationIdAccessor,
+                state._concurrencyScopeStrategies,
+                state._causationManager,
+                state.UnitOfWorkManager,
+                state._identityProvider,
+                state._jsonSerializerOptions),
+            this);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
