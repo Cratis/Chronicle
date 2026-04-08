@@ -1,5 +1,5 @@
 {
-  "lastUpdate": 1775568205736,
+  "lastUpdate": 1775517929119,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis Benchmarks": [
@@ -836,6 +836,50 @@
             "value": 497802669,
             "unit": "ns",
             "range": "± 64952028.73431978"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "committer": {
+            "name": "Cratis",
+            "username": "Cratis"
+          },
+          "id": "9c41e1cc3a5af940f61f78687f6c20309d155d69",
+          "message": "Bump Cratis.Arc from 20.1.4 to 20.3.0",
+          "timestamp": "2026-04-06T19:05:05Z",
+          "url": "https://github.com/Cratis/Chronicle/pull/2988/commits/9c41e1cc3a5af940f61f78687f6c20309d155d69"
+        },
+        "date": 1775517929118,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendBenchmark.AppendSingleEvent",
+            "value": 12400183.155555556,
+            "unit": "ns",
+            "range": "± 1023192.2975383148"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 10)",
+            "value": 22243744.3,
+            "unit": "ns",
+            "range": "± 2067267.47067209"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 100)",
+            "value": 68128824.7,
+            "unit": "ns",
+            "range": "± 7671149.609764319"
+          },
+          {
+            "name": "Cratis.Chronicle.Benchmarks.AppendManyBenchmark.AppendManyEvents(EventCount: 1000)",
+            "value": 587439487.4,
+            "unit": "ns",
+            "range": "± 115163188.51672608"
           }
         ]
       }
