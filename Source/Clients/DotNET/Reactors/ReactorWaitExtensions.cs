@@ -33,6 +33,11 @@ public static class ReactorWaitExtensions
         {
             var state = await reactor.GetState();
             currentRunningState = state.RunningState;
+            if (currentRunningState == runningState)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }

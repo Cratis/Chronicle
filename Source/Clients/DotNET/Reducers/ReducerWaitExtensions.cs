@@ -33,6 +33,11 @@ public static class ReducerWaitExtensions
         {
             var state = await reducer.GetState();
             currentRunningState = state.RunningState;
+            if (currentRunningState == runningState)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
