@@ -4,6 +4,8 @@
   href: getting-started.md
 - name: Event Processing
   href: event-processing.md
+- name: Event Sequence
+  href: event-sequence.md
 - name: OnceOnly
   href: once-only.md
 
