@@ -70,7 +70,7 @@ public class ModelBoundProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyze
                 Rule,
                 namedTypeSymbol.Locations.FirstOrDefault(),
                 namedTypeSymbol.Name,
-                string.Join(", ", distinctEventStores));
+                string.Join(", ", distinctEventStores.Select(WellKnownTypes.FormatEventStoreName)));
             context.ReportDiagnostic(diagnostic);
         }
     }
@@ -96,11 +96,12 @@ public class ModelBoundProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyze
             if (attribute.AttributeClass.TypeArguments.Length > 0)
             {
                 var eventType = attribute.AttributeClass.TypeArguments[0];
-                var eventStore = WellKnownTypes.GetEventStoreName(eventType);
-                if (eventStore is not null)
+                if (!WellKnownTypes.HasEventTypeAttribute(eventType))
                 {
-                    eventStores.Add(eventStore);
+                    continue;
                 }
+
+                eventStores.Add(WellKnownTypes.GetEventStoreNameOrDefault(eventType));
             }
         }
 
