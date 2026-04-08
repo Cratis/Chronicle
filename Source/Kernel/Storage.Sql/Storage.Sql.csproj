@@ -17,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Cratis.Arc" />
       <PackageReference Include="Cratis.Arc.EntityFrameworkCore" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />

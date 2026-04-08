@@ -134,11 +134,29 @@ public class TypeDiscovery(Assembly assembly)
         return services;
     }
 
-    static bool HasCommandAttribute(Type type) =>
-        type.GetCustomAttributesData().Any(a => a.AttributeType.Name == CommandAttributeName);
+    static bool HasCommandAttribute(Type type)
+    {
+        try
+        {
+            return type.GetCustomAttributesData().Any(a => a.AttributeType.Name == CommandAttributeName);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
-    static bool HasReadModelAttribute(Type type) =>
-        type.GetCustomAttributesData().Any(a => a.AttributeType.Name == ReadModelAttributeName);
+    static bool HasReadModelAttribute(Type type)
+    {
+        try
+        {
+            return type.GetCustomAttributesData().Any(a => a.AttributeType.Name == ReadModelAttributeName);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     static string? GetBelongsToAttribute(Type type)
     {
@@ -158,12 +176,17 @@ public class TypeDiscovery(Assembly assembly)
             catch { return false; }
         });
 
-        if (attr is null)
+            if (attr is null)
+            {
+                return null;
+            }
+
+            return attr.ConstructorArguments.FirstOrDefault().Value as string;
+        }
+        catch (Exception)
         {
             return null;
         }
-
-        return attr.ConstructorArguments.FirstOrDefault().Value as string;
     }
 
     static List<QueryMethodDefinition> DiscoverQueryMethods(Type readModelType)

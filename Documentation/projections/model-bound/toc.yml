@@ -2,6 +2,8 @@
   href: index.md
 - name: Basic Mapping
   href: basic-mapping.md
+- name: Set Constant Value
+  href: set-value.md
 - name: Convention-Based
   href: convention-based.md
 - name: FromEvery

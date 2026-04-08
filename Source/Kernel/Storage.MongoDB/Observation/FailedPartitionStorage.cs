@@ -52,7 +52,7 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
 
         return new FailedPartitions
         {
-            Partitions = cursor.ToList()
+            Partitions = await cursor.ToListAsync()
         };
     }
 }

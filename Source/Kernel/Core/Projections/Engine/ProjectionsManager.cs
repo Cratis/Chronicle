@@ -26,26 +26,34 @@ public class ProjectionsManager(IProjectionFactory projectionFactory, IStorage s
     /// <inheritdoc/>
     public async Task Register(EventStoreName eventStore, IEnumerable<ProjectionDefinition> definitions, IEnumerable<ReadModelDefinition> readModelDefinitions, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        foreach (var definition in definitions)
+        var definitionList = definitions.ToList();
+        var namespaceList = namespaces.ToList();
+
+        foreach (var definition in definitionList)
         {
             var definitionKey = GetKeyFor(eventStore, definition.Identifier);
             _definitions[definitionKey] = definition;
+        }
+
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+
+        await Task.WhenAll(definitionList.Select(async definition =>
+        {
             var readModelDefinition = readModelDefinitions.SingleOrDefault(rm => rm.Identifier == definition.ReadModel);
             if (readModelDefinition is null)
             {
                 var availableIdentifiers = string.Join(", ", readModelDefinitions.Select(rm => $"'{rm.Identifier.Value}'"));
                 throw new InvalidOperationException($"ReadModelDefinition with Identifier '{definition.ReadModel.Value}' not found. Available: [{availableIdentifiers}]");
             }
-            var readModel = readModelDefinition;
-            var eventStoreStorage = storage.GetEventStore(eventStore);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-            foreach (var @namespace in namespaces)
+
+            await Task.WhenAll(namespaceList.Select(async @namespace =>
             {
-                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, eventTypeSchemas);
+                var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModelDefinition, eventTypeSchemas);
                 var key = $"{eventStore}{KeyHelper.Separator}{@namespace}{KeyHelper.Separator}{definition.Identifier}";
                 _projections[key] = projection;
-            }
-        }
+            }));
+        }));
     }
 
     /// <inheritdoc/>

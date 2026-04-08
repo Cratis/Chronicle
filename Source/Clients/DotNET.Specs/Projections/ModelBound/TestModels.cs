@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.ReadModels;
 
@@ -45,7 +46,7 @@ public record Cart(
     [ChildrenFrom<ItemAddedToCart>(key: nameof(ItemAddedToCart.ItemId), identifiedBy: nameof(CartItem.Id))]
     IEnumerable<CartItem> Items);
 
-[FromEventSequence("audit-log")]
+[EventSequence("audit-log")]
 public record AuditRecord(
     [Key]
     Guid Id,
@@ -69,7 +70,7 @@ public record Snapshot(
     [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
     string Data);
 
-[FromEventSequence("custom")]
+[EventSequence("custom")]
 [NotRewindable]
 [Passive]
 public record ConfiguredProjection(

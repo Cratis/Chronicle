@@ -53,6 +53,7 @@ Model-bound projections support all projection engine capabilities:
 See the following pages for detailed information on each feature:
 
 - [Basic Mapping](./basic-mapping.md) - SetFrom, AddFrom, SubtractFrom, SetFromContext
+- [Set Constant Value](./set-value.md) - Set a property to a fixed value with SetValue
 - [Convention-Based](./convention-based.md) - Automatic property mapping with FromEvent (equivalent to AutoMap)
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count

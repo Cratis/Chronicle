@@ -38,6 +38,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithJoinDefinition> _removedWithJoinDefinitions = [];
+    protected readonly List<string> _observedEventStores = [];
     protected FromEveryDefinition _fromEveryDefinition = new();
     protected JsonObject _initialValues = (JsonObject)JsonNode.Parse("{}")!;
     protected AutoMap _autoMap = autoMap;
@@ -94,6 +95,9 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         {
             _fromDefinitions[eventTypesInProjection[0].ToContract()] = fromDefinition;
         }
+
+        CollectEventStore(type);
+
         return (this as TBuilder)!;
     }
 
@@ -170,5 +174,14 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         builderCallback(builder);
         _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;
+    }
+
+    void CollectEventStore(Type eventType)
+    {
+        var eventStoreName = eventType.GetEventStoreName();
+        if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
+        {
+            _observedEventStores.Add(eventStoreName);
+        }
     }
 }

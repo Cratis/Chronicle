@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
@@ -20,12 +21,18 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="currentEventStoreName">
+/// The name of the event store this builder is targeting.
+/// Used to detect when event types belong to the same store, which means event-log rather than inbox routing.
+/// </param>
 internal class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes) : IModelBoundProjectionBuilder
+    IEventTypes eventTypes,
+    string? currentEventStoreName = null) : IModelBoundProjectionBuilder
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
+    readonly string? _currentEventStoreName = currentEventStoreName;
     readonly Dictionary<string, EventType> _eventTypeCache = new();
     readonly List<(string PropertyName, FromEveryAttribute Attribute)> _fromEveryAttributes = [];
 
@@ -40,12 +47,12 @@ internal class ModelBoundProjectionBuilder(
 
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
-        var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
+        var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
 
         var definition = new ProjectionDefinition
         {
-            EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
+            EventSequenceId = fromEventSequenceAttr?.Sequence ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
             IsActive = !modelType.IsPassive(),
@@ -90,7 +97,70 @@ internal class ModelBoundProjectionBuilder(
         var hasNoAutoMap = Attribute.IsDefined(modelType, typeof(NoAutoMapAttribute), inherit: true);
         definition.AutoMap = hasNoAutoMap ? (Contracts.Projections.AutoMap)AutoMap.Disabled : (Contracts.Projections.AutoMap)AutoMap.Enabled;
 
+        if (fromEventSequenceAttr is null)
+        {
+            definition.EventSequenceId = InferEventSequenceId(modelType, definition, _currentEventStoreName);
+        }
+
         return definition;
+    }
+
+    static string ConvertValueToInvariantString(object value)
+    {
+        var actualValue = value;
+
+        if (actualValue.GetType().IsEnum)
+        {
+            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
+            if (underlyingType == typeof(int))
+            {
+                actualValue = Convert.ChangeType(actualValue, underlyingType);
+            }
+            else
+            {
+                return actualValue.ToString()!;
+            }
+        }
+
+        return actualValue switch
+        {
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => actualValue.ToString()!
+        };
+    }
+
+    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
+    {
+        var eventStores = definition.From.Keys
+            .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
+            .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
+            .Select(t => t.GetEventStoreName())
+            .Where(name => name is not null)
+            .Select(name => name!)
+            .Distinct()
+            .ToList();
+
+        if (eventStores.Count > 1)
+        {
+            throw new MultipleEventStoresDefined(modelType, eventStores);
+        }
+
+        if (eventStores.Count == 1)
+        {
+            // If the event types belong to the same store as the one we're in, use event-log instead of inbox
+            if (currentEventStoreName is not null && eventStores[0] == currentEventStoreName)
+            {
+                return EventSequenceId.Log;
+            }
+
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
+        }
+
+        return EventSequenceId.Log;
     }
 
     EventType GetOrCreateEventType(Type eventType)
@@ -273,6 +343,18 @@ internal class ModelBoundProjectionBuilder(
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
         }
 
+        foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
+        {
+            allEventTypesReferencedByModel.Add(eventType);
+            var valueProperty = attr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+            var value = valueProperty?.GetValue(attr);
+            if (value is not null)
+            {
+                var invariantValue = ConvertValueToInvariantString(value);
+                targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
+        }
+
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
         {
             targetJoin.ProcessJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType, memberName, propertyName);
@@ -391,6 +473,18 @@ internal class ModelBoundProjectionBuilder(
             var propertyToValidate = contextPropertyName ?? property.Name;
             PropertyValidator.ValidatePropertyExists<EventContext>(propertyToValidate);
             targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, propertyToValidate);
+        }
+
+        foreach (var (attr, eventType) in property.GetAttributesOfGenericType<SetValueAttribute<object>>())
+        {
+            eventTypesReferencedByMember.Add(eventType);
+            var valueProperty = attr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+            var value = valueProperty?.GetValue(attr);
+            if (value is not null)
+            {
+                var invariantValue = ConvertValueToInvariantString(value);
+                targetFrom.AddSetValueMapping(GetOrCreateEventType, eventType, propertyName, invariantValue);
+            }
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<JoinAttribute<object>>())

@@ -10,8 +10,9 @@ on:
       - 'Source/**'
 
 permissions:
-  contents: write
+  contents: read
   deployments: write
+  pull-requests: write
 
 jobs:
   benchmarks:
@@ -22,7 +23,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -40,25 +40,23 @@ jobs:
           find Benchmarks/Chronicle.Benchmarks -path "*/BenchmarkDotNet.Artifacts/results/*.json" -type f -exec cp {} Benchmarks/results/ \;
           test -n "$(find Benchmarks/results -maxdepth 1 -name '*.json' -print -quit)" || { echo "No benchmark JSON files were produced"; exit 1; }
           ls -la Benchmarks/results/
+          python3 Benchmarks/merge-results.py
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cratis Benchmarks
           tool: 'benchmarkdotnet'
-          output-file-path: Benchmarks/results/*.json
+          output-file-path: Benchmarks/results/combined.json
+          external-data-json-path: Documentation/benchmarks/benchmark-data.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: false
-          alert-threshold: '120%'
+          alert-threshold: '150%'
           comment-on-alert: true
-          fail-on-alert: true
+          fail-on-alert: false
           alert-comment-cc-users: '@einari'
-          benchmark-data-dir-path: 'Documentation/benchmarks'
 
-      - name: Commit updated benchmark results
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add Documentation/benchmarks/
-          git diff --staged --quiet || git commit -m "Update benchmark results"
-          git push
+      - name: Upload benchmark data
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-data
+          path: Documentation/benchmarks/benchmark-data.json

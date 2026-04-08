@@ -8,6 +8,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Monads;
 using Cratis.Serialization;
@@ -117,9 +118,25 @@ public class Projections(
     }
 
     /// <inheritdoc/>
+    public IEnumerable<(string EventStoreName, IEnumerable<EventTypeId> EventTypeIds)> GetExternalEventStoreSubscriptions()
+    {
+        return Definitions
+            .Where(d => d.EventSequenceId.StartsWith(EventSequenceId.InboxPrefix, StringComparison.Ordinal))
+            .GroupBy(d => d.EventSequenceId[EventSequenceId.InboxPrefix.Length..])
+            .Select(g => (
+                EventStoreName: g.Key,
+                EventTypeIds: g.SelectMany(d => d.From.Keys
+                    .Concat(d.Join.Keys)
+                    .Select(et => new EventTypeId(et.Id)))
+                    .Distinct()
+                    .AsEnumerable()))
+            .ToList();
+    }
+
+    /// <inheritdoc/>
     public Task Discover()
     {
-        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes);
+        var modelBoundProjections = new ModelBoundProjections(clientArtifacts, namingPolicy, eventTypes, eventStore.Name?.Value);
         var modelBoundDefinitions = modelBoundProjections.Discover();
         var modelBoundHandlers = modelBoundDefinitions.ToDictionary(
             kvp => kvp.Key,

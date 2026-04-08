@@ -29,6 +29,11 @@ public static class WellKnownCollectionNames
     public const string System = "system";
 
     /// <summary>
+    /// The collection that holds <see cref="Event"/> for the outbox.
+    /// </summary>
+    public const string Outbox = "outbox";
+
+    /// <summary>
     /// The collection that holds observer state.
     /// </summary>
     public const string Observers = "observers";

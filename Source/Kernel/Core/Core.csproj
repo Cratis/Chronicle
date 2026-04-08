@@ -15,6 +15,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
         <InternalsVisibleTo Include="Cratis.Chronicle.XUnit.Integration" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Testing" />
     </ItemGroup>
 
     <ItemGroup>
@@ -31,7 +32,7 @@
 
     <Target Name="GenerateGrpcContracts" AfterTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' ">
         <Message Text="Generating gRPC contracts from Arc artifacts" Importance="high" />
-        <Exec Command="dotnet run -- &quot;$(MSBuildThisFileDirectory)$(OutputPath)Cratis.Chronicle.Core.dll&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
+        <Exec Command="dotnet run -- &quot;$(TargetPath)&quot; &quot;$(MSBuildThisFileDirectory)../Contracts&quot; --skip-namespaces 2 --base-namespace Cratis.Chronicle.Contracts" WorkingDirectory="$(MSBuildThisFileDirectory)../../../Source/Tools/GrpcCodeGenerator" />
     </Target>
 
     <PropertyGroup>

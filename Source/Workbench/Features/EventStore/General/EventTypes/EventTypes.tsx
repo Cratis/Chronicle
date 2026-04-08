@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom';
 import { FilterMatchMode } from 'primereact/api';
 import { DataTableFilterMeta } from 'primereact/datatable';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
@@ -99,7 +100,7 @@ export const EventTypes = () => {
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.general.eventTypes.title}>
             <DataPage
                 key={refreshTrigger}
                 title={strings.eventStore.general.eventTypes.title}
@@ -155,6 +156,6 @@ export const EventTypes = () => {
                 </DataPage.Columns>
             </DataPage>
             <AddEventTypeDialogWrapper />
-        </>
+        </Page>
     );
 };

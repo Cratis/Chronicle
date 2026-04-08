@@ -56,7 +56,7 @@ public class with_events_seeded_using_seeding_api(context context) : Given<conte
 
             var filter = Builders<ItemsReadModel>.Filter.Eq(new StringFieldDefinition<ItemsReadModel, string>("_id"), EventSourceId);
             var cursor = await _chronicleInProcessFixture.ReadModels.Database.GetCollection<ItemsReadModel>().FindAsync(filter);
-            Result = cursor.FirstOrDefault();
+            Result = await cursor.FirstOrDefaultAsync();
         }
     }
 

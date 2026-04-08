@@ -121,7 +121,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
-        var disableTls = options.Tls.IsDisabled || (string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls);
+        var disableTls = string.IsNullOrEmpty(certificatePath) && (options.ConnectionString.DisableTls || options.Tls.IsDisabled);
 
         var tokenProvider = CreateTokenProvider(options, disableTls);
 

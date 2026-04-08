@@ -48,7 +48,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier)
     {
         using var result = await GetCollection(eventStore, eventStoreNamespace).FindAsync(_ => _.Identifier == identifier);
-        var key = result.SingleOrDefault();
+        var key = await result.SingleOrDefaultAsync();
         ThrowIfMissingEncryptionKey(identifier, key);
         return new(key.PublicKey, key.PrivateKey);
     }

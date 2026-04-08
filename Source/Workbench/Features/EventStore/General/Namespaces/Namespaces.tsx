@@ -7,6 +7,7 @@ import { AllNamespaces, AllNamespacesParameters } from 'Api/Namespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Page } from 'Components/Common/Page';
 import { Column } from 'primereact/column';
 import * as faIcons from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
@@ -25,7 +26,7 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
     };
 
     return (
-        <>
+        <Page title={strings.eventStore.general.namespaces.title}>
             <DataPage
                 title={strings.eventStore.general.namespaces.title}
                 query={AllNamespaces}
@@ -44,6 +45,6 @@ export const Namespaces = withViewModel(NamespacesViewModel, ({ viewModel }) => 
                 </DataPage.Columns>
             </DataPage>
             <AddNamespaceDialog/>
-        </>
+        </Page>
     );
 });

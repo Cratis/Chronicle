@@ -208,6 +208,11 @@ public class ModelBoundCodeGenerator
                 {
                     propInfo.Counts.Add(eventTypeName);
                 }
+                else if (normalizedExpression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+                {
+                    var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
+                    propInfo.SetValues.Add((eventTypeName, innerValue));
+                }
                 else
                 {
                     propInfo.SetFroms.Add((eventTypeName, GetEventPropertyName(normalizedExpression)));
@@ -257,6 +262,11 @@ public class ModelBoundCodeGenerator
             }
         }
 
+        foreach (var setValue in propInfo.SetValues)
+        {
+            attributes.Add(CreateSetValueAttribute(setValue.EventTypeName, setValue.Value));
+        }
+
         return attributes;
     }
 
@@ -302,10 +312,50 @@ public class ModelBoundCodeGenerator
         return Attribute(attribute);
     }
 
+    AttributeSyntax CreateSetValueAttribute(string eventTypeName, string value)
+    {
+        var attribute = GenericName("SetValue")
+            .WithTypeArgumentList(
+                TypeArgumentList(
+                    SingletonSeparatedList<TypeSyntax>(
+                        IdentifierName(eventTypeName))));
+
+        ExpressionSyntax valueLiteral;
+
+        if (bool.TryParse(value, out var boolValue))
+        {
+            valueLiteral = LiteralExpression(
+                boolValue ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
+        }
+        else if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var intValue))
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(intValue));
+        }
+        else if (long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var longValue))
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(longValue));
+        }
+        else if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var doubleValue))
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(doubleValue));
+        }
+        else
+        {
+            valueLiteral = LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(value));
+        }
+
+        return Attribute(attribute)
+            .WithArgumentList(
+                AttributeArgumentList(
+                    SingletonSeparatedList(
+                        AttributeArgument(valueLiteral))));
+    }
+
     sealed class PropertyInfo
     {
         public string PropertyName { get; set; } = string.Empty;
         public List<(string EventTypeName, string EventPropertyName)> SetFroms { get; } = [];
+        public List<(string EventTypeName, string Value)> SetValues { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> AddFroms { get; } = [];
         public List<(string EventTypeName, string EventPropertyName)> SubtractFroms { get; } = [];
         public List<string> Increments { get; } = [];

@@ -20,7 +20,7 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
     public async Task<IEnumerable<Chronicle.Storage.Observation.ObserverDefinition>> GetAll()
     {
         using var result = await _collection.FindAsync(FilterDefinition<ObserverDefinition>.Empty);
-        var definitions = result.ToList();
+        var definitions = await result.ToListAsync();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
 
@@ -32,7 +32,7 @@ public class ObserverDefinitionsStorage(IEventStoreDatabase eventStoreDatabase) 
     public async Task<Chronicle.Storage.Observation.ObserverDefinition> Get(ObserverId id)
     {
         using var result = await _collection.FindAsync(definition => definition.Id == id);
-        return result.FirstOrDefault()?.ToKernel() ?? Chronicle.Storage.Observation.ObserverDefinition.Empty;
+        return (await result.FirstOrDefaultAsync())?.ToKernel() ?? Chronicle.Storage.Observation.ObserverDefinition.Empty;
     }
 
     /// <inheritdoc/>

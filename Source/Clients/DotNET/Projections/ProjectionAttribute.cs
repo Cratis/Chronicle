@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Projections;
 /// Initializes a new instance of <see cref="ProjectionAttribute"/>.
 /// </remarks>
 /// <param name="id">Optional identifier. If not specified, it will default to the fully qualified type name.</param>
-/// <param name="eventSequence">Optional the name of the event sequence to observe. Defaults to the event log.</param>
+/// <param name="eventSequence">Optional the name of the event sequence to observe. When not specified, the event sequence is inferred from the event types used in the projection definition.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class ProjectionAttribute(string id = "", string? eventSequence = default) : Attribute
 {
@@ -22,7 +22,12 @@ public sealed class ProjectionAttribute(string id = "", string? eventSequence = 
     public ProjectionId Id { get; } = id;
 
     /// <summary>
-    /// Gets the unique identifier for an event sequence.
+    /// Gets the explicit event sequence identifier, or <see langword="null"/> if not specified.
     /// </summary>
-    public EventSequenceId EventSequenceId { get; } = eventSequence ?? EventSequenceId.Log;
+    /// <remarks>
+    /// When <see langword="null"/>, the event sequence is inferred from the event types used in the projection definition.
+    /// If all event types originate from the same event store (via <see cref="Cratis.Chronicle.Events.EventStoreAttribute"/>),
+    /// the projection will automatically subscribe to the corresponding inbox event sequence.
+    /// </remarks>
+    public EventSequenceId? EventSequenceId { get; } = eventSequence is null ? null : new EventSequenceId(eventSequence);
 }

@@ -36,19 +36,28 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
-- For PR descriptions, use short release-note bullets with issue references and never include Copilot "Original prompt" blocks.
+<<<<<<< copilot/add-event-scenario-type
+- For PR descriptions, use short release-note bullets with the **actual** issue number (look up the real GitHub issue number the PR resolves, e.g. `(#351)`). Never use placeholder text like `(#issue)` or the literal example `(#123)`. Never include Copilot "Original prompt" blocks. **Always verify the issue number using the `search_issues` or `list_issues` GitHub MCP tool — never guess or invent a number.**
+=======
+- For PR descriptions, use short release-note bullets and append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks.
+>>>>>>> main
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
+- When asked to commit, push, create a PR, ship, or land changes, always use the **ship-changes** skill.
 
 ## Development Workflow
 
 - After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
+- At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
 
 ## Detailed Guides
 
 These guides contain the full rules, examples, and rationale for each topic. The sections above are the global defaults; the guides go deeper into each area:
+   - [Code Quality](./instructions/code-quality.instructions.md)
+   - [Code Quality — C#](./instructions/code-quality.csharp.instructions.md)
+   - [Code Quality — TypeScript](./instructions/code-quality.typescript.instructions.md)
    - [C# Conventions](./instructions/csharp.instructions.md)
    - [How to Write Specs](./instructions/specs.instructions.md)
    - [How to Write C# Specs](./instructions/specs.csharp.instructions.md)

@@ -38,5 +38,7 @@ public class EventStoreQueries : ControllerBase
     /// <returns>An observable for observing a collection of event store names.</returns>
     [HttpGet("observe")]
     public ISubject<IEnumerable<string>> AllEventStores() =>
-        _eventStores.InvokeAndWrapWithSubject(token => _eventStores.AllEventStores(token));
+        _eventStores.InvokeAndWrapWithTransformSubject(
+            token => _eventStores.ObserveEventStores(token),
+            es => es);
 }
