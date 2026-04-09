@@ -95,7 +95,6 @@ jobs:
     continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
-      CHRONICLE_TEST_TIMEOUT_SECONDS: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -69,8 +69,8 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
             await EventStore.EventLog.Append(EventSourceId, Event);
 
-            await Reactor.WaitTillHandledEventReaches(1);
-            await Reducer.WaitTillHandledEventReaches(1);
+            await reactorHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
             await projectionHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
 
             var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");

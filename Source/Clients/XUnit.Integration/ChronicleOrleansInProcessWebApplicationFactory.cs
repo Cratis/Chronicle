@@ -74,6 +74,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
+            .ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    [$"{Configuration.ChronicleOptions.SectionPath}:Observers:SubscriberTimeout"] = "30"
+                });
+            })
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
@@ -82,6 +89,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddChronicleTelemetry(ctx.Configuration);
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
+                Configuration.ChronicleOptions.AddConfiguration(services, ctx.Configuration);
 
                 configureServices(services);
             });
