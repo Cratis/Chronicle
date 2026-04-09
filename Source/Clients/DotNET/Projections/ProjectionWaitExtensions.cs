@@ -27,12 +27,15 @@ public static class ProjectionWaitExtensions
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
-        var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState)
+        while (true)
         {
             var state = await projection.GetState();
-            currentRunningState = state.RunningState;
+            if (state.RunningState == runningState)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -78,11 +81,15 @@ public static class ProjectionWaitExtensions
     public static async Task WaitTillReachesEventSequenceNumber(this IProjectionHandler projection, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var state = await projection.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
+        while (true)
         {
-            state = await projection.GetState();
+            var state = await projection.GetState();
+            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -96,15 +103,17 @@ public static class ProjectionWaitExtensions
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IProjectionHandler projection, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var failedPartitions = await projection.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any())
+        while (true)
         {
-            failedPartitions = await projection.GetFailedPartitions();
+            var failedPartitions = await projection.GetFailedPartitions();
+            if (failedPartitions.Any())
+            {
+                return failedPartitions;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        return failedPartitions;
     }
 
     /// <summary>

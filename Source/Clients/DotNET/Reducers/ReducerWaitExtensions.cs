@@ -27,12 +27,15 @@ public static class ReducerWaitExtensions
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
-        var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState)
+        while (true)
         {
             var state = await reducer.GetState();
-            currentRunningState = state.RunningState;
+            if (state.RunningState == runningState)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -78,11 +81,15 @@ public static class ReducerWaitExtensions
     public static async Task WaitTillReachesEventSequenceNumber(this IReducerHandler reducer, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var state = await reducer.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
+        while (true)
         {
-            state = await reducer.GetState();
+            var state = await reducer.GetState();
+            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -96,15 +103,17 @@ public static class ReducerWaitExtensions
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IReducerHandler reducer, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var failedPartitions = await reducer.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any())
+        while (true)
         {
-            failedPartitions = await reducer.GetFailedPartitions();
+            var failedPartitions = await reducer.GetFailedPartitions();
+            if (failedPartitions.Any())
+            {
+                return failedPartitions;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        return failedPartitions;
     }
 
     /// <summary>
