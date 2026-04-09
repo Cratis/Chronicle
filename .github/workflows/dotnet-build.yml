@@ -116,7 +116,7 @@ jobs:
 
       - name: Run integration tests
         working-directory: ./Integration/DotNET.InProcess
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --stop-on-first-failure
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release
 
   integration-api:
     runs-on: ubuntu-latest
