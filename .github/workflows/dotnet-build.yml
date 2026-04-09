@@ -95,6 +95,7 @@ jobs:
     continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
+      CHRONICLE_TEST_TIMEOUT_SECONDS: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,7 +116,7 @@ jobs:
 
       - name: Run integration tests
         working-directory: ./Integration/DotNET.InProcess
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release
+        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release --stop-on-first-failure
 
   integration-api:
     runs-on: ubuntu-latest
