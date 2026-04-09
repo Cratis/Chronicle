@@ -69,11 +69,10 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
     {
-        var statuses = new List<JobStatus>(includeStatuses);
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var currentJobs = await jobs.GetJobs();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentJobs.Any() && !currentJobs.All(_ => includeStatuses.Contains(_.Status)))
+        while (currentJobs.Any(j => includeStatuses.Length == 0 || !includeStatuses.Contains(j.Status)))
         {
             currentJobs = await jobs.GetJobs();
             await Task.Delay(DefaultDelay, cts.Token);
