@@ -11,5 +11,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>
