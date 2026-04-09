@@ -33,11 +33,6 @@ public static class ProjectionWaitExtensions
         {
             var state = await projection.GetState();
             currentRunningState = state.RunningState;
-            if (currentRunningState == runningState)
-            {
-                break;
-            }
-
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
