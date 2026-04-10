@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Testing.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Testing/Testing.csproj" />
+        <ProjectReference Include="../DotNET/DotNET.csproj" />
+        <ProjectReference Include="../Connections/Connections.csproj" />
+        <ProjectReference Include="../../Kernel/Contracts/Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+        <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+        <PackageReference Include="Microsoft.Orleans.Sdk" />
+        <PackageReference Include="Microsoft.Orleans.Serialization" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
+        <PackageReference Include="Microsoft.Orleans.Server" />
+        <PackageReference Include="Microsoft.Orleans.Streaming" />
+        <PackageReference Include="Microsoft.Orleans.Reminders" />
+    </ItemGroup>
+</Project>
