@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 
 namespace Cratis.Chronicle.Services.Observation.Reactors;
@@ -22,5 +23,8 @@ internal static class ReactorDefinitionConverters
             reactorDefinition.EventSequenceId,
             reactorDefinition.EventTypes.Select(_ => _.ToChronicle()),
             reactorDefinition.IsReplayable,
-            reactorDefinition.Tags);
+            reactorDefinition.Tags,
+            string.IsNullOrEmpty(reactorDefinition.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(reactorDefinition.EventSourceType),
+            new EventStreamType(reactorDefinition.EventStreamType));
 }
+

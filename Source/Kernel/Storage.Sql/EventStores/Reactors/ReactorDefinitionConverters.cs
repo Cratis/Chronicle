@@ -24,6 +24,8 @@ public static class ReactorDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
+            EventSourceType = definition.EventSourceType?.Value ?? string.Empty,
+            EventStreamType = definition.EventStreamType?.Value ?? EventStreamType.All.Value
         };
 
     /// <summary>
@@ -37,5 +39,8 @@ public static class ReactorDefinitionConverters
             schema.Owner,
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
-            schema.IsReplayable);
+            schema.IsReplayable,
+            EventSourceType: string.IsNullOrEmpty(schema.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(schema.EventSourceType),
+            EventStreamType: new EventStreamType(schema.EventStreamType));
 }
+

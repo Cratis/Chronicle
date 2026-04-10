@@ -324,7 +324,9 @@ public class Reducers : IReducers
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
                 },
-                Tags = handler.ReducerType.GetTags().ToArray()
+                Tags = handler.ReducerType.GetTags().ToArray(),
+                EventSourceType = handler.ReducerType.GetEventSourceType().Value,
+                EventStreamType = handler.ReducerType.GetEventStreamType().Value
             }
         };
 

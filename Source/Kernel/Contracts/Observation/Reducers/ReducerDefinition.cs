@@ -52,4 +52,17 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the event source type filter. An empty string means no filter (all event source types).
+    /// </summary>
+    [ProtoMember(8)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream type filter. Defaults to "All" which means no filter.
+    /// </summary>
+    [ProtoMember(9), DefaultValue("All")]
+    public string EventStreamType { get; set; } = "All";
 }
+

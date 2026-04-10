@@ -87,7 +87,9 @@ public class Reactor(
                 eventTypes,
                 localSiloDetails.SiloAddress,
                 connectedClient,
-                definition.IsReplayable);
+                definition.IsReplayable,
+                definition.EventSourceType,
+                definition.EventStreamType);
             _subscribed = true;
         }
     }

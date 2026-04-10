@@ -38,4 +38,15 @@ public class ReactorDefinition
     /// Gets or sets a value indicating whether the reactor is replayable.
     /// </summary>
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the event source type filter. An empty string means no filter (all event source types).
+    /// </summary>
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the event stream type filter. Defaults to "All" which means no filter.
+    /// </summary>
+    public string EventStreamType { get; set; } = "All";
 }
+

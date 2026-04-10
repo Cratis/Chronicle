@@ -25,7 +25,9 @@ public static class ReducerDefinitionConverters
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             ReadModel = definition.ReadModel,
             SinkType = definition.Sink.Type,
-            SinkConfigurationId = definition.Sink.Configuration
+            SinkConfigurationId = definition.Sink.Configuration,
+            EventSourceType = definition.EventSourceType?.Value ?? string.Empty,
+            EventStreamType = definition.EventStreamType?.Value ?? EventStreamType.All.Value
         };
 
     /// <summary>
@@ -41,5 +43,8 @@ public static class ReducerDefinitionConverters
             schema.ReadModel,
             true,
             new SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
-            []);
+            [],
+            string.IsNullOrEmpty(schema.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(schema.EventSourceType),
+            new EventStreamType(schema.EventStreamType));
 }
+
