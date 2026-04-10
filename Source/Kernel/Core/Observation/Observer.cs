@@ -121,8 +121,7 @@ public partial class Observer(
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
-        EventSourceType? eventSourceType = null,
-        EventStreamType? eventStreamType = null)
+        ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
@@ -149,8 +148,7 @@ public partial class Observer(
             siloAddress,
             subscriberArgs,
             isReplayable,
-            eventSourceType,
-            eventStreamType);
+            filters);
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())

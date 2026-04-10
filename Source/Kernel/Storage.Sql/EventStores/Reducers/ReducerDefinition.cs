@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observation;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 
@@ -44,13 +45,8 @@ public class ReducerDefinition
     public Guid SinkConfigurationId { get; set; } = Guid.Empty;
 
     /// <summary>
-    /// Gets or sets the event source type filter. An empty string means no filter (all event source types).
+    /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    public string EventSourceType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the event stream type filter. Defaults to "All" which means no filter.
-    /// </summary>
-    public string EventStreamType { get; set; } = "All";
+    [Json]
+    public ObserverFiltersRecord Filters { get; set; } = new();
 }
-

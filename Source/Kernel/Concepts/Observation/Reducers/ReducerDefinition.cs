@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -17,9 +16,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="ReadModel">The read model to use.</param>
 /// <param name="IsActive">Whether or not the reducer is an actively observing reducer.</param>
 /// <param name="Sink">Target sink.</param>
-/// <param name="Tags">Collection of tags the reducer belongs to.</param>
-/// <param name="EventSourceType">Optional <see cref="EventSourceType"/> filter. When <see cref="Events.EventSourceType.Unspecified"/>, all event source types are observed.</param>
-/// <param name="EventStreamType">Optional <see cref="EventStreamType"/> filter. When <see cref="Events.EventStreamType.All"/>, all event stream types are observed.</param>
+/// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
 public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
@@ -27,7 +24,4 @@ public record ReducerDefinition(
     ReadModelIdentifier ReadModel,
     bool IsActive,
     SinkDefinition Sink,
-    IEnumerable<string> Tags,
-    EventSourceType? EventSourceType = default,
-    EventStreamType? EventStreamType = default);
-
+    ObserverFilters? Filters = default);

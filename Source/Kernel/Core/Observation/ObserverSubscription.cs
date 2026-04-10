@@ -16,8 +16,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="SiloAddress">The <see cref="SiloAddress"/> for the subscriber.</param>
 /// <param name="Arguments">Optional arguments for the subscriber.</param>
 /// <param name="IsReplayable">Whether the observer supports replay scenarios.</param>
-/// <param name="EventSourceType">Optional <see cref="EventSourceType"/> filter. When <see cref="EventSourceType.Unspecified"/>, all event source types are observed.</param>
-/// <param name="EventStreamType">Optional <see cref="EventStreamType"/> filter. When <see cref="EventStreamType.All"/>, all event stream types are observed.</param>
+/// <param name="Filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
 public record ObserverSubscription(
     ObserverId ObserverId,
     ObserverKey ObserverKey,
@@ -26,8 +25,7 @@ public record ObserverSubscription(
     SiloAddress SiloAddress,
     object? Arguments = null,
     bool IsReplayable = true,
-    EventSourceType? EventSourceType = null,
-    EventStreamType? EventStreamType = null)
+    ObserverFilters? Filters = null)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.
@@ -39,4 +37,3 @@ public record ObserverSubscription(
     /// </summary>
     public bool IsSubscribed => !ObserverId.Equals(ObserverId.Unspecified) && !Equals(Unsubscribed);
 }
-

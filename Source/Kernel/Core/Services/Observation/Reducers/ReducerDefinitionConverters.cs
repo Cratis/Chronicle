@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Services.Sinks;
 
@@ -25,9 +24,5 @@ internal static class ReducerDefinitionConverters
             reducerDefinition.ReadModel,
             reducerDefinition.IsActive,
             reducerDefinition.Sink.ToChronicle(),
-            reducerDefinition.Tags,
-            string.IsNullOrEmpty(reducerDefinition.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(reducerDefinition.EventSourceType),
-            new EventStreamType(reducerDefinition.EventStreamType)
-        );
+            reducerDefinition.Filters.ToChronicle());
 }
-

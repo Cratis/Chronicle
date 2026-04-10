@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -25,7 +24,7 @@ public class ReducerDefinition
     public EventSequenceId EventSequenceId { get; set; } = EventSequenceId.Unspecified;
 
     /// <summary>
-    /// Gets or sets the <see cref="EventTypeWithKeyExpression"/>s that the reducer subscribes to.
+    /// Gets or sets the event types and key expressions that the reducer subscribes to.
     /// </summary>
     public IDictionary<string, string> EventTypes { get; set; } = new Dictionary<string, string>();
 
@@ -45,18 +44,7 @@ public class ReducerDefinition
     public SinkDefinition Sink { get; set; } = SinkDefinition.None;
 
     /// <summary>
-    /// Gets or sets the tags the reducer belongs to.
+    /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    public IEnumerable<string> Tags { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the event source type filter. An empty string means no filter (all event source types).
-    /// </summary>
-    public string EventSourceType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the event stream type filter. Defaults to "All" which means no filter.
-    /// </summary>
-    public string EventStreamType { get; set; } = "All";
+    public ObserverFiltersDocument Filters { get; set; } = new();
 }
-

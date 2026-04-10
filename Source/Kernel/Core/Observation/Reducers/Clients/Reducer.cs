@@ -89,8 +89,7 @@ public class Reducer(
                 definition.EventTypes.Select(_ => _.EventType).ToArray(),
                 localSiloDetails.SiloAddress,
                 connectedClient,
-                eventSourceType: definition.EventSourceType,
-                eventStreamType: definition.EventStreamType);
+                filters: definition.Filters);
 
             _subscribed = true;
         }

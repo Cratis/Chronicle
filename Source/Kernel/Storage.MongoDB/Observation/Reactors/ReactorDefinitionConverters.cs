@@ -27,9 +27,7 @@ public static class ReactorDefinitionConverters
                 et => et.EventType.ToString(),
                 et => et.Key.ToString()),
             IsReplayable = definition.IsReplayable,
-            Tags = definition.Tags ?? [],
-            EventSourceType = definition.EventSourceType?.Value ?? string.Empty,
-            EventStreamType = definition.EventStreamType?.Value ?? EventStreamType.All.Value
+            Filters = (definition.Filters ?? ObserverFilters.None).ToDocument()
         };
 
     /// <summary>
@@ -44,8 +42,5 @@ public static class ReactorDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
             definition.IsReplayable,
-            definition.Tags,
-            string.IsNullOrEmpty(definition.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(definition.EventSourceType),
-            new EventStreamType(definition.EventStreamType));
+            definition.Filters.ToKernel());
 }
-

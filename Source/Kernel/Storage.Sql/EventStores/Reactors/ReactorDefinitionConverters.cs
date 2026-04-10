@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observation;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 
@@ -24,8 +26,7 @@ public static class ReactorDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
-            EventSourceType = definition.EventSourceType?.Value ?? string.Empty,
-            EventStreamType = definition.EventStreamType?.Value ?? EventStreamType.All.Value
+            Filters = (definition.Filters ?? ObserverFilters.None).ToRecord()
         };
 
     /// <summary>
@@ -40,7 +41,5 @@ public static class ReactorDefinitionConverters
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.IsReplayable,
-            EventSourceType: string.IsNullOrEmpty(schema.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(schema.EventSourceType),
-            EventStreamType: new EventStreamType(schema.EventStreamType));
+            schema.Filters.ToKernel());
 }
-

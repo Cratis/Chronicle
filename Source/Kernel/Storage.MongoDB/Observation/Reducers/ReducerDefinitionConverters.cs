@@ -28,9 +28,7 @@ public static class ReducerDefinitionConverters
             ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
             Sink = definition.Sink,
-            Tags = definition.Tags,
-            EventSourceType = definition.EventSourceType?.Value ?? string.Empty,
-            EventStreamType = definition.EventStreamType?.Value ?? EventStreamType.All.Value
+            Filters = (definition.Filters ?? ObserverFilters.None).ToDocument()
         };
 
     /// <summary>
@@ -46,8 +44,5 @@ public static class ReducerDefinitionConverters
             definition.ReadModel,
             definition.IsActive,
             definition.Sink,
-            definition.Tags,
-            string.IsNullOrEmpty(definition.EventSourceType) ? EventSourceType.Unspecified : new EventSourceType(definition.EventSourceType),
-            new EventStreamType(definition.EventStreamType));
+            definition.Filters.ToKernel());
 }
-

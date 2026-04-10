@@ -44,28 +44,42 @@ public partial class Observer
             return;
         }
 
-        if (_subscription.EventSourceType is { } eventSourceType &&
-            eventSourceType != EventSourceType.Unspecified &&
-            !events.Any(_ => _.Context.EventSourceType == eventSourceType))
+        if (_subscription.Filters is { } filters)
         {
-            State = State with
+            if (filters.EventSourceType is { } eventSourceType &&
+                eventSourceType != EventSourceType.Unspecified &&
+                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
             {
-                NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
-            };
-            await WriteStateAsync();
-            return;
-        }
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
 
-        if (_subscription.EventStreamType is { } eventStreamType &&
-            !eventStreamType.IsAll &&
-            !events.Any(_ => _.Context.EventStreamType == eventStreamType))
-        {
-            State = State with
+            if (filters.EventStreamType is { } eventStreamType &&
+                !eventStreamType.IsAll &&
+                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
             {
-                NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
-            };
-            await WriteStateAsync();
-            return;
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.Tags.Any() &&
+                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
         }
 
         var failed = false;

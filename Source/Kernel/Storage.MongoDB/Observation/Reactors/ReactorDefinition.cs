@@ -37,18 +37,7 @@ public class ReactorDefinition
     public bool IsReplayable { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the tags the reactor belongs to.
+    /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    public IEnumerable<string> Tags { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the event source type filter. An empty string means no filter (all event source types).
-    /// </summary>
-    public string EventSourceType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the event stream type filter. Defaults to "All" which means no filter.
-    /// </summary>
-    public string EventStreamType { get; set; } = "All";
+    public ObserverFiltersDocument Filters { get; set; } = new();
 }
-
