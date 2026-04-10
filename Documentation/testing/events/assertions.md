@@ -64,6 +64,8 @@ result.ShouldHaveErrors();
 result.ShouldNotHaveErrors();
 ```
 
+For asserting on the event sequence itself (tail sequence number, event types, and event content), see [Event Sequence Assertions](event-sequence-assertions.md).
+
 ## Example: testing a constraint violation end-to-end
 
 Pre-seed state with `Given`, then verify the conflicting append is rejected with the expected constraint name:
