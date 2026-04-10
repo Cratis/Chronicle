@@ -12,9 +12,17 @@ These methods are available on any `IEventSequence` or `IEventLog` instance, inc
 | Method | Asserts |
 |--------|---------|
 | `ShouldHaveTailSequenceNumber(expected)` | Tail sequence number matches the expected value |
+| `ShouldHaveAppendedEvent<TEvent>()` | At least one event of the given type exists anywhere in the sequence |
+| `ShouldHaveAppendedEvent<TEvent>(validator)` | At least one event of the given type exists and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(predicate)` | At least one event of the given type matches the predicate |
+| `ShouldHaveAppendedEvent<TEvent>(eventSourceId)` | At least one event of the given type exists for the event source |
+| `ShouldHaveAppendedEvent<TEvent>(eventSourceId, validator)` | At least one event of the given type exists for the event source and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(eventSourceId, predicate)` | At least one event of the given type matches the predicate for the event source |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber)` | An event of the given type exists at the sequence number |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, validator)` | An event of the given type exists at the sequence number and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, predicate)` | An event of the given type at the sequence number matches the predicate |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, eventSourceId, validator)` | An event of the given type exists at the sequence number for the given event source and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, eventSourceId, predicate)` | An event of the given type at the sequence number for the given event source matches the predicate |
 
 All methods are async and return `Task`. They throw `EventSequenceAssertionException` on failure with a descriptive message.
 
@@ -35,7 +43,7 @@ Sequence numbers are zero-based, so the first event has sequence number `0` and 
 
 ## Verifying an appended event by type
 
-Use `ShouldHaveAppendedEvent<TEvent>` to verify that an event of the expected type was appended at a specific sequence number:
+Use `ShouldHaveAppendedEvent<TEvent>` without a sequence number to verify that at least one event of the expected type was appended anywhere in the sequence:
 
 ```csharp
 var scenario = new EventScenario();
@@ -43,6 +51,13 @@ var scenario = new EventScenario();
 await scenario.EventLog.Append(authorId, new AuthorRegistered("Jane Smith"));
 await scenario.EventLog.Append(authorId, new BookAdded("Clean Code"));
 
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>();
+await scenario.EventLog.ShouldHaveAppendedEvent<BookAdded>();
+```
+
+When you know the exact position, pass a sequence number to assert at a specific location:
+
+```csharp
 await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(0);
 await scenario.EventLog.ShouldHaveAppendedEvent<BookAdded>(1);
 ```
@@ -60,9 +75,34 @@ await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(0, author =>
     author.Name.ShouldEqual("Jane Smith"));
 ```
 
+Without a sequence number, the validator runs against the first event of the matching type:
+
+```csharp
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(author =>
+    author.Name.ShouldEqual("Jane Smith"));
+```
+
+## Verifying with a predicate
+
+Pass a `Func<TEvent, bool>` predicate when you only need to check whether the event satisfies a condition. The assertion fails if no event of the expected type returns `true` from the predicate:
+
+```csharp
+var scenario = new EventScenario();
+
+await scenario.EventLog.Append(authorId, new AuthorRegistered("Jane Smith"));
+
+// Without sequence number — finds any matching event
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(
+    author => author.Name == "Jane Smith");
+
+// At a specific sequence number
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(0,
+    author => author.Name == "Jane Smith");
+```
+
 ## Verifying event content for a specific event source
 
-When events for multiple event sources exist in the same sequence, filter by event source to avoid ambiguity:
+When events for multiple event sources exist in the same sequence, filter by event source to avoid ambiguity. All event source overloads support both `Action<TEvent>` validators and `Func<TEvent, bool>` predicates:
 
 ```csharp
 var scenario = new EventScenario();
@@ -72,10 +112,17 @@ var author2 = AuthorId.New();
 await scenario.EventLog.Append(author1, new AuthorRegistered("Jane Smith"));
 await scenario.EventLog.Append(author2, new AuthorRegistered("John Doe"));
 
+// With sequence number and validator
 await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(0, author1, author =>
     author.Name.ShouldEqual("Jane Smith"));
-await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(1, author2, author =>
+
+// Without sequence number — finds any matching event for the event source
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(author2, author =>
     author.Name.ShouldEqual("John Doe"));
+
+// With a predicate instead of a validator
+await scenario.EventLog.ShouldHaveAppendedEvent<AuthorRegistered>(
+    author1, author => author.Name == "Jane Smith");
 ```
 
 ## AppendedEventWithResult assertions
