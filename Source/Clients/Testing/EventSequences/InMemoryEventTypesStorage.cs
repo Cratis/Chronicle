@@ -43,7 +43,12 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
 
     /// <inheritdoc/>
     public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) =>
-        Task.FromResult(new EventTypeDefinition(eventTypeId, EventTypeOwner.Client, false, [], []));
+        Task.FromResult(new EventTypeDefinition(
+            eventTypeId,
+            EventTypeOwner.Client,
+            false,
+            [new EventTypeGenerationDefinition(EventTypeGeneration.First, new JsonSchema())],
+            []));
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType) =>
