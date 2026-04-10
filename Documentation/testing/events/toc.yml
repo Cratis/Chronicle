@@ -2,5 +2,7 @@
   href: index.md
 - name: EventScenario
   href: scenario.md
-- name: Assertions
+- name: Append Assertions
   href: assertions.md
+- name: Event Sequence Assertions
+  href: event-sequence-assertions.md

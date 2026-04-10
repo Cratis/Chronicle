@@ -10,4 +10,5 @@ Chronicle provides the `EventScenario` utility for testing event-appending behav
 | Guide | Description |
 |-------|-------------|
 | [EventScenario](scenario.md) | Append events and pre-seed state using `EventScenario` and the `Given` builder |
-| [Assertions](assertions.md) | Assert on `IAppendResult` using the built-in `Should*` extension methods |
+| [Append Assertions](assertions.md) | Assert on `IAppendResult` using the built-in `Should*` extension methods |
+| [Event Sequence Assertions](event-sequence-assertions.md) | Assert on the event sequence itself and on `AppendedEventWithResult` entries |
