@@ -58,7 +58,7 @@
     -->
         <Target Name="_PackPrivateRuntimeAssemblyPrefixes"
                 DependsOnTargets="ResolveReferences"
-            Condition="'$(PrivatePackageRuntimeAssemblyRegex)' != ''">
+            Condition="'$(PrivatePackageRuntimeAssemblyRegex)' != '' AND '$(NoBuild)' != 'true'">
             <ItemGroup>
                 <_PrivateRuntimeAssembly Include="@(RuntimeCopyLocalItems)"
                                      Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.Extension)').Equals('.dll', System.StringComparison.OrdinalIgnoreCase)) and $([System.Text.RegularExpressions.Regex]::IsMatch('%(RuntimeCopyLocalItems.DestinationSubPath)', '$(PrivatePackageRuntimeAssemblyRegex)', System.Text.RegularExpressions.RegexOptions.IgnoreCase))" />

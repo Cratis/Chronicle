@@ -27,12 +27,15 @@ public static class ReactorWaitExtensions
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
 
-        var currentRunningState = ObserverRunningState.Unknown;
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentRunningState != runningState)
+        while (true)
         {
             var state = await reactor.GetState();
-            currentRunningState = state.RunningState;
+            if (state.RunningState == runningState)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -78,11 +81,15 @@ public static class ReactorWaitExtensions
     public static async Task WaitTillReachesEventSequenceNumber(this IReactorHandler reactor, EventSequenceNumber eventSequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var state = await reactor.GetState();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (state.LastHandledEventSequenceNumber != eventSequenceNumber)
+        while (true)
         {
-            state = await reactor.GetState();
+            var state = await reactor.GetState();
+            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            {
+                break;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -96,15 +103,17 @@ public static class ReactorWaitExtensions
     public static async Task<IEnumerable<FailedPartition>> WaitForThereToBeFailedPartitions(this IReactorHandler reactor, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var failedPartitions = await reactor.GetFailedPartitions();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!failedPartitions.Any())
+        while (true)
         {
-            failedPartitions = await reactor.GetFailedPartitions();
+            var failedPartitions = await reactor.GetFailedPartitions();
+            if (failedPartitions.Any())
+            {
+                return failedPartitions;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        return failedPartitions;
     }
 
     /// <summary>

@@ -24,15 +24,17 @@ public static class JobsWaitHelpers
     public static async Task<IEnumerable<Job>> WaitForThereToBeJobs(this IJobs jobs, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var currentJobs = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!currentJobs.Any())
+        while (true)
         {
-            currentJobs = await jobs.GetJobs();
+            var currentJobs = await jobs.GetJobs();
+            if (currentJobs.Any())
+            {
+                return currentJobs;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        return currentJobs;
     }
 
     /// <summary>
@@ -70,15 +72,17 @@ public static class JobsWaitHelpers
     public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var currentJobs = await jobs.GetJobs();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentJobs.Any(j => includeStatuses.Length == 0 || !includeStatuses.Contains(j.Status)))
+        while (true)
         {
-            currentJobs = await jobs.GetJobs();
+            var currentJobs = await jobs.GetJobs();
+            if (!currentJobs.Any() || currentJobs.All(_ => includeStatuses.Contains(_.Status)))
+            {
+                return currentJobs;
+            }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
-
-        return currentJobs;
     }
 
     /// <summary>
