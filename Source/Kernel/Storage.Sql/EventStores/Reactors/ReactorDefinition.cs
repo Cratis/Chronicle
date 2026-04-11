@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
-using Cratis.Chronicle.Storage.Sql.EventStores.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 

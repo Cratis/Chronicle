@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Storage.Sql.EventStores.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 

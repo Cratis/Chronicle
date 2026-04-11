@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using KernelObserverFilters = Cratis.Chronicle.Concepts.Observation.ObserverFilters;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Observation;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 /// <summary>
 /// Provides extension methods for converting between <see cref="KernelObserverFilters"/> and <see cref="ObserverFilters"/>.
