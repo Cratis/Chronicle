@@ -241,8 +241,7 @@ internal static class ProjectionReadModelProcessor
         Queue<KernelAppendedEvent> deferredEvents)
     {
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
-        var keyResolver = projection.GetKeyResolverFor(@event.Context.EventType);
-        var keyResult = await keyResolver(eventSequenceStorage, NullSink.Instance, @event);
+        var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, NullSink.Instance, @event);
 
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
