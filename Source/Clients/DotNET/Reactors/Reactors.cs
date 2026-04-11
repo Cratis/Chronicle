@@ -256,6 +256,7 @@ public class Reactors : IReactors
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                Tags = handler.ReactorType.GetTags().ToArray(),
                 Filters = new()
                 {
                     FilterTags = handler.ReactorType.GetFilterTags().ToArray(),

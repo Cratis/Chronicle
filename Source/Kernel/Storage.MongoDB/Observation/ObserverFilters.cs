@@ -4,9 +4,9 @@
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 
 /// <summary>
-/// Represents the MongoDB storage document for observer filters.
+/// Represents the MongoDB storage model for observer filters.
 /// </summary>
-public class ObserverFiltersDocument
+public class ObserverFilters
 {
     /// <summary>
     /// Gets or sets the tags used to filter which events are observed.

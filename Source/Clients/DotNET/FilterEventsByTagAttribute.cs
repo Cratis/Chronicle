@@ -8,13 +8,13 @@ namespace Cratis.Chronicle;
 /// </summary>
 /// <remarks>
 /// Apply this attribute to a reactor, reducer, or projection class to filter the observed event stream
-/// to events that have been tagged with the given value.  Use <see cref="TagAttribute"/> or
+/// to events that have been tagged with the given value. Use <see cref="TagAttribute"/> or
 /// <see cref="TagsAttribute"/> when you want to <em>label</em> an observer; use this attribute when
 /// you want to <em>filter</em> on an event's tags.
 /// </remarks>
 /// <param name="tag">The tag value that an event must carry in order to be dispatched to the observer.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public sealed class FilterByTagAttribute(string tag) : Attribute
+public sealed class FilterEventsByTagAttribute(string tag) : Attribute
 {
     /// <summary>
     /// Gets the tag to filter by.

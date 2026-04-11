@@ -30,13 +30,13 @@ public static class TagExtensions
     /// Get all filter tags from a type.
     /// </summary>
     /// <remarks>
-    /// Filter tags are specified via <see cref="FilterByTagAttribute"/> and control which events the observer receives,
+    /// Filter tags are specified via <see cref="FilterEventsByTagAttribute"/> and control which events the observer receives,
     /// as opposed to <see cref="TagAttribute"/> and <see cref="TagsAttribute"/> which label the observer itself.
     /// </remarks>
     /// <param name="type"><see cref="Type"/> to get from.</param>
     /// <returns>Collection of tag values to filter events by.</returns>
     public static IEnumerable<string> GetFilterTags(this Type type) =>
-        type.GetCustomAttributes<FilterByTagAttribute>().Select(_ => _.Tag).Distinct();
+        type.GetCustomAttributes<FilterEventsByTagAttribute>().Select(_ => _.Tag).Distinct();
 
     /// <summary>
     /// Get the <see cref="EventSourceType"/> filter from a type, if one is specified.

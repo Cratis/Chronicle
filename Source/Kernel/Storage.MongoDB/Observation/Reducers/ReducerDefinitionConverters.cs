@@ -28,7 +28,8 @@ public static class ReducerDefinitionConverters
             ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
             Sink = definition.Sink,
-            Filters = (definition.Filters ?? ObserverFilters.None).ToDocument()
+            Tags = definition.Tags?.ToArray() ?? [],
+            Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToMongoDB()
         };
 
     /// <summary>
@@ -44,5 +45,6 @@ public static class ReducerDefinitionConverters
             definition.ReadModel,
             definition.IsActive,
             definition.Sink,
+            definition.Tags,
             definition.Filters.ToKernel());
 }

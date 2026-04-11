@@ -48,8 +48,14 @@ public class ReducerDefinition
     public SinkDefinition Sink { get; set; }
 
     /// <summary>
+    /// Gets or sets the tags the reducer belongs to.
+    /// </summary>
+    [ProtoMember(7, IsRequired = true)]
+    public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    [ProtoMember(7)]
+    [ProtoMember(8)]
     public ObserverFilters Filters { get; set; } = new();
 }

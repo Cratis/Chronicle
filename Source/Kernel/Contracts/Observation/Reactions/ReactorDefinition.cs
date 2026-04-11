@@ -34,8 +34,14 @@ public class ReactorDefinition
     public bool IsReplayable { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the tags the reactor belongs to.
+    /// </summary>
+    [ProtoMember(5, IsRequired = true)]
+    public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(6)]
     public ObserverFilters Filters { get; set; } = new();
 }

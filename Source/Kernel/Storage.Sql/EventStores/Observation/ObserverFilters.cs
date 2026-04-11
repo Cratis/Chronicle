@@ -4,9 +4,9 @@
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Observation;
 
 /// <summary>
-/// Represents the SQL storage record for observer filters, serialized as JSON.
+/// Represents the SQL storage model for observer filters, serialized as JSON.
 /// </summary>
-public class ObserverFiltersRecord
+public class ObserverFilters
 {
     /// <summary>
     /// Gets or sets the tags used to filter which events are observed.

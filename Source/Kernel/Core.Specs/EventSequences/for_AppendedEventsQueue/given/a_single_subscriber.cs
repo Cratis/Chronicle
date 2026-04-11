@@ -42,8 +42,10 @@ public abstract class a_single_subscriber : all_dependencies
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Substitute.For<ILogger<AppendedEventsQueue>>());
-        await _queue.Subscribe(_observerKey, EventTypes);
+        await _queue.Subscribe(_observerKey, EventTypes, Filters);
     }
 
     protected abstract IEnumerable<EventType> EventTypes { get; }
+
+    protected virtual ObserverFilters? Filters => null;
 }

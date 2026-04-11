@@ -41,8 +41,14 @@ public class ReactorDefinition
     public bool IsReplayable { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the tags the reactor belongs to.
+    /// </summary>
+    [Json]
+    public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the filters to apply when observing events.
     /// </summary>
     [Json]
-    public ObserverFiltersRecord Filters { get; set; } = new();
+    public ObserverFilters Filters { get; set; } = new();
 }

@@ -28,7 +28,8 @@ public static class ReducerDefinitionConverters
             ReadModel = definition.ReadModel,
             SinkType = definition.Sink.Type,
             SinkConfigurationId = definition.Sink.Configuration,
-            Filters = (definition.Filters ?? ObserverFilters.None).ToRecord()
+            Tags = definition.Tags?.ToArray() ?? [],
+            Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
 
     /// <summary>
@@ -44,5 +45,6 @@ public static class ReducerDefinitionConverters
             schema.ReadModel,
             true,
             new SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
+            schema.Tags,
             schema.Filters.ToKernel());
 }

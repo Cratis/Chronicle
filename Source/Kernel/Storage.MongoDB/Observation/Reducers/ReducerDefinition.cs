@@ -44,7 +44,12 @@ public class ReducerDefinition
     public SinkDefinition Sink { get; set; } = SinkDefinition.None;
 
     /// <summary>
+    /// Gets or sets the tags the reducer belongs to.
+    /// </summary>
+    public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the filters to apply when observing events.
     /// </summary>
-    public ObserverFiltersDocument Filters { get; set; } = new();
+    public ObserverFilters Filters { get; set; } = new();
 }
