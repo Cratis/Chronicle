@@ -105,6 +105,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <see cref="Instance"/> is first accessed, allowing events across multiple event sources to be
     /// collected and then processed together. This is required for projections that use
     /// <c>ChildrenFrom</c> with events on separate event source streams.
+    /// If events are collected after <see cref="Instance"/> has already been accessed, the next access
+    /// to <see cref="Instance"/> will re-process all collected events including the newly added ones.
     /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to collect in order.</param>
