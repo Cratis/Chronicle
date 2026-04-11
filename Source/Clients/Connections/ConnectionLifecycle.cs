@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Connections;
@@ -34,9 +33,9 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// <inheritdoc/>
     public async Task Connected()
     {
-        logger.Connected();
+        IsConnected = true;
 
-        var exceptions = new ConcurrentBag<Exception>();
+        logger.Connected();
 
         var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
@@ -47,19 +46,10 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
             catch (Exception ex)
             {
                 logger.FailureDuringConnected(ex);
-                exceptions.Add(ex);
             }
         })).ToArray();
 
         await Task.WhenAll(tasks);
-
-        if (!exceptions.IsEmpty)
-        {
-            IsConnected = false;
-            throw new AggregateException("One or more connection handlers failed", exceptions);
-        }
-
-        IsConnected = true;
     }
 
     /// <inheritdoc/>
