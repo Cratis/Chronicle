@@ -27,9 +27,10 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
-    public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
+    public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        await Parallel.ForEachAsync(_queues, async (queue, ctx) => await queue.Enqueue(appendedEvents));
+        Parallel.ForEachAsync(_queues, async (queue, ctx) => await queue.Enqueue(appendedEvents));
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
