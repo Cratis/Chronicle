@@ -51,7 +51,7 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     Task IChronicleConnection.Connect()
     {
-        return ConnectIfNotConnected();
+        return Task.CompletedTask;
     }
 
     /// <summary>
