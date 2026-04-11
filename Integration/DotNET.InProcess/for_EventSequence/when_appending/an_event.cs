@@ -15,7 +15,7 @@ public class an_event(context context) : Given<context>(context)
     {
         public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent Event { get; private set; }
-        public KernelAppendedEvent StoredEvent { get; private set; }
+        public KernelAppendedEvent StoredEvent { get; private set; } = null!;
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 

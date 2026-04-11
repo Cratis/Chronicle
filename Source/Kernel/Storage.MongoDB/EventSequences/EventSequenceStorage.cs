@@ -154,7 +154,6 @@ public class EventSequenceStorage(
                     genContentDict[genNumber] = genDoc.ToString();
             }
 
-            // Use the hash for the event type's native generation
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(

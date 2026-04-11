@@ -23,7 +23,7 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
     JsonSchema _gen1Schema;
     JsonSchema _gen2Schema;
     Identity _identity;
-    Event _insertedEvent;
+    Event _insertedEvent = null!;
 
     async Task Establish()
     {
