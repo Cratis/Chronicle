@@ -33,9 +33,9 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// <inheritdoc/>
     public async Task Connected()
     {
-        IsConnected = true;
-
         logger.Connected();
+
+        var exceptions = new List<Exception>();
 
         var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
@@ -46,10 +46,22 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
             catch (Exception ex)
             {
                 logger.FailureDuringConnected(ex);
+                lock (exceptions)
+                {
+                    exceptions.Add(ex);
+                }
             }
         })).ToArray();
 
         await Task.WhenAll(tasks);
+
+        if (exceptions.Count > 0)
+        {
+            IsConnected = false;
+            throw new AggregateException("One or more connection handlers failed", exceptions);
+        }
+
+        IsConnected = true;
     }
 
     /// <inheritdoc/>
