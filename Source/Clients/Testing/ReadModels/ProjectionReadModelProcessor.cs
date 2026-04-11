@@ -143,7 +143,7 @@ internal static class ProjectionReadModelProcessor
 
         // Create a projection factory backed by the populated in-memory storage so that
         // join and parent-hierarchy resolvers can look up events from all event streams.
-        var storageForFactory = new InMemoryReadModelKernelStorage(inMemoryEventSequenceStorage);
+        var storageForFactory = new InMemoryStorage(inMemoryEventSequenceStorage);
         var projectionFactory = CreateProjectionFactory(storageForFactory);
 
         var engineProjection = await projectionFactory.Create(

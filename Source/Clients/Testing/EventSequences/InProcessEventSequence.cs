@@ -57,7 +57,7 @@ internal static class InProcessEventSequence
     /// <param name="namespaceName">The event store namespace name.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
-        InMemoryKernelStorage storage,
+        InMemoryStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
         KernelConceptsNs::EventStoreNamespaceName namespaceName)
