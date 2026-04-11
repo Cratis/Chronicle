@@ -108,7 +108,8 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content)
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes)
     {
         try
         {
@@ -119,6 +120,10 @@ public class EventSequenceStorage(
                 var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
                 generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
             }
+
+            var hashesForStorage = contentHashes.ToDictionary(
+                kvp => kvp.Key.ToString(),
+                kvp => kvp.Value.Value);
 
             var @event = new Event(
                 sequenceNumber,
@@ -133,7 +138,7 @@ public class EventSequenceStorage(
                 eventStreamId,
                 tags.Select(_ => _.Value),
                 generationalContent,
-                new Dictionary<string, string>(),
+                hashesForStorage,
                 []);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
@@ -148,6 +153,9 @@ public class EventSequenceStorage(
                 if (int.TryParse(gen, out var genNumber))
                     genContentDict[genNumber] = genDoc.ToString();
             }
+
+            // Use the hash for the event type's native generation
+            var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
@@ -164,7 +172,7 @@ public class EventSequenceStorage(
                     causation,
                     await identityStorage.GetFor(causedByChain),
                     tags,
-                    EventHash.NotSet),
+                    eventHash),
                 returnContent)
             {
                 GenerationalContent = genContentDict

@@ -18,10 +18,12 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
     EventSequenceNumber _sequenceNumber;
     EventType _eventType;
     IDictionary<EventTypeGeneration, ExpandoObject> _content;
+    IDictionary<EventTypeGeneration, EventHash> _contentHashes;
     Result<AppendedEvent, DuplicateEventSequenceNumber> _result;
     JsonSchema _gen1Schema;
     JsonSchema _gen2Schema;
     Identity _identity;
+    Event _insertedEvent;
 
     async Task Establish()
     {
@@ -51,6 +53,12 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
             [(EventTypeGeneration)2] = gen2Expando
         };
 
+        _contentHashes = new Dictionary<EventTypeGeneration, EventHash>
+        {
+            [(EventTypeGeneration)1] = "hash-gen-1",
+            [(EventTypeGeneration)2] = "hash-gen-2"
+        };
+
         _expandoObjectConverter.ToJsonObject(Arg.Is<ExpandoObject>(e => e == gen1Expando), Arg.Any<JsonSchema>())
             .Returns(new JsonObject { ["name"] = "John Doe" });
         _expandoObjectConverter.ToJsonObject(Arg.Is<ExpandoObject>(e => e == gen2Expando), Arg.Any<JsonSchema>())
@@ -59,6 +67,10 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
         _identity = Identity.System;
         _identityStorage.GetFor(Arg.Any<IEnumerable<IdentityId>>())
             .Returns(_identity);
+
+        _collection
+            .When(_ => _.InsertOneAsync(Arg.Any<Event>(), Arg.Any<InsertOneOptions?>(), Arg.Any<CancellationToken>()))
+            .Do(callInfo => _insertedEvent = callInfo.Arg<Event>());
     }
 
     async Task Because() => _result = await _storage.Append(
@@ -73,8 +85,12 @@ public class when_appending_event_with_multiple_generations : given.an_event_seq
         [IdentityId.NotSet],
         [],
         DateTimeOffset.UtcNow,
-        _content);
+        _content,
+        _contentHashes);
 
     [Fact] void should_attempt_to_insert_event() =>
         _collection.Received(1).InsertOneAsync(Arg.Any<Event>(), Arg.Any<InsertOneOptions?>(), Arg.Any<CancellationToken>());
+    [Fact] void should_have_content_hash_for_generation_1() => _insertedEvent.ContentHashes["1"].ShouldEqual("hash-gen-1");
+    [Fact] void should_have_content_hash_for_generation_2() => _insertedEvent.ContentHashes["2"].ShouldEqual("hash-gen-2");
+    [Fact] void should_have_hash_on_appended_event_context() => ((AppendedEvent)_result).Context.Hash.ShouldNotEqual(EventHash.NotSet);
 }

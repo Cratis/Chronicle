@@ -70,7 +70,8 @@ internal sealed class InMemoryEventSequenceStorage(
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content)
+        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
+        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes)
     {
         if (_events.Exists(_ => _.Context.SequenceNumber == sequenceNumber))
         {

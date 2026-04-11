@@ -52,7 +52,8 @@ internal sealed class NullEventSequenceStorage : IEventSequenceStorage
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
+        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
+        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
 
     /// <inheritdoc/>
     public Task<Result<IEnumerable<KernelAppendedEvent>, DuplicateEventSequenceNumber>> AppendMany(IEnumerable<EventToAppendToStorage> events) => throw new NotSupportedException("NullEventSequenceStorage does not support this operation.");
