@@ -4,6 +4,7 @@
 using Cratis.Arc.MongoDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -70,7 +71,21 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
         }
-        catch (Exception)
+        catch (OrleansException)
+        {
+            // If grain deactivation fails, the silo may be in a bad state — dispose the factory
+            // so that the next test recreates it from scratch.
+            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+            _webApplicationFactory = null;
+        }
+        catch (InvalidOperationException)
+        {
+            // If grain deactivation fails, the silo may be in a bad state — dispose the factory
+            // so that the next test recreates it from scratch.
+            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+            _webApplicationFactory = null;
+        }
+        catch (ObjectDisposedException)
         {
             // If grain deactivation fails, the silo may be in a bad state — dispose the factory
             // so that the next test recreates it from scratch.
