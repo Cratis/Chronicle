@@ -59,6 +59,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     {
     }
 
+    /// <summary>
+    /// Deactivates all grains in the silo between tests to avoid the costly silo teardown and recreation.
+    /// If deactivation fails, the factory is disposed and nulled so the next test recreates it from scratch.
+    /// </summary>
     async Task DeactivateAllGrains()
     {
         try
