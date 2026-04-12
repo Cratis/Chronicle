@@ -40,7 +40,8 @@ public interface IChronicleFixture : IAsyncDisposable
     /// Performs a backup of the MongoDB database.
     /// </summary>
     /// <param name="prefix">The prefix to use in the filename.</param>
-    void PerformBackup(string? prefix = null);
+    /// <returns>Awaitable task.</returns>
+    Task PerformBackupAsync(string? prefix = null);
 
     /// <summary>
     /// Clears all databases in the MongoDB container.

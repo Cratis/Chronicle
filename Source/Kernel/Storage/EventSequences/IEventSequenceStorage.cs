@@ -51,6 +51,7 @@ public interface IEventSequenceStorage
     /// <param name="tags">Collection of tags associated with the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event per generation.</param>
+    /// <param name="contentHashes">The content hashes per generation.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
@@ -64,7 +65,8 @@ public interface IEventSequenceStorage
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content);
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes);
 
     /// <summary>
     /// Append multiple events to the event store transactional.

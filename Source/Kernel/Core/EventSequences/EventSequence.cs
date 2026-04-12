@@ -474,6 +474,12 @@ public class EventSequence(
 
             // Migrate the event to all generations
             var migratedContent = await eventTypeMigrations.MigrateToAllGenerations(_eventSequenceKey.EventStore, eventType, contentAsJson);
+
+            // Calculate content hashes for each generation
+            var contentHashes = migratedContent.ToDictionary(
+                kvp => kvp.Key,
+                kvp => eventHashCalculator.Calculate(eventType.Id, eventSourceId, kvp.Value));
+
             do
             {
                 await HandleFailedAppendResult(appendResult, eventType, eventSourceId, eventType.Id);
@@ -498,7 +504,8 @@ public class EventSequence(
                     identity,
                     tags,
                     eventOccurred,
-                    migratedContent);
+                    migratedContent,
+                    contentHashes);
             }
             while (!appendResult.IsSuccess);
 

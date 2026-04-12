@@ -6,7 +6,7 @@ using Cratis.Chronicle.Recommendations.for_RecommendationsManager.given;
 
 namespace Cratis.Chronicle.Recommendations.for_RecommendationsManager.when_adding_a_recommendation;
 
-public class and_there_is_no_existing_recommendation_of_same_type_and_request : given.all_dependencies
+public class and_there_is_no_existing_recommendation_of_same_type_and_request : all_dependencies
 {
     RecommendationId _result;
     Exception _error;

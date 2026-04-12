@@ -157,7 +157,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var projectionDefinition = FindProjectionDefinition(readModelType);
         if (projectionDefinition is not null)
         {
-            return await ProjectionReadModelProcessor.Process<TReadModel>(
+            return await ProjectionReadModelProcessor.Process(
                 projectionDefinition,
                 eventsList,
                 _eventTypes,
@@ -215,7 +215,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<TReadModel>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)
             ?? throw new ProjectionDefinitionBuildFailed(projectionType, new InvalidOperationException("CreateAndDefine method not found on ProjectionDefinitionCreator."));
 
-        var result = (Cratis.Monads.Catch<Contracts.Projections.ProjectionDefinition>)method.Invoke(
+        var result = (Monads.Catch<Contracts.Projections.ProjectionDefinition>)method.Invoke(
             null,
             [
                 projectionType,
@@ -244,8 +244,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
         /// <param name="artifactsActivator">The <see cref="IClientArtifactsActivator"/>.</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
-        /// <returns>A <see cref="Cratis.Monads.Catch{T}"/> wrapping the built definition.</returns>
-        public static Cratis.Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
+        /// <returns>A <see cref="Monads.Catch{T}"/> wrapping the built definition.</returns>
+        public static Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
             Type type,
             INamingPolicy namingPolicy,
             IEventTypes eventTypes,

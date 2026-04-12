@@ -90,7 +90,8 @@ public class EventSequenceStorage(
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content)
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes)
     {
         try
         {
@@ -122,6 +123,8 @@ public class EventSequenceStorage(
 
             var returnContent = content.TryGetValue(eventType.Generation, out var value) ? value : content.Values.FirstOrDefault() ?? new ExpandoObject();
 
+            var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
+
             var eventContext = new EventContext(
                 eventType,
                 eventSourceType,
@@ -136,7 +139,7 @@ public class EventSequenceStorage(
                 causation,
                 await identityStorage.GetFor(causedByChain),
                 tags,
-                EventHash.NotSet);
+                eventHash);
 
             return new AppendedEvent(eventContext, returnContent);
         }

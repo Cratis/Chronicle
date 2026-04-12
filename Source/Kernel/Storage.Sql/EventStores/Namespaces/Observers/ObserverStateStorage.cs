@@ -58,7 +58,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             return;
         }
 
-        var renamed = new Observers.ObserverState
+        var renamed = new ObserverState
         {
             Id = newId,
             LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,

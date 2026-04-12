@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
         if (isSqlStorage)
-            services.AddSingleton<IUserStorage>(sp => sp.GetRequiredService<ISystemStorage>().Users);
+            services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Users);
         else
             services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IUserStore<User>, UserStore>();

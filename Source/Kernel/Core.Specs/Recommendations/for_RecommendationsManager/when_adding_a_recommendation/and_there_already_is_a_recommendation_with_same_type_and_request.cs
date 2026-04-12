@@ -7,7 +7,7 @@ using Cratis.Chronicle.Storage.Recommendations;
 
 namespace Cratis.Chronicle.Recommendations.for_RecommendationsManager.when_adding_a_recommendation;
 
-public class and_there_already_is_a_recommendation_with_same_type_and_request : given.all_dependencies
+public class and_there_already_is_a_recommendation_with_same_type_and_request : all_dependencies
 {
     RecommendationId _existingId;
     RecommendationId _result;
