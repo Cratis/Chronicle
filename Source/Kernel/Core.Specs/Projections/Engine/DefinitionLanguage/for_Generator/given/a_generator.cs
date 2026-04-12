@@ -58,9 +58,9 @@ public class a_generator : Specification
             new JsonObject(),
             new Dictionary<EventType, FromDefinition>(),
             new Dictionary<EventType, JoinDefinition>(),
-            new Dictionary<Cratis.Chronicle.Properties.PropertyPath, ChildrenDefinition>(),
+            new Dictionary<Properties.PropertyPath, ChildrenDefinition>(),
             [],
-            new FromEveryDefinition(new Dictionary<Cratis.Chronicle.Properties.PropertyPath, string>(), true),
+            new FromEveryDefinition(new Dictionary<Properties.PropertyPath, string>(), true),
             new Dictionary<EventType, RemovedWithDefinition>(),
             new Dictionary<EventType, RemovedWithJoinDefinition>());
 }

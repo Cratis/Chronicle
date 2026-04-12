@@ -106,7 +106,7 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
-        IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
+        IEnumerable<Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes)

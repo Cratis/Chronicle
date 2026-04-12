@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <param name="eventSequenceId">The <c>EventSequenceId</c> this storage serves.</param>
 internal sealed class InMemoryEventSequenceStorage(
-    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
+    KernelConcept.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
 {
     readonly List<KernelAppendedEvent> _events = [];
 

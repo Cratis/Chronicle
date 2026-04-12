@@ -172,7 +172,7 @@ public class EventScenario(
             defaults.EventTypes,
             inProcessConstraints,
             defaults.EventSerializer,
-            new Execution.CorrelationIdAccessor(),
+            new CorrelationIdAccessor(),
             new NoConcurrencyScopeStrategies(),
             new CausationManager(),
             new NoUnitOfWorkManager(),

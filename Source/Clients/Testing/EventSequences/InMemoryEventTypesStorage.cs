@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <remarks>
 /// Returns an empty <see cref="JsonSchema"/> for every requested event type, which causes the
-/// <see cref="Cratis.Chronicle.Json.ExpandoObjectConverter"/> to fall back to generic unknown-type
+/// <see cref="Json.ExpandoObjectConverter"/> to fall back to generic unknown-type
 /// conversion — preserving all event content without schema-driven type coercion.
 /// No compliance rules, migrations, or validations are applied.
 /// </remarks>

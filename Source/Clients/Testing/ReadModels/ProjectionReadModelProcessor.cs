@@ -135,7 +135,8 @@ internal static class ProjectionReadModelProcessor
                 new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, ExpandoObject>
                 {
                     { KernelConceptsNs::Events.EventTypeGeneration.First, appendedEvent.Content }
-                });
+                },
+                new Dictionary<string, object>());
         }
 
         // Generate event type schemas so AutoMap can map properties from events to read model fields.
@@ -194,7 +195,7 @@ internal static class ProjectionReadModelProcessor
         return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
     }
 
-    static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(global::Cratis.Chronicle.Storage.IStorage storage) =>
+    static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>
         new(
             _readModelPropertyExpressionResolvers,
             _eventValueProviderExpressionResolvers,
