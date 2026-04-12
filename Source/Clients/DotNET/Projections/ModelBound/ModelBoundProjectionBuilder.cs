@@ -198,6 +198,34 @@ internal class ModelBoundProjectionBuilder(
         }
     }
 
+    void ApplyClassLevelFromEventConfiguration(Attribute attr, Type eventType, IDictionary<EventType, FromDefinition> targetFrom)
+    {
+        var eventTypeId = GetOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+
+        var key = (attr as IKeyedAttribute)?.Key;
+        if (!string.IsNullOrEmpty(key))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, key);
+            var keyPropertyPath = new PropertyPath(key);
+            fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+        }
+
+        var parentKey = (attr as IFromEventAttribute)?.ParentKey;
+        if (!string.IsNullOrEmpty(parentKey))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, parentKey);
+            var parentKeyPropertyPath = new PropertyPath(parentKey);
+            fromDefinition.ParentKey = _namingPolicy.GetPropertyName(parentKeyPropertyPath);
+        }
+
+        var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
+        if (!string.IsNullOrEmpty(constantKey))
+        {
+            fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
+        }
+    }
+
     void BuildFromEveryDefinition(ProjectionDefinition definition)
     {
         if (_fromEveryAttributes.Count == 0)
@@ -384,26 +412,7 @@ internal class ModelBoundProjectionBuilder(
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             allEventTypesReferencedByModel.Add(eventType);
-
-            // Only set custom key if specified, don't auto-map properties (server handles that based on AutoMap flag)
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
@@ -517,27 +526,7 @@ internal class ModelBoundProjectionBuilder(
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             eventTypesReferencedByMember.Add(eventType);
-
-            // Create FromDefinition for class-level events
-            // The server handles auto-mapping properties based on AutoMap flag
-            var eventTypeId = GetOrCreateEventType(eventType);
-            var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-
-            // Only set custom key if specified
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();

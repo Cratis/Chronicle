@@ -132,6 +132,28 @@ When a `QuantityIncreased` event occurs later:
 - The projection finds the matching child by ID
 - Increments the `Quantity` on that specific child
 
+## Class-Level `FromEvent` on Child Types
+
+Use a class-level `FromEvent` on the child type when later child events should auto-map into the existing child instance. If those events come from the child's own event source, specify `parentKey` so Chronicle can still resolve the parent document:
+
+```csharp
+public record Dashboard(
+    [Key] Guid Id,
+
+    [ChildrenFrom<ConfigurationAdded>(
+        key: nameof(ConfigurationAdded.ConfigurationId),
+        identifiedBy: nameof(Configuration.Id),
+        parentKey: nameof(ConfigurationAdded.DashboardId))]
+    IEnumerable<Configuration> Configurations);
+
+[FromEvent<ConfigurationRenamed>(parentKey: nameof(ConfigurationRenamed.DashboardId))]
+public record Configuration(
+    [Key] Guid Id,
+    string Name);
+```
+
+`ChildrenFrom` handles how the child is first added to the collection. The child type's own `FromEvent` handles later updates, and `parentKey` is the equivalent of `.UsingParentKey(...)` in a fluent child projection.
+
 ## Removing Children
 
 Use `RemovedWith` to remove children from collections. You can apply it either on the collection property or on the child type class:
