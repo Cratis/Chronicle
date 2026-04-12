@@ -9,4 +9,11 @@
 - name: OnceOnly
   href: once-only.md
 - name: Filtering by appended event metadata
-  href: ../events/filtering/toc.yml
+  href: filtering.md
+  items:
+    - name: By tag
+      href: ../events/filtering/by-tag.md
+    - name: By event source type
+      href: ../events/filtering/by-event-source-type.md
+    - name: By event stream type
+      href: ../events/filtering/by-event-stream-type.md
