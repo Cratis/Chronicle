@@ -26,7 +26,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     where TChronicleFixture : IChronicleFixture
 {
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
-    protected IAsyncDisposable? _webApplicationFactory;
+    protected static IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051, MA0069
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
