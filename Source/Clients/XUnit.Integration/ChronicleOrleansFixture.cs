@@ -112,7 +112,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             var connection = Services.GetRequiredService<IChronicleConnection>();
             await connection.Lifecycle.Disconnected();
         }
-        catch
+        catch (Exception)
         {
             // If disconnection fails, force-recreate the silo on the next test.
             await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
