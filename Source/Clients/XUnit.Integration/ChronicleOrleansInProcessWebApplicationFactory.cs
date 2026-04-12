@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -111,7 +112,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-                    services.AddSingleton<IClientArtifactsProvider>(new DelegatingClientArtifactsProvider(_fixture));
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
@@ -160,6 +160,17 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             b.Configure(app => app.UseCratisChronicle());
             configureWebHost(b);
         });
+
+        // Final pass: ensure our DelegatingClientArtifactsProvider wins over any
+        // registrations added by convention-based discovery or AddCratisChronicle
+        // in earlier ConfigureServices callbacks.
+        var delegatingProvider = new DelegatingClientArtifactsProvider(_fixture);
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IClientArtifactsProvider>();
+            services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+        });
+
         return builder;
     }
 
