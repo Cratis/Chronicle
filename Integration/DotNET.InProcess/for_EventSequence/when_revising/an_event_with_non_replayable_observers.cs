@@ -25,6 +25,8 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
         public SomeReducer Reducer { get; private set; }
         public NonReplayableReactor NonReplayableReactorInstance { get; private set; }
         public NonReplayableReducer NonReplayableReducerInstance { get; private set; }
+        public ReactorState NonReplayableReactorState { get; private set; }
+        public ReducerState NonReplayableReducerState { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent)];
         public override IEnumerable<Type> Reactors => [typeof(SomeReactor), typeof(NonReplayableReactor)];
@@ -92,11 +94,10 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
             await Reactor.WaitTillHandledEventReaches(3);
             await Reducer.WaitTillHandledEventReaches(3);
 
-            // Give a brief window for non-replayable observers in case they would incorrectly be replayed.
-            await Task.Delay(500);
-
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
+            NonReplayableReactorState = await nonReplayableReactorHandler.GetState();
+            NonReplayableReducerState = await nonReplayableReducerHandler.GetState();
         }
 
         async Task MarkObserverAsNonReplayable(string observerId)
@@ -125,4 +126,10 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
 
     [Fact]
     void should_have_reducer_in_active_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_keep_non_replayable_reactor_in_active_state() => Context.NonReplayableReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_keep_non_replayable_reducer_in_active_state() => Context.NonReplayableReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
 }

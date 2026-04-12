@@ -25,7 +25,7 @@ public class and_resuming_successfully_completed_job(context context) : Given<co
             await JobStepProcessor.WaitForStepsToBeCompleted();
             JobId = StartJobResult.AsT0;
             var job = await EventStore.Jobs.GetJob(JobId.Value);
-            var x = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully, TimeSpanFactory.FromSeconds(20));
+            await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully && state.Progress.IsCompleted, TimeSpanFactory.FromSeconds(20));
             await JobsManager.Resume(JobId);
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status == JobStatus.CompletedSuccessfully && state.Progress.IsCompleted, TimeSpanFactory.FromSeconds(20));
             JobSteps = await job.GetJobSteps();

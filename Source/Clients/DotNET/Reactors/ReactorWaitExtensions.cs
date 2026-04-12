@@ -17,6 +17,31 @@ public static class ReactorWaitExtensions
     const int DefaultDelay = 50;
 
     /// <summary>
+    /// Waits for a reactor handler with the specified identifier to become available.
+    /// </summary>
+    /// <param name="reactors">The reactor system to query.</param>
+    /// <param name="reactorId">The identifier of the reactor to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The available <see cref="IReactorHandler"/>.</returns>
+    public static async Task<IReactorHandler> WaitForHandlerById(this IReactors reactors, ReactorId reactorId, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            try
+            {
+                return reactors.GetHandlerById(reactorId);
+            }
+            catch (UnknownReactorId)
+            {
+                await Task.Delay(DefaultDelay, cts.Token);
+            }
+        }
+    }
+
+    /// <summary>
     /// Wait for the reactor to reach a specific running state.
     /// </summary>
     /// <param name="reactor">Reactor to wait for.</param>

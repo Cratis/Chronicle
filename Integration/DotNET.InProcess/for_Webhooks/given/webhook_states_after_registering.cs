@@ -18,24 +18,9 @@ public class webhook_states_after_registering(ChronicleInProcessFixture chronicl
             await Webhooks.Register(id, targetUrl, configure);
         }
 
-        // The WebhookReactor is a kernel-side system reactor registered asynchronously
-        // via ReactorsReactor processing EventStoreAdded. Retry until it is available.
-        IReactorHandler? webhookReactor = null;
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
-        while (DateTimeOffset.UtcNow < deadline)
-        {
-            try
-            {
-                webhookReactor = EventStore.Reactors.GetHandlerById("$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor");
-                break;
-            }
-            catch (UnknownReactorId)
-            {
-                await Task.Delay(100);
-            }
-        }
-
-        webhookReactor.ShouldNotBeNull();
+        var webhookReactor = await EventStore.Reactors.WaitForHandlerById(
+            "$system.Cratis.Chronicle.Observation.Webhooks.WebhookReactor",
+            TimeSpanFactory.FromSeconds(30));
         var systemStorage = GetSystemEventLogStorage();
         var tailSequenceNumber = (await systemStorage.GetTailSequenceNumber()).Value;
         await webhookReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
