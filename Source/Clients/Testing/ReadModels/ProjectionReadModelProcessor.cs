@@ -136,7 +136,7 @@ internal static class ProjectionReadModelProcessor
                 {
                     { KernelConceptsNs::Events.EventTypeGeneration.First, appendedEvent.Content }
                 },
-                new Dictionary<string, object>());
+                new Dictionary<KernelConceptsNs::Events.EventTypeGeneration, KernelConceptsNs::Events.EventHash>());
         }
 
         // Generate event type schemas so AutoMap can map properties from events to read model fields.
