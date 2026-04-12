@@ -4,6 +4,8 @@
   href: architecture.md
 - name: Eventual Consistency
   href: eventual-consistency.md
+- name: Appended event metadata filters
+  href: ../events/filtering/toc.yml
 - name: Tagging Projections
   href: tagging-projections.md
 - name: Projection Declaration Language

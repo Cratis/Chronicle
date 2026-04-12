@@ -93,3 +93,44 @@ var cart = await readModels.GetOne<CartState>(cartId);
 // All instances
 var allCarts = await readModels.GetAll<CartState>();
 ```
+
+---
+
+## Filtering reducers by appended event metadata
+
+Use reducer filters when the reducer should only observe a subset of appended events:
+
+```csharp
+using Cratis.Chronicle;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reducers;
+
+[FilterEventsByTag("priority")]
+[EventSourceType("order")]
+[EventStreamType("fulfillment")]
+public class PriorityOrderReducer : IReducerFor<PriorityOrderState>
+{
+    public PriorityOrderState Ordered(OrderPlaced @event, PriorityOrderState? current, EventContext context) =>
+        new((current?.Count ?? 0) + 1);
+}
+
+public record PriorityOrderState(int Count);
+```
+
+Match the reducer filters when you append:
+
+```csharp
+await eventLog.Append(
+    EventSourceId.New(),
+    new OrderPlaced(42m),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
+- `[FilterEventsByTag]` matches any appended or static event tag
+- `[EventSourceType]` matches the appended `eventSourceType`
+- `[EventStreamType]` matches the appended `eventStreamType`
+- `[Tag]` and `[Tags]` label the reducer; they do not filter events
+
+For fuller guidance, see `Documentation/events/filtering/`.

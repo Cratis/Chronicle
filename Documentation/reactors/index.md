@@ -44,5 +44,5 @@ public class EmailNotificationsReactor : IReactor
 - [Event Processing](event-processing.md)
 - [Event Sequence](event-sequence.md)
 - [Once-Only Processing](once-only.md)
+- [Filtering by appended event metadata](../events/filtering/index.md)
 - [Tagging Reactors](../concepts/tagging-reactors.md)
-

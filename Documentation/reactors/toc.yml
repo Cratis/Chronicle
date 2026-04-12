@@ -8,4 +8,5 @@
   href: event-sequence.md
 - name: OnceOnly
   href: once-only.md
-
+- name: Filtering by appended event metadata
+  href: ../events/filtering/toc.yml

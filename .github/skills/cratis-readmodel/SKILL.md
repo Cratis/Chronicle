@@ -115,6 +115,7 @@ public class AccountSummaryProjection : IProjectionFor<AccountSummary>
 
 - Discovered automatically — no registration needed
 - `IProjectionFor<T>` is keyed by **event source ID** by default (the `Id` passed to `IEventLog.Append`)
+- Appended `tags`, `eventSourceType`, and `eventStreamType` do not filter projections directly; use reducers or reactors alongside the projection when you need metadata-based filtering
 - See `references/projections.md` for joins, auto-mapping, children, composite keys
 
 ### Model-bound shorthand (for simple cases)
@@ -160,6 +161,7 @@ public record AccountBalance(decimal Balance, DateTimeOffset LastUpdated);
 - `current` is `null` on the first event for a given event source
 - `EventContext` provides `Occurred`, `EventSourceId`, `SequenceNumber`, `CorrelationId`
 - Discovered automatically — no registration needed
+- Add `[FilterEventsByTag]`, `[EventSourceType]`, and `[EventStreamType]` when the reducer should only observe events appended with matching metadata
 
 ---
 
