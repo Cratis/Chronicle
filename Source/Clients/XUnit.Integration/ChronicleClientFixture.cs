@@ -28,6 +28,16 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
     protected static IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051, MA0069
+    static readonly object _webApplicationFactoryLock = new();
+
+    static IAsyncDisposable EnsureWebApplicationFactoryInitialized(ChronicleClientFixture<TChronicleFixture> fixture)
+    {
+        lock (_webApplicationFactoryLock)
+        {
+            _webApplicationFactory ??= fixture.CreateWebApplicationFactory();
+            return _webApplicationFactory;
+        }
+    }
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
@@ -348,10 +358,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     void InitializeFixture()
     {
-        _webApplicationFactory ??= CreateWebApplicationFactory();
+        var webApplicationFactory = EnsureWebApplicationFactoryInitialized(this);
         if (!_isInitialized)
         {
-            var webApplicationFactoryType = _webApplicationFactory.GetType();
+            var webApplicationFactoryType = webApplicationFactory.GetType();
             _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
             _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
