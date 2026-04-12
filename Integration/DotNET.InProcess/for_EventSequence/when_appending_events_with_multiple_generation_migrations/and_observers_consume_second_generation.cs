@@ -69,16 +69,42 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
             await EventStore.EventLog.Append(EventSourceId, Event);
 
-            await Reactor.WaitTillHandledEventReaches(1);
-            await Reducer.WaitTillHandledEventReaches(1);
-            await projectionHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
-
             var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
-            StoredEvent = await collection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
-
+            var readModels = _fixture.ReadModels.Database.GetCollection<UserReadModel>();
             var filter = Builders<UserReadModel>.Filter.Eq(new StringFieldDefinition<UserReadModel, string>("_id"), EventSourceId.Value);
-            var result = await _fixture.ReadModels.Database.GetCollection<UserReadModel>().FindAsync(filter);
-            ProjectionResult = await result.FirstOrDefaultAsync();
+
+            await WaitForObservedState(collection, readModels, filter);
+        }
+
+        async Task WaitForObservedState(
+            IMongoCollection<BsonDocument> eventLog,
+            IMongoCollection<UserReadModel> readModels,
+            FilterDefinition<UserReadModel> filter,
+            TimeSpan? timeout = default)
+        {
+            timeout ??= TimeSpanFactory.DefaultTimeout();
+            using var cts = new CancellationTokenSource(timeout.Value);
+
+            while (true)
+            {
+                StoredEvent = await eventLog.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync(cts.Token);
+                var result = await readModels.FindAsync(filter, cancellationToken: cts.Token);
+                ProjectionResult = await result.FirstOrDefaultAsync(cts.Token);
+
+                if (StoredEvent is not null &&
+                    ProjectionResult is not null &&
+                    Reactor.ReceivedGeneration == 2u &&
+                    Reactor.ReceivedFirstName == "Jane" &&
+                    Reactor.ReceivedLastName == "Doe" &&
+                    Reducer.ReceivedGeneration == 2u &&
+                    Reducer.ReceivedFirstName == "Jane" &&
+                    Reducer.ReceivedLastName == "Doe")
+                {
+                    return;
+                }
+
+                await Task.Delay(50, cts.Token);
+            }
         }
     }
 
