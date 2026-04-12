@@ -45,8 +45,7 @@ public class and_reducer_has_observed_events_previously_but_is_now_behind(contex
             await reducer.WaitTillSubscribed();
             await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             await Reducer.WaitTillHandledEventReaches(HandledEventsBefore + FirstEvents.Count + CatchupEvents.Count);
-            await reducer.WaitTillActive();
-            ReducerState = await reducer.GetState();
+            ReducerState = await reducer.WaitTillActiveAndGetState();
         }
     }
 

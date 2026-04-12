@@ -38,13 +38,14 @@ public class and_waiting_for_observer_to_be_active(context context) : Given<cont
 
         async Task Because()
         {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reducer = EventStore.Reducers.GetHandlerFor<SomeReducer>();
-            await reducer.WaitTillActive();
+            await reducer.WaitTillActive(startupTimeout);
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             WaitingForObserverStateError = await Catch.Exception(async () => await EventStore.Reducers.WaitTillActive<SomeReducer>());
             await reducer.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
-            ReducerState = await reducer.GetState();
+            ReducerState = await reducer.WaitTillActiveAndGetState(startupTimeout);
 
             FailedPartitions = await reducer.GetFailedPartitions();
         }
