@@ -306,7 +306,7 @@ public class Reducers : IReducers
 
     void DisconnectHandlers()
     {
-        foreach (var handler in _handlersByType.Values)
+        foreach (var handler in _handlersByType.Values.ToList())
         {
             handler.Disconnect();
             (handler as IDisposable)?.Dispose();

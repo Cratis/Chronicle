@@ -254,7 +254,7 @@ public class Reactors : IReactors
 
     void DisconnectHandlers()
     {
-        foreach (var handler in _handlers.Values)
+        foreach (var handler in _handlers.Values.ToList())
         {
             handler.Disconnect();
             (handler as IDisposable)?.Dispose();
