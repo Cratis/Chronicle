@@ -36,7 +36,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
-- For PR descriptions, use short release-note bullets and append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks. **Always verify the issue number using the `search_issues` or `list_issues` GitHub MCP tool — never guess or invent a number.**
+- For PR descriptions, use short release-note bullets that focus on **user-facing impact only** — new APIs, changed behavior, fixed bugs. Do not include internal implementation details (storage changes, converter updates, gRPC internals, spec additions). Append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks. **Always verify the issue number using the `search_issues` or `list_issues` GitHub MCP tool — never guess or invent a number.**
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 - When asked to commit, push, create a PR, ship, or land changes, always use the **ship-changes** skill.
