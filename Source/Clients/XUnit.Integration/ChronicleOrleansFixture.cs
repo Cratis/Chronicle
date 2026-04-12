@@ -22,8 +22,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
-        await DeactivateAllGrains();
         await DisconnectClient();
+        await DeactivateAllGrains();
 
         await base.DisposeAsync();
     }
@@ -31,6 +31,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override async Task OnBeforeInitializeAsync()
     {
+        var services = new ServiceCollection();
+        ConfigureServices(services);
+        DelegatingServiceProvider.SetCurrent(services.BuildServiceProvider());
+
         if (_webApplicationFactory is null)
         {
             return;
@@ -47,6 +51,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         // know about this test's types before any Establish/Because code runs.
         var eventStore = Services.GetRequiredService<IEventStore>();
         await eventStore.DiscoverAll();
+        await eventStore.RegisterAll();
     }
 
     /// <inheritdoc/>
@@ -110,6 +115,12 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         try
         {
             var connection = Services.GetRequiredService<IChronicleConnection>();
+            if (connection is ChronicleConnection inProcessConnection)
+            {
+                await inProcessConnection.Disconnect();
+                return;
+            }
+
             await connection.Lifecycle.Disconnected();
         }
         catch (Exception)

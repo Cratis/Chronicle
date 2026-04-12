@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/> to delegate to.</param>
 internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initial) : IClientArtifactsProvider
 {
+    static readonly object _lock = new();
     volatile IClientArtifactsProvider _current = initial;
 
     /// <inheritdoc/>
@@ -61,13 +62,27 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     public IEnumerable<Type> EventSeeders => _current.EventSeeders;
 
     /// <summary>
+    /// Gets or sets the singleton instance created during factory construction.
+    /// </summary>
+    internal static DelegatingClientArtifactsProvider? Instance { get; set; }
+
+    /// <summary>
+    /// Gets the existing singleton instance or creates it with the provided initial provider.
+    /// </summary>
+    /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/>.</param>
+    /// <returns>The shared <see cref="DelegatingClientArtifactsProvider"/> instance.</returns>
+    internal static DelegatingClientArtifactsProvider GetOrCreate(IClientArtifactsProvider initial)
+    {
+        lock (_lock)
+        {
+            Instance ??= new(initial);
+            return Instance;
+        }
+    }
+
+    /// <summary>
     /// Points the delegate at a new provider (typically the current test fixture).
     /// </summary>
     /// <param name="provider">The <see cref="IClientArtifactsProvider"/> to delegate to.</param>
     internal void SetCurrent(IClientArtifactsProvider provider) => _current = provider;
-
-    /// <summary>
-    /// Gets or sets the singleton instance created during factory construction.
-    /// </summary>
-    internal static DelegatingClientArtifactsProvider? Instance { get; set; }
 }

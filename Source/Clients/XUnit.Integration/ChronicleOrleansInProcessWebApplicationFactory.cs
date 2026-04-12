@@ -91,8 +91,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
 
-        var delegatingProvider = new DelegatingClientArtifactsProvider(_fixture);
-        DelegatingClientArtifactsProvider.Instance = delegatingProvider;
+        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
 
         builder.UseOrleans(silo =>
             {
@@ -132,6 +131,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     {
                         var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                         var artifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
+                        var serviceProvider = DelegatingServiceProvider.GetOrCreate(sp);
                         var identityProvider = new IdentityProvider(
                             sp.GetRequiredService<IHttpContextAccessor>(),
                             sp.GetRequiredService<ILogger<IdentityProvider>>());
@@ -144,7 +144,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
-                        return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, loggerFactory: loggerFactory);
+                        return new ChronicleClient(connection, options, artifactsProvider, serviceProvider, identityProvider, loggerFactory: loggerFactory);
                     });
 
                     services.AddSingleton(sp =>

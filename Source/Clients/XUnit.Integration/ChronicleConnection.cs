@@ -31,6 +31,7 @@ internal class ChronicleConnection(
 {
     IServices? _services;
     ConnectionService? _connectionService;
+    IDisposable? _connectionSubscription;
 
     /// <inheritdoc/>
     IConnectionLifecycle IChronicleConnection.Lifecycle => lifecycle;
@@ -48,7 +49,7 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     public void Dispose()
     {
-        lifecycle.Disconnected().GetAwaiter().GetResult();
+        Disconnect().GetAwaiter().GetResult();
     }
 
     /// <inheritdoc/>
@@ -62,6 +63,26 @@ internal class ChronicleConnection(
     /// </summary>
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
+
+    /// <summary>
+    /// Disconnects the current client connection and unregisters it from the server.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> that completes when the client has disconnected.</returns>
+    internal async Task Disconnect()
+    {
+        _connectionSubscription?.Dispose();
+        _connectionSubscription = null;
+
+        if (lifecycle.IsConnected)
+        {
+            var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+            await connectedClients.OnClientDisconnected(
+                (KernelConnectionId)lifecycle.ConnectionId.Value,
+                "Client disconnected");
+        }
+
+        await lifecycle.Disconnected();
+    }
 
     async Task ConnectIfNotConnected()
     {
@@ -87,7 +108,7 @@ internal class ChronicleConnection(
             Debugger.IsAttached);
 
         _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
-        _connectionService.Connect(new()
+        _connectionSubscription = _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
