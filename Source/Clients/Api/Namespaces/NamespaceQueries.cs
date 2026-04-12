@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Namespaces;

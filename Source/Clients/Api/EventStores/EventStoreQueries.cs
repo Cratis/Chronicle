@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Security.Cryptography.Xml;
-using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.EventStores;
@@ -31,10 +30,10 @@ public class EventStoreQueries : ControllerBase
     /// </summary>
     /// <returns>A collection of event store names.</returns>
     [HttpGet]
-    public async Task<IEnumerable<string>> GetEventStores() => await _eventStores.GetEventStores();
+    public async Task<IEnumerable<string>> GetEventStores() => await _eventStores.AllEventStores().FirstAsync();
 
     /// <summary>
-    /// Observes all event stores registered..
+    /// Observes all event stores registered.
     /// </summary>
     /// <returns>An observable for observing a collection of event store names.</returns>
     [HttpGet("observe")]

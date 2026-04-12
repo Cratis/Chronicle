@@ -17,7 +17,7 @@ public class when_replaying_by_projection_type : given.all_dependencies
 
         _handlersByType[typeof(MyProjection)] = _handler;
 
-        _observers.Replay(Arg.Any<Replay>()).Returns(Task.CompletedTask);
+        _observers.ReplayObserver(Arg.Any<ReplayObserverRequest>()).Returns(Task.CompletedTask);
     }
 
     async Task Because() => await _projections.Replay<MyProjection>();
@@ -26,7 +26,7 @@ public class when_replaying_by_projection_type : given.all_dependencies
     void should_call_replay_with_correct_parameters() =>
         _observers
             .Received(1)
-            .Replay(Arg.Is<Replay>(r =>
+            .ReplayObserver(Arg.Is<ReplayObserverRequest>(r =>
                 r.EventStore == _eventStore.Name.Value &&
                 r.Namespace == _eventStore.Namespace.Value &&
                 r.ObserverId == _projectionId.Value &&

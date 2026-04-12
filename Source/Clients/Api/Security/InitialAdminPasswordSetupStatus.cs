@@ -24,7 +24,7 @@ public record InitialAdminPasswordSetupStatus(
     /// <returns>The <see cref="InitialAdminPasswordSetupStatus"/>.</returns>
     internal static async Task<InitialAdminPasswordSetupStatus> GetStatus(IUsers users)
     {
-        var status = await users.GetInitialAdminPasswordSetupStatus();
+        var status = await users.GetStatus();
         return new InitialAdminPasswordSetupStatus(status.IsRequired, status.AdminUserId);
     }
 }

@@ -108,7 +108,7 @@ public class Projections(
     /// <inheritdoc/>
     public Task Replay(ProjectionId projectionId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
+        return _servicesAccessor.Services.Observers.ReplayObserver(new Contracts.Observation.ReplayObserverRequest
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,

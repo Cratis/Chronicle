@@ -5,7 +5,10 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.EventStores;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -272,7 +275,7 @@ public class EventStore : IEventStore
         _logger.RegisterAllArtifacts();
 
         // Ensure the event store is registered in the system before registering artifacts
-        await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
+        await _servicesAccessor.Services.EventStores.EnsureEventStore(new EnsureEventStoreRequest { Name = Name.Value });
 
         // We need to register event types and read models first, as they are used by the other artifacts
         await Task.WhenAll(
@@ -317,7 +320,7 @@ public class EventStore : IEventStore
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
-        var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
+        var namespaces = await _servicesAccessor.Services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = _eventStoreName }).FirstAsync();
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
     }
 
