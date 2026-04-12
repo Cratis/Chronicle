@@ -173,6 +173,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     protected static ContentRoot? ContentRoot { get; private set; }
 
+    static bool IsBackupEnabled => string.Equals(
+        Environment.GetEnvironmentVariable("CHRONICLE_BACKUP_ENABLED"),
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// Sets the name of the fixture.
     /// </summary>
@@ -241,9 +246,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <inheritdoc/>
     public virtual async Task DisposeAsync()
     {
-        if (!_backupPerformed)
+        if (!_backupPerformed && IsBackupEnabled)
         {
-            ChronicleFixture.PerformBackup(_name);
+            await ChronicleFixture.PerformBackupAsync(_name);
             _backupPerformed = true;
         }
 

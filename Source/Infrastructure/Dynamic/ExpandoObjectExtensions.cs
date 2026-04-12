@@ -99,7 +99,7 @@ public static class ExpandoObjectExtensions
             var value = property.GetValue(original, null);
             if (value != null)
             {
-                value = GetActualValueFrom(value);
+                value = GetActualValueFrom(value, camelCaseProperties);
             }
             expandoAsDictionary[propertyName] = value!;
         }
@@ -311,7 +311,7 @@ public static class ExpandoObjectExtensions
         }
     }
 
-    static object GetActualValueFrom(object value)
+    static object GetActualValueFrom(object value, bool camelCaseProperties = false)
     {
         var valueType = value.GetType();
         if (!valueType.IsPrimitive &&
@@ -329,14 +329,14 @@ public static class ExpandoObjectExtensions
 
                 foreach (var element in enumerableValue)
                 {
-                    list.Add(GetActualValueFrom(element));
+                    list.Add(GetActualValueFrom(element, camelCaseProperties));
                 }
 
                 value = list.ToArray();
             }
             else
             {
-                value = value.AsExpandoObject();
+                value = value.AsExpandoObject(camelCaseProperties);
             }
         }
 

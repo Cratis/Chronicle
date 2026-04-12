@@ -23,7 +23,8 @@ internal sealed class InMemoryUniqueEventTypesConstraintsStorage(
     /// <inheritdoc/>
     public Task<(bool IsAllowed, KernelEvents::EventSequenceNumber SequenceNumber)> IsAllowed(
         KernelEvents::EventTypeId eventTypeId,
-        KernelEvents::EventSourceId eventSourceId)
+        KernelEvents::EventSourceId eventSourceId,
+        string scopeKey = "")
     {
         var existing = eventSequenceStorage.Events
             .FirstOrDefault(_ =>

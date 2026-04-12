@@ -33,9 +33,10 @@ public class but_not_third_time(context context) : Given<context>(context)
             // The retry backoff uses exponential delay: 2s for the first retry, 4s for the second.
             // The default 5s timeout is too tight for the second cycle, so use a longer timeout.
             var retryTimeout = TimeSpan.FromSeconds(10);
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
 
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
-            await reducer.WaitTillActive();
+            await reducer.WaitTillActive(startupTimeout);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = true;
             Observers[2].ShouldFail = false;
@@ -58,11 +59,9 @@ public class but_not_third_time(context context) : Given<context>(context)
             await EventStore.Jobs.WaitForThereToBeNoJobs(retryTimeout, JobStatus.CompletedWithFailures);
 
             FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
-            await reducer.WaitTillActive();
-
             await Observers[2].WaitTillHandledEventReaches(1);
 
-            ReducerState = await reducer.GetState();
+            ReducerState = await reducer.WaitTillActiveAndGetState(startupTimeout);
         }
     }
 

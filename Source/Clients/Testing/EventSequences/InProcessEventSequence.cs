@@ -22,14 +22,14 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <remarks>
 /// The kernel grain runs fully in-process without a real Orleans silo. Real implementations are used for all
 /// dependencies except <c>IStorage</c> (in-memory) and
-/// <see cref="Cratis.Metrics.IMeter{T}"/> / <see cref="Microsoft.Extensions.Logging.ILogger{T}"/> (null implementations).
+/// <see cref="Metrics.IMeter{T}"/> / <see cref="Microsoft.Extensions.Logging.ILogger{T}"/> (null implementations).
 /// This means constraint validation, hash calculation, event serialization, migration, and compliance all run
 /// through the actual kernel code paths.
 /// </remarks>
 internal static class InProcessEventSequence
 {
     static readonly FieldInfo _storageField =
-        typeof(global::Orleans.Grain<Cratis.Chronicle.Storage.EventSequences.EventSequenceState>)
+        typeof(Grain<Storage.EventSequences.EventSequenceState>)
             .GetField("_storage", BindingFlags.NonPublic | BindingFlags.Instance)
         ?? throw new InvalidOperationException("Could not find _storage field on Grain<EventSequenceState>.");
 
@@ -57,7 +57,7 @@ internal static class InProcessEventSequence
     /// <param name="namespaceName">The event store namespace name.</param>
     /// <returns>The initialized kernel <see cref="KernelEventSequences::EventSequence"/> grain.</returns>
     internal static async Task<KernelEventSequences::EventSequence> Create(
-        InMemoryKernelStorage storage,
+        InMemoryStorage storage,
         KernelSequenceConcepts::EventSequenceId eventSequenceId,
         KernelConceptsNs::EventStoreName eventStoreName,
         KernelConceptsNs::EventStoreNamespaceName namespaceName)
@@ -70,20 +70,42 @@ internal static class InProcessEventSequence
         var eventSerializer = new KernelEventSequences::EventSerializer(
             new InMemoryKernelEventTypes(),
             expandoObjectConverter,
-            global::Cratis.Json.Globals.JsonSerializerOptions ?? new global::System.Text.Json.JsonSerializerOptions());
+            Cratis.Json.Globals.JsonSerializerOptions ?? new System.Text.Json.JsonSerializerOptions());
 
-        var grain = new KernelEventSequences::EventSequence(
-            storage,
-            new KernelConstraints::ConstraintValidationFactory(storage),
-            eventTypeMigrations,
-            null!,
-            jsonComplianceManager,
-            expandoObjectConverter,
-            eventSerializer,
-            new KernelEventSequences::EventHashCalculator(),
-            NullLogger<KernelEventSequences::EventSequence>.Instance);
+        // The Grain base class constructor accesses RuntimeContext.Current!.ObservableLifecycle,
+        // which requires a valid IGrainContext to be set as the current execution context.
+        // Following the same approach as OrleansTestKit, we set a test context with a lifecycle
+        // before constructing the grain, then reset it afterward.
+        // The Grain constructor also resolves IGrainRuntime from ActivationServices, so we
+        // must provide a service provider with IGrainRuntime registered.
+        var grainLifecycle = new TestGrainLifecycle();
+        var testServiceProvider = new TestServiceProvider();
+        var grainRuntime = new TestGrainRuntime(testServiceProvider);
+        testServiceProvider.AddService<IGrainRuntime>(grainRuntime);
 
-        var grainStorage = new InMemoryGrainStorage<Cratis.Chronicle.Storage.EventSequences.EventSequenceState>();
+        var grainContext = new TestGrainContext
+        {
+            ObservableLifecycle = grainLifecycle,
+            ActivationServices = testServiceProvider
+        };
+
+        KernelEventSequences::EventSequence grain;
+
+        using (RuntimeContextScope.SetContext(grainContext))
+        {
+            grain = new KernelEventSequences::EventSequence(
+                storage,
+                new KernelConstraints::ConstraintValidationFactory(storage),
+                eventTypeMigrations,
+                null!,
+                jsonComplianceManager,
+                expandoObjectConverter,
+                eventSerializer,
+                new KernelEventSequences::EventHashCalculator(),
+                NullLogger<KernelEventSequences::EventSequence>.Instance);
+        }
+
+        var grainStorage = new InMemoryGrainStorage<Storage.EventSequences.EventSequenceState>();
         _storageField.SetValue(grain, grainStorage);
 
         var key = new KernelSequenceConcepts::EventSequenceKey(eventSequenceId, eventStoreName, namespaceName);

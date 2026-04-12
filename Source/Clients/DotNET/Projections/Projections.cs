@@ -188,7 +188,7 @@ public class Projections(
     /// <inheritdoc/>
     public async Task<ProjectionQueryResult> Query(string declaration, string eventSequenceId = "event-log")
     {
-        var result = await _servicesAccessor.Services.Projections.Preview(new Contracts.Projections.PreviewProjectionRequest
+        var result = await _servicesAccessor.Services.Projections.Preview(new PreviewProjectionRequest
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,

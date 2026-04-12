@@ -135,7 +135,7 @@ public class EventScenario(
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
-        var storage = new InMemoryKernelStorage(
+        var storage = new InMemoryStorage(
             eventSequenceStorage,
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
@@ -172,7 +172,7 @@ public class EventScenario(
             defaults.EventTypes,
             inProcessConstraints,
             defaults.EventSerializer,
-            new Execution.CorrelationIdAccessor(),
+            new CorrelationIdAccessor(),
             new NoConcurrencyScopeStrategies(),
             new CausationManager(),
             new NoUnitOfWorkManager(),

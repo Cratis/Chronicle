@@ -1,6 +1,6 @@
 ---
 name: add-projection
-description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Enforces the AutoMap-first rule and Chronicle-specific join semantics.
+description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Favor model-bound projections by default, and only fall back to declarative/fluent `IProjectionFor<T>` projections when model-bound attributes cannot express the behavior cleanly. Enforces the AutoMap-first rule and Chronicle-specific join semantics.
 ---
 
 Add a Chronicle **projection** that populates a read model from events.
@@ -41,9 +41,9 @@ public record <ReadModelName>(
 - If property names between event and read model match, `[FromEvent<T>]` alone is sufficient
 - Child types also support all attributes recursively
 
-## Projection — Fluent (use for complex cases)
+## Projection — Fluent / declarative (fallback for complex cases)
 
-Use `IProjectionFor<T>` when projection logic is too complex for attributes.
+Use `IProjectionFor<T>` only when the projection logic is too complex for model-bound attributes or would become less clear if forced into attributes.
 
 ```csharp
 public class <Name>Projection : IProjectionFor<<ReadModel>>

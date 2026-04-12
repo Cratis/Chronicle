@@ -162,11 +162,12 @@ static class ChildrenDefinitionExtensions
         }
 
         var keyExpression = key == WellKnownExpressions.EventSourceId ? key : namingPolicy.GetPropertyName(new PropertyPath(key));
+        var parentKeyExpression = parentKey == WellKnownExpressions.EventSourceId ? parentKey : namingPolicy.GetPropertyName(new PropertyPath(parentKey));
 
         childrenDef.From[eventTypeId] = new FromDefinition
         {
             Key = keyExpression,
-            ParentKey = parentKey,
+            ParentKey = parentKeyExpression,
             Properties = new Dictionary<string, string>()
         };
 

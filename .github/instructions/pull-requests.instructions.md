@@ -11,12 +11,8 @@ PR descriptions serve two purposes: they help reviewers understand the change *n
 - Follow the [pull request template](../pull_request_template.md).
 - Focus on the **Added**, **Changed**, **Fixed**, **Removed**, **Security**, and **Deprecated** sections. Remove sections that are empty — don't leave blank headings.
 - Each bullet should be short, self-contained, and release-note ready.
-<<<<<<< copilot/add-event-scenario-type
-- Add an issue reference on every bullet point at the end. Always use the **actual GitHub issue number** that this PR resolves (e.g. `(#351)`). Never use a placeholder like `(#issue)` or leave the example number `(#123)` literally — look up the real issue number before writing the description.
-  - **Mandatory:** Use the `search_issues` or `list_issues` GitHub MCP tool to find the issue assigned to you in the current repository. Never guess or invent an issue number. If you are uncertain, search for the issue by title keywords to confirm the number.
-=======
-- Add the associated issue reference at the end of a bullet when there is a real GitHub issue for the change (e.g. `(#351)`). If there is no associated issue, omit the reference entirely. Never use a placeholder like `(#issue)` or leave the example number `(#123)` literally, and never invent a random issue number.
->>>>>>> main
+- **Write for users of the framework, not for internal developers.** Only include changes that have an impact on anyone using what we build — new APIs, changed behavior, fixed bugs, removed features. Do not list internal implementation details like storage changes, converter updates, gRPC contract internals, or spec additions. If a change is purely internal plumbing, it does not belong in the PR description.
+- Add the associated issue reference at the end of a bullet when there is a real GitHub issue for the change (e.g. `(#351)`). If there is no associated issue, omit the reference entirely. Never use a placeholder like `(#issue)` or leave the example number `(#123)` literally, and never invent a random issue number. **Always verify the issue number using the `search_issues` or `list_issues` GitHub MCP tool — never guess or invent a number.**
 - Include a summary only if there is a cohesive theme across the changes. If you find yourself restating individual bullets in slightly different words, the summary adds no value — remove it.
 - Never include Copilot prompt content in the PR description. Remove any "Original prompt" / coding agent transcript blocks before publishing.
 
@@ -44,3 +40,4 @@ Before marking a PR ready for review:
 - `yarn lint` — zero errors
 - `npx tsc -b` — zero TypeScript errors
 - Code follows all project coding standards and conventions
+- **CI checks pass** — after pushing, use GitHub MCP tools (`pull_request_read` with `get_check_runs`, `get_job_logs`) to monitor CI results. If any checks fail, investigate the logs, fix the failures, and push again. The task is not complete until all CI checks pass or the remaining failures are confirmed to be pre-existing flaky tests unrelated to the PR changes.

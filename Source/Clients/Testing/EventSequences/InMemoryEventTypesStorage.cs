@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <remarks>
 /// Returns an empty <see cref="JsonSchema"/> for every requested event type, which causes the
-/// <see cref="Cratis.Chronicle.Json.ExpandoObjectConverter"/> to fall back to generic unknown-type
+/// <see cref="Json.ExpandoObjectConverter"/> to fall back to generic unknown-type
 /// conversion — preserving all event content without schema-driven type coercion.
 /// No compliance rules, migrations, or validations are applied.
 /// </remarks>
@@ -43,7 +43,12 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
 
     /// <inheritdoc/>
     public Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId) =>
-        Task.FromResult(new EventTypeDefinition(eventTypeId, EventTypeOwner.Client, false, [], []));
+        Task.FromResult(new EventTypeDefinition(
+            eventTypeId,
+            EventTypeOwner.Client,
+            false,
+            [new EventTypeGenerationDefinition(EventTypeGeneration.First, new JsonSchema())],
+            []));
 
     /// <inheritdoc/>
     public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetAllGenerationsForEventType(EventType eventType) =>

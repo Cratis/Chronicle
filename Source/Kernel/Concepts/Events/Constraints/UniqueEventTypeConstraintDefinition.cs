@@ -8,7 +8,8 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="Name">Name of the constraint.</param>
 /// <param name="EventTypeId">The <see cref="EventTypeId"/> the constraint is for.</param>
-public record UniqueEventTypeConstraintDefinition(ConstraintName Name, EventTypeId EventTypeId) : IConstraintDefinition
+/// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
+public record UniqueEventTypeConstraintDefinition(ConstraintName Name, EventTypeId EventTypeId, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => base.Equals(other);

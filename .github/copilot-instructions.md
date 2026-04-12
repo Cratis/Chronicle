@@ -37,7 +37,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
-- For PR descriptions, use short release-note bullets and append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks.
+- For PR descriptions, use short release-note bullets that focus on **user-facing impact only** — new APIs, changed behavior, fixed bugs. Do not include internal implementation details (storage changes, converter updates, gRPC internals, spec additions). Append the **actual** issue number only when the PR is associated with a real GitHub issue (for example `(#351)`). If there is no associated issue, omit the reference entirely. Never use placeholder text like `(#issue)`, never leave the literal example `(#123)`, and never invent a random issue number. Never include Copilot "Original prompt" blocks. **Always verify the issue number using the `search_issues` or `list_issues` GitHub MCP tool — never guess or invent a number.**
 - Always reuse the active terminal for commands.
 - Do not create new terminals unless current one is busy or fails.
 - When asked to commit, push, create a PR, ship, or land changes, always use the **ship-changes** skill.
@@ -49,6 +49,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
 - Before concluding any task, run the relevant specs/tests for every affected project and do not stop until they pass.
 - At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
+- **After pushing changes to a PR**, use the GitHub MCP tools (`pull_request_read` with `get_check_runs`, `get_job_logs`) to monitor CI check results. If any checks fail, investigate the logs, fix the failures, and push again. The task is not complete until all CI checks pass or the remaining failures are confirmed to be pre-existing flaky tests unrelated to the PR changes.
 
 ## Detailed Guides
 

@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// <remarks>
 /// Only the <see cref="GetJsonSchema"/> method is used by the kernel <see cref="KernelCore::Cratis.Chronicle.EventSequences.EventSerializer"/>
 /// during event deserialization. Since test scenarios only append events (serialization only), this implementation
-/// returns an empty schema for all types, causing the <see cref="Cratis.Chronicle.Json.ExpandoObjectConverter"/>
+/// returns an empty schema for all types, causing the <see cref="Json.ExpandoObjectConverter"/>
 /// to fall back to generic conversion.
 /// </remarks>
 internal sealed class InMemoryKernelEventTypes : IEventTypes

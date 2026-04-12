@@ -67,7 +67,7 @@ public class and_external_event_types_are_discovered : Specification
     }
 
     [EventType("f6d8a40f-db16-4474-9f1e-d7ce6f263a2f")]
-    [Events.EventStore(SourceEventStore)]
+    [EventStore(SourceEventStore)]
     record external_user_invited;
 
     [Reactor]

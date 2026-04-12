@@ -9,6 +9,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Serialization;
 
@@ -42,11 +43,14 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly INamingPolicy _namingPolicy = new CamelCaseNamingPolicy();
     readonly IEventTypes _eventTypes = defaults.EventTypes;
     readonly IClientArtifactsProvider _clientArtifactsProvider = defaults.ClientArtifactsProvider;
+    readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
 #pragma warning disable CA2000 // Dispose objects before losing scope
     readonly IClientArtifactsActivator _artifactsActivator = new ClientArtifactsActivator(new DefaultServiceProvider(), new NullLoggerFactory());
 #pragma warning restore CA2000 // Dispose objects before losing scope
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
+    readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
     TReadModel? _instance;
+    bool _processed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class.
@@ -62,9 +66,23 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <remarks>
     /// This property returns <see langword="null"/> if <see cref="Given"/> has not been used yet or if
-    /// the events produced no state changes.
+    /// the events produced no state changes. Accessing this property triggers event processing the first
+    /// time it is called after events have been collected via <see cref="CollectEventsFor"/> or
+    /// <see cref="ProcessEventsFor"/>.
     /// </remarks>
-    public TReadModel? Instance => _instance;
+    public TReadModel? Instance
+    {
+        get
+        {
+            if (!_processed && _collectedEvents.Count > 0)
+            {
+                _instance = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
+                _processed = true;
+            }
+
+            return _instance;
+        }
+    }
 
     /// <summary>
     /// Gets the entry point of the fluent builder for seeding events into this scenario.
@@ -80,18 +98,47 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public ReadModelScenarioGivenBuilder<TReadModel> Given => new(this);
 
     /// <summary>
+    /// Collects events for a specific event source to be processed together when <see cref="Instance"/> is accessed.
+    /// </summary>
+    /// <remarks>
+    /// This method accumulates events without immediately processing them. Processing is deferred until
+    /// <see cref="Instance"/> is first accessed, allowing events across multiple event sources to be
+    /// collected and then processed together. This is required for projections that use
+    /// <c>ChildrenFrom</c> with events on separate event source streams.
+    /// If events are collected after <see cref="Instance"/> has already been accessed, the next access
+    /// to <see cref="Instance"/> will re-process all collected events including the newly added ones.
+    /// </remarks>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
+    /// <param name="events">The event instances to collect in order.</param>
+    public void CollectEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
+    {
+        _processed = false;
+        foreach (var @event in events)
+        {
+            _collectedEvents.Add((eventSourceId, @event));
+        }
+    }
+
+    /// <summary>
     /// Feeds the provided events for a specific event source through the read model's projection or reducer and updates <see cref="Instance"/>.
     /// </summary>
+    /// <remarks>
+    /// Events are accumulated and processed together with all previously collected events when
+    /// <see cref="Instance"/> is next accessed. This enables multi-stream scenarios where events across
+    /// different event sources are needed for hierarchical projections.
+    /// </remarks>
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate with the events.</param>
     /// <param name="events">The event instances to process in order.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public async Task ProcessEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
+    public Task ProcessEventsFor(EventSourceId eventSourceId, IEnumerable<object> events)
     {
-        _instance = await ProcessEvents(eventSourceId, events);
+        CollectEventsFor(eventSourceId, events);
+        return Task.CompletedTask;
     }
 
-    async Task<TReadModel?> ProcessEvents(EventSourceId eventSourceId, IEnumerable<object> events)
+    async Task<TReadModel?> ProcessEvents(IEnumerable<(EventSourceId EventSourceId, object Event)> events)
     {
+        var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
 
         var reducerType = FindReducerType(readModelType);
@@ -100,7 +147,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
             using var serviceProvider = new DefaultServiceProvider();
             return await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
-                events.Select(e => new EventForEventSourceId(eventSourceId, e, Causation.Unknown())),
+                eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
                 _eventTypes,
                 _artifactsActivator,
                 serviceProvider,
@@ -110,11 +157,11 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var projectionDefinition = FindProjectionDefinition(readModelType);
         if (projectionDefinition is not null)
         {
-            return await ProjectionReadModelProcessor.Process<TReadModel>(
+            return await ProjectionReadModelProcessor.Process(
                 projectionDefinition,
-                events,
+                eventsList,
                 _eventTypes,
-                Defaults.Instance.JsonSchemaGenerator,
+                _jsonSchemaGenerator,
                 _initialState);
         }
 
@@ -168,7 +215,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var method = creatorType.GetMethod(nameof(ProjectionDefinitionCreator<TReadModel>.CreateAndDefine), BindingFlags.Public | BindingFlags.Static)
             ?? throw new ProjectionDefinitionBuildFailed(projectionType, new InvalidOperationException("CreateAndDefine method not found on ProjectionDefinitionCreator."));
 
-        var result = (Cratis.Monads.Catch<Contracts.Projections.ProjectionDefinition>)method.Invoke(
+        var result = (Monads.Catch<Contracts.Projections.ProjectionDefinition>)method.Invoke(
             null,
             [
                 projectionType,
@@ -197,8 +244,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
         /// <param name="artifactsActivator">The <see cref="IClientArtifactsActivator"/>.</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
-        /// <returns>A <see cref="Cratis.Monads.Catch{T}"/> wrapping the built definition.</returns>
-        public static Cratis.Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
+        /// <returns>A <see cref="Monads.Catch{T}"/> wrapping the built definition.</returns>
+        public static Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
             Type type,
             INamingPolicy namingPolicy,
             IEventTypes eventTypes,

@@ -11,9 +11,11 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="EventsWithProperties">The <see cref="EventType"/> and properties the constraint is for.</param>
 /// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
 /// <param name="IgnoreCasing">Whether this constraint should ignore casing.</param>
+/// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
 public record UniqueConstraintDefinition(
     ConstraintName Name,
     ConstraintViolationMessageProvider MessageCallback,
     IEnumerable<UniqueConstraintEventDefinition> EventsWithProperties,
     EventTypeId? RemovedWith,
-    bool IgnoreCasing) : IConstraintDefinition;
+    bool IgnoreCasing,
+    ConstraintScope? Scope = default) : IConstraintDefinition;

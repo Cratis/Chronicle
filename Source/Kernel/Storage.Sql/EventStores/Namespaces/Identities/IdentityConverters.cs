@@ -15,7 +15,7 @@ public static class IdentityConverters
     /// </summary>
     /// <param name="entity">Entity to convert from.</param>
     /// <returns>Converted identity.</returns>
-    public static Chronicle.Concepts.Identities.Identity ToIdentity(this Identity entity) =>
+    public static Concepts.Identities.Identity ToIdentity(this Identity entity) =>
         new(entity.Subject, entity.Name, entity.UserName);
 
     /// <summary>
@@ -24,7 +24,7 @@ public static class IdentityConverters
     /// <param name="identity">Identity to convert from.</param>
     /// <param name="id">Unique identifier for the entity.</param>
     /// <returns>Converted entity.</returns>
-    public static Identity ToEntity(this Chronicle.Concepts.Identities.Identity identity, IdentityId id) =>
+    public static Identity ToEntity(this Concepts.Identities.Identity identity, IdentityId id) =>
         new()
         {
             Id = id.Value,

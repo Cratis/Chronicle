@@ -36,7 +36,8 @@ internal static class ConstraintConverters
         Definition = new(new UniqueEventTypeConstraintDefinitionContract
         {
             EventTypeId = definition.EventTypeId
-        })
+        }),
+        Scope = definition.Scope?.ToContract()
     };
 
     /// <summary>
@@ -56,6 +57,19 @@ internal static class ConstraintConverters
                 EventTypeId = _.EventTypeId,
                 Properties = _.Properties,
             }).ToList()
-        })
+        }),
+        Scope = definition.Scope?.ToContract()
+    };
+
+    /// <summary>
+    /// Convert a client <see cref="ConstraintScope"/> to a contract <see cref="Contracts.Events.Constraints.ConstraintScope"/>.
+    /// </summary>
+    /// <param name="scope"><see cref="ConstraintScope"/> to convert.</param>
+    /// <returns>Converted <see cref="Contracts.Events.Constraints.ConstraintScope"/>.</returns>
+    internal static Contracts.Events.Constraints.ConstraintScope ToContract(this ConstraintScope scope) => new()
+    {
+        EventSourceType = scope.EventSourceType?.Value,
+        EventStreamType = scope.EventStreamType?.Value,
+        EventStreamId = scope.EventStreamId?.Value
     };
 }

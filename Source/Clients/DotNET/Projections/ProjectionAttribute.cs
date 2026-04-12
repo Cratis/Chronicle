@@ -26,7 +26,7 @@ public sealed class ProjectionAttribute(string id = "", string? eventSequence = 
     /// </summary>
     /// <remarks>
     /// When <see langword="null"/>, the event sequence is inferred from the event types used in the projection definition.
-    /// If all event types originate from the same event store (via <see cref="Cratis.Chronicle.Events.EventStoreAttribute"/>),
+    /// If all event types originate from the same event store (via <see cref="Events.EventStoreAttribute"/>),
     /// the projection will automatically subscribe to the corresponding inbox event sequence.
     /// </remarks>
     public EventSequenceId? EventSequenceId { get; } = eventSequence is null ? null : new EventSequenceId(eventSequence);

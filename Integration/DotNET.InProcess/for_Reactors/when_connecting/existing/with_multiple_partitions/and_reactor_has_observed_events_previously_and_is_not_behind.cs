@@ -44,7 +44,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillActive();
-            ReactorState = await reactor.GetState();
+            ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }
 

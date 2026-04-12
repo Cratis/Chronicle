@@ -94,7 +94,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public virtual void PerformBackup(string? prefix = null)
+    public virtual async Task PerformBackupAsync(string? prefix = null)
     {
         prefix ??= string.Empty;
         if (!string.IsNullOrEmpty(prefix))
@@ -105,12 +105,12 @@ public abstract class ChronicleFixture : IChronicleFixture
         var backupName = $"{prefix}{DateTimeOffset.Now:yyyyMMdd-HHmmss}.tgz";
         try
         {
-            MongoDBContainer.ExecAsync(
+            await MongoDBContainer.ExecAsync(
             [
                 "mongodump",
                 $"--archive=/backups/{backupName}",
                 "--gzip"
-            ]).GetAwaiter().GetResult();
+            ]);
         }
         catch
         {
@@ -158,7 +158,7 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 await container.StartAsync();
             }
-            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
+            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
                 Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;

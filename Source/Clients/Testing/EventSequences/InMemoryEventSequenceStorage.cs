@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <param name="eventSequenceId">The <c>EventSequenceId</c> this storage serves.</param>
 internal sealed class InMemoryEventSequenceStorage(
-    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
+    KernelConcept.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
 {
     readonly List<KernelAppendedEvent> _events = [];
 
@@ -70,7 +70,8 @@ internal sealed class InMemoryEventSequenceStorage(
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content)
+        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
+        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes)
     {
         if (_events.Exists(_ => _.Context.SequenceNumber == sequenceNumber))
         {

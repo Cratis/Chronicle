@@ -16,28 +16,29 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Testing.EventSequences;
 using KernelEventSequences = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
-namespace Cratis.Chronicle.Testing.EventSequences;
+namespace Cratis.Chronicle.Testing;
 
 /// <summary>
-/// Represents an in-memory implementation of <see cref="IEventStoreNamespaceStorage"/>.
+/// Represents an in-memory implementation of <see cref="IEventStoreNamespaceStorage"/> for testing.
 /// </summary>
 /// <param name="eventSequenceStorage">The <see cref="InMemoryEventSequenceStorage"/> for the event sequence under test.</param>
-/// <param name="uniqueConstraintsStorage">The <see cref="InMemoryUniqueConstraintsStorage"/> for unique constraints.</param>
-/// <param name="uniqueEventTypesStorage">The <see cref="InMemoryUniqueEventTypesConstraintsStorage"/> for unique event type constraints.</param>
-/// <param name="identityStorage">The <see cref="InMemoryIdentityStorage"/>.</param>
-sealed class InMemoryEventStoreNamespaceStorage(
+/// <param name="uniqueConstraintsStorage">Optional <see cref="InMemoryUniqueConstraintsStorage"/> for unique constraints.</param>
+/// <param name="uniqueEventTypesStorage">Optional <see cref="InMemoryUniqueEventTypesConstraintsStorage"/> for unique event type constraints.</param>
+/// <param name="identityStorage">Optional <see cref="InMemoryIdentityStorage"/>.</param>
+internal sealed class InMemoryEventStoreNamespaceStorage(
     InMemoryEventSequenceStorage eventSequenceStorage,
-    InMemoryUniqueConstraintsStorage uniqueConstraintsStorage,
-    InMemoryUniqueEventTypesConstraintsStorage uniqueEventTypesStorage,
-    InMemoryIdentityStorage identityStorage) : IEventStoreNamespaceStorage
+    InMemoryUniqueConstraintsStorage? uniqueConstraintsStorage = null,
+    InMemoryUniqueEventTypesConstraintsStorage? uniqueEventTypesStorage = null,
+    InMemoryIdentityStorage? identityStorage = null) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets => throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public IIdentityStorage Identities => identityStorage;
+    public IIdentityStorage Identities => identityStorage ?? throw new NotSupportedException();
 
     /// <inheritdoc/>
     public IJobStorage Jobs => throw new NotSupportedException();
@@ -70,14 +71,16 @@ sealed class InMemoryEventStoreNamespaceStorage(
     public IEventSeedingStorage EventSeeding => throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public IProjectionFuturesStorage ProjectionFutures => throw new NotSupportedException("Projection futures storage is not needed for in-memory event sequence testing.");
+    public IProjectionFuturesStorage ProjectionFutures => throw new NotSupportedException();
 
     /// <inheritdoc/>
     public IEventSequenceStorage GetEventSequence(KernelEventSequences::EventSequenceId eventSequenceId) => eventSequenceStorage;
 
     /// <inheritdoc/>
-    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(KernelEventSequences::EventSequenceId eventSequenceId) => uniqueConstraintsStorage;
+    public IUniqueConstraintsStorage GetUniqueConstraintsStorage(KernelEventSequences::EventSequenceId eventSequenceId) =>
+        uniqueConstraintsStorage ?? throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(KernelEventSequences::EventSequenceId eventSequenceId) => uniqueEventTypesStorage;
+    public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(KernelEventSequences::EventSequenceId eventSequenceId) =>
+        uniqueEventTypesStorage ?? throw new NotSupportedException();
 }

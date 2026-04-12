@@ -6,6 +6,7 @@ Remove this section if the bullets already tell the full story.
 Release notes are generated from this description:
 
 - Keep bullets short and specific.
+- Focus on user-facing impact only — new APIs, changed behavior, fixed bugs. Do not list internal implementation details.
 - End each bullet with the relevant issue reference when there is one, for example `(#123)`.
 - If there is no associated issue, omit the reference entirely.
 - Remove any empty sections.

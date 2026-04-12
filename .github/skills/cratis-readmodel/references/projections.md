@@ -1,6 +1,58 @@
 # Projections — Reference
 
-## Declarative projection builder (`IProjectionFor<T>`)
+## Model-bound projections (preferred)
+
+Put projection metadata on the read model first. This is the default choice for Cratis projects because it keeps the read model and its projection behavior together.
+
+```csharp
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.ModelBound;
+
+public record InvoiceInfo(
+    [Key] Guid Id,
+    [FromEvent<InvoiceCreated>] string Number,
+    [AddFrom<LineItemAdded>(nameof(LineItemAdded.Price))] decimal RunningTotal,
+    [SetFromContext<InvoicePaid>(nameof(EventContext.Occurred))] DateTimeOffset? PaidAt);
+```
+
+For child relationships where later child events arrive on the child event source, set `parentKey` on the child type's class-level `FromEvent`:
+
+```csharp
+public record Invoice(
+    [Key] Guid Id,
+    [ChildrenFrom<LineItemAdded>(
+        key: nameof(LineItemAdded.LineItemId),
+        identifiedBy: nameof(LineItem.Id),
+        parentKey: nameof(LineItemAdded.InvoiceId))]
+    IEnumerable<LineItem> Lines);
+
+[FromEvent<LineItemRenamed>(parentKey: nameof(LineItemRenamed.InvoiceId))]
+public record LineItem(
+    [Key] Guid Id,
+    string Description);
+```
+
+### Attribute reference
+
+| Attribute | Equivalent builder |
+| --------- | ------------------ |
+| `[Key]` | Default key (event source ID) |
+| `[FromEvent<T>]` | `.AutoMap()` for event T |
+| `[FromEvent<T>(key: nameof(T.Prop))]` | `.UsingKey(e => e.Prop)` |
+| `[FromEvent<T>(parentKey: nameof(T.Prop))]` | `.UsingParentKey(e => e.Prop)` on child projections |
+| `[SetFrom<T>(nameof(...))]` | `.Set(...).To(...)` |
+| `[AddFrom<T>(nameof(...))]` | `.Add(...).With(...)` |
+| `[SubtractFrom<T>(nameof(...))]` | `.Subtract(...).With(...)` |
+| `[SetFromContext<T>(nameof(...))]` | `.Set(...).ToEventContextProperty(...)` |
+| `[Increment<T>]` | counter increment |
+| `[Decrement<T>]` | counter decrement |
+| `[RemovedWith<T>]` | `.RemovedWith<T>()` |
+| `[Passive]` | `.Passive()` |
+| `[NotRewindable]` | `.NotRewindable()` |
+
+---
+
+## Declarative projection builder (`IProjectionFor<T>`) — fallback
 
 ```csharp
 public class InvoiceProjection : IProjectionFor<Invoice>
@@ -59,42 +111,6 @@ builder.UsingCompositeKey<MonthlyReport>(key => key
     .Set(k => k.Year).ToEventContextProperty(c => c.Occurred.Year)
     .Set(k => k.Month).ToEventContextProperty(c => c.Occurred.Month));
 ```
-
----
-
-## Model-bound projections (attribute-based)
-
-Attributes go directly on the read model record. Chronicle discovers types with any mapping attribute automatically — no separate class needed.
-
-```csharp
-using Cratis.Chronicle.Keys;
-using Cratis.Chronicle.Projections.ModelBound;
-
-public record InvoiceInfo(
-    [Key] Guid Id,
-    [FromEvent<InvoiceCreated>] string Number,              // auto-map by name
-    [SetFrom<InvoiceCreated>(nameof(InvoiceCreated.Total))] decimal Total,
-    [AddFrom<LineItemAdded>(nameof(LineItemAdded.Price))]    decimal RunningTotal,
-    [SetFromContext<InvoicePaid>(nameof(EventContext.Occurred))] DateTimeOffset? PaidAt,
-    [RemovedWith<InvoiceVoided>] bool _  // marker; property unused
-);
-```
-
-| Attribute | Equivalent builder |
-| --------- | ------------------ |
-| `[Key]` | Default key (event source ID) |
-| `[FromEvent<T>]` | `.AutoMap()` for event T |
-| `[SetFrom<T>(nameof(...))]` | `.Set(...).To(...)` |
-| `[AddFrom<T>(nameof(...))]` | `.Add(...).With(...)` |
-| `[SubtractFrom<T>(nameof(...))]` | `.Subtract(...).With(...)` |
-| `[SetFromContext<T>(nameof(...))]` | `.Set(...).ToEventContextProperty(...)` |
-| `[Increment<T>]` | counter increment |
-| `[Decrement<T>]` | counter decrement |
-| `[RemovedWith<T>]` | `.RemovedWith<T>()` |
-| `[Passive]` | `.Passive()` |
-| `[NotRewindable]` | `.NotRewindable()` |
-
----
 
 ## Reading projected read models
 

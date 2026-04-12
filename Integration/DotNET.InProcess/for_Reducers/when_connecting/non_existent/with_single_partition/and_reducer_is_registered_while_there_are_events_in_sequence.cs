@@ -36,8 +36,7 @@ public class and_reducer_is_registered_while_there_are_events_in_sequence(contex
             await reducer.WaitTillSubscribed();
             await reducer.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
             await Reducer.WaitTillHandledEventReaches(HandledEventsBefore + Events.Count);
-
-            ReducerState = await reducer.GetState();
+            ReducerState = await reducer.WaitTillActiveAndGetState();
         }
     }
 
