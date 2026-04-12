@@ -92,6 +92,16 @@ internal class ChronicleConnection(
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
+
+        // Pre-register the client before signaling Connected(). ConnectionService.Connect()
+        // registers via a fire-and-forget Task.Run, creating a race where lifecycle.Connected()
+        // triggers observer subscriptions before the client is known to the ConnectedClients grain.
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        await connectedClients.OnClientConnected(
+            new KernelConnectionId(lifecycle.ConnectionId.Value),
+            string.Empty,
+            Debugger.IsAttached);
+
         await lifecycle.Connected();
     }
 

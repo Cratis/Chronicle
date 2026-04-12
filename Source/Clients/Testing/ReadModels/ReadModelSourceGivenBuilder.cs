@@ -15,11 +15,19 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
     where TReadModel : class
 {
     /// <summary>
-    /// Processes the provided event instances through the read model's projection or reducer and updates
-    /// <see cref="ReadModelScenario{TReadModel}.Instance"/>.
+    /// Collects the provided event instances for this event source to be processed together with all other
+    /// collected events when <see cref="ReadModelScenario{TReadModel}.Instance"/> is first accessed.
     /// </summary>
-    /// <param name="events">The event instances to process in order.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public Task Events(params object[] events) =>
-        scenario.ProcessEventsFor(eventSourceId, events);
+    /// <remarks>
+    /// Events are not processed immediately. Deferred processing enables multi-stream scenarios where events
+    /// across different event sources are required (for example, <c>ChildrenFrom</c> projections that link
+    /// child entities to parents via a parent key on a separate event source stream).
+    /// </remarks>
+    /// <param name="events">The event instances to collect in order.</param>
+    /// <returns>A completed <see cref="Task"/>.</returns>
+    public Task Events(params object[] events)
+    {
+        scenario.CollectEventsFor(eventSourceId, events);
+        return Task.CompletedTask;
+    }
 }

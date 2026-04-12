@@ -135,7 +135,7 @@ public class EventScenario(
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
 
-        var storage = new InMemoryKernelStorage(
+        var storage = new InMemoryStorage(
             eventSequenceStorage,
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
