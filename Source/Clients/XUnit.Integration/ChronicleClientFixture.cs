@@ -25,10 +25,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
-#pragma warning disable CA2213, SA1600, CA1051, MA0069
-    protected static IAsyncDisposable? _webApplicationFactory;
-#pragma warning restore CA2213, SA1600, CA1051, MA0069
-    static readonly object _webApplicationFactoryLock = new();
+#pragma warning disable CA2213, SA1600, CA1051
+    protected IAsyncDisposable? _webApplicationFactory;
+#pragma warning restore CA2213, SA1600, CA1051
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
@@ -338,15 +337,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <returns>Awaitable Task.</returns>
     protected virtual Task OnDisposeAsync() => Task.CompletedTask;
 
-    static IAsyncDisposable EnsureWebApplicationFactoryInitialized(ChronicleClientFixture<TChronicleFixture> fixture)
-    {
-        lock (_webApplicationFactoryLock)
-        {
-            _webApplicationFactory ??= fixture.CreateWebApplicationFactory();
-            return _webApplicationFactory;
-        }
-    }
-
     T EnsureInitialized<T>(Func<T> getObject)
     {
         if (_webApplicationFactory is null)
@@ -358,10 +348,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     void InitializeFixture()
     {
-        var webApplicationFactory = EnsureWebApplicationFactoryInitialized(this);
+        _webApplicationFactory = CreateWebApplicationFactory();
         if (!_isInitialized)
         {
-            var webApplicationFactoryType = webApplicationFactory.GetType();
+            var webApplicationFactoryType = _webApplicationFactory.GetType();
             _servicesProperty = webApplicationFactoryType.GetProperty(nameof(WebApplicationFactory<object>.Services), BindingFlags.Instance | BindingFlags.Public)!;
             _createClientMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [])!;
             _createClientWithOptionsMethod = webApplicationFactoryType.GetMethod(nameof(WebApplicationFactory<object>.CreateClient), BindingFlags.Instance | BindingFlags.Public, [typeof(WebApplicationFactoryClientOptions)])!;
