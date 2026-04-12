@@ -91,6 +91,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
 
+        var delegatingProvider = new DelegatingClientArtifactsProvider(_fixture);
+        DelegatingClientArtifactsProvider.Instance = delegatingProvider;
+
         builder.UseOrleans(silo =>
             {
                 silo.UseLocalhostClustering(siloPort, gatewayPort);
@@ -118,6 +121,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         sp.GetRequiredService<ILogger<IdentityProvider>>()));
                     services.AddSingleton(Globals.JsonSerializerOptions);
                     services.AddHttpContextAccessor();
+
+                    // Ensure DelegatingClientArtifactsProvider wins over convention-based
+                    // discovery from AddBindingsByConvention above, which registers test
+                    // fixture types as IClientArtifactsProvider.
+                    services.RemoveAll<IClientArtifactsProvider>();
+                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
 
                     services.AddSingleton<IChronicleClient>(sp =>
                     {
@@ -159,16 +168,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         {
             b.Configure(app => app.UseCratisChronicle());
             configureWebHost(b);
-        });
-
-        // Final pass: ensure our DelegatingClientArtifactsProvider wins over any
-        // registrations added by convention-based discovery or AddCratisChronicle
-        // in earlier ConfigureServices callbacks.
-        var delegatingProvider = new DelegatingClientArtifactsProvider(_fixture);
-        builder.ConfigureServices(services =>
-        {
-            services.RemoveAll<IClientArtifactsProvider>();
-            services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
         });
 
         return builder;

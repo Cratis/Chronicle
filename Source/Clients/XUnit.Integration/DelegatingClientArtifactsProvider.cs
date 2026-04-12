@@ -6,6 +6,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Wraps an <see cref="IClientArtifactsProvider"/> and delegates to a mutable
 /// reference so that the static silo can serve artifacts from the current test fixture.
+/// The instance is stored on <see cref="Instance"/> so test fixtures can swap the
+/// active provider without resolving from DI (the host and silo have separate
+/// service providers).
 /// </summary>
 /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/> to delegate to.</param>
 internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initial) : IClientArtifactsProvider
@@ -62,4 +65,9 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
     /// </summary>
     /// <param name="provider">The <see cref="IClientArtifactsProvider"/> to delegate to.</param>
     internal void SetCurrent(IClientArtifactsProvider provider) => _current = provider;
+
+    /// <summary>
+    /// Gets or sets the singleton instance created during factory construction.
+    /// </summary>
+    internal static DelegatingClientArtifactsProvider? Instance { get; set; }
 }

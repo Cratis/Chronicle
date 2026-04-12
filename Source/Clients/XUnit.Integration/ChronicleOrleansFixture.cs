@@ -38,21 +38,15 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
-        if (Services.GetRequiredService<IClientArtifactsProvider>() is DelegatingClientArtifactsProvider delegating)
-        {
-            delegating.SetCurrent(this);
-        }
+        // We use the static instance because the host and silo have separate service
+        // providers — resolving IClientArtifactsProvider from the host provider would
+        // return the wrong instance.
+        DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
 
         // Re-discover artifacts from the updated provider so the client-side registries
         // know about this test's types before any Establish/Because code runs.
-        // This is a local operation — no server access is needed.
         var eventStore = Services.GetRequiredService<IEventStore>();
         await eventStore.DiscoverAll();
-
-        // The client was disconnected in the previous test's DisposeAsync.
-        // ConnectIfNotConnected() will lazily reconnect the first time the test
-        // accesses IChronicleServicesAccessor.Services, which fires OnConnected
-        // → RegisterAll → pushes discovered artifacts to the server.
     }
 
     /// <inheritdoc/>
