@@ -17,9 +17,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNamespaceDatabase, EventSequenceId eventSequenceId) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value)
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
-        var collection = GetCollectionFor(definition.Name);
+        var collection = GetCollectionFor(definition.Name, scopeKey);
         var options = new FindOptions<UniqueConstraintIndex, UniqueConstraintIndex>();
 
         if (definition.IgnoreCasing)
@@ -40,9 +40,9 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
     }
 
     /// <inheritdoc/>
-    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value)
+    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
-        var collection = GetCollectionFor(name);
+        var collection = GetCollectionFor(name, scopeKey);
         await collection.ReplaceOneAsync(
             u => u.EventSourceId == eventSourceId,
             new UniqueConstraintIndex(eventSourceId, value, sequenceNumber),
@@ -50,12 +50,17 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
     }
 
     /// <inheritdoc/>
-    public async Task Remove(EventSourceId eventSourceId, ConstraintName name)
+    public async Task Remove(EventSourceId eventSourceId, ConstraintName name, string scopeKey = "")
     {
-        var collection = GetCollectionFor(name);
+        var collection = GetCollectionFor(name, scopeKey);
         await collection.DeleteOneAsync(u => u.EventSourceId == eventSourceId);
     }
 
-    IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName) =>
-        eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>($"{eventSequenceId}+{constraintName}+constraint");
+    IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName, string scopeKey = "")
+    {
+        var collectionName = string.IsNullOrEmpty(scopeKey)
+            ? $"{eventSequenceId}+{constraintName}+constraint"
+            : $"{eventSequenceId}+{constraintName}+{scopeKey}+constraint";
+        return eventStoreNamespaceDatabase.GetCollection<UniqueConstraintIndex>(collectionName);
+    }
 }

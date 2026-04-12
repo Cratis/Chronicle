@@ -36,7 +36,8 @@ public class UniqueConstraintValidator(
         }
 
         var value = propertiesWithValues.GetValue();
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition, value);
+        var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition, value, scopeKey);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()

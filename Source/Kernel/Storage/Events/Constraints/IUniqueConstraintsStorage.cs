@@ -17,11 +17,12 @@ public interface IUniqueConstraintsStorage
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to check for.</param>
     /// <param name="definition"><see cref="UniqueConstraintDefinition"/> to check for.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to check.</param>
+    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
     /// <returns>
     /// Tuple containing a boolean saying whether or not its allowed to perform and the <see cref="EventSequenceNumber"/> for the item it violates.
     /// Returns <see cref="EventSequenceNumber.Unavailable"/> if it doesn't exist.
     /// </returns>
-    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value);
+    Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "");
 
     /// <summary>
     /// Save a constraint value.
@@ -30,14 +31,16 @@ public interface IUniqueConstraintsStorage
     /// <param name="name"><see cref="ConstraintName"/> to save for.</param>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> the value exists at.</param>
     /// <param name="value"><see cref="UniqueConstraintValue"/>to save.</param>
+    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
     /// <returns>Awaitable task.</returns>
-    Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value);
+    Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "");
 
     /// <summary>
     /// Remove a constraint value.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to remove for.</param>
     /// <param name="name"><see cref="ConstraintName"/> to remove for.</param>
+    /// <param name="scopeKey">Optional scope key for scoped constraints.</param>
     /// <returns>Awaitable task.</returns>
-    Task Remove(EventSourceId eventSourceId, ConstraintName name);
+    Task Remove(EventSourceId eventSourceId, ConstraintName name, string scopeKey = "");
 }
