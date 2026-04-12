@@ -8,7 +8,8 @@ The goal is minimal ceremony, maximum clarity. Modern C# (13+) gives us records,
 
 ## Building
 
-- Use `dotnet build` from the command line.
+- Use `dotnet build` from the command line after every code change — never defer building. Fix all errors and warnings immediately.
+- **Warnings are errors in Release.** The project sets `TreatWarningsAsErrors=True` in Release builds (see `Source/Directory.Build.props`). CI always builds in Release mode. Any warning — unused `using` directives, nullable reference issues, code style violations like `IDE0005` — will fail the CI build. Always run `dotnet build -c Release` before considering work complete, and fix every warning.
 - Use `dotnet format` to format code.
 - Use `dotnet test` to run tests.
 

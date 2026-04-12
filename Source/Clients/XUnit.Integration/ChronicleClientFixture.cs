@@ -29,15 +29,6 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     protected static IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051, MA0069
     static readonly object _webApplicationFactoryLock = new();
-
-    static IAsyncDisposable EnsureWebApplicationFactoryInitialized(ChronicleClientFixture<TChronicleFixture> fixture)
-    {
-        lock (_webApplicationFactoryLock)
-        {
-            _webApplicationFactory ??= fixture.CreateWebApplicationFactory();
-            return _webApplicationFactory;
-        }
-    }
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
@@ -346,6 +337,15 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// </summary>
     /// <returns>Awaitable Task.</returns>
     protected virtual Task OnDisposeAsync() => Task.CompletedTask;
+
+    static IAsyncDisposable EnsureWebApplicationFactoryInitialized(ChronicleClientFixture<TChronicleFixture> fixture)
+    {
+        lock (_webApplicationFactoryLock)
+        {
+            _webApplicationFactory ??= fixture.CreateWebApplicationFactory();
+            return _webApplicationFactory;
+        }
+    }
 
     T EnsureInitialized<T>(Func<T> getObject)
     {
