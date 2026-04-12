@@ -111,7 +111,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
+                    services.AddSingleton<IClientArtifactsProvider>(new DelegatingClientArtifactsProvider(_fixture));
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),

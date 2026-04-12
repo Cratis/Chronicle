@@ -92,6 +92,8 @@ public class Reactors : IReactors
                                 _ => _,
                                 CreateHandlerFor);
 
+        _handlers.Clear();
+        _registered = false;
         foreach (var handler in handlers)
         {
             _handlers.Add(handler);
