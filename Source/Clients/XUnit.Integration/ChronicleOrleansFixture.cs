@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using Cratis.Arc.MongoDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,7 +71,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
         }
-        catch
+        catch (Exception)
         {
             // If grain deactivation fails, the silo may be in a bad state — dispose the factory
             // so that the next test recreates it from scratch.
