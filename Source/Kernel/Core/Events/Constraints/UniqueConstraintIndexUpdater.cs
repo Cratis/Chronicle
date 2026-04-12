@@ -21,9 +21,11 @@ public class UniqueConstraintIndexUpdater(
     /// <inheritdoc/>
     public async Task Update(EventSequenceNumber eventSequenceNumber)
     {
+        var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
+
         if (context.EventTypeId == definition.RemovedWith)
         {
-            await storage.Remove(context.EventSourceId, definition.Name);
+            await storage.Remove(context.EventSourceId, definition.Name, scopeKey);
         }
         else
         {
@@ -35,7 +37,7 @@ public class UniqueConstraintIndexUpdater(
             var value = definition.GetPropertiesAndValues(context).GetValue();
             if (value is not null)
             {
-                await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value);
+                await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
             }
         }
     }

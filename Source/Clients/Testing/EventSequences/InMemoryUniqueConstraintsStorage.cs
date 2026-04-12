@@ -14,20 +14,22 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 internal sealed class InMemoryUniqueConstraintsStorage : IUniqueConstraintsStorage
 {
-    /// <summary>Key: (EventSourceId, ConstraintName, UniqueConstraintValue) → SequenceNumber.</summary>
-    readonly Dictionary<(string EventSourceId, string ConstraintName, string Value), KernelEvents::EventSequenceNumber> _index = [];
+    /// <summary>Key: (EventSourceId, ConstraintName, UniqueConstraintValue, ScopeKey) → SequenceNumber.</summary>
+    readonly Dictionary<(string EventSourceId, string ConstraintName, string Value, string ScopeKey), KernelEvents::EventSequenceNumber> _index = [];
 
     /// <inheritdoc/>
     public Task<(bool IsAllowed, KernelEvents::EventSequenceNumber SequenceNumber)> IsAllowed(
         KernelEvents::EventSourceId eventSourceId,
         KernelConstraints::UniqueConstraintDefinition definition,
-        KernelConstraints::UniqueConstraintValue value)
+        KernelConstraints::UniqueConstraintValue value,
+        string scopeKey = "")
     {
         // Check if any OTHER event source has this value (unique across all sources)
         var conflict = _index
             .FirstOrDefault(kv =>
                 kv.Key.ConstraintName == definition.Name.Value &&
                 kv.Key.Value == value.Value &&
+                kv.Key.ScopeKey == scopeKey &&
                 kv.Key.EventSourceId != eventSourceId.Value);
 
         if (conflict.Key != default)
@@ -43,9 +45,10 @@ internal sealed class InMemoryUniqueConstraintsStorage : IUniqueConstraintsStora
         KernelEvents::EventSourceId eventSourceId,
         KernelConstraints::ConstraintName name,
         KernelEvents::EventSequenceNumber sequenceNumber,
-        KernelConstraints::UniqueConstraintValue value)
+        KernelConstraints::UniqueConstraintValue value,
+        string scopeKey = "")
     {
-        var key = (eventSourceId.Value, name.Value, value.Value);
+        var key = (eventSourceId.Value, name.Value, value.Value, scopeKey);
         _index[key] = sequenceNumber;
         return Task.CompletedTask;
     }
@@ -53,10 +56,11 @@ internal sealed class InMemoryUniqueConstraintsStorage : IUniqueConstraintsStora
     /// <inheritdoc/>
     public Task Remove(
         KernelEvents::EventSourceId eventSourceId,
-        KernelConstraints::ConstraintName name)
+        KernelConstraints::ConstraintName name,
+        string scopeKey = "")
     {
         var keysToRemove = _index.Keys
-            .Where(k => k.EventSourceId == eventSourceId.Value && k.ConstraintName == name.Value)
+            .Where(k => k.EventSourceId == eventSourceId.Value && k.ConstraintName == name.Value && k.ScopeKey == scopeKey)
             .ToList();
 
         foreach (var key in keysToRemove)

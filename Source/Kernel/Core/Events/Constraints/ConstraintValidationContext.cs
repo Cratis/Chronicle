@@ -21,15 +21,24 @@ public record ConstraintValidationContext
     /// <param name="eventSourceId">The <see cref="Concepts.Events.EventSourceId"/> to validate for.</param>
     /// <param name="eventTypeId">The <see cref="EventTypeId"/> to validate for.</param>
     /// <param name="content">The content of the event.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the event being validated.</param>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event being validated.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event being validated.</param>
     public ConstraintValidationContext(
         IEnumerable<IConstraintValidator> validators,
         EventSourceId eventSourceId,
         EventTypeId eventTypeId,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default)
     {
         EventSourceId = eventSourceId;
         EventTypeId = eventTypeId;
         Content = content;
+        EventSourceType = eventSourceType;
+        EventStreamType = eventStreamType;
+        EventStreamId = eventStreamId;
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
     }
@@ -48,6 +57,21 @@ public record ConstraintValidationContext
     /// Gets the content of the event.
     /// </summary>
     public ExpandoObject Content { get; }
+
+    /// <summary>
+    /// Gets the <see cref="EventSourceType"/> of the event being validated.
+    /// </summary>
+    public EventSourceType? EventSourceType { get; }
+
+    /// <summary>
+    /// Gets the <see cref="EventStreamType"/> of the event being validated.
+    /// </summary>
+    public EventStreamType? EventStreamType { get; }
+
+    /// <summary>
+    /// Gets the <see cref="EventStreamId"/> of the event being validated.
+    /// </summary>
+    public EventStreamId? EventStreamId { get; }
 
     /// <summary>
     /// Gets the <see cref="IConstraintValidator">validators</see> involved in the context.

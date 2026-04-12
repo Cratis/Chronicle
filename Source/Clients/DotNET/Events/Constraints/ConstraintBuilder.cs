@@ -18,13 +18,38 @@ public class ConstraintBuilder(
     Type? owner = default) : IConstraintBuilder
 {
     readonly List<IConstraintDefinition> _constraints = [];
+    bool _perEventSourceType;
+    bool _perEventStreamType;
+    bool _perEventStreamId;
+
+    /// <inheritdoc/>
+    public IConstraintBuilder PerEventSourceType()
+    {
+        _perEventSourceType = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IConstraintBuilder PerEventStreamType()
+    {
+        _perEventStreamType = true;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IConstraintBuilder PerEventStreamId()
+    {
+        _perEventStreamId = true;
+        return this;
+    }
 
     /// <inheritdoc/>
     public IConstraintBuilder Unique(Action<IUniqueConstraintBuilder> callback)
     {
         var uniqueConstraintBuilder = new UniqueConstraintBuilder(eventTypes, namingPolicy, owner);
         callback(uniqueConstraintBuilder);
-        AddConstraint(uniqueConstraintBuilder.Build());
+        var definition = uniqueConstraintBuilder.Build();
+        AddConstraint(ApplyScope(definition));
         return this;
     }
 
@@ -40,11 +65,11 @@ public class ConstraintBuilder(
     public IConstraintBuilder Unique<TEventType>(ConstraintViolationMessageProvider messageCallback, ConstraintName? name = default)
     {
         var eventType = eventTypes.GetEventTypeFor(typeof(TEventType));
-        AddConstraint(new UniqueEventTypeConstraintDefinition(
+        AddConstraint(ApplyScope(new UniqueEventTypeConstraintDefinition(
             name ?? eventType.Id.Value,
             messageCallback,
             eventType.Id,
-            null));
+            null)));
 
         return this;
     }
@@ -61,6 +86,35 @@ public class ConstraintBuilder(
         ThrowIfDuplicateConstraintNames();
 
         return _constraints.ToImmutableList();
+    }
+
+    ConstraintScope? GetScope()
+    {
+        if (!_perEventSourceType && !_perEventStreamType && !_perEventStreamId)
+        {
+            return null;
+        }
+
+        return new ConstraintScope(
+            _perEventSourceType ? (EventSourceType)"_scoped_" : null,
+            _perEventStreamType ? (EventStreamType)"_scoped_" : null,
+            _perEventStreamId ? (EventStreamId)"_scoped_" : null);
+    }
+
+    IConstraintDefinition ApplyScope(IConstraintDefinition definition)
+    {
+        var scope = GetScope();
+        if (scope is null)
+        {
+            return definition;
+        }
+
+        return definition switch
+        {
+            UniqueConstraintDefinition unique => unique with { Scope = scope },
+            UniqueEventTypeConstraintDefinition uniqueEventType => uniqueEventType with { Scope = scope },
+            _ => definition
+        };
     }
 
     void ThrowIfDuplicateConstraintNames()

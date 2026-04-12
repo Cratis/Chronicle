@@ -211,7 +211,7 @@ public class EventSequence(
     {
         try
         {
-            var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamId, eventType, content, correlationId);
+            var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId);
             if (getValidAndCompliantEvent.TryGetError(out var error))
             {
                 return error;
@@ -256,7 +256,7 @@ public class EventSequence(
         {
             var tasks = events.Select(async e =>
             {
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamId, e.EventType, e.Content, correlationId);
+                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
                 return (Event: e, Result: result);
             });
 
@@ -530,6 +530,7 @@ public class EventSequence(
     async Task<Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult>> GetValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
+        EventStreamType eventStreamType,
         EventStreamId eventStreamId,
         EventType eventType,
         JsonObject content,
@@ -544,7 +545,7 @@ public class EventSequence(
                 return schemaError;
             }
 
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject);
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -593,9 +594,12 @@ public class EventSequence(
         EventSourceId eventSourceId,
         EventType eventType,
         CorrelationId correlationId,
-        ExpandoObject compliantEventAsExpandoObject)
+        ExpandoObject compliantEventAsExpandoObject,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default)
     {
-        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject);
+        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)
         {
