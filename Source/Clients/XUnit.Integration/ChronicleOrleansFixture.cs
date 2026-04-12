@@ -21,12 +21,9 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
-        await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await DeactivateAllGrains();
 
         await base.DisposeAsync();
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 
     /// <inheritdoc/>
@@ -60,5 +57,21 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
+    }
+
+    async Task DeactivateAllGrains()
+    {
+        try
+        {
+            var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
+            await managementGrain.ForceActivationCollection(TimeSpan.Zero);
+        }
+        catch
+        {
+            // If grain deactivation fails, the silo may be in a bad state — dispose the factory
+            // so that the next test recreates it from scratch.
+            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
+            _webApplicationFactory = null;
+        }
     }
 }
