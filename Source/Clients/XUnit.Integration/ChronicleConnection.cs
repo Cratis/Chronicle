@@ -2,13 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelConcepts;
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
+using KernelCore::Cratis.Chronicle.Clients;
 using Microsoft.Extensions.Logging;
 using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
+using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -76,6 +79,16 @@ internal class ChronicleConnection(
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
+
+        // Pre-register the client before signaling Connected(). ConnectionService.Connect()
+        // registers via a fire-and-forget Task.Run, creating a race where lifecycle.Connected()
+        // triggers observer subscriptions before the client is known to the ConnectedClients grain.
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        await connectedClients.OnClientConnected(
+            new KernelConnectionId(lifecycle.ConnectionId.Value),
+            string.Empty,
+            Debugger.IsAttached);
+
         await lifecycle.Connected();
     }
 
