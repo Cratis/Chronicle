@@ -71,7 +71,7 @@ CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/DotNET.InProcess/DotNET.In
 
 Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net10.0`, that path is:
 
-```
+```bash
 Integration/DotNET.InProcess/bin/Debug/net10.0/backups/
 ```
 
@@ -81,13 +81,13 @@ The directory is created automatically during fixture initialization — you do 
 
 Each backup file is a gzip-compressed MongoDB archive dump with the following naming pattern:
 
-```
+```bash
 {prefix}-yyyyMMdd-HHmmss.tgz
 ```
 
 The prefix corresponds to the xUnit collection name registered for the test suite. When no prefix is set the timestamp is used alone:
 
-```
+```bash
 20260412-143025.tgz
 ```
 
