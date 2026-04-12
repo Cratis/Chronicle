@@ -66,11 +66,13 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
             await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
 
-            // Wait for all observers to process the 3 events.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
-            await NonReplayableReactorInstance.WaitTillHandledEventReaches(3);
-            await NonReplayableReducerInstance.WaitTillHandledEventReaches(3);
+            var lastAppendedSequenceNumber = EventSequenceNumber.First + 2;
+
+            // Wait for all observers to process the appended events.
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
 
             // Mark the non-replayable observers as non-replayable in storage.
             await MarkObserverAsNonReplayable(typeof(NonReplayableReactor).GetReactorId());

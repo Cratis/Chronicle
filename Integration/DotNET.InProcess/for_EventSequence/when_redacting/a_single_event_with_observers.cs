@@ -62,10 +62,12 @@ public class a_single_event_with_observers(context context) : Given<context>(con
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
             await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
 
-            // Wait for all observers to process the 3 events.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
-            await projectionHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First + 2);
+            var lastAppendedSequenceNumber = EventSequenceNumber.First + 2;
+
+            // Wait for all observers to process the appended events.
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await projectionHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
 
             // Reset counters before redaction to measure replay.
             Reactor.HandledEvents = 0;
