@@ -38,4 +38,10 @@ public class ReactorDefinition
     /// </summary>
     [ProtoMember(5, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the filters to apply when observing events.
+    /// </summary>
+    [ProtoMember(6)]
+    public ObserverFilters Filters { get; set; } = new();
 }

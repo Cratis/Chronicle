@@ -33,6 +33,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - Never change package.json or package-lock.json files unless explicitly asked to.
 - Never change NuGet.config files unless explicitly asked to.
 - Always ensure that the code compiles without warnings.
+- Always treat warnings as errors and fix them before considering the work complete.
 - Always ensure that the code passes all tests.
 - Always ensure that the code adheres to the project's coding standards.
 - Always ensure that the code is maintainable.
@@ -46,6 +47,7 @@ When these instructions don't explicitly cover a situation, apply these values t
 - After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
+- Before concluding any task, run the relevant specs/tests for every affected project and do not stop until they pass.
 - At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
 - **After pushing changes to a PR**, use the GitHub MCP tools (`pull_request_read` with `get_check_runs`, `get_job_logs`) to monitor CI check results. If any checks fail, investigate the logs, fix the failures, and push again. The task is not complete until all CI checks pass or the remaining failures are confirmed to be pre-existing flaky tests unrelated to the PR changes.
 

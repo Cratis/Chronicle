@@ -126,3 +126,30 @@ var account = await readModels.GetOneWithImmediateProjection<AccountSummary>(id)
 // All instances
 var all = await readModels.GetAll<AccountSummary>();
 ```
+
+---
+
+## Appended event metadata and projections
+
+When you append events, you can set tags, event source type, and event stream type:
+
+```csharp
+await eventLog.Append(
+    EventSourceId.New(),
+    new OrderPlaced(42m),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
+Projection definitions do not use `[FilterEventsByTag]`, `[EventSourceType]`, or `[EventStreamType]` as observer filters. Projections choose input through event types, joins, and event sequence selection.
+
+Use appended metadata when you need:
+
+- A reducer or reactor alongside the projection to observe only matching events
+- Event context values inside projection mappings
+- Consistent metadata across downstream observers that react to the same append operation
+
+`[Tag]` and `[Tags]` on a projection label the projection definition; they do not filter appended events.
+
+For reducer and reactor filtering examples, see `Documentation/events/filtering/`.

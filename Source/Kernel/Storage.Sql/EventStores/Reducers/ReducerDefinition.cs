@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 
@@ -42,4 +43,16 @@ public class ReducerDefinition
     /// Gets or sets the configuration identifier for the sink of the projection.
     /// </summary>
     public Guid SinkConfigurationId { get; set; } = Guid.Empty;
+
+    /// <summary>
+    /// Gets or sets the tags the reducer belongs to.
+    /// </summary>
+    [Json]
+    public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the filters to apply when observing events.
+    /// </summary>
+    [Json]
+    public ObserverFilters Filters { get; set; } = new();
 }

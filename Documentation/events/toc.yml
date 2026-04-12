@@ -4,6 +4,8 @@
   href: appending.md
 - name: Appending with tags
   href: appending-with-tags.md
+- name: Filtering
+  href: filtering/toc.yml
 - name: Appending many
   href: appending-many.md
 - name: Observing appends
@@ -20,4 +22,3 @@
   href: revision.md
 - name: Redaction
   href: redaction.md
-

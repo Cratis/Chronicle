@@ -31,6 +31,7 @@ Use these topics to append, read, and manage events:
 
 - [Appending](appending.md)
 - [Appending with tags](appending-with-tags.md)
+- [Filtering reducers and reactors](filtering/index.md)
 - [Appending many](appending-many.md)
 - [Observing appends](observing-appends.md)
 - [Getting events](getting-events.md)
@@ -39,4 +40,3 @@ Use these topics to append, read, and manage events:
 - [Cross-cutting properties](cross-cutting-properties.md)
 - [Revision](revision.md)
 - [Redaction](redaction.md)
-

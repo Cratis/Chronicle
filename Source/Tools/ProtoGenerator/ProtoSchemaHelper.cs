@@ -11,6 +11,21 @@ namespace Cratis.Chronicle.Tools.ProtoGenerator;
 /// </summary>
 internal static partial class ProtoSchemaHelper
 {
+    [GeneratedRegex(@"^package\s+(?<name>[\w.]+)\s*;", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex PackageDeclarationRegex { get; }
+
+    [GeneratedRegex(@"^message\s+(?<name>\w+)\s*\{", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex MessageDeclarationRegex { get; }
+
+    [GeneratedRegex(@"rpc\s+(?<method>\w+)\s*\(\s*(?<input>\w+)\s*\)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex RpcDeclarationRegex { get; }
+
+    [GeneratedRegex(@"enum\s+(?<name>\w+)\s*\{(?<body>[^{}]*)\}", RegexOptions.Singleline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EnumBlockRegex { get; }
+
+    [GeneratedRegex(@"^\s+(?<value>[A-Za-z][A-Za-z0-9_]*)\s*=", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ValueDeclarationRegex { get; }
+
     /// <summary>
     /// Fixes RPC method name conflicts in a proto3 schema.
     /// In proto3, any message type that shares a name with an RPC method in the same service
@@ -24,7 +39,7 @@ internal static partial class ProtoSchemaHelper
     /// <returns>The schema with RPC method name conflicts resolved.</returns>
     public static string FixRpcMethodNameConflicts(string schema)
     {
-        var packageMatch = PackageDeclarationRegex().Match(schema);
+        var packageMatch = PackageDeclarationRegex.Match(schema);
         if (!packageMatch.Success)
         {
             return schema;
@@ -33,7 +48,7 @@ internal static partial class ProtoSchemaHelper
         var packageName = packageMatch.Groups["name"].Value;
 
         var messageNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (Match m in MessageDeclarationRegex().Matches(schema))
+        foreach (Match m in MessageDeclarationRegex.Matches(schema))
         {
             messageNames.Add(m.Groups["name"].Value);
         }
@@ -45,7 +60,7 @@ internal static partial class ProtoSchemaHelper
 
         // Collect all RPC method names in this file
         var rpcMethodNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (Match m in RpcDeclarationRegex().Matches(schema))
+        foreach (Match m in RpcDeclarationRegex.Matches(schema))
         {
             rpcMethodNames.Add(m.Groups["method"].Value);
         }
@@ -84,8 +99,8 @@ internal static partial class ProtoSchemaHelper
     /// <returns>The schema with enum value conflicts resolved.</returns>
     public static string FixEnumValueConflicts(string schema)
     {
-        var enumBlockRegex = EnumBlockRegex();
-        var valueDeclarationRegex = ValueDeclarationRegex();
+        var enumBlockRegex = EnumBlockRegex;
+        var valueDeclarationRegex = ValueDeclarationRegex;
 
         // First pass: collect all value names per enum
         var fullMatches = new List<string>();
@@ -185,21 +200,6 @@ internal static partial class ProtoSchemaHelper
 
         return schema.Replace(messageDeclaration, comment + messageDeclaration);
     }
-
-    [GeneratedRegex(@"^package\s+(?<name>[\w.]+)\s*;", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex PackageDeclarationRegex();
-
-    [GeneratedRegex(@"^message\s+(?<name>\w+)\s*\{", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex MessageDeclarationRegex();
-
-    [GeneratedRegex(@"rpc\s+(?<method>\w+)\s*\(\s*(?<input>\w+)\s*\)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex RpcDeclarationRegex();
-
-    [GeneratedRegex(@"enum\s+(?<name>\w+)\s*\{(?<body>[^{}]*)\}", RegexOptions.Singleline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex EnumBlockRegex();
-
-    [GeneratedRegex(@"^\s+(?<value>[A-Za-z][A-Za-z0-9_]*)\s*=", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ValueDeclarationRegex();
 
     private static string PrefixValuesInBody(string body, List<string> valuesToPrefix, string prefix)
     {

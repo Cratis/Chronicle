@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="IsActive">Whether or not the reducer is an actively observing reducer.</param>
 /// <param name="Sink">Target sink.</param>
 /// <param name="Tags">Collection of tags the reducer belongs to.</param>
+/// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
 public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
@@ -24,4 +25,5 @@ public record ReducerDefinition(
     ReadModelIdentifier ReadModel,
     bool IsActive,
     SinkDefinition Sink,
-    IEnumerable<string> Tags);
+    IEnumerable<string>? Tags = default,
+    ObserverFilters? Filters = default);

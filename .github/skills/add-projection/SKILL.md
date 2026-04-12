@@ -65,6 +65,28 @@ public class <Name>Projection : IProjectionFor<<ReadModel>>
 
 Run `dotnet build`. Fix all errors before completing.
 
+## Appended event metadata and filtering
+
+Chronicle correlates appended metadata in two different ways:
+
+- **Projections** select input through event types, joins, and event sequence configuration
+- **Reducers and reactors** can additionally filter by appended tags, event source type, and event stream type
+
+Use append metadata like this:
+
+```csharp
+await eventLog.Append(
+    EventSourceId.New(),
+    new OrderPlaced(42m),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
+If you need metadata-based filtering for downstream processing, pair the projection with a reducer or reactor using `[FilterEventsByTag]`, `[EventSourceType]`, or `[EventStreamType]`. Projection `[Tag]` and `[Tags]` attributes label the projection definition; they do not filter appended events.
+
+For examples, see `Documentation/events/filtering/`.
+
 ---
 
 For the full model-bound projection attribute reference and fluent builder API, see [references/CHRONICLE-API.md](references/CHRONICLE-API.md).

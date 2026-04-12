@@ -52,4 +52,10 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
     public IList<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the filters to apply when observing events.
+    /// </summary>
+    [ProtoMember(8)]
+    public ObserverFilters Filters { get; set; } = new();
 }

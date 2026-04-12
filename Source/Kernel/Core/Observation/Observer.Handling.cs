@@ -44,6 +44,44 @@ public partial class Observer
             return;
         }
 
+        if (_subscription.Filters is { } filters)
+        {
+            if (filters.EventSourceType is { } eventSourceType &&
+                eventSourceType != EventSourceType.Unspecified &&
+                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.EventStreamType is { } eventStreamType &&
+                !eventStreamType.IsAll &&
+                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.Tags.Any() &&
+                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+        }
+
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
