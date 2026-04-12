@@ -17,6 +17,31 @@ public static class ReactorWaitExtensions
     const int DefaultDelay = 50;
 
     /// <summary>
+    /// Waits for a reactor handler with the specified identifier to become available.
+    /// </summary>
+    /// <param name="reactors">The reactor system to query.</param>
+    /// <param name="reactorId">The identifier of the reactor to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The available <see cref="IReactorHandler"/>.</returns>
+    public static async Task<IReactorHandler> WaitForHandlerById(this IReactors reactors, ReactorId reactorId, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            try
+            {
+                return reactors.GetHandlerById(reactorId);
+            }
+            catch (UnknownReactorId)
+            {
+                await Task.Delay(DefaultDelay, cts.Token);
+            }
+        }
+    }
+
+    /// <summary>
     /// Wait for the reactor to reach a specific running state.
     /// </summary>
     /// <param name="reactor">Reactor to wait for.</param>
@@ -41,6 +66,30 @@ public static class ReactorWaitExtensions
     }
 
     /// <summary>
+    /// Waits for the reactor to reach a specific running state and returns that state snapshot.
+    /// </summary>
+    /// <param name="reactor">Reactor to wait for.</param>
+    /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The <see cref="ReactorState"/> observed when the reactor reached the requested state.</returns>
+    public static async Task<ReactorState> WaitForStateAndGetState(this IReactorHandler reactor, ObserverRunningState runningState, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var state = await reactor.GetState();
+            if (state.RunningState == runningState)
+            {
+                return state;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    /// <summary>
     /// Wait till the reactor is active, with an optional timeout.
     /// </summary>
     /// <param name="reactor">Reactor to wait for.</param>
@@ -48,6 +97,15 @@ public static class ReactorWaitExtensions
     /// <returns>Awaitable task.</returns>
     public static Task WaitTillActive(this IReactorHandler reactor, TimeSpan? timeout = default) =>
          reactor.WaitForState(ObserverRunningState.Active, timeout);
+
+    /// <summary>
+    /// Waits until the reactor is active and returns that state snapshot.
+    /// </summary>
+    /// <param name="reactor">Reactor to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The <see cref="ReactorState"/> observed when the reactor became active.</returns>
+    public static Task<ReactorState> WaitTillActiveAndGetState(this IReactorHandler reactor, TimeSpan? timeout = default) =>
+        reactor.WaitForStateAndGetState(ObserverRunningState.Active, timeout);
 
     /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.

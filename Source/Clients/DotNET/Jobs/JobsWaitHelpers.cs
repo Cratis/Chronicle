@@ -106,6 +106,37 @@ public static class JobsWaitHelpers
         jobs.WaitTillJobMeetsPredicate(jobId, state => state.Progress.IsStopped, timeout);
 
     /// <summary>
+    /// Waits for a job to reach a terminal state or to no longer exist.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> system.</param>
+    /// <param name="jobId">Job ID.</param>
+    /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
+    /// <returns>
+    /// The final <see cref="Job"/> state when it is retained; otherwise <see langword="null"/>
+    /// if the job has been removed after completion or deletion.
+    /// </returns>
+    public static async Task<Job?> WaitTillJobCompletesOrIsDeleted(this IJobs jobs, JobId jobId, TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var currentJob = await jobs.GetJob(jobId);
+            if (currentJob is null)
+            {
+                return null;
+            }
+
+            if (currentJob.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
+            {
+                return currentJob;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    /// <summary>
     /// Waits for a job to be deleted.
     /// </summary>
     /// <param name="jobs"><see cref="IJobs"/> system.</param>
