@@ -39,26 +39,27 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             return;
         }
 
-        // After database cleanup the ConnectedClients grain has lost its state.
-        // Re-register the client connection so observer grains can find it.
+        // 1. Signal disconnect — tears down all handler streams (cancels CancellationTokens),
+        //    sets lifecycle.IsConnected = false, and assigns a fresh ConnectionId.
         var connection = Services.GetRequiredService<IChronicleConnection>();
+        await connection.Lifecycle.Disconnected();
+
+        // 2. Deactivate all grains so stale in-memory state (e.g. LastHandledEventSequenceNumber)
+        //    is discarded. Now that streams are torn down, grains have no active subscriptions
+        //    and can be deactivated.
+        await DeactivateAllGrains();
+
+        // 3. Re-discover artifacts from the current test fixture. Discover() creates new
+        //    handler objects with fresh CancellationTokens (but does not register them yet).
+        var eventStore = Services.GetRequiredService<IEventStore>();
+        await eventStore.DiscoverAll();
+
+        // 4. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
+        //    then fires lifecycle.Connected() which triggers RegisterAll() via OnConnected.
         if (connection is ChronicleConnection chronicleConnection)
         {
             await chronicleConnection.Reconnect();
         }
-
-        // Re-discover and re-register artifacts with the kernel so it knows about
-        // this test's event types, observers, and projections.
-        var eventStore = Services.GetRequiredService<IEventStore>();
-        await eventStore.DiscoverAll();
-        await eventStore.RegisterAll();
-
-        // Observer grains survive across tests (ForceActivationCollection cannot
-        // deactivate them because they hold active subscriptions). Their in-memory
-        // LastHandledEventSequenceNumber is stale from the previous test. Replay
-        // forces each observer to re-read its state from the (now clean) database
-        // and re-process events from the beginning.
-        await ReplayAllObservers(eventStore);
     }
 
     /// <inheritdoc/>
@@ -95,28 +96,48 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     }
 
     /// <summary>
-    /// Replays all registered projection, reactor, and reducer observers so their
-    /// in-memory state is reset after a database cleanup.
+    /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.
+    /// Waits until activation count stabilizes to ensure grains have fully deactivated before
+    /// the next test starts registering artifacts against fresh grain activations.
     /// </summary>
-    static async Task ReplayAllObservers(IEventStore eventStore)
+    async Task DeactivateAllGrains()
     {
-        var replayTasks = new List<Task>();
-
-        foreach (var handler in eventStore.Projections.GetAllHandlers())
+        try
         {
-            replayTasks.Add(eventStore.Projections.Replay(handler.Id));
-        }
+            var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
+            await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
-        foreach (var handler in eventStore.Reactors.GetAllHandlers())
+            // ForceActivationCollection only schedules deactivation; the actual deactivation
+            // happens asynchronously. Poll until the activation count stabilizes so that
+            // grains are not still mid-deactivation when the next test registers artifacts.
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var stableReadCount = 0;
+            var previousCount = -1;
+
+            while (!cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                var currentCount = await managementGrain.GetTotalActivationCount();
+
+                if (currentCount == previousCount)
+                {
+                    if (++stableReadCount >= 3)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    stableReadCount = 0;
+                    previousCount = currentCount;
+                }
+
+                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+        }
+        catch
         {
-            replayTasks.Add(eventStore.Reactors.Replay(handler.Id));
+            // If the management grain is unavailable (e.g. silo is shutting down),
+            // we can safely ignore the error — the grains will be deactivated anyway.
         }
-
-        foreach (var handler in eventStore.Reducers.GetAllHandlers())
-        {
-            replayTasks.Add(eventStore.Reducers.Replay(handler.Id));
-        }
-
-        await Task.WhenAll(replayTasks);
     }
 }
