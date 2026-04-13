@@ -5,6 +5,7 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Orleans;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -134,7 +135,11 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
                 await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            // Timeout/cancellation while waiting for stabilization during teardown is safe to ignore.
+        }
+        catch (OrleansException)
         {
             // If the management grain is unavailable (e.g. silo is shutting down),
             // we can safely ignore the error — the grains will be deactivated anyway.
