@@ -25,9 +25,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, IAsyncLifetime, IChronicleSetupFixture
     where TChronicleFixture : IChronicleFixture
 {
-#pragma warning disable CA2213, SA1600, CA1051
-    protected IAsyncDisposable? _webApplicationFactory;
-#pragma warning restore CA2213, SA1600, CA1051
+#pragma warning disable CA2213, SA1600, CA1051, MA0069
+    protected static IAsyncDisposable? _webApplicationFactory;
+#pragma warning restore CA2213, SA1600, CA1051, MA0069
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
     static PropertyInfo _servicesProperty = null!;
     static MethodInfo _createClientMethod = null!;
@@ -238,9 +238,10 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     }
 
     /// <inheritdoc/>
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        return OnInitializeAsync();
+        await OnBeforeInitializeAsync();
+        await OnInitializeAsync();
     }
 
     /// <inheritdoc/>
@@ -326,10 +327,17 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     }
 
     /// <summary>
-    /// Overridable method to perform actions when the fixture is disposed async.
+    /// Overridable method to perform actions when the fixture is initialized.
     /// </summary>
     /// <returns>Awaitable Task.</returns>
     protected virtual Task OnInitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Overridable method called before <see cref="OnInitializeAsync"/>.
+    /// Used to update the artifacts provider and re-discover artifacts when the silo is reused.
+    /// </summary>
+    /// <returns>Awaitable Task.</returns>
+    protected virtual Task OnBeforeInitializeAsync() => Task.CompletedTask;
 
     /// <summary>
     /// Overridable method to perform actions when the fixture is disposed async.
@@ -348,7 +356,7 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
 
     void InitializeFixture()
     {
-        _webApplicationFactory = CreateWebApplicationFactory();
+        _webApplicationFactory ??= CreateWebApplicationFactory();
         if (!_isInitialized)
         {
             var webApplicationFactoryType = _webApplicationFactory.GetType();

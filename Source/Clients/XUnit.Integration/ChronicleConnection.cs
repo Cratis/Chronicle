@@ -63,6 +63,21 @@ internal class ChronicleConnection(
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
 
+    /// <summary>
+    /// Re-registers the client connection with the <c>ConnectedClients</c> grain.
+    /// Call this after grain deactivation to restore the connection registration
+    /// without cycling the <see cref="IConnectionLifecycle"/> state.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    internal async Task Reconnect()
+    {
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        await connectedClients.OnClientConnected(
+            (KernelConnectionId)lifecycle.ConnectionId.Value,
+            string.Empty,
+            Debugger.IsAttached);
+    }
+
     async Task ConnectIfNotConnected()
     {
         if (!lifecycle.IsConnected)

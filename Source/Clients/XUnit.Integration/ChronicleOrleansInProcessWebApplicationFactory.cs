@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -90,6 +91,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
 
+        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
+
         builder.UseOrleans(silo =>
             {
                 silo.UseLocalhostClustering(siloPort, gatewayPort);
@@ -111,7 +114,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
+
+                    // Use DelegatingClientArtifactsProvider so the shared silo can serve
+                    // artifacts from whichever test fixture is currently active.
+                    // RemoveAll ensures it wins over convention-based discovery.
+                    services.RemoveAll<IClientArtifactsProvider>();
+                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
