@@ -89,6 +89,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
     /// <summary>
     /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.
+    /// Waits until activation count stabilises to ensure grains have fully deactivated before
+    /// the next test starts registering artifacts against fresh grain activations.
     /// </summary>
     async Task DeactivateAllGrains()
     {
@@ -96,6 +98,31 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
+
+            // ForceActivationCollection only schedules deactivation; the actual deactivation
+            // happens asynchronously. Poll until the activation count stabilises so that
+            // grains are not still mid-deactivation when the next test registers artifacts.
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var stableReadCount = 0;
+            var previousCount = -1;
+            while (!cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                var currentCount = await managementGrain.GetTotalActivationCount();
+                if (currentCount == previousCount)
+                {
+                    if (++stableReadCount >= 3)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    stableReadCount = 0;
+                    previousCount = currentCount;
+                }
+
+                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
         }
         catch
         {
