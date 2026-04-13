@@ -7,10 +7,6 @@ using Cratis.Chronicle.Events;
 
 [EventType]
 public record OrderPlaced(string CustomerId, decimal Total);
-
-// Optional: stable custom ID (survives class renames)
-[EventType("4f8e91a1-0e3e-4c12-933c-b7c8c26a0de1")]
-public record OrderPlaced(string CustomerId, decimal Total);
 ```
 
 Every event must be decorated with `[EventType]` — this makes it discoverable and registers its schema with Chronicle.
@@ -51,6 +47,17 @@ public class OrdersController(IEventLog eventLog) : ControllerBase
 
 The first argument is the **event source ID** — the identity the event belongs to (analogous to an aggregate root ID). Projections and reducers are keyed by this ID by default.
 
+You can also append metadata that downstream reducers and reactors can filter on:
+
+```csharp
+await eventLog.Append(
+    command.OrderId,
+    new OrderPlaced(command.CustomerId, command.Total),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
 ---
 
 ## Constraints (uniqueness)
@@ -72,11 +79,13 @@ Violation surfaces in `AppendResult.HasConstraintViolations`.
 
 ```csharp
 [EventType]
-[EventTag("high-value")]
+[Tag("high-value")]
 public record LargeOrderPlaced(decimal Total);
 
 // Or apply at append time:
-await eventLog.Append(orderId, new OrderPlaced(...), ["high-value"]);
+await eventLog.Append(orderId, new LargeOrderPlaced(2500m), tags: ["priority"]);
 ```
 
-Tags allow filtering reactors, projections and reducers to only handle tagged events.
+Tags allow reducers and reactors to filter which appended events they handle when you use `[FilterEventsByTag]`. `[Tag]` and `[Tags]` on projections, reducers, and reactors label the observer or event type; they do not filter the observer by themselves.
+
+See `Documentation/events/filtering/` for tag, event source type, and event stream type filtering examples.

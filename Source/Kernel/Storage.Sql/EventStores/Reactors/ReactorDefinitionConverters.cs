@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 
@@ -24,6 +25,8 @@ public static class ReactorDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
+            Tags = definition.Tags?.ToArray() ?? [],
+            Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
 
     /// <summary>
@@ -37,5 +40,7 @@ public static class ReactorDefinitionConverters
             schema.Owner,
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
-            schema.IsReplayable);
+            schema.IsReplayable,
+            schema.Tags,
+            schema.Filters.ToKernel());
 }

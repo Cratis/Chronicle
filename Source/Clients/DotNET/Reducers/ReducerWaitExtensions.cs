@@ -41,6 +41,30 @@ public static class ReducerWaitExtensions
     }
 
     /// <summary>
+    /// Waits for the reducer to reach a specific running state and returns that state snapshot.
+    /// </summary>
+    /// <param name="reducer">Reducer to wait for.</param>
+    /// <param name="runningState">The expected <see cref="ObserverRunningState"/> to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The <see cref="ReducerState"/> observed when the reducer reached the requested state.</returns>
+    public static async Task<ReducerState> WaitForStateAndGetState(this IReducerHandler reducer, ObserverRunningState runningState, TimeSpan? timeout = default)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var state = await reducer.GetState();
+            if (state.RunningState == runningState)
+            {
+                return state;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    /// <summary>
     /// Wait till the reducer is active, with an optional timeout.
     /// </summary>
     /// <param name="reducer">Reducer to wait for.</param>
@@ -48,6 +72,15 @@ public static class ReducerWaitExtensions
     /// <returns>Awaitable task.</returns>
     public static Task WaitTillActive(this IReducerHandler reducer, TimeSpan? timeout = default) =>
         reducer.WaitForState(ObserverRunningState.Active, timeout);
+
+    /// <summary>
+    /// Waits until the reducer is active and returns that state snapshot.
+    /// </summary>
+    /// <param name="reducer">Reducer to wait for.</param>
+    /// <param name="timeout">Optional timeout. If none is provided, it will default to 5 seconds.</param>
+    /// <returns>The <see cref="ReducerState"/> observed when the reducer became active.</returns>
+    public static Task<ReducerState> WaitTillActiveAndGetState(this IReducerHandler reducer, TimeSpan? timeout = default) =>
+        reducer.WaitForStateAndGetState(ObserverRunningState.Active, timeout);
 
     /// <summary>
     /// Wait till the reactor has been subscribed, with an optional timeout.

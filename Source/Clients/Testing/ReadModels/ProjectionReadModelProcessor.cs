@@ -156,7 +156,7 @@ internal static class ProjectionReadModelProcessor
 
         var state = initialState is not null
             ? initialState.AsExpandoObject(false)
-            : new ExpandoObject();
+            : CreateInitialStateFromSchema(schema);
 
         // Process events, retrying any that return DeferredKey once all other events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
@@ -193,6 +193,18 @@ internal static class ProjectionReadModelProcessor
 
         var json = JsonSerializer.Serialize(state);
         return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+    }
+
+    static ExpandoObject CreateInitialStateFromSchema(JsonSchema schema)
+    {
+        var initialState = new ExpandoObject();
+        var dict = (IDictionary<string, object?>)initialState;
+        foreach (var property in schema.Properties.Values.Where(p => p.IsArray))
+        {
+            dict[property.Name] = new List<object>();
+        }
+
+        return initialState;
     }
 
     static KernelProjectionEngine::ProjectionFactory CreateProjectionFactory(Storage.IStorage storage) =>

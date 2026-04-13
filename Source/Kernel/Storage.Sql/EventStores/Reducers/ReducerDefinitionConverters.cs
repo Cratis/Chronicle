@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 
@@ -25,7 +26,9 @@ public static class ReducerDefinitionConverters
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             ReadModel = definition.ReadModel,
             SinkType = definition.Sink.Type,
-            SinkConfigurationId = definition.Sink.Configuration
+            SinkConfigurationId = definition.Sink.Configuration,
+            Tags = definition.Tags?.ToArray() ?? [],
+            Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
 
     /// <summary>
@@ -41,5 +44,6 @@ public static class ReducerDefinitionConverters
             schema.ReadModel,
             true,
             new SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
-            []);
+            schema.Tags,
+            schema.Filters.ToKernel());
 }

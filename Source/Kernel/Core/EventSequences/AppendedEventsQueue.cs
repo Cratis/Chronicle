@@ -77,9 +77,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <inheritdoc/>
-    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes)
+    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
-        _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray()));
+        _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
         return Task.CompletedTask;
     }
 
@@ -164,6 +164,37 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         });
     }
 
+    static bool MatchesFilters(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
+    {
+        var filters = subscription.Filters;
+        if (filters is null)
+        {
+            return true;
+        }
+
+        if (filters.EventSourceType is { } eventSourceType &&
+            !eventSourceType.IsDefaultOrUnspecified &&
+            @event.Context.EventSourceType != eventSourceType)
+        {
+            return false;
+        }
+
+        if (filters.EventStreamType is { } eventStreamType &&
+            !eventStreamType.IsAll &&
+            @event.Context.EventStreamType != eventStreamType)
+        {
+            return false;
+        }
+
+        if (filters.Tags.Any() &&
+            !filters.Tags.Any(tag => @event.Context.Tags.Any(t => t.Value == tag)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     void StartQueueHandler()
     {
         if (_isDisposed)
@@ -233,6 +264,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 continue;
             }
+
+            if (!MatchesFilters(subscription, @event))
+            {
+                continue;
+            }
+
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
             var eventToHandle = new List<AppendedEvent> { @event };
             await observer.Handle(@event.Context.EventSourceId, eventToHandle);
@@ -263,7 +300,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             foreach (var subscription in _subscriptions)
             {
                 var actualEvents = partitionEvents
-                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
                     .ToList();
                 if (actualEvents.Count == 0)
                 {

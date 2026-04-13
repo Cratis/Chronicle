@@ -2,6 +2,8 @@
 
 Tags provide a way to organize and tag your projections for better discoverability and management. By applying the `[Tag]` attribute to your projection classes, you can assign one or more tags that describe the purpose or domain of the projection.
 
+`[Tag]` and `[Tags]` on projections label the projection definition. They do not filter which appended events the projection observes. Use projection event declarations and event sequence selection to control projection input, and use reducer or reactor filters when you need metadata-based filtering for appended events. See [Filter reducers and reactors by appended event metadata](../events/filtering/index.md).
+
 ## Adding Tags
 
 You can tag projections in multiple ways:

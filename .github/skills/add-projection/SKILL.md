@@ -1,6 +1,6 @@
 ---
 name: add-projection
-description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Enforces the AutoMap-first rule and Chronicle-specific join semantics.
+description: Use this skill when asked to add a Chronicle projection to a Cratis-based project. Favor model-bound projections by default, and only fall back to declarative/fluent `IProjectionFor<T>` projections when model-bound attributes cannot express the behavior cleanly. Enforces the AutoMap-first rule and Chronicle-specific join semantics.
 ---
 
 Add a Chronicle **projection** that populates a read model from events.
@@ -41,9 +41,9 @@ public record <ReadModelName>(
 - If property names between event and read model match, `[FromEvent<T>]` alone is sufficient
 - Child types also support all attributes recursively
 
-## Projection — Fluent (use for complex cases)
+## Projection — Fluent / declarative (fallback for complex cases)
 
-Use `IProjectionFor<T>` when projection logic is too complex for attributes.
+Use `IProjectionFor<T>` only when the projection logic is too complex for model-bound attributes or would become less clear if forced into attributes.
 
 ```csharp
 public class <Name>Projection : IProjectionFor<<ReadModel>>
@@ -64,6 +64,28 @@ public class <Name>Projection : IProjectionFor<<ReadModel>>
 ## After creating
 
 Run `dotnet build`. Fix all errors before completing.
+
+## Appended event metadata and filtering
+
+Chronicle correlates appended metadata in two different ways:
+
+- **Projections** select input through event types, joins, and event sequence configuration
+- **Reducers and reactors** can additionally filter by appended tags, event source type, and event stream type
+
+Use append metadata like this:
+
+```csharp
+await eventLog.Append(
+    EventSourceId.New(),
+    new OrderPlaced(42m),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
+If you need metadata-based filtering for downstream processing, pair the projection with a reducer or reactor using `[FilterEventsByTag]`, `[EventSourceType]`, or `[EventStreamType]`. Projection `[Tag]` and `[Tags]` attributes label the projection definition; they do not filter appended events.
+
+For examples, see `Documentation/events/filtering/`.
 
 ---
 

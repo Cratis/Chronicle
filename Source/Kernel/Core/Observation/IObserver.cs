@@ -72,13 +72,15 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
+    /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>

@@ -68,7 +68,42 @@ public class StockKeeping(IStockKeeper stockKeeper, ICommandPipeline commandPipe
 }
 ```
 
-## Step 5 — Validate
+## Step 5 — Filter by appended event metadata (optional)
+
+If the reactor should only observe a subset of appended events, decorate it with filter attributes that match the metadata used when appending:
+
+```csharp
+using Cratis.Chronicle;
+using Cratis.Chronicle.Events;
+
+[FilterEventsByTag("priority")]
+[EventSourceType("order")]
+[EventStreamType("fulfillment")]
+public class PriorityFulfillmentReactor : IReactor
+{
+    public Task OrderPlaced(OrderPlaced @event, EventContext context) => Task.CompletedTask;
+}
+```
+
+These attributes correlate directly to the append call:
+
+```csharp
+await eventLog.Append(
+    EventSourceId.New(),
+    new OrderPlaced(42m),
+    eventStreamType: "fulfillment",
+    eventSourceType: "order",
+    tags: ["priority"]);
+```
+
+- `[FilterEventsByTag]` filters by event tags
+- `[EventSourceType]` filters by the appended event source type
+- `[EventStreamType]` filters by the appended event stream type
+- `[Tag]` and `[Tags]` still label the reactor itself; they do not filter events
+
+For fuller examples, see `Documentation/events/filtering/`.
+
+## Step 6 — Validate
 
 Run `dotnet build`. Fix all errors before completing.
 

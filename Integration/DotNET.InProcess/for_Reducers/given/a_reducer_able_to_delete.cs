@@ -21,8 +21,10 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleInProcessFixture chroni
 
     async Task Establish()
     {
+        var startupTimeout = TimeSpanFactory.FromSeconds(30);
         _reducer = EventStore.Reducers.GetHandlerFor<TReducer>();
-        await _reducer.WaitTillActive();
+        await _reducer.WaitTillSubscribed(startupTimeout);
+        await _reducer.WaitTillActive(startupTimeout);
     }
 
     async Task Because()
