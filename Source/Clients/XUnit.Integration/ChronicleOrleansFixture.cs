@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,36 +21,12 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
-        await DisconnectClient();
-        await DeactivateAllGrains();
+        await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
 
         await base.DisposeAsync();
-    }
 
-    /// <inheritdoc/>
-    protected override async Task OnBeforeInitializeAsync()
-    {
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        DelegatingServiceProvider.SetCurrent(services.BuildServiceProvider());
-
-        if (_webApplicationFactory is null)
-        {
-            return;
-        }
-
-        // The silo is reused across tests. Point the artifacts provider at the current
-        // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
-        // We use the static instance because the host and silo have separate service
-        // providers — resolving IClientArtifactsProvider from the host provider would
-        // return the wrong instance.
-        DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
-
-        // Re-discover artifacts from the updated provider so the client-side registries
-        // know about this test's types before any Establish/Because code runs.
-        var eventStore = Services.GetRequiredService<IEventStore>();
-        await eventStore.DiscoverAll();
-        await eventStore.RegisterAll();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     /// <inheritdoc/>
@@ -85,76 +60,5 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
-    }
-
-    /// <summary>
-    /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.
-    /// Waits until activation count stabilises to ensure grains have fully deactivated before
-    /// the next test starts registering artifacts against fresh grain activations.
-    /// </summary>
-    async Task DeactivateAllGrains()
-    {
-        try
-        {
-            var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
-            await managementGrain.ForceActivationCollection(TimeSpan.Zero);
-
-            // ForceActivationCollection only schedules deactivation; the actual deactivation
-            // happens asynchronously. Poll until the activation count stabilises so that
-            // grains are not still mid-deactivation when the next test registers artifacts.
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            var stableReadCount = 0;
-            var previousCount = -1;
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                var currentCount = await managementGrain.GetTotalActivationCount();
-                if (currentCount == previousCount)
-                {
-                    if (++stableReadCount >= 3)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    stableReadCount = 0;
-                    previousCount = currentCount;
-                }
-
-                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-        }
-        catch
-        {
-            // If grain deactivation fails, the silo may be in a bad state — dispose the factory
-            // so that the next test recreates it from scratch.
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            _webApplicationFactory = null;
-        }
-    }
-
-    /// <summary>
-    /// Disconnects the client so the next test triggers a fresh reconnection that
-    /// re-registers all artifacts with the newly activated grains.
-    /// </summary>
-    async Task DisconnectClient()
-    {
-        try
-        {
-            var connection = Services.GetRequiredService<IChronicleConnection>();
-            if (connection is ChronicleConnection inProcessConnection)
-            {
-                await inProcessConnection.Disconnect();
-                return;
-            }
-
-            await connection.Lifecycle.Disconnected();
-        }
-        catch (Exception)
-        {
-            // If disconnection fails, force-recreate the silo on the next test.
-            await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-            _webApplicationFactory = null;
-        }
     }
 }

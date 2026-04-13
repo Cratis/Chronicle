@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -91,8 +90,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
 
-        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
-
         builder.UseOrleans(silo =>
             {
                 silo.UseLocalhostClustering(siloPort, gatewayPort);
@@ -114,6 +111,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
+                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
@@ -121,17 +119,10 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     services.AddSingleton(Globals.JsonSerializerOptions);
                     services.AddHttpContextAccessor();
 
-                    // Ensure DelegatingClientArtifactsProvider wins over convention-based
-                    // discovery from AddBindingsByConvention above, which registers test
-                    // fixture types as IClientArtifactsProvider.
-                    services.RemoveAll<IClientArtifactsProvider>();
-                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
-
                     services.AddSingleton<IChronicleClient>(sp =>
                     {
                         var options = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
                         var artifactsProvider = sp.GetRequiredService<IClientArtifactsProvider>();
-                        var serviceProvider = DelegatingServiceProvider.GetOrCreate(sp);
                         var identityProvider = new IdentityProvider(
                             sp.GetRequiredService<IHttpContextAccessor>(),
                             sp.GetRequiredService<ILogger<IdentityProvider>>());
@@ -144,7 +135,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
-                        return new ChronicleClient(connection, options, artifactsProvider, serviceProvider, identityProvider, loggerFactory: loggerFactory);
+                        return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, loggerFactory: loggerFactory);
                     });
 
                     services.AddSingleton(sp =>
@@ -169,7 +160,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             b.Configure(app => app.UseCratisChronicle());
             configureWebHost(b);
         });
-
         return builder;
     }
 

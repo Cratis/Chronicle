@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -28,10 +27,8 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
                 services.Configure<ChronicleOptions>(options =>
                     options.ConnectionString = "chronicle://localhost:35001?disableTls=true");
 
-                // Override the artifacts provider with the shared delegating provider so
-                // the reused host can swap artifacts between tests.
-                services.RemoveAll<IClientArtifactsProvider>();
-                services.AddSingleton<IClientArtifactsProvider>(DelegatingClientArtifactsProvider.GetOrCreate(fixture));
+                // Override the artifacts provider with the integration test fixture.
+                services.AddSingleton<IClientArtifactsProvider>(fixture);
             });
     }
 }
