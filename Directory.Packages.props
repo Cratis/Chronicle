@@ -48,7 +48,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <!-- Orleans -->
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="10.1.0" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AzureStorage" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="10.0.1" />
