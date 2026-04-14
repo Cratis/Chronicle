@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Hosting" />
+      <PackageReference Include="Microsoft.Extensions.Logging" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
     </ItemGroup>
 </Project>
