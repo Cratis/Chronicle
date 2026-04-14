@@ -5,7 +5,6 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
