@@ -98,7 +98,11 @@ public static class ChronicleServerSiloBuilderExtensions
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
             return new Cratis.Chronicle.Contracts.Services(
-                new Cratis.Chronicle.Services.EventStores(grainFactory, storage, sp.GetRequiredService<IEventTypes>()),
+                new Cratis.Chronicle.Services.EventStores(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<IEventTypes>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>()),
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),

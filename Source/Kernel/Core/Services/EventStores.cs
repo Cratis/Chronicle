@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventTypes;
+using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Services;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for working with the storage.</param>
 /// <param name="eventTypes">The <see cref="IEventTypes"/> for managing event types.</param>
-internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes) : IEventStores
+/// <param name="reactors">The <see cref="IReactors"/> for discovering and registering kernel reactors.</param>
+internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, IEventTypes eventTypes, IReactors reactors) : IEventStores
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetEventStores()
@@ -46,6 +48,11 @@ internal sealed class EventStores(IGrainFactory grainFactory, IStorage storage, 
         // Ensure was called — causing DiscoverAndRegister to be skipped and leaving server
         // types such as EventRedactionRequested unregistered.
         await eventTypes.DiscoverAndRegister(eventStoreName);
+
+        // Always register kernel reactors in the default namespace.
+        // A store can exist without having emitted EventStoreAdded (for example if it was
+        // implicitly created), in which case ReactorsReactor would not have run.
+        await reactors.DiscoverAndRegister(eventStoreName, Concepts.EventStoreNamespaceName.Default);
 
         if (!exists)
         {
