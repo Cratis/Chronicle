@@ -18,7 +18,7 @@
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.7.3" />
     <PackageVersion Include="Cratis.Arc" Version="20.7.4" />
     <PackageVersion Include="Cratis.Arc.Core" Version="20.7.4" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.5.1" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.8.1" />
     <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.7.4" />
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.5.1" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="20.7.4" />
