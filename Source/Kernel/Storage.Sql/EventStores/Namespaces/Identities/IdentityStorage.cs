@@ -38,15 +38,19 @@ public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName 
     public async Task<IImmutableList<IdentityId>> GetFor(Concepts.Identities.Identity identity)
     {
         var chain = new List<IdentityId>();
+        var seen = new HashSet<IdentityId>();
         var current = identity;
 
-        do
+        while (current is not null)
         {
             var identityId = await GetSingleFor(current);
-            chain.Add(identityId);
+            if (seen.Add(identityId))
+            {
+                chain.Add(identityId);
+            }
+
             current = current.OnBehalfOf;
         }
-        while (current is not null);
 
         return chain.ToImmutableList();
     }
