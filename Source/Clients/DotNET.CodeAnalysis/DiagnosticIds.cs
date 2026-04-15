@@ -62,4 +62,9 @@ public static class DiagnosticIds
     /// Declarative projection event types must all be from the same event store.
     /// </summary>
     public const string DeclarativeProjectionEventTypesMustBeFromSameEventStore = "CHR0011";
+
+    /// <summary>
+    /// Event type has nullable property.
+    /// </summary>
+    public const string EventTypeHasNullableProperty = "CHR0012";
 }

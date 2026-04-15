@@ -490,7 +490,7 @@ public class JsonSchema
                     .Select(req => req?.GetValue<string>())
                     .Where(propName => propName is not null))
                 {
-                    if (!obj.ContainsKey(propName!))
+                    if (!obj.ContainsKey(propName!) && !PropertyAllowsNull(propName!))
                     {
                         errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
                     }
@@ -503,6 +503,21 @@ public class JsonSchema
         }
 
         return errors;
+
+        bool PropertyAllowsNull(string propName)
+        {
+            if (!Properties.TryGetValue(propName, out var propSchema))
+            {
+                return false;
+            }
+
+            if (propSchema.Type.HasFlag(JsonObjectType.Null))
+            {
+                return true;
+            }
+
+            return propSchema.AnyOf.Any(s => s.Type == JsonObjectType.Null);
+        }
     }
 
     static JsonObjectType ParseTypeFromNode(JsonObject node)
