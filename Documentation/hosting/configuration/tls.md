@@ -28,9 +28,12 @@ Cratis__Chronicle__Tls__CertificatePassword=your-password
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| enabled | boolean | true | Whether TLS is enabled |
+| enabled | boolean | true | Whether TLS is enabled. In production, this must remain `true` for the default (gRPC) TLS configuration. |
 | certificatePath | string | null | Path to the TLS certificate file (PFX format) |
 | certificatePassword | string | null | Password for the certificate file |
+
+> [!NOTE]
+> In production, the default Kernel TLS configuration for gRPC cannot be disabled. Setting `tls.enabled=false` for the default TLS configuration is not supported and causes startup validation to fail.
 
 ## gRPC TLS enforcement
 
@@ -45,7 +48,7 @@ See [Workbench TLS](workbench-tls.md) for details.
 ## Development vs production
 
 - **Development**: The server can start without TLS in Debug builds.
-- **Production**: The server will fail to start if TLS is not configured for gRPC. Workbench TLS can be explicitly disabled.
+- **Production**: The server will fail to start if TLS is not configured for gRPC, and the default `tls.enabled` cannot be turned off. Workbench TLS can be explicitly disabled.
 
 ## Certificate requirements
 
