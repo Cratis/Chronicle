@@ -14,6 +14,7 @@ export { EventType } from './generated/events';
 export { ConstraintType, constraintTypeFromJSON, constraintTypeToJSON } from './generated/events_constraints';
 export { EventTypeWithKeyExpression, ObservationState, observationStateFromJSON, observationStateToJSON } from './generated/observation_reactors';
 export { ObserverOwner, observerOwnerFromJSON, observerOwnerToJSON } from './generated/observation';
+export { ObserverFilters } from './generated/observation_reactors';
 export { Identity } from './generated/identities';
 export { IndexDefinition, ReadModelDefinition, ReadModelObserverType, readModelObserverTypeFromJSON, readModelObserverTypeToJSON, ReadModelOwner, readModelOwnerFromJSON, readModelOwnerToJSON, ReadModelSource, readModelSourceFromJSON, readModelSourceToJSON, ReadModelType, SinkDefinition } from './generated/readmodels';
 
@@ -43,4 +44,3 @@ export * from './ChronicleConnectionString';
 export * from './ChronicleServices';
 export * from './TokenProvider';
 export * from './DateTimeOffset';
-
