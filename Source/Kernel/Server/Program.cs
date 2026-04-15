@@ -53,9 +53,10 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
-var serverCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+var grpcCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+var workbenchCertificate = CertificateLoader.LoadWorkbenchCertificate(chronicleOptions);
 
-if (serverCertificate is not null)
+if (grpcCertificate is not null)
 {
     logger.TlsCertificateLoaded();
 }
@@ -72,35 +73,49 @@ logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
 
 builder.WebHost.UseKestrel(options =>
 {
-    // Always listen on ManagementPort for API
+    // Listen on ManagementPort for Workbench and API (HTTP/1.1)
+    // Uses Workbench-specific TLS config, falling back to top-level TLS
     options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http1;
 
-        if (serverCertificate is not null)
+        if (workbenchCertificate is not null)
         {
-            listenOptions.UseHttps(serverCertificate);
+            listenOptions.UseHttps(workbenchCertificate);
         }
 #if !DEVELOPMENT
         else
         {
-            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+            // In production, Workbench TLS can be explicitly disabled for deployments
+            // behind an ingress/reverse proxy that terminates TLS upstream.
+            var workbenchTls = chronicleOptions.WorkbenchTls;
+            if (workbenchTls.Enabled)
+            {
+                throw new InvalidOperationException(
+                    "No TLS certificate is configured for the Workbench. " +
+                    "Either provide a certificate path in configuration, or set Workbench:Tls:Enabled to false " +
+                    "if TLS is terminated upstream by an ingress/reverse proxy.");
+            }
         }
 #endif
     });
 
+    // Listen on Port for gRPC (HTTP/2)
+    // Always uses top-level TLS config — gRPC TLS cannot be disabled in Production
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
 
-        if (serverCertificate is not null)
+        if (grpcCertificate is not null)
         {
-            listenOptions.UseHttps(serverCertificate);
+            listenOptions.UseHttps(grpcCertificate);
         }
 #if !DEVELOPMENT
         else
         {
-            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+            throw new InvalidOperationException(
+                "No TLS certificate is configured for gRPC. gRPC always requires TLS in production. " +
+                "Please provide a certificate path in configuration.");
         }
 #endif
     });

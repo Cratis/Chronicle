@@ -11,15 +11,31 @@ namespace Cratis.Chronicle.Server;
 public static class CertificateLoader
 {
     /// <summary>
-    /// Loads a certificate based on the priority: ChronicleOptions → Embedded Certificate → Dev Certificate.
+    /// Loads the gRPC TLS certificate from the top-level TLS configuration.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
     /// <returns>The loaded certificate or null if no certificate is available.</returns>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
-        if (!string.IsNullOrEmpty(options.Tls.CertificatePath) && File.Exists(options.Tls.CertificatePath))
+        return LoadFromTls(options.Tls);
+    }
+
+    /// <summary>
+    /// Loads the Workbench TLS certificate using the Workbench TLS fallback chain.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    /// <returns>The loaded certificate or null if no certificate is available.</returns>
+    public static X509Certificate2? LoadWorkbenchCertificate(Configuration.ChronicleOptions options)
+    {
+        var workbenchTls = options.WorkbenchTls;
+        return LoadFromTls(workbenchTls);
+    }
+
+    static X509Certificate2? LoadFromTls(Configuration.Tls tls)
+    {
+        if (!string.IsNullOrEmpty(tls.CertificatePath) && File.Exists(tls.CertificatePath))
         {
-            return LoadCertificateFromPath(options.Tls.CertificatePath, options.Tls.CertificatePassword);
+            return LoadCertificateFromPath(tls.CertificatePath, tls.CertificatePassword);
         }
 
         return null;

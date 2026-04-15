@@ -87,12 +87,13 @@ public static class OpenIddictServiceCollectionExtensions
                 }
 #endif
 
-                // Determine if we have a secure certificate configured
-                var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+                // Determine if the Workbench has TLS enabled (token endpoint runs on the management port)
+                var workbenchTls = chronicleOptions.WorkbenchTls;
+                var workbenchHasSecureCertificate = workbenchTls.Enabled && !string.IsNullOrEmpty(workbenchTls.CertificatePath);
 
-                // In development without a certificate, allow HTTP connections
+                // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
 #if DEVELOPMENT
-                if (!hasSecureCertificate)
+                if (!workbenchHasSecureCertificate)
                 {
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough()
@@ -104,8 +105,17 @@ public static class OpenIddictServiceCollectionExtensions
                            .EnableTokenEndpointPassthrough();
                 }
 #else
-                options.UseAspNetCore()
-                       .EnableTokenEndpointPassthrough();
+                if (!workbenchHasSecureCertificate)
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough()
+                           .DisableTransportSecurityRequirement();
+                }
+                else
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough();
+                }
 #endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
@@ -114,12 +124,9 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // In development without a certificate, use HTTP; otherwise use HTTPS
-#if DEVELOPMENT
-                    var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-#else
-                    var internalScheme = Uri.UriSchemeHttps;
-#endif
+                    // Use Workbench TLS config to determine the issuer scheme
+                    // since the token endpoint is served on the management port
+                    var internalScheme = workbenchHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
                     options.SetIssuer(internalAuthority);
                 }
@@ -142,13 +149,10 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // In development without a certificate, use HTTP; otherwise use HTTPS
-                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT
-                    scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-#else
-                    scheme = Uri.UriSchemeHttps;
-#endif
+                    // Use Workbench TLS config since tokens are served on the management port
+                    var validationWorkbenchTls = chronicleOptions.WorkbenchTls;
+                    var validationHasSecureCertificate = validationWorkbenchTls.Enabled && !string.IsNullOrEmpty(validationWorkbenchTls.CertificatePath);
+                    scheme = validationHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     host = "localhost";
                 }
 
