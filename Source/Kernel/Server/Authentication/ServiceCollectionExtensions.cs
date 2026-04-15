@@ -118,15 +118,7 @@ public static class ServiceCollectionExtensions
         {
             options.Cookie.Name = "Chronicle.Auth";
             options.Cookie.HttpOnly = true;
-
-            // Use Workbench-specific TLS config for cookie security policy
-            var workbenchTls = chronicleOptions.WorkbenchTls;
-            var workbenchHasSecureCertificate = workbenchTls.Enabled && !string.IsNullOrEmpty(workbenchTls.CertificatePath);
-#if DEVELOPMENT
-            options.Cookie.SecurePolicy = workbenchHasSecureCertificate ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
-#else
-            options.Cookie.SecurePolicy = workbenchHasSecureCertificate ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
-#endif
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;
