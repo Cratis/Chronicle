@@ -16,7 +16,7 @@ public class EventTypeNullablePropertyAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.EventTypeHasNullableProperty,
         title: "Event type has nullable property",
-        messageFormat: "Event type '{0}' has nullable property '{1}'. Consider using a separate event to represent the absence of this data instead of a nullable property.",
+        messageFormat: "Event type '{0}' has nullable property '{1}'. Consider modeling this as a separate domain event representing the specific fact that occurred, rather than making a property nullable.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,

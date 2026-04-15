@@ -14,3 +14,5 @@
   href: CHR0006.md
 - name: CHR0007 - Reducer event parameter must have [EventType] attribute
   href: CHR0007.md
+- name: CHR0012 - Event type has nullable property
+  href: CHR0012.md
