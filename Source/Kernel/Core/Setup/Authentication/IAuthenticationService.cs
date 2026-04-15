@@ -25,6 +25,12 @@ internal interface IAuthenticationService
     /// <returns>A task representing the asynchronous operation.</returns>
     Task EnsureDefaultAdminUser();
 
+    /// <summary>
+    /// Ensures bootstrap clients from configuration are registered.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task EnsureBootstrapClients();
+
 #if DEVELOPMENT
     /// <summary>
     /// Ensures default client credentials exist for development.

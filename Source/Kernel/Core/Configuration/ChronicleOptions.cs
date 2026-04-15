@@ -78,6 +78,24 @@ public class ChronicleOptions
     public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
+    /// Gets or inits the optional Workbench configuration.
+    /// When not set, the Workbench uses the top-level <see cref="Tls"/> configuration.
+    /// </summary>
+    public Workbench? Workbench { get; init; }
+
+    /// <summary>
+    /// Gets or inits the bootstrap client configurations.
+    /// Clients defined here are registered on startup with hashed secrets.
+    /// </summary>
+    public IEnumerable<ClientBootstrapConfig> Clients { get; init; } = [];
+
+    /// <summary>
+    /// Gets the effective TLS configuration for the Workbench.
+    /// Falls back to the top-level <see cref="Tls"/> if <see cref="Workbench"/> or <see cref="Configuration.Workbench.Tls"/> is not set.
+    /// </summary>
+    public Tls WorkbenchTls => Workbench?.Tls ?? Tls;
+
+    /// <summary>
     /// Adds the Chronicle configuration.
     /// </summary>
     /// <param name="services">Service collection to add to.</param>

@@ -16,6 +16,10 @@
   href: authentication.md
 - name: TLS
   href: tls.md
+- name: Workbench TLS
+  href: workbench-tls.md
+- name: Client Bootstrap
+  href: client-bootstrap.md
 - name: Environment Variables
   href: environment-variables.md
 - name: Open Telemetry

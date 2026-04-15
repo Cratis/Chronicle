@@ -22,9 +22,7 @@ namespace Cratis.Chronicle.Setup.Authentication;
 [Singleton]
 internal sealed class AuthenticationService(
     IUserStorage userStorage,
-#pragma warning disable CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
     IApplicationStorage applicationStorage,
-#pragma warning restore CS9113 // Parameters are unread - this is due to conditional compilation with the DEVELOPMENT preprocessor symbol
     IGrainFactory grainFactory,
     IOptions<Configuration.ChronicleOptions> options,
     ILogger<AuthenticationService> logger) : IAuthenticationService
@@ -79,6 +77,48 @@ internal sealed class AuthenticationService(
 #endif
 
         logger.DefaultAdminUserAdded();
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureBootstrapClients()
+    {
+        var clients = _options.Clients;
+        if (!clients.Any())
+        {
+            return;
+        }
+
+        logger.BootstrappingClients(clients.Count());
+
+        var existingApplications = await applicationStorage.GetAll();
+
+        foreach (var client in clients)
+        {
+            if (string.IsNullOrEmpty(client.ClientId) || string.IsNullOrEmpty(client.ClientSecret))
+            {
+                logger.SkippingInvalidBootstrapClient(client.ClientId ?? "(empty)");
+                continue;
+            }
+
+            if (existingApplications.Any(a => a.ClientId == client.ClientId))
+            {
+                logger.BootstrapClientAlreadyExists(client.ClientId);
+                continue;
+            }
+
+            logger.RegisteringBootstrapClient(client.ClientId);
+
+            var hashedSecret = _passwordHasher.HashPassword(null!, client.ClientSecret);
+            var applicationId = Guid.NewGuid().ToString();
+            var @event = new Security.ApplicationAdded(
+                client.ClientId,
+                hashedSecret);
+
+            var eventSequence = grainFactory.GetEventLog();
+            await eventSequence.Append(applicationId, @event);
+
+            logger.BootstrapClientRegistered(client.ClientId);
+        }
     }
 
 #if DEVELOPMENT
