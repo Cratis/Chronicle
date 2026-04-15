@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aspire.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>
