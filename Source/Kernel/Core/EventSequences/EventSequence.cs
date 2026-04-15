@@ -279,7 +279,7 @@ public class EventSequence(
                 return AppendManyResult.Failed(correlationId, concurrencyViolations);
             }
 
-            var identity = await IdentityStorage.GetFor(causedBy);
+            var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
             var eventsToAppend = new List<EventToAppendToStorage>();
             var constraintContexts = new List<ConstraintValidationContext>();
 
@@ -389,7 +389,7 @@ public class EventSequence(
             eventType,
             correlationId,
             causation,
-            await IdentityStorage.GetFor(causedBy),
+            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow,
             contentAsExpandoObject,
             hash);
@@ -416,7 +416,7 @@ public class EventSequence(
             reason,
             correlationId,
             causation,
-            await IdentityStorage.GetFor(causedBy),
+            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
@@ -443,7 +443,7 @@ public class EventSequence(
             eventTypes,
             correlationId,
             causation,
-            await IdentityStorage.GetFor(causedBy),
+            await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
@@ -466,7 +466,7 @@ public class EventSequence(
         {
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
 
-            var identity = await IdentityStorage.GetFor(causedBy);
+            var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
             // Convert the compliant event to JsonObject for migration
             var json = JsonSerializer.Serialize(compliantEvent);
