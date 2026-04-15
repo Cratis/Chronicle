@@ -14,6 +14,7 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="System.Reactive" />
     </ItemGroup>
