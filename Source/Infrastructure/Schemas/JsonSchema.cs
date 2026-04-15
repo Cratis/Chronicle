@@ -483,6 +483,10 @@ public class JsonSchema
                 return errors;
             }
 
+            var schemaProperties = this
+                .GetFlattenedProperties()
+                .ToDictionary(_ => _.Name, StringComparer.OrdinalIgnoreCase);
+
             // Check required properties
             if (Node["required"] is JsonArray required)
             {
@@ -492,6 +496,12 @@ public class JsonSchema
                 {
                     if (!obj.ContainsKey(propName!))
                     {
+                        if (schemaProperties.TryGetValue(propName!, out var schemaProperty) &&
+                            (schemaProperty.Type.HasFlag(JsonObjectType.Null) || schemaProperty.IsNullable()))
+                        {
+                            continue;
+                        }
+
                         errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
                     }
                 }
