@@ -3,27 +3,23 @@
 
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Testing.ReadModels;
 
 namespace Cratis.Chronicle.Testing;
 
 /// <summary>
 /// Represents an implementation of <see cref="IChronicleConnection"/> for testing.
 /// </summary>
-internal sealed class ChronicleConnectionForTesting : IChronicleConnection, IChronicleServicesAccessor
+/// <param name="readModelsService">The <see cref="InProcessReadModelsService"/> to expose via <see cref="IChronicleServicesAccessor.Services"/>.</param>
+internal sealed class ChronicleConnectionForTesting(InProcessReadModelsService readModelsService) : IChronicleConnection, IChronicleServicesAccessor
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ChronicleConnectionForTesting"/> class.
-    /// </summary>
-    public ChronicleConnectionForTesting()
-    {
-        Lifecycle = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
-    }
+    readonly TestingServices _services = new(readModelsService);
 
     /// <inheritdoc/>
-    public IConnectionLifecycle Lifecycle { get; }
+    public IConnectionLifecycle Lifecycle { get; } = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
 
     /// <inheritdoc/>
-    IServices IChronicleServicesAccessor.Services => throw new NotImplementedException();
+    IServices IChronicleServicesAccessor.Services => _services;
 
     /// <inheritdoc/>
     public Task Connect() => Task.CompletedTask;

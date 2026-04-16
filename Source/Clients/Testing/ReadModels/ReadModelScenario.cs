@@ -8,8 +8,10 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Testing.Events;
 using Cratis.Json;
 using Cratis.Serialization;
 
@@ -49,7 +51,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 #pragma warning restore CA2000 // Dispose objects before losing scope
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
-    readonly ReadModelsForTesting _readModels = new();
+    readonly EventStoreForTesting _eventStore = new();
     TReadModel? _instance;
     bool _processed;
 
@@ -104,14 +106,14 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     public ReadModelScenarioGivenBuilder<TReadModel> Given => new(this);
 
     /// <summary>
-    /// Gets an <see cref="IReadModels"/> instance backed by the pre-seeded read model registry for this scenario.
+    /// Gets an <see cref="IReadModels"/> instance that returns pre-seeded read model instances for this scenario.
     /// </summary>
     /// <remarks>
     /// Pass this to production code that depends on <see cref="IReadModels"/> to have
     /// <c>GetInstanceById</c> calls return the instances registered via
     /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
-    public IReadModels ReadModels => _readModels;
+    public IReadModels ReadModels => _eventStore.ReadModels;
 
     /// <summary>
     /// Registers a pre-built read model instance for a specific event source, making it available via
@@ -120,7 +122,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
     /// <param name="readModel">The read model instance to register.</param>
     public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel) =>
-        _readModels.Register(eventSourceId, readModel);
+        _eventStore.RegisterReadModelInstance(eventSourceId, readModel);
 
     /// <summary>
     /// Collects events for a specific event source to be processed together when <see cref="Instance"/> is accessed.
