@@ -87,13 +87,14 @@ public static class OpenIddictServiceCollectionExtensions
                 }
 #endif
 
-                // Determine if the Workbench has TLS enabled (token endpoint runs on the management port)
-                var workbenchTls = chronicleOptions.WorkbenchTls;
-                var workbenchHasSecureCertificate = workbenchTls.Enabled && !string.IsNullOrEmpty(workbenchTls.CertificatePath);
+                // Determine if the identity provider has TLS enabled (token endpoint runs on the management port).
+                // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls for backward compatibility.
+                var identityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
+                var identityProviderHasSecureCertificate = identityProviderCertificate.Enabled && !string.IsNullOrEmpty(identityProviderCertificate.CertificatePath);
 
                 // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
 #if DEVELOPMENT
-                if (!workbenchHasSecureCertificate)
+                if (!identityProviderHasSecureCertificate)
                 {
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough()
@@ -105,7 +106,7 @@ public static class OpenIddictServiceCollectionExtensions
                            .EnableTokenEndpointPassthrough();
                 }
 #else
-                if (!workbenchHasSecureCertificate)
+                if (!identityProviderHasSecureCertificate)
                 {
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough()
@@ -124,9 +125,9 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // Use Workbench TLS config to determine the issuer scheme
+                    // Use identity provider certificate config to determine the issuer scheme
                     // since the token endpoint is served on the management port
-                    var internalScheme = workbenchHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+                    var internalScheme = identityProviderHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
                     options.SetIssuer(internalAuthority);
                 }
@@ -149,9 +150,10 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // Use Workbench TLS config since tokens are served on the management port
-                    var validationWorkbenchTls = chronicleOptions.WorkbenchTls;
-                    var validationHasSecureCertificate = validationWorkbenchTls.Enabled && !string.IsNullOrEmpty(validationWorkbenchTls.CertificatePath);
+                    // Use identity provider certificate config since tokens are served on the management port.
+                    // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls.
+                    var validationIdentityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
+                    var validationHasSecureCertificate = validationIdentityProviderCertificate.Enabled && !string.IsNullOrEmpty(validationIdentityProviderCertificate.CertificatePath);
                     scheme = validationHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     host = "localhost";
                 }
