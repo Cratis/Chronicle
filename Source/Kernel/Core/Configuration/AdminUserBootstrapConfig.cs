@@ -35,5 +35,5 @@ public class AdminUserBootstrapConfig
     /// When <see langword="true"/>, the user can log in with the configured password but will be
     /// prompted to set a new password before continuing.
     /// </summary>
-    public bool RequirePasswordChangeOnFirstLogin { get; init; } = false;
+    public bool RequirePasswordChangeOnFirstLogin { get; init; }
 }
