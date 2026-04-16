@@ -27,8 +27,7 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 1. On startup, Chronicle checks whether an admin user with the configured username already exists
 2. If no matching user exists and a password is configured, Chronicle:
    - Creates the admin user
-   - Hashes the password immediately using ASP.NET Core's `PasswordHasher`
-   - Appends the hashed password — the plaintext is **never retained** in memory beyond this point
+   - Hashes the password immediately — the plaintext is **never retained** in memory beyond this point
 3. If a user with the same username already exists, the bootstrap step is skipped entirely
 4. If no `adminUser` configuration is present (or no password is set), Chronicle falls back to the default behavior: the admin user is created without a password and must go through the initial password setup flow in the Workbench
 
@@ -72,23 +71,13 @@ When this option is `true`:
 - On first login, Chronicle redirects the admin to the password change screen
 - The admin must set a new password before accessing the Workbench
 
-This is the recommended setting for production deployments. It ensures the bootstrap password (which may be stored in secrets management or deployment configuration) is replaced with a password known only to the admin.
-
 ## Security considerations
 
-> **Warning:** The `password` value is provided as plaintext in configuration. Always use a proper secrets management solution in production rather than storing the password directly in `chronicle.json`.
+The `password` value should be sourced from a secrets management solution such as Azure Key Vault, Kubernetes Secrets, or Docker Secrets rather than stored directly in `chronicle.json`.
 
 **Key security properties of admin user bootstrap:**
-- The plaintext password is hashed using ASP.NET Core's `PasswordHasher` immediately on use
-- The plaintext value is never persisted to storage, event logs, or application state
+- The plaintext password is hashed immediately — it is never persisted to storage, event logs, or application state
 - If the admin user already exists when Chronicle restarts, the bootstrap section is completely ignored — credentials are never updated through this mechanism
-- Once the admin user has been created, remove or clear the `password` field from your configuration to avoid keeping the bootstrap password in plaintext
-
-**Recommended production workflow:**
-1. Set a strong, random initial password via your secrets manager (e.g., Azure Key Vault, Kubernetes Secrets)
-2. Set `requirePasswordChangeOnFirstLogin: true`
-3. After the first login and password change, clear the `password` from configuration
-4. Rotate secrets manager values so the bootstrap password is no longer available
 
 ### Azure Key Vault
 

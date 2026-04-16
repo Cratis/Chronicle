@@ -74,8 +74,6 @@ internal sealed class AuthenticationService(
             var @event = new Security.InitialAdminUserAdded(effectiveUsername, adminUser.Email);
             await eventSequence.Append(userId, @event);
 
-            // Hash the password immediately — the plaintext is never retained beyond this point
-            // null! is safe: ASP.NET Identity's default PasswordHasher ignores the user parameter
             var passwordHash = _passwordHasher.HashPassword(null!, adminUser.Password);
             await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
 
@@ -100,7 +98,6 @@ internal sealed class AuthenticationService(
 
             logger.SettingDefaultAdminPassword();
 
-            // null! is safe here: ASP.NET Identity's default PasswordHasher ignores the user parameter
             var passwordHash = _passwordHasher.HashPassword(null!, authentication.DefaultAdminPassword);
             await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
 
