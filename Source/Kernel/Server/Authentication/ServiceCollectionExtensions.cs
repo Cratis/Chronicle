@@ -57,15 +57,6 @@ public static class ServiceCollectionExtensions
                 encryptionCert.CertificatePassword);
             dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
         }
-#if !DEVELOPMENT
-        else
-        {
-            throw new InvalidOperationException(
-                "An encryption certificate is required in production for Data Protection key security. " +
-                "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
-                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
-        }
-#endif
 
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
