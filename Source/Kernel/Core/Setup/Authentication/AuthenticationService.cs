@@ -47,34 +47,71 @@ internal sealed class AuthenticationService(
     public async Task EnsureDefaultAdminUser()
     {
         logger.CheckingForDefaultAdminUser();
+
         var existingUsers = await userStorage.GetAll();
-        if (existingUsers.Any(u => u.Username == _options.Authentication.DefaultAdminUsername))
+        var authentication = _options.Authentication;
+        var adminUser = authentication.AdminUser;
+
+        // Determine the effective username — AdminUser.Username takes precedence if set
+        var effectiveUsername = !string.IsNullOrEmpty(adminUser?.Username)
+            ? adminUser.Username
+            : authentication.DefaultAdminUsername;
+
+        if (existingUsers.Any(u => u.Username == effectiveUsername))
         {
             logger.DefaultAdminUserAlreadyExist();
             return;
         }
 
-        logger.CreatingDefaultAdminUser();
-
-        var userId = Guid.NewGuid();
-        var @event = new Security.InitialAdminUserAdded(
-            _options.Authentication.DefaultAdminUsername,
-            string.Empty);
-
         var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(userId, @event);
+        var userId = Guid.NewGuid();
+
+        // Path 1: AdminUser is configured with a password — bootstrap with credentials
+        if (adminUser is not null && !string.IsNullOrEmpty(adminUser.Password))
+        {
+            logger.CreatingAdminUserWithConfiguredCredentials(effectiveUsername);
+
+            var @event = new Security.InitialAdminUserAdded(effectiveUsername, adminUser.Email);
+            await eventSequence.Append(userId, @event);
+
+            var passwordHash = _passwordHasher.HashPassword(null!, adminUser.Password);
+            await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
+
+            if (adminUser.RequirePasswordChangeOnFirstLogin)
+            {
+                logger.RequiringPasswordChangeOnFirstLogin(effectiveUsername);
+                await eventSequence.Append(userId, new Security.PasswordChangeRequired());
+            }
+
+            logger.AdminUserWithCredentialsCreated(effectiveUsername);
+            return;
+        }
 
 #if DEVELOPMENT
-        if (!string.IsNullOrEmpty(_options.Authentication.DefaultAdminPassword))
+        // Path 2 (legacy dev): DefaultAdminPassword is set — same as AdminUser with password, dev-only
+        if (!string.IsNullOrEmpty(authentication.DefaultAdminPassword))
         {
+            logger.CreatingDefaultAdminUser();
+
+            var @event = new Security.InitialAdminUserAdded(effectiveUsername, string.Empty);
+            await eventSequence.Append(userId, @event);
+
             logger.SettingDefaultAdminPassword();
 
-            // null! is safe here: ASP.NET Identity's default PasswordHasher ignores the user parameter
-            var passwordHash = _passwordHasher.HashPassword(null!, _options.Authentication.DefaultAdminPassword);
+            var passwordHash = _passwordHasher.HashPassword(null!, authentication.DefaultAdminPassword);
             await eventSequence.Append(userId, new Security.UserPasswordChanged(passwordHash));
+
             logger.DefaultAdminPasswordSet();
+            logger.DefaultAdminUserAdded();
+            return;
         }
 #endif
+
+        // Path 3: No password configured — create admin without password (initial setup flow)
+        logger.CreatingDefaultAdminUser();
+
+        var defaultEvent = new Security.InitialAdminUserAdded(effectiveUsername, string.Empty);
+        await eventSequence.Append(userId, defaultEvent);
 
         logger.DefaultAdminUserAdded();
     }
