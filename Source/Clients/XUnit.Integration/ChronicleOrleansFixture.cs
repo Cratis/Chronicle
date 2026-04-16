@@ -39,6 +39,17 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             return;
         }
 
+        // Re-initialize test-specific fields (e.g. Tcs, Reactor, Observers) on the current
+        // fixture and update the shared MutableServiceRegistry so that DI resolves the new
+        // instances for this test run.
+        var capturingCollection = new CapturingServiceCollection();
+        ConfigureServices(capturingCollection);
+        if (capturingCollection.Count > 0)
+        {
+            var registry = Services.GetRequiredService<MutableServiceRegistry>();
+            registry.Update(capturingCollection);
+        }
+
         // 1. Signal disconnect — tears down all handler streams (cancels CancellationTokens),
         //    sets lifecycle.IsConnected = false, and assigns a fresh ConnectionId.
         var connection = Services.GetRequiredService<IChronicleConnection>();

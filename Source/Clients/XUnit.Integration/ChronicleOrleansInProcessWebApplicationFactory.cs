@@ -84,7 +84,19 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                configureServices(services);
+                // Capture the first fixture's service registrations and populate the mutable
+                // registry. Subsequent tests update the registry via OnBeforeInitializeAsync
+                // without rebuilding the DI container.
+                var capturingCollection = new CapturingServiceCollection();
+                configureServices(capturingCollection);
+                var testServiceRegistry = new MutableServiceRegistry();
+                testServiceRegistry.Update(capturingCollection);
+                services.AddSingleton(testServiceRegistry);
+                foreach (var registeredType in testServiceRegistry.RegisteredTypes)
+                {
+                    var capturedType = registeredType;
+                    services.AddTransient(capturedType, sp => sp.GetRequiredService<MutableServiceRegistry>().Get(capturedType, sp));
+                }
             });
         builder.AddCratisChronicle();
 
