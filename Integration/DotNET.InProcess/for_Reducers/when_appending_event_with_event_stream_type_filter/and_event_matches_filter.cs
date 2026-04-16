@@ -39,7 +39,7 @@ public class and_event_matches_filter(context context) : Given<context>(context)
         {
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerFilteredByEventStreamType>();
             await reducer.WaitTillActive();
-            await EventStore.EventLog.Append(EventSourceId, Event, eventStreamType: new Events.EventStreamType("invoices"));
+            await EventStore.EventLog.Append(EventSourceId, Event, eventStreamType: new EventStreamType("invoices"));
             await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await reducer.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);
             ReducerState = await reducer.GetState();
