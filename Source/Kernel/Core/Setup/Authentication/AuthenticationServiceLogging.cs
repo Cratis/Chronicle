@@ -20,6 +20,15 @@ internal static partial class AuthenticationServiceLogging
     [LoggerMessage(LogLevel.Information, "Successfully created default admin user")]
     internal static partial void DefaultAdminUserAdded(this ILogger<AuthenticationService> logger);
 
+    [LoggerMessage(LogLevel.Information, "Creating admin user '{Username}' with pre-configured credentials from bootstrap configuration")]
+    internal static partial void CreatingAdminUserWithConfiguredCredentials(this ILogger<AuthenticationService> logger, string username);
+
+    [LoggerMessage(LogLevel.Information, "Admin user '{Username}' created with pre-configured credentials")]
+    internal static partial void AdminUserWithCredentialsCreated(this ILogger<AuthenticationService> logger, string username);
+
+    [LoggerMessage(LogLevel.Information, "Admin user '{Username}' will be required to change password on first login")]
+    internal static partial void RequiringPasswordChangeOnFirstLogin(this ILogger<AuthenticationService> logger, string username);
+
     [LoggerMessage(LogLevel.Information, "Setting pre-configured default admin password from development configuration")]
     internal static partial void SettingDefaultAdminPassword(this ILogger<AuthenticationService> logger);
 
