@@ -55,8 +55,13 @@ if (chronicleOptions.Features.Api)
 
 var grpcCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
 var workbenchCertificate = CertificateLoader.LoadWorkbenchCertificate(chronicleOptions);
+var grpcTls = chronicleOptions.Tls;
 
-if (grpcCertificate is not null)
+if (!grpcTls.Enabled)
+{
+    logger.TlsDisabled();
+}
+else if (grpcCertificate is not null)
 {
     logger.TlsCertificateLoaded();
 }
@@ -101,7 +106,7 @@ builder.WebHost.UseKestrel(options =>
     });
 
     // Listen on Port for gRPC (HTTP/2)
-    // Always uses top-level TLS config — gRPC TLS cannot be disabled in Production
+    // Uses top-level TLS config and can run without TLS when explicitly disabled.
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
@@ -111,11 +116,11 @@ builder.WebHost.UseKestrel(options =>
             listenOptions.UseHttps(grpcCertificate);
         }
 #if !DEVELOPMENT
-        else
+        else if (grpcTls.Enabled)
         {
             throw new InvalidOperationException(
-                "No TLS certificate is configured for gRPC. gRPC always requires TLS in production. " +
-                "Please provide a certificate path in configuration.");
+                "No TLS certificate is configured for gRPC while TLS is enabled. " +
+                "Please provide a certificate path in configuration, or set Tls:Enabled to false.");
         }
 #endif
     });

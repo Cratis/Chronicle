@@ -33,6 +33,11 @@ public static class CertificateLoader
 
     static X509Certificate2? LoadFromTls(Configuration.Tls tls)
     {
+        if (!tls.Enabled)
+        {
+            return null;
+        }
+
         if (!string.IsNullOrEmpty(tls.CertificatePath) && File.Exists(tls.CertificatePath))
         {
             return LoadCertificateFromPath(tls.CertificatePath, tls.CertificatePassword);

@@ -1,6 +1,6 @@
 # Workbench TLS Configuration
 
-Chronicle supports a dedicated TLS configuration for the Workbench (admin UI), separate from the gRPC TLS configuration. This allows deployments behind an ingress or reverse proxy to disable Workbench TLS while gRPC continues to enforce TLS.
+Chronicle supports a dedicated TLS configuration for the Workbench (admin UI), separate from the gRPC TLS configuration. This allows deployments behind an ingress or reverse proxy to disable Workbench TLS while configuring gRPC TLS independently.
 
 ## Fallback behavior
 
@@ -34,7 +34,7 @@ When deploying behind a reverse proxy that terminates TLS:
 ```
 
 In this configuration:
-- gRPC uses TLS with the provided certificate (required in production)
+- gRPC uses TLS with the provided certificate
 - The Workbench runs without TLS, relying on the upstream proxy for HTTPS
 
 ### Separate Workbench certificate

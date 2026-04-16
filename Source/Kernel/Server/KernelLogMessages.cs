@@ -11,10 +11,13 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "TLS certificate loaded successfully. Server will use HTTPS")]
     internal static partial void TlsCertificateLoaded(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Warning, "TLS is disabled by configuration. Server will run without HTTPS")]
+    internal static partial void TlsDisabled(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Warning, "No TLS certificate configured. Server will run without HTTPS (Development mode only)")]
     internal static partial void TlsCertificateMissingDevelopment(this ILogger<Kernel> logger);
 
-    [LoggerMessage(LogLevel.Error, "No TLS certificate is configured. Server cannot start without HTTPS in non-development environments")]
+    [LoggerMessage(LogLevel.Error, "No TLS certificate is configured while TLS is enabled. Server cannot start without HTTPS in non-development environments")]
     internal static partial void TlsCertificateMissingProduction(this ILogger<Kernel> logger);
 
     [LoggerMessage(LogLevel.Debug, "Configuring server to listen on management port {ManagementPort} (HTTP/1.1) and gRPC port {GrpcPort} (HTTP/2)")]

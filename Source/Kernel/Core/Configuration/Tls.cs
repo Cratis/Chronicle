@@ -10,7 +10,7 @@ public class Tls
 {
     /// <summary>
     /// Gets or inits whether TLS is enabled. Defaults to true.
-    /// Can be set to false for the Workbench when TLS is terminated upstream by an ingress/reverse proxy.
+    /// Can be set to false when TLS is terminated upstream by an ingress/reverse proxy.
     /// </summary>
     public bool Enabled { get; init; } = true;
 
