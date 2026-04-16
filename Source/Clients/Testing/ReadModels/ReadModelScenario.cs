@@ -49,6 +49,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 #pragma warning restore CA2000 // Dispose objects before losing scope
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
+    readonly ReadModelsForTesting _readModels = new();
     TReadModel? _instance;
     bool _processed;
 
@@ -85,7 +86,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     }
 
     /// <summary>
-    /// Gets the entry point of the fluent builder for seeding events into this scenario.
+    /// Gets the entry point of the fluent builder for seeding events or read model instances into this scenario.
     /// </summary>
     /// <remarks>
     /// Usage:
@@ -93,9 +94,33 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// await scenario.Given
     ///     .ForEventSource(myId)
     ///     .Events(new SomeEvent(), new SomeOtherEvent());
+    ///
+    /// // Or to pre-seed a read model instance:
+    /// scenario.Given
+    ///     .ForEventSourceId(myId)
+    ///     .ReadModel(new MyReadModel { ... });
     /// </code>
     /// </remarks>
     public ReadModelScenarioGivenBuilder<TReadModel> Given => new(this);
+
+    /// <summary>
+    /// Gets an <see cref="IReadModels"/> instance backed by the pre-seeded read model registry for this scenario.
+    /// </summary>
+    /// <remarks>
+    /// Pass this to production code that depends on <see cref="IReadModels"/> to have
+    /// <c>GetInstanceById</c> calls return the instances registered via
+    /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
+    /// </remarks>
+    public IReadModels ReadModels => _readModels;
+
+    /// <summary>
+    /// Registers a pre-built read model instance for a specific event source, making it available via
+    /// <see cref="ReadModels"/> for calls to <c>GetInstanceById</c>.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to associate the read model instance with.</param>
+    /// <param name="readModel">The read model instance to register.</param>
+    public void CollectReadModelFor(EventSourceId eventSourceId, TReadModel readModel) =>
+        _readModels.Register(eventSourceId, readModel);
 
     /// <summary>
     /// Collects events for a specific event source to be processed together when <see cref="Instance"/> is accessed.

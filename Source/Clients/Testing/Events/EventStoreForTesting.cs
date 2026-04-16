@@ -12,6 +12,7 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
+using Cratis.Chronicle.Testing.ReadModels;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 
@@ -22,6 +23,8 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </summary>
 public class EventStoreForTesting : IEventStore
 {
+    readonly ReadModelsForTesting _readModels = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
     /// </summary>
@@ -40,52 +43,52 @@ public class EventStoreForTesting : IEventStore
     public IChronicleConnection Connection { get; }
 
     /// <inheritdoc/>
-    public IEventTypes EventTypes => throw new NotImplementedException();
+    public IEventTypes EventTypes => throw new NotSupportedException("EventTypes is not supported in EventStoreForTesting. Use Defaults.Instance.EventTypes instead.");
 
     /// <inheritdoc/>
-    public IEventLog EventLog => throw new NotImplementedException();
+    public IEventLog EventLog => throw new NotSupportedException("EventLog is not supported in EventStoreForTesting. Use EventScenario for event sequence testing.");
 
     /// <inheritdoc/>
-    public IReactors Reactors => throw new NotImplementedException();
+    public IReactors Reactors => throw new NotSupportedException("Reactors is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IReducers Reducers => throw new NotImplementedException();
+    public IReducers Reducers => throw new NotSupportedException("Reducers is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IProjections Projections => throw new NotImplementedException();
+    public IProjections Projections => throw new NotSupportedException("Projections is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IWebhooks Webhooks => throw new NotImplementedException();
+    public IWebhooks Webhooks => throw new NotSupportedException("Webhooks is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IEventStoreSubscriptions Subscriptions => throw new NotImplementedException();
+    public IEventStoreSubscriptions Subscriptions => throw new NotSupportedException("Subscriptions is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IConstraints Constraints => throw new NotImplementedException();
+    public IConstraints Constraints => throw new NotSupportedException("Constraints is not supported in EventStoreForTesting. Use EventScenario for constraint testing.");
 
     /// <inheritdoc/>
-    public IUnitOfWorkManager UnitOfWorkManager => throw new NotImplementedException();
+    public IUnitOfWorkManager UnitOfWorkManager => throw new NotSupportedException("UnitOfWorkManager is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IFailedPartitions FailedPartitions => throw new NotImplementedException();
+    public IFailedPartitions FailedPartitions => throw new NotSupportedException("FailedPartitions is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IJobs Jobs => throw new NotImplementedException();
+    public IJobs Jobs => throw new NotSupportedException("Jobs is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
-    public IReadModels ReadModels => throw new NotImplementedException();
+    public IReadModels ReadModels => _readModels;
 
     /// <inheritdoc/>
-    public Seeding.IEventSeeding Seeding => throw new NotImplementedException();
+    public Seeding.IEventSeeding Seeding => throw new NotSupportedException("Seeding is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) => throw new NotImplementedException();
+    public IEventSequence GetEventSequence(EventSequenceId id) => throw new NotSupportedException("GetEventSequence is not supported in EventStoreForTesting. Use EventScenario for event sequence testing.");
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) => throw new NotSupportedException("GetNamespaces is not supported in EventStoreForTesting.");
 
     /// <inheritdoc/>
     public Task RegisterAll() => Task.CompletedTask;
