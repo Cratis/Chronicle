@@ -8,6 +8,7 @@ import { SaveProjectionWithInferredReadModel } from 'Api/Projections';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { resolveTargetNamespace } from './resolveTargetNamespace';
 
 export interface SaveWithInferredReadModelDialogProps {
     declaration: string;
@@ -20,6 +21,7 @@ export interface SaveWithInferredReadModelDialogProps {
 export const SaveWithInferredReadModelDialog = () => {
     const { request, closeDialog } = useDialogContext<SaveWithInferredReadModelDialogProps>();
     const params = useParams<EventStoreAndNamespaceParams>();
+    const targetNamespace = resolveTargetNamespace(params.namespace);
 
     return (
         <CommandDialog
@@ -27,7 +29,7 @@ export const SaveWithInferredReadModelDialog = () => {
             initialValues={{
                 declaration: request.declaration,
                 eventStore: params.eventStore!,
-                namespace: params.namespace!
+                namespace: targetNamespace
             }}
             title={strings.eventStore.general.projections.dialogs.saveWithInferredReadModel.title}
             okLabel={strings.general.buttons.ok}

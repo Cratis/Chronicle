@@ -27,6 +27,7 @@ import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@
 import { TimeMachineDialog, ReadModelInstances } from 'Components';
 import { Json } from 'Features';
 import { SaveWithInferredReadModelDialog } from './SaveWithInferredReadModelDialog';
+import { resolveTargetNamespace } from './resolveTargetNamespace';
 
 const projectionDeclarationPattern = /^(\s*projection\s+[\w.]+\s*=>\s*)([\w.]+)/m;
 
@@ -89,6 +90,7 @@ export const Projections = () => {
     const [originalDeclarationValue, setOriginalDeclarationValue] = useState('');
     const [selectedProjection, setSelectedProjection] = useState<unknown>(null);
     const params = useParams<EventStoreAndNamespaceParams>();
+    const targetNamespace = resolveTargetNamespace(params.namespace);
     const [isCreateReadModelDialogOpen, setIsCreateReadModelDialogOpen] = useState(false);
     const [newReadModelDisplayName, setNewReadModelDisplayName] = useState('');
     const [initialReadModelSchema, setInitialReadModelSchema] = useState<JsonSchema | undefined>(undefined);
@@ -372,7 +374,7 @@ export const Projections = () => {
                                         clearSaveProjectionValues();
                                         setSaveProjectionValues({
                                             eventStore: params.eventStore!,
-                                            namespace: params.namespace!,
+                                            namespace: targetNamespace,
                                             declaration: normalizedDeclaration,
                                             draftReadModel: draftReadModel ?? undefined
                                         });
@@ -413,7 +415,7 @@ export const Projections = () => {
                                         clearPreviewProjectionValues();
                                         setPreviewProjectionValues({
                                             eventStore: params.eventStore!,
-                                            namespace: params.namespace!,
+                                            namespace: targetNamespace,
                                             declaration: toIdentifierDeclaration(declarationValue, readModels.data, draftReadModel),
                                             draftReadModel: draftReadModel ?? undefined
                                         });
