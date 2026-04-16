@@ -2,6 +2,8 @@
 
 Authentication is always enabled. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
 
+Identity provider certificate configuration is documented on [Identity Provider Certificate](identity-provider-certificate.md).
+
 ## Example configuration
 
 ```json

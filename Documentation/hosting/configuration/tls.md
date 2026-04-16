@@ -41,11 +41,10 @@ The top-level `tls` configuration controls the gRPC listener:
 
 Use `tls.enabled=false` only when TLS is terminated by upstream infrastructure such as ingress or reverse proxies.
 
-## Workbench-specific TLS
+## Related TLS and certificate pages
 
-The Workbench (admin UI) can have its own TLS configuration, independent of gRPC. This is useful for deployments behind an ingress or reverse proxy (e.g., Azure Container Apps, Nginx, Azure App Gateway) that terminates TLS upstream.
-
-See [Workbench TLS](workbench-tls.md) for details.
+- [Workbench TLS Configuration](workbench-tls.md) for Workbench-specific TLS and certificates.
+- [Identity Provider Certificate Configuration](identity-provider-certificate.md) for internal OAuth authority certificates.
 
 ## Development vs production
 
