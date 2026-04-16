@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// Usage:
 /// <code>
 /// var scenario = new ReadModelScenario&lt;MyReadModel&gt;();
-/// await scenario.Given([new SomeEvent(), new SomeOtherEvent()]);
+/// await scenario.Given.ForEventSource(myId).Events(new SomeEvent(), new SomeOtherEvent());
 /// scenario.Instance.SomeProperty.ShouldBe(expectedValue);
 /// </code>
 /// </para>
@@ -38,7 +38,8 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 /// <typeparam name="TReadModel">The type of read model under test.</typeparam>
 /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
 /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
-public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults)
+/// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
+public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults defaults, IServiceProvider? serviceProvider)
     where TReadModel : class
 {
     readonly TReadModel? _initialState = initialState;
@@ -47,11 +48,14 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly IClientArtifactsProvider _clientArtifactsProvider = defaults.ClientArtifactsProvider;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator = defaults.JsonSchemaGenerator;
 #pragma warning disable CA2000 // Dispose objects before losing scope
-    readonly IClientArtifactsActivator _artifactsActivator = new ClientArtifactsActivator(new DefaultServiceProvider(), new NullLoggerFactory());
+    readonly IClientArtifactsActivator _artifactsActivator = new ClientArtifactsActivator(
+        serviceProvider ?? new DefaultServiceProvider(),
+        new NullLoggerFactory());
 #pragma warning restore CA2000 // Dispose objects before losing scope
     readonly JsonSerializerOptions _jsonSerializerOptions = Globals.JsonSerializerOptions;
     readonly List<(EventSourceId EventSourceId, object Event)> _collectedEvents = [];
-    readonly EventStoreForTesting _eventStore = new();
+    readonly EventStoreForTesting _eventStore = new(serviceProvider);
+    readonly IServiceProvider _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
     TReadModel? _instance;
     bool _processed;
 
@@ -60,7 +64,27 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// </summary>
     /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
     public ReadModelScenario(TReadModel? initialState = null)
-        : this(initialState, Defaults.Instance)
+        : this(initialState, Defaults.Instance, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class.
+    /// </summary>
+    /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reducer and projection instances.</param>
+    public ReadModelScenario(TReadModel? initialState, IServiceProvider? serviceProvider)
+        : this(initialState, Defaults.Instance, serviceProvider)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReadModelScenario{TReadModel}"/> class.
+    /// </summary>
+    /// <param name="initialState">Optional initial state for the read model before any events are applied.</param>
+    /// <param name="defaults">The <see cref="Defaults"/> to use for service resolution.</param>
+    public ReadModelScenario(TReadModel? initialState, Defaults defaults)
+        : this(initialState, defaults, null)
     {
     }
 
@@ -171,13 +195,12 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var reducerType = FindReducerType(readModelType);
         if (reducerType is not null)
         {
-            using var serviceProvider = new DefaultServiceProvider();
             return await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
                 eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
                 _eventTypes,
                 _artifactsActivator,
-                serviceProvider,
+                _serviceProvider,
                 _namingPolicy);
         }
 

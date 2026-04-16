@@ -24,6 +24,7 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Chronicle.Testing.ReadModels;
 using Cratis.Chronicle.Transactions;
@@ -34,6 +35,8 @@ using Cratis.Serialization;
 using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
+using ReactorsImpl = Cratis.Chronicle.Reactors.Reactors;
+using WebhooksImpl = Cratis.Chronicle.Webhooks.Webhooks;
 
 namespace Cratis.Chronicle.Testing.Events;
 
@@ -57,14 +60,26 @@ public class EventStoreForTesting : IEventStore
     readonly IReducers _reducers;
     readonly IReadModels _readModels;
     readonly ICanProvideConstraints _constraintProvider;
+    readonly IClientArtifactsActivator _artifactActivator;
+    readonly IServiceProvider _serviceProvider;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
+    readonly Lazy<IConstraints> _constraints;
+    readonly Lazy<IReactors> _reactors;
+    readonly Lazy<IWebhooks> _webhooks;
+    readonly Lazy<IEventStoreSubscriptions> _subscriptions;
+    readonly Lazy<IFailedPartitions> _failedPartitions;
+    readonly Lazy<IJobs> _jobs;
+    readonly Lazy<IUnitOfWorkManager> _unitOfWorkManager;
+    readonly Lazy<IEventSeeding> _seeding;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
     /// </summary>
+    /// <param name="serviceProvider">Optional <see cref="IServiceProvider"/> for resolving reactor, reducer, and seeder instances.</param>
 #pragma warning disable CA2000 // Dispose objects before losing scope
-    public EventStoreForTesting()
+    public EventStoreForTesting(IServiceProvider? serviceProvider = null)
     {
+        _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
         _clientArtifactsProvider = DefaultClientArtifactsProvider.Default;
         _namingPolicy = new CamelCaseNamingPolicy();
@@ -77,15 +92,14 @@ public class EventStoreForTesting : IEventStore
         _readModelsService = new InProcessReadModelsService(_jsonSerializerOptions);
         Connection = new ChronicleConnectionForTesting(_readModelsService);
 
-        var serviceProvider = new DefaultServiceProvider();
         var loggerFactory = new NullLoggerFactory();
-        var artifactActivator = new ClientArtifactsActivator(serviceProvider, loggerFactory);
-        var eventTypeMigrators = new EventTypeMigrators(_clientArtifactsProvider, serviceProvider);
+        _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
+        var eventTypeMigrators = new EventTypeMigrators(_clientArtifactsProvider, _serviceProvider);
 
         _eventTypes = new Events.EventTypes(this, _jsonSchemaGenerator, _clientArtifactsProvider, eventTypeMigrators);
         _eventTypes.Discover().GetAwaiter().GetResult();
 
-        _eventSerializer = new EventSerializer(_clientArtifactsProvider, artifactActivator, _eventTypes, _jsonSerializerOptions);
+        _eventSerializer = new EventSerializer(_clientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
 
         var reducerObservers = new ReducerObservers();
 
@@ -94,7 +108,7 @@ public class EventStoreForTesting : IEventStore
             _eventTypes,
             _clientArtifactsProvider,
             _namingPolicy,
-            artifactActivator,
+            _artifactActivator,
             _jsonSerializerOptions,
             NullLogger<Projections.Projections>.Instance);
         _projections.Discover().GetAwaiter().GetResult();
@@ -102,8 +116,8 @@ public class EventStoreForTesting : IEventStore
         _reducers = new Reducers.Reducers(
             this,
             _clientArtifactsProvider,
-            serviceProvider,
-            artifactActivator,
+            _serviceProvider,
+            _artifactActivator,
             new ReducerValidator(),
             _eventTypes,
             _namingPolicy,
@@ -126,7 +140,38 @@ public class EventStoreForTesting : IEventStore
             readModelWatcherManager,
             reducerObservers);
 
-        _constraintProvider = CreateConstraintProvider(artifactActivator);
+        _constraintProvider = CreateConstraintProvider(_artifactActivator);
+
+        _constraints = new Lazy<IConstraints>(() => new Constraints(this, [_constraintProvider]));
+        _reactors = new Lazy<IReactors>(() => new ReactorsImpl(
+            this,
+            _eventTypes,
+            _clientArtifactsProvider,
+            _serviceProvider,
+            _artifactActivator,
+            new ReactorMiddlewaresActivator(_clientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
+            _eventSerializer,
+            new CausationManager(),
+            new BaseIdentityProvider(),
+            NullLogger<ReactorsImpl>.Instance,
+            new NullLoggerFactory()));
+        _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
+        _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptions(
+            _eventTypes,
+            this,
+            NullLogger<EventStoreSubscriptions>.Instance));
+        _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitions(this));
+        _jobs = new Lazy<IJobs>(() => new Jobs(this));
+        _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
+        _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
+            Name,
+            Connection,
+            _eventTypes,
+            _eventSerializer,
+            _clientArtifactsProvider,
+            _serviceProvider,
+            _artifactActivator,
+            NullLogger<EventSeeding>.Instance));
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -143,16 +188,16 @@ public class EventStoreForTesting : IEventStore
     public IEventTypes EventTypes => _eventTypes;
 
     /// <inheritdoc/>
-    public IUnitOfWorkManager UnitOfWorkManager => throw new NotSupportedException("UnitOfWorkManager is not supported in EventStoreForTesting.");
+    public IUnitOfWorkManager UnitOfWorkManager => _unitOfWorkManager.Value;
 
     /// <inheritdoc/>
-    public IConstraints Constraints => throw new NotSupportedException("Constraints is not supported directly on EventStoreForTesting.");
+    public IConstraints Constraints => _constraints.Value;
 
     /// <inheritdoc/>
     public IEventLog EventLog => (IEventLog)GetEventSequence(EventSequenceId.Log);
 
     /// <inheritdoc/>
-    public IReactors Reactors => throw new NotSupportedException("Reactors is not supported in EventStoreForTesting.");
+    public IReactors Reactors => _reactors.Value;
 
     /// <inheritdoc/>
     public IReducers Reducers => _reducers;
@@ -161,22 +206,22 @@ public class EventStoreForTesting : IEventStore
     public IProjections Projections => _projections;
 
     /// <inheritdoc/>
-    public IWebhooks Webhooks => throw new NotSupportedException("Webhooks is not supported in EventStoreForTesting.");
+    public IWebhooks Webhooks => _webhooks.Value;
 
     /// <inheritdoc/>
-    public IEventStoreSubscriptions Subscriptions => throw new NotSupportedException("Subscriptions is not supported in EventStoreForTesting.");
+    public IEventStoreSubscriptions Subscriptions => _subscriptions.Value;
 
     /// <inheritdoc/>
-    public IFailedPartitions FailedPartitions => throw new NotSupportedException("FailedPartitions is not supported in EventStoreForTesting.");
+    public IFailedPartitions FailedPartitions => _failedPartitions.Value;
 
     /// <inheritdoc/>
-    public IJobs Jobs => throw new NotSupportedException("Jobs is not supported in EventStoreForTesting.");
+    public IJobs Jobs => _jobs.Value;
 
     /// <inheritdoc/>
     public IReadModels ReadModels => _readModels;
 
     /// <inheritdoc/>
-    public Seeding.IEventSeeding Seeding => throw new NotSupportedException("Seeding is not supported in EventStoreForTesting.");
+    public IEventSeeding Seeding => _seeding.Value;
 
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
@@ -205,7 +250,7 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("GetNamespaces is not supported in EventStoreForTesting.");
+        Task.FromResult(Enumerable.Empty<EventStoreNamespaceName>());
 
     /// <summary>
     /// Registers a pre-seeded read model instance so that production code calling
