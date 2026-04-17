@@ -81,6 +81,12 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        _eventStore.Connection.Lifecycle.OnDisconnected += () =>
+        {
+            _registered = false;
+            DisconnectHandlers();
+            return Task.CompletedTask;
+        };
     }
 
     /// <inheritdoc/>
@@ -92,6 +98,9 @@ public class Reactors : IReactors
                                 _ => _,
                                 CreateHandlerFor);
 
+        DisconnectHandlers();
+        _handlers.Clear();
+        _registered = false;
         foreach (var handler in handlers)
         {
             _handlers.Add(handler);
@@ -241,6 +250,15 @@ public class Reactors : IReactors
             register?.Dispose();
         });
         return handler;
+    }
+
+    void DisconnectHandlers()
+    {
+        foreach (var handler in _handlers.Values.ToList())
+        {
+            handler.Disconnect();
+            (handler as IDisposable)?.Dispose();
+        }
     }
 
     void RegisterReactor(IReactorHandler handler)
