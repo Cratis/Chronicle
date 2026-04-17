@@ -5,6 +5,7 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
@@ -35,6 +36,9 @@ using Cratis.Serialization;
 using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
+using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
+using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
+using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
 using ReactorsImpl = Cratis.Chronicle.Reactors.Reactors;
 using WebhooksImpl = Cratis.Chronicle.Webhooks.Webhooks;
 
@@ -49,7 +53,7 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </remarks>
 public class EventStoreForTesting : IEventStore
 {
-    readonly InProcessReadModelsService _readModelsService;
+    readonly ReadModelsForTesting _readModelsForTesting;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly INamingPolicy _namingPolicy;
@@ -89,14 +93,15 @@ public class EventStoreForTesting : IEventStore
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
             _namingPolicy);
 
-        _readModelsService = new InProcessReadModelsService(_jsonSerializerOptions);
-        Connection = new ChronicleConnectionForTesting(_readModelsService);
+        var topLevelGrainFactory = new TestingGrainFactory();
+        var topLevelStorage = new InMemoryStorage(new InMemoryEventSequenceStorage(KernelSequenceConcepts::EventSequenceId.Log));
+        Connection = new ChronicleConnectionForTesting(topLevelGrainFactory, topLevelStorage, _jsonSerializerOptions);
 
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
         var eventTypeMigrators = new EventTypeMigrators(_clientArtifactsProvider, _serviceProvider);
 
-        _eventTypes = new Events.EventTypes(this, _jsonSchemaGenerator, _clientArtifactsProvider, eventTypeMigrators);
+        _eventTypes = new EventTypes(this, _jsonSchemaGenerator, _clientArtifactsProvider, eventTypeMigrators);
         _eventTypes.Discover().GetAwaiter().GetResult();
 
         _eventSerializer = new EventSerializer(_clientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
@@ -129,7 +134,7 @@ public class EventStoreForTesting : IEventStore
 
         var readModelWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, _jsonSerializerOptions));
 
-        _readModels = new ReadModels.ReadModels(
+        var realReadModels = new Chronicle.ReadModels.ReadModels(
             this,
             _namingPolicy,
             _projections,
@@ -139,6 +144,9 @@ public class EventStoreForTesting : IEventStore
             _jsonSerializerOptions,
             readModelWatcherManager,
             reducerObservers);
+
+        _readModelsForTesting = new ReadModelsForTesting(realReadModels);
+        _readModels = _readModelsForTesting;
 
         _constraintProvider = CreateConstraintProvider(_artifactActivator);
 
@@ -156,12 +164,12 @@ public class EventStoreForTesting : IEventStore
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
-        _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptions(
+        _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptionsImpl(
             _eventTypes,
             this,
-            NullLogger<EventStoreSubscriptions>.Instance));
-        _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitions(this));
-        _jobs = new Lazy<IJobs>(() => new Jobs(this));
+            NullLogger<EventStoreSubscriptionsImpl>.Instance));
+        _failedPartitions = new Lazy<IFailedPartitions>(() => new FailedPartitionsImpl(this));
+        _jobs = new Lazy<IJobs>(() => new JobsImpl(this));
         _unitOfWorkManager = new Lazy<IUnitOfWorkManager>(() => new UnitOfWorkManager(this));
         _seeding = new Lazy<IEventSeeding>(() => new EventSeeding(
             Name,
@@ -261,7 +269,7 @@ public class EventStoreForTesting : IEventStore
     /// <param name="instance">The read model instance to pre-seed.</param>
     internal void RegisterReadModelInstance<TReadModel>(EventSourceId eventSourceId, TReadModel instance)
         where TReadModel : class =>
-        _readModelsService.Register(eventSourceId, instance);
+        _readModelsForTesting.RegisterInstance(eventSourceId, instance);
 
     IEventSequence CreateEventSequence(EventSequenceId id)
     {
@@ -393,7 +401,7 @@ public class EventStoreForTesting : IEventStore
     sealed class CompositeConstraintProvider(params ICanProvideConstraints[] providers) : ICanProvideConstraints
     {
         /// <inheritdoc/>
-        public System.Collections.Immutable.IImmutableList<IConstraintDefinition> Provide() =>
+        public IImmutableList<IConstraintDefinition> Provide() =>
             providers
                 .SelectMany(p => p.Provide())
                 .ToImmutableList();
