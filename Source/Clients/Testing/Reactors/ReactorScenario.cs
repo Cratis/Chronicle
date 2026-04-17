@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
+using Cratis.Execution;
 
 namespace Cratis.Chronicle.Testing.Reactors;
 

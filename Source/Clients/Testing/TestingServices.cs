@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
+extern alias KernelCore;
+
+using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -14,304 +16,198 @@ using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
-using Cratis.Chronicle.Testing.EventSequences;
-using Cratis.Chronicle.Testing.ReadModels;
+using Cratis.Chronicle.Storage;
+using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
+using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
+using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
+using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
+using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
+using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
+using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
+using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
+using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
+using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
+using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
+using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
+using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
+using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
+using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
+using KernelReducersService = KernelCore::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
+using KernelSeedingService = KernelCore::Cratis.Chronicle.Services.Seeding.EventSeeding;
+using KernelServerService = KernelCore::Cratis.Chronicle.Services.Host.Server;
+using KernelSubscriptionsService = KernelCore::Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
+using KernelUsersService = KernelCore::Cratis.Chronicle.Services.Security.Users;
+using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
+using KernelWebhooksService = KernelCore::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
+using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 
 namespace Cratis.Chronicle.Testing;
 
 /// <summary>
-/// Represents an in-process implementation of <see cref="IServices"/> for testing scenarios.
+/// Represents an implementation of <see cref="IServices"/> for testing scenarios backed by real kernel
+/// gRPC service implementations wired to in-memory storage.
 /// </summary>
 /// <remarks>
-/// All gRPC service contracts are backed by no-op or minimal in-process implementations.
-/// <see cref="IReadModels"/> is backed by an <see cref="InProcessReadModelsService"/> that returns
-/// pre-seeded read model instances registered via the test scenario builder.
+/// All gRPC service contracts are backed by the real kernel implementations from
+/// <c>Cratis.Chronicle.Services</c>.
 /// </remarks>
-/// <param name="readModels">The <see cref="InProcessReadModelsService"/> used for read model lookups.</param>
-internal sealed class TestingServices(InProcessReadModelsService readModels) : IServices
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for grain-based operations.</param>
+/// <param name="storage">The <see cref="IStorage"/> backed by in-memory implementations.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> for serialization.</param>
+internal sealed class TestingServices(
+    IGrainFactory grainFactory,
+    IStorage storage,
+    JsonSerializerOptions jsonSerializerOptions) : IServices
 {
-    static readonly IConstraints _constraints = new InProcessNoOpConstraintsService();
-    static readonly IObservers _observers = new NoOpObserversService();
-    static readonly IFailedPartitions _failedPartitions = new NoOpFailedPartitionsService();
-    static readonly IReactors _reactors = new NoOpReactorsService();
-    static readonly IReducers _reducers = new NoOpReducersService();
-    static readonly IProjections _projections = new NoOpProjectionsService();
-    static readonly IWebhooks _webhooks = new NoOpWebhooksService();
-    static readonly IEventStoreSubscriptions _eventStoreSubscriptions = new NoOpEventStoreSubscriptionsService();
-    static readonly IJobs _jobs = new NoOpJobsService();
-    static readonly IEventSeeding _seeding = new NoOpEventSeedingService();
-    static readonly IEventSequences _eventSequences = new NoOpEventSequencesService();
-    static readonly IEventStores _eventStores = new NoOpEventStoresService();
-    static readonly INamespaces _namespaces = new NoOpNamespacesService();
-    static readonly IIdentities _identities = new NoOpIdentitiesService();
-    static readonly IEventTypes _eventTypes = new NoOpEventTypesService();
-    static readonly IRecommendations _recommendations = new NoOpRecommendationsService();
-    static readonly IUsers _users = new NoOpUsersService();
-    static readonly IApplications _applications = new NoOpApplicationsService();
-    static readonly IServer _server = new NoOpServerService();
+    readonly Lazy<IObservers> _observers = new(() =>
+        new KernelObserversService(grainFactory, storage));
+
+    readonly Lazy<IFailedPartitions> _failedPartitions = new(() =>
+        new KernelFailedPartitionsService(storage));
+
+    readonly Lazy<IReactors> _reactors = new(() =>
+        new KernelReactorsService(
+            grainFactory,
+            new KernelReactorMediator(),
+            storage,
+            jsonSerializerOptions,
+            NullLogger<KernelReactorsService>.Instance));
+
+    readonly Lazy<IReducers> _reducers = new(() =>
+        new KernelReducersService(
+            grainFactory,
+            new KernelReducerMediator(),
+            new ExpandoObjectConverter(new TypeFormats()),
+            jsonSerializerOptions,
+            NullLogger<KernelReducersService>.Instance));
+
+    readonly Lazy<IProjections> _projections = new(() =>
+        new KernelProjectionsService(
+            grainFactory,
+            new ExpandoObjectConverter(new TypeFormats()),
+            null!,
+            null!));
+
+    readonly Lazy<IWebhooks> _webhooks = new(() =>
+        new KernelWebhooksService(
+            grainFactory,
+            storage,
+            new KernelWebhookComparer(
+                storage,
+                new ObjectComparer(),
+                NullLogger<KernelWebhookComparer>.Instance),
+            null!,
+            null!,
+            new KernelWebhookMediatorImpl(null!, jsonSerializerOptions)));
+
+    readonly Lazy<IEventStoreSubscriptions> _eventStoreSubscriptions = new(() =>
+        new KernelSubscriptionsService(grainFactory, storage));
+
+    readonly Lazy<IJobs> _jobs = new(() =>
+        new KernelJobsService(grainFactory, storage));
+
+    readonly Lazy<IEventSeeding> _seeding = new(() =>
+        new KernelSeedingService(grainFactory));
+
+    readonly Lazy<IEventSequences> _eventSequences = new(() =>
+        new KernelEventSequencesService(grainFactory, storage, jsonSerializerOptions));
+
+    readonly Lazy<INamespaces> _namespaces = new(() =>
+        new KernelNamespacesService(grainFactory, storage));
+
+    readonly Lazy<IIdentities> _identities = new(() =>
+        new KernelIdentitiesService(storage));
+
+    readonly Lazy<IEventTypes> _eventTypes = new(() =>
+        new KernelEventTypesService(storage, grainFactory));
+
+    readonly Lazy<IRecommendations> _recommendations = new(() =>
+        new KernelRecommendationsService(grainFactory, storage));
+
+    readonly Lazy<IConstraints> _constraints = new(() =>
+        new KernelConstraintsService(grainFactory));
+
+    readonly Lazy<IUsers> _users = new(() =>
+        new KernelUsersService(grainFactory, storage));
+
+    readonly Lazy<IApplications> _applications = new(() =>
+        new KernelApplicationsService(grainFactory, storage));
+
+    readonly Lazy<IServer> _server = new(() =>
+        new KernelServerService(null!));
+
+    readonly Lazy<IEventStores> _eventStores = new(() =>
+        new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
+
+    readonly Lazy<IReadModels> _readModels = new(() =>
+        new KernelReadModelsService(null!, grainFactory, storage, new ExpandoObjectConverter(new TypeFormats()), jsonSerializerOptions));
 
     /// <inheritdoc/>
-    public IReadModels ReadModels => readModels;
+    public IReadModels ReadModels => _readModels.Value;
 
     /// <inheritdoc/>
-    public IConstraints Constraints => _constraints;
+    public IConstraints Constraints => _constraints.Value;
 
     /// <inheritdoc/>
-    public IObservers Observers => _observers;
+    public IObservers Observers => _observers.Value;
 
     /// <inheritdoc/>
-    public IFailedPartitions FailedPartitions => _failedPartitions;
+    public IFailedPartitions FailedPartitions => _failedPartitions.Value;
 
     /// <inheritdoc/>
-    public IReactors Reactors => _reactors;
+    public IReactors Reactors => _reactors.Value;
 
     /// <inheritdoc/>
-    public IReducers Reducers => _reducers;
+    public IReducers Reducers => _reducers.Value;
 
     /// <inheritdoc/>
-    public IProjections Projections => _projections;
+    public IProjections Projections => _projections.Value;
 
     /// <inheritdoc/>
-    public IWebhooks Webhooks => _webhooks;
+    public IWebhooks Webhooks => _webhooks.Value;
 
     /// <inheritdoc/>
-    public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions;
+    public IEventStoreSubscriptions EventStoreSubscriptions => _eventStoreSubscriptions.Value;
 
     /// <inheritdoc/>
-    public IJobs Jobs => _jobs;
+    public IJobs Jobs => _jobs.Value;
 
     /// <inheritdoc/>
-    public IEventSeeding Seeding => _seeding;
+    public IEventSeeding Seeding => _seeding.Value;
 
     /// <inheritdoc/>
-    public IEventSequences EventSequences => _eventSequences;
+    public IEventSequences EventSequences => _eventSequences.Value;
 
     /// <inheritdoc/>
-    public IEventStores EventStores => _eventStores;
+    public IEventStores EventStores => _eventStores.Value;
 
     /// <inheritdoc/>
-    public INamespaces Namespaces => _namespaces;
+    public INamespaces Namespaces => _namespaces.Value;
 
     /// <inheritdoc/>
-    public IIdentities Identities => _identities;
+    public IIdentities Identities => _identities.Value;
 
     /// <inheritdoc/>
-    public IEventTypes EventTypes => _eventTypes;
+    public IEventTypes EventTypes => _eventTypes.Value;
 
     /// <inheritdoc/>
-    public IRecommendations Recommendations => _recommendations;
+    public IRecommendations Recommendations => _recommendations.Value;
 
     /// <inheritdoc/>
-    public IUsers Users => _users;
+    public IUsers Users => _users.Value;
 
     /// <inheritdoc/>
-    public IApplications Applications => _applications;
+    public IApplications Applications => _applications.Value;
 
     /// <inheritdoc/>
-    public IServer Server => _server;
-
-    sealed class NoOpObserversService : IObservers
-    {
-        public Task Replay(Replay command, CallContext context = default) => Task.CompletedTask;
-        public Task ReplayPartition(ReplayPartition command, CallContext context = default) => Task.CompletedTask;
-        public Task RetryPartition(RetryPartition command, CallContext context = default) => Task.CompletedTask;
-        public Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default) =>
-            Task.FromResult(new ObserverInformation());
-        public Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<ObserverInformation>());
-        public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<ObserverInformation>>();
-        public Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<ObserverInformation>());
-    }
-
-    sealed class NoOpFailedPartitionsService : IFailedPartitions
-    {
-        public Task<IEnumerable<FailedPartition>> GetFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<FailedPartition>());
-        public IObservable<IEnumerable<FailedPartition>> ObserveFailedPartitions(GetFailedPartitionsRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<FailedPartition>>();
-    }
-
-    sealed class NoOpReactorsService : IReactors
-    {
-        public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default) =>
-            Observable.Never<EventsToObserve>();
-        public Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default) =>
-            Task.FromResult(new HasReactorResponse { Exists = false });
-    }
-
-    sealed class NoOpReducersService : IReducers
-    {
-        public IObservable<ReduceOperationMessage> Observe(IObservable<ReducerMessage> messages, CallContext context = default) =>
-            Observable.Never<ReduceOperationMessage>();
-    }
-
-    sealed class NoOpProjectionsService : IProjections
-    {
-        public Task Register(RegisterRequest request, CallContext context = default) => Task.CompletedTask;
-        public Task<IEnumerable<ProjectionDefinition>> GetAllDefinitions(GetAllDefinitionsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<ProjectionDefinition>());
-        public Task<IEnumerable<ProjectionWithDeclaration>> GetAllDeclarations(GetAllDeclarationsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<ProjectionWithDeclaration>());
-        public Task<OneOf<ProjectionPreview, ProjectionDeclarationParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default) =>
-            Task.FromResult(new OneOf<ProjectionPreview, ProjectionDeclarationParsingErrors>(new ProjectionPreview()));
-        public Task<SaveProjectionResult> Save(SaveProjectionRequest request, CallContext context = default) =>
-            Task.FromResult(new SaveProjectionResult());
-        public Task<OneOf<GeneratedCode, ProjectionDeclarationParsingErrors>> GenerateDeclarativeCode(GenerateDeclarativeCodeRequest request, CallContext context = default) =>
-            Task.FromResult(new OneOf<GeneratedCode, ProjectionDeclarationParsingErrors>(new GeneratedCode()));
-        public Task<OneOf<GeneratedCode, ProjectionDeclarationParsingErrors>> GenerateModelBoundCode(GenerateModelBoundCodeRequest request, CallContext context = default) =>
-            Task.FromResult(new OneOf<GeneratedCode, ProjectionDeclarationParsingErrors>(new GeneratedCode()));
-    }
-
-    sealed class NoOpWebhooksService : IWebhooks
-    {
-        public Task Add(AddWebhooks request, CallContext context = default) => Task.CompletedTask;
-        public Task Remove(RemoveWebhooks request, CallContext context = default) => Task.CompletedTask;
-        public Task<IEnumerable<WebhookDefinition>> GetWebhooks(GetWebhooksRequest request) =>
-            Task.FromResult(Enumerable.Empty<WebhookDefinition>());
-        public IObservable<IEnumerable<WebhookDefinition>> ObserveWebhooks(GetWebhooksRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<WebhookDefinition>>();
-        public Task<TestOAuthAuthorizationResponse> TestOAuthAuthorization(TestOAuthAuthorizationRequest request, CallContext context = default) =>
-            Task.FromResult(new TestOAuthAuthorizationResponse());
-        public Task<TestWebhookResponse> TestWebhook(TestWebhookRequest request, CallContext context = default) =>
-            Task.FromResult(new TestWebhookResponse());
-    }
-
-    sealed class NoOpEventStoreSubscriptionsService : IEventStoreSubscriptions
-    {
-        public Task Add(AddEventStoreSubscriptions request, CallContext context = default) => Task.CompletedTask;
-        public Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default) => Task.CompletedTask;
-        public Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request) =>
-            Task.FromResult(Enumerable.Empty<EventStoreSubscriptionDefinition>());
-    }
-
-    sealed class NoOpJobsService : IJobs
-    {
-        public Task Stop(StopJob command, CallContext context = default) => Task.CompletedTask;
-        public Task Resume(ResumeJob command, CallContext context = default) => Task.CompletedTask;
-        public Task Delete(DeleteJob command, CallContext context = default) => Task.CompletedTask;
-        public Task<OneOf<Job, JobError>> GetJob(GetJobRequest request, CallContext context = default) =>
-            Task.FromResult(new OneOf<Job, JobError>(new Job()));
-        public Task<IEnumerable<Job>> GetJobs(GetJobsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<Job>());
-        public IObservable<IEnumerable<Job>> ObserveJobs(GetJobsRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<Job>>();
-        public Task<IEnumerable<JobStep>> GetJobSteps(GetJobStepsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<JobStep>());
-    }
-
-    sealed class NoOpEventSeedingService : IEventSeeding
-    {
-        public Task Seed(SeedRequest request, CallContext context = default) => Task.CompletedTask;
-        public Task<SeedDataResponse> GetGlobalSeedData(GetSeedDataRequest request, CallContext context = default) =>
-            Task.FromResult(new SeedDataResponse());
-        public Task<SeedDataResponse> GetNamespaceSeedData(GetSeedDataRequest request, CallContext context = default) =>
-            Task.FromResult(new SeedDataResponse());
-    }
-
-    sealed class NoOpEventSequencesService : IEventSequences
-    {
-        public Task<AppendResponse> Append(AppendRequest request, CallContext context = default) =>
-            Task.FromResult(new AppendResponse());
-        public Task<AppendManyResponse> AppendMany(AppendManyRequest request, CallContext context = default) =>
-            Task.FromResult(new AppendManyResponse());
-        public Task<GetTailSequenceNumberResponse> GetTailSequenceNumber(GetTailSequenceNumberRequest request, CallContext context = default) =>
-            Task.FromResult(new GetTailSequenceNumberResponse());
-        public Task<GetForEventSourceIdAndEventTypesResponse> GetForEventSourceIdAndEventTypes(GetForEventSourceIdAndEventTypesRequest request, CallContext context = default) =>
-            Task.FromResult(new GetForEventSourceIdAndEventTypesResponse());
-        public Task<HasEventsForEventSourceIdResponse> HasEventsForEventSourceId(HasEventsForEventSourceIdRequest request, CallContext context = default) =>
-            Task.FromResult(new HasEventsForEventSourceIdResponse());
-        public Task<GetFromEventSequenceNumberResponse> GetEventsFromEventSequenceNumber(GetFromEventSequenceNumberRequest request, CallContext context = default) =>
-            Task.FromResult(new GetFromEventSequenceNumberResponse());
-        public Task Revise(ReviseRequest request, CallContext context = default) => Task.CompletedTask;
-        public Task<RedactResponse> Redact(RedactRequest request, CallContext context = default) =>
-            Task.FromResult(new RedactResponse());
-        public Task RedactForEventSource(RedactForEventSourceRequest request, CallContext context = default) => Task.CompletedTask;
-    }
-
-    sealed class NoOpEventStoresService : IEventStores
-    {
-        public Task<IEnumerable<string>> GetEventStores() => Task.FromResult(Enumerable.Empty<string>());
-        public IObservable<IEnumerable<string>> ObserveEventStores(CallContext callContext = default) =>
-            Observable.Empty<IEnumerable<string>>();
-        public Task Ensure(EnsureEventStore command) => Task.CompletedTask;
-    }
-
-    sealed class NoOpNamespacesService : INamespaces
-    {
-        public Task Ensure(EnsureNamespace command) => Task.CompletedTask;
-        public Task<IEnumerable<string>> GetNamespaces(GetNamespacesRequest request) =>
-            Task.FromResult(Enumerable.Empty<string>());
-        public IObservable<IEnumerable<string>> ObserveNamespaces(GetNamespacesRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<string>>();
-    }
-
-    sealed class NoOpIdentitiesService : IIdentities
-    {
-        public Task<IEnumerable<Identity>> GetIdentities(GetIdentitiesRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<Identity>());
-        public IObservable<IEnumerable<Identity>> ObserveIdentities(GetIdentitiesRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<Identity>>();
-    }
-
-    sealed class NoOpEventTypesService : IEventTypes
-    {
-        public Task Register(RegisterEventTypesRequest request) => Task.CompletedTask;
-        public Task RegisterSingle(RegisterSingleEventTypeRequest request) => Task.CompletedTask;
-        public Task<IEnumerable<EventType>> GetAll(GetAllEventTypesRequest request) =>
-            Task.FromResult(Enumerable.Empty<EventType>());
-        public Task<IEnumerable<EventTypeRegistration>> GetAllRegistrations(GetAllEventTypesRequest request) =>
-            Task.FromResult(Enumerable.Empty<EventTypeRegistration>());
-        public IObservable<IEnumerable<EventTypeRegistration>> ObserveAllRegistrations(GetAllEventTypesRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<EventTypeRegistration>>();
-        public Task<IEnumerable<EventTypeRegistration>> GetAllGenerationsForEventType(GetEventTypeGenerationsRequest request) =>
-            Task.FromResult(Enumerable.Empty<EventTypeRegistration>());
-    }
-
-    sealed class NoOpRecommendationsService : IRecommendations
-    {
-        public Task Perform(Perform command, CallContext context = default) => Task.CompletedTask;
-        public Task Ignore(Perform command, CallContext context = default) => Task.CompletedTask;
-        public Task<IEnumerable<Recommendation>> GetRecommendations(GetRecommendationsRequest request, CallContext context = default) =>
-            Task.FromResult(Enumerable.Empty<Recommendation>());
-        public IObservable<IEnumerable<Recommendation>> ObserveRecommendations(GetRecommendationsRequest request, CallContext context = default) =>
-            Observable.Empty<IEnumerable<Recommendation>>();
-    }
-
-    sealed class NoOpUsersService : IUsers
-    {
-        public Task Add(AddUser command) => Task.CompletedTask;
-        public Task Remove(RemoveUser command) => Task.CompletedTask;
-        public Task ChangePassword(ChangeUserPassword command) => Task.CompletedTask;
-        public Task RequirePasswordChange(RequirePasswordChange command) => Task.CompletedTask;
-        public Task SetInitialAdminPassword(SetInitialAdminPassword command) => Task.CompletedTask;
-        public Task<IList<User>> GetAll() => Task.FromResult<IList<User>>([]);
-        public IObservable<IList<User>> ObserveAll(CallContext context = default) =>
-            Observable.Empty<IList<User>>();
-        public Task<InitialAdminPasswordSetupStatus> GetInitialAdminPasswordSetupStatus() =>
-            Task.FromResult(new InitialAdminPasswordSetupStatus());
-    }
-
-    sealed class NoOpApplicationsService : IApplications
-    {
-        public Task Add(AddApplication command) => Task.CompletedTask;
-        public Task Remove(RemoveApplication command) => Task.CompletedTask;
-        public Task ChangeSecret(ChangeApplicationSecret command) => Task.CompletedTask;
-        public Task<IList<Application>> GetAll() => Task.FromResult<IList<Application>>([]);
-        public IObservable<IList<Application>> ObserveAll(CallContext context = default) =>
-            Observable.Empty<IList<Application>>();
-    }
-
-    sealed class NoOpServerService : IServer
-    {
-        public Task ReloadState() => Task.CompletedTask;
-        public Task<ServerVersionInfo> GetVersionInfo() => Task.FromResult(new ServerVersionInfo());
-    }
+    public IServer Server => _server.Value;
 }
