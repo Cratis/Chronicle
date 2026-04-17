@@ -34,11 +34,11 @@ using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
-using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
+using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
+using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 using ReactorsImpl = Cratis.Chronicle.Reactors.Reactors;
 using WebhooksImpl = Cratis.Chronicle.Webhooks.Webhooks;
 
@@ -54,15 +54,11 @@ namespace Cratis.Chronicle.Testing.Events;
 public class EventStoreForTesting : IEventStore
 {
     readonly ReadModelsForTesting _readModelsForTesting;
-    readonly IClientArtifactsProvider _clientArtifactsProvider;
-    readonly IJsonSchemaGenerator _jsonSchemaGenerator;
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly IEventTypes _eventTypes;
-    readonly IEventSerializer _eventSerializer;
-    readonly IProjections _projections;
-    readonly IReducers _reducers;
-    readonly IReadModels _readModels;
+    readonly EventTypes _eventTypes;
+    readonly Projections.Projections _projections;
+    readonly Reducers.Reducers _reducers;
     readonly ICanProvideConstraints _constraintProvider;
     readonly IClientArtifactsActivator _artifactActivator;
     readonly IServiceProvider _serviceProvider;
@@ -85,9 +81,9 @@ public class EventStoreForTesting : IEventStore
     {
         _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        _clientArtifactsProvider = DefaultClientArtifactsProvider.Default;
+        ClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
         _namingPolicy = new CamelCaseNamingPolicy();
-        _jsonSchemaGenerator = new JsonSchemaGenerator(
+        JsonSchemaGenerator = new JsonSchemaGenerator(
             new ComplianceMetadataResolver(
                 new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
                 new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
@@ -99,19 +95,19 @@ public class EventStoreForTesting : IEventStore
 
         var loggerFactory = new NullLoggerFactory();
         _artifactActivator = new ClientArtifactsActivator(_serviceProvider, loggerFactory);
-        var eventTypeMigrators = new EventTypeMigrators(_clientArtifactsProvider, _serviceProvider);
+        var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, _serviceProvider);
 
-        _eventTypes = new EventTypes(this, _jsonSchemaGenerator, _clientArtifactsProvider, eventTypeMigrators);
+        _eventTypes = new EventTypes(this, JsonSchemaGenerator, ClientArtifactsProvider, eventTypeMigrators);
         _eventTypes.Discover().GetAwaiter().GetResult();
 
-        _eventSerializer = new EventSerializer(_clientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
+        EventSerializer = new EventSerializer(ClientArtifactsProvider, _artifactActivator, _eventTypes, _jsonSerializerOptions);
 
         var reducerObservers = new ReducerObservers();
 
         _projections = new Projections.Projections(
             this,
             _eventTypes,
-            _clientArtifactsProvider,
+            ClientArtifactsProvider,
             _namingPolicy,
             _artifactActivator,
             _jsonSerializerOptions,
@@ -120,7 +116,7 @@ public class EventStoreForTesting : IEventStore
 
         _reducers = new Reducers.Reducers(
             this,
-            _clientArtifactsProvider,
+            ClientArtifactsProvider,
             _serviceProvider,
             _artifactActivator,
             new ReducerValidator(),
@@ -140,13 +136,13 @@ public class EventStoreForTesting : IEventStore
             _projections,
             _reducers,
             _eventTypes,
-            _jsonSchemaGenerator,
+            JsonSchemaGenerator,
             _jsonSerializerOptions,
             readModelWatcherManager,
             reducerObservers);
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels);
-        _readModels = _readModelsForTesting;
+        ReadModels = _readModelsForTesting;
 
         _constraintProvider = CreateConstraintProvider(_artifactActivator);
 
@@ -154,11 +150,11 @@ public class EventStoreForTesting : IEventStore
         _reactors = new Lazy<IReactors>(() => new ReactorsImpl(
             this,
             _eventTypes,
-            _clientArtifactsProvider,
+            ClientArtifactsProvider,
             _serviceProvider,
             _artifactActivator,
-            new ReactorMiddlewaresActivator(_clientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
-            _eventSerializer,
+            new ReactorMiddlewaresActivator(ClientArtifactsProvider, _artifactActivator, NullLogger<ReactorMiddlewaresActivator>.Instance),
+            EventSerializer,
             new CausationManager(),
             new BaseIdentityProvider(),
             NullLogger<ReactorsImpl>.Instance,
@@ -175,8 +171,8 @@ public class EventStoreForTesting : IEventStore
             Name,
             Connection,
             _eventTypes,
-            _eventSerializer,
-            _clientArtifactsProvider,
+            EventSerializer,
+            ClientArtifactsProvider,
             _serviceProvider,
             _artifactActivator,
             NullLogger<EventSeeding>.Instance));
@@ -226,7 +222,7 @@ public class EventStoreForTesting : IEventStore
     public IJobs Jobs => _jobs.Value;
 
     /// <inheritdoc/>
-    public IReadModels ReadModels => _readModels;
+    public IReadModels ReadModels { get; }
 
     /// <inheritdoc/>
     public IEventSeeding Seeding => _seeding.Value;
@@ -234,17 +230,17 @@ public class EventStoreForTesting : IEventStore
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
     /// </summary>
-    internal IJsonSchemaGenerator JsonSchemaGenerator => _jsonSchemaGenerator;
+    internal IJsonSchemaGenerator JsonSchemaGenerator { get; }
 
     /// <summary>
     /// Gets the <see cref="IClientArtifactsProvider"/> used by this event store.
     /// </summary>
-    internal IClientArtifactsProvider ClientArtifactsProvider => _clientArtifactsProvider;
+    internal IClientArtifactsProvider ClientArtifactsProvider { get; }
 
     /// <summary>
     /// Gets the <see cref="IEventSerializer"/> used by this event store.
     /// </summary>
-    internal IEventSerializer EventSerializer => _eventSerializer;
+    internal IEventSerializer EventSerializer { get; }
 
     /// <inheritdoc/>
     public Task DiscoverAll() => Task.CompletedTask;
@@ -307,7 +303,9 @@ public class EventStoreForTesting : IEventStore
 
         var constraintsService = new InProcessNoOpConstraintsService();
         var services = new InProcessServices(eventSequencesService, constraintsService);
+#pragma warning disable CA2000 // Dispose objects before losing scope — EventLog/EventSequence takes ownership
         var connection = new InProcessChronicleConnection(services);
+#pragma warning restore CA2000
 
         var inProcessConstraints = new InProcessConstraints(_constraintProvider);
         inProcessConstraints.Discover().GetAwaiter().GetResult();
@@ -320,7 +318,7 @@ public class EventStoreForTesting : IEventStore
                 connection,
                 _eventTypes,
                 inProcessConstraints,
-                _eventSerializer,
+                EventSerializer,
                 new CorrelationIdAccessor(),
                 new NoConcurrencyScopeStrategies(),
                 new CausationManager(),
@@ -336,7 +334,7 @@ public class EventStoreForTesting : IEventStore
             connection,
             _eventTypes,
             inProcessConstraints,
-            _eventSerializer,
+            EventSerializer,
             new CorrelationIdAccessor(),
             new NoConcurrencyScopeStrategies(),
             new CausationManager(),
@@ -345,16 +343,16 @@ public class EventStoreForTesting : IEventStore
             _jsonSerializerOptions);
     }
 
-    ICanProvideConstraints CreateConstraintProvider(IClientArtifactsActivator artifactActivator) =>
-        new CompositeConstraintProvider(
+    CompositeConstraintProvider CreateConstraintProvider(IClientArtifactsActivator artifactActivator) =>
+        new(
             new ConstraintsByBuilderProvider(
-                _clientArtifactsProvider,
+                ClientArtifactsProvider,
                 _eventTypes,
                 _namingPolicy,
                 artifactActivator,
                 NullLogger<ConstraintsByBuilderProvider>.Instance),
-            new UniqueConstraintProvider(_clientArtifactsProvider, _eventTypes, _namingPolicy),
-            new UniqueEventTypeConstraintsProvider(_clientArtifactsProvider, _eventTypes));
+            new UniqueConstraintProvider(ClientArtifactsProvider, _eventTypes, _namingPolicy),
+            new UniqueEventTypeConstraintsProvider(ClientArtifactsProvider, _eventTypes));
 
     sealed class NoConcurrencyScopeStrategies : IConcurrencyScopeStrategies
     {

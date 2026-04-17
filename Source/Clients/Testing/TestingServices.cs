@@ -4,6 +4,7 @@
 extern alias KernelCore;
 
 using System.Text.Json;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
@@ -21,14 +22,10 @@ using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
-using Cratis.Chronicle.Storage;
-using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
-using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
-using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
-using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
-using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage;
+using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
@@ -39,16 +36,19 @@ using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
+using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
+using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
 using KernelReducersService = KernelCore::Cratis.Chronicle.Services.Observation.Reducers.Reducers;
 using KernelSeedingService = KernelCore::Cratis.Chronicle.Services.Seeding.EventSeeding;
 using KernelServerService = KernelCore::Cratis.Chronicle.Services.Host.Server;
 using KernelSubscriptionsService = KernelCore::Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions;
 using KernelUsersService = KernelCore::Cratis.Chronicle.Services.Security.Users;
-using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
+using KernelWebhookComparer = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionComparer;
+using KernelWebhookMediatorImpl = KernelCore::Cratis.Chronicle.Observation.Webhooks.WebhookMediator;
 using KernelWebhooksService = KernelCore::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks;
-using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 
 namespace Cratis.Chronicle.Testing;
 

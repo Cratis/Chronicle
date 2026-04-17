@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 using Cratis.Execution;
 
@@ -77,7 +76,9 @@ public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null)
 
         var invoker = new ReactorInvoker(
             _eventTypes,
+#pragma warning disable CA2000 // Dispose objects before losing scope — ownership transfers to ReactorInvoker
             new ReactorMiddlewares([]),
+#pragma warning restore CA2000
             typeof(TReactor),
             activatedReactor,
             NullLogger<ReactorInvoker>.Instance);
