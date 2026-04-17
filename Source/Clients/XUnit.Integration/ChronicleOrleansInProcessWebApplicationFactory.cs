@@ -5,6 +5,7 @@ extern alias KernelCore;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -92,9 +93,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 var testServiceRegistry = new MutableServiceRegistry();
                 testServiceRegistry.Update(capturingCollection);
                 services.AddSingleton(testServiceRegistry);
-                foreach (var registeredType in testServiceRegistry.RegisteredTypes)
+                foreach (var capturedType in testServiceRegistry.RegisteredTypes.Select(type => type))
                 {
-                    var capturedType = registeredType;
                     services.AddTransient(capturedType, sp => sp.GetRequiredService<MutableServiceRegistry>().Get(capturedType, sp));
                 }
             });
