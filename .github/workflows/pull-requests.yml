@@ -1,5 +1,9 @@
 name: PR Prerelase
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   NUGET_SOURCE: https://nuget.pkg.github.com/cratis/index.json

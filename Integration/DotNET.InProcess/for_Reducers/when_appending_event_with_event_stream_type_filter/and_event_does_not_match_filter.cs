@@ -46,7 +46,7 @@ public class and_event_does_not_match_filter(context context) : Given<context>(c
             await EventStore.EventLog.Append(EventSourceId, NonMatchingEvent);
 
             // Append an event with the matching event stream type — should be handled
-            await EventStore.EventLog.Append(EventSourceId, MatchingEvent, eventStreamType: new Events.EventStreamType("invoices"));
+            await EventStore.EventLog.Append(EventSourceId, MatchingEvent, eventStreamType: new EventStreamType("invoices"));
             await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await reducer.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First.Next());
             ReducerState = await reducer.GetState();

@@ -6,6 +6,7 @@ import { inject, injectable } from 'tsyringe';
 import { AllNamespaces } from 'Api/Namespaces';
 import { ILocalStorage } from '@cratis/arc.react.mvvm/browser';
 import { BehaviorSubject } from 'rxjs';
+import type { ObservableQuerySubscription } from '@cratis/arc/queries';
 import { CurrentNamespaceChanged } from './CurrentNamespaceChanged';
 import { INamespaces } from './INamespaces';
 import { type EventStoreAndNamespaceParams } from 'Shared';
@@ -17,14 +18,40 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 export class Namespaces implements INamespaces {
     private _currentNamespace: BehaviorSubject<string> = new BehaviorSubject('');
     private _namespaces: BehaviorSubject<string[]> = new BehaviorSubject<string[]>([]);
+    private _subscription: ObservableQuerySubscription<string[]> | null = null;
+    private _lastEventStore: string | undefined = undefined;
 
     constructor(
         private readonly _localStorage: ILocalStorage,
         private readonly _messenger: IMessenger,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams,
-        namespacesQuery: AllNamespaces) {
+        private readonly _namespacesQuery: AllNamespaces) {
 
-        namespacesQuery.subscribe(result => {
+        // Initialize after a microtask to allow params to be fully set
+        Promise.resolve().then(() => {
+            this.ensureSubscription();
+        });
+    }
+
+    private ensureSubscription() {
+        // Only subscribe if we have an eventStore and it's different from last time
+        if (!this._params.eventStore) {
+            return;
+        }
+
+        if (this._lastEventStore === this._params.eventStore) {
+            return; // Already subscribed for this event store
+        }
+
+        // Unsubscribe from previous subscription
+        if (this._subscription) {
+            this._subscription.unsubscribe();
+            this._subscription = null;
+        }
+
+        this._lastEventStore = this._params.eventStore;
+
+        this._subscription = this._namespacesQuery.subscribe(result => {
             this._namespaces.next(result.data);
             const namespace = this.getNamespaceFromName(this._params.namespace ?? this._localStorage.getItem('namespace'));
             if (namespace) {
@@ -33,7 +60,7 @@ export class Namespaces implements INamespaces {
                 this.setCurrentNamespace(this._namespaces.value[0]);
             }
         }, {
-            eventStore: _params.eventStore
+            eventStore: this._params.eventStore
         });
     }
 

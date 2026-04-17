@@ -194,18 +194,6 @@ If authentication fails after configuration:
 2. Check for special characters that may need escaping in environment variables
 3. Ensure the password matches what was used during certificate generation
 
-### Production Startup Failure
-
-In production, Chronicle will fail to start if no encryption certificate is configured:
-
-```bash
-InvalidOperationException: An encryption certificate is required in production for Data Protection key security.
-Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword'
-in your configuration.
-```
-
-Ensure you have configured the certificate path and password as described above.
-
 ## Next Steps
 
 - [Local Certificates](local-certificates.md) - TLS certificate setup for development

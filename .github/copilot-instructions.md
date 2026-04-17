@@ -1,3 +1,4 @@
+<<<<<<< copilot/worktree-2026-04-17T09-36-14
 # GitHub Copilot Instructions
 
 ## Project Philosophy
@@ -84,3 +85,6 @@ All files should start with the following header:
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 ```
+=======
+../.ai/rules/general.md
+>>>>>>> main
