@@ -92,7 +92,7 @@ public class ProjectionReplayHandler(
             {
                 return ICanHandleReplayForObserver.Error.CouldNotGetReplayContext;
             }
-            var pipeline = projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             await doWork(pipeline, projection, replayContext);
             return Result<ICanHandleReplayForObserver.Error>.Success();
         }

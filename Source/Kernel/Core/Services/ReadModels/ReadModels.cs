@@ -111,7 +111,7 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetDefinition();
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-        var sink = sinks.GetFor(definition);
+        var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
         Concepts.ReadModels.ReadModelContainerName? occurrence = null;

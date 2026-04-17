@@ -33,7 +33,7 @@ public class ProjectionPipelineManager(
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
 
     /// <inheritdoc/>
-    public IProjectionPipeline GetFor(
+    public async Task<IProjectionPipeline> GetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         EngineProjection projection)
@@ -46,7 +46,7 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
-        var sink = namespaceStorage.Sinks.GetFor(projection.ReadModel);
+        var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
         var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());

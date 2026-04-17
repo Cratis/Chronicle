@@ -19,7 +19,7 @@ public interface IProjectionPipelineManager
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
     /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
     /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
-    IProjectionPipeline GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
+    Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
 
     /// <summary>
     /// Evict any projection pipeline for a specific projection identifier.
