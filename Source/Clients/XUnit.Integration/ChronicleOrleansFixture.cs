@@ -1,8 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+extern alias KernelConcepts;
+
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
+using KernelCore::Cratis.Chronicle.Namespaces;
+using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,16 +65,50 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    and can be deactivated.
         await DeactivateAllGrains();
 
-        // 3. Re-discover artifacts from the current test fixture. Discover() creates new
+        // 3. Remove all databases again. The previous test's DisposeAsync already dropped
+        //    databases, but StateMachine.OnDeactivateAsync calls WriteStateAsync(), which
+        //    auto-creates MongoDB databases with stale grain state. A second cleanup ensures
+        //    grains start with a clean slate when they reactivate during RegisterAll.
+        await ChronicleFixture.RemoveAllDatabases();
+
+        // 3b. Re-bootstrap the kernel reactors for the system event store. The startup task
+        //     that normally does this has been removed from the test silo (it deadlocks when
+        //     PatchManager grain can't activate during silo startup). Since DB was wiped, the
+        //     system Namespaces grain and ReactorsReactor are gone. Without this, events like
+        //     EventStoreAdded/NamespaceAdded won't be processed and webhook/subscription
+        //     definitions never get saved.
+        var grainFactory = Services.GetRequiredService<IGrainFactory>();
+        await grainFactory.GetGrain<INamespaces>(
+            (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System).EnsureDefault();
+        var kernelReactors = Services.GetRequiredService<IReactors>();
+        await kernelReactors.DiscoverAndRegister(
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
         var eventStore = Services.GetRequiredService<IEventStore>();
         await eventStore.DiscoverAll();
 
-        // 4. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
+        // 5. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
         //    then fires lifecycle.Connected() which triggers RegisterAll() via OnConnected.
         if (connection is ChronicleConnection chronicleConnection)
         {
             await chronicleConnection.Reconnect();
+        }
+
+        // Diagnostic: call RegisterAll directly so that any exception surfaces instead
+        // of being swallowed by ConnectionLifecycle.Connected's catch block.
+        // If lifecycle.Connected already succeeded, Register() is a no-op (_registered = true).
+        // If it failed, this retries and surfaces the actual error.
+        try
+        {
+            await eventStore.RegisterAll();
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"[DIAG] RegisterAll failed after Reconnect: {ex}");
+            throw;
         }
     }
 
@@ -116,6 +155,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
+
+            var beforeCount = await managementGrain.GetTotalActivationCount();
+            Console.Error.WriteLine($"[DIAG] Activation count BEFORE ForceActivationCollection: {beforeCount}");
+
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
             // ForceActivationCollection only schedules deactivation; the actual deactivation
@@ -133,6 +176,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
                 {
                     if (++stableReadCount >= 3)
                     {
+                        Console.Error.WriteLine($"[DIAG] Activation count AFTER ForceActivationCollection stabilized at: {currentCount}");
                         break;
                     }
                 }

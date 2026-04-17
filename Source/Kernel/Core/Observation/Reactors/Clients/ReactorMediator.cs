@@ -37,10 +37,12 @@ public class ReactorMediator : IReactorMediator
     {
         if (_observers.TryGetValue(new(reactorId, connectionId), out var observable))
         {
+            Console.Error.WriteLine($"[DIAG-MEDIATOR] OnNext FOUND subscription for reactor={reactorId} connectionId={connectionId} partition={partition}");
             observable(partition, events, taskCompletionSource);
         }
         else
         {
+            Console.Error.WriteLine($"[DIAG-MEDIATOR] OnNext MISSING subscription for reactor={reactorId} connectionId={connectionId}. Active keys: {string.Join(", ", _observers.Keys.Select(k => $"({k.ReactorId},{k.ConnectionId})"))}");
             taskCompletionSource.SetResult(ObserverSubscriberResult.Disconnected());
         }
     }

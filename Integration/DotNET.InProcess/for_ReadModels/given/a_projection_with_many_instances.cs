@@ -48,15 +48,8 @@ public class a_projection_with_many_instances(ChronicleInProcessFixture chronicl
 
     protected async Task AppendAllEvents()
     {
-        await File.AppendAllTextAsync("/tmp/silo-debug.log", $"[TEST {DateTime.UtcNow:HH:mm:ss.fff}] AppendAllEvents START\n");
-
         var projection = EventStore.Projections.GetHandlerFor<SomeProjection>();
-
-        var stateBefore = await projection.GetState();
-        await File.AppendAllTextAsync("/tmp/silo-debug.log", $"[TEST {DateTime.UtcNow:HH:mm:ss.fff}] State before WaitTillActive: RunningState={stateBefore.RunningState}, LastHandled={stateBefore.LastHandledEventSequenceNumber}\n");
-
         await projection.WaitTillActive(TimeSpanFactory.FromSeconds(30));
-        await File.AppendAllTextAsync("/tmp/silo-debug.log", $"[TEST {DateTime.UtcNow:HH:mm:ss.fff}] WaitTillActive completed\n");
 
         var lastSequenceNumber = EventSequenceNumber.First;
         for (var i = 0; i < TotalInstances; i++)
@@ -66,9 +59,6 @@ public class a_projection_with_many_instances(ChronicleInProcessFixture chronicl
             lastSequenceNumber = result.SequenceNumber;
         }
 
-        await File.AppendAllTextAsync("/tmp/silo-debug.log", $"[TEST {DateTime.UtcNow:HH:mm:ss.fff}] All events appended, lastSeq={lastSequenceNumber}\n");
-
         await projection.WaitTillReachesEventSequenceNumber(lastSequenceNumber);
-        await File.AppendAllTextAsync("/tmp/silo-debug.log", $"[TEST {DateTime.UtcNow:HH:mm:ss.fff}] WaitTillReachesEventSequenceNumber completed\n");
     }
 }
