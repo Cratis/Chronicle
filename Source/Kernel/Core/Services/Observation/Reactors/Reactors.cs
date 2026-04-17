@@ -133,7 +133,9 @@ internal sealed class Reactors(
                 using (Tracing.RegisterObserver(key, ObserverType.Reactor))
                 {
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
+                    Console.Error.WriteLine($"[DIAG-SERVER] About to SetDefinitionAndSubscribe for reactor {registration.Reactor.ReactorId} connectionId={registration.ConnectionId}");
                     await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
+                    Console.Error.WriteLine($"[DIAG-SERVER] SetDefinitionAndSubscribe completed for reactor {registration.Reactor.ReactorId}");
                 }
 
                 await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -153,6 +155,7 @@ internal sealed class Reactors(
             catch (Exception ex)
             {
                 logger.Disengage(observerId, connectionId, ex);
+                Console.Error.WriteLine($"[DIAG-SERVER] Reactor Observe error for {observerId}: {ex}");
                 observer.OnError(ex);
             }
             finally

@@ -146,6 +146,7 @@ public class ProjectionObserverSubscriber(
     {
         if (State.ReadModel is null)
         {
+            File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-SUB] HandlePipeline: State.ReadModel is null for key={_key}\n");
             return;
         }
 
@@ -153,7 +154,7 @@ public class ProjectionObserverSubscriber(
         var eventStoreStorage = storage.GetEventStore(_key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
-        _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
+        _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }
 }

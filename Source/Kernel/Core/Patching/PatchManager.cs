@@ -28,6 +28,7 @@ public class PatchManager(
     /// <inheritdoc/>
     public async Task ApplyPatches()
     {
+        System.IO.File.AppendAllText("/tmp/diag-patchmgr.log", $"[DIAG-PM] ApplyPatches called at {DateTimeOffset.UtcNow:O}\n{Environment.StackTrace}\n\n");
         logger.StartingPatchApplication();
 
         var system = grainFactory.GetSystem();
@@ -97,13 +98,14 @@ public class PatchManager(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        System.IO.File.AppendAllText("/tmp/diag-patchmgr.log", $"[DIAG-PM] OnActivateAsync called at {DateTimeOffset.UtcNow:O}\n");
         if (State is null || State == PatchManagerState.Empty)
         {
             var appliedPatches = await storage.System.Patches.GetAll();
             State = new PatchManagerState(appliedPatches);
             await WriteStateAsync();
         }
-
+        System.IO.File.AppendAllText("/tmp/diag-patchmgr.log", $"[DIAG-PM] OnActivateAsync completed\n");
         await base.OnActivateAsync(cancellationToken);
     }
 }
