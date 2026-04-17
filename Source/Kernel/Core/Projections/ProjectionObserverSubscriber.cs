@@ -146,13 +146,17 @@ public class ProjectionObserverSubscriber(
     {
         if (State.ReadModel is null)
         {
+            File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-SUB] HandlePipeline: State.ReadModel is null for key={_key}\n");
             return;
         }
 
         var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(State.ReadModel, _key.EventStore)).GetDefinition();
         var eventStoreStorage = storage.GetEventStore(_key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
+        var schemaList = eventTypeSchemas.ToList();
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-SUB] HandlePipeline: projection={State.Identifier}, readModel={State.ReadModel}, autoMap={State.AutoMap}, eventTypeSchemas={schemaList.Count}, fromEvents={string.Join(",", State.From.Keys.Select(k => k.Id))}\n");
+        var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, schemaList);
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-SUB] HandlePipeline: created engine projection with {projection.EventTypes.Count()} event types\n");
         _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }

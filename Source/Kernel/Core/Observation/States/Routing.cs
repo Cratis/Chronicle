@@ -107,10 +107,13 @@ public class Routing(
         else
         {
             logger.Observing();
-            state = state with
+            if (_tailEventSequenceNumber.IsActualValue)
             {
-                NextEventSequenceNumber = _tailEventSequenceNumber.Next()
-            };
+                state = state with
+                {
+                    NextEventSequenceNumber = _tailEventSequenceNumber.Next()
+                };
+            }
 
             await StateMachine.TransitionTo<Observing>();
         }

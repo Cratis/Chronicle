@@ -61,6 +61,7 @@ public class EventTypes : IEventTypes
             ClrType = _,
             EventType = _.GetEventType()
         }).ToArray();
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-ET] EventTypes.Discover: clientArtifacts.EventTypes returned {eventTypes.Length} types, current _typesByEventType has {_typesByEventType.Count} entries\n");
 
         var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType).Where(_ => _.Count() > 1).ToArray();
         if (duplicateEventTypes.Length > 0)
@@ -164,6 +165,7 @@ public class EventTypes : IEventTypes
             Types = registrations,
             DisableValidation = !_enableEventTypeGenerationValidation
         });
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-ET] EventTypes.Register: sent {registrations.Count} registrations, typesByEventType has {_typesByEventType.Count} entries\n");
     }
 
     /// <inheritdoc/>

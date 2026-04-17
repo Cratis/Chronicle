@@ -116,20 +116,13 @@ public class EventStoreSubscriptionsManager(
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
-        var subscribed = await observer.IsSubscribed();
 
-        if (!subscribed)
-        {
-            logger.Subscribing(definition.Identifier, namespaceName);
-            await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress,
-                _targetEventStoreName.Value);
-            return;
-        }
-
-        logger.AlreadySubscribed(definition.Identifier, namespaceName);
+        logger.Subscribing(definition.Identifier, namespaceName);
+        await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
+            ObserverType.External,
+            definition.EventTypes.ToArray(),
+            localSiloDetails.SiloAddress,
+            _targetEventStoreName.Value);
     }
 
     async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, EventStoreSubscriptionId subscriptionId)

@@ -43,6 +43,8 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        System.IO.File.AppendAllText("/tmp/diag-patchmgr.log", $"[DIAG-STARTUP] Execute called at {DateTimeOffset.UtcNow:O}\n{Environment.StackTrace}\n\n");
+
         // Apply patches first before anything else starts
         var patchManager = grainFactory.GetGrain<IPatchManager>(0);
         await patchManager.ApplyPatches();
