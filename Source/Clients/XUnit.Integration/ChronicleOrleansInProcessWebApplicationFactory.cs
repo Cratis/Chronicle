@@ -75,6 +75,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
+            .UseServiceProviderFactory(new FallbackServiceProviderFactory())
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
@@ -84,18 +85,43 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                // Capture the first fixture's service registrations and populate the mutable
-                // registry. Subsequent tests update the registry via OnBeforeInitializeAsync
-                // without rebuilding the DI container.
+                // Register test services directly in DI so the first test works normally,
+                // and also capture them in the MutableServiceRegistry so subsequent tests
+                // can update instances without rebuilding the container.
                 var capturingCollection = new CapturingServiceCollection();
                 configureServices(capturingCollection);
                 var testServiceRegistry = new MutableServiceRegistry();
                 testServiceRegistry.Update(capturingCollection);
                 services.AddSingleton(testServiceRegistry);
-                foreach (var capturedType in testServiceRegistry.RegisteredTypes.Select(type => type))
+
+                // Register delegate factories that always resolve from MutableServiceRegistry.
+                // This ensures that even when ActivatorUtilities.GetServiceOrCreateInstance
+                // calls GetService on the raw Microsoft DI provider (bypassing
+                // FallbackServiceProvider), the correct per-test instances are returned.
+                foreach (var descriptor in capturingCollection)
                 {
-                    services.AddTransient(capturedType, sp => sp.GetRequiredService<MutableServiceRegistry>().Get(capturedType, sp));
+                    services.AddSingleton(descriptor.ServiceType, sp =>
+                    {
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        return registry.TryGet(descriptor.ServiceType, sp)
+                            ?? ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType ?? descriptor.ServiceType);
+                    });
                 }
+
+                // Replace the convention-registered ClientArtifactsActivator with one
+                // that wraps any IServiceProvider with a FallbackServiceProvider before
+                // delegating. Microsoft DI's internal IServiceProvider injection bypasses
+                // our FallbackServiceProviderFactory wrapper, so this is the only
+                // reliable way to make MutableServiceRegistry types resolvable
+                // during artifact activation. We use RemoveAll + Add to ensure our
+                // registration wins regardless of ordering with AddBindingsByConvention.
+                services.RemoveAll<IClientArtifactsActivator>();
+                services.AddSingleton<IClientArtifactsActivator>(sp =>
+                {
+                    var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    return new TestClientArtifactsActivator(sp, registry, loggerFactory);
+                });
             });
         builder.AddCratisChronicle();
 
@@ -119,6 +145,26 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.ConfigureServices(services =>
                 {
+                    // Remove the ChronicleServerStartupTask that AddChronicleToSilo registered.
+                    // In tests, databases are fresh for each test and the fixture handles all
+                    // setup (artifact registration, namespace creation, etc.) itself.
+                    // Keeping the startup task causes a deadlock: PatchManager grain activation
+                    // can hang when the silo is starting for the first time while other test
+                    // infrastructure is being initialized concurrently.
+                    var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+                        .GetType("Orleans.Hosting.ChronicleServerStartupTask");
+                    File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] startupTaskType={startupTaskType?.FullName ?? "NULL"}\n");
+                    if (startupTaskType is not null)
+                    {
+                        var descriptors = services.Where(d => d.ImplementationType == startupTaskType).ToList();
+                        File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] Found {descriptors.Count} descriptors to remove\n");
+                        foreach (var descriptor in descriptors)
+                        {
+                            File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] Removing: ServiceType={descriptor.ServiceType.FullName}, ImplType={descriptor.ImplementationType?.FullName}\n");
+                            services.Remove(descriptor);
+                        }
+                    }
+
                     services.AddTypeDiscovery();
                     services.AddBindingsByConvention();
                     services.AddSelfBindings();
@@ -155,7 +201,14 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
-                        return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, loggerFactory: loggerFactory);
+
+                        // Wrap the service provider with FallbackServiceProvider so that
+                        // ChronicleClient.InitializeInternal (which creates a new
+                        // ClientArtifactsActivator internally) uses a provider that can
+                        // resolve per-test types from MutableServiceRegistry.
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        var wrappedSp = new FallbackServiceProvider(sp, registry);
+                        return new ChronicleClient(connection, options, artifactsProvider, wrappedSp, identityProvider, loggerFactory: loggerFactory);
                     });
 
                     services.AddSingleton(sp =>
@@ -171,6 +224,17 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactors);
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reducers);
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Projections);
+
+                    // Override the convention-registered ClientArtifactsActivator with
+                    // TestClientArtifactsActivator so that artifact activation can
+                    // resolve types from the MutableServiceRegistry.
+                    services.RemoveAll<IClientArtifactsActivator>();
+                    services.AddSingleton<IClientArtifactsActivator>(sp =>
+                    {
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                        return new TestClientArtifactsActivator(sp, registry, loggerFactory);
+                    });
                 });
             })
             .UseConsoleLifetime();

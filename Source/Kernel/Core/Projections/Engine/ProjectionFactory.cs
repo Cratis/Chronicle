@@ -65,8 +65,11 @@ public class ProjectionFactory(
     {
         var merged = fromDefinition.Properties.ToList();
 
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-FACTORY] GetMergedFromProperties: explicitProps={merged.Count}, eventSchema={eventSchema is not null}, readModelSchema={currentReadModelSchema is not null}, autoMap={autoMap}\n");
+
         if (autoMap == AutoMap.Disabled || eventSchema is null || currentReadModelSchema is null)
         {
+            File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-FACTORY] GetMergedFromProperties: EARLY RETURN (autoMap={autoMap}, eventSchema={eventSchema is not null}, readModelSchema={currentReadModelSchema is not null})\n");
             return merged;
         }
 
@@ -89,6 +92,7 @@ public class ProjectionFactory(
             }
         }
 
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-FACTORY] GetMergedFromProperties: final merged count={merged.Count}\n");
         return merged;
     }
 
@@ -463,7 +467,14 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap);
+        var schemaList = eventTypeSchemas.ToList();
+        var matchingSchema = schemaList.FirstOrDefault(ets => ets.Type == eventType);
+        File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-FACTORY] SetupFromDefinition: projectionId={projection.Identifier}, eventType={eventType.Id}:{eventType.Generation}, schemasAvailable={schemaList.Count}, schemaFound={matchingSchema is not null}\n");
+        if (matchingSchema is null && schemaList.Count > 0)
+        {
+            File.AppendAllText("/tmp/diag-projection.log", $"[DIAG-FACTORY] SetupFromDefinition: available schema types: {string.Join(", ", schemaList.Select(s => $"{s.Type.Id}:{s.Type.Generation}"))}\n");
+        }
+        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap);
         var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event

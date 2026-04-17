@@ -22,4 +22,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
     internal static partial void EventHandlingCompleted(this ILogger<Reactors> logger, ReactorId reactorId);
+
+    [LoggerMessage(LogLevel.Error, "Failed to register Reactor '{Id}' — the reactive observation stream errored out")]
+    internal static partial void RegisteringReactorFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
 }
