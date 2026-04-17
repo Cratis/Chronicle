@@ -139,7 +139,11 @@ public class ReactorHandler(
     /// <summary>
     /// Disconnect the handler.
     /// </summary>
-    public void Disconnect() => _cancellationTokenSource.Cancel();
+    public void Disconnect()
+    {
+        Console.Error.WriteLine($"[DIAG-HANDLER] Disconnect called for {Id} (canceling CancellationToken). Stack: {Environment.StackTrace}");
+        _cancellationTokenSource.Cancel();
+    }
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();

@@ -96,7 +96,15 @@ public partial class Observer(
     public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
 
     /// <inheritdoc/>
-    public Task<ObserverState> GetState() => Task.FromResult(State);
+    public Task<ObserverState> GetState()
+    {
+        if (State.RunningState != Concepts.Observation.ObserverRunningState.Active)
+        {
+            Console.Error.WriteLine($"[DIAG-OBSERVER] GetState for {_observerId} key={_observerKey} returning RunningState={State.RunningState} NextSeq={State.NextEventSequenceNumber}");
+        }
+
+        return Task.FromResult(State);
+    }
 #pragma warning restore CA1721 // Property namTes should not match get methods
 
     /// <inheritdoc/>
@@ -127,6 +135,14 @@ public partial class Observer(
         var owner = GetOwner<TObserverSubscriber>();
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        // Re-read all persistent state from storage. When the silo is shared
+        // across tests (KeepAlive grains survive ForceActivationCollection),
+        // the in-memory state may be stale if databases were dropped between
+        // tests. Reading from storage detects this and resets to defaults.
+        await ReadStateAsync();
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -190,6 +206,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        Console.Error.WriteLine($"[DIAG-OBSERVER] Unsubscribe called for {_observerId} key={_observerKey} currentState={State.RunningState}");
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
     }

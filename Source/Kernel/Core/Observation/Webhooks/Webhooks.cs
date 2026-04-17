@@ -224,19 +224,20 @@ public class Webhooks(
 
     async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GetObserver(definition, namespaceName);
-        var subscribed = await observer.IsSubscribed();
-
-        if (!subscribed && definition.IsActive)
+        if (!definition.IsActive)
         {
-            logger.Subscribing(definition.Identifier, namespaceName);
-            await observer.Subscribe<IWebhookObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress);
             return;
         }
-        logger.AlreadySubscribed(definition.Identifier, namespaceName);
+
+        var observer = GetObserver(definition, namespaceName);
+
+        // Always call Subscribe — for [KeepAlive] grains the in-memory
+        // subscription state can be stale after databases are dropped.
+        logger.Subscribing(definition.Identifier, namespaceName);
+        await observer.Subscribe<IWebhookObserverSubscriber>(
+            ObserverType.External,
+            definition.EventTypes.ToArray(),
+            localSiloDetails.SiloAddress);
     }
 
     async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)

@@ -55,6 +55,7 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// <inheritdoc/>
     public async Task Disconnected()
     {
+        Console.Error.WriteLine($"[DIAG-LIFECYCLE] Disconnected() called. ConnectionId={ConnectionId}. Stack: {Environment.StackTrace}");
         IsConnected = false;
         logger.Disconnected();
         var tasks = OnDisconnected.GetInvocationList().Select(_ => Task.Run(async () =>
