@@ -84,6 +84,7 @@ internal sealed class ChronicleServerStartupTask(
         }
 
         await authenticationService.EnsureDefaultAdminUser();
+        await authenticationService.EnsureBootstrapClients();
 #if DEVELOPMENT
         await authenticationService.EnsureDefaultClientCredentials();
 #endif

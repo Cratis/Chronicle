@@ -1,5 +1,9 @@
 name: gRPC Contract Compatibility
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_call:
     inputs:
@@ -26,7 +30,7 @@ jobs:
     outputs:
       has-breaking-changes: ${{ steps.compare.outputs.has-breaking-changes }}
       breaking-changes: ${{ steps.compare.outputs.breaking-changes }}
-    
+
     steps:
       - name: Checkout current code
         uses: actions/checkout@v4
@@ -48,7 +52,7 @@ jobs:
         working-directory: current
         run: |
           .github/scripts/generate-grpc-schema.sh current-schema.proto
-          
+
       - name: Generate baseline schema
         run: |
           # Use the script from current (PR) branch to generate schema for baseline code
@@ -59,19 +63,19 @@ jobs:
         working-directory: current
         run: |
           set +e
-          
+
           # Run the comparison
           .github/scripts/compare-grpc-schemas.sh ../baseline/baseline-schema.proto current-schema.proto > comparison-output.txt 2>&1
           RESULT=$?
-          
+
           cat comparison-output.txt
-          
+
           if [ $RESULT -eq 0 ]; then
             echo "has-breaking-changes=false" >> $GITHUB_OUTPUT
             echo "breaking-changes=" >> $GITHUB_OUTPUT
           else
             echo "has-breaking-changes=true" >> $GITHUB_OUTPUT
-            
+
             # Extract breaking changes and format for output
             CHANGES=$(grep "^  - " comparison-output.txt | sed 's/^  - //' | tr '\n' ';' | sed 's/;$//')
             echo "breaking-changes=$CHANGES" >> $GITHUB_OUTPUT

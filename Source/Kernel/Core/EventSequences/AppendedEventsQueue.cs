@@ -252,7 +252,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 _logger.QueueHandlerFailed(exception);
             }
         }
-        StartQueueHandler();
+        if (!_isDisposed)
+        {
+            StartQueueHandler();
+        }
     }
 
     async Task HandleSingle(IEnumerable<AppendedEvent> events)

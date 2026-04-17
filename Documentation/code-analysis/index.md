@@ -15,6 +15,7 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0005](CHR0005.md) | Reactor event parameter must have [EventType] attribute | Error | Event parameters in reactor methods must be marked with [EventType] attribute |
 | [CHR0006](CHR0006.md) | Reducer method signature must match allowed signatures | Warning | Reducer methods must follow allowed signatures |
 | [CHR0007](CHR0007.md) | Reducer event parameter must have [EventType] attribute | Error | Event parameters in reducer methods must be marked with [EventType] attribute |
+| [CHR0012](CHR0012.md) | Event types should avoid nullable properties | Warning | Nullable properties are supported on events but are often better modeled as separate event types |
 
 ## Quick Fixes
 

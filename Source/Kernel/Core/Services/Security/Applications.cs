@@ -24,6 +24,12 @@ internal sealed class Applications(IGrainFactory grainFactory, IStorage storage)
     /// <inheritdoc/>
     public async Task Add(AddApplication command)
     {
+        var existing = await storage.System.Applications.GetByClientId(command.ClientId);
+        if (existing is not null)
+        {
+            return;
+        }
+
         var clientSecret = _passwordHasher.HashPassword(null!, command.ClientSecret);
 
         var @event = new ApplicationAdded(

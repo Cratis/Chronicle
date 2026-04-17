@@ -5,6 +5,7 @@ extern alias KernelCore;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
