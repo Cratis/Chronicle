@@ -5,15 +5,16 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
 
-namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
+namespace Cratis.Chronicle.Storage.Sinks.for_Sinks.when_getting_for_known_type;
 
-public class when_asking_for_known_type : Specification
+public class and_sink_already_exists : Specification
 {
     static SinkTypeId _type = "df371e5d-b244-48d0-aaad-f298a127dd92";
-    Sinks _stores;
+
+    Sinks _sinks;
     ISinkFactory _factory;
-    ISink _store;
-    bool _result;
+    ISink _sink;
+    ISink _result;
     ReadModelDefinition _model;
 
     void Establish()
@@ -26,17 +27,24 @@ public class when_asking_for_known_type : Specification
             ReadModelSource.Code,
             ReadModelObserverType.Projection,
             ReadModelObserverIdentifier.Unspecified,
-            SinkDefinition.None,
+            new SinkDefinition(SinkConfigurationId.None, _type),
             new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
-        _store = Substitute.For<ISink>();
+
+        _sink = Substitute.For<ISink>();
         _factory = Substitute.For<ISinkFactory>();
         _factory.TypeId.Returns(_type);
-        _factory.CreateFor(string.Empty, string.Empty, _model).Returns(_store);
-        _stores = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([_factory]));
+        _factory.CreateFor(string.Empty, string.Empty, _model).Returns(_sink);
+        _sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([_factory]));
     }
 
-    void Because() => _result = _stores.HasType(_type);
+    async Task Because()
+    {
+        await _sinks.GetFor(_model);
+        _sink.ClearReceivedCalls();
+        _result = await _sinks.GetFor(_model);
+    }
 
-    [Fact] void should_have_type() => _result.ShouldBeTrue();
+    [Fact] void should_return_the_same_sink() => _result.ShouldEqual(_sink);
+    [Fact] void should_not_ensure_indexes_again() => _sink.DidNotReceive().EnsureIndexes();
 }
