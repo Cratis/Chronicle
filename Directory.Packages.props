@@ -41,7 +41,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.17.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.6" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.6" />
@@ -70,11 +70,12 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.15.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.15.2" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.7.0" />
     <!-- Roslyn-->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.3.0" />
@@ -98,7 +99,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="protobuf-net.Reflection" Version="3.2.52" />
-    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
+    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.76.0" />
     <PackageVersion Include="mongodb.driver" Version="3.7.1" />

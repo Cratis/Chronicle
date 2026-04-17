@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.CodeAnalysis</AssemblyName>
         <RootNamespace>Cratis.Chronicle.CodeAnalysis</RootNamespace>
         <TargetFramework>netstandard2.0</TargetFramework>
         <TargetFrameworks></TargetFrameworks>
-        <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
         <IsRoslynComponent>true</IsRoslynComponent>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <DevelopmentDependency>true</DevelopmentDependency>
@@ -19,23 +18,16 @@
         <NoWarn>$(NoWarn);NU5128;NU1507</NoWarn>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Update="Microsoft.CodeAnalysis.Common" VersionOverride="5.0.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.0.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="5.0.0" />
-        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" VersionOverride="5.0.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Remove="Cratis.Fundamentals" />
         <PackageReference Remove="System.Text.Json" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll"
-              Pack="true"
-              PackagePath="analyzers/dotnet/cs"
-              Visible="false" />
-        <None Include="$(OutputPath)\$(AssemblyName).pdb"
-              Pack="true"
-              PackagePath="analyzers/dotnet/cs"
-              Visible="false" />
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Include="$(OutputPath)\$(AssemblyName).pdb" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 </Project>
