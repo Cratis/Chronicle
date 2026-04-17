@@ -40,13 +40,11 @@ public class IdentityStorage(EventStoreName eventStore, EventStoreNamespaceName 
         var chain = new List<IdentityId>();
         var current = identity;
 
-        do
+        while (current is not null)
         {
-            var identityId = await GetSingleFor(current);
-            chain.Add(identityId);
+            chain.Add(await GetSingleFor(current));
             current = current.OnBehalfOf;
         }
-        while (current is not null);
 
         return chain.ToImmutableList();
     }
