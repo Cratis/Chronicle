@@ -4,6 +4,8 @@ on:
   push:
     branches: ["main"]
     paths:
+      - ".ai/**"
+      - ".claude/**"
       - ".github/copilot-instructions.md"
       - ".github/instructions/**"
       - ".github/agents/**"
