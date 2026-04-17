@@ -1,0 +1,1 @@
+../../.ai/rules/efcore.md

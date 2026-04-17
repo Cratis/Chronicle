@@ -1,0 +1,1 @@
+../../.ai/rules/vertical-slices.md
