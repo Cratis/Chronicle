@@ -11,6 +11,10 @@
 #
 name: "CodeQL Advanced"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET_VERSION: "10.0.x"
