@@ -104,7 +104,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         PropertyPath identifiedByProperty,
         object key,
         IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
-        ArrayIndexers arrayIndexers)
+        ArrayIndexers arrayIndexers,
+        TTarget? childInitialState = null)
         where TChild : new()
     {
         var workingState = CurrentState.Clone();
@@ -166,14 +167,14 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 }
                 else
                 {
-                    item = new TChild();
+                    item = childInitialState is not null ? childInitialState.Clone() : new TChild();
                     identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
                 }
             }
         }
         else
         {
-            item = new TChild();
+            item = childInitialState is not null ? childInitialState.Clone() : new TChild();
             arrayIndexers = new ArrayIndexers(
             [
                 arrayIndexers.All.First() with { Identifier = items.Count }

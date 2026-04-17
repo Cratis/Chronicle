@@ -471,7 +471,8 @@ public class ProjectionFactory(
             .Project(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
-                propertyMappers);
+                propertyMappers,
+                childrenAccessorProperty.IsRoot ? null : projection.InitialModelState);
     }
 
     void SetupJoinsForFromDefinition(
