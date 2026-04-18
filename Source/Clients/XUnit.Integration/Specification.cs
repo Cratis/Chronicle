@@ -17,7 +17,7 @@ public abstract class Specification<TChronicleFixture>(TChronicleFixture fixture
     /// <inheritdoc/>
     protected override async Task OnInitializeAsync()
     {
-        EnsureBuilt();
+        await EnsureBuilt();
         await OnEstablish();
         await OnBecause();
     }
@@ -52,7 +52,7 @@ public abstract class Specification<TChronicleFixture, TFactory, TStartup>(TChro
     /// <inheritdoc/>
     protected override async Task OnInitializeAsync()
     {
-        EnsureBuilt();
+        await EnsureBuilt();
         await OnEstablish();
         await OnBecause();
     }

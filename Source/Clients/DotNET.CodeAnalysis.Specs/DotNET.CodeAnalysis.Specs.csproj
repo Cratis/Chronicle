@@ -2,7 +2,6 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.CodeAnalysis.Specs</AssemblyName>
         <RootNamespace>Cratis.Chronicle.CodeAnalysis</RootNamespace>
-        <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
@@ -12,14 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Update="Microsoft.CodeAnalysis.Common" VersionOverride="5.0.0" />
-        <PackageReference Update="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.0.0" />
-        <PackageReference Update="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="5.0.0" />
-        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" VersionOverride="5.0.0" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" />
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="OpenTelemetry" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>

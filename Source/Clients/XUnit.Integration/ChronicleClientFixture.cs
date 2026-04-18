@@ -321,9 +321,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// <summary>
     /// Ensures that the event store is built.
     /// </summary>
-    protected void EnsureBuilt()
+    /// <returns>Awaitable task.</returns>
+    protected Task EnsureBuilt()
     {
-        Services.GetRequiredService<IEventStore>();
+        _ = Services.GetRequiredService<IEventStore>();
+        return Task.CompletedTask;
     }
 
     /// <summary>

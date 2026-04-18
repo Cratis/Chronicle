@@ -5,7 +5,6 @@ extern alias KernelCore;
 
 using System.Net;
 using System.Net.Sockets;
-using System.Linq;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -102,12 +101,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
+        var clusterId = Guid.NewGuid().ToString("N");
 
         var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
 
         builder.UseOrleans(silo =>
             {
-                silo.UseLocalhostClustering(siloPort, gatewayPort);
+                silo.UseLocalhostClustering(siloPort, gatewayPort, serviceId: clusterId, clusterId: clusterId);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleOrleansInProcessWebApplicationFactory<TStartup>).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();

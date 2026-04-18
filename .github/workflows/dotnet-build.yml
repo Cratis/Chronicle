@@ -17,10 +17,8 @@ on:
     branches:
       - "**"
     paths:
-      - "Source/**"
-      - "Integration/**"
-      - "!Source/Node/**"
-      - "!Source/Workbench/**"
+      - "Source/**/*.cs"
+      - "Source/**/*.csproj"
 
 jobs:
   dotnet-build:
