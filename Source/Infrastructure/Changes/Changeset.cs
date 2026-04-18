@@ -168,7 +168,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 else
                 {
                     item = childInitialState is not null ? childInitialState.Clone() : new TChild();
-                    identifiedByProperty.SetValue(item, key, ArrayIndexers.NoIndexers);
+                    identifiedByProperty.SetValue(item!, key, ArrayIndexers.NoIndexers);
                 }
             }
         }
