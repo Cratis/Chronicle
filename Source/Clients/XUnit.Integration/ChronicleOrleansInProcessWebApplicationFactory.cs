@@ -5,6 +5,7 @@ extern alias KernelCore;
 
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 using Cratis.Arc;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -83,13 +85,26 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                configureServices(services);
+                // Capture the first fixture's service registrations and populate the mutable
+                // registry. Subsequent tests update the registry via OnBeforeInitializeAsync
+                // without rebuilding the DI container.
+                var capturingCollection = new CapturingServiceCollection();
+                configureServices(capturingCollection);
+                var testServiceRegistry = new MutableServiceRegistry();
+                testServiceRegistry.Update(capturingCollection);
+                services.AddSingleton(testServiceRegistry);
+                foreach (var capturedType in testServiceRegistry.RegisteredTypes.Select(type => type))
+                {
+                    services.AddTransient(capturedType, sp => sp.GetRequiredService<MutableServiceRegistry>().Get(capturedType, sp));
+                }
             });
         builder.AddCratisChronicle();
 
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
         var clusterId = Guid.NewGuid().ToString("N");
+
+        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
 
         builder.UseOrleans(silo =>
             {
@@ -112,7 +127,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
+
+                    // Use DelegatingClientArtifactsProvider so the shared silo can serve
+                    // artifacts from whichever test fixture is currently active.
+                    // RemoveAll ensures it wins over convention-based discovery.
+                    services.RemoveAll<IClientArtifactsProvider>();
+                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),

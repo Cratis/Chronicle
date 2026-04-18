@@ -66,7 +66,7 @@ internal sealed class Reducers(
             new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
 
-        messages.Subscribe(message =>
+        var messagesSubscription = messages.Subscribe(message =>
         {
             switch (message.Content.Value)
             {
@@ -191,6 +191,7 @@ internal sealed class Reducers(
                 }
                 finally
                 {
+                    messagesSubscription.Dispose();
                     reducerMediator.Disconnected(observerId, connectionId);
                     reducerResultTcs.Values.ForEach(_ => _.TrySetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
                     if (clientObserver is not null)
@@ -207,7 +208,6 @@ internal sealed class Reducers(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-            clientObserver?.Unsubscribe().GetAwaiter().GetResult();
             reducerMediator.Disconnected(observerId, connectionId);
             register?.Dispose();
         });

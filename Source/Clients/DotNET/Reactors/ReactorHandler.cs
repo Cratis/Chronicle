@@ -85,7 +85,7 @@ public class ReactorHandler(
     {
         try
         {
-            identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+            identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
             causationManager.Add(CausationType, new Dictionary<string, string>
             {
                 { CausationReactorIdProperty, Id.ToString() },
