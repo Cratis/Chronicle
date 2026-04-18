@@ -22,6 +22,6 @@ internal static class JobProgressConverters
             StoppedSteps = jobProgress.StoppedSteps,
             IsCompleted = jobProgress.IsCompleted,
             IsStopped = jobProgress.IsStopped,
-            Message = jobProgress.Message
+            Message = jobProgress.Message ?? string.Empty
         };
 }
