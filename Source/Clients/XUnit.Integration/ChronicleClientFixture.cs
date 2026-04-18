@@ -319,13 +319,13 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     protected abstract void ConfigureWebHostBuilder(IWebHostBuilder builder);
 
     /// <summary>
-    /// Ensures that the event store is built and all artifacts are registered.
+    /// Ensures that the event store is built.
     /// </summary>
     /// <returns>Awaitable task.</returns>
-    protected async Task EnsureBuilt()
+    protected Task EnsureBuilt()
     {
-        var eventStore = Services.GetRequiredService<IEventStore>();
-        await eventStore.RegisterAll();
+        _ = Services.GetRequiredService<IEventStore>();
+        return Task.CompletedTask;
     }
 
     /// <summary>
