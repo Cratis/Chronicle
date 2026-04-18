@@ -105,7 +105,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         object key,
         IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers,
         ArrayIndexers arrayIndexers,
-        TTarget? childInitialState = null)
+        TTarget? childInitialState = default)
         where TChild : new()
     {
         var workingState = CurrentState.Clone();
