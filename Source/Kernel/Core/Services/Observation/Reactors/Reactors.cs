@@ -47,7 +47,7 @@ internal sealed class Reactors(
         ConcurrentDictionary<EventSourceId, TaskCompletionSource<ObserverSubscriberResult>> reactorResultTcs = [];
         IReactor clientObserver = null!;
 
-        messages.Subscribe(message =>
+        var messagesSubscription = messages.Subscribe(message =>
         {
             switch (message.Content.Value)
             {
@@ -150,6 +150,7 @@ internal sealed class Reactors(
             }
             finally
             {
+                messagesSubscription.Dispose();
                 reactorMediator.Disconnected(observerId, connectionId);
                 reactorResultTcs.Values.ForEach(_ => _.TrySetResult(ObserverSubscriberResult.Disconnected()));
                 if (clientObserver is not null)
@@ -166,7 +167,6 @@ internal sealed class Reactors(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-            clientObserver?.Unsubscribe().GetAwaiter().GetResult();
             reactorMediator.Disconnected(observerId, connectionId);
             register?.Dispose();
         });

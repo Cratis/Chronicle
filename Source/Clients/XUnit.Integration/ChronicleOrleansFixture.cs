@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.MongoDB;
+using Cratis.Chronicle.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,12 +22,55 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
-        await (_webApplicationFactory?.DisposeAsync() ?? ValueTask.CompletedTask);
-
         await base.DisposeAsync();
+    }
 
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+    /// <inheritdoc/>
+    protected override async Task OnBeforeInitializeAsync()
+    {
+        // The silo is reused across tests. Point the artifacts provider at the current
+        // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
+        DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
+
+        // For the very first test the factory hasn't been created yet — InitializeFixture
+        // will create it and the DI-registered IEventStore will do the initial discovery.
+        if (_webApplicationFactory is null)
+        {
+            return;
+        }
+
+        // Re-initialize test-specific fields (e.g. Tcs, Reactor, Observers) on the current
+        // fixture and update the shared MutableServiceRegistry so that DI resolves the new
+        // instances for this test run.
+        var capturingCollection = new CapturingServiceCollection();
+        ConfigureServices(capturingCollection);
+        if (capturingCollection.Count > 0)
+        {
+            var registry = Services.GetRequiredService<MutableServiceRegistry>();
+            registry.Update(capturingCollection);
+        }
+
+        // 1. Signal disconnect — tears down all handler streams (cancels CancellationTokens),
+        //    sets lifecycle.IsConnected = false, and assigns a fresh ConnectionId.
+        var connection = Services.GetRequiredService<IChronicleConnection>();
+        await connection.Lifecycle.Disconnected();
+
+        // 2. Deactivate all grains so stale in-memory state (e.g. LastHandledEventSequenceNumber)
+        //    is discarded. Now that streams are torn down, grains have no active subscriptions
+        //    and can be deactivated.
+        await DeactivateAllGrains();
+
+        // 3. Re-discover artifacts from the current test fixture. Discover() creates new
+        //    handler objects with fresh CancellationTokens (but does not register them yet).
+        var eventStore = Services.GetRequiredService<IEventStore>();
+        await eventStore.DiscoverAll();
+
+        // 4. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
+        //    then fires lifecycle.Connected() which triggers RegisterAll() via OnConnected.
+        if (connection is ChronicleConnection chronicleConnection)
+        {
+            await chronicleConnection.Reconnect();
+        }
     }
 
     /// <inheritdoc/>
@@ -60,5 +104,55 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// <inheritdoc/>
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
+    }
+
+    /// <summary>
+    /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.
+    /// Waits until activation count stabilizes to ensure grains have fully deactivated before
+    /// the next test starts registering artifacts against fresh grain activations.
+    /// </summary>
+    async Task DeactivateAllGrains()
+    {
+        try
+        {
+            var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
+            await managementGrain.ForceActivationCollection(TimeSpan.Zero);
+
+            // ForceActivationCollection only schedules deactivation; the actual deactivation
+            // happens asynchronously. Poll until the activation count stabilizes so that
+            // grains are not still mid-deactivation when the next test registers artifacts.
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var stableReadCount = 0;
+            var previousCount = -1;
+
+            while (!cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                var currentCount = await managementGrain.GetTotalActivationCount();
+
+                if (currentCount == previousCount)
+                {
+                    if (++stableReadCount >= 3)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    stableReadCount = 0;
+                    previousCount = currentCount;
+                }
+
+                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout/cancellation while waiting for stabilization during teardown is safe to ignore.
+        }
+        catch (OrleansException)
+        {
+            // If the management grain is unavailable (e.g. silo is shutting down),
+            // we can safely ignore the error — the grains will be deactivated anyway.
+        }
     }
 }
