@@ -1,12 +1,23 @@
 name: gRPC Contract Compatibility
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/**"
+
   workflow_call:
     inputs:
       base-ref:
         description: 'Base branch reference to compare against'
-        required: true
+        required: false
         type: string
+        default: 'main'
     outputs:
       has-breaking-changes:
         description: 'Whether breaking changes were detected'
