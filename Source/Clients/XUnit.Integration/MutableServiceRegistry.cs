@@ -40,8 +40,7 @@ internal class MutableServiceRegistry
             }
             else if (descriptor.ImplementationFactory is not null)
             {
-                var factory = descriptor.ImplementationFactory;
-                _factories[descriptor.ServiceType] = factory;
+                _factories[descriptor.ServiceType] = descriptor.ImplementationFactory;
             }
         }
     }

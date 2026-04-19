@@ -12,7 +12,7 @@ export { protobufPackage } from './generated/clients';
 export { AppendedEvent, AppendedEvent_GenerationalContentEntry, Causation, Causation_PropertiesEntry, EventContext, EventObservationState, eventObservationStateFromJSON, eventObservationStateToJSON, EventRevision, SerializableDateTimeOffset } from './generated/eventsequences';
 export { EventType } from './generated/events';
 export { ConstraintType, constraintTypeFromJSON, constraintTypeToJSON } from './generated/events_constraints';
-export { EventTypeWithKeyExpression, ObservationState, observationStateFromJSON, observationStateToJSON } from './generated/observation_reactors';
+export { EventTypeWithKeyExpression, ObservationState, observationStateFromJSON, observationStateToJSON, ObserverFilters } from './generated/observation_reactors';
 export { ObserverOwner, observerOwnerFromJSON, observerOwnerToJSON } from './generated/observation';
 export { Identity } from './generated/identities';
 export { IndexDefinition, ReadModelDefinition, ReadModelObserverType, readModelObserverTypeFromJSON, readModelObserverTypeToJSON, ReadModelOwner, readModelOwnerFromJSON, readModelOwnerToJSON, ReadModelSource, readModelSourceFromJSON, readModelSourceToJSON, ReadModelType, SinkDefinition } from './generated/readmodels';

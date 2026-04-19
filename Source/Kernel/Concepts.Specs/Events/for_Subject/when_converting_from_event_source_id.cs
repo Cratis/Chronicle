@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
-
 namespace Cratis.Chronicle.Concepts.Events.for_Subject;
 
 public class when_converting_from_event_source_id : Specification

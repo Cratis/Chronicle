@@ -49,12 +49,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EncryptionKeyIdentifier identifier)
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
-        var entity = await scope.DbContext.EncryptionKeys.SingleOrDefaultAsync(e => e.Identifier == identifier.Value);
-        if (entity is null)
-        {
-            throw new MissingEncryptionKey(identifier);
-        }
-
+        var entity = await scope.DbContext.EncryptionKeys.SingleOrDefaultAsync(e => e.Identifier == identifier.Value) ?? throw new MissingEncryptionKey(identifier);
         return new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey);
     }
 

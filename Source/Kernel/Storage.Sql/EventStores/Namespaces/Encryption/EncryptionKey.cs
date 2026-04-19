@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 public class EncryptionKey
 {
     /// <summary>
-    /// Gets or sets the <see cref="Compliance.EncryptionKeyIdentifier"/> value the key is for.
+    /// Gets or sets the <see cref="Cratis.Chronicle.Compliance.EncryptionKeyIdentifier"/> value the key is for.
     /// </summary>
     [Key]
     [MaxLength(256)]

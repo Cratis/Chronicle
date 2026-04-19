@@ -34,6 +34,17 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         return JsonValue.Create(encryptedAsBase64);
     }
 
+    /// <inheritdoc/>
+    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
+    {
+        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+        var encryptedAsString = value.ToString();
+        var encrypted = Convert.FromBase64String(encryptedAsString);
+        var decrypted = _encryption.Decrypt(encrypted, key);
+        var decryptedAsString = Encoding.UTF8.GetString(decrypted);
+        return JsonValue.Create(decryptedAsString);
+    }
+
     async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
         if (await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
@@ -44,16 +55,5 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         var key = _encryption.GenerateKey();
         await _encryptionKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
         return key;
-    }
-
-    /// <inheritdoc/>
-    public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
-    {
-        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
-        var encryptedAsString = value.ToString();
-        var encrypted = Convert.FromBase64String(encryptedAsString);
-        var decrypted = _encryption.Decrypt(encrypted, key);
-        var decryptedAsString = Encoding.UTF8.GetString(decrypted);
-        return JsonValue.Create(decryptedAsString);
     }
 }

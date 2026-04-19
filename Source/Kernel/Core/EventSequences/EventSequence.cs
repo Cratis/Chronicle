@@ -587,7 +587,7 @@ public class EventSequence(
     {
         var eventSchema = await EventTypesStorage.GetFor(eventType.Id, eventType.Generation);
 
-        var complianceIdentifier = subject is not null && subject.IsSet ? subject.Value : eventSourceId.Value;
+        var complianceIdentifier = subject?.IsSet == true ? subject.Value : eventSourceId.Value;
         var compliantEvent = await jsonComplianceManagerProvider.Apply(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, eventSchema.Schema, complianceIdentifier, content);
         var expandoObject = expandoObjectConverter.ToExpandoObject(compliantEvent, eventSchema.Schema);
         return (expandoObject, compliantEvent, eventSchema);
