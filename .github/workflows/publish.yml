@@ -4,7 +4,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   DOTNET8_VERSION: "8.0.410"
@@ -49,16 +48,8 @@ permissions:
   deployments: write
 
 jobs:
-  grpc-compatibility:
-    permissions:
-      contents: read
-    uses: ./.github/workflows/grpc-compatibility.yml
-    with:
-      base-ref: 'main'
-
   release:
     runs-on: ubuntu-latest
-    needs: [grpc-compatibility]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
