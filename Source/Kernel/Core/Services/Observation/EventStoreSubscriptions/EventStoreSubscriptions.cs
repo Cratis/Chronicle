@@ -40,7 +40,7 @@ internal sealed class EventStoreSubscriptions(
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
             var existing = existingSubscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
 
-            if (existing is null)
+            if (existing is null || !HasSameDefinition(existing, definition))
             {
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
@@ -70,5 +70,17 @@ internal sealed class EventStoreSubscriptions(
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList()
         });
+    }
+
+    static bool HasSameDefinition(ConceptsEventStoreSubscriptionDefinition existing, ConceptsEventStoreSubscriptionDefinition incoming)
+    {
+        if (existing.SourceEventStore != incoming.SourceEventStore)
+        {
+            return false;
+        }
+
+        var existingEventTypes = existing.EventTypes.ToHashSet();
+        var incomingEventTypes = incoming.EventTypes.ToHashSet();
+        return existingEventTypes.SetEquals(incomingEventTypes);
     }
 }

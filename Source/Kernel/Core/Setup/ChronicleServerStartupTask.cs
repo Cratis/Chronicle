@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Patching;
@@ -58,6 +59,9 @@ internal sealed class ChronicleServerStartupTask(
             await eventTypes.DiscoverAndRegister(eventStore);
             var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
             await namespaces.EnsureDefault();
+
+            var eventStoreSubscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventStore);
+            await eventStoreSubscriptionsManager.Ensure();
 
             var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
             await readModelsManager.Ensure();

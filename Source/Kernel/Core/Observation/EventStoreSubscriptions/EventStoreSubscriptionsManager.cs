@@ -37,7 +37,7 @@ public class EventStoreSubscriptionsManager(
     {
         _targetEventStoreName = this.GetPrimaryKeyString();
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        var tasks = State.Subscriptions.Select(definition => SubscribeIfNotSubscribed(definition, namespaces));
+        var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivation(definition, namespaces));
         await Task.WhenAll(tasks);
     }
 
@@ -56,13 +56,21 @@ public class EventStoreSubscriptionsManager(
     /// <inheritdoc/>
     public async Task Remove(EventStoreSubscriptionId subscriptionId)
     {
+        var definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId);
+        if (definition is null)
+        {
+            return;
+        }
+
         var subscriptions = State.Subscriptions.ToList();
         subscriptions.RemoveAll(s => s.Identifier == subscriptionId);
         State.Subscriptions = subscriptions;
         await WriteStateAsync();
 
+        await RemoveReminder(GetSubscriptionReminderName(subscriptionId));
+
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        await Unsubscribe(namespaces, subscriptionId);
+        await Unsubscribe(namespaces, definition);
     }
 
     /// <inheritdoc/>
@@ -85,7 +93,7 @@ public class EventStoreSubscriptionsManager(
         }
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        await SubscribeIfNotSubscribed(definition, namespaces);
+        await RefreshSubscription(definition, namespaces);
         await RemoveReminder(reminderName);
     }
 
@@ -107,10 +115,35 @@ public class EventStoreSubscriptionsManager(
         await Task.WhenAll(tasks);
     }
 
-    async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task EnsureSubscriptionOnActivation(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        var tasks = namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, namespaceName));
+        await ScheduleSubscriptionReminder(definition.Identifier);
+        await RefreshSubscription(definition, namespaces);
+    }
+
+    async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        var tasks = namespaces.Select(namespaceName => RefreshSubscription(definition, namespaceName));
         await Task.WhenAll(tasks);
+    }
+
+    async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        var observer = GetObserver(definition, namespaceName);
+        var subscribed = await observer.IsSubscribed();
+
+        if (subscribed)
+        {
+            logger.Unsubscribing(definition.Identifier, namespaceName);
+            await observer.Unsubscribe();
+        }
+
+        logger.Subscribing(definition.Identifier, namespaceName);
+        await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
+            ObserverType.External,
+            definition.EventTypes.ToArray(),
+            localSiloDetails.SiloAddress,
+            _targetEventStoreName.Value);
     }
 
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
@@ -132,12 +165,9 @@ public class EventStoreSubscriptionsManager(
         logger.AlreadySubscribed(definition.Identifier, namespaceName);
     }
 
-    async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, EventStoreSubscriptionId subscriptionId)
+    async Task Unsubscribe(IEnumerable<EventStoreNamespaceName> namespaces, EventStoreSubscriptionDefinition definition)
     {
-        logger.Unregistering(subscriptionId);
-
-        var definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId);
-        if (definition is null) return;
+        logger.Unregistering(definition.Identifier);
 
         var tasks = namespaces.Select(namespaceName => UnsubscribeIfSubscribed(definition, namespaceName));
         await Task.WhenAll(tasks);
