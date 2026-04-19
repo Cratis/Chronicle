@@ -441,7 +441,7 @@ public class JsonSchema
                         schemaObj["format"] = _typeFormats.GetFormatForType(context.TypeInfo.Type);
                     }
 
-                    if (context.TypeInfo.Kind == System.Text.Json.Serialization.Metadata.JsonTypeInfoKind.Object)
+                    if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
                     {
                         schemaObj["title"] = context.TypeInfo.Type.Name;
                     }

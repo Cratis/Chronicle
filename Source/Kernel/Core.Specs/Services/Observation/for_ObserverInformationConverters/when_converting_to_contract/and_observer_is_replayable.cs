@@ -41,5 +41,5 @@ public class and_observer_is_replayable : Specification
 
     [Fact] void should_set_is_replayable_to_true() => _result.IsReplayable.ShouldBeTrue();
     [Fact] void should_have_correct_id() => _result.Id.ShouldEqual(_definition.Identifier.Value);
-    [Fact] void should_have_correct_running_state() => _result.RunningState.ShouldEqual(Contracts.Observation.ObserverRunningState.Active);
+    [Fact] void should_have_correct_running_state() => _result.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
