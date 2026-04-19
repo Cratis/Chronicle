@@ -192,4 +192,9 @@ public static class WellKnownTableNames
     /// The table that holds webhook definitions.
     /// </summary>
     public const string WebhookDefinitions = "WebhookDefinitions";
+
+    /// <summary>
+    /// The table that holds encryption keys for compliance handling.
+    /// </summary>
+    public const string EncryptionKeys = "EncryptionKeys";
 }
