@@ -27,11 +27,23 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
     /// <inheritdoc/>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+        var key = await EnsureKeyFor(eventStore, eventStoreNamespace, identifier);
         var valueAsString = value.ToString();
         var encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(valueAsString), key);
         var encryptedAsBase64 = Convert.ToBase64String(encrypted);
         return JsonValue.Create(encryptedAsBase64);
+    }
+
+    async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    {
+        if (await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
+        {
+            return await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+        }
+
+        var key = _encryption.GenerateKey();
+        await _encryptionKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
+        return key;
     }
 
     /// <inheritdoc/>
