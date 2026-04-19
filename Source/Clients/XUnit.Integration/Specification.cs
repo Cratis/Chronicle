@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.Connections;
 using Cratis.Specifications;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -18,6 +20,13 @@ public abstract class Specification<TChronicleFixture>(TChronicleFixture fixture
     protected override async Task OnInitializeAsync()
     {
         await EnsureBuilt();
+
+        var connection = Services.GetRequiredService<IChronicleConnection>();
+        if (!connection.Lifecycle.IsConnected && connection is ChronicleConnection chronicleConnection)
+        {
+            await chronicleConnection.Reconnect();
+        }
+
         await OnEstablish();
         await OnBecause();
     }
