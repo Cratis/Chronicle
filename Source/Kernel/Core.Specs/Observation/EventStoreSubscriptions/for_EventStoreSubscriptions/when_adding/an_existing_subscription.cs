@@ -60,4 +60,7 @@ public class an_existing_subscription : given.an_event_store_subscriptions_servi
             Arg.Any<EventSourceType>(),
             Arg.Any<EventStreamType>(),
             Arg.Any<EventStreamId>());
+
+    [Fact] void should_not_wait_until_subscription_is_ready() =>
+        _subscriptionsManager.DidNotReceive().WaitUntilSubscribed(Arg.Any<EventStoreSubscriptionId>(), Arg.Any<TimeSpan>());
 }
