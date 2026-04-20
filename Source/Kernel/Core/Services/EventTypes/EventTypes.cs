@@ -51,6 +51,7 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
             var owner = (Concepts.Events.EventTypeOwner)(int)eventType.Owner;
             var source = (Concepts.Events.EventTypeSource)(int)eventType.Source;
             var eventTypeId = new EventTypeId(eventType.Type.Id);
+            var hasExistingEventType = await eventTypesStorage.HasFor(eventTypeId);
 
             // Detect new generations before registration
             var newGenerations = new List<(EventTypeGeneration Generation, string Schema)>();
@@ -123,15 +124,26 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
                     source);
             }
 
-            // Append system events for new generations
+            // Append system events for newly discovered event type generations.
             if (newGenerations.Count > 0)
             {
                 var systemEventSequence = grainFactory.GetSystemEventSequence(request.EventStore);
-                foreach (var (generation, genSchema) in newGenerations)
+
+                if (!hasExistingEventType)
                 {
+                    var firstGeneration = newGenerations.OrderBy(_ => _.Generation.Value).First();
                     await systemEventSequence.Append(
                         (EventSourceId)eventTypeId.Value,
-                        new EventTypeGenerationAdded(eventTypeId, generation, genSchema));
+                        new EventTypeAdded(eventTypeId, firstGeneration.Generation, firstGeneration.Schema));
+                }
+                else
+                {
+                    foreach (var (generation, genSchema) in newGenerations)
+                    {
+                        await systemEventSequence.Append(
+                            (EventSourceId)eventTypeId.Value,
+                            new EventTypeGenerationAdded(eventTypeId, generation, genSchema));
+                    }
                 }
             }
         }
