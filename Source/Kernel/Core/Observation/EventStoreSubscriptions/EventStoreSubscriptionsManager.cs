@@ -99,7 +99,8 @@ public class EventStoreSubscriptionsManager(
 
         if (definition is null)
         {
-            throw new InvalidOperationException($"Subscription '{subscriptionId}' not found");
+            logger.SubscriptionDefinitionNotFoundWithinTimeout(subscriptionId, timeout);
+            throw new TimeoutException($"Subscription '{subscriptionId}' was not registered within {timeout.TotalMilliseconds}ms");
         }
 
         while (DateTime.UtcNow - startTime < timeout)
@@ -119,6 +120,34 @@ public class EventStoreSubscriptionsManager(
 
         logger.SubscriptionNotReadyWithinTimeout(subscriptionId, timeout);
         throw new TimeoutException($"Subscription '{subscriptionId}' did not become ready within {timeout.TotalMilliseconds}ms");
+    }
+
+    /// <inheritdoc/>
+    public async Task SourceEventStoreAdded(EventStoreName sourceEventStore)
+    {
+        var pendingDefinitions = State.Subscriptions
+            .Where(_ => _.SourceEventStore == sourceEventStore)
+            .ToArray();
+
+        if (pendingDefinitions.Length == 0)
+        {
+            return;
+        }
+
+        logger.SourceEventStoreBecameAvailable(sourceEventStore, pendingDefinitions.Length);
+
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+        foreach (var definition in pendingDefinitions)
+        {
+            try
+            {
+                await RefreshSubscription(definition, namespaces);
+            }
+            catch (Exception ex)
+            {
+                logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
+            }
+        }
     }
 
     /// <inheritdoc/>

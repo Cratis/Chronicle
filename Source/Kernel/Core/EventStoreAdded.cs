@@ -10,5 +10,5 @@ namespace Cratis.Chronicle;
 /// Represents the event that gets appended when an event store is added.
 /// </summary>
 /// <param name="EventStore">The <see cref="EventStoreName"/> that was added.</param>
-[EventType("8a8d7c3e-4f6b-4e5a-9c7d-2b1f3e4a5d6c")]
+[EventType]
 public record EventStoreAdded(EventStoreName EventStore);
