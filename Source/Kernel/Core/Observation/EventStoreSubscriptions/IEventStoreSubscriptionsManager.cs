@@ -35,4 +35,14 @@ public interface IEventStoreSubscriptionsManager : IGrainWithStringKey
     /// <param name="subscriptionId">The <see cref="EventStoreSubscriptionId"/> to remove.</param>
     /// <returns>Awaitable task.</returns>
     Task Remove(EventStoreSubscriptionId subscriptionId);
+
+    /// <summary>
+    /// Wait until a subscription is ready to receive events.
+    /// </summary>
+    /// <param name="subscriptionId">The <see cref="EventStoreSubscriptionId"/> to wait for.</param>
+    /// <param name="timeout">The maximum time to wait.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">Thrown if the subscription does not become ready within the timeout.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the subscription is not found.</exception>
+    Task WaitUntilSubscribed(EventStoreSubscriptionId subscriptionId, TimeSpan timeout);
 }

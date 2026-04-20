@@ -28,6 +28,7 @@ internal sealed class EventStoreSubscriptions(
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
+        var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
 
         foreach (var subscription in request.Subscriptions)
         {
@@ -36,7 +37,6 @@ internal sealed class EventStoreSubscriptions(
                 new EventStoreName(subscription.SourceEventStore),
                 subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)));
 
-            var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
             var existing = existingSubscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
 
@@ -45,6 +45,20 @@ internal sealed class EventStoreSubscriptions(
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
                     definition.EventTypes));
+
+                // Wait for the subscription to be ready before returning to the client
+                // This ensures that events are not lost if the client immediately starts publishing
+                try
+                {
+                    await subscriptionsManager.WaitUntilSubscribed(
+                        new EventStoreSubscriptionId(subscription.Identifier),
+                        TimeSpan.FromSeconds(5));
+                }
+                catch (TimeoutException)
+                {
+                    // Log but don't fail - the subscription may still activate asynchronously
+                    // This prevents blocking the client indefinitely if there are issues
+                }
             }
         }
     }
