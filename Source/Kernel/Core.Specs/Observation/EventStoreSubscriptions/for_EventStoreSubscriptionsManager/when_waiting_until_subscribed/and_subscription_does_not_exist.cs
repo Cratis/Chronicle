@@ -27,5 +27,5 @@ public class and_subscription_does_not_exist : Specification
         _error = await Catch.Exception(() =>
             _manager.WaitUntilSubscribed(new EventStoreSubscriptionId("does-not-exist"), TimeSpan.FromSeconds(1)));
 
-    [Fact] void should_throw_invalid_operation_exception() => _error.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_throw_timeout_exception() => _error.ShouldBeOfExactType<TimeoutException>();
 }
