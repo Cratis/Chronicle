@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -88,6 +89,8 @@ internal sealed class Reactors(
 
         var connectionId = ConnectionId.NotSet;
         var observerId = ObserverId.Unspecified;
+        var eventStoreName = EventStoreName.NotSet;
+        var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<EventsToObserve>? observableObserver = null;
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
@@ -98,6 +101,8 @@ internal sealed class Reactors(
                 var registration = await registrationTcs.Task;
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
+                eventStoreName = registration.EventStore;
+                namespaceName = registration.Namespace;
 
                 logger.Subscribing(
                     registration.Reactor.ReactorId,
@@ -116,6 +121,8 @@ internal sealed class Reactors(
                 reactorMediator.Subscribe(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
+                    registration.EventStore,
+                    registration.Namespace,
                     (partition, events, tcs) =>
                     {
                         reactorResultTcs[partition] = tcs;
@@ -151,7 +158,7 @@ internal sealed class Reactors(
             finally
             {
                 messagesSubscription.Dispose();
-                reactorMediator.Disconnected(observerId, connectionId);
+                reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
                 reactorResultTcs.Values.ForEach(_ => _.TrySetResult(ObserverSubscriberResult.Disconnected()));
                 if (clientObserver is not null)
                 {
@@ -167,7 +174,7 @@ internal sealed class Reactors(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-            reactorMediator.Disconnected(observerId, connectionId);
+            reactorMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();
         });
 
