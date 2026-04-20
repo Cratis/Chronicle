@@ -11,29 +11,23 @@ using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Obse
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptions.when_adding;
 
-public class a_new_subscription : given.an_event_store_subscriptions_service
+public class a_new_subscription_that_times_out_while_waiting : given.an_event_store_subscriptions_service
 {
     IEventSequence _eventSequence;
     IEventStoreSubscriptionsManager _subscriptionsManager;
     AddEventStoreSubscriptions _request;
+    Exception _error;
 
     void Establish()
     {
         _eventSequence = Substitute.For<IEventSequence>();
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_eventSequence);
-        _eventSequence.Append(
-            Arg.Any<EventSourceId>(),
-            Arg.Any<object>(),
-            Arg.Any<CorrelationId>(),
-            Arg.Any<IEnumerable<Causation>>(),
-            Arg.Any<Identity>(),
-            Arg.Any<IEnumerable<Tag>>(),
-            Arg.Any<EventSourceType>(),
-            Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>()).Returns(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
 
         _subscriptionsManager = Substitute.For<IEventStoreSubscriptionsManager>();
         _subscriptionsManager.GetSubscriptionDefinitions().Returns([]);
+        _subscriptionsManager
+            .WaitUntilSubscribed(Arg.Any<EventStoreSubscriptionId>(), Arg.Any<TimeSpan>())
+            .Returns(_ => throw new TimeoutException());
         _grainFactory.GetGrain<IEventStoreSubscriptionsManager>(Arg.Any<string>()).Returns(_subscriptionsManager);
 
         _request = new AddEventStoreSubscriptions
@@ -51,7 +45,7 @@ public class a_new_subscription : given.an_event_store_subscriptions_service
         };
     }
 
-    async Task Because() => await _service.Add(_request);
+    async Task Because() => _error = await Catch.Exception(() => _service.Add(_request));
 
     [Fact] void should_append_subscription_added_event() =>
         _eventSequence.Received(1).Append(
@@ -69,4 +63,6 @@ public class a_new_subscription : given.an_event_store_subscriptions_service
         _subscriptionsManager.Received(1).WaitUntilSubscribed(
             Arg.Is<EventStoreSubscriptionId>(id => id.Value == "test-subscription-id"),
             Arg.Any<TimeSpan>());
+
+    [Fact] void should_not_fail_the_request() => _error.ShouldBeNull();
 }
