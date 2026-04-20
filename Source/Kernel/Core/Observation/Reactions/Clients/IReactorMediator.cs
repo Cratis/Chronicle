@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -18,23 +19,29 @@ public interface IReactorMediator
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to subscribe for.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to subscribe for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
     /// <param name="target"><see cref="ReactorEventsObserver"/> delegate that will be called with events.</param>
-    void Subscribe(ReactorId reactorId, ConnectionId connectionId, ReactorEventsObserver target);
+    void Subscribe(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReactorEventsObserver target);
 
     /// <summary>
     /// Notify that events should be observed.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to send to.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to send to.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to send to.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to send to.</param>
     /// <param name="partition"><see cref="Key"/> for the partition.</param>
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
     /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
-    void OnNext(ReactorId reactorId, ConnectionId connectionId, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource);
+    void OnNext(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition, IEnumerable<AppendedEvent> events, TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource);
 
     /// <summary>
-    /// Notify that a client has connected.
+    /// Notify that a client has disconnected.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> for the client that disconnected.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> for the client that disconnected.</param>
-    void Disconnected(ReactorId reactorId, ConnectionId connectionId);
+    /// <param name="eventStore"><see cref="EventStoreName"/> for the client that disconnected.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> for the client that disconnected.</param>
+    void Disconnected(ReactorId reactorId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }
