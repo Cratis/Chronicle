@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
-public class when_getting_for_known_type : Specification
+public class when_getting_for_known_type_by_type_id : Specification
 {
     static SinkTypeId _type = "df371e5d-b244-48d0-aaad-f298a127dd92";
     Sinks _stores;
