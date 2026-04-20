@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 
@@ -43,6 +44,13 @@ public interface IEventStoreSubscriptionsManager : IGrainWithStringKey
     /// <param name="timeout">The maximum time to wait.</param>
     /// <returns>Awaitable task.</returns>
     /// <exception cref="TimeoutException">Thrown if the subscription does not become ready within the timeout.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if the subscription is not found.</exception>
     Task WaitUntilSubscribed(EventStoreSubscriptionId subscriptionId, TimeSpan timeout);
+
+    /// <summary>
+    /// Notifies the manager that a source event store has been added.
+    /// Any subscriptions waiting for this source event store should be retried immediately.
+    /// </summary>
+    /// <param name="sourceEventStore">The source <see cref="EventStoreName"/> that became available.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SourceEventStoreAdded(EventStoreName sourceEventStore);
 }
