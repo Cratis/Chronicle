@@ -74,6 +74,35 @@ public class EventStoreSubscriptionsManager(
     }
 
     /// <inheritdoc/>
+    public async Task WaitUntilSubscribed(EventStoreSubscriptionId subscriptionId, TimeSpan timeout)
+    {
+        var definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId) ??
+            throw new InvalidOperationException($"Subscription '{subscriptionId}' not found");
+
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+        var namespacesToWaitFor = namespaces.ToList();
+
+        var startTime = DateTime.UtcNow;
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            var tasks = namespacesToWaitFor.Select(ns => CheckSubscriptionForNamespace(definition, ns));
+            var results = await Task.WhenAll(tasks);
+
+            if (results.All(r => r))
+            {
+                logger.SubscriptionReadyForUse(subscriptionId);
+                return;
+            }
+
+            // Brief delay before retrying
+            await Task.Delay(10);
+        }
+
+        logger.SubscriptionNotReadyWithinTimeout(subscriptionId, timeout);
+        throw new TimeoutException($"Subscription '{subscriptionId}' did not become ready within {timeout.TotalMilliseconds}ms");
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventStoreSubscriptionDefinition>> GetSubscriptionDefinitions() =>
         Task.FromResult(State.Subscriptions);
 
@@ -92,9 +121,41 @@ public class EventStoreSubscriptionsManager(
             return;
         }
 
-        var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        await RefreshSubscription(definition, namespaces);
-        await RemoveReminder(reminderName);
+        try
+        {
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+            var healthCheckTasks = namespaces.Select(ns => HealthCheckSubscription(definition, ns));
+            var healthCheckResults = await Task.WhenAll(healthCheckTasks);
+
+            // If any namespace is not healthy, refresh the subscription
+            if (healthCheckResults.Any(r => !r))
+            {
+                logger.SubscriptionHealthCheckFailed(definition.Identifier);
+                await RefreshSubscription(definition, namespaces);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorProcessingSubscriptionReminder(ex, definition.Identifier);
+        }
+        finally
+        {
+            // Re-schedule the reminder for the next check
+            await ScheduleSubscriptionReminder(definition.Identifier);
+        }
+    }
+
+    async Task<bool> HealthCheckSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        try
+        {
+            var observer = GetObserver(definition, namespaceName);
+            return await observer.IsSubscribed();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <inheritdoc/>
@@ -130,20 +191,44 @@ public class EventStoreSubscriptionsManager(
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         var observer = GetObserver(definition, namespaceName);
-        var subscribed = await observer.IsSubscribed();
 
-        if (subscribed)
+        try
         {
-            logger.Unsubscribing(definition.Identifier, namespaceName);
-            await observer.Unsubscribe();
-        }
+            var subscribed = await observer.IsSubscribed();
+            if (subscribed)
+            {
+                // Already subscribed - no need to unsubscribe and re-subscribe
+                // This eliminates the event loss gap that occurs every 60 seconds
+                logger.SubscriptionAlreadyActive(definition.Identifier, namespaceName);
+                return;
+            }
 
-        logger.Subscribing(definition.Identifier, namespaceName);
-        await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-            ObserverType.External,
-            definition.EventTypes.ToArray(),
-            localSiloDetails.SiloAddress,
-            _targetEventStoreName.Value);
+            // Not subscribed yet, subscribe now
+            logger.Subscribing(definition.Identifier, namespaceName);
+            await observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
+                ObserverType.External,
+                definition.EventTypes.ToArray(),
+                localSiloDetails.SiloAddress,
+                _targetEventStoreName.Value);
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
+            throw;
+        }
+    }
+
+    async Task<bool> CheckSubscriptionForNamespace(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        try
+        {
+            var observer = GetObserver(definition, namespaceName);
+            return await observer.IsSubscribed();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
