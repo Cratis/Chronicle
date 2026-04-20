@@ -76,13 +76,32 @@ public class EventStoreSubscriptionsManager(
     /// <inheritdoc/>
     public async Task WaitUntilSubscribed(EventStoreSubscriptionId subscriptionId, TimeSpan timeout)
     {
-        var definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId) ??
-            throw new InvalidOperationException($"Subscription '{subscriptionId}' not found");
-
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         var namespacesToWaitFor = namespaces.ToList();
 
         var startTime = DateTime.UtcNow;
+
+        // The subscription definition is written by the EventStoreSubscriptionsReactor reacting to the
+        // EventStoreSubscriptionAdded event. That reactor processes asynchronously, so the definition may
+        // not yet be in State.Subscriptions when this method is called immediately after appending the event.
+        // Poll until the definition appears in state before proceeding to check IsSubscribed.
+        EventStoreSubscriptionDefinition? definition = null;
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            definition = State.Subscriptions.FirstOrDefault(s => s.Identifier == subscriptionId);
+            if (definition is not null)
+            {
+                break;
+            }
+
+            await Task.Delay(10);
+        }
+
+        if (definition is null)
+        {
+            throw new InvalidOperationException($"Subscription '{subscriptionId}' not found");
+        }
+
         while (DateTime.UtcNow - startTime < timeout)
         {
             var tasks = namespacesToWaitFor.Select(ns => CheckSubscriptionForNamespace(definition, ns));
