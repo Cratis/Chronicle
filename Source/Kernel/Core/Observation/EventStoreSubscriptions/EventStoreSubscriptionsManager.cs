@@ -145,6 +145,18 @@ public class EventStoreSubscriptionsManager(
         }
     }
 
+    /// <inheritdoc/>
+    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
+    {
+        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
+        if (_targetEventStoreName != eventStore) return Task.CompletedTask;
+
+        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
+        return Task.CompletedTask;
+
+        static Task OnError(Exception exception) => Task.CompletedTask;
+    }
+
     async Task<bool> HealthCheckSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         try
@@ -156,18 +168,6 @@ public class EventStoreSubscriptionsManager(
         {
             return false;
         }
-    }
-
-    /// <inheritdoc/>
-    public Task OnSubscribed(IBroadcastChannelSubscription streamSubscription)
-    {
-        var eventStore = streamSubscription.ChannelId.GetKeyAsString();
-        if (_targetEventStoreName != eventStore) return Task.CompletedTask;
-
-        streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
-        return Task.CompletedTask;
-
-        static Task OnError(Exception exception) => Task.CompletedTask;
     }
 
     async Task OnNamespaceAdded(NamespaceAdded added)
