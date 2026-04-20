@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.Events.for_TypedEventSourceId.when_converting_from_an
 
 public class with_a_string_type : Specification
 {
-    const string _input = "some-id";
+    const string Input = "some-id";
     EventSourceId<string> _result;
 
-    void Because() => _result = EventSourceId<string>.From(new EventSourceId(_input));
+    void Because() => _result = EventSourceId<string>.From(new EventSourceId(Input));
 
-    [Fact] void should_have_the_string_as_value() => _result.Value.ShouldEqual(_input);
-    [Fact] void should_have_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(_input);
+    [Fact] void should_have_the_string_as_value() => _result.Value.ShouldEqual(Input);
+    [Fact] void should_have_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(Input);
 }
