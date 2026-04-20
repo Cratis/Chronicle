@@ -36,8 +36,17 @@ internal static partial class EventStoreSubscriptionsManagerLogging
     [LoggerMessage(LogLevel.Information, "Event store subscription '{SubscriptionId}' is ready to receive events")]
     internal static partial void SubscriptionReadyForUse(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId);
 
+    [LoggerMessage(LogLevel.Warning, "Event store subscription '{SubscriptionId}' was not registered within {Timeout}")]
+    internal static partial void SubscriptionDefinitionNotFoundWithinTimeout(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, TimeSpan timeout);
+
     [LoggerMessage(LogLevel.Warning, "Event store subscription '{SubscriptionId}' did not become ready within {Timeout}")]
     internal static partial void SubscriptionNotReadyWithinTimeout(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId, TimeSpan timeout);
+
+    [LoggerMessage(LogLevel.Information, "Source event store '{SourceEventStore}' became available; retrying {SubscriptionCount} pending subscriptions")]
+    internal static partial void SourceEventStoreBecameAvailable(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreName sourceEventStore, int subscriptionCount);
+
+    [LoggerMessage(LogLevel.Error, "Error refreshing subscription '{SubscriptionId}' after source event store '{SourceEventStore}' was added")]
+    internal static partial void ErrorRefreshingForNewSourceEventStore(this ILogger<EventStoreSubscriptionsManager> logger, Exception exception, EventStoreSubscriptionId subscriptionId, EventStoreName sourceEventStore);
 
     [LoggerMessage(LogLevel.Debug, "Event store subscription '{SubscriptionId}' health check failed - refreshing subscription")]
     internal static partial void SubscriptionHealthCheckFailed(this ILogger<EventStoreSubscriptionsManager> logger, EventStoreSubscriptionId subscriptionId);
