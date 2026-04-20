@@ -5,11 +5,11 @@ namespace Cratis.Chronicle.Events.for_TypedEventSourceId.when_converting_from_a_
 
 public class with_a_concept_wrapping_a_string_type : Specification
 {
-    const string _input = "some-concept-id";
+    const string Input = "some-concept-id";
     EventSourceId<StringConcept> _result;
 
-    void Because() => _result = (EventSourceId<StringConcept>)_input;
+    void Because() => _result = (EventSourceId<StringConcept>)Input;
 
-    [Fact] void should_have_the_string_as_value() => _result.Value.ShouldEqual(_input);
-    [Fact] void should_have_the_concept_with_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(new StringConcept(_input));
+    [Fact] void should_have_the_string_as_value() => _result.Value.ShouldEqual(Input);
+    [Fact] void should_have_the_concept_with_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(new StringConcept(Input));
 }
