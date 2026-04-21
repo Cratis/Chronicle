@@ -24,7 +24,7 @@ public record ReadModelInstance(JsonObject Instance)
     /// <param name="readModel">The name of the read model to get instances for.</param>
     /// <param name="occurrence">Optional occurrence name to get instances from.</param>
     /// <returns>Paged collection of read model instances.</returns>
-    internal static async Task<IEnumerable<ReadModelInstance>> ReadModelInstances(
+    public static async Task<IEnumerable<ReadModelInstance>> ReadModelInstances(
         IReadModelsService readModels,
         IQueryContextManager queryContextManager,
         string eventStore,

@@ -25,7 +25,7 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
     /// <param name="readModel">The read model identifier.</param>
     /// <param name="readModelKey">The read model key.</param>
     /// <returns>Collection of snapshots.</returns>
-    internal static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
+    public static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
         IReadModels readModels,
         string eventStore,
         string @namespace,

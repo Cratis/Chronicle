@@ -20,7 +20,7 @@ public record ProjectionWithDeclaration(string Identifier, string ContainerName,
     /// <param name="projections"><see cref="IProjections"/> for interacting with projections.</param>
     /// <param name="eventStore">The event store to get projections for.</param>
     /// <returns>All projections with their declaration representation.</returns>
-    internal static async Task<IEnumerable<ProjectionWithDeclaration>> AllProjectionsWithDeclarations(IProjections projections, string eventStore)
+    public static async Task<IEnumerable<ProjectionWithDeclaration>> AllProjectionsWithDeclarations(IProjections projections, string eventStore)
     {
         var declarations = await projections.GetAllDeclarations(new GetAllDeclarationsRequest { EventStore = eventStore });
         return declarations.Select(d => new ProjectionWithDeclaration(d.Identifier, d.ContainerName, d.Declaration));
