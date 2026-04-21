@@ -22,7 +22,7 @@ public record ReadModelOccurrence(DateTimeOffset Occurred, string RevertContaine
     /// <param name="namespace">The namespace of the read model to get occurrences for.</param>
     /// <param name="readModel">The name of the read model to get occurrences for.</param>
     /// <returns>Collection of read model occurrences.</returns>
-    internal static async Task<IEnumerable<ReadModelOccurrence>> ReadModelOccurrences(
+    public static async Task<IEnumerable<ReadModelOccurrence>> ReadModelOccurrences(
         IReadModels readModels,
         string eventStore,
         string @namespace,
