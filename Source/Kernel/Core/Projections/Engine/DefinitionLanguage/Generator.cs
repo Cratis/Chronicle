@@ -420,6 +420,13 @@ public class Generator : IGenerator
             return normalizedExpression;
         }
 
+        // Convert $value(innerValue) back to literal "innerValue" syntax for round-tripping
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+        {
+            var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
+            return $"literal \"{innerValue}\"";
+        }
+
         // Numeric literals
         if (double.TryParse(normalizedExpression, out _))
         {

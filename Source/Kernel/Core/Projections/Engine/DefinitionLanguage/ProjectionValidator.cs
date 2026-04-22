@@ -22,8 +22,8 @@ public class ProjectionValidator(
     IEnumerable<ReadModelDefinition> readModelDefinitions,
     IEnumerable<EventTypeSchema> eventTypeSchemas)
 {
-    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.ToDictionary(_ => _.Identifier);
-    readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.ToDictionary(_ => _.Type);
+    readonly Dictionary<ReadModelIdentifier, ReadModelDefinition> _readModelLookup = readModelDefinitions.DistinctBy(_ => _.Identifier).ToDictionary(_ => _.Identifier);
+    readonly Dictionary<EventType, EventTypeSchema> _eventTypeLookup = eventTypeSchemas.DistinctBy(_ => _.Type).ToDictionary(_ => _.Type);
 
     /// <summary>
     /// Validates a projection against the available read models and event type schemas.

@@ -26,11 +26,14 @@ export class Namespaces implements INamespaces {
         private readonly _messenger: IMessenger,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams,
         private readonly _namespacesQuery: AllNamespaces) {
+    }
 
-        // Initialize after a microtask to allow params to be fully set
-        Promise.resolve().then(() => {
-            this.ensureSubscription();
-        });
+    /** @inheritdoc */
+    setEventStore(eventStore: string) {
+        if (eventStore) {
+            this._params.eventStore = eventStore;
+        }
+        this.ensureSubscription();
     }
 
     private ensureSubscription() {
