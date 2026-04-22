@@ -23,7 +23,8 @@ function App() {
         <Arc
             development={isDevelopment}
             apiBasePath={basePath}
-            basePath={basePath}>
+            basePath={basePath}
+            queryDirectMode={true}>
             <MVVM>
                 <LayoutProvider>
                     <DialogComponents confirmation={ConfirmationDialog} busyIndicator={BusyIndicatorDialog}>
