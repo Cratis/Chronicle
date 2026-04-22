@@ -27,7 +27,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
         var builder = new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-            .WithPortBinding(MongoDBPort, 27017)
+            .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
