@@ -3,6 +3,8 @@
 
 using System.Collections;
 using System.Dynamic;
+using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -17,10 +19,12 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// </summary>
 /// <param name="projectionFutures"><see cref="IProjectionFutures"/> for managing futures.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
+/// <param name="objectComparer"><see cref="IObjectComparer"/> for creating changesets when resolving futures.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 public class ResolveFutures(
     IProjectionFutures projectionFutures,
     ITypeFormats typeFormats,
+    IObjectComparer objectComparer,
     ILogger<ResolveFutures> logger) : ICanPerformProjectionPipelineStep
 {
     /// <inheritdoc/>
@@ -130,21 +134,32 @@ public class ResolveFutures(
                     parentIndexers.Add(new ArrayIndexer(future.ChildPath, future.IdentifiedByProperty, childKey!));
                     var key = new Key(context.Key.Value, new ArrayIndexers(parentIndexers));
 
+                    // Use a separate changeset so the future's ChildAdded is saved in its own MongoDB
+                    // operation after the main changeset save, avoiding MongoDB's restriction on
+                    // pushing to a child of an array element being pushed in the same update.
+                    var futureChangeset = new Changeset<AppendedEvent, ExpandoObject>(
+                        objectComparer,
+                        future.Event,
+                        context.Changeset.CurrentState);
+
                     var futureContext = context with
                     {
                         Event = future.Event,
-                        Key = key
+                        Key = key,
+                        Changeset = futureChangeset
                     };
 
-                    var contextEvent = futureContext.Changeset.Incoming;
-                    futureContext.Changeset.Incoming = future.Event;
                     childProjection.OnNext(futureContext);
-                    futureContext.Changeset.Incoming = contextEvent;
 
                     // Successfully resolved the future
                     await projectionFutures.ResolveFuture(future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
+
+                    if (futureChangeset.HasChanges)
+                    {
+                        context.AddPendingFutureSave(key, futureChangeset);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -207,7 +222,20 @@ public class ResolveFutures(
         if (currentState is null) return false;
 
         var chain = BuildParentChain(childProjection);
-        if (chain.Count == 0) return false;
+
+        if (chain.Count == 0)
+        {
+            // The child projection's parent is root, so the resolved item is a direct child of the root.
+            // Use the child projection's ChildrenPropertyPath (e.g. [Configurations]) to find the
+            // collection. ParentPath is PropertyPath.Root for first-level children and cannot be used
+            // directly. The caller adds the child's own ArrayIndexer; no ancestor indexers are needed.
+            var directCollectionValue = childProjection.ChildrenPropertyPath.GetValue(currentState, ArrayIndexers.NoIndexers);
+            var directCollection = AsExpandoCollection(directCollectionValue);
+            if (directCollection is null) return false;
+            var directList = directCollection.ToList();
+
+            return directList.Contains(parentIdentifiedByProperty, parentKey);
+        }
 
         if (chain.Count == 1)
         {
@@ -253,7 +281,7 @@ public class ResolveFutures(
     /// key. When found, the full indexer chain (one entry per level, root-to-leaf) is written to
     /// <paramref name="resultIndexers"/>.
     /// </summary>
-    /// <param name="rootState">The root <see cref="ExpandoObject"/> to navigate from.</param>
+    /// <param name="rootState">The root <see cref="ExpandoObject"/> representing the current read model state.</param>
     /// <param name="chain">The ordered projection chain from root-most ancestor to the direct parent.</param>
     /// <param name="level">The current depth within <paramref name="chain"/>.</param>
     /// <param name="currentIndexers">Array indexers accumulated so far for levels above this one.</param>
@@ -274,6 +302,8 @@ public class ResolveFutures(
         var childrenPath = proj.ChildrenPropertyPath;
         var isLeaf = level == chain.Count - 1;
 
+        // Navigate from the root using the full children path with accumulated indexers so
+        // that multi-segment paths (e.g. "[Configurations].[Hubs]") are resolved correctly.
         var collectionValue = childrenPath.GetValue(rootState, new ArrayIndexers(currentIndexers));
         var collection = AsExpandoCollection(collectionValue);
         if (collection is null) return false;

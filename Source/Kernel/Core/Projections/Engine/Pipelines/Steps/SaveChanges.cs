@@ -53,6 +53,11 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
             context.Event.Context.CorrelationId,
             context.Changeset);
 
+        foreach (var pendingSave in context.PendingFutureSaves)
+        {
+            await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber);
+        }
+
         return context;
     }
 }
