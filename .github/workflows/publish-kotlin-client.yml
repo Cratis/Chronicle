@@ -1,0 +1,85 @@
+name: Publish Kotlin Client
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+      protos-artifact:
+        description: Name of the artifact containing proto files. Leave empty to generate them.
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+        default: '0.0.0'
+
+env:
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  publish-kotlin-client:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        if: inputs.protos-artifact == ''
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download proto files
+        if: inputs.protos-artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.protos-artifact }}
+          path: Source/Kernel/Protobuf/
+
+      - name: Build Contracts
+        if: inputs.protos-artifact == ''
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        if: inputs.protos-artifact == ''
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            "$CONTRACTS_DLL" \
+            Source/Kernel/Protobuf
+
+      - name: Copy proto files into Kotlin project
+        run: |
+          mkdir -p Source/Clients/Kotlin/src/main/proto
+          cp -r Source/Kernel/Protobuf/* Source/Clients/Kotlin/src/main/proto/
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Publish to Maven Central
+        working-directory: ./Source/Clients/Kotlin
+        run: gradle publishToMavenCentral --no-configuration-cache -Pversion=${{ inputs.version }}
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
