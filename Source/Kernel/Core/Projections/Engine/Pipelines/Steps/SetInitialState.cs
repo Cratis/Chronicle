@@ -32,6 +32,12 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             return context;
         }
 
+        // Don't set initial state if the key value could not be resolved
+        if (context.Key.Value is null)
+        {
+            return context;
+        }
+
         logger.GettingInitialValues(context.Event.Context.SequenceNumber);
 
         // If we are joining, or adding a child - we do want to set initial state
