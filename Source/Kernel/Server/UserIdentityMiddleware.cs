@@ -26,6 +26,7 @@ public class UserIdentityMiddleware(RequestDelegate next)
                 string.IsNullOrEmpty(name) &&
                 string.IsNullOrEmpty(username))
             {
+                await next(context);
                 return;
             }
 
