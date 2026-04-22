@@ -54,27 +54,28 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
 
         async Task Because()
         {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reactorHandler = EventStore.Reactors.GetHandlerFor<SomeReactor>();
             var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
             var nonReplayableReactorHandler = EventStore.Reactors.GetHandlerFor<NonReplayableReactor>();
             var nonReplayableReducerHandler = EventStore.Reducers.GetHandlerFor<NonReplayableReducer>();
 
-            await reactorHandler.WaitTillActive();
-            await reducerHandler.WaitTillActive();
-            await nonReplayableReactorHandler.WaitTillActive();
-            await nonReplayableReducerHandler.WaitTillActive();
+            await reactorHandler.WaitTillActive(startupTimeout);
+            await reducerHandler.WaitTillActive(startupTimeout);
+            await nonReplayableReactorHandler.WaitTillActive(startupTimeout);
+            await nonReplayableReducerHandler.WaitTillActive(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
-            await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
+            var lastAppendResult = await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
 
-            var lastAppendedSequenceNumber = EventSequenceNumber.First + 2;
+            var lastAppendedSequenceNumber = lastAppendResult.SequenceNumber;
 
             // Wait for all observers to process the appended events.
-            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
-            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
-            await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
-            await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber);
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
 
             // Mark the non-replayable observers as non-replayable in storage.
             await MarkObserverAsNonReplayable(typeof(NonReplayableReactor).GetReactorId());
@@ -93,8 +94,8 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
             await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             // Wait for replayable observers to finish processing the replay.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
+            await Reactor.WaitTillHandledEventReaches(3, startupTimeout);
+            await Reducer.WaitTillHandledEventReaches(3, startupTimeout);
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
