@@ -207,7 +207,6 @@ logger.ServerConfigured();
 app.UseRouting();
 
 app.UseCratisArc();
-app.UseRouting();
 
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)

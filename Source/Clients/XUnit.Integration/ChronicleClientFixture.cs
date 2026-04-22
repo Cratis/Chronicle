@@ -8,6 +8,7 @@ using System.Reflection;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -62,6 +63,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     /// Gets the value indicating whether to auto discover artifacts.
     /// </summary>
     public virtual bool AutoDiscoverArtifacts { get; } = true;
+
+    /// <summary>
+    /// Gets the MongoDB container.
+    /// </summary>
+    public IContainer MongoDBContainer => ChronicleFixture.MongoDBContainer;
 
     /// <summary>
     /// Gets the docker network.
