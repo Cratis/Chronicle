@@ -29,6 +29,10 @@ export class NamespaceSelectorViewModel {
     currentNamespace: string = '';
     namespaces: string[] = [];
 
+    setEventStore(eventStore: string) {
+        this._namespaces.setEventStore(eventStore);
+    }
+
     onNamespaceSelected(namespace: string) {
         this.currentNamespace = namespace;
         this._props.onNamespaceSelected(namespace);
