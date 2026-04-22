@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Api.ReadModels;
 
@@ -37,6 +38,7 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
             EventStore = eventStore,
             Namespace = @namespace,
             ReadModelIdentifier = readModel,
+            EventSequenceId = EventSequenceId.Log,
             ReadModelKey = readModelKey
         });
 
