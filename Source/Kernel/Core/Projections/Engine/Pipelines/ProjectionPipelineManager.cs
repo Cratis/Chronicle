@@ -49,7 +49,7 @@ public class ProjectionPipelineManager(
         var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [

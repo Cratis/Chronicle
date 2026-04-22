@@ -27,6 +27,7 @@ public record ProjectionEventContext(
 {
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];
+    readonly List<PendingFutureSave> _pendingFutureSaves = [];
 
     /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
@@ -42,6 +43,11 @@ public record ProjectionEventContext(
     /// Gets the collection of failed partitions from bulk operations.
     /// </summary>
     public IEnumerable<FailedPartition> FailedPartitions => _failedPartitions;
+
+    /// <summary>
+    /// Gets the collection of pending future saves that must be applied after the main changeset save.
+    /// </summary>
+    public IEnumerable<PendingFutureSave> PendingFutureSaves => _pendingFutureSaves;
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
@@ -88,6 +94,14 @@ public record ProjectionEventContext(
     /// </summary>
     /// <param name="failedPartition">The <see cref="FailedPartition"/> to add.</param>
     public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
+
+    /// <summary>
+    /// Adds a pending future save that will be applied after the main changeset is saved.
+    /// </summary>
+    /// <param name="key">The key to use when applying the changeset.</param>
+    /// <param name="changeset">The changeset containing the resolved future's changes.</param>
+    public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset) =>
+        _pendingFutureSaves.Add(new PendingFutureSave(key, changeset));
 
     /// <summary>
     /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
