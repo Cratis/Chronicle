@@ -378,11 +378,6 @@ internal sealed class ReadModels(
 
         while (await cursor.MoveNext())
         {
-            if (!cursor.Current.Any())
-            {
-                break;
-            }
-
             foreach (var appendedEvent in cursor.Current)
             {
                 var correlationId = appendedEvent.Context.CorrelationId;
