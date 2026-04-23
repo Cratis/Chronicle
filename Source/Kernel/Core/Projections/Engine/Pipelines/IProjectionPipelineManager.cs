@@ -28,4 +28,9 @@ public interface IProjectionPipelineManager
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the projection is for.</param>
     /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
     void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id);
+
+    /// <summary>
+    /// Clears all cached projection pipelines.
+    /// </summary>
+    void Clear();
 }
