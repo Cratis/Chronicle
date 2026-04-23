@@ -23,7 +23,6 @@ public partial class Observer
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        Console.Error.WriteLine($"[DIAG-OBSERVER-HANDLE] Handle called for {_observerId} key={_observerKey} partition={partition} eventCount={events.Count()} runningState={State.RunningState}");
 
         if (!events.Any())
         {

@@ -153,14 +153,10 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     // infrastructure is being initialized concurrently.
                     var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
                         .GetType("Orleans.Hosting.ChronicleServerStartupTask");
-                    File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] startupTaskType={startupTaskType?.FullName ?? "NULL"}\n");
                     if (startupTaskType is not null)
                     {
-                        var descriptors = services.Where(d => d.ImplementationType == startupTaskType).ToList();
-                        File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] Found {descriptors.Count} descriptors to remove\n");
-                        foreach (var descriptor in descriptors)
+                        foreach (var descriptor in services.Where(d => d.ImplementationType == startupTaskType).ToList())
                         {
-                            File.AppendAllText("/tmp/diag-factory.log", $"[DIAG] Removing: ServiceType={descriptor.ServiceType.FullName}, ImplType={descriptor.ImplementationType?.FullName}\n");
                             services.Remove(descriptor);
                         }
                     }

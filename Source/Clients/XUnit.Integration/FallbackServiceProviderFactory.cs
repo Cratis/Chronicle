@@ -25,11 +25,9 @@ internal sealed class FallbackServiceProviderFactory : IServiceProviderFactory<I
         var registry = innerProvider.GetService<MutableServiceRegistry>();
         if (registry is null)
         {
-            File.AppendAllText("/tmp/chronicle-diag.log", "[DIAG-FACTORY] No MutableServiceRegistry found, returning raw provider\n");
             return innerProvider;
         }
 
-        File.AppendAllText("/tmp/chronicle-diag.log", "[DIAG-FACTORY] Wrapping provider with FallbackServiceProvider\n");
         return new FallbackServiceProvider(innerProvider, registry);
     }
 }

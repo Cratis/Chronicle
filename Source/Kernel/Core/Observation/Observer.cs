@@ -98,11 +98,6 @@ public partial class Observer(
     /// <inheritdoc/>
     public Task<ObserverState> GetState()
     {
-        if (State.RunningState != Concepts.Observation.ObserverRunningState.Active)
-        {
-            Console.Error.WriteLine($"[DIAG-OBSERVER] GetState for {_observerId} key={_observerKey} returning RunningState={State.RunningState} NextSeq={State.NextEventSequenceNumber}");
-        }
-
         return Task.FromResult(State);
     }
 #pragma warning restore CA1721 // Property namTes should not match get methods
@@ -206,7 +201,6 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
-        Console.Error.WriteLine($"[DIAG-OBSERVER] Unsubscribe called for {_observerId} key={_observerKey} currentState={State.RunningState}");
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
     }

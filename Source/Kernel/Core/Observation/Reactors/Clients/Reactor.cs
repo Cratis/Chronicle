@@ -111,12 +111,10 @@ public class Reactor(
             subscription.Arguments is ConnectedClient connectedClient &&
             connectedClient.ConnectionId != _observerKey!.ConnectionId)
         {
-            Console.Error.WriteLine($"[DIAG-REACTOR] Unsubscribe SKIPPED for {_observerKey.ObserverId} — connectionId mismatch: subscription={connectedClient.ConnectionId} reactor={_observerKey.ConnectionId}");
             _subscribed = false;
             return;
         }
 
-        Console.Error.WriteLine($"[DIAG-REACTOR] Unsubscribe PROCEEDING for {_observerKey.ObserverId} connectionId={_observerKey.ConnectionId}");
         await observer.Unsubscribe();
 
         _subscribed = false;
