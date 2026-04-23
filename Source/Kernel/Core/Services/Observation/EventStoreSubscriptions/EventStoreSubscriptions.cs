@@ -42,6 +42,10 @@ internal sealed class EventStoreSubscriptions(
 
             if (existing is null || !HasSameDefinition(existing, definition))
             {
+                // Reserve the definition in the manager before appending the event so a second
+                // immediate Subscribe() call observes the pending subscription instead of
+                // appending a duplicate EventStoreSubscriptionAdded event.
+                await subscriptionsManager.Add(definition);
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
                     definition.EventTypes));
