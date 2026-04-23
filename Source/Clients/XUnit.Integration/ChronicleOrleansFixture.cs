@@ -101,15 +101,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         // of being swallowed by ConnectionLifecycle.Connected's catch block.
         // If lifecycle.Connected already succeeded, Register() is a no-op (_registered = true).
         // If it failed, this retries and surfaces the actual error.
-        try
-        {
-            await eventStore.RegisterAll();
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync($"[DIAG] RegisterAll failed after Reconnect: {ex}");
-            throw;
-        }
+        await eventStore.RegisterAll();
     }
 
     /// <inheritdoc/>
@@ -156,9 +148,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
 
-            var beforeCount = await managementGrain.GetTotalActivationCount();
-            Console.Error.WriteLine($"[DIAG] Activation count BEFORE ForceActivationCollection: {beforeCount}");
-
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
             // ForceActivationCollection only schedules deactivation; the actual deactivation
@@ -176,7 +165,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
                 {
                     if (++stableReadCount >= 3)
                     {
-                        Console.Error.WriteLine($"[DIAG] Activation count AFTER ForceActivationCollection stabilized at: {currentCount}");
                         break;
                     }
                 }
