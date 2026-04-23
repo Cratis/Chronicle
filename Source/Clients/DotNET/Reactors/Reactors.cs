@@ -69,7 +69,6 @@ public class Reactors : IReactors
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
-        File.AppendAllText("/tmp/chronicle-diag.log", $"[DIAG-CTOR] Reactors constructed. artifactActivator={artifactActivator.GetType().FullName} sp={serviceProvider.GetType().FullName}\n");
         _eventStore = eventStore;
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventTypes = eventTypes;
@@ -309,23 +308,19 @@ public class Reactors : IReactors
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
     {
-        File.AppendAllText("/tmp/chronicle-diag.log", $"[DIAG] ObserverMethod handler={handler.Id} type={handler.ReactorType.Name} activator={_artifactActivator.GetType().Name} sp={_serviceProvider.GetType().Name}\n");
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
 
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
-        File.AppendAllText("/tmp/chronicle-diag.log", $"[DIAG] scope.SP type={serviceProviderScope.ServiceProvider.GetType().Name}\n");
         var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
         if (activatedReactorResult.TryGetException(out var exception))
         {
-            File.AppendAllText("/tmp/chronicle-diag.log", $"[DIAG] FAILED to activate {handler.ReactorType.Name}: {exception}\n");
             FailedActivatingReactor(exception);
             PublishResult();
             return;
         }
-        File.AppendAllText("/tmp/chronicle-diag.log", $"[DIAG] activated {handler.ReactorType.Name} OK\n");
 
         await using var activatedReactor = activatedReactorResult.AsT0;
         await using var middlewares = _middlewaresActivator.Activate(serviceProviderScope.ServiceProvider);
@@ -362,15 +357,12 @@ public class Reactors : IReactors
 
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
-                Console.Error.WriteLine($"[DIAG-CLIENT] About to invoke handler.OnNext for {handler.ReactorType.Name} eventType={context.EventType.Id}");
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
                 if (handleResult.TryGetException(out var ex))
                 {
-                    Console.Error.WriteLine($"[DIAG-CLIENT] handler.OnNext FAILED for {handler.ReactorType.Name}: {ex}");
                     FailedToHandleEvent(ex, @event.Context.EventType.Id);
                     break;
                 }
-                Console.Error.WriteLine($"[DIAG-CLIENT] handler.OnNext SUCCEEDED for {handler.ReactorType.Name}");
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)
