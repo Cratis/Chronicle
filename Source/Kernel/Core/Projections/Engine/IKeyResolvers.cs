@@ -47,9 +47,10 @@ public interface IKeyResolvers
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> the join is for.</param>
     /// <param name="keyResolver"><see cref="KeyResolver"/> for resolving the key from the event.</param>
-    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> for the identified by property in the join relationship.</param>
+    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> for the identified by property in the join relationship. Used as the child property path when looking up the root key for root-level joins.</param>
+    /// <param name="joinOnProperty">The <see cref="PropertyPath"/> of the property on the root read model that serves as the join target. Used when the projection has no parent.</param>
     /// <returns><see cref="KeyResolver"/> that will be used to resolve.</returns>
-    KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty);
+    KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty, PropertyPath joinOnProperty);
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value hierarchically upwards in Child->Parent relationships.
