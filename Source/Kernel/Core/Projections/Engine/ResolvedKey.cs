@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// Represents a successfully resolved key.
 /// </summary>
 /// <param name="Key">The resolved key.</param>
-public record ResolvedKey(Key Key) : KeyResolverResult;
+/// <param name="JoinKey">Optional key to use when applying direct joins.</param>
+public record ResolvedKey(Key Key, object? JoinKey = null) : KeyResolverResult;

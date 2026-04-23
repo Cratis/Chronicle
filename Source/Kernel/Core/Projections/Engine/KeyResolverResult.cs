@@ -15,8 +15,9 @@ public abstract record KeyResolverResult
     /// Creates a resolved result with a key.
     /// </summary>
     /// <param name="key">The resolved key.</param>
+    /// <param name="joinKey">Optional key to use when applying direct joins.</param>
     /// <returns>A <see cref="ResolvedKey"/> result.</returns>
-    public static KeyResolverResult Resolved(Key key) => new ResolvedKey(key);
+    public static KeyResolverResult Resolved(Key key, object? joinKey = null) => new ResolvedKey(key, joinKey);
 
     /// <summary>
     /// Creates a deferred result with a future.
