@@ -113,12 +113,6 @@ public class EventTypesStorage(
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-        var cached = _eventTypes.FirstOrDefault(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString));
-        if (cached is not null)
-        {
-            return cached.ToKernel(generation);
-        }
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
@@ -138,14 +132,6 @@ public class EventTypesStorage(
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
-        generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
-        {
-            return true;
-        }
-
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = await result.ToListAsync();
