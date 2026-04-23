@@ -75,4 +75,7 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+
+    /// <inheritdoc/>
+    public void Clear() => _pipelines.Clear();
 }

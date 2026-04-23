@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.Projections;
 public class ProjectionFutures : Grain<ProjectionFuturesState>, IProjectionFutures
 {
     /// <inheritdoc/>
-    public Task<IEnumerable<ProjectionFuture>> GetFutures() => Task.FromResult<IEnumerable<ProjectionFuture>>(State.Futures);
+    public Task<IEnumerable<ProjectionFuture>> GetFutures() =>
+        Task.FromResult<IEnumerable<ProjectionFuture>>(State.Futures);
 
     /// <inheritdoc/>
     public async Task AddFuture(ProjectionFuture future)
