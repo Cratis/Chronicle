@@ -58,6 +58,14 @@ public class Routing(
         logger.Entering();
 
         _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
+
+        // First-time subscription after state reset: start from beginning so existing events are not skipped.
+        // NextEventSequenceNumber is Unavailable when the observer grain reloaded state from an empty DB.
+        if (!state.NextEventSequenceNumber.IsActualValue && _tailEventSequenceNumber.IsActualValue)
+        {
+            state = state with { NextEventSequenceNumber = EventSequenceNumber.First };
+        }
+
         var getNextToHandleResult = await eventSequence.GetNextSequenceNumberGreaterOrEqualTo(state.NextEventSequenceNumber, _subscription.EventTypes.ToList());
         _nextUnhandledEventSequenceNumber = getNextToHandleResult.Match(eventSequenceNumber => eventSequenceNumber, _ => EventSequenceNumber.Unavailable);
 
