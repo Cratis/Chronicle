@@ -14,6 +14,12 @@ namespace Cratis.Chronicle.Storage.EventTypes;
 public interface IEventTypesStorage
 {
     /// <summary>
+    /// Populate the in-memory cache from the underlying storage.
+    /// </summary>
+    /// <returns>Async task.</returns>
+    Task Populate();
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>
