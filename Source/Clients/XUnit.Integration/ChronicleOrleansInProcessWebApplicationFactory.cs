@@ -95,12 +95,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddSingleton(testServiceRegistry);
 
                 // Register delegate factories that always resolve from MutableServiceRegistry.
-                // This ensures that even when ActivatorUtilities.GetServiceOrCreateInstance
-                // calls GetService on the raw Microsoft DI provider (bypassing
-                // FallbackServiceProvider), the correct per-test instances are returned.
+                // AddTransient ensures the factory runs on every resolution, so that when
+                // the registry is updated between tests, subsequent resolutions get the new
+                // per-test instance rather than a stale cached singleton.
                 foreach (var descriptor in capturingCollection)
                 {
-                    services.AddSingleton(descriptor.ServiceType, sp =>
+                    services.AddTransient(descriptor.ServiceType, sp =>
                     {
                         var registry = sp.GetRequiredService<MutableServiceRegistry>();
                         return registry.TryGet(descriptor.ServiceType, sp)

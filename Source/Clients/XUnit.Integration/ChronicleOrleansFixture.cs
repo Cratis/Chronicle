@@ -6,6 +6,7 @@ extern alias KernelConcepts;
 
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Storage;
 using KernelCore::Cratis.Chronicle.Namespaces;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
@@ -84,6 +85,25 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         await kernelReactors.DiscoverAndRegister(
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // 3c. Drop all test event store databases a second time, preserving the system event
+        //     store databases written by step 3b. Grain OnDeactivateAsync writes in step 2
+        //     can re-create test databases after the drop in step 3, carrying stale event type
+        //     schemas into the next test. By this point (after step 3b), all deactivation
+        //     writes have had sufficient time to complete, so this second drop leaves a clean
+        //     slate without destroying the kernel reactor state.
+        await ChronicleFixture.RemoveAllDatabases(
+            excludePrefixes: [(string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System]);
+
+        // 3d. Reset the EventTypesStorage in-memory cache for the test event store.
+        //     EventTypesStorage caches registered schemas in a ConcurrentBag<EventType> field
+        //     that is never cleared by database drops — HasFor/GetFor check this cache first and
+        //     can return stale schemas from a previous test's event types, causing
+        //     EventTypeSchemaChanged when two test suites define the same event type name with
+        //     different properties. Calling Populate() re-reads from MongoDB (now empty) and
+        //     replaces the cache, ensuring the next RegisterAll starts with a clean schema state.
+        var storage = Services.GetRequiredService<IStorage>();
+        await storage.GetEventStore(Constants.EventStore).EventTypes.Populate();
 
         // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
