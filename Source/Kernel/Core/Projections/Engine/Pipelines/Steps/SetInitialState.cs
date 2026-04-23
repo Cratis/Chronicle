@@ -27,12 +27,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             return context;
         }
 
-        if (context.IsJoin)
-        {
-            return context;
-        }
-
-        // Don't set initial state if the key value could not be resolved
+        // Don't set initial state if the key value could not be resolved.
         if (context.Key.Value is null)
         {
             return context;
