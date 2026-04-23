@@ -84,6 +84,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
+                // Keep every host-level Chronicle client registration pointed at the
+                // shared test event store so reconnect does not create a second unnamed
+                // event store with its own failing OnConnected registration.
+                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+
                 // Capture the first fixture's service registrations and populate the mutable
                 // registry. Subsequent tests update the registry via OnBeforeInitializeAsync
                 // without rebuilding the DI container.
