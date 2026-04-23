@@ -29,16 +29,20 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-            EventsToAppend.Add(EventAppended);
             _observable = EventStore.ReadModels.Watch<ReadModel>().Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.SetResult();
             });
 
-            // Append the events after the watcher is ready
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
             await Projection.WaitTillActive();
+
+            // Allow the Watch's Orleans stream subscription to be established before appending.
+            // WaitTillActive may return immediately if the projection is already active, which
+            // is not enough time for the async stream.SubscribeAsync() in Watch() to complete.
+            await Task.Delay(250);
+
             var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
             await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
             Result = await GetReadModel(EventSourceId);
