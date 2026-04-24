@@ -2,16 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Jobs;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Jobs;
 using Cratis.Monads;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using NSubstitute;
-using JobType = Cratis.Chronicle.Concepts.Jobs.JobType;
 
 namespace Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage.given;
 
@@ -31,26 +28,19 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
         _database.GetCollection<JobState>(WellKnownCollectionNames.Jobs)
             .Returns(_mongoDatabase.GetCollection<JobState>(WellKnownCollectionNames.Jobs));
 
-        var jobTypes = Services.GetRequiredService<IJobTypes>();
+        if (!BsonClassMap.IsClassMapRegistered(typeof(JobState)))
+        {
+            BsonClassMap.RegisterClassMap<JobState>(new JobStateClassMap().Configure);
+        }
+
+        var jobTypes = new TestJobTypes();
+        var jobStateSerializer = new JobStateSerializer(jobTypes);
+        BsonSerializer.RegisterSerializationProvider(
+            new JobStateSerializationProvider(jobStateSerializer));
+
         _storage = new JobStorage(_database, jobTypes);
 
         await Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    protected override void ConfigureServices(IServiceCollection services)
-    {
-        // Remove convention-based IJobTypes registration so we can replace it
-        // with a decorator that adds test-specific job type mappings.
-        // This ensures the JobStateSerializer (which resolves IJobTypes from DI)
-        // can deserialize test request types.
-        services.RemoveAll<IJobTypes>();
-        services.AddSingleton<IJobTypes>(sp =>
-        {
-            var types = sp.GetRequiredService<ITypes>();
-            var realJobTypes = new JobTypes(types);
-            return new TestJobTypes(realJobTypes);
-        });
     }
 
     async Task Cleanup()
@@ -59,24 +49,40 @@ public class a_job_storage(ChronicleInProcessFixture fixture) : Integration.give
     }
 
     /// <summary>
-    /// Decorator over <see cref="IJobTypes"/> that adds test-specific job type to request type mappings
-    /// while delegating all other calls to the real implementation.
+    /// Minimal <see cref="IJobTypes"/> implementation for the <see cref="IntegrationJob"/> test job type.
     /// </summary>
-    /// <param name="inner">The real <see cref="IJobTypes"/> implementation.</param>
-    class TestJobTypes(IJobTypes inner) : IJobTypes
+    class TestJobTypes : IJobTypes
     {
-        public Result<JobType, IJobTypes.GetForError> GetFor(Type type) => inner.GetFor(type);
+        static readonly JobType _integrationJobType = new(nameof(IntegrationJob));
 
-        public Result<Type, IJobTypes.GetClrTypeForError> GetClrTypeFor(JobType type) => inner.GetClrTypeFor(type);
+        public Result<JobType, IJobTypes.GetForError> GetFor(Type type)
+        {
+            if (type == typeof(IntegrationJob) || type.Name == nameof(IntegrationJob))
+            {
+                return _integrationJobType;
+            }
+
+            return IJobTypes.GetForError.NoAssociatedJobType;
+        }
+
+        public Result<Type, IJobTypes.GetClrTypeForError> GetClrTypeFor(JobType type)
+        {
+            if (type == _integrationJobType)
+            {
+                return typeof(IntegrationJob);
+            }
+
+            return IJobTypes.GetClrTypeForError.CouldNotFindType;
+        }
 
         public Result<Type, IJobTypes.GetRequestClrTypeForError> GetRequestClrTypeFor(JobType type)
         {
-            if (type.Value == nameof(IntegrationJob))
+            if (type == _integrationJobType)
             {
                 return typeof(IntegrationJobRequest);
             }
 
-            return inner.GetRequestClrTypeFor(type);
+            return IJobTypes.GetRequestClrTypeForError.CouldNotFindType;
         }
     }
 }
