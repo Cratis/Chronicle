@@ -90,7 +90,7 @@ public class Sink(
     {
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
-        var keyFilterValue = key.ArrayIndexers.IsEmpty ? converter.ToBsonValue(key) : key.Value.ToBsonValue();
+        var keyFilterValue = converter.ToBsonValue(key);
 
         var filter = changeset.HasJoined() && !hasDirectKeyScopedChanges ?
             FilterDefinition<BsonDocument>.Empty :
@@ -114,7 +114,7 @@ public class Sink(
         // Run through and remove all children affected by ChildRemovedFromAll
         foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
-            await RemoveChildFromAll(key, childRemoved);
+            await RemoveChildFromAll(childRemoved);
         }
 
         if (_isBulkMode && changeset.HasJoined() && _bulkOperations.Count > 0)
@@ -265,7 +265,7 @@ public class Sink(
 
         foreach (var indexDefinition in readModel.Indexes)
         {
-            var indexName = indexDefinition.PropertyPath.Path;
+            var indexName = $"chronicle_idx_{indexDefinition.PropertyPath.Path.Replace('.', '_')}";
 
             if (existingIndexes.Contains(indexName))
             {
@@ -429,11 +429,11 @@ public class Sink(
         };
     }
 
-    async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
+    async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
     {
         var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
         var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
-        var propertyValue = key.Value.ToBsonValue();
+        var propertyValue = childRemoved.Key.ToBsonValue();
 
         var collection = Collection;
 
