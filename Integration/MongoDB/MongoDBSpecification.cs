@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Linq;
 using Cratis.Arc.MongoDB;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -76,10 +77,9 @@ public abstract class MongoDBSpecification(ChronicleInProcessFixture fixture) : 
             methods.Reverse();
         }
 
-        foreach (var method in methods)
+        var results = methods.Select(method => method.Invoke(this, null));
+        foreach (var result in results)
         {
-            var result = method.Invoke(this, null);
-
             if (result is Task t)
             {
                 await t;
