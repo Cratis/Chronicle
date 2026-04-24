@@ -95,6 +95,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
+        // Re-register kernel reactors (e.g. WebhookReactor) for the test event store as well.
+        // After databases are dropped, the per-event-store observer grain states are gone.
+        // The ReactorsReactor won't re-process EventStoreAdded (it already handled it in the
+        // previous test), so we must explicitly re-subscribe the kernel reactors here.
+        await kernelReactors.DiscoverAndRegister(
+            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
         // 3c. Drop all test event store databases a second time, preserving the system event
         //     store databases written by step 3b. Grain OnDeactivateAsync writes in step 2
         //     can re-create test databases after the drop in step 3, carrying stale event type
