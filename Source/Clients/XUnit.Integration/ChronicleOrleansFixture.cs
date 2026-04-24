@@ -66,6 +66,13 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    and can be deactivated.
         await DeactivateAllGrains();
 
+        // 2b. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
+        //     service whose cache persists across test classes. Without this, a test that registers
+        //     ProjectionX can leave a stale pipeline in the cache that is then reused — with the
+        //     wrong schema or Sink state — when a later test registers a different projection that
+        //     happens to resolve to the same pipeline key.
+        Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
+
         // 3. Remove all databases again. The previous test's DisposeAsync already dropped
         //    databases, but StateMachine.OnDeactivateAsync calls WriteStateAsync(), which
         //    auto-creates MongoDB databases with stale grain state. A second cleanup ensures
