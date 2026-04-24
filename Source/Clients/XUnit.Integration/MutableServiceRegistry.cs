@@ -26,6 +26,11 @@ internal class MutableServiceRegistry
     public IEnumerable<Type> RegisteredTypes => [.. _factories.Keys];
 
     /// <summary>
+    /// Removes all factories from the registry so the next test starts with a clean slate.
+    /// </summary>
+    public void Clear() => _factories.Clear();
+
+    /// <summary>
     /// Updates (or adds) factories for each service descriptor in <paramref name="descriptors"/>.
     /// </summary>
     /// <param name="descriptors">The <see cref="ServiceDescriptor"/> instances to update from.</param>

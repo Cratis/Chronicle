@@ -47,12 +47,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
         // Re-initialize test-specific fields (e.g. Tcs, Reactor, Observers) on the current
         // fixture and update the shared MutableServiceRegistry so that DI resolves the new
-        // instances for this test run.
+        // instances for this test run. Clear first so that services from the previous test
+        // (e.g. a different UserProjection variant) are not still discoverable by DiscoverAll.
+        var registry = Services.GetRequiredService<MutableServiceRegistry>();
+        registry.Clear();
         var capturingCollection = new CapturingServiceCollection();
         ConfigureServices(capturingCollection);
         if (capturingCollection.Count > 0)
         {
-            var registry = Services.GetRequiredService<MutableServiceRegistry>();
             registry.Update(capturingCollection);
         }
 
