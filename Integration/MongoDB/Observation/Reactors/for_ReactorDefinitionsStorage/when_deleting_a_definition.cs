@@ -7,7 +7,7 @@ using context = Cratis.Chronicle.MongoDB.Integration.Observation.Reactors.for_Re
 namespace Cratis.Chronicle.MongoDB.Integration.Observation.Reactors.for_ReactorDefinitionsStorage;
 
 [Collection(MongoDBCollection.Name)]
-public class when_deleting_a_definition(context context) : Given<context>(context)
+public class when_deleting_a_definition(context context) : MongoDBGiven<context>(context)
 {
     public class context(ChronicleInProcessFixture fixture) : given.a_reactor_definitions_storage(fixture)
     {
