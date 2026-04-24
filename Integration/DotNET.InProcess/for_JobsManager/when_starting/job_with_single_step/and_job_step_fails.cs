@@ -28,8 +28,8 @@ public class and_job_step_fails(context context) : Given<context>(context)
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
 
             CompletedJobState = await EventStore.Jobs.WaitTillJobProgressCompleted(JobId.Value);
-            JobStep = await CompletedJobState.GetJobSteps();
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status is JobStatus.CompletedWithFailures);
+            JobStep = await CompletedJobState.GetJobSteps();
         }
     }
 
