@@ -95,14 +95,6 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
-        // Re-register kernel reactors (e.g. WebhookReactor) for the test event store as well.
-        // After databases are dropped, the per-event-store observer grain states are gone.
-        // The ReactorsReactor won't re-process EventStoreAdded (it already handled it in the
-        // previous test), so we must explicitly re-subscribe the kernel reactors here.
-        await kernelReactors.DiscoverAndRegister(
-            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
-            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
-
         // 3c. Drop all test event store databases a second time, preserving the system event
         //     store databases written by step 3b. Grain OnDeactivateAsync writes in step 2
         //     can re-create test databases after the drop in step 3, carrying stale event type
@@ -111,6 +103,23 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     slate without destroying the kernel reactor state.
         await ChronicleFixture.RemoveAllDatabases(
             excludePrefixes: [(string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System]);
+
+        // 3c.5. Re-bootstrap the test event store namespace and kernel reactors.
+        //       After step 3c drops the test databases the INamespaces grain for the test event
+        //       store loses its state. Webhooks.Add calls INamespaces.GetAll() to find namespaces
+        //       to subscribe webhook observers; if the namespace list is empty, no observer is
+        //       subscribed and webhook HTTP calls never fire. EnsureDefault() re-creates the
+        //       default namespace in the grain (and persists it to the now-clean test DB).
+        //       DiscoverAndRegister re-subscribes kernel reactors (e.g. WebhookReactor) for the
+        //       test event store AFTER the drop so their observer states survive into the test.
+        //       The ReactorsReactor won't re-do this automatically because it already processed
+        //       the EventStoreAdded event for the test event store in the previous test.
+        await grainFactory.GetGrain<INamespaces>(
+            (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore)
+            .EnsureDefault();
+        await kernelReactors.DiscoverAndRegister(
+            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
 
         // 3d. Reset the EventTypesStorage in-memory cache for the test event store.
         //     EventTypesStorage caches registered schemas in a ConcurrentBag<EventType> field
