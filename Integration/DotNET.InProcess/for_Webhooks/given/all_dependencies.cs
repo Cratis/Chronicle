@@ -29,8 +29,10 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
         InvokedWebhooks = new();
         services.AddSingleton(InvokedWebhooks);
 
-        // Override the IHttpClientFactory to use TestServer's handler
-        services.AddTransient<IHttpClientFactory>(_ => new TestHttpClientFactory(CreateClient()));
+        // Override the IHttpClientFactory to use TestServer's handler.
+        // Pass CreateClient as a method group so each call returns a fresh HttpClient;
+        // reusing a single instance would cause BaseAddress-mutation failures after the first request.
+        services.AddTransient<IHttpClientFactory>(_ => new TestHttpClientFactory(CreateClient));
     }
 
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
