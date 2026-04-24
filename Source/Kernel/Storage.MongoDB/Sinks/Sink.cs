@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -385,10 +386,9 @@ public class Sink(
 
         if (value is IEnumerable<object> collection)
         {
-            foreach (var item in collection)
+            foreach (var itemExpando in collection.OfType<ExpandoObject>())
             {
-                if (item is ExpandoObject itemExpando &&
-                    TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
+                if (TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
                 {
                     return true;
                 }
