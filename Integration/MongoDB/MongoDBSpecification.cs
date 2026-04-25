@@ -77,13 +77,12 @@ public abstract class MongoDBSpecification(ChronicleInProcessFixture fixture) : 
             methods.Reverse();
         }
 
-        var results = methods.Select(method => method.Invoke(this, null));
-        foreach (var result in results)
+        var tasks = methods
+            .Select(method => method.Invoke(this, null))
+            .OfType<Task>();
+        foreach (var task in tasks)
         {
-            if (result is Task t)
-            {
-                await t;
-            }
+            await task;
         }
     }
 
