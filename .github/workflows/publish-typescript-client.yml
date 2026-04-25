@@ -1,0 +1,122 @@
+name: Publish TypeScript Client
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+      protos-artifact:
+        description: Name of the artifact containing proto files. Leave empty to generate them.
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+        default: '0.0.0'
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  PROTOC_VERSION: "28.3"
+
+jobs:
+  publish-typescript-client:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        if: inputs.protos-artifact == ''
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '23.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure npm for OIDC-based publishing
+        run: |
+          # setup-node writes a placeholder _authToken into .npmrc and exports NODE_AUTH_TOKEN
+          # with the same placeholder. npm uses this token as-is for registry auth → 404.
+          # Remove it so npm falls back to OIDC.
+          sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG"
+          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+          echo "--- .npmrc after stripping placeholder ---"
+          cat "$NPM_CONFIG_USERCONFIG"
+
+      - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
+        run: |
+          npm install -g npm@11
+          NPM_VER="$(npm --version)"
+          echo "Installed npm $NPM_VER"
+          node -e "
+            const v = '$NPM_VER'.split('.').map(Number);
+            if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) {
+              console.error('npm >= 11.5.1 is required for trusted publishing, got $NPM_VER');
+              process.exit(1);
+            }
+          "
+
+      - name: Install protoc
+        run: |
+          PROTOC_ZIP="protoc-${{ env.PROTOC_VERSION }}-linux-x86_64.zip"
+          curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${{ env.PROTOC_VERSION }}/${PROTOC_ZIP}"
+          sudo unzip -o "$PROTOC_ZIP" -d /usr/local bin/protoc
+          sudo unzip -o "$PROTOC_ZIP" -d /usr/local 'include/*'
+          rm -f "$PROTOC_ZIP"
+          protoc --version
+
+      - name: Download proto files
+        if: inputs.protos-artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.protos-artifact }}
+          path: Source/Kernel/Protobuf/
+
+      - name: Build Contracts
+        if: inputs.protos-artifact == ''
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        if: inputs.protos-artifact == ''
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            "$CONTRACTS_DLL" \
+            Source/Kernel/Protobuf
+
+      - name: Install TypeScript dependencies
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn install --ignore-scripts
+
+      - name: Generate TypeScript from proto files
+        working-directory: ./Source/Clients/TypeScript
+        run: |
+          mkdir -p generated
+          yarn generate
+
+      - name: Build TypeScript package
+        working-directory: ./Source/Clients/TypeScript
+        run: yarn build
+
+      - name: Set package version
+        working-directory: ./Source/Clients/TypeScript
+        run: npm version ${{ inputs.version }} --no-git-tag-version
+
+      - name: Publish to npm
+        working-directory: ./Source/Clients/TypeScript
+        run: npm publish --provenance --access public
