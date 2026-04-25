@@ -92,7 +92,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 var testServiceRegistry = new MutableServiceRegistry();
                 testServiceRegistry.Update(capturingCollection);
                 services.AddSingleton(testServiceRegistry);
-                foreach (var capturedType in testServiceRegistry.RegisteredTypes.Select(type => type))
+                foreach (var capturedType in testServiceRegistry.RegisteredTypes)
                 {
                     services.AddTransient(capturedType, sp => sp.GetRequiredService<MutableServiceRegistry>().Get(capturedType, sp));
                 }
