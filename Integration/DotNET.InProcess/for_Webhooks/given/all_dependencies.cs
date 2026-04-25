@@ -27,9 +27,12 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
     protected override void ConfigureServices(IServiceCollection services)
     {
         InvokedWebhooks = new();
+        services.AddSingleton(InvokedWebhooks);
 
-        // Override the IHttpClientFactory to use TestServer's handler
-        services.AddTransient<IHttpClientFactory>(_ => new TestHttpClientFactory(CreateClient()));
+        // Override the IHttpClientFactory to use TestServer's handler.
+        // Pass CreateClient as a method group so each call returns a fresh HttpClient;
+        // reusing a single instance would cause BaseAddress-mutation failures after the first request.
+        services.AddTransient<IHttpClientFactory>(_ => new TestHttpClientFactory(CreateClient));
     }
 
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
@@ -40,10 +43,11 @@ public class all_dependencies(ChronicleInProcessFixture chronicleInProcessFixtur
             {
                 b.MapPost("/webhooks", async httpContext =>
                 {
+                    var invokedWebhooks = httpContext.RequestServices.GetRequiredService<InvokedWebhooks>();
                     using var reader = new StreamReader(httpContext.Request.Body);
                     var body = await reader.ReadToEndAsync();
 
-                    InvokedWebhooks.Add(body, httpContext.Request.Headers
+                    invokedWebhooks.Add(body, httpContext.Request.Headers
                         .Where(pair => !new[] { "Host", "Content-Type", "Content-Length" }.Contains(pair.Key))
                         .ToDictionary(k => k.Key, v => v.Value.ToString()));
                     httpContext.Response.StatusCode = 200;

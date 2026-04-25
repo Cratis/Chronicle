@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.for_Webhooks.given;
 
-public class TestHttpClientFactory(HttpClient testClient) : IHttpClientFactory
+public class TestHttpClientFactory(Func<HttpClient> createClient) : IHttpClientFactory
 {
-    public HttpClient CreateClient(string name) => testClient;
+    public HttpClient CreateClient(string name) => createClient();
 }

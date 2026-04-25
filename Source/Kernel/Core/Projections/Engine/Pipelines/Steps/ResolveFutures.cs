@@ -49,6 +49,7 @@ public class ResolveFutures(
         // Keep trying to resolve futures until we can't resolve any more
         // This handles the case where resolving one future creates the parent data needed by another future
         var resolvedAny = true;
+        var latestResolvedEvent = context.Event;
         while (resolvedAny)
         {
             resolvedAny = false;
@@ -88,7 +89,15 @@ public class ResolveFutures(
                     // chain needed to navigate from root to the parent. For parents nested beyond one level,
                     // this searches through intermediate array collections to find the matching parent and
                     // records the identifier of each intermediate element.
-                    if (!TryFindParentWithIndexers(context.Changeset.CurrentState, childProjection, future.ParentPath, future.ParentIdentifiedByProperty, parentKey, out var parentIndexers))
+                    var parentExistsInCurrentState = TryFindParentWithIndexers(
+                        context.Changeset.CurrentState,
+                        childProjection,
+                        future.ParentPath,
+                        future.ParentIdentifiedByProperty,
+                        parentKey,
+                        out var parentIndexers);
+
+                    if (!parentExistsInCurrentState)
                     {
                         // Parent still doesn't exist, skip this future
                         logger.ParentNotInCurrentState(future.Id);
@@ -146,7 +155,9 @@ public class ResolveFutures(
                     {
                         Event = future.Event,
                         Key = key,
-                        Changeset = futureChangeset
+                        Changeset = futureChangeset,
+                        OperationType = childProjection.GetOperationTypeFor(future.Event.Context.EventType),
+                        JoinKey = childKey ?? key.Value
                     };
 
                     childProjection.OnNext(futureContext);
@@ -155,6 +166,10 @@ public class ResolveFutures(
                     await projectionFutures.ResolveFuture(future.Id);
                     logger.ResolvedFuture(future.Id, future.ProjectionId);
                     resolvedAny = true;
+                    if (future.Event.Context.SequenceNumber > latestResolvedEvent.Context.SequenceNumber)
+                    {
+                        latestResolvedEvent = future.Event;
+                    }
 
                     if (futureChangeset.HasChanges)
                     {
@@ -168,7 +183,7 @@ public class ResolveFutures(
             }
         }
 
-        return context;
+        return context with { Event = latestResolvedEvent };
     }
 
     static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)

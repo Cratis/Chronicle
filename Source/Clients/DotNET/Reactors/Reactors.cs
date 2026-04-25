@@ -297,7 +297,13 @@ public class Reactors : IReactors
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe(_ => { }, messages.Dispose);
+            .Subscribe(
+                _ => { },
+                ex =>
+                {
+                    _logger.RegisteringReactorFailed(handler.Id, ex);
+                    messages.Dispose();
+                });
     }
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
@@ -357,7 +363,6 @@ public class Reactors : IReactors
                     FailedToHandleEvent(ex, @event.Context.EventType.Id);
                     break;
                 }
-
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)

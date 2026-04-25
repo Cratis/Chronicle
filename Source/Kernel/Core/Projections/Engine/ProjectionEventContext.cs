@@ -18,12 +18,14 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="Changeset">The <see cref="IChangeset{Event, ExpandoObject}"/> to build on.</param>
 /// <param name="OperationType"><see cref="ProjectionOperationType"/>.</param>
 /// <param name="NeedsInitialState">Whether the projection needs initial state.</param>
+/// <param name="JoinKey">Optional key to use when applying direct joins.</param>
 public record ProjectionEventContext(
     Key Key,
     AppendedEvent Event,
     IChangeset<AppendedEvent, ExpandoObject> Changeset,
     ProjectionOperationType OperationType,
-    bool NeedsInitialState)
+    bool NeedsInitialState,
+    object? JoinKey = null)
 {
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];

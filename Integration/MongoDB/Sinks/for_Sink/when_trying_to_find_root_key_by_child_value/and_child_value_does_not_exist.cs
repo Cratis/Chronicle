@@ -10,7 +10,7 @@ using context = Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_
 namespace Cratis.Chronicle.MongoDB.Integration.Sinks.for_Sink.when_trying_to_find_root_key_by_child_value;
 
 [Collection(MongoDBCollection.Name)]
-public class and_child_value_does_not_exist(context context) : Given<context>(context)
+public class and_child_value_does_not_exist(context context) : MongoDBGiven<context>(context)
 {
     public class context(ChronicleInProcessFixture fixture) : given.a_sink_with_test_data(fixture)
     {

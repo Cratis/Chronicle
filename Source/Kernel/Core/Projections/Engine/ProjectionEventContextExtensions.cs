@@ -45,7 +45,7 @@ public static class ProjectionEventContextExtensions
         var joinSubject = new Subject<ProjectionEventContext>();
         observable.Subscribe(_ =>
         {
-            var changeset = _.Changeset.Join(onModelProperty, _.Key.Value, _.Key.ArrayIndexers);
+            var changeset = _.Changeset.Join(onModelProperty, _.JoinKey ?? _.Key.Value, _.Key.ArrayIndexers);
             joinSubject.OnNext(_ with
             {
                 Changeset = changeset

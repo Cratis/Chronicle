@@ -50,19 +50,6 @@ public class EventTypesStorage(
 
         var generationAsString = type.Generation.ToString();
 
-        // Check if we already have this exact schema stored - if so, skip
-        var existingEventType = _eventTypes
-            .FirstOrDefault(_ => _.Id == type.Id && _.Schemas.ContainsKey(generationAsString));
-
-        if (existingEventType is not null)
-        {
-            var existingSchema = await JsonSchema.FromJsonAsync(existingEventType.Schemas[generationAsString].ToJson());
-            if (existingSchema.ToJson() == schema.ToJson())
-            {
-                return;
-            }
-        }
-
         // Build the merged event type: preserve all existing schemas and add/update the current one
         var schemas = new Dictionary<string, BsonDocument>();
         var migrations = new List<EventTypeMigration>();
@@ -126,12 +113,6 @@ public class EventTypesStorage(
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-        var cached = _eventTypes.FirstOrDefault(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString));
-        if (cached is not null)
-        {
-            return cached.ToKernel(generation);
-        }
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
@@ -151,14 +132,6 @@ public class EventTypesStorage(
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
-        generation ??= EventTypeGeneration.First;
-        var generationAsString = generation.ToString();
-
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generationAsString)))
-        {
-            return true;
-        }
-
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
         var schemas = await result.ToListAsync();

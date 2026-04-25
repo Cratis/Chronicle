@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
@@ -23,8 +24,8 @@ public class EventTypes : IEventTypes
 {
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
-    readonly Dictionary<Type, JsonSchema> _schemaByType = new();
-    readonly Dictionary<EventTypeId, Type> _typeByEventTypeId = new();
+    readonly ConcurrentDictionary<Type, JsonSchema> _schemaByType = new();
+    readonly ConcurrentDictionary<EventTypeId, Type> _typeByEventTypeId = new();
     readonly ITypes _types;
     readonly IStorage _storage;
     readonly ILogger<EventTypes> _logger;
