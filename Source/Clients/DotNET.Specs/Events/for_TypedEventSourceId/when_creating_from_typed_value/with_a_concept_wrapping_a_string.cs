@@ -10,6 +10,6 @@ public class with_a_concept_wrapping_a_string : Specification
 
     void Because() => _result = _input;
 
-    [Fact] void should_have_the_concept_string_value_as_value() => _result.Value.ShouldEqual(_input.Value);
+    [Fact] void should_have_the_concept_string_value_as_value() => ((EventSourceId)_result).Value.ShouldEqual(_input.Value);
     [Fact] void should_have_the_concept_as_typed_value() => _result.TypedValue.ShouldEqual(_input);
 }
