@@ -10,6 +10,6 @@ public class with_a_concept_wrapping_a_string_type : Specification
 
     void Because() => _result = EventSourceId<StringConcept>.From(new EventSourceId(Input));
 
-    [Fact] void should_have_the_string_as_value() => _result.Value.ShouldEqual(Input);
+    [Fact] void should_have_the_string_as_value() => ((EventSourceId)_result).Value.ShouldEqual(Input);
     [Fact] void should_have_the_concept_with_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(new StringConcept(Input));
 }
