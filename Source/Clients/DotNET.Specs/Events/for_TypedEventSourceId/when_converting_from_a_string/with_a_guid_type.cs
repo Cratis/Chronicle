@@ -10,6 +10,6 @@ public class with_a_guid_type : Specification
 
     void Because() => _result = (EventSourceId<Guid>)_expected.ToString();
 
-    [Fact] void should_have_the_guid_string_as_value() => _result.Value.ShouldEqual(_expected.ToString());
+    [Fact] void should_have_the_guid_string_as_value() => ((EventSourceId)_result).Value.ShouldEqual(_expected.ToString());
     [Fact] void should_have_the_parsed_guid_as_typed_value() => _result.TypedValue.ShouldEqual(_expected);
 }
