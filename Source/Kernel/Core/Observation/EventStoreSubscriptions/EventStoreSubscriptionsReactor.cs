@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using Orleans;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 
@@ -88,7 +89,15 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage
             var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(targetEventStore.Value);
             await subscriptionsManager.SourceEventStoreAdded(sourceEventStore);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (TimeoutException ex)
+        {
+            logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);
+        }
+        catch (OrleansException ex)
         {
             logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);
         }
