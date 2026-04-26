@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
 using Microsoft.Extensions.Logging;
+using Orleans;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 
@@ -143,7 +144,15 @@ public class EventStoreSubscriptionsManager(
             {
                 await RefreshSubscription(definition, namespaces);
             }
-            catch (Exception ex)
+            catch (OrleansException ex)
+            {
+                logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
+            }
+            catch (TimeoutException ex)
+            {
+                logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
+            }
+            catch (OperationCanceledException ex)
             {
                 logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
             }
