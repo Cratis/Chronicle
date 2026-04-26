@@ -191,7 +191,7 @@ public class EventStoreSubscriptionsManager(
                 await RefreshSubscription(definition, namespaces);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.ErrorProcessingSubscriptionReminder(ex, definition.Identifier);
         }
