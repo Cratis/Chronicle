@@ -117,12 +117,14 @@ public static class ProjectionEventContextExtensions
     /// <param name="childrenProperty">The property in which children are stored on the object.</param>
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
+    /// <param name="childInitialState">Optional initial state for new child items. Used to pre-initialize nested collections.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Project(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty,
-        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers,
+        ExpandoObject? childInitialState = null)
     {
         if (childrenProperty.IsRoot)
         {
@@ -148,7 +150,8 @@ public static class ProjectionEventContextExtensions
                         identifiedByProperty,
                         childrenPropertyIndexer.Identifier,
                         propertyMappers,
-                        context.Key.ArrayIndexers);
+                        context.Key.ArrayIndexers,
+                        childInitialState);
                     return;
                 }
 
