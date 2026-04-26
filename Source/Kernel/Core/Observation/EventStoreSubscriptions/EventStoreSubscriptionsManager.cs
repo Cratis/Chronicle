@@ -286,8 +286,9 @@ public class EventStoreSubscriptionsManager(
             var observer = GetObserver(definition, namespaceName);
             return await observer.IsSubscribed();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
             return false;
         }
     }
