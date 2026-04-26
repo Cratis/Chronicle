@@ -81,6 +81,12 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        _eventStore.Connection.Lifecycle.OnDisconnected += () =>
+        {
+            _registered = false;
+            DisconnectHandlers();
+            return Task.CompletedTask;
+        };
     }
 
     /// <inheritdoc/>
@@ -92,6 +98,9 @@ public class Reactors : IReactors
                                 _ => _,
                                 CreateHandlerFor);
 
+        DisconnectHandlers();
+        _handlers.Clear();
+        _registered = false;
         foreach (var handler in handlers)
         {
             _handlers.Add(handler);
@@ -243,6 +252,15 @@ public class Reactors : IReactors
         return handler;
     }
 
+    void DisconnectHandlers()
+    {
+        foreach (var handler in _handlers.Values.ToList())
+        {
+            handler.Disconnect();
+            (handler as IDisposable)?.Dispose();
+        }
+    }
+
     void RegisterReactor(IReactorHandler handler)
     {
         _logger.RegisteringReactor(handler.Id);
@@ -279,7 +297,13 @@ public class Reactors : IReactors
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe(_ => { }, messages.Dispose);
+            .Subscribe(
+                _ => { },
+                ex =>
+                {
+                    _logger.RegisteringReactorFailed(handler.Id, ex);
+                    messages.Dispose();
+                });
     }
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
@@ -339,7 +363,6 @@ public class Reactors : IReactors
                     FailedToHandleEvent(ex, @event.Context.EventType.Id);
                     break;
                 }
-
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)

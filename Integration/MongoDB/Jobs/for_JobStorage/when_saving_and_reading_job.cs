@@ -8,7 +8,7 @@ using context = Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage.when_sa
 namespace Cratis.Chronicle.MongoDB.Integration.Jobs.for_JobStorage;
 
 [Collection(MongoDBCollection.Name)]
-public class when_saving_and_reading_job(context context) : Given<context>(context)
+public class when_saving_and_reading_job(context context) : MongoDBGiven<context>(context)
 {
     public class context(ChronicleInProcessFixture fixture) : given.a_job_storage(fixture)
     {

@@ -27,7 +27,14 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             return context;
         }
 
+        // For join events, initial state is resolved via the join key resolution path — skip here.
         if (context.IsJoin)
+        {
+            return context;
+        }
+
+        // Don't set initial state if the key value could not be resolved.
+        if (context.Key.Value is null)
         {
             return context;
         }

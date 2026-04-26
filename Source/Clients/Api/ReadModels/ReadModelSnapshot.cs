@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Api.ReadModels;
 
@@ -25,7 +26,7 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
     /// <param name="readModel">The read model identifier.</param>
     /// <param name="readModelKey">The read model key.</param>
     /// <returns>Collection of snapshots.</returns>
-    internal static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
+    public static async Task<IEnumerable<ReadModelSnapshot>> AllSnapshotsForReadModel(
         IReadModels readModels,
         string eventStore,
         string @namespace,
@@ -37,6 +38,7 @@ public record ReadModelSnapshot(DateTimeOffset Occurred, JsonObject Instance, IE
             EventStore = eventStore,
             Namespace = @namespace,
             ReadModelIdentifier = readModel,
+            EventSequenceId = EventSequenceId.Log,
             ReadModelKey = readModelKey
         });
 

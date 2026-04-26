@@ -15,6 +15,13 @@
         "dotnet-ef"
       ],
       "rollForward": false
+    },
+    "ilspycmd": {
+      "version": "10.0.0.8330",
+      "commands": [
+        "ilspycmd"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -33,7 +33,7 @@ public class ProjectionPipelineManager(
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
 
     /// <inheritdoc/>
-    public IProjectionPipeline GetFor(
+    public async Task<IProjectionPipeline> GetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         EngineProjection projection)
@@ -46,10 +46,10 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
-        var sink = namespaceStorage.Sinks.GetFor(projection.ReadModel);
+        var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -75,4 +75,7 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+
+    /// <inheritdoc/>
+    public void Clear() => _pipelines.Clear();
 }

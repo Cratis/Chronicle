@@ -61,7 +61,6 @@ public class EventTypes : IEventTypes
             ClrType = _,
             EventType = _.GetEventType()
         }).ToArray();
-
         var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType).Where(_ => _.Count() > 1).ToArray();
         if (duplicateEventTypes.Length > 0)
         {

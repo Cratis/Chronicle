@@ -463,7 +463,9 @@ public class ProjectionFactory(
         JsonSchema currentReadModelSchema,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap);
+        var schemaList = eventTypeSchemas.ToList();
+        var matchingSchema = schemaList.FirstOrDefault(ets => ets.Type == eventType);
+        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap);
         var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event
@@ -580,10 +582,11 @@ public class ProjectionFactory(
             operationTypes);
     }
 
-    EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(IProjection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty)
+    EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty)
     {
         var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
-        keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty);
+        var joinOnProperty = projection.HasParent ? projection.Parent!.IdentifiedByProperty : PropertyPath.Root;
+        keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty, joinOnProperty);
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
 

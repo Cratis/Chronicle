@@ -60,7 +60,7 @@ public class ReactorObserverSubscriber(
         try
         {
             var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
-            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, partition, events, tcs);
+            reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
             return await tcs.Task.WaitAsync(timeout);
         }
         catch (TaskCanceledException taskCanceledException)

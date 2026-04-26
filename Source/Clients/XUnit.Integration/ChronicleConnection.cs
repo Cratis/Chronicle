@@ -63,6 +63,15 @@ internal class ChronicleConnection(
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
 
+    /// <summary>
+    /// Re-establishes the client connection after a lifecycle disconnect.
+    /// Registers with the <c>ConnectedClients</c> grain, re-creates the keep-alive
+    /// stream, and signals <see cref="IConnectionLifecycle.Connected"/> which triggers
+    /// <c>RegisterAll</c> on the <see cref="IEventStore"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    internal Task Reconnect() => Connect();
+
     async Task ConnectIfNotConnected()
     {
         if (!lifecycle.IsConnected)

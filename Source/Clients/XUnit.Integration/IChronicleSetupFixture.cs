@@ -7,6 +7,7 @@ extern alias KernelConcepts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
@@ -19,6 +20,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 public interface IChronicleSetupFixture : IClientArtifactsProvider
 {
+    /// <summary>
+    /// Gets the MongoDB container.
+    /// </summary>
+    public IContainer MongoDBContainer { get; }
+
     /// <summary>
     /// Gets the docker network.
     /// </summary>

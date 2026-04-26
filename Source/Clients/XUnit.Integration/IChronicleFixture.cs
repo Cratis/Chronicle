@@ -46,6 +46,7 @@ public interface IChronicleFixture : IAsyncDisposable
     /// <summary>
     /// Clears all databases in the MongoDB container.
     /// </summary>
+    /// <param name="excludePrefixes">Optional database name prefixes to exclude from removal.</param>
     /// <returns>Awaitable task.</returns>
-    Task RemoveAllDatabases();
+    Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null);
 }

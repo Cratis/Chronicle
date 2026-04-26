@@ -72,6 +72,8 @@ public class ReducerObserverSubscriber(
                 reducerMediator.OnNext(
                     _key.ObserverId,
                     connectedClient.ConnectionId,
+                    _key.EventStore,
+                    _key.Namespace,
                     new(partition, events, initialState),
                     reducerSubscriberResultTCS);
 

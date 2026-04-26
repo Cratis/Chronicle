@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -22,20 +23,24 @@ public class ReactorMediator : IReactorMediator
     public void Subscribe(
         ReactorId reactorId,
         ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         ReactorEventsObserver target)
     {
-        _observers[new(reactorId, connectionId)] = target;
+        _observers[new(reactorId, connectionId, eventStore, @namespace)] = target;
     }
 
     /// <inheritdoc/>
     public void OnNext(
         ReactorId reactorId,
         ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         Key partition,
         IEnumerable<AppendedEvent> events,
         TaskCompletionSource<ObserverSubscriberResult> taskCompletionSource)
     {
-        if (_observers.TryGetValue(new(reactorId, connectionId), out var observable))
+        if (_observers.TryGetValue(new(reactorId, connectionId, eventStore, @namespace), out var observable))
         {
             observable(partition, events, taskCompletionSource);
         }
@@ -48,8 +53,10 @@ public class ReactorMediator : IReactorMediator
     /// <inheritdoc/>
     public void Disconnected(
         ReactorId reactorId,
-        ConnectionId connectionId)
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace)
     {
-        _observers.TryRemove(new(reactorId, connectionId), out var _);
+        _observers.TryRemove(new(reactorId, connectionId, eventStore, @namespace), out var _);
     }
 }

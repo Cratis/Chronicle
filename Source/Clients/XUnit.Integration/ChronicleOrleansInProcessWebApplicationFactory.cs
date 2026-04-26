@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,7 +58,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
-        var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBPort}/?directConnection=true";
+        var mongoServer = $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
 
         builder.AddCratisMongoDB(
             mongo =>
@@ -74,6 +75,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         });
         builder
             .UseDefaultServiceProvider(_ => _.ValidateOnBuild = false)
+            .UseServiceProviderFactory(new FallbackServiceProviderFactory())
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
@@ -83,12 +85,56 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                configureServices(services);
+                // Keep every host-level Chronicle client registration pointed at the
+                // shared test event store so reconnect does not create a second unnamed
+                // event store with its own failing OnConnected registration.
+                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+
+                // Register test services directly in DI so the first test works normally,
+                // and also capture them in the MutableServiceRegistry so subsequent tests
+                // can update instances without rebuilding the container.
+                var capturingCollection = new CapturingServiceCollection();
+                configureServices(capturingCollection);
+                var testServiceRegistry = new MutableServiceRegistry();
+                testServiceRegistry.Update(capturingCollection);
+                services.AddSingleton(testServiceRegistry);
+
+                // Register delegate factories that always resolve from MutableServiceRegistry.
+                // AddTransient ensures the factory runs on every resolution, so that when
+                // the registry is updated between tests, subsequent resolutions get the new
+                // per-test instance rather than a stale cached singleton.
+                foreach (var descriptor in capturingCollection)
+                {
+                    services.AddTransient(descriptor.ServiceType, sp =>
+                    {
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        return registry.TryGet(descriptor.ServiceType, sp)
+                            ?? ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType ?? descriptor.ServiceType);
+                    });
+                }
+
+                // Replace the convention-registered ClientArtifactsActivator with one
+                // that wraps any IServiceProvider with a FallbackServiceProvider before
+                // delegating. Microsoft DI's internal IServiceProvider injection bypasses
+                // our FallbackServiceProviderFactory wrapper, so this is the only
+                // reliable way to make MutableServiceRegistry types resolvable
+                // during artifact activation. We use RemoveAll + Add to ensure our
+                // registration wins regardless of ordering with AddBindingsByConvention.
+                services.RemoveAll<IClientArtifactsActivator>();
+                services.AddSingleton<IClientArtifactsActivator>(sp =>
+                {
+                    var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    return new TestClientArtifactsActivator(sp, registry, loggerFactory);
+                });
             });
         builder.AddCratisChronicle();
 
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
+
+        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
 
         builder.UseOrleans(silo =>
             {
@@ -105,13 +151,35 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.ConfigureServices(services =>
                 {
+                    // Remove the ChronicleServerStartupTask that AddChronicleToSilo registered.
+                    // In tests, databases are fresh for each test and the fixture handles all
+                    // setup (artifact registration, namespace creation, etc.) itself.
+                    // Keeping the startup task causes a deadlock: PatchManager grain activation
+                    // can hang when the silo is starting for the first time while other test
+                    // infrastructure is being initialized concurrently.
+                    var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+                        .GetType("Orleans.Hosting.ChronicleServerStartupTask");
+                    if (startupTaskType is not null)
+                    {
+                        foreach (var descriptor in services.Where(d => d.ImplementationType == startupTaskType).ToList())
+                        {
+                            services.Remove(descriptor);
+                        }
+                    }
+
                     services.AddTypeDiscovery();
                     services.AddBindingsByConvention();
                     services.AddSelfBindings();
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
-                    services.AddSingleton<IClientArtifactsProvider>(_fixture);
+
+                    // Use DelegatingClientArtifactsProvider so the shared silo can serve
+                    // artifacts from whichever test fixture is currently active.
+                    // RemoveAll ensures it wins over convention-based discovery.
+                    services.RemoveAll<IClientArtifactsProvider>();
+                    services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
+
                     services.AddSingleton<INamingPolicy>(new DefaultNamingPolicy());
                     services.AddSingleton<IIdentityProvider>(sp => new IdentityProvider(
                         sp.GetRequiredService<IHttpContextAccessor>(),
@@ -135,7 +203,14 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
-                        return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, loggerFactory: loggerFactory);
+
+                        // Wrap the service provider with FallbackServiceProvider so that
+                        // ChronicleClient.InitializeInternal (which creates a new
+                        // ClientArtifactsActivator internally) uses a provider that can
+                        // resolve per-test types from MutableServiceRegistry.
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        var wrappedSp = new FallbackServiceProvider(sp, registry);
+                        return new ChronicleClient(connection, options, artifactsProvider, wrappedSp, identityProvider, loggerFactory: loggerFactory);
                     });
 
                     services.AddSingleton(sp =>
@@ -151,6 +226,17 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reactors);
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reducers);
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Projections);
+
+                    // Override the convention-registered ClientArtifactsActivator with
+                    // TestClientArtifactsActivator so that artifact activation can
+                    // resolve types from the MutableServiceRegistry.
+                    services.RemoveAll<IClientArtifactsActivator>();
+                    services.AddSingleton<IClientArtifactsActivator>(sp =>
+                    {
+                        var registry = sp.GetRequiredService<MutableServiceRegistry>();
+                        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                        return new TestClientArtifactsActivator(sp, registry, loggerFactory);
+                    });
                 });
             })
             .UseConsoleLifetime();

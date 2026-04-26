@@ -153,7 +153,7 @@ public class ProjectionObserverSubscriber(
         var eventStoreStorage = storage.GetEventStore(_key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
-        _pipeline = projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
+        _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
     }
 }

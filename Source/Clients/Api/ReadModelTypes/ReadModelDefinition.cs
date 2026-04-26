@@ -34,7 +34,7 @@ public record ReadModelDefinition(
     /// <param name="readModels"><see cref="IReadModels"/> for working with read models.</param>
     /// <param name="eventStore">The event store to get read models for.</param>
     /// <returns>Collection of read model definitions.</returns>
-    internal static async Task<IEnumerable<ReadModelDefinition>> AllReadModelDefinitions(IReadModels readModels, string eventStore)
+    public static async Task<IEnumerable<ReadModelDefinition>> AllReadModelDefinitions(IReadModels readModels, string eventStore)
     {
         var response = await readModels.GetDefinitions(new()
         {
