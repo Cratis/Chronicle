@@ -221,7 +221,11 @@ public class EventStoreSubscriptionsManager(
             var observer = GetObserver(definition, namespaceName);
             return await observer.IsSubscribed();
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             return false;
         }
