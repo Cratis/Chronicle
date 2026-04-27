@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -301,9 +302,42 @@ public class Reactors : IReactors
                 _ => { },
                 ex =>
                 {
-                    _logger.RegisteringReactorFailed(handler.Id, ex);
+                    if (IsExpectedCancellation(ex, handler.CancellationToken))
+                    {
+                        _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                        messages.Dispose();
+                        return;
+                    }
+
+                    var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
+                    _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
                 });
+    }
+
+    bool IsExpectedCancellation(Exception exception, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return true;
+        }
+
+        if (exception is OperationCanceledException)
+        {
+            return true;
+        }
+
+        if (exception is RpcException rpcException && rpcException.StatusCode == StatusCode.Cancelled)
+        {
+            return true;
+        }
+
+        if (exception.InnerException is not null)
+        {
+            return IsExpectedCancellation(exception.InnerException, cancellationToken);
+        }
+
+        return false;
     }
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
