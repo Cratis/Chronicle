@@ -144,15 +144,7 @@ public class EventStoreSubscriptionsManager(
             {
                 await RefreshSubscription(definition, namespaces);
             }
-            catch (OrleansException ex)
-            {
-                logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
-            }
-            catch (TimeoutException ex)
-            {
-                logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
-            }
-            catch (OperationCanceledException ex)
+            catch (Exception ex)
             {
                 logger.ErrorRefreshingForNewSourceEventStore(ex, definition.Identifier, sourceEventStore);
             }

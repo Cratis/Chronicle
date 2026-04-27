@@ -93,11 +93,7 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage
         {
             throw;
         }
-        catch (TimeoutException ex)
-        {
-            logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);
-        }
-        catch (OrleansException ex)
+        catch (Exception ex)
         {
             logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);
         }

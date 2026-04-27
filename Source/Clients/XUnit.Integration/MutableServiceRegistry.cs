@@ -46,6 +46,12 @@ internal class MutableServiceRegistry
             {
                 _factories[descriptor.ServiceType] = descriptor.ImplementationFactory;
             }
+            else if (descriptor.ImplementationType is not null)
+            {
+                var implType = descriptor.ImplementationType;
+                _factories[descriptor.ServiceType] = sp =>
+                    ActivatorUtilities.CreateInstance(sp, implType);
+            }
         }
     }
 

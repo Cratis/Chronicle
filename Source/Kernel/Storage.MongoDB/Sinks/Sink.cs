@@ -385,9 +385,9 @@ public class Sink(
 
         if (value is IEnumerable<object> collection)
         {
-            foreach (var item in collection.Where(item => item is ExpandoObject))
+            foreach (var itemExpando in collection.OfType<ExpandoObject>())
             {
-                if (TryFindValueInDocument((ExpandoObject)item, pathSegments, segmentIndex + 1, targetValue))
+                if (TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
                 {
                     return true;
                 }
