@@ -140,6 +140,14 @@ public class EventConverter(
 
     async Task<ExpandoObject> ResolveContent(EventType eventType, EventSourceId eventSourceId, JsonObject content)
     {
+        // Redaction events store their content as RedactionEventContent (with EventTypeId as a
+        // string), but the registered EventRedacted schema uses Type for OriginalEventType.
+        // Using the schema-based converter would produce null for that field and potentially
+        // throw for array fields whose schema carries no item type info.  Raw conversion
+        // preserves every field exactly as stored.
+        if (eventType.Id == GlobalEventTypes.Redaction)
+            return ConvertToRawExpandoObject(content);
+
         if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
             return ConvertToRawExpandoObject(content);
 
