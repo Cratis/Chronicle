@@ -73,6 +73,25 @@ This keys the order's PII under the *customer*, not under the order. When that c
 invokes their right to erasure, a single key deletion scrubs every order, invoice, and
 interaction record at once.
 
+## Implicit subject with `[Subject]`
+
+To avoid threading the subject through every call site, mark the responsible property with
+`[Subject]`. Chronicle derives the subject automatically at append time:
+
+```csharp
+[EventType]
+public record ShippingAddressChanged(
+    OrderId Order,
+    [property: Subject] CustomerId Customer,
+    [property: PII] string Street,
+    [property: PII] string City);
+
+// Subject is read from the Customer property automatically.
+await eventLog.Append(orderId, new ShippingAddressChanged(orderId, customerId, "123 Main St", "Springfield"));
+```
+
+An explicit `subject` argument always takes precedence over a `[Subject]` property.
+
 ## Honoring deletion requests
 
 Deleting a subject's encryption key is the compliance operation. Use the `IPIIManager` grain:

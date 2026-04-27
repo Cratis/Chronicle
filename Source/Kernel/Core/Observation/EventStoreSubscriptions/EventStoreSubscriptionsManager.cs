@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 

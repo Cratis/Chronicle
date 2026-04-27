@@ -12,6 +12,7 @@ arise.
 ## Pages
 
 - [PII](./pii.md) — marking PII properties, per-subject encryption keys, honoring deletion requests.
+- [Working with Compliance from the Client](./client.md) — practical how-to guide covering event annotation, subject derivation, and the right-to-erasure workflow.
 
 ## Designing for compliance
 

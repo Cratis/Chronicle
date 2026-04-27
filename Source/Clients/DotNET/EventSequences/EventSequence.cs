@@ -96,6 +96,8 @@ public class EventSequence(
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
+        subject ??= SubjectResolver.ResolveFrom(@event);
+
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
         var causation = causationManager.GetCurrentChain();

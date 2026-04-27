@@ -39,6 +39,26 @@ await eventStore.EventLog.Append(
 
 `Subject` also converts implicitly from `string` and `Guid`.
 
+## Implicit subject with `[Subject]`
+
+Rather than threading `subject` through every call site, decorate the relevant property on the
+event type with `[Subject]`. Chronicle will read the property value automatically when no
+explicit subject is provided:
+
+```csharp
+[EventType]
+public record ShippingAddressChanged(
+    OrderId Order,
+    [property: Subject] CustomerId Customer,
+    [property: PII] string Street,
+    [property: PII] string City);
+
+// Subject is derived from the Customer property — no explicit subject needed.
+await eventStore.EventLog.Append(orderId, new ShippingAddressChanged(orderId, customerId, "123 Main St", "Springfield"));
+```
+
+An explicit `subject` argument always takes precedence over a `[Subject]` property.
+
 ## Compliance
 
 When an event type declares `[PII]` properties, Chronicle encrypts those properties at append

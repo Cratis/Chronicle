@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
-using Orleans;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 

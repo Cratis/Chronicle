@@ -1,2 +1,4 @@
 - name: PII
   href: pii.md
+- name: Working with Compliance from the Client
+  href: client.md
