@@ -243,4 +243,35 @@ public static class ProjectionEventContextExtensions
         observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
         return observable;
     }
+
+    /// <summary>
+    /// Project properties from event onto a nested single-object model.
+    /// The property mappers must already include the full path prefix to the nested object.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="propertyMappers">PropertyMappers used to map from the event to the nested object (paths include nested prefix).</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> ProjectNested(
+        this IObservable<ProjectionEventContext> observable,
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
+    {
+        observable.Subscribe(context =>
+            context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
+
+        return observable;
+    }
+
+    /// <summary>
+    /// Clear (set to null) a nested single-object property based on event.
+    /// </summary>
+    /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
+    /// <param name="nestedProperty">The property path to the nested object on the parent.</param>
+    /// <returns>The observable for continuation.</returns>
+    public static IObservable<ProjectionEventContext> ClearNested(
+        this IObservable<ProjectionEventContext> observable,
+        PropertyPath nestedProperty)
+    {
+        observable.Subscribe(_ => _.Changeset.ClearNested(nestedProperty));
+        return observable;
+    }
 }

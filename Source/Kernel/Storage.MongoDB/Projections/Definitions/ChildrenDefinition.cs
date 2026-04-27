@@ -52,4 +52,9 @@ public class ChildrenDefinition
     /// Gets or sets whether properties should be auto-mapped from events.
     /// </summary>
     public Concepts.Projections.Definitions.AutoMap AutoMap { get; set; } = Concepts.Projections.Definitions.AutoMap.Inherit;
+
+    /// <summary>
+    /// Gets or sets all the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.
+    /// </summary>
+    public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
 }
