@@ -95,6 +95,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
         var type = context.TypeInfo.Type;
+        var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
         // Handle concept types - redirect to the underlying primitive type's schema
         if (type.IsConcept())
@@ -124,9 +125,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (schema is not JsonObject schemaObj) return schema;
 
         // Add format for known types
-        if (_typeFormats.IsKnown(type))
+        if (_typeFormats.IsKnown(formatType))
         {
-            schemaObj["format"] = _typeFormats.GetFormatForType(type);
+            schemaObj["format"] = _typeFormats.GetFormatForType(formatType);
         }
 
         // Add compliance metadata for the type
