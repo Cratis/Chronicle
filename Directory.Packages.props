@@ -12,16 +12,16 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.7" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.2.3" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.2.4" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.7.3" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.7.3" />
-    <PackageVersion Include="Cratis.Arc" Version="20.8.11" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="20.8.11" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.8.11" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.8.11" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.8.11" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.8.11" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.7.11" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.7.11" />
+    <PackageVersion Include="Cratis.Arc" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.10.6" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.203" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
@@ -84,7 +84,7 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.1.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.48" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.54" />
     <!-- Not categorized -->
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.4.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -117,7 +117,7 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
-    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="18.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.SDK" Version="18.5.0" />
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET8.props" Condition=" '$(TargetFramework)' == 'net8.0' " />
   <Import Project="$(MSBuildThisFileDirectory)/Directory.Packages.NET9.props" Condition=" '$(TargetFramework)' == 'net9.0' " />
