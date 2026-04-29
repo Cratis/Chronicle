@@ -141,7 +141,7 @@ public class EventSequenceStorage(
                 generationalContent,
                 hashesForStorage,
                 [],
-                subject?.IsSet == true ? subject.Value : null);
+                subject?.IsSet == true ? subject : null);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 

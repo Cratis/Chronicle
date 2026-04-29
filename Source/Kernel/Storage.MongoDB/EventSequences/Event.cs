@@ -41,4 +41,5 @@ public record Event(
     IDictionary<string, BsonDocument> Content,
     IDictionary<string, string> ContentHashes,
     IEnumerable<EventRevision> Revisions,
-    string? Subject = null);
+    Subject? Subject = null);
+
