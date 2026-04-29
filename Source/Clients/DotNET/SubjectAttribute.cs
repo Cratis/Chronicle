@@ -8,17 +8,16 @@ namespace Cratis.Chronicle;
 /// key per-subject compliance material such as PII encryption keys.
 /// </summary>
 /// <remarks>
-/// When this attribute is present on a property of an event type, Chronicle will automatically derive
-/// the subject from that property value when the caller does not supply an explicit <see cref="Subject"/>
-/// to <c>IEventSequence.Append</c>. This keeps event type definitions self-describing and removes the
-/// need to thread the subject through every call site.
+/// When this attribute is present on a property or record constructor parameter of an event type,
+/// Chronicle will automatically derive the subject from that value when the caller does not supply
+/// an explicit <see cref="Subject"/> to <c>IEventSequence.Append</c>.
 ///
 /// <code>
 /// [EventType]
 /// public record ShippingAddressChanged(
 ///     OrderId Order,
-///     [property: Subject] CustomerId Customer,
-///     [property: PII] string City);
+///     [Subject] CustomerId Customer,
+///     [PII] string City);
 /// </code>
 ///
 /// Appending without an explicit subject automatically uses the <c>Customer</c> property as the

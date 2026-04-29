@@ -141,6 +141,17 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         {
             AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
         }
+        else if (context.PropertyInfo?.AttributeProvider is ParameterInfo paramInfo &&
+            paramInfo.Member.DeclaringType is { } recordType)
+        {
+            var recordProp = recordType.GetProperty(
+                paramInfo.Name ?? string.Empty,
+                BindingFlags.Public | BindingFlags.Instance);
+            if (recordProp is not null && _metadataResolver.HasMetadataFor(recordProp))
+            {
+                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
+            }
+        }
 
         // Add title and compensation metadata — only applies to top-level type schema (no property context)
         if (context.PropertyInfo is null)

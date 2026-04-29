@@ -24,8 +24,8 @@ Annotate the specific properties that contain PII. There are two ways:
 public record CustomerRegistered(
     CustomerId CustomerId,
     string CompanyName,
-    [property: PII] string ContactEmail,
-    [property: PII] string ContactPhone);
+    [PII] string ContactEmail,
+    [PII] string ContactPhone);
 ```
 
 Only properties marked with `[PII]` are encrypted. Plain properties are stored as written.
@@ -82,9 +82,9 @@ To avoid threading the subject through every call site, mark the responsible pro
 [EventType]
 public record ShippingAddressChanged(
     OrderId Order,
-    [property: Subject] CustomerId Customer,
-    [property: PII] string Street,
-    [property: PII] string City);
+    [Subject] CustomerId Customer,
+    [PII] string Street,
+    [PII] string City);
 
 // Subject is read from the Customer property automatically.
 await eventLog.Append(orderId, new ShippingAddressChanged(orderId, customerId, "123 Main St", "Springfield"));

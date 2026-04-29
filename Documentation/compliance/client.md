@@ -19,8 +19,8 @@ using Cratis.Chronicle.Compliance.GDPR;
 public record CustomerRegistered(
     CustomerId Id,
     string CompanyName,
-    [property: PII] string ContactEmail,
-    [property: PII] string ContactPhone);
+    [PII] string ContactEmail,
+    [PII] string ContactPhone);
 ```
 
 Only the annotated properties are encrypted. Plain properties such as `CompanyName` are stored in clear text.
@@ -52,9 +52,9 @@ using Cratis.Chronicle.Compliance.GDPR;
 [EventType]
 public record ShippingAddressChanged(
     OrderId Order,
-    [property: Subject] CustomerId Customer,
-    [property: PII] string Street,
-    [property: PII] string City);
+    [Subject] CustomerId Customer,
+    [PII] string Street,
+    [PII] string City);
 ```
 
 Now you can append without providing an explicit subject:
@@ -128,9 +128,9 @@ public record FullName(string Value) : PIIConceptAs<string>(Value);
 // Event type
 [EventType]
 public record CustomerProfileUpdated(
-    [property: Subject] CustomerId CustomerId,
+    [Subject] CustomerId CustomerId,
     FullName Name,
-    [property: PII] string Email);
+    [PII] string Email);
 
 // Appending — subject derived automatically from [Subject]
 await eventLog.Append(customerId, new CustomerProfileUpdated(customerId, "Jane Doe", "jane@example.com"));

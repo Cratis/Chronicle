@@ -49,9 +49,9 @@ explicit subject is provided:
 [EventType]
 public record ShippingAddressChanged(
     OrderId Order,
-    [property: Subject] CustomerId Customer,
-    [property: PII] string Street,
-    [property: PII] string City);
+    [Subject] CustomerId Customer,
+    [PII] string Street,
+    [PII] string City);
 
 // Subject is derived from the Customer property — no explicit subject needed.
 await eventStore.EventLog.Append(orderId, new ShippingAddressChanged(orderId, customerId, "123 Main St", "Springfield"));
