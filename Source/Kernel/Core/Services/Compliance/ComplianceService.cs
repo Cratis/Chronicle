@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -40,7 +41,12 @@ internal sealed class ComplianceService(IJsonComplianceManager jsonComplianceMan
 
             return new ReleaseResponse { Payload = released.ToJsonString() };
         }
-        catch (Exception ex)
+        catch (JsonException ex)
+        {
+            logger.FailedToRelease(request.EventStore, request.Namespace, request.Subject, ex);
+            return new ReleaseResponse { HasError = true, Error = ex.Message };
+        }
+        catch (InvalidOperationException ex)
         {
             logger.FailedToRelease(request.EventStore, request.Namespace, request.Subject, ex);
             return new ReleaseResponse { HasError = true, Error = ex.Message };
