@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- System -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
@@ -16,12 +17,12 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.7.11" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.7.11" />
-    <PackageVersion Include="Cratis.Arc" Version="20.10.6" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="20.10.6" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.10.6" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.10.6" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.10.6" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.10.6" />
+    <PackageVersion Include="Cratis.Arc" Version="20.10.10" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="20.10.10" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.10.10" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.10.10" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.10.10" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.10.10" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.203" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
@@ -70,7 +71,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.10.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.15.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.15.3" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.7.0" />
     <!-- Roslyn-->
@@ -84,9 +85,9 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.1.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.54" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.58" />
     <!-- Not categorized -->
-    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.4.0" />
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.5.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="humanizer" Version="3.0.10" />
@@ -98,7 +99,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="protobuf-net.Reflection" Version="3.2.52" />
-    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.5" />
+    <PackageVersion Include="protobuf-net.Grpc" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.76.0" />
     <PackageVersion Include="mongodb.driver" Version="3.8.0" />
