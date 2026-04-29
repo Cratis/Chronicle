@@ -43,10 +43,7 @@ var customerId = CustomerId.New();
 await eventLog.Append(customerId, new OrderPlaced(customerId, total));
 ```
 
-The implicit conversions between `EventSourceId<T>` and the plain `EventSourceId` are handled automatically, so typed and untyped identifiers interoperate without any manual conversion.
-
-> [!NOTE]
-> When you define a domain concept (such as `CustomerId`) and add an implicit conversion to `EventSourceId`, you can pass it directly to `IEventLog.Append` without wrapping it in `EventSourceId<T>`. The generic form is most useful when you want the identifier itself to carry the type through multiple layers and be readable by the caller.
+Because `EventSourceId<T>` carries an implicit conversion to `EventSourceId`, you can pass a typed identifier anywhere the untyped form is expected — including directly to `IEventLog.Append` — without any manual conversion. The typed form is most useful when you want the identifier to carry its concrete type through multiple layers so that callers always see the domain concept rather than a plain string.
 
 ## Frontend proxy generation
 
