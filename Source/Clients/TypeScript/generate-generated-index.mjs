@@ -36,12 +36,17 @@ const generatedIndexPath = path.join(generatedDirectory, 'index.ts');
  * @param {string} filePath The absolute path to the generated TypeScript file.
  * @returns {Promise<Map<string, 'type' | 'value'>>} A map of exported symbol names and their export kind.
  */
-const getExportedSymbols = async filePath =>
+const getExportedSymbols = async (filePath) =>
 {
     const sourceText = await fs.readFile(filePath, 'utf8');
     const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
     const exportedSymbols = new Map();
 
+    /**
+     * Tracks an exported symbol and prefers value exports when the same symbol also has a type export.
+     * @param {string} name The exported symbol name.
+     * @param {'type' | 'value'} kind The kind of export.
+     */
     const addExport = (name, kind) =>
     {
         const currentKind = exportedSymbols.get(name);
@@ -50,7 +55,7 @@ const getExportedSymbols = async filePath =>
 
     for (const statement of sourceFile.statements)
     {
-        const hasExportModifier = statement.modifiers?.some(_ => _.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+        const hasExportModifier = statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
 
         if (!hasExportModifier && !ts.isExportDeclaration(statement))
         {
