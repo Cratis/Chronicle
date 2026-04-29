@@ -1,5 +1,8 @@
 name: Update Packages
 
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: '0 6 * * *'
@@ -7,6 +10,36 @@ on:
 
 jobs:
   update:
-    uses: Cratis/Workflows/.github/workflows/update-packages.yml@main
-    secrets:
-      PAT_WORKFLOWS: ${{ secrets.PAT_WORKFLOWS }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_WORKFLOWS }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Update NuGet packages
+        run: dotnet package update
+
+      - name: Build .NET
+        run: dotnet build --configuration Release -p:DisableProxyGenerator=true
+
+      - name: Commit and push changes
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No package updates found. Nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "chore: update NuGet packages"
+          git push origin HEAD
