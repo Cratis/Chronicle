@@ -111,9 +111,75 @@ After the key is deleted:
 - Reading any PII property for that subject fails because the key is gone.
 - The right-to-erasure requirement is satisfied.
 
+## 4 — Decrypting read models with `Release()`
+
+When you read a projection or reducer that includes PII fields, those fields are stored in their encrypted form. Call `Release()` on `IReadModels` to decrypt them before presenting the data to a user.
+
+### Identifying the subject on a read model
+
+Chronicle applies the same subject resolution rules to read models as to events:
+
+1. A property decorated with `[Subject]` is used as the subject.
+2. A constructor parameter decorated with `[Subject]` (record shorthand) is used as the subject.
+3. A property named `Id` (case-insensitive) is used as a final fallback.
+
+```csharp
+public record CustomerProfile(
+    [Subject] CustomerId CustomerId,
+    string CompanyName,
+    [PII] string ContactEmail);
+```
+
+### Decrypting a single instance
+
+```csharp
+public class CustomerProfileController(IReadModels readModels)
+{
+    public async Task<IActionResult> GetProfile(CustomerId customerId)
+    {
+        var profile = await readModels.GetInstanceById<CustomerProfile>(customerId.ToString());
+        var decrypted = await readModels.Release(profile);
+        return Ok(decrypted);
+    }
+}
+```
+
+Chronicle derives the subject from `profile.CustomerId`, calls the kernel to decrypt, and returns the plaintext read model.
+
+### Decrypting a collection
+
+```csharp
+var profiles = await readModels.GetInstances<CustomerProfile>();
+var decrypted = await readModels.Release(profiles);
+```
+
+Each instance is decrypted individually using the subject derived from that instance.
+
+### Decrypting with an explicit subject
+
+When the subject cannot be derived from the read model itself, pass it directly:
+
+```csharp
+var profile = await readModels.GetInstanceById<CustomerProfile>(customerId.ToString());
+var decrypted = await readModels.Release((Subject)customerId.ToString(), profile);
+```
+
+### Behavior on failure
+
+`Release()` is designed to be non-breaking:
+
+- If the read model has **no PII-annotated properties**, the original instance is returned immediately without contacting the server.
+- If the encryption key **no longer exists** (e.g. after a right-to-erasure request), the original encrypted instance is returned and an error is logged. The call does not throw.
+
+```csharp
+// After erasure, this returns the instance with encrypted field values unchanged
+// and logs an error — it does not throw.
+var profile = await readModels.Release(erasedCustomerProfile);
+```
+
 ## Putting it all together
 
-The example below combines all the pieces — event definition, subject annotation, PII encryption, and erasure:
+The example below combines all the pieces — event definition, subject annotation, PII encryption, erasure, and decryption:
 
 ```csharp
 // Domain types
@@ -132,9 +198,23 @@ public record CustomerProfileUpdated(
     FullName Name,
     [PII] string Email);
 
+// Read model
+public record CustomerProfile(
+    [Subject] CustomerId CustomerId,
+    string Name,
+    [PII] string Email);
+
 // Appending — subject derived automatically from [Subject]
 await eventLog.Append(customerId, new CustomerProfileUpdated(customerId, "Jane Doe", "jane@example.com"));
 
+// Reading and decrypting
+var profile = await readModels.GetInstanceById<CustomerProfile>(customerId.ToString());
+var decrypted = await readModels.Release(profile);
+// decrypted.Email == "jane@example.com"
+
 // Erasure
 await piiManager.DeleteEncryptionKeyFor(customerId.ToString());
+
+// After erasure — returns encrypted form, logs error, no exception
+var erasedProfile = await readModels.Release(profile);
 ```
