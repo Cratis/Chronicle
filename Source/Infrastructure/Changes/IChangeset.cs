@@ -99,6 +99,12 @@ public interface IChangeset<TSource, TTarget>
     void Remove();
 
     /// <summary>
+    /// Apply a clear change to a nested single-object property on the <see cref="IChangeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="nestedProperty"><see cref="PropertyPath"/> for accessing the nested object.</param>
+    void ClearNested(PropertyPath nestedProperty);
+
+    /// <summary>
     /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>

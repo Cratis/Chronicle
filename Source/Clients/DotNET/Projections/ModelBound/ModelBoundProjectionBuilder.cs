@@ -61,6 +61,7 @@ internal class ModelBoundProjectionBuilder(
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
             Children = new Dictionary<string, ChildrenDefinition>(),
+            Nested = new Dictionary<string, ChildrenDefinition>(),
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
@@ -406,6 +407,11 @@ internal class ModelBoundProjectionBuilder(
             {
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
             }
+
+            if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+            {
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
@@ -519,6 +525,12 @@ internal class ModelBoundProjectionBuilder(
             {
                 var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
+            }
+
+            if (Attribute.IsDefined(property, typeof(NestedAttribute)))
+            {
+                var memberType = property is PropertyInfo propInfo2 ? propInfo2.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, ProcessMember, modelType);
             }
         }
 

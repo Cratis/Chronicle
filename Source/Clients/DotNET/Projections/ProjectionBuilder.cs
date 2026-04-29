@@ -34,6 +34,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
+    protected readonly Dictionary<PropertyPath, ChildrenDefinition> _nestedDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
@@ -173,6 +174,15 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         var builder = new ChildrenBuilder<TReadModel, TChildModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
         builderCallback(builder);
         _childrenDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
+        return (this as TBuilder)!;
+    }
+
+    /// <inheritdoc/>
+    public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
+    {
+        var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
+        builderCallback(builder);
+        _nestedDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
         return (this as TBuilder)!;
     }
 

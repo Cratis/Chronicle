@@ -100,4 +100,13 @@ public interface IProjectionBuilder<TReadModel, TBuilder>
     /// <typeparam name="TChildModel">Type of nested child model.</typeparam>
     /// <returns>Builder continuation.</returns>
     TBuilder Children<TChildModel>(Expression<Func<TReadModel, IEnumerable<TChildModel>>> targetProperty, Action<IChildrenBuilder<TReadModel, TChildModel>> builderCallback);
+
+    /// <summary>
+    /// Start building a nested single-object projection for a specific nested model.
+    /// </summary>
+    /// <param name="targetProperty">Expression for expressing the target nullable property.</param>
+    /// <param name="builderCallback">Builder callback.</param>
+    /// <typeparam name="TNestedModel">Type of nested model.</typeparam>
+    /// <returns>Builder continuation.</returns>
+    TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback);
 }

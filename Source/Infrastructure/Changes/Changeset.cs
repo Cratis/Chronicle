@@ -198,6 +198,12 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
+    public void ClearNested(PropertyPath nestedProperty)
+    {
+        Add(new NestedCleared(nestedProperty));
+    }
+
+    /// <inheritdoc/>
     public void RemoveChild(
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty,
