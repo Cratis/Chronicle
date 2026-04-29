@@ -63,7 +63,7 @@ static class NestedDefinitionExtensions
             definition.Nested[propertyName] = nestedDef;
         }
 
-        ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, processMember, definition, parentModelType);
+        ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, namingPolicy, processMember, definition, parentModelType);
     }
 
     /// <summary>
@@ -117,13 +117,14 @@ static class NestedDefinitionExtensions
             parentChildrenDef.Nested[propertyName] = nestedDef;
         }
 
-        ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, processMember, definition, parentModelType);
+        ProcessNestedTypeDefinition(nestedType, nestedDef, getOrCreateEventType, namingPolicy, processMember, definition, parentModelType);
     }
 
     static void ProcessNestedTypeDefinition(
         Type nestedType,
         ChildrenDefinition nestedDef,
         Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
         Type? parentModelType)
@@ -152,10 +153,50 @@ static class NestedDefinitionExtensions
             }
         }
 
-        // Process properties of the nested type
+        // Process constructor parameters for [Nested] attributes on record types
+        var primaryConstructor = nestedType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        var constructorParamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (primaryConstructor is not null)
+        {
+            foreach (var parameter in primaryConstructor.GetParameters())
+            {
+                constructorParamNames.Add(parameter.Name!);
+
+                if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+                {
+                    nestedDef.ProcessNestedAttributeForChildren(
+                        getOrCreateEventType,
+                        namingPolicy,
+                        parameter.Name!,
+                        parameter.ParameterType,
+                        processMember,
+                        definition,
+                        nestedType);
+                }
+            }
+        }
+
+        // Process properties of the nested type and detect any further [Nested] properties within them
         foreach (var childProperty in nestedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             processMember(childProperty, definition, classLevelFromEvents, false, parentModelType, nestedDef);
+
+            // Check property-level [Nested] only if not already handled as a constructor parameter
+            if (!constructorParamNames.Contains(childProperty.Name) &&
+                Attribute.IsDefined(childProperty, typeof(NestedAttribute)))
+            {
+                nestedDef.ProcessNestedAttributeForChildren(
+                    getOrCreateEventType,
+                    namingPolicy,
+                    childProperty.Name,
+                    childProperty.PropertyType,
+                    processMember,
+                    definition,
+                    nestedType);
+            }
         }
     }
 
