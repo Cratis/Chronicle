@@ -184,7 +184,8 @@ public class EventStore : IEventStore
             schemaGenerator,
             jsonSerializerOptions,
             readModelsWatcherManager,
-            reducerObservers);
+            reducerObservers,
+            loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
         Seeding = new EventSeeding(
             eventStoreName,

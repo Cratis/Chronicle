@@ -237,7 +237,8 @@ public class EventSequence(
                 tags,
                 compliantEvent,
                 constraintContext,
-                occurred);
+                occurred,
+                subject);
         }
         catch (Exception ex)
         {
@@ -461,7 +462,8 @@ public class EventSequence(
         IEnumerable<Tag> tags,
         ExpandoObject compliantEvent,
         ConstraintValidationContext constraintContext,
-        DateTimeOffset? occurred = null)
+        DateTimeOffset? occurred = null,
+        Subject? subject = null)
     {
         try
         {
@@ -506,7 +508,8 @@ public class EventSequence(
                     tags,
                     eventOccurred,
                     migratedContent,
-                    contentHashes);
+                    contentHashes,
+                    subject);
             }
             while (!appendResult.IsSuccess);
 
