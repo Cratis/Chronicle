@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 // SerializableDateTimeOffset is duplicated across all generated proto files that reference it.
-// The canonical source is eventsequences, matching the explicit re-export in index.ts.
+// The canonical source is eventsequences, matching the generated barrel export order.
 import type { SerializableDateTimeOffset } from './generated/eventsequences';
 
 /**
