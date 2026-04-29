@@ -122,6 +122,19 @@ describe('when replacing route parameters', () => {
 
 ---
 
+## Behavior isolation rule
+
+Keep one primary behavior per spec file/folder. Do not mix orthogonal behaviors in one spec.
+
+- Good: separate folders for delta semantics:
+    - `when_items_are_added_as_delta/and_item_is_identified_by_a_guid.ts`
+    - `when_items_are_removed_as_delta/and_item_is_identified_by_a_guid.ts`
+- Avoid: a single file that validates both add-delta and remove-delta behavior.
+
+This keeps failures precise and prevents unrelated behavior from becoming tangled in one spec.
+
+---
+
 ## Running specs
 
 ```bash

@@ -514,8 +514,8 @@ public class EventSequenceStorage(
             .Project<BsonDocument>($"{{'{nameof(TailEventSequenceNumbers.Tail)}': {{ '$arrayElemAt': ['$tail.{nameof(TailEventSequenceNumbers.Tail)}',0] }}, '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': {{ '$arrayElemAt': ['$tail2.{nameof(TailEventSequenceNumbers.TailForEventTypes)}',0] }} }}")
             .Single();
 
-        var hasTail = sequenceNumbers.TryGetValue("Tail", out var tail) && tail is not null && tail is not BsonNull;
-        var hasTailForEventTypes = sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes) && tailForEventTypes is not null && tailForEventTypes is not BsonNull;
+        var hasTail = !(!sequenceNumbers.TryGetValue("Tail", out var tail) || tail is null || tail is BsonNull);
+        var hasTailForEventTypes = !(!sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes) || tailForEventTypes is null || tailForEventTypes is BsonNull);
 
         return Task.FromResult(new TailEventSequenceNumbers(
             eventSequenceId,

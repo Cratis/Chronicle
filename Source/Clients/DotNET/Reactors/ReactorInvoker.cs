@@ -29,7 +29,7 @@ public class ReactorInvoker(
     ILogger<ReactorInvoker> logger) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
-    readonly Dictionary<Type, MethodInfo> _methodsByEventType = GetMethodsByEventType(targetType, eventTypes.AllClrTypes);
+    readonly Dictionary<Type, MethodInfo> _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
 
     /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
@@ -38,7 +38,7 @@ public class ReactorInvoker(
     /// <param name="reactorType">The reactor <see cref="Type"/> to get event types for.</param>
     /// <returns>Collection of discovered <see cref="EventType"/>.</returns>
     public static IImmutableList<EventType> GetEventTypesFor(IEventTypes eventTypes, Type reactorType) =>
-        GetMethodsByEventType(reactorType, eventTypes.AllClrTypes)
+        MethodsByEventType.Get(reactorType, eventTypes.AllClrTypes)
             .Keys
             .Select(eventTypes.GetEventTypeFor)
             .ToImmutableList();
@@ -54,21 +54,21 @@ public class ReactorInvoker(
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
             {
-                Task returnValue;
+                object? returnValue;
                 var parameters = method.GetParameters();
 
                 await middlewares.BeforeInvoke(eventContext, content);
 
                 if (parameters.Length == 2)
                 {
-                    returnValue = (Task)method.Invoke(activatedReactor.Instance, [content, eventContext])!;
+                    returnValue = method.Invoke(activatedReactor.Instance, [content, eventContext]);
                 }
                 else
                 {
-                    returnValue = (Task)method.Invoke(activatedReactor.Instance, [content])!;
+                    returnValue = method.Invoke(activatedReactor.Instance, [content]);
                 }
 
-                await returnValue;
+                await HandleReturnValue(method, returnValue);
             }
             else
             {
@@ -97,30 +97,48 @@ public class ReactorInvoker(
         }
     }
 
-    static Dictionary<Type, MethodInfo> BuildMethodsByEventType(Type targetType, IEnumerable<Type> eventTypes)
+    Task HandleReturnValue(MethodInfo method, object? returnValue)
     {
-        var methodsByEventType = new Dictionary<Type, MethodInfo>();
-
-        foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        if (method.ReturnType == typeof(void))
         {
-            if (!method.IsEventHandlerMethod(eventTypes))
-            {
-                continue;
-            }
-
-            var eventParameterType = method.GetParameters()[0].ParameterType;
-            foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
-            {
-                methodsByEventType[eventType] = method;
-            }
+            return Task.CompletedTask;
         }
 
-        return methodsByEventType;
+        if (method.ReturnType == typeof(Task) && returnValue is Task task)
+        {
+            return task;
+        }
+
+        throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
     }
 
-    static Dictionary<Type, MethodInfo> GetMethodsByEventType(Type targetType, IEnumerable<Type> eventTypes) =>
-        _methodsByEventTypeCache.GetOrAdd(
-            targetType,
-            static (key, keyEventTypes) => BuildMethodsByEventType(key, keyEventTypes),
-            eventTypes);
+    static class MethodsByEventType
+    {
+        public static Dictionary<Type, MethodInfo> Get(Type targetType, IEnumerable<Type> eventTypes) =>
+            _methodsByEventTypeCache.GetOrAdd(
+                targetType,
+                static (key, keyEventTypes) => Build(key, keyEventTypes),
+                eventTypes);
+
+        static Dictionary<Type, MethodInfo> Build(Type targetType, IEnumerable<Type> eventTypes)
+        {
+            var methodsByEventType = new Dictionary<Type, MethodInfo>();
+
+            foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (!method.IsEventHandlerMethod(eventTypes))
+                {
+                    continue;
+                }
+
+                var eventParameterType = method.GetParameters()[0].ParameterType;
+                foreach (var eventType in eventParameterType.GetEventTypes(eventTypes))
+                {
+                    methodsByEventType[eventType] = method;
+                }
+            }
+
+            return methodsByEventType;
+        }
+    }
 }
