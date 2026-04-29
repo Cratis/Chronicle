@@ -1,4 +1,3 @@
-<<<<<<< copilot/worktree-2026-04-17T09-36-14
 # GitHub Copilot Instructions
 
 ## Project Philosophy
@@ -45,12 +44,9 @@ When these instructions don't explicitly cover a situation, apply these values t
 
 ## Development Workflow
 
-- **Build after every change.** After creating or modifying any file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately — before moving on. Fix all errors and warnings as they appear. Never accumulate technical debt. Never push code that has not been built locally.
-- **Warnings are errors.** The project's `Directory.Build.props` sets `TreatWarningsAsErrors=True` in Release builds. CI builds in Release mode, so any warning (unused usings, nullable issues, code style violations) will fail the build. Always fix every warning — do not suppress, ignore, or defer them.
-- **Final build gate.** At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors. This is non-negotiable.
+- After creating each new file, run `dotnet build` (C#) or `yarn compile` (TypeScript) immediately before proceeding to the next file. Fix all errors as they appear — never accumulate technical debt.
 - Before adding parameters to interfaces or function signatures, review all usages to ensure the new parameter is needed at every call site.
 - When modifying imports, audit all occurrences — verify additions are used and removals don't break other files.
-- **Run affected tests before pushing.** When changing test infrastructure or fixture code, run the affected integration tests locally with `dotnet test` before committing. Never push changes to shared test infrastructure without first confirming that tests still pass. If tests cannot be run locally (e.g. missing Docker or database dependencies), document what was verified and what was not.
 - Before concluding any task, run the relevant specs/tests for every affected project and do not stop until they pass.
 - At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
 - **After pushing changes to a PR**, use the GitHub MCP tools (`pull_request_read` with `get_check_runs`, `get_job_logs`) to monitor CI check results. If any checks fail, investigate the logs, fix the failures, and push again. The task is not complete until all CI checks pass or the remaining failures are confirmed to be pre-existing flaky tests unrelated to the PR changes.
@@ -85,6 +81,3 @@ All files should start with the following header:
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 ```
-=======
-../.ai/rules/general.md
->>>>>>> main

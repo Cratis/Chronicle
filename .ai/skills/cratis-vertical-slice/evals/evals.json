@@ -1,0 +1,34 @@
+{
+  "skill_name": "cratis-vertical-slice",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building an invoicing feature for my app (namespace: MyBillingApp). The feature needs: (1) creating an invoice, (2) listing all invoices, (3) marking an invoice as paid. Show me the complete folder structure and the content of each .cs and .tsx file, following vertical slice architecture.",
+      "expected_output": "Features/Invoices/ folder with: Invoices.tsx composition page, InvoiceId.cs and InvoiceNumber.cs concepts, and three slice subdirs: Creation/Creation.cs, Listing/Listing.cs+Listing.tsx, MarkingAsPaid/MarkingAsPaid.cs. All .cs files have all backend artifacts in one file. No Commands/ Events/ Handlers/ folders.",
+      "files": [],
+      "assertions": [
+        "Output shows a Features/Invoices/ root folder (pluralized feature name)",
+        "Output contains concept files at the feature root (InvoiceId.cs etc.)",
+        "Each slice has a subfolder with a single .cs file containing ALL backend artifacts",
+        "No Commands/, Events/, Handlers/, or Projections/ subfolders within the feature",
+        "Namespace does NOT include '.Features.' segment (e.g. MyBillingApp.Invoices.Creation)",
+        "All .cs files start with the Cratis copyright header",
+        "State change slices contain command + event in the same .cs file",
+        "State view slice contains read model + projection + query in the same .cs file"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Explain what slice type I should use and how to structure the code for this scenario: when a new order is placed (OrderPlaced event), I need to automatically send a confirmation email via our IEmailService. This is separate from the order creation command itself.",
+      "expected_output": "Identifies this as an Automation slice (IReactor). Shows IReactor class dispatching on OrderPlaced event, using IEmailService via constructor injection. Places it inside the Orders feature folder in its own slice subfolder.",
+      "files": [],
+      "assertions": [
+        "Correctly identifies the slice type as Automation (IReactor), not Translation",
+        "Output shows IReactor implementation with method dispatching on the event type",
+        "IEmailService injected via constructor (not service locator)",
+        "Slice is placed inside the feature folder (e.g. Orders/EmailConfirmation/)",
+        "All artifacts in a single .cs file"
+      ]
+    }
+  ]
+}

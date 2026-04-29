@@ -1,7 +1,9 @@
-<<<<<<< copilot/worktree-2026-04-17T09-36-14
 ---
 applyTo: "**/*.cs"
+paths:
+  - "**/*.cs"
 ---
+
 
 # C# Conventions
 
@@ -9,8 +11,7 @@ The goal is minimal ceremony, maximum clarity. Modern C# (13+) gives us records,
 
 ## Building
 
-- Use `dotnet build` from the command line after every code change — never defer building. Fix all errors and warnings immediately.
-- **Warnings are errors in Release.** The project sets `TreatWarningsAsErrors=True` in Release builds (see `Source/Directory.Build.props`). CI always builds in Release mode. Any warning — unused `using` directives, nullable reference issues, code style violations like `IDE0005` — will fail the CI build. Always run `dotnet build -c Release` before considering work complete, and fix every warning.
+- Use `dotnet build` from the command line.
 - Use `dotnet format` to format code.
 - Use `dotnet test` to run tests.
 
@@ -177,6 +178,3 @@ These are the building blocks. Each type has a specific role in the vertical sli
 - Projections join **events**, never read models — projections rebuild state from the event stream, not from other projections.
 - For fluent projections, AutoMap is on by default — just call `.From<EventType>()` without manually mapping every property.
 - Use model-bound projection attributes (`[FromEvent<T>]`, `[SetFrom<T>]`, etc.) when possible; fall back to `IProjectionFor<T>` for complex cases.
-=======
-../../.ai/rules/csharp.md
->>>>>>> main

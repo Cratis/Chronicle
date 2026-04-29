@@ -1,0 +1,35 @@
+{
+  "skill_name": "cratis-specs-typescript",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write TypeScript specs for a function formatCurrency(amount: number, currency: string): string. Test two behaviors: (1) when formatting a positive amount — it should include the currency symbol and two decimal places; (2) when formatting a negative amount — it should include a minus sign. Follow Cratis TypeScript spec conventions.",
+      "expected_output": "Folder structure: for_formatCurrency/when_formatting_positive_amount.ts + when_formatting_negative_amount.ts. Uses describe()/it() with Vitest/Mocha. Uses Chai .should fluent assertions (NOT expect()). it() descriptions use spaces not underscores.",
+      "files": [],
+      "assertions": [
+        "Uses Chai .should fluent interface (value.should.equal(), NOT expect(value).to.equal())",
+        "it() descriptions use spaces (not underscores)",
+        "it() descriptions start with 'should'",
+        "Folder structure follows for_<function>/when_<behavior>.ts naming",
+        "Uses describe() for the outer scenario block",
+        "Uses beforeEach() for setup",
+        "Does NOT use expect() from Chai"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write TypeScript specs for a class CommandHandler that has a method handle(command: Command): Promise<CommandResult>. It depends on an ICommandExecutor interface. Spec two scenarios: (1) when the executor succeeds — result.isSuccess should be true; (2) when the executor throws — result.isSuccess should be false. Use the given() helper with a reusable context class.",
+      "expected_output": "for_CommandHandler/given/a_command_handler.ts context class using sinon.createStubInstance + for_CommandHandler/when_handling/with_successful_execution.ts and with_failed_execution.ts using given() helper. Chai .should assertions.",
+      "files": [],
+      "assertions": [
+        "Reusable context class defined in given/ folder",
+        "Context class uses sinon.createStubInstance for mocking",
+        "Context class properties are public (not protected)",
+        "Specs use given() helper from package root",
+        "Uses Chai .should assertions",
+        "Folder names follow for_<Class>/when_<behavior>/with_<condition> pattern",
+        "it() descriptions start with 'should' and use spaces"
+      ]
+    }
+  ]
+}
