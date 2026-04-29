@@ -19,7 +19,7 @@ public class clearing_the_nested_object_using_model_bound_projection(context con
 
         async Task Because()
         {
-            SliceId = Guid.Parse("b4e2d319-e256-5c4f-9d3b-2g0f9ce63d82");
+            SliceId = Guid.Parse("b4e2d319-e256-5c4f-9d3b-2a0f9ce63d82");
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<ModelBoundSlice>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
