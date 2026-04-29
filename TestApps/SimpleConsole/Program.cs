@@ -16,10 +16,6 @@ Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options, loggerFactory: loggerFactory);
 var store = await client.GetEventStore("TestStore");
 
-Console.WriteLine("Registering artifacts and seed data...");
-await store.DiscoverAll();
-await store.RegisterAll();
-
 var random = new Random();
 var selectedIndex = 0;
 

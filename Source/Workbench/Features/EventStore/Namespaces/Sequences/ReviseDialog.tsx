@@ -27,7 +27,9 @@ export const ReviseDialog = () => {
             return {};
         }
     }, [request?.event.content]);
-    const [parsedContent, setParsedContent] = useState<Record<string, unknown>>(() => ({ ...originalContent }));
+    const [parsedContent, setParsedContent] = useState<Record<string, Record<string, unknown>>>(() =>
+        originalContent as Record<string, Record<string, unknown>>
+    );
     const [schema, setSchema] = useState<JsonSchema>({ type: 'object', properties: {} });
     const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
@@ -84,7 +86,7 @@ export const ReviseDialog = () => {
                     object={parsedContent as Json}
                     schema={schema}
                     editMode={true}
-                    onChange={(obj) => setParsedContent(obj as Record<string, unknown>)}
+                    onChange={(obj) => setParsedContent(obj as Record<string, Record<string, unknown>>)}
                     onValidationChange={setHasValidationErrors}
                 />
             </div>
