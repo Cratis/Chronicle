@@ -1,6 +1,6 @@
 # TLS Configuration (Client)
 
-Chronicle .NET clients support TLS for secure communication with Chronicle Server. TLS is enabled by default and can be disabled only for development scenarios.
+Chronicle .NET clients support TLS for secure communication with Chronicle Server. TLS is enabled by default on the server, but can be disabled.
 
 For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
