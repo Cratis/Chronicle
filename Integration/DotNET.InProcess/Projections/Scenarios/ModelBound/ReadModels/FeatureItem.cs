@@ -6,12 +6,11 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.ReadModels;
 
-[FromEvent<SliceAddedToFeature>]
-public record SliceItem(
+[FromEvent<FeatureAddedToModule>]
+public record FeatureItem(
     Guid Id,
     string Name,
-    [ChildrenFrom<EventAddedToSlice>(
-        key: nameof(EventAddedToSlice.EventItemId),
-        parentKey: nameof(EventAddedToSlice.SliceId))]
-    IEnumerable<EventItem> Events,
-    [Nested] SliceCommandItem? Command);
+    [ChildrenFrom<SliceAddedToFeature>(
+        key: nameof(SliceAddedToFeature.SliceId),
+        parentKey: nameof(SliceAddedToFeature.FeatureId))]
+    IEnumerable<SliceItem> Slices);
