@@ -6,9 +6,9 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_model_bound_child_with_class_level_parent_key.and_child_event_is_appended_to_its_own_event_source.context;
+using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.when_projecting_child_with_class_level_parent_key.and_child_event_is_appended_to_its_own_event_source.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_model_bound_child_with_class_level_parent_key;
+namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.when_projecting_child_with_class_level_parent_key;
 
 [Collection(ChronicleCollection.Name)]
 public class and_child_event_is_appended_to_its_own_event_source(context context) : Given<context>(context)
