@@ -330,7 +330,12 @@ public class JsonSchema
                 var nonNull = anyOf.FirstOrDefault(s =>
                     s.Type != JsonObjectType.Null &&
                     !(s.HasReference && s.Reference?.Type == JsonObjectType.Null));
-                return nonNull ?? this;
+                if (nonNull is not null)
+                {
+                    return nonNull.HasReference ? (nonNull.Reference ?? nonNull) : nonNull;
+                }
+
+                return this;
             }
 
             return this;
