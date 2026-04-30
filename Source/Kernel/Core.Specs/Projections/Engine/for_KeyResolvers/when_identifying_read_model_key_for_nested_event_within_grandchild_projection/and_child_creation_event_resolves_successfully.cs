@@ -16,13 +16,14 @@ public class and_child_creation_event_resolves_successfully : given.a_three_leve
         // SliceAddedEvent is found as the head event for SliceKey (the child creation event).
         Storage.GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), (EventSourceId)SliceKey)
             .Returns(new EventSequenceNumber(2));
+        var cursor = CreateCursorWith(SliceAddedEvent);
         Storage.GetRange(
                 Arg.Any<EventSequenceNumber>(),
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(CreateCursorWith(SliceAddedEvent));
+            .Returns(cursor);
 
         // Inner resolution chain: finding FeatureAdded for FeatureKey and ModuleAdded for RootKey.
         Storage.TryGetLastInstanceOfAny(FeatureKey, Arg.Any<IEnumerable<EventTypeId>>())

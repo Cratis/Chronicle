@@ -15,13 +15,14 @@ public class and_child_creation_event_resolver_returns_deferred : given.a_three_
     {
         Storage.GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), (EventSourceId)SliceKey)
             .Returns(new EventSequenceNumber(2));
+        var cursor = CreateCursorWith(SliceAddedEvent);
         Storage.GetRange(
                 Arg.Any<EventSequenceNumber>(),
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(CreateCursorWith(SliceAddedEvent));
+            .Returns(cursor);
 
         // Override: the key resolver for SliceAddedEventType returns a deferred result,
         // so TryResolveViaChildCreationEvent cannot resolve and returns null.

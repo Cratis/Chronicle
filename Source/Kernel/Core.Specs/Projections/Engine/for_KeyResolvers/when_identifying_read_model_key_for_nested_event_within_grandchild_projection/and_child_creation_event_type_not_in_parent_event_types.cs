@@ -19,13 +19,14 @@ public class and_child_creation_event_type_not_in_parent_event_types : given.a_t
 
         Storage.GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), (EventSourceId)SliceKey)
             .Returns(new EventSequenceNumber(2));
+        var cursor = CreateCursorWith(SliceAddedEvent);
         Storage.GetRange(
                 Arg.Any<EventSequenceNumber>(),
                 Arg.Any<EventSequenceNumber>(),
                 (EventSourceId)SliceKey,
                 Arg.Any<IEnumerable<EventType>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(CreateCursorWith(SliceAddedEvent));
+            .Returns(cursor);
 
         Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), Arg.Any<object>())
             .Returns(Option<Key>.None());

@@ -86,19 +86,22 @@ public class a_three_level_hierarchy : Specification
         SliceProjection.EventTypes.Returns([SliceAddedEventType, NestedCommandEventType]);
 
         // Wire up the key resolvers that the real resolution chain will call.
-        FeatureProjection.GetKeyResolverFor(FeatureAddedEventType).Returns(
-            KeyResolvers.FromParentHierarchy(
-                FeatureProjection,
-                KeyResolvers.FromEventSourceId,
-                KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("moduleId")),
-                "featureId"));
+        // NSubstitute requires that return values are computed before passing to Returns()
+        // to avoid "CouldNotSetReturnDueToNoLastCallException" when the factory methods
+        // internally read properties from substitute objects.
+        var featureAddedKeyResolver = KeyResolvers.FromParentHierarchy(
+            FeatureProjection,
+            KeyResolvers.FromEventSourceId,
+            KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("moduleId")),
+            "featureId");
+        FeatureProjection.GetKeyResolverFor(FeatureAddedEventType).Returns(featureAddedKeyResolver);
 
-        FeatureProjection.GetKeyResolverFor(SliceAddedEventType).Returns(
-            KeyResolvers.FromParentHierarchy(
-                SliceProjection,
-                KeyResolvers.FromEventSourceId,
-                KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("featureId")),
-                "sliceId"));
+        var sliceAddedKeyResolver = KeyResolvers.FromParentHierarchy(
+            SliceProjection,
+            KeyResolvers.FromEventSourceId,
+            KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("featureId")),
+            "sliceId");
+        FeatureProjection.GetKeyResolverFor(SliceAddedEventType).Returns(sliceAddedKeyResolver);
 
         // The parent event lookup fails because FeatureAdded events have FeatureKey as event source,
         // not SliceKey. This is the trigger for TryResolveViaChildCreationEvent.
