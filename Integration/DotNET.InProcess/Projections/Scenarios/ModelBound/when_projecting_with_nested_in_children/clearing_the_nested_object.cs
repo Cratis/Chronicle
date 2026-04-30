@@ -23,7 +23,8 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
             typeof(SliceAddedToFeature),
             typeof(CommandSetOnSlice),
             typeof(CommandRenamedOnSlice),
-            typeof(CommandClearedFromSlice)
+            typeof(CommandClearedFromSlice),
+            typeof(EventAddedToSlice)
         ];
 
         public override IEnumerable<Type> ModelBoundProjections => [typeof(FeatureReadModel), typeof(SliceItem), typeof(SliceCommandItem)];
