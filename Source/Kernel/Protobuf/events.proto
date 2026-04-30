@@ -27,6 +27,7 @@ message EventTypeRegistration {
    string Schema = 2;
    repeated EventTypeGenerationDefinition Generations = 3;
    repeated EventTypeMigrationDefinition Migrations = 4;
+   string EventStore = 5;
 }
 message GetAllEventTypesRequest {
    string EventStore = 1;

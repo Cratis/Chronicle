@@ -109,7 +109,8 @@ public class EventSequenceStorage(
         IEnumerable<Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
-        IDictionary<EventTypeGeneration, EventHash> contentHashes)
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Concepts.Events.Subject? subject = null)
     {
         try
         {
@@ -139,7 +140,8 @@ public class EventSequenceStorage(
                 tags.Select(_ => _.Value),
                 generationalContent,
                 hashesForStorage,
-                []);
+                [],
+                subject?.IsSet == true ? subject : null);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 

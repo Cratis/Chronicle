@@ -36,6 +36,7 @@ message AppendRequest {
    ConcurrencyScope ConcurrencyScope = 13;
    repeated string Tags = 14;
    SerializableDateTimeOffset Occurred = 15;
+   string Subject = 16;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1;
@@ -124,6 +125,7 @@ message EventToAppend {
    string Content = 6;
    repeated string Tags = 7;
    SerializableDateTimeOffset Occurred = 8;
+   string Subject = 9;
 }
 message EventType {
    string Id = 1;
@@ -183,6 +185,17 @@ message Identity {
    string UserName = 3;
    Identity OnBehalfOf = 4;
 }
+message RedactForEventSourceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventSourceId = 4;
+   string Reason = 5;
+   repeated EventType EventTypes = 6;
+   .bcl.Guid CorrelationId = 7; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
+}
 message RedactRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -218,5 +231,6 @@ service EventSequences {
    rpc GetTailSequenceNumber (GetTailSequenceNumberRequest) returns (GetTailSequenceNumberResponse);
    rpc HasEventsForEventSourceId (HasEventsForEventSourceIdRequest) returns (HasEventsForEventSourceIdResponse);
    rpc Redact (RedactRequest) returns (RedactResponse);
+   rpc RedactForEventSource (RedactForEventSourceRequest) returns (.google.protobuf.Empty);
    rpc Revise (ReviseRequest) returns (.google.protobuf.Empty);
 }

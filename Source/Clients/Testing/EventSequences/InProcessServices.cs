@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -40,6 +41,9 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IConstraints Constraints => constraints;
+
+    /// <inheritdoc/>
+    public ICompliance Compliance => throw new NotSupportedException("Compliance is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public IEventStores EventStores => throw new NotSupportedException("EventStores is not supported in test scenarios.");

@@ -56,4 +56,11 @@ public class EventToAppend
     /// </summary>
     [ProtoMember(8)]
     public SerializableDateTimeOffset? Occurred { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional subject — the target identity used for compliance concerns such as PII encryption keys.
+    /// When omitted, the <see cref="EventSourceId"/> is used as the subject.
+    /// </summary>
+    [ProtoMember(9)]
+    public string? Subject { get; set; }
 }

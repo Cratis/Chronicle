@@ -18,7 +18,8 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
     public bool CanProvide(PropertyInfo property) =>
          Attribute.IsDefined(property, typeof(PIIAttribute)) ||
          (property.DeclaringType is not null && Attribute.IsDefined(property.DeclaringType, typeof(PIIAttribute))) ||
-         CanProvide(property.PropertyType);
+         CanProvide(property.PropertyType) ||
+         HasPIIOnConstructorParameter(property);
 
     /// <inheritdoc/>
     public ComplianceMetadata Provide(Type type)
@@ -40,5 +41,14 @@ public class PIIMetadataProvider : ICanProvideComplianceMetadataForType, ICanPro
         }
 
         return new ComplianceMetadata(ComplianceMetadataType.PII, property.GetComplianceMetadataDetails());
+    }
+
+    static bool HasPIIOnConstructorParameter(PropertyInfo property)
+    {
+        if (property.DeclaringType is null) return false;
+        var ctor = property.DeclaringType.GetConstructors().MaxBy(c => c.GetParameters().Length);
+        var param = ctor?.GetParameters().FirstOrDefault(p =>
+            string.Equals(p.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+        return param is not null && Attribute.IsDefined(param, typeof(PIIAttribute));
     }
 }
