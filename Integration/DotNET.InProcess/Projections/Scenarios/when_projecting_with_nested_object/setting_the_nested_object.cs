@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class setting_the_nested_object(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture fixture) : given.a_projection_and_events_appended_to_it<SliceProjection, Slice>(fixture)
+    public class context(ChronicleInProcessFixture fixture) : given.a_projection_and_events_appended_to_it<SliceProjection, NestedSlice>(fixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(SliceCreated), typeof(CommandSetForSlice), typeof(SliceCommandRenamed), typeof(CommandClearedForSlice)];
 
@@ -42,15 +42,15 @@ public record SliceCommandRenamed(string NewName);
 [EventType]
 public record CommandClearedForSlice;
 
-public class CommandItem
+public class NestedCommandItem
 {
     public string Name { get; set; } = string.Empty;
     public string Schema { get; set; } = string.Empty;
 }
 
-public record Slice(
+public record NestedSlice(
     string Name,
-    CommandItem? Command,
+    NestedCommandItem? Command,
     EventSequenceNumber __lastHandledEventSequenceNumber = default!);
 
 #pragma warning restore SA1402 // File may only contain a single type

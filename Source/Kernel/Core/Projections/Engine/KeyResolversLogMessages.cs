@@ -126,4 +126,10 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: Sink did NOT find root for childPropertyPath='{ChildPropertyPath}', parentKeyValue='{ParentKeyValue}' - deferring")]
     internal static partial void FromParentHierarchySinkDidNotFindRoot(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: parent event not found by parent key, attempting resolution via child's creation event for eventSource='{EventSourceId}'")]
+    internal static partial void FromParentHierarchyAttemptingViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventSourceId);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: resolved key via child's creation event type='{EventType}', key='{Key}'")]
+    internal static partial void FromParentHierarchyResolvedViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventType, string key);
 }

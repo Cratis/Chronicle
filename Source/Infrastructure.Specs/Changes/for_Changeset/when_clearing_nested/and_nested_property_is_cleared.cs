@@ -11,7 +11,7 @@ public class and_nested_property_is_cleared : for_Changeset.when_adding_changes.
 
     void Establish() => _nestedProperty = new PropertyPath("command");
 
-    void Because() => _changeset.ClearNested(_nestedProperty);
+    void Because() => _changeset.ClearNested(_nestedProperty, ArrayIndexers.NoIndexers);
 
     [Fact] void should_have_changes() => _changeset.HasChanges.ShouldBeTrue();
     [Fact] void should_have_one_change() => _changeset.Changes.Count().ShouldEqual(1);

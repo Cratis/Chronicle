@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Changes;
 /// Represents a nested single object property that has been cleared (set to null) on a parent.
 /// </summary>
 /// <param name="NestedProperty">The property path to the nested object on the parent.</param>
-public record NestedCleared(PropertyPath NestedProperty) : Change((object)null!);
+/// <param name="ArrayIndexers">The array indexers needed to resolve the correct element when the nested object lives inside a child collection.</param>
+public record NestedCleared(PropertyPath NestedProperty, ArrayIndexers ArrayIndexers) : Change((object)null!);

@@ -4,27 +4,41 @@ applyTo: "**/*"
 
 # Managing AI Rules and Instructions
 
-`.ai/rules/` is the **single source of truth** for all AI assistant rules in this repository. Rules are written once and surfaced to each AI tool through symlinks. When asked to add, rename, or update a rule, always work in `.ai/rules/` — never edit the symlinks directly.
+`.ai/` is the **single source of truth** for all AI assistant configuration in this repository — rules, agents, prompts, skills, and hooks. Everything is written once in `.ai/` and surfaced to each AI tool through symlinks.
+
+> **Never edit files under `.github/` or `.claude/` directly.** Both folders are composed entirely of symlinks. Any direct edit would be lost the next time the symlink target changes, and would diverge from the canonical source.
 
 ## Folder structure
 
 ```
-.ai/
-├── rules/          ← canonical rule files (real files, not symlinks)
-├── workflows/      ← shared GitHub Actions workflow files
-├── prompts/        ← reusable prompt templates
-└── agents/         ← agent definitions
+.ai/                             ← canonical source of truth (edit here)
+├── rules/                       ← instruction/rule markdown files
+├── agents/                      ← agent definition files
+├── prompts/                     ← reusable prompt templates
+├── skills/                      ← multi-step skill workflows
+├── hooks/                       ← agent lifecycle hooks
+└── workflows/                   ← shared CI workflow files
 
-.github/
-├── copilot-instructions.md   ← symlink → ../.ai/rules/general.md
-└── instructions/
-    └── <name>.instructions.md  ← symlinks → ../../.ai/rules/<name>.md
+.github/                         ← GitHub Copilot integration (symlinks only — do NOT edit)
+├── copilot-instructions.md      ← symlink → ../.ai/rules/general.md
+├── instructions/
+│   └── <name>.instructions.md   ← symlinks → ../../.ai/rules/<name>.md
+├── agents/                      ← symlink → ../.ai/agents
+├── prompts/                     ← symlink → ../.ai/prompts
+├── skills/                      ← symlink → ../.ai/skills
+└── hooks/                       ← symlink → ../.ai/hooks
 
-.claude/
-├── CLAUDE.md                 ← symlink → ../.ai/rules/general.md
-└── rules/
-    └── <name>.md             ← symlinks → ../../.ai/rules/<name>.md
+.claude/                         ← Claude Code integration (symlinks only — do NOT edit)
+├── CLAUDE.md                    ← symlink → ../.ai/rules/general.md
+├── rules/
+│   └── <name>.md                ← symlinks → ../../.ai/rules/<name>.md
+├── agents/                      ← symlink → ../.ai/agents
+├── prompts/                     ← symlink → ../.ai/prompts
+├── skills/                      ← symlink → ../.ai/skills
+└── hooks/                       ← symlink → ../.ai/hooks
 ```
+
+Note: `agents/`, `prompts/`, `skills/`, and `hooks/` are **folder-level** symlinks — adding, renaming, or removing files inside `.ai/` is immediately visible to both tools. Only `rules/` uses individual per-file symlinks (because GitHub Copilot requires the `.instructions.md` suffix, which requires renaming at the symlink level).
 
 ## Rule file format
 
@@ -68,7 +82,11 @@ Use `applyTo: "**/*"` (and omit `paths`) for rules that apply to all files.
 
 ## Updating an existing rule
 
-Edit the canonical file in `.ai/rules/<name>.md`. The symlinks in `.github/instructions/` and `.claude/rules/` automatically reflect the change — nothing else needs to be touched.
+Edit the canonical file in `.ai/rules/<name>.md`. **Do not touch anything in `.github/` or `.claude/`** — the symlinks automatically reflect the change.
+
+## Updating agents, prompts, skills, or hooks
+
+Add, edit, or remove files directly inside the relevant `.ai/` subfolder (`agents/`, `prompts/`, `skills/`, `hooks/`). The folder-level symlinks in `.github/` and `.claude/` pick up the changes automatically — no further steps needed. **Never create or edit these files inside `.github/` or `.claude/` directly.**
 
 ## Renaming a rule
 

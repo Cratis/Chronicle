@@ -26,7 +26,7 @@ public class and_there_is_a_nested_cleared : given.a_changeset_converter
         _expectedBsonValue = BsonValue.Create(42UL);
         _nestedProperty = new PropertyPath("command");
 
-        var nestedCleared = new NestedCleared(_nestedProperty);
+        var nestedCleared = new NestedCleared(_nestedProperty, ArrayIndexers.NoIndexers);
 
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         _changeset.Changes.Returns([nestedCleared]);

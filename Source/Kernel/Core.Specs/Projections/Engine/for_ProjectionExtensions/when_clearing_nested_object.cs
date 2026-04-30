@@ -17,5 +17,5 @@ public class when_clearing_nested_object : given.an_observable_and_event_setup
 
     void Because() => _observable.OnNext(_eventContext);
 
-    [Fact] void should_call_clear_nested_on_changeset() => _changeset.Received(1).ClearNested(_nestedProperty);
+    [Fact] void should_call_clear_nested_on_changeset() => _changeset.Received(1).ClearNested(_nestedProperty, ArrayIndexers.NoIndexers);
 }

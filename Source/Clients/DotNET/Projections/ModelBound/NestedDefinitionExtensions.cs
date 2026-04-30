@@ -153,7 +153,9 @@ static class NestedDefinitionExtensions
             }
         }
 
-        // Process constructor parameters for [Nested] attributes on record types
+        // Process constructor parameters for mapping attributes and [Nested] on record types.
+        // Reading directly from parameters (not from auto-generated properties) ensures attributes
+        // are found regardless of whether the C# compiler propagates them to properties.
         var primaryConstructor = nestedType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
             .OrderByDescending(c => c.GetParameters().Length)
             .FirstOrDefault();
@@ -164,6 +166,48 @@ static class NestedDefinitionExtensions
             foreach (var parameter in primaryConstructor.GetParameters())
             {
                 constructorParamNames.Add(parameter.Name!);
+
+                var paramPath = new PropertyPath(parameter.Name!);
+                var paramPropertyName = namingPolicy.GetPropertyName(paramPath);
+
+                foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
+                {
+                    var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
+                    var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
+                    var propertyToUse = eventPropertyName ?? parameter.Name!;
+                    nestedDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse);
+                }
+
+                foreach (var (addFromAttr, addFromEventType) in parameter.GetAttributesOfGenericType<AddFromAttribute<object>>())
+                {
+                    var eventPropertyNameProperty = addFromAttr.GetType().GetProperty(nameof(AddFromAttribute<object>.EventPropertyName));
+                    var eventPropertyName = eventPropertyNameProperty?.GetValue(addFromAttr) as string;
+                    var propertyToUse = eventPropertyName ?? parameter.Name!;
+                    nestedDef.From.AddAddMapping(getOrCreateEventType, namingPolicy, addFromEventType, paramPropertyName, propertyToUse);
+                }
+
+                foreach (var (subtractFromAttr, subtractFromEventType) in parameter.GetAttributesOfGenericType<SubtractFromAttribute<object>>())
+                {
+                    var eventPropertyNameProperty = subtractFromAttr.GetType().GetProperty(nameof(SubtractFromAttribute<object>.EventPropertyName));
+                    var eventPropertyName = eventPropertyNameProperty?.GetValue(subtractFromAttr) as string;
+                    var propertyToUse = eventPropertyName ?? parameter.Name!;
+                    nestedDef.From.AddSubtractMapping(getOrCreateEventType, namingPolicy, subtractFromEventType, paramPropertyName, propertyToUse);
+                }
+
+                foreach (var (_, incrementEventType) in parameter.GetAttributesOfGenericType<IncrementAttribute<object>>())
+                {
+                    nestedDef.From.AddIncrementMapping(getOrCreateEventType, incrementEventType, paramPropertyName);
+                }
+
+                foreach (var (_, decrementEventType) in parameter.GetAttributesOfGenericType<DecrementAttribute<object>>())
+                {
+                    nestedDef.From.AddDecrementMapping(getOrCreateEventType, decrementEventType, paramPropertyName);
+                }
+
+                foreach (var (_, countEventType) in parameter.GetAttributesOfGenericType<CountAttribute<object>>())
+                {
+                    nestedDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
+                }
 
                 if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
                 {
@@ -179,7 +223,9 @@ static class NestedDefinitionExtensions
             }
         }
 
-        // Process properties of the nested type and detect any further [Nested] properties within them
+        // Process properties of the nested type for attributes and further [Nested] detection.
+        // Properties that correspond to constructor parameters are still processed here because
+        // some attributes (e.g. SetValueAttribute) may only appear at the property level.
         foreach (var childProperty in nestedType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             processMember(childProperty, definition, classLevelFromEvents, false, parentModelType, nestedDef);
