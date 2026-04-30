@@ -68,9 +68,6 @@ public class EventTypes : IEventTypes
             throw new MultipleEventTypesWithSameIdFound(clrTypes);
         }
 
-        _typesByEventType.Clear();
-        _schemasByEventType.Clear();
-
         foreach (var eventType in eventTypes)
         {
             _typesByEventType[eventType.EventType] = eventType.ClrType;
