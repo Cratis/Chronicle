@@ -267,6 +267,26 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
+
+        // When the parent event cannot be found by the parent key (e.g., for nested events within
+        // grandchild projections), resolve via the current projection's own creation event.
+        // Example: Module -> FeatureItem (child) -> SliceItem (grandchild) -> [Nested Command]
+        // CommandSetOnSlice is appended to SliceId and has no explicit parentKey, so it defaults
+        // to the event source (SliceId). FeatureItem events use FeatureId — the lookup fails.
+        // By finding SliceAddedToFeature (SliceItem's creation event) for SliceId, we obtain FeatureId
+        // and can resolve the full parent hierarchy correctly.
+        var childCreationResult = await TryResolveViaChildCreationEvent(
+            @event,
+            childKey,
+            parentProjection,
+            projection,
+            eventSequenceStorage,
+            sink);
+        if (childCreationResult is not null)
+        {
+            return childCreationResult;
+        }
+
         logger.FromParentHierarchyFallingBackToSink();
 
         return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, childKey);
@@ -360,6 +380,69 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         // All events were deferred or couldn't be resolved
         return Option<AppendedEvent>.None();
+    }
+
+    async Task<ParentEventResult?> TryResolveViaChildCreationEvent(
+        AppendedEvent @event,
+        Key childKey,
+        IProjection parentProjection,
+        IProjection projection,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink)
+    {
+        var childCreationEventTypes = projection.OwnEventTypes
+            .Where(et => et.Id != @event.Context.EventType.Id)
+            .Select(et => new EventType(et.Id, EventTypeGeneration.First))
+            .ToArray();
+
+        if (childCreationEventTypes.Length == 0)
+        {
+            return null;
+        }
+
+        var childEventSource = childKey.Value?.ToString()!;
+        logger.FromParentHierarchyAttemptingViaChildCreationEvent(childEventSource);
+
+        var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(childCreationEventTypes, childEventSource);
+        if (headSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            return null;
+        }
+
+        var cursor = await eventSequenceStorage.GetRange(headSequenceNumber, headSequenceNumber, childEventSource, childCreationEventTypes);
+        AppendedEvent? childCreationEvent = null;
+        while (await cursor.MoveNext())
+        {
+            childCreationEvent = cursor.Current.FirstOrDefault();
+            if (childCreationEvent is not null)
+            {
+                break;
+            }
+        }
+
+        if (childCreationEvent is null)
+        {
+            return null;
+        }
+
+        var parentEventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == childCreationEvent.Context.EventType.Id);
+        if (parentEventType == default)
+        {
+            return null;
+        }
+
+        var parentResolver = parentProjection.GetKeyResolverFor(parentEventType);
+        var resolvedResult = await parentResolver(eventSequenceStorage, sink, childCreationEvent);
+        if (resolvedResult is not ResolvedKey resolvedKey)
+        {
+            return null;
+        }
+
+        logger.FromParentHierarchyResolvedViaChildCreationEvent(
+            childCreationEvent.Context.EventType.Id.ToString(),
+            resolvedKey.Key.Value?.ToString() ?? "null");
+
+        return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey.Key));
     }
 
     async Task<ParentEventResult> TryFindParentByFallback(
