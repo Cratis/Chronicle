@@ -6,10 +6,10 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.ReadModels;
 
-[FromEvent<CommandSetForSlice>]
-[FromEvent<SliceCommandRenamed>]
-[ClearWith<CommandClearedForSlice>]
+[FromEvent<CommandSetOnSliceItem>]
+[FromEvent<SliceItemCommandRenamed>]
+[ClearWith<CommandClearedOnSliceItem>]
 public record CommandItem(
-    [SetFrom<SliceCommandRenamed>(nameof(SliceCommandRenamed.NewName))]
+    [SetFrom<SliceItemCommandRenamed>(nameof(SliceItemCommandRenamed.NewName))]
     string Name,
     string Schema);

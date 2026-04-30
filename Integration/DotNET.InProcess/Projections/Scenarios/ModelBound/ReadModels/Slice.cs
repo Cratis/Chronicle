@@ -6,7 +6,7 @@ using Cratis.Chronicle.Projections.ModelBound;
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.ReadModels;
 
-[FromEvent<SliceCreated>]
+[FromEvent<SliceItemCreated>]
 public record Slice(
     Guid Id,
     string Name,

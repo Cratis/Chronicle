@@ -6,4 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.Events;
 
 [EventType]
-public record SliceCreated(string Name);
+public record SliceItemCreated(string Name);

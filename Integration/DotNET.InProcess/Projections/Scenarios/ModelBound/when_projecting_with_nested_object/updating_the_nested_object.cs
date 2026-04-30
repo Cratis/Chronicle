@@ -17,7 +17,7 @@ public class updating_the_nested_object(context context) : Given<context>(contex
         public Slice Result;
 
         public override IEnumerable<Type> EventTypes =>
-            [typeof(SliceCreated), typeof(CommandSetForSlice), typeof(SliceCommandRenamed), typeof(CommandClearedForSlice)];
+            [typeof(SliceItemCreated), typeof(CommandSetOnSliceItem), typeof(SliceItemCommandRenamed), typeof(CommandClearedOnSliceItem)];
 
         public override IEnumerable<Type> ModelBoundProjections => [typeof(Slice), typeof(CommandItem)];
 
@@ -29,9 +29,9 @@ public class updating_the_nested_object(context context) : Given<context>(contex
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
             await handler.WaitTillActive();
 
-            await EventStore.EventLog.Append(SliceId, new SliceCreated("Model-Bound Slice"));
-            await EventStore.EventLog.Append(SliceId, new CommandSetForSlice("Register", "{}"));
-            var appendResult = await EventStore.EventLog.Append(SliceId, new SliceCommandRenamed("Create"));
+            await EventStore.EventLog.Append(SliceId, new SliceItemCreated("Model-Bound Slice"));
+            await EventStore.EventLog.Append(SliceId, new CommandSetOnSliceItem("Register", "{}"));
+            var appendResult = await EventStore.EventLog.Append(SliceId, new SliceItemCommandRenamed("Create"));
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 

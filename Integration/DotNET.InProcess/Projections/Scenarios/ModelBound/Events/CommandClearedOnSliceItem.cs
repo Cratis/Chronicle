@@ -6,4 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.Events;
 
 [EventType]
-public record SliceCommandRenamed(string NewName);
+public record CommandClearedOnSliceItem;
