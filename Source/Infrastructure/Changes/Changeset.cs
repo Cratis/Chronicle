@@ -198,9 +198,9 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
     }
 
     /// <inheritdoc/>
-    public void ClearNested(PropertyPath nestedProperty)
+    public void ClearNested(PropertyPath nestedProperty, ArrayIndexers arrayIndexers)
     {
-        Add(new NestedCleared(nestedProperty));
+        Add(new NestedCleared(nestedProperty, arrayIndexers));
     }
 
     /// <inheritdoc/>
