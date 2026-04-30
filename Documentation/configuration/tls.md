@@ -54,8 +54,11 @@ var options = ChronicleOptions.FromConnectionString("chronicle://localhost:35000
 
 ## Development vs production
 
-- **Development**: `Disable` can be set to true when the server runs without TLS.
-- **Production**: TLS should remain enabled.
+When we talk about **Development** vs **Production**, we're talking about the development Docker image
+vs the Production Docker image.
+
+- **Development**: TLS is disabled by default.
+- **Production**: TLS should remain enabled but can be disabled.
 
 ## Certificate validation
 
