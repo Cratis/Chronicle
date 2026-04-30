@@ -80,7 +80,7 @@ An explicit subject at the call site always takes precedence over a `[Subject]` 
 
 ### Implicit subject — same entity as the event source
 
-For aggregates where the subject _is_ the event source you need nothing extra. Omit both `[Subject]` and the `subject` parameter and Chronicle uses the `EventSourceId`:
+For aggregates where the subject *is* the event source you need nothing extra. Omit both `[Subject]` and the `subject` parameter and Chronicle uses the `EventSourceId`:
 
 ```csharp
 await eventLog.Append(authorId, new AuthorRegistered("John Doe"));
