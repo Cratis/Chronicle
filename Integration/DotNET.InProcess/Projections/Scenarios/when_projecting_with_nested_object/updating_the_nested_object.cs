@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_proj
 [Collection(ChronicleCollection.Name)]
 public class updating_the_nested_object(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture fixture) : given.a_projection_and_events_appended_to_it<SliceProjection, Slice>(fixture)
+    public class context(ChronicleInProcessFixture fixture) : given.a_projection_and_events_appended_to_it<SliceProjection, NestedSlice>(fixture)
     {
         public override IEnumerable<Type> EventTypes => [typeof(SliceCreated), typeof(CommandSetForSlice), typeof(SliceCommandRenamed), typeof(CommandClearedForSlice)];
 
