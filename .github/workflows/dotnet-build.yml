@@ -84,6 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
     strategy:
+      fail-fast: false
       matrix:
         namespace:
           - 'for_EventSequence'
@@ -96,7 +97,6 @@ jobs:
           - 'Jobs'
           - 'Patches'
           - 'Projections'
-    continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
       CHRONICLE_TEST_TIMEOUT_SECONDS: 45
