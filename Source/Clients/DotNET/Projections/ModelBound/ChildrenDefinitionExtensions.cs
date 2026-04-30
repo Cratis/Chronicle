@@ -335,15 +335,19 @@ static class ChildrenDefinitionExtensions
         ProjectionDefinition definition,
         ChildrenDefinition parentChildrenDef)
     {
-        // Process constructor parameters for ChildrenFrom attributes
+        // Process constructor parameters for ChildrenFrom and Nested attributes
         var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
             .OrderByDescending(c => c.GetParameters().Length)
             .FirstOrDefault();
+
+        var constructorParamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (primaryConstructor is not null)
         {
             foreach (var parameter in primaryConstructor.GetParameters())
             {
+                constructorParamNames.Add(parameter.Name!);
+
                 foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>())
                 {
                     parentChildrenDef.ProcessChildrenFromAttributeForNestedChildren(
@@ -357,14 +361,26 @@ static class ChildrenDefinitionExtensions
                         definition,
                         childType);
                 }
+
+                if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+                {
+                    parentChildrenDef.ProcessNestedAttributeForChildren(
+                        getOrCreateEventType,
+                        namingPolicy,
+                        parameter.Name!,
+                        parameter.ParameterType,
+                        processMember,
+                        definition,
+                        childType);
+                }
             }
         }
 
-        // Process properties for ChildrenFrom attributes
+        // Process properties for ChildrenFrom and Nested attributes
         foreach (var property in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             // Skip if already processed as constructor parameter
-            if (primaryConstructor?.GetParameters().Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true)
+            if (constructorParamNames.Contains(property.Name))
             {
                 continue;
             }
@@ -378,6 +394,18 @@ static class ChildrenDefinitionExtensions
                     property.PropertyType,
                     attr,
                     eventType,
+                    processMember,
+                    definition,
+                    childType);
+            }
+
+            if (Attribute.IsDefined(property, typeof(NestedAttribute)))
+            {
+                parentChildrenDef.ProcessNestedAttributeForChildren(
+                    getOrCreateEventType,
+                    namingPolicy,
+                    property.Name,
+                    property.PropertyType,
                     processMember,
                     definition,
                     childType);

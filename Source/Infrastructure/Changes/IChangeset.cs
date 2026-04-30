@@ -102,7 +102,8 @@ public interface IChangeset<TSource, TTarget>
     /// Apply a clear change to a nested single-object property on the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     /// <param name="nestedProperty"><see cref="PropertyPath"/> for accessing the nested object.</param>
-    void ClearNested(PropertyPath nestedProperty);
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see> needed to target the correct element when the nested object lives inside a child collection.</param>
+    void ClearNested(PropertyPath nestedProperty, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.

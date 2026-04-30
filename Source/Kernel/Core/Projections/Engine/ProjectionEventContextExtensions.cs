@@ -271,7 +271,7 @@ public static class ProjectionEventContextExtensions
         this IObservable<ProjectionEventContext> observable,
         PropertyPath nestedProperty)
     {
-        observable.Subscribe(_ => _.Changeset.ClearNested(nestedProperty));
+        observable.Subscribe(_ => _.Changeset.ClearNested(nestedProperty, _.Key.ArrayIndexers));
         return observable;
     }
 }

@@ -219,7 +219,7 @@ public class ChangesetConverter(
 
     void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)
     {
-        var (property, arrayFilters) = converter.ToMongoDBProperty(nestedCleared.NestedProperty, ArrayIndexers.NoIndexers);
+        var (property, arrayFilters) = converter.ToMongoDBProperty(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 
         updateBuilder = updateBuilder is not null
