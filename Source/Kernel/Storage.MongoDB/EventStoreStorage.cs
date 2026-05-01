@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
@@ -42,7 +41,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// </remarks>
 /// <param name="eventStore"><see cref="EventStore"/> the storage is for.</param>
 /// <param name="eventStoreDatabase"><see cref="IEventStoreDatabase"/> to use.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinksFactory"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -52,7 +50,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public class EventStoreStorage(
     EventStoreName eventStore,
     IEventStoreDatabase eventStoreDatabase,
-    IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     SinksFactory sinksFactory,
@@ -113,7 +110,6 @@ public class EventStoreStorage(
                 eventStoreDatabase.GetNamespaceDatabase(@namespace),
                 EventTypes,
                 Observers,
-                complianceManager,
                 expandoObjectConverter,
                 jsonSerializerOptions,
                 sinksFactory(@namespace),

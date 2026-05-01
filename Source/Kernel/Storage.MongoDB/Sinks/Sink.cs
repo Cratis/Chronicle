@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
@@ -255,13 +256,10 @@ public class Sink(
     /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
-        if (readModel.Indexes.Count == 0)
-        {
-            return;
-        }
-
         var collection = Collection;
         var existingIndexes = await GetExistingIndexNamesAsync(collection);
+
+        await EnsureSubjectIndex(collection, existingIndexes);
 
         foreach (var indexDefinition in readModel.Indexes)
         {
@@ -278,6 +276,21 @@ public class Sink(
 
             await collection.Indexes.CreateOneAsync(indexModel);
         }
+    }
+
+    async Task EnsureSubjectIndex(IMongoCollection<BsonDocument> collection, HashSet<string> existingIndexes)
+    {
+        const string SubjectIndexName = "subject_index";
+
+        if (existingIndexes.Contains(SubjectIndexName))
+        {
+            return;
+        }
+
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending(WellKnownProperties.Subject),
+                new CreateIndexOptions { Sparse = true, Name = SubjectIndexName }));
     }
 
     /// <inheritdoc/>

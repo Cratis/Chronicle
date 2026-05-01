@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -11,9 +12,11 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +31,9 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="observerDefinition"><see cref="IPersistentState{T}"/> for the observer definition.</param>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
+/// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for looking up event type schemas.</param>
+/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -39,6 +45,9 @@ public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
+    IEventTypesStorage eventTypesStorage,
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable

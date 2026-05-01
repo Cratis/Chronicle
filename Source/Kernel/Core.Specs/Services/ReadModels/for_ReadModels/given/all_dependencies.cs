@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -26,6 +27,7 @@ public class all_dependencies : Specification
     protected ISink _sink;
     protected IReadModel _readModel;
     protected ReadModelDefinition _readModelDefinition;
+    protected IJsonComplianceManager _complianceManager;
     protected Contracts.ReadModels.IReadModels _service;
 
     void Establish()
@@ -48,7 +50,7 @@ public class all_dependencies : Specification
             ReadModelObserverType.Projection,
             "test-observer",
             new SinkDefinition(SinkConfigurationId.None, SinkTypeId.None),
-            new Dictionary<ReadModelGeneration, JsonSchema>(),
+            new Dictionary<ReadModelGeneration, JsonSchema> { { (ReadModelGeneration)1, new JsonSchema() } },
             []);
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -61,12 +63,14 @@ public class all_dependencies : Specification
 
         var clusterClient = Substitute.For<IClusterClient>();
         var expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _complianceManager = Substitute.For<IJsonComplianceManager>();
 
         _service = new ReadModels(
             clusterClient,
             _grainFactory,
             _storage,
             expandoObjectConverter,
+            _complianceManager,
             new JsonSerializerOptions());
     }
 }

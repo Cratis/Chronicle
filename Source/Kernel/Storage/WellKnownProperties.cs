@@ -19,4 +19,9 @@ public static class WellKnownProperties
     /// The property name for whether an model instance is initialized.
     /// </summary>
     public const string ReadModelInstanceInitialized = "__initialized";
+
+    /// <summary>
+    /// The property name for the subject (compliance identity target) of the event.
+    /// </summary>
+    public const string Subject = "_subject";
 }
