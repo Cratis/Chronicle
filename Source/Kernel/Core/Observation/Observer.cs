@@ -6,6 +6,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -16,7 +17,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
-using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,7 +32,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="observerDefinition"><see cref="IPersistentState{T}"/> for the observer definition.</param>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
-/// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for looking up event type schemas.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -45,7 +46,7 @@ public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
-    IEventTypesStorage eventTypesStorage,
+    IStorage storage,
     IJsonComplianceManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<Observer> logger,
@@ -61,6 +62,7 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
+    Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -137,6 +139,9 @@ public partial class Observer(
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
+
+        var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
+        _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 

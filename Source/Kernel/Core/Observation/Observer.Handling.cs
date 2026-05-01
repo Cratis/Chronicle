@@ -185,9 +185,8 @@ public partial class Observer
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
-            if (await eventTypesStorage.HasFor(@event.Context.EventType.Id, @event.Context.EventType.Generation))
+            if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
-                var schema = await eventTypesStorage.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation);
                 var identifier = @event.Context.Subject.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
