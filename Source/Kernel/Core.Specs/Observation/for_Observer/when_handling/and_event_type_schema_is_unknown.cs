@@ -23,9 +23,6 @@ public class and_event_type_schema_is_unknown : given.an_observer_with_subscript
             Content = _originalContent
         };
 
-        // HasFor returns false (default set in an_observer Establish)
-        _eventTypesStorage.HasFor(event_type.Id, event_type.Generation).Returns(false);
-
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(callInfo =>
             {

@@ -114,6 +114,28 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => _eventTypesSubject;
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
+    {
+        var ids = eventTypeIds.Select(id => id.Value).ToList();
+        await using var scope = await database.EventStore(eventStore);
+        var eventTypes = await scope.DbContext.EventTypes.Where(e => ids.Contains(e.Id)).ToListAsync();
+        return eventTypes.Select(_ => _.ToKernel());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<Concepts.Events.EventType> eventTypes)
+    {
+        var eventTypesList = eventTypes.ToList();
+        var ids = eventTypesList.ConvertAll(et => et.Id.Value);
+        await using var scope = await database.EventStore(eventStore);
+        var storedTypes = await scope.DbContext.EventTypes.Where(e => ids.Contains(e.Id)).ToListAsync();
+        var storedTypeMap = storedTypes.ToDictionary(s => (EventTypeId)s.Id);
+        return eventTypesList
+            .Where(et => storedTypeMap.ContainsKey(et.Id))
+            .Select(et => storedTypeMap[et.Id].ToKernel(et.Generation));
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType) => throw new NotImplementedException();
 
     /// <inheritdoc/>

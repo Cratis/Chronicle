@@ -54,4 +54,5 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 | [Applying PII to ConceptAs types](pii-with-concepts.md) | How to mark domain value types as PII once and apply everywhere |
 | [Working with compliance from the client](client.md) | How to annotate events and ConceptAs types in your .NET client code |
 | [Read models and PII](read-models.md) | How PII encryption affects projections, reducers, and read model queries |
+| [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
 | [Event Redaction](../events/redaction.md) | Removing event content for GDPR right-to-erasure requests |
