@@ -1,14 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -39,6 +42,9 @@ public class an_observer : Specification
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
     protected IConfigurationForObserverProvider _configurationProvider;
+    protected IEventTypesStorage _eventTypesStorage;
+    protected IJsonComplianceManager _complianceManager;
+    protected IExpandoObjectConverter _expandoObjectConverter;
     protected Observers _observersConfig;
 
     async Task Establish()
@@ -50,6 +56,15 @@ public class an_observer : Specification
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
+        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+
+        // By default, no event types are registered, so events pass through unchanged.
+        _eventTypesStorage.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>()).Returns(false);
+        _silo.AddService(_eventTypesStorage);
+        _silo.AddService(_complianceManager);
+        _silo.AddService(_expandoObjectConverter);
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
