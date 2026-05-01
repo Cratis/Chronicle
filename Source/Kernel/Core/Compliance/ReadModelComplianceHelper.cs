@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
@@ -45,6 +46,35 @@ public static class ReadModelComplianceHelper
         var result = converter.ToExpandoObject(applied, schema);
         ((IDictionary<string, object?>)result)[WellKnownProperties.Subject] = identifier;
         return result;
+    }
+
+    /// <summary>
+    /// Decrypts PII fields in a read model <see cref="JsonObject"/> instance using the stored <c>__subject</c> field.
+    /// </summary>
+    /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the read model belongs to.</param>
+    /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> the read model belongs to.</param>
+    /// <param name="schema">The <see cref="JsonSchema"/> describing the read model's properties.</param>
+    /// <param name="instance">The <see cref="JsonObject"/> read model instance to decrypt.</param>
+    /// <returns>A <see cref="JsonObject"/> with PII fields decrypted, or the original instance if no subject is stored.</returns>
+    public static async Task<JsonObject> ReleaseJson(
+        IJsonComplianceManager complianceManager,
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        JsonSchema schema,
+        JsonObject instance)
+    {
+        if (!schema.HasComplianceMetadata())
+        {
+            return instance;
+        }
+
+        if (instance[WellKnownProperties.Subject]?.GetValue<string>() is not string identifier)
+        {
+            return instance;
+        }
+
+        return await complianceManager.Release(eventStore, eventStoreNamespace, schema, identifier, instance);
     }
 
     /// <summary>

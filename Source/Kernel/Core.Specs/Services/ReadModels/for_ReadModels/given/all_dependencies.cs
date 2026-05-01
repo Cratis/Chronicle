@@ -11,6 +11,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.given;
 
@@ -30,8 +31,11 @@ public class all_dependencies : Specification
     protected IJsonComplianceManager _complianceManager;
     protected Contracts.ReadModels.IReadModels _service;
 
+    protected IClusterClient _clusterClient;
+
     void Establish()
     {
+        _clusterClient = Substitute.For<IClusterClient, IKeyedServiceProvider>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
 
@@ -61,12 +65,11 @@ public class all_dependencies : Specification
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
 
-        var clusterClient = Substitute.For<IClusterClient>();
         var expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
 
         _service = new ReadModels(
-            clusterClient,
+            _clusterClient,
             _grainFactory,
             _storage,
             expandoObjectConverter,

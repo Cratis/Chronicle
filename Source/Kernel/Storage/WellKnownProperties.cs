@@ -23,5 +23,5 @@ public static class WellKnownProperties
     /// <summary>
     /// The property name for the subject (compliance identity target) of the event.
     /// </summary>
-    public const string Subject = "_subject";
+    public const string Subject = "__subject";
 }
