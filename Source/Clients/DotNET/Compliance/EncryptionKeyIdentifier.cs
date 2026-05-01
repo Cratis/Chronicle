@@ -14,4 +14,10 @@ public record EncryptionKeyIdentifier(string Value) : ConceptAs<string>(Value)
     /// </summary>
     /// <param name="value"><see cref="string"/> to convert from.</param>
     public static implicit operator EncryptionKeyIdentifier(string value) => new(value);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="Subject"/> to <see cref="EncryptionKeyIdentifier"/>.
+    /// </summary>
+    /// <param name="subject"><see cref="Subject"/> to convert from.</param>
+    public static implicit operator EncryptionKeyIdentifier(Subject subject) => new(subject.Value);
 }
