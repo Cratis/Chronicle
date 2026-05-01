@@ -32,6 +32,9 @@ internal sealed class InMemoryEventSequenceStorage(
     internal IReadOnlyList<KernelAppendedEvent> Events => _events;
 
     /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<EventSequenceState> GetState() =>
         Task.FromResult(new EventSequenceState
         {

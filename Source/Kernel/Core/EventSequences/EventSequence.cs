@@ -88,6 +88,7 @@ public class EventSequence(
 
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
 
+        await EventSequenceStorage.EnsureIndexes();
         await base.OnActivateAsync(cancellationToken);
     }
 

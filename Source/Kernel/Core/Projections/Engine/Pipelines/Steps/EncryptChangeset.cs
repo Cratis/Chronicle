@@ -1,13 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -35,11 +32,7 @@ public class EncryptChangeset(
             return context;
         }
 
-        var eventContext = context.Event.Context;
-        var subject = eventContext.Subject;
-        var identifier = subject is not null && subject.IsSet
-            ? subject.Value
-            : eventContext.EventSourceId.Value;
+        var identifier = context.Event.Context.Subject.Value;
 
         var schema = projection.TargetReadModelSchema;
         var currentState = context.Changeset.CurrentState;
@@ -55,9 +48,9 @@ public class EncryptChangeset(
 
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
 
-        if (hasDifferences && differences is not null && differences.Any())
+        if (hasDifferences && differences?.Any() == true)
         {
-            context.Changeset.Add(new PropertiesChanged<ExpandoObject>(encrypted, differences));
+            context.Changeset.Add(new PropertiesChanged<System.Dynamic.ExpandoObject>(encrypted, differences));
         }
 
         return context;
