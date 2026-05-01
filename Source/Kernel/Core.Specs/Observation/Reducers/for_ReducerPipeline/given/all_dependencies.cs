@@ -101,7 +101,7 @@ public class all_dependencies : Specification
     }
 
     protected ReducerContext CreateContext(string eventSourceId, Subject? subject = null) =>
-        new(new[] { CreateEvent(eventSourceId, subject) }, new Key(eventSourceId, new ArrayIndexers([])));
+        new([CreateEvent(eventSourceId, subject)], new Key(eventSourceId, new ArrayIndexers([])));
 
     protected ReducerDelegate CreateReducer(ExpandoObject? returnState) =>
         (_, _) => Task.FromResult(new ReducerSubscriberResult(

@@ -5,10 +5,8 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
@@ -34,8 +32,8 @@ public class and_event_has_pii_property : given.an_observer_with_subscription_fo
 
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
         _complianceManager.Release(
-            Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(),
-            Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(),
+            Arg.Any<Concepts.EventStoreName>(),
+            Arg.Any<Concepts.EventStoreNamespaceName>(),
             Arg.Any<JsonSchema>(),
             Arg.Any<string>(),
             Arg.Any<JsonObject>())
@@ -52,9 +50,10 @@ public class and_event_has_pii_property : given.an_observer_with_subscription_fo
 
     async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
-    [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(
-        Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(),
-        Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(),
+    [Fact]
+    void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(
+        Arg.Any<Concepts.EventStoreName>(),
+        Arg.Any<Concepts.EventStoreNamespaceName>(),
         Arg.Any<JsonSchema>(),
         Arg.Any<string>(),
         Arg.Any<JsonObject>());

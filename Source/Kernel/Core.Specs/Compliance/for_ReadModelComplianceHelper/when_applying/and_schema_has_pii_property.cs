@@ -3,8 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Compliance.for_ReadModelComplianceHelper.when_applying;

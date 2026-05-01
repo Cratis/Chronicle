@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
@@ -38,22 +37,18 @@ public class DecryptInitialState(
             return context;
         }
 
-        var initialState = context.Changeset.InitialState;
-        var dict = (IDictionary<string, object?>)initialState;
-        if (!dict.ContainsKey(WellKnownProperties.Subject))
+        if (!((IDictionary<string, object?>)context.Changeset.InitialState).ContainsKey(WellKnownProperties.Subject))
         {
             return context;
         }
 
-        var decrypted = await ReadModelComplianceHelper.Release(
+        context.Changeset.InitialState = await ReadModelComplianceHelper.Release(
             complianceManager,
             eventStore,
             eventStoreNamespace,
             schema,
-            initialState,
+            context.Changeset.InitialState,
             expandoObjectConverter);
-
-        context.Changeset.InitialState = decrypted;
         return context;
     }
 }

@@ -3,8 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -17,7 +15,7 @@ public class and_read_model_has_pii_and_initial_state_exists : given.all_depende
 
     void Establish()
     {
-        var property = new JsonSchemaProperty
+        _schema.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
@@ -27,7 +25,6 @@ public class and_read_model_has_pii_and_initial_state_exists : given.all_depende
                 }
             }
         };
-        _schema.Properties["name"] = property;
 
         _initialState = new ExpandoObject();
         ((IDictionary<string, object?>)_initialState)[WellKnownProperties.Subject] = EventSourceIdValue;

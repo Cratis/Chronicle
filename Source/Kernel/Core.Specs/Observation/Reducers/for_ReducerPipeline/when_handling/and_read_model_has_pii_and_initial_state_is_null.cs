@@ -4,7 +4,6 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Observation.Reducers.for_ReducerPipeline.when_handling;
@@ -15,7 +14,7 @@ public class and_read_model_has_pii_and_initial_state_is_null : given.all_depend
 
     void Establish()
     {
-        var property = new JsonSchemaProperty
+        _schema.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
@@ -25,7 +24,6 @@ public class and_read_model_has_pii_and_initial_state_is_null : given.all_depend
                 }
             }
         };
-        _schema.Properties["name"] = property;
 
         _returnedState = new ExpandoObject();
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));

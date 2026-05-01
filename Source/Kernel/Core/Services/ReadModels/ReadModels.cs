@@ -142,7 +142,7 @@ internal sealed class ReadModels(
             decryptedInstances.Add(decrypted);
         }
 
-        var instancesAsJson = decryptedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
+        var instancesAsJson = decryptedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
         return new()
         {
             Instances = instancesAsJson,

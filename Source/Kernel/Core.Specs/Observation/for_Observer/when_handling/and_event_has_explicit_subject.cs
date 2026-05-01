@@ -5,10 +5,8 @@ using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
@@ -31,15 +29,15 @@ public class and_event_has_explicit_subject : given.an_observer_with_subscriptio
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
         _complianceManager
             .When(m => m.Release(
-                Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(),
-                Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(),
+                Arg.Any<Concepts.EventStoreName>(),
+                Arg.Any<Concepts.EventStoreNamespaceName>(),
                 Arg.Any<JsonSchema>(),
                 Arg.Any<string>(),
                 Arg.Any<JsonObject>()))
             .Do(callInfo => _capturedIdentifier = callInfo.ArgAt<string>(3));
         _complianceManager.Release(
-            Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(),
-            Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(),
+            Arg.Any<Concepts.EventStoreName>(),
+            Arg.Any<Concepts.EventStoreNamespaceName>(),
             Arg.Any<JsonSchema>(),
             Arg.Any<string>(),
             Arg.Any<JsonObject>())
