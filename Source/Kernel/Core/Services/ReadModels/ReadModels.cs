@@ -303,17 +303,23 @@ internal sealed class ReadModels(
 
                 var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
 
-                var subscription = await stream.SubscribeAsync((changeset, _) =>
+                var schema = definition.GetSchemaForLatestGeneration();
+                var subscription = await stream.SubscribeAsync(async (changeset, _) =>
                 {
+                    var decrypted = await ReadModelComplianceHelper.ReleaseJson(
+                        complianceManager,
+                        request.EventStore,
+                        changeset.Namespace,
+                        schema,
+                        changeset.ReadModel);
+
                     observer.OnNext(new ReadModelChangeset
                     {
                         Namespace = changeset.Namespace,
                         ModelKey = changeset.ReadModelKey,
-                        ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
+                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
                         Removed = false
                     });
-
-                    return Task.CompletedTask;
                 });
 
                 context.CancellationToken.Register(() => subscription.UnsubscribeAsync().GetAwaiter().GetResult());

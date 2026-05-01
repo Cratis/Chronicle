@@ -120,10 +120,16 @@ public class ProjectionObserverSubscriber(
             {
                 var model = expandoObjectConverter.ToJsonObject(changeset.CurrentState, _schema!);
 
-                // Mirror the metadata field that the storage sink writes so that watched models
+                // Mirror the metadata fields that the storage sink writes so that watched models
                 // match what a direct read from the underlying store returns.
                 model[WellKnownProperties.LasHandledEventSequenceNumber] =
                     JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
+
+                var stateDict = (IDictionary<string, object?>)changeset.CurrentState;
+                if (stateDict.TryGetValue(WellKnownProperties.Subject, out var subjectValue) && subjectValue is string subject)
+                {
+                    model[WellKnownProperties.Subject] = JsonValue.Create(subject);
+                }
 
                 await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), model));
             }
