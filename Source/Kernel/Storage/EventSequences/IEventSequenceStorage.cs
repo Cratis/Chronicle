@@ -16,6 +16,12 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Ensure any required indexes exist on the event sequence collection.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureIndexes();
+
+    /// <summary>
     /// Get the state of an event sequence.
     /// </summary>
     /// <returns><see cref="EventSequenceState"/> for the event sequence.</returns>

@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
@@ -43,10 +42,11 @@ public class and_event_type_schema_is_unknown : given.an_observer_with_subscript
         await _observer.Handle("Something", [appendedEvent]);
     }
 
-    [Fact] void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().Release(
-        Arg.Any<Cratis.Chronicle.Concepts.EventStoreName>(),
-        Arg.Any<Cratis.Chronicle.Concepts.EventStoreNamespaceName>(),
-        Arg.Any<Cratis.Chronicle.Schemas.JsonSchema>(),
+    [Fact]
+    void should_not_call_compliance_manager() => _complianceManager.DidNotReceive().Release(
+        Arg.Any<Concepts.EventStoreName>(),
+        Arg.Any<Concepts.EventStoreNamespaceName>(),
+        Arg.Any<Schemas.JsonSchema>(),
         Arg.Any<string>(),
         Arg.Any<System.Text.Json.Nodes.JsonObject>());
     [Fact] void should_pass_event_through_unchanged() => _receivedEvents.First().Content.ShouldEqual(_originalContent);

@@ -35,6 +35,9 @@ public class EventSequenceStorage(
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);

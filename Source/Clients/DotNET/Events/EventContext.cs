@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Events;
 /// <param name="Tags">The tags associated with the event.</param>
 /// <param name="Hash">The <see cref="EventHash"/> of the event content.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
-/// <param name="Subject">The <see cref="Subject"/> identifying the compliance target for this event. Defaults to <see cref="Subject.NotSet"/>.</param>
+/// <param name="Subject">The <see cref="Subject"/> identifying the compliance target for this event. Always set — defaults to the <see cref="EventSourceId"/> value when no explicit subject is provided.</param>
 public record EventContext(
     EventType EventType,
     EventSourceType EventSourceType,
@@ -41,13 +41,8 @@ public record EventContext(
     IEnumerable<Tag> Tags,
     EventHash Hash,
     EventObservationState ObservationState = EventObservationState.Initial,
-    Subject? Subject = null)
+    Subject Subject = default!)
 {
-    /// <summary>
-    /// Gets a value indicating whether the subject is the event source id (no explicit <see cref="Subject"/> was set, or <see cref="Subject"/> equals <see cref="EventSourceId"/>).
-    /// </summary>
-    public bool SubjectIsEventSourceId => Subject is null || !Subject.IsSet || Subject.Value == EventSourceId.Value;
-
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
     /// </summary>
@@ -62,6 +57,11 @@ public record EventContext(
         EventStreamId.Default,
         EventSequenceNumber.Unavailable,
         CorrelationId.NotSet);
+
+    /// <summary>
+    /// Gets a value indicating whether the subject is the event source id (no explicit <see cref="Subject"/> was set, or <see cref="Subject"/> equals <see cref="EventSourceId"/>).
+    /// </summary>
+    public bool SubjectIsEventSourceId => !Subject.IsSet || Subject.Value == EventSourceId.Value;
 
     /// <summary>
     /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
@@ -103,7 +103,8 @@ public record EventContext(
             [],
             Identity.NotSet,
             [],
-            EventHash.NotSet);
+            EventHash.NotSet,
+            Subject: new Subject(eventSourceId.Value));
     }
 
     /// <summary>

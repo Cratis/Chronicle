@@ -3,8 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 
@@ -16,7 +14,7 @@ public class and_subject_is_different_from_event_source_id : given.all_dependenc
 
     void Establish()
     {
-        var property = new JsonSchemaProperty
+        _schema.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
@@ -26,7 +24,6 @@ public class and_subject_is_different_from_event_source_id : given.all_dependenc
                 }
             }
         };
-        _schema.Properties["name"] = property;
 
         _returnedState = new ExpandoObject();
         _sink.FindOrDefault(Arg.Any<Concepts.Keys.Key>()).Returns(Task.FromResult<ExpandoObject?>(null));

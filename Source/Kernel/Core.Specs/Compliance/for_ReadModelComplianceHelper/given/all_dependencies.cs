@@ -27,7 +27,7 @@ public class all_dependencies : Specification
         _converter = Substitute.For<IExpandoObjectConverter>();
 
         _schemaWithPii = new JsonSchema();
-        var property = new JsonSchemaProperty
+        _schemaWithPii.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
@@ -37,7 +37,6 @@ public class all_dependencies : Specification
                 }
             }
         };
-        _schemaWithPii.Properties["name"] = property;
 
         _schemaWithoutPii = new JsonSchema();
         _schemaWithoutPii.Properties["value"] = new JsonSchemaProperty();

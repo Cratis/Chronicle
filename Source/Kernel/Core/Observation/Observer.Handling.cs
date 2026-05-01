@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -189,9 +188,7 @@ public partial class Observer
             if (await eventTypesStorage.HasFor(@event.Context.EventType.Id, @event.Context.EventType.Generation))
             {
                 var schema = await eventTypesStorage.GetFor(@event.Context.EventType.Id, @event.Context.EventType.Generation);
-                var identifier = @event.Context.Subject?.IsSet == true
-                    ? @event.Context.Subject.Value
-                    : @event.Context.EventSourceId.Value;
+                var identifier = @event.Context.Subject.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
                     @event.Context.EventStore,

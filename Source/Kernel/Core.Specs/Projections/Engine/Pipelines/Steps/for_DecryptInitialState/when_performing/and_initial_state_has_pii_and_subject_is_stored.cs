@@ -3,8 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
@@ -18,14 +16,13 @@ public class and_initial_state_has_pii_and_subject_is_stored : given.all_depende
 
     void Establish()
     {
-        var property = new JsonSchemaProperty
+        _schema.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
                 { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
             }
         };
-        _schema.Properties["name"] = property;
 
         dynamic state = new ExpandoObject();
         state.name = "encrypted-name";

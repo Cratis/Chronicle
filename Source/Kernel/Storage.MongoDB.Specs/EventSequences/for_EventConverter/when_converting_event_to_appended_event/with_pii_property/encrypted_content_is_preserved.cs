@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventConverter.whe
 
 public class encrypted_content_is_preserved : given.an_event_converter
 {
-    static readonly string _encryptedValue = "encrypted::abc123";
+    const string EncryptedValue = "encrypted::abc123";
     Event _event;
     AppendedEvent _result;
     EventTypeSchema _schema;
@@ -26,7 +26,7 @@ public class encrypted_content_is_preserved : given.an_event_converter
             new JsonSchema());
 
         _convertedContent = new ExpandoObject();
-        ((IDictionary<string, object?>)_convertedContent)["name"] = _encryptedValue;
+        ((IDictionary<string, object?>)_convertedContent)["name"] = EncryptedValue;
 
         _event = CreateEvent();
         _eventTypesStorage.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>()).Returns(true);
@@ -37,5 +37,5 @@ public class encrypted_content_is_preserved : given.an_event_converter
     async Task Because() => _result = await _converter.ToAppendedEvent(_event);
 
     [Fact] void should_use_schema_based_converter() => _expandoObjectConverter.Received(1).ToExpandoObject(Arg.Any<JsonObject>(), Arg.Any<JsonSchema>());
-    [Fact] void should_return_the_raw_converted_content() => ((IDictionary<string, object?>)_result.Content)["name"].ShouldEqual(_encryptedValue);
+    [Fact] void should_return_the_raw_converted_content() => ((IDictionary<string, object?>)_result.Content)["name"].ShouldEqual(EncryptedValue);
 }

@@ -74,11 +74,7 @@ public class ReducerPipeline(
 
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return;
 
-        var firstEventContext = context.Events.First().Context;
-        var subject = firstEventContext.Subject;
-        var identifier = subject is not null && subject.IsSet
-            ? subject.Value
-            : firstEventContext.EventSourceId.Value;
+        var identifier = context.Events.First().Context.Subject.Value;
 
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, context.Events.First(), initial ?? new ExpandoObject());
         if (result.ReadModelState is null)

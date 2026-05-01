@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_EncryptChangeset.when_performing;
@@ -15,14 +13,13 @@ public class and_read_model_has_pii_property : given.all_dependencies
 
     void Establish()
     {
-        var property = new JsonSchemaProperty
+        _schema.Properties["name"] = new JsonSchemaProperty
         {
             ExtensionData = new Dictionary<string, object?>
             {
                 { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
             }
         };
-        _schema.Properties["name"] = property;
         _context = CreateContext(EventSourceIdValue);
     }
 
