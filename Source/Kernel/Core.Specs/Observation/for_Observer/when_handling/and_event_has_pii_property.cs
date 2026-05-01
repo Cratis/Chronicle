@@ -4,31 +4,20 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
-public class and_event_has_pii_property : given.an_observer_with_subscription_for_specific_event_type
+public class and_event_has_pii_property : given.an_observer_with_subscription_and_schema_for_event_type
 {
     IEnumerable<AppendedEvent> _receivedEvents = [];
     ExpandoObject _decryptedContent;
-    EventTypeSchema _schema;
 
     void Establish()
     {
         _decryptedContent = new ExpandoObject();
         ((IDictionary<string, object?>)_decryptedContent)["ssn"] = "123-45-6789";
-
-        _schema = new EventTypeSchema(
-            event_type,
-            EventTypeOwner.Client,
-            EventTypeSource.Code,
-            new JsonSchema());
-
-        _eventTypesStorage.HasFor(event_type.Id, event_type.Generation).Returns(true);
-        _eventTypesStorage.GetFor(event_type.Id, event_type.Generation).Returns(_schema);
 
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
         _complianceManager.Release(

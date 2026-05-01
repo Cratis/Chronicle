@@ -4,28 +4,18 @@
 using System.Dynamic;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
-public class and_event_has_explicit_subject : given.an_observer_with_subscription_for_specific_event_type
+public class and_event_has_explicit_subject : given.an_observer_with_subscription_and_schema_for_event_type
 {
     static readonly Subject _subject = new("explicit-subject-value");
     string? _capturedIdentifier;
-    EventTypeSchema _schema;
 
     void Establish()
     {
-        _schema = new EventTypeSchema(
-            event_type,
-            EventTypeOwner.Client,
-            EventTypeSource.Code,
-            new JsonSchema());
-
-        _eventTypesStorage.HasFor(event_type.Id, event_type.Generation).Returns(true);
-        _eventTypesStorage.GetFor(event_type.Id, event_type.Generation).Returns(_schema);
         _expandoObjectConverter.ToJsonObject(Arg.Any<ExpandoObject>(), Arg.Any<JsonSchema>()).Returns(new JsonObject());
         _complianceManager
             .When(m => m.Release(
