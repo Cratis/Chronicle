@@ -4,57 +4,83 @@ uid: Chronicle.Compliance.ReadModels
 
 # Read models and PII
 
-Read models are built by projecting events from the event log. When those events contain PII-encrypted values, Chronicle decrypts them transparently before delivering the event data to your projection or reducer. The read model itself stores the decrypted plaintext — the encryption boundary is the event log.
+Chronicle stores PII fields encrypted at rest in both the event log and managed read models (projections and reducers). The encryption and decryption is handled automatically by the kernel — your application code works with plaintext values at all times.
 
-## How decryption flows through projections
+## Observer decryption
 
-When a projection processes an event, the Chronicle kernel:
+All observers — reactors, webhooks, reducers, and projections — receive decrypted events from a single, central decryption point in `Observer.Handle()`. This means encryption is applied consistently regardless of the observer type, and no observer implementation needs to handle decryption itself.
 
-1. Reads the encrypted ciphertext from the event log.
-2. Looks up the encryption key for the event source identifier.
-3. Decrypts all PII properties before passing the event to the projection handler.
-4. The projection writes the decrypted value into the read model.
+The compliance identifier used for key lookup follows this rule: if an explicit `Subject` was set on the event at append time, that value is used. Otherwise, the `EventSourceId` is used as the fallback identifier. This mirrors the encryption key that was used when the event was originally written to the event log.
 
-This means your projection code and read model records are written exactly as if the data were never encrypted:
+## Projections — automatic PII lineage
+
+Projection-backed read models benefit from automatic PII lineage. The kernel knows which read model properties are mapped from PII event properties and encrypts them transparently before writing to storage. No `[PII]` attribute is needed on the read model type.
 
 ```csharp
 [EventType]
 public record EmployeeRegistered(PersonName Name, string Department);
 
 [ReadModel]
-public record Employee(EmployeeId Id, string Name, string Department)
+[FromEvent<EmployeeRegistered>]
+public record Employee(
+    [Key] EmployeeId Id,
+    string Name,        // mapped from PersonName — stored encrypted at rest
+    string Department)
 {
-    // ...
-}
-
-public class EmployeeProjection : IProjectionFor<Employee>
-{
-    public void Define(IProjectionBuilderFor<Employee> builder) =>
-        builder.From<EmployeeRegistered>(e => e
-            .Set(m => m.Name).To(ev => ev.Name)   // PersonName is already decrypted
-            .Set(m => m.Department).To(ev => ev.Department));
+    public static ISubject<Employee?> ById(EmployeeId id) =>
+        Query.ForEventSource<Employee>(id);
 }
 ```
 
-## What happens when the encryption key is deleted
+The `Name` property is stored encrypted in MongoDB because `PersonName` is a PII-marked type. When a query returns `Employee` records, the kernel decrypts the values before they reach the caller.
 
-Deleting an encryption key is the Chronicle mechanism for GDPR erasure. Once the key is gone, decryption of PII properties for that event source will fail. Chronicle handles this gracefully:
+## Reducers — explicit `[PII]` required
 
-- PII properties decrypt to an empty value (empty string for `string`-backed types).
-- Non-PII properties are returned as-is.
-- The read model update still runs — it just stores empty values for the PII fields.
-- Existing read model documents that were written before erasure continue to contain the decrypted value until they are re-projected.
+Reducers use arbitrary C# logic to compute state. The kernel cannot infer which properties derive from PII fields because the transformation is opaque. You must annotate PII properties on the read model record with `[PII]`.
+
+```csharp
+[EventType]
+public record PatientAdmitted(PersonName Name, DateTimeOffset AdmittedAt);
+
+public record PatientSummary(Guid PatientId, [PII] string Name, DateTimeOffset LastAdmittedAt);
+
+public class PatientSummaryReducer : IReducerFor<PatientSummary>
+{
+    public Task<PatientSummary> On(PatientAdmitted @event, PatientSummary? current, EventContext context)
+    {
+        return Task.FromResult(new PatientSummary(
+            Guid.Parse(context.EventSourceId.Value),
+            @event.Name,
+            @event.AdmittedAt));
+    }
+}
+```
+
+The `[PII]` attribute on `Name` tells the kernel to encrypt that property before storage and decrypt it on retrieval.
+
+## The `_subject` field
+
+Every managed read model document written by Chronicle contains a reserved `_subject` field. This field stores the compliance identifier (the `Subject` or `EventSourceId`) that was used as the encryption key reference for that document. Chronicle uses `_subject` to look up the correct key when decrypting on retrieval.
+
+> **Do not** declare a property named `_subject` in your read model records. Chronicle reserves this name for internal use.
+
+## GDPR erasure
+
+Deleting an encryption key is the Chronicle mechanism for GDPR erasure:
+
+1. Delete the key for the subject (the data subject's identifier) via the Compliance API.
+2. Trigger a re-projection or re-reduction of the affected read models.
+
+After key deletion, decryption of PII properties for that subject fails gracefully — Chronicle writes empty values for erased PII fields. Existing read model documents that were written before erasure continue to contain encrypted ciphertext until they are re-projected.
 
 > [!IMPORTANT]
-> If a complete and verifiable erasure is required, you must trigger a re-projection of the read model after deleting the key. This overwrites any cached plaintext values in the read model store.
+> Re-projection is required for a complete, verifiable erasure. Until re-projection runs, the ciphertext remains in the read model store. Chronicle cannot decrypt it, but the ciphertext is still present.
 
-## Re-projecting after key deletion
+For full erasure of event content, combine key deletion with [event redaction](../events/redaction.md).
 
-Chronicle's catch-up projection mechanism lets you replay all events and rebuild the read model from scratch. After deleting the key for a particular event source, force a catch-up for that event source to ensure the read model reflects the erased state.
+## Querying
 
-## Querying PII data
-
-Read model queries return the decrypted plaintext value. There is nothing special to do in query code:
+Read model queries are transparent to PII encryption. No changes to query code are needed:
 
 ```csharp
 [ReadModel]
@@ -65,30 +91,4 @@ public record Employee(EmployeeId Id, string Name, string Department)
 }
 ```
 
-The `Name` field contains the decrypted person name when the key exists, or an empty string when the key has been deleted.
-
-## Storing PII in read models
-
-Because read models store decrypted plaintext, they are themselves subject to data protection requirements. Consider:
-
-- Applying appropriate access controls to the read model store (MongoDB collection permissions, for example).
-- Treating the read model store as sensitive data in your infrastructure security posture.
-- Re-projecting affected read models as part of your GDPR erasure workflow to propagate key deletion.
-
-For full erasure of event content, combine key deletion with [event redaction](../events/redaction.md).
-
-## Model-bound projections and PII
-
-Model-bound projections using `[FromEvent<T>]` attributes behave identically — decryption happens at the event layer before the attribute mapping runs.
-
-```csharp
-[ReadModel]
-[FromEvent<EmployeeRegistered>]
-public record Employee(
-    [Key] EmployeeId Id,
-    string Name,        // mapped from PersonName — arrives decrypted
-    string Department)
-{
-    // ...
-}
-```
+Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result.
