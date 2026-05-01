@@ -60,7 +60,7 @@ public class EventConverter(
                 await identityStorage.GetFor(@event.CausedBy),
                 @event.Tags.Select(_ => new Tag(_)).ToArray(),
                 hash,
-                Subject: @event.Subject ?? Subject.NotSet),
+                Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value)),
             resolvedContent)
         {
             OriginalContent = originalContent,
