@@ -1,105 +1,100 @@
 ---
-applyTo: "**"
+uid: Chronicle.Compliance.PII
 ---
 
-# PII
+# PII Attribute
 
-**Personally Identifiable Information** — names, addresses, national identification numbers,
-contact details, and anything else that can identify a real person — is the most common
-compliance concern. GDPR, CCPA, and similar regimes all require that PII can be *deleted*
-on request, even when the system is fundamentally append-only.
+The `[PII]` attribute marks data as personally identifiable information (PII) under GDPR. When Chronicle sees this attribute on an event property or a `ConceptAs<T>` type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
 
-Chronicle solves this by encrypting PII properties with a **per-subject encryption key**. When
-the key is deleted, every PII property for that subject becomes unrecoverable — the events
-themselves remain intact, but the sensitive fields are permanently inaccessible.
+```csharp
+using Cratis.Chronicle.Compliance.GDPR;
+```
 
-## Marking properties as PII
+## Attribute definition
 
-Annotate the specific properties that contain PII. There are two ways:
+```csharp
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
+public sealed class PIIAttribute(string details = "") : Attribute
+```
 
-### The `[PII]` attribute
+The optional `details` parameter lets you record *why* the value is classified as PII — for example, the legal basis under which it is collected or the retention period. This information is stored in the event schema and can be used by compliance reporting tools.
+
+```csharp
+[PII("Collected under GDPR Art. 6(1)(b) — necessary for contract performance")]
+public record PersonName(string Value) : ConceptAs<string>(Value);
+```
+
+## Where the attribute is valid
+
+| Target | Supported | Notes |
+|---|---|---|
+| `ConceptAs<T>` class | Yes | Preferred approach — marks the concept type itself as PII |
+| Event property | Yes | Marks a single property of an event as PII |
+| `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
+| Any other class type | **No** | Throws `PIIAppliedToNonConceptAsType` at runtime |
+
+## Applying to an event property
+
+You can mark a single property on an event record as PII. This is useful when the property type is a primitive and you cannot or do not want to introduce a dedicated concept type.
 
 ```csharp
 [EventType]
-public record CustomerRegistered(
-    CustomerId CustomerId,
-    string CompanyName,
-    [PII] string ContactEmail,
-    [PII] string ContactPhone);
+public record EmployeeRegistered(
+    [PII] string FirstName,
+    [PII] string LastName,
+    string Department);
 ```
 
-Only properties marked with `[PII]` are encrypted. Plain properties are stored as written.
+When this event is written, `FirstName` and `LastName` are encrypted. `Department` is stored as plaintext.
 
-### The `PIIConceptAs<T>` base record
+## Applying to a ConceptAs type
 
-When the PII nature of a value is intrinsic to its meaning (a social security number is always
-PII no matter where it appears), define the value type itself as PII:
+The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every property across every event that uses this type is then automatically encrypted — you declare the rule once and it applies everywhere.
 
 ```csharp
-public record SocialSecurityNumber(string Value) : PIIConceptAs<string>(Value);
-
-[EventType]
-public record TaxpayerRegistered(TaxpayerId Id, SocialSecurityNumber Ssn);
+[PII]
+public record PersonName(string Value) : ConceptAs<string>(Value)
+{
+    public static readonly PersonName NotSet = new(string.Empty);
+    public static implicit operator string(PersonName name) => name.Value;
+    public static implicit operator PersonName(string value) => new(value);
+}
 ```
 
-Any property typed as `SocialSecurityNumber` is automatically encrypted without needing an
-attribute at every use site.
+> [!TIP]
+> Use <xref:Fundamentals.Concepts> as a reference for the full `ConceptAs<T>` pattern. For guidance on declaring compliance on concept types, see [Applying PII to ConceptAs types](pii-with-concepts.md).
 
-## Subjects and encryption keys
+## Constraints
 
-Encryption keys are stored under a [`Subject`](./../concepts/subject.md). By default, the
-subject is the `EventSourceId` of the append. When you append an event that carries PII for
-the first time for a subject, Chronicle:
+### EventSourceId is not supported
 
-1. Generates a unique RSA key pair for that subject,
-2. Stores it in the encryption key store (MongoDB or Entity Framework-backed),
-3. Encrypts each `[PII]` property with the public key.
-
-Subsequent appends reuse the same key. Reads decrypt transparently with the stored private
-key.
-
-## Explicit subjects
-
-When the subject of an event is different from its event source, pass `Subject` explicitly:
+Applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `PIINotSupportedOnEventSourceId` at runtime:
 
 ```csharp
-await eventStore.EventLog.Append(
-    eventSourceId: orderId,
-    @event: new ShippingAddressChanged(street, city),
-    subject: customerId);
+// ❌ This will throw PIINotSupportedOnEventSourceId
+[PII]
+public record EmployeeId(Guid Value) : EventSourceId<Guid>(Value);
 ```
 
-This keys the order's PII under the *customer*, not under the order. When that customer
-invokes their right to erasure, a single key deletion scrubs every order, invoice, and
-interaction record at once.
+Event source identifiers are used to look up encryption keys and group events. Encrypting them would make key lookup impossible. If the identifier itself is sensitive, use a non-sensitive surrogate (such as a random `Guid`) as the event source identifier and store the sensitive value in a `[PII]`-marked event property.
 
-## Implicit subject with `[Subject]`
+### Non-ConceptAs class types are not supported
 
-To avoid threading the subject through every call site, mark the responsible property with
-`[Subject]`. Chronicle derives the subject automatically at append time:
+Applying `[PII]` to a class that does not inherit from `ConceptAs<T>` throws `PIIAppliedToNonConceptAsType` at runtime:
 
 ```csharp
-[EventType]
-public record ShippingAddressChanged(
-    OrderId Order,
-    [Subject] CustomerId Customer,
-    [PII] string Street,
-    [PII] string City);
-
-// Subject is read from the Customer property automatically.
-await eventLog.Append(orderId, new ShippingAddressChanged(orderId, customerId, "123 Main St", "Springfield"));
+// ❌ This will throw PIIAppliedToNonConceptAsType
+[PII]
+public class SomeArbitraryClass { }
 ```
 
-An explicit `subject` argument always takes precedence over a `[Subject]` property.
+The `[PII]` attribute at the class level is reserved for `ConceptAs<T>` types. Use a property-level `[PII]` annotation instead if you need to mark individual fields on a class.
 
-## Honoring deletion requests
+## Details parameter
 
-Deleting a subject's encryption key is the compliance operation. Use the `IPIIManager` grain:
+The `details` parameter is a free-text description stored in the event schema. It is never used for encryption — it exists solely to record *why* a value is classified as PII for compliance documentation and auditing purposes.
 
 ```csharp
-await piiManager.DeleteEncryptionKeyFor(customerId);
+[PII("Full legal name — required for contract identification")]
+public record LegalName(string Value) : ConceptAs<string>(Value);
 ```
-
-After the delete, the events still exist — their non-PII fields still project correctly — but
-any attempt to read a PII property fails because the key no longer exists. This preserves the
-integrity of the event log while satisfying the "right to be forgotten".
