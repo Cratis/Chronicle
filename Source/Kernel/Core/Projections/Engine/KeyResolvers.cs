@@ -202,6 +202,35 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         return arrayIndexers;
     }
 
+    /// <summary>
+    /// Builds the full property path from the root document to the identified-by property of
+    /// <paramref name="projection"/>, walking up the parent chain to collect all intermediate
+    /// array segment names.
+    /// </summary>
+    /// <param name="projection">The projection whose chain is walked to build the full path.</param>
+    /// <param name="identifiedByProperty">The property that identifies items at the leaf level.</param>
+    /// <remarks>
+    /// For a 3-level hierarchy (Root → Feature → Slice), the Feature projection's
+    /// <c>ChildrenPropertyPath</c> is already relative to root (e.g. "features"), so the path
+    /// is simply "features.id". For a 4-level hierarchy (Root → Feature → Slice → EventItem),
+    /// the Slice projection's <c>ChildrenPropertyPath</c> is "slices" (relative to Feature),
+    /// not to root. Walking up the chain gives ["features", "slices"], yielding the correct
+    /// MongoDB path "features.slices.id" for a flat document query.
+    /// </remarks>
+    static PropertyPath BuildFullParentChildPropertyPath(IProjection projection, PropertyPath identifiedByProperty)
+    {
+        var segments = new List<string>();
+        var current = projection;
+        while (current?.ChildrenPropertyPath.IsSet == true)
+        {
+            segments.Insert(0, current.ChildrenPropertyPath.Path);
+            current = current.Parent;
+        }
+
+        segments.Add(identifiedByProperty.Path);
+        return new PropertyPath(string.Join('.', segments));
+    }
+
     async Task<KeyResolverResult> ResolveParentKey(
         KeyResolver parentKeyResolver,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
@@ -464,11 +493,13 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return new ParentEventResult(null, KeyResolverResult.Deferred(deferredFuture));
         }
 
-        // For root-level parents (ChildrenPropertyPath not set), use the child's path
-        // For nested parents, use the parent's path to query at the correct level
-        var childPropertyPath = parentProjection.ChildrenPropertyPath.IsSet
-            ? parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty
-            : projection.ChildrenPropertyPath + parentIdentifiedByProperty;
+        // Build the full path from root to the parent's identified-by property.
+        // For a 3-level hierarchy (Root → Feature → Slice), the parent's ChildrenPropertyPath
+        // is already relative to root (e.g. "features"), so "features.id" is correct.
+        // For a 4-level hierarchy (Root → Feature → Slice → EventItem), the parent (Slice) has
+        // ChildrenPropertyPath = "slices" which is relative to Feature, not to root. We need
+        // "features.slices.id" — so we must walk up the hierarchy to collect all segments.
+        var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
@@ -587,7 +618,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
             if (parentIdentifiedByProperty is not null)
             {
-                var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                // Use the full path from root to avoid missing intermediate array segments
+                // when the parent is itself nested more than one level below root.
+                var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
                 logger.CollectParentIndexersLookup(childPropertyPath.Path, childKeyValue);
 
                 var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, childKeyValue);
