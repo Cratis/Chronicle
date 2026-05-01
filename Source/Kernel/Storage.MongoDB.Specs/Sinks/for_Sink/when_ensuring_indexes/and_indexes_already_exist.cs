@@ -11,9 +11,10 @@ public class and_indexes_already_exist : given.a_sink_with_indexes
     void Establish()
     {
         var existingIndexDocument = new BsonDocument("name", $"chronicle_idx_{_indexedProperty.Path}");
+        var subjectIndexDocument = new BsonDocument("name", "subject_index");
         _indexCursor.MoveNextAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(true), Task.FromResult(false));
-        _indexCursor.Current.Returns([existingIndexDocument]);
+        _indexCursor.Current.Returns([existingIndexDocument, subjectIndexDocument]);
     }
 
     async Task Because() => await _sink.EnsureIndexes();
