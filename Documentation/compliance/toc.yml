@@ -1,4 +1,10 @@
-- name: PII
+- name: Overview
+  href: index.md
+- name: PII Attribute
   href: pii.md
-- name: Working with Compliance from the Client
+- name: Applying PII to ConceptAs types
+  href: pii-with-concepts.md
+- name: Working with compliance from the client
   href: client.md
+- name: Read models and PII
+  href: read-models.md
