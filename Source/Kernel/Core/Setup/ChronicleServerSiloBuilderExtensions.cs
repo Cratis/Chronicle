@@ -124,7 +124,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 projections,
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, jsonSerializerOptions),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),

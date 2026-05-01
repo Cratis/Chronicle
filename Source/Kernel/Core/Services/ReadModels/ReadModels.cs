@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -28,12 +29,14 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
+    IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
     /// <inheritdoc/>
@@ -125,7 +128,21 @@ internal sealed class ReadModels(
             skip,
             request.PageSize);
 
-        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)).ToList() ?? [];
+        var schema = definition.GetSchemaForLatestGeneration();
+        var decryptedInstances = new List<ExpandoObject>();
+        foreach (var instance in instances ?? [])
+        {
+            var decrypted = await ReadModelComplianceHelper.Release(
+                complianceManager,
+                request.EventStore,
+                request.Namespace,
+                schema,
+                instance,
+                expandoObjectConverter);
+            decryptedInstances.Add(decrypted);
+        }
+
+        var instancesAsJson = decryptedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
         {
             Instances = instancesAsJson,
