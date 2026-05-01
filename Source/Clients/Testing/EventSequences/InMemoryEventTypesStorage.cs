@@ -58,6 +58,14 @@ internal sealed class InMemoryEventTypesStorage : IEventTypesStorage
         Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
 
     /// <inheritdoc/>
+    public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds) =>
+        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<KernelEventTypes::EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes) =>
+        Task.FromResult(Enumerable.Empty<KernelEventTypes::EventTypeSchema>());
+
+    /// <inheritdoc/>
     public Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default) =>
         Task.FromResult(true);
 
