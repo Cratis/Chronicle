@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Monads;
 using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
 
@@ -70,44 +69,47 @@ public static class ProjectionEventContextExtensions
         PropertyPath onModelProperty,
         ILogger logger)
     {
-        var joinSubject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(context =>
-        {
-            var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
-            if (onValue is not null)
+        return observable
+            .SelectMany(async context =>
             {
-                var tryGetLastEvent = eventSequenceStorage.TryGetLastEventBefore(
+                var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
+                if (onValue is null) return [];
+
+                var tryGetLastEvent = await eventSequenceStorage.TryGetLastEventBefore(
                     joinEventType.Id,
                     onValue.ToString()!,
-                    context.EventSequenceNumber).GetAwaiter().GetResult();
+                    context.EventSequenceNumber);
 
-                void HandleResolveJoin(Option<AppendedEvent> maybeLastEvent)
-                {
-                    if (!maybeLastEvent.HasValue) return;
-                    var lastEvent = (AppendedEvent)maybeLastEvent;
-                    var changeset = context.Changeset.ResolvedJoin(
-                        onModelProperty,
-                        context.Key.Value,
-                        lastEvent,
-                        context.Key.ArrayIndexers);
-                    joinSubject.OnNext(context with
-                    {
-                        Event = lastEvent,
-                        Changeset = changeset
-                    });
-                }
+                var results = new List<ProjectionEventContext>();
 
                 // TODO: We need to have a fulfillment strategy here: https://github.com/Cratis/Chronicle/issues/50
-                tryGetLastEvent.Switch(HandleResolveJoin, error =>
-                {
+                tryGetLastEvent.Switch(
+                    maybeLastEvent =>
+                    {
+                        if (!maybeLastEvent.HasValue) return;
+                        var lastEvent = (AppendedEvent)maybeLastEvent;
+                        var changeset = context.Changeset.ResolvedJoin(
+                            onModelProperty,
+                            context.Key.Value,
+                            lastEvent,
+                            context.Key.ArrayIndexers);
+                        results.Add(context with
+                        {
+                            Event = lastEvent,
+                            Changeset = changeset
+                        });
+                    },
+                    error =>
+                    {
 #pragma warning disable CA1848
-                    logger.LogError("Error when trying to resolve join: {Error}", error);
+                        logger.LogError("Error when trying to resolve join: {Error}", error);
 #pragma warning restore CA1848
-                    throw error;
-                });
-            }
-        });
-        return joinSubject;
+                        throw error;
+                    });
+
+                return results;
+            })
+            .SelectMany(resolved => resolved);
     }
 
     /// <summary>

@@ -50,7 +50,7 @@ internal static class ReadModelDefinitionConverters
     /// <returns>The converted <see cref="ReadModelDefinition"/>.</returns>
     public static ReadModelDefinition ToChronicle(this Contracts.ReadModels.ReadModelDefinition contract, Contracts.ReadModels.ReadModelOwner owner, Contracts.ReadModels.ReadModelSource source)
     {
-        var schema = JsonSchema.FromJsonAsync(contract.Schema).GetAwaiter().GetResult();
+        var schema = JsonSchema.FromJson(contract.Schema);
         var indexes = contract.Indexes
             .Select(i => new IndexDefinition(new PropertyPath(i.PropertyPath)))
             .ToArray();

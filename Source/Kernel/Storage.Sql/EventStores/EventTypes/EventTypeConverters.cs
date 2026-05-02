@@ -78,7 +78,7 @@ public static class EventTypeConverters
     /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
     public static EventTypeSchema ToKernel(this EventType schema)
     {
-        var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJson(schema.Schemas.First().Value);
         result.EnsureComplianceMetadata();
 
         return new EventTypeSchema(
@@ -103,7 +103,7 @@ public static class EventTypeConverters
             ? json
             : schema.Schemas.First().Value;
 
-        var result = JsonSchema.FromJsonAsync(schemaJson).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJson(schemaJson);
         result.EnsureComplianceMetadata();
 
         return new EventTypeSchema(
@@ -125,7 +125,7 @@ public static class EventTypeConverters
     {
         var generations = eventType.Schemas.Select(kvp =>
         {
-            var schema = JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult();
+            var schema = JsonSchema.FromJson(kvp.Value);
             return new EventTypeGenerationDefinition(new EventTypeGeneration(kvp.Key), schema);
         }).ToList();
 
