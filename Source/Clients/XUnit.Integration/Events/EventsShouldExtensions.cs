@@ -6,7 +6,6 @@ extern alias KernelConcepts;
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
@@ -80,7 +79,7 @@ public static class EventsShouldExtensions
         KernelEventContext context,
         JsonObject contentAsJson)
     {
-        var eventTypesStorage = fixture.Services.GetRequiredService<IEventTypesStorage>();
+        var eventTypesStorage = fixture.EventStoreStorage.EventTypes;
         var eventTypeId = context.EventType.Id;
         var eventTypeGeneration = context.EventType.Generation;
 
