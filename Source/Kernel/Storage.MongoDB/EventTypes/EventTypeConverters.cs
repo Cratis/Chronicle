@@ -81,7 +81,7 @@ public static class EventTypeConverters
             schemaBson = schema.Schemas.First().Value;
         }
 
-        var result = JsonSchema.FromJsonAsync(schemaBson.ToJson()).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJson(schemaBson.ToJson());
         result.EnsureComplianceMetadata();
 
         return new EventTypeSchema(
@@ -104,7 +104,7 @@ public static class EventTypeConverters
         var generations = eventType.Schemas.Select(kvp =>
         {
             var generation = new EventTypeGeneration(uint.Parse(kvp.Key));
-            var schema = JsonSchema.FromJsonAsync(kvp.Value.ToJson()).GetAwaiter().GetResult();
+            var schema = JsonSchema.FromJson(kvp.Value.ToJson());
             schema.EnsureComplianceMetadata();
             return new EventTypeGenerationDefinition(generation, schema);
         }).ToList();
