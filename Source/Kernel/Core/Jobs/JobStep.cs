@@ -83,6 +83,7 @@ public abstract class JobStep<TRequest, TResult, TState>(
         state.State.Name = Name;
         state.State.Id = Identifier;
         state.State.Type = grainType;
+        _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = new();
     }
 
@@ -164,9 +165,10 @@ public abstract class JobStep<TRequest, TResult, TState>(
             }
 
             logger.Stopping();
-            var cancelTokenTask = _cancellationTokenSource?.CancelAsync() ?? Task.CompletedTask;
-            await cancelTokenTask;
+            var cts = _cancellationTokenSource;
             _cancellationTokenSource = null;
+            await (cts?.CancelAsync() ?? Task.CompletedTask);
+            cts?.Dispose();
             if (_currentlyRunning)
             {
                 return Result.Success<JobStepError>();
