@@ -5,6 +5,7 @@
         <RootNamespace>Cratis.Chronicle.CodeAnalysis</RootNamespace>
         <TargetFramework>netstandard2.0</TargetFramework>
         <TargetFrameworks></TargetFrameworks>
+        <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
         <IsRoslynComponent>true</IsRoslynComponent>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <DevelopmentDependency>true</DevelopmentDependency>

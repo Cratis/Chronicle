@@ -139,7 +139,8 @@ public class EventStoreForTesting : IEventStore
             JsonSchemaGenerator,
             _jsonSerializerOptions,
             readModelWatcherManager,
-            reducerObservers);
+            reducerObservers,
+            NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels);
         ReadModels = _readModelsForTesting;

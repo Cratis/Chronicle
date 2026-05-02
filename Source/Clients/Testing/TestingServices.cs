@@ -6,6 +6,7 @@ extern alias KernelCore;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -25,7 +26,9 @@ using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Types;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
+using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
@@ -33,6 +36,8 @@ using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.Eve
 using KernelFailedPartitionsService = KernelCore::Cratis.Chronicle.Services.Observation.FailedPartitions;
 using KernelIdentitiesService = KernelCore::Cratis.Chronicle.Services.Identities.Identities;
 using KernelJobsService = KernelCore::Cratis.Chronicle.Services.Jobs.Jobs;
+using KernelJsonComplianceManager = KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager;
+using KernelJsonCompliancePropertyValueHandler = KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler;
 using KernelNamespacesService = KernelCore::Cratis.Chronicle.Services.Namespaces;
 using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation.Observers;
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
@@ -149,10 +154,24 @@ internal sealed class TestingServices(
         new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
 
     readonly Lazy<IReadModels> _readModels = new(() =>
-        new KernelReadModelsService(null!, grainFactory, storage, new ExpandoObjectConverter(new TypeFormats()), jsonSerializerOptions));
+        new KernelReadModelsService(
+            null!,
+            grainFactory,
+            storage,
+            new ExpandoObjectConverter(new TypeFormats()),
+            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+            jsonSerializerOptions));
+
+    readonly Lazy<ICompliance> _compliance = new(() =>
+        new KernelComplianceService(
+            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+            NullLogger<KernelComplianceService>.Instance));
 
     /// <inheritdoc/>
     public IReadModels ReadModels => _readModels.Value;
+
+    /// <inheritdoc/>
+    public ICompliance Compliance => _compliance.Value;
 
     /// <inheritdoc/>
     public IConstraints Constraints => _constraints.Value;
