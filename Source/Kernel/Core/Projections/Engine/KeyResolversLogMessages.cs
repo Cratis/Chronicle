@@ -132,4 +132,7 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: resolved key via child's creation event type='{EventType}', key='{Key}'")]
     internal static partial void FromParentHierarchyResolvedViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventType, string key);
+
+    [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: all resolution strategies exhausted for child projection '{Path}' with parent key '{ParentKey}' — event will be skipped (no future created). This typically indicates a badly-defined projection.")]
+    internal static partial void FromParentHierarchyKeyUnresolvable(this ILogger<KeyResolvers> logger, string path, string parentKey);
 }

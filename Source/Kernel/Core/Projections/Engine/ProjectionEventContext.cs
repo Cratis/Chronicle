@@ -30,6 +30,7 @@ public record ProjectionEventContext(
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];
     readonly List<PendingFutureSave> _pendingFutureSaves = [];
+    bool _isKeyUnresolvable;
 
     /// <summary>
     /// Gets the collection of deferred futures that need to be stored.
@@ -40,6 +41,12 @@ public record ProjectionEventContext(
     /// Gets whether this event has been deferred (has futures that couldn't be resolved).
     /// </summary>
     public bool IsDeferred => _deferredFutures.Count > 0;
+
+    /// <summary>
+    /// Gets whether the root key could not be resolved after all strategies were exhausted.
+    /// The event is silently skipped for this projection when true.
+    /// </summary>
+    public bool IsUnresolvable => _isKeyUnresolvable;
 
     /// <summary>
     /// Gets the collection of failed partitions from bulk operations.
@@ -90,6 +97,11 @@ public record ProjectionEventContext(
 
         _deferredFutures.Add(future);
     }
+
+    /// <summary>
+    /// Marks the root key as permanently unresolvable. Subsequent pipeline steps skip all processing.
+    /// </summary>
+    public void MarkKeyUnresolvable() => _isKeyUnresolvable = true;
 
     /// <summary>
     /// Adds a failed partition to the context.

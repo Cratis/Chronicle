@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -105,6 +107,9 @@ public class an_observer : Specification
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+
+        _jobsManager.GetJobsOfType<IRetryFailedPartition, RetryFailedPartitionRequest>()
+            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 

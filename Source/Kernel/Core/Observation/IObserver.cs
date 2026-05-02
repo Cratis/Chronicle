@@ -166,6 +166,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task<bool> HasFailedPartitions();
 
     /// <summary>
+    /// Get the keys of all currently failed partitions.
+    /// </summary>
+    /// <returns>Collection of <see cref="Key"/> for failed partitions.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<Key>> GetFailedPartitionKeys();
+
+    /// <summary>
     /// Catch up the observer.
     /// </summary>
     /// <returns>Awaitable task.</returns>

@@ -25,4 +25,11 @@ public abstract record KeyResolverResult
     /// <param name="future">The projection future.</param>
     /// <returns>A <see cref="DeferredKey"/> result.</returns>
     public static KeyResolverResult Deferred(ProjectionFuture future) => new DeferredKey(future);
+
+    /// <summary>
+    /// Creates an unresolvable result — all resolution strategies were exhausted.
+    /// No future is created; the event is silently skipped for the affected child projection.
+    /// </summary>
+    /// <returns>An <see cref="UnresolvableKey"/> result.</returns>
+    public static KeyResolverResult Unresolvable() => new UnresolvableKey();
 }
