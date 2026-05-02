@@ -91,7 +91,7 @@ public static class EventsShouldExtensions
 
         var schema = await eventTypesStorage.GetFor(eventTypeId, eventTypeGeneration);
         var complianceManager = fixture.Services.GetRequiredService<KernelCompliance.IJsonComplianceManager>();
-        var identifier = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value;
+        var identifier = context.Subject?.IsSet is true ? context.Subject.Value : context.EventSourceId.Value;
 
         return await complianceManager.Release(context.EventStore, context.Namespace, schema.Schema, identifier, contentAsJson);
     }
