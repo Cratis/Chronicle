@@ -18,38 +18,69 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
     readonly Dictionary<Key, EncryptionKey> _keys = [];
 
     /// <inheritdoc/>
-    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        _keys.Remove(new(eventStore, eventStoreNamespace, identifier));
-        await actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier);
+        if (IsLatest(revision))
+        {
+            var keysToRemove = _keys.Keys
+                .Where(k => k.EventStore == eventStore && k.EventStoreNamespace == eventStoreNamespace && k.Identifier == identifier)
+                .ToList();
+            foreach (var key in keysToRemove)
+            {
+                _keys.Remove(key);
+            }
+        }
+        else
+        {
+            _keys.Remove(new(eventStore, eventStoreNamespace, identifier, revision!));
+            _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
+        }
+
+        await actualKeyStore.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        var key = new Key(eventStore, eventStoreNamespace, identifier);
-        if (_keys.TryGetValue(key, out var encryptionKey)) return encryptionKey;
+        var cacheRevision = revision ?? EncryptionKeyRevision.Latest;
+        var cacheKey = new Key(eventStore, eventStoreNamespace, identifier, cacheRevision);
 
-        return _keys[key] = await actualKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+        if (_keys.TryGetValue(cacheKey, out var encryptionKey))
+        {
+            return encryptionKey;
+        }
+
+        return _keys[cacheKey] = await actualKeyStore.GetFor(eventStore, eventStoreNamespace, identifier, revision);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
-        if (_keys.ContainsKey(new(eventStore, eventStoreNamespace, identifier)))
+        var cacheRevision = revision ?? EncryptionKeyRevision.Latest;
+
+        if (_keys.ContainsKey(new(eventStore, eventStoreNamespace, identifier, cacheRevision)))
         {
             return true;
         }
 
-        return await actualKeyStore.HasFor(eventStore, eventStoreNamespace, identifier);
+        return await actualKeyStore.HasFor(eventStore, eventStoreNamespace, identifier, revision);
     }
 
     /// <inheritdoc/>
-    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
-        _keys[new(eventStore, eventStoreNamespace, identifier)] = key;
-        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
+        _keys.Remove(new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest));
+
+        if (revision is not null && revision != EncryptionKeyRevision.Latest)
+        {
+            _keys[new(eventStore, eventStoreNamespace, identifier, revision)] = key;
+        }
+
+        _keys[new(eventStore, eventStoreNamespace, identifier, EncryptionKeyRevision.Latest)] = key;
+        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
     }
 
-    sealed record Key(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier);
+    static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    sealed record Key(EventStoreName EventStore, EventStoreNamespaceName EventStoreNamespace, EncryptionKeyIdentifier Identifier, EncryptionKeyRevision Revision);
 }

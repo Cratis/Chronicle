@@ -12,6 +12,7 @@ namespace Cratis.Compliance.MongoDB;
 /// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
 /// </summary>
 /// <param name="Identifier"><see cref="EncryptionKeyIdentifier"/> it is for.</param>
+/// <param name="Revision">The <see cref="EncryptionKeyRevision"/> of the key.</param>
 /// <param name="PublicKey">The public part of the key.</param>
 /// <param name="PrivateKey">The private part of the key.</param>
-public record EncryptionKeyForIdentifier(EncryptionKeyIdentifier Identifier, byte[] PublicKey, byte[] PrivateKey);
+public record EncryptionKeyForIdentifier(EncryptionKeyIdentifier Identifier, EncryptionKeyRevision Revision, byte[] PublicKey, byte[] PrivateKey);

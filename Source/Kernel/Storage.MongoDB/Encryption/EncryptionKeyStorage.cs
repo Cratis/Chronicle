@@ -23,11 +23,17 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
-        EncryptionKey key)
+        EncryptionKey key,
+        EncryptionKeyRevision? revision = null)
     {
-        await GetCollection(eventStore, eventStoreNamespace).ReplaceOneAsync(
-            _ => _.Identifier == identifier,
-            new EncryptionKeyForIdentifier(identifier, key.Public, key.Private),
+        var collection = GetCollection(eventStore, eventStoreNamespace);
+        var actualRevision = IsLatest(revision)
+            ? await GetNextRevision(collection, identifier)
+            : revision!;
+
+        await collection.ReplaceOneAsync(
+            _ => _.Identifier == identifier && _.Revision == actualRevision,
+            new EncryptionKeyForIdentifier(identifier, actualRevision, key.Public, key.Private),
             new ReplaceOptions() { IsUpsert = true });
     }
 
@@ -35,31 +41,76 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null)
     {
-        var result = await GetCollection(eventStore, eventStoreNamespace).CountDocumentsAsync(_ => _.Identifier == identifier);
-        return result == 1;
+        var collection = GetCollection(eventStore, eventStoreNamespace);
+        if (IsLatest(revision))
+        {
+            return await collection.CountDocumentsAsync(_ => _.Identifier == identifier) > 0;
+        }
+
+        return await collection.CountDocumentsAsync(_ => _.Identifier == identifier && _.Revision == revision) == 1;
     }
 
     /// <inheritdoc/>
     public async Task<EncryptionKey> GetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier)
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null)
     {
-        using var result = await GetCollection(eventStore, eventStoreNamespace).FindAsync(_ => _.Identifier == identifier);
-        var key = await result.SingleOrDefaultAsync();
-        ThrowIfMissingEncryptionKey(identifier, key);
-        return new(key.PublicKey, key.PrivateKey);
+        var collection = GetCollection(eventStore, eventStoreNamespace);
+
+        EncryptionKeyForIdentifier? keyDoc;
+        if (IsLatest(revision))
+        {
+            keyDoc = await collection
+                .Find(_ => _.Identifier == identifier)
+                .SortByDescending(_ => _.Revision)
+                .FirstOrDefaultAsync();
+        }
+        else
+        {
+            using var result = await collection.FindAsync(_ => _.Identifier == identifier && _.Revision == revision);
+            keyDoc = await result.SingleOrDefaultAsync();
+        }
+
+        ThrowIfMissingEncryptionKey(identifier, keyDoc);
+        return new(keyDoc.PublicKey, keyDoc.PrivateKey);
     }
 
     /// <inheritdoc/>
     public async Task DeleteFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
-        EncryptionKeyIdentifier identifier) => await GetCollection(eventStore, eventStoreNamespace).DeleteOneAsync(_ => _.Identifier == identifier);
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null)
+    {
+        var collection = GetCollection(eventStore, eventStoreNamespace);
+        if (IsLatest(revision))
+        {
+            await collection.DeleteManyAsync(_ => _.Identifier == identifier);
+        }
+        else
+        {
+            await collection.DeleteOneAsync(_ => _.Identifier == identifier && _.Revision == revision);
+        }
+    }
 
-    void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier key)
+    static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
+
+    static async Task<EncryptionKeyRevision> GetNextRevision(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier)
+    {
+        var latestDoc = await collection
+            .Find(_ => _.Identifier == identifier)
+            .SortByDescending(_ => _.Revision)
+            .FirstOrDefaultAsync();
+
+        return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Revision.Value + 1u;
+    }
+
+    void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier? key)
     {
         if (key == default)
         {
