@@ -30,4 +30,20 @@ public class ReadModelSourceGivenBuilder<TReadModel>(ReadModelScenario<TReadMode
         scenario.CollectEventsFor(eventSourceId, events);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Registers a pre-built read model instance for this event source, making it available through
+    /// <see cref="ReadModelScenario{TReadModel}.ReadModels"/> for <c>GetInstanceById</c> calls.
+    /// </summary>
+    /// <remarks>
+    /// Use this when testing production code that calls <c>IReadModels.GetInstanceById</c> — seed the
+    /// expected read model state here rather than replaying events through a projection.
+    /// </remarks>
+    /// <param name="readModel">The read model instance to register for this event source.</param>
+    /// <returns>A completed <see cref="Task"/>.</returns>
+    public Task ReadModel(TReadModel readModel)
+    {
+        scenario.CollectReadModelFor(eventSourceId, readModel);
+        return Task.CompletedTask;
+    }
 }

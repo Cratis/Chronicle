@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.XUnit.Integration;
@@ -18,7 +19,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </remarks>
 internal class MutableServiceRegistry
 {
-    readonly Dictionary<Type, Func<IServiceProvider, object>> _factories = [];
+    readonly ConcurrentDictionary<Type, Func<IServiceProvider, object>> _factories = new();
 
     /// <summary>
     /// Gets the service types currently registered in the registry.
