@@ -99,20 +99,16 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
 
         if (IsLatest(revision))
         {
-            var entities = scope.DbContext.EncryptionKeys.Where(e => e.Identifier == identifier.Value);
-            scope.DbContext.EncryptionKeys.RemoveRange(entities);
+            await scope.DbContext.EncryptionKeys
+                .Where(e => e.Identifier == identifier.Value)
+                .ExecuteDeleteAsync();
         }
         else
         {
-            var entity = await scope.DbContext.EncryptionKeys
-                .SingleOrDefaultAsync(e => e.Identifier == identifier.Value && e.Revision == revision!.Value);
-            if (entity is not null)
-            {
-                scope.DbContext.EncryptionKeys.Remove(entity);
-            }
+            await scope.DbContext.EncryptionKeys
+                .Where(e => e.Identifier == identifier.Value && e.Revision == revision!.Value)
+                .ExecuteDeleteAsync();
         }
-
-        await scope.DbContext.SaveChangesAsync();
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;

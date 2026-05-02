@@ -19,4 +19,10 @@ public record EncryptionKeyRevision(uint Value) : ConceptAs<uint>(Value)
     /// </summary>
     /// <param name="value"><see cref="uint"/> to convert from.</param>
     public static implicit operator EncryptionKeyRevision(uint value) => new(value);
+
+    /// <summary>
+    /// Implicitly convert from <see cref="EncryptionKeyRevision"/> to <see cref="uint"/>.
+    /// </summary>
+    /// <param name="revision"><see cref="EncryptionKeyRevision"/> to convert from.</param>
+    public static implicit operator uint(EncryptionKeyRevision revision) => revision.Value;
 }

@@ -28,7 +28,7 @@ public class v15_1_0 : Migration
                 PublicKey = table.Column<byte[]>(nullable: false),
                 PrivateKey = table.Column<byte[]>(nullable: false)
             },
-            constraints: table => table.PrimaryKey($"PK_{TempTableName}", x => new { x.Identifier, x.Revision }));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EncryptionKeys}", x => new { x.Identifier, x.Revision }));
 
         migrationBuilder.Sql(
             $"INSERT INTO {TempTableName} (Identifier, Revision, PublicKey, PrivateKey) " +
@@ -51,7 +51,7 @@ public class v15_1_0 : Migration
                 PublicKey = table.Column<byte[]>(nullable: false),
                 PrivateKey = table.Column<byte[]>(nullable: false)
             },
-            constraints: table => table.PrimaryKey($"PK_{TempDownTable}", x => x.Identifier));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EncryptionKeys}", x => x.Identifier));
 
         migrationBuilder.Sql(
             $"INSERT INTO {TempDownTable} (Identifier, PublicKey, PrivateKey) " +
