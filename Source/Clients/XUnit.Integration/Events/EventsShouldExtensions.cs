@@ -1,9 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+extern alias KernelConcepts;
+
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Storage.EventTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
+using KernelEventContext = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventContext;
 
 namespace Cratis.Chronicle.XUnit.Integration.Events;
 
@@ -31,6 +38,7 @@ public static class EventsShouldExtensions
         Assert.Equal(@event.Context.SequenceNumber.Value, sequenceNumber.Value);
         Assert.Equal(@event.Context.EventType.Id.Value, eventType.Id.Value);
         var contentAsJson = System.Text.Json.JsonSerializer.SerializeToNode(@event.Content)!.AsObject();
+        contentAsJson = await TryDecryptEventContent(fixture, @event.Context, contentAsJson);
         var eventObject = await fixture.Services.GetRequiredService<IEventSerializer>().Deserialize(eventClrType, contentAsJson);
         Assert.IsType<TEvent>(eventObject);
         var theEvent = (TEvent)eventObject;
@@ -65,5 +73,26 @@ public static class EventsShouldExtensions
         var storedEventLog = fixture.GetEventLogStorage();
         var storedNumber = await storedEventLog.GetTailSequenceNumber();
         Assert.Equal(storedNumber.Value, sequenceNumber.Value);
+    }
+
+    static async Task<JsonObject> TryDecryptEventContent(
+        IChronicleSetupFixture fixture,
+        KernelEventContext context,
+        JsonObject contentAsJson)
+    {
+        var eventTypesStorage = fixture.Services.GetRequiredService<IEventTypesStorage>();
+        var eventTypeId = context.EventType.Id;
+        var eventTypeGeneration = context.EventType.Generation;
+
+        if (!await eventTypesStorage.HasFor(eventTypeId, eventTypeGeneration))
+        {
+            return contentAsJson;
+        }
+
+        var schema = await eventTypesStorage.GetFor(eventTypeId, eventTypeGeneration);
+        var complianceManager = fixture.Services.GetRequiredService<KernelCompliance.IJsonComplianceManager>();
+        var identifier = context.Subject?.IsSet == true ? context.Subject.Value : context.EventSourceId.Value;
+
+        return await complianceManager.Release(context.EventStore, context.Namespace, schema.Schema, identifier, contentAsJson);
     }
 }
