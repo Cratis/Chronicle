@@ -529,14 +529,22 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         logger.FromParentHierarchySinkDidNotFindRoot(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
-        // All resolution strategies failed: event log, child creation event, and sink lookup all returned nothing.
-        // This is almost always a sign of a badly-defined projection (wrong parent key property, missing parent
-        // event type, or out-of-order events whose parent truly never exists). Creating a deferred future here
-        // would cause it to accumulate across every subsequent event in the batch without ever resolving, creating
-        // an ever-growing MongoDB read on each event. Signal this as permanently unresolvable instead so the
-        // event is silently skipped and no future is stored.
-        logger.FromParentHierarchyKeyUnresolvable(projection.Path, parentKey.Value?.ToString() ?? "null");
-        return new ParentEventResult(null, KeyResolverResult.Unresolvable());
+        // All resolution strategies failed — the parent does not yet exist in the event log or sink.
+        // This is a normal out-of-order scenario: the child event arrived before its parent was created.
+        // Create a deferred future so the event is re-processed once the parent materializes.
+        var parentIdentifierForFuture = parentProjection.HasParent
+            ? parentProjection.IdentifiedByProperty
+            : projection.IdentifiedByProperty;
+
+        var future = CreateDeferredFutureObject(
+            projection,
+            @event,
+            parentProjection.ChildrenPropertyPath,
+            identifiedByProperty,
+            parentIdentifierForFuture,
+            parentKey);
+
+        return new ParentEventResult(null, KeyResolverResult.Deferred(future));
     }
 
     ProjectionFuture CreateDeferredFutureObject(

@@ -18,6 +18,6 @@ public class and_event_has_no_subject : given.an_event_converter
 
     async Task Because() => _result = await _converter.ToAppendedEvent(_event);
 
-    [Fact] void should_set_subject_to_not_set() => _result.Context.Subject.ShouldEqual(Subject.NotSet);
+    [Fact] void should_set_subject_to_event_source_id() => _result.Context.Subject.ShouldEqual(new Subject("test-source"));
     [Fact] void should_be_subject_is_event_source_id() => _result.Context.SubjectIsEventSourceId.ShouldBeTrue();
 }

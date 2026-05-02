@@ -108,14 +108,21 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             // so we check the actual property nullability via NullabilityInfoContext. When the property
             // is nullable we append '?' to the format so that IsNullable() returns true and
             // GetDefaultValue() returns null rather than the primitive default (e.g. 0 for ulong).
-            if (IsNullableConceptProperty(context) &&
-                conceptSchema is JsonObject conceptSchemaObj &&
-                conceptSchemaObj.TryGetPropertyValue("format", out var format))
+            if (conceptSchema is JsonObject conceptSchemaObj)
             {
-                var formatStr = format!.GetValue<string>();
-                if (!formatStr.EndsWith('?'))
+                if (_metadataResolver.HasMetadataFor(type))
                 {
-                    conceptSchemaObj["format"] = formatStr + "?";
+                    AddComplianceMetadata(conceptSchemaObj, _metadataResolver.GetMetadataFor(type));
+                }
+
+                if (IsNullableConceptProperty(context) &&
+                    conceptSchemaObj.TryGetPropertyValue("format", out var format))
+                {
+                    var formatStr = format!.GetValue<string>();
+                    if (!formatStr.EndsWith('?'))
+                    {
+                        conceptSchemaObj["format"] = formatStr + "?";
+                    }
                 }
             }
 
