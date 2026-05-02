@@ -9,7 +9,11 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 public class when_generating_schema_for_pii_adorned_type : given.a_json_schema_generator_with_pii_support
 {
     [PII]
-    record PersonalData(string Name, string SocialSecurityNumber);
+    record PersonalData(string Value) : ConceptAs<string>(Value)
+    {
+        public static implicit operator PersonalData(string value) => new(value);
+        public static implicit operator string(PersonalData value) => value.Value;
+    }
 
     JsonSchema _result;
 
