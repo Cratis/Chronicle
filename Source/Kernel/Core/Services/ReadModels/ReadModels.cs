@@ -322,7 +322,7 @@ internal sealed class ReadModels(
                     });
                 });
 
-                context.CancellationToken.Register(() => subscription.UnsubscribeAsync().GetAwaiter().GetResult());
+                context.CancellationToken.Register(() => _ = subscription.UnsubscribeAsync());
                 await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
             else

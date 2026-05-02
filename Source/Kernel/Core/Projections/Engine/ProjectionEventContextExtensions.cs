@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Monads;
 using Cratis.Reflection;
 using Microsoft.Extensions.Logging;
 
@@ -69,19 +68,27 @@ public static class ProjectionEventContextExtensions
         PropertyPath onModelProperty,
         ILogger logger)
     {
+        // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
+        // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
+        // after projection.OnNext() returns, so the join resolution must complete synchronously.
+        // A proper async refactor would require restructuring the entire projection pipeline.
+        // See: https://github.com/Cratis/Chronicle/issues/50
         return Observable.Create<ProjectionEventContext>(observer =>
             observable.Subscribe(
                 context =>
                 {
                     var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
-                    if (onValue is not null)
-                    {
-                        var tryGetLastEvent = eventSequenceStorage.TryGetLastEventBefore(
-                            joinEventType.Id,
-                            onValue.ToString()!,
-                            context.EventSequenceNumber).GetAwaiter().GetResult();
+                    if (onValue is null) return;
 
-                        void HandleResolveJoin(Option<AppendedEvent> maybeLastEvent)
+#pragma warning disable CA2007
+                    var tryGetLastEvent = eventSequenceStorage.TryGetLastEventBefore(
+                        joinEventType.Id,
+                        onValue.ToString()!,
+                        context.EventSequenceNumber).GetAwaiter().GetResult();
+#pragma warning restore CA2007
+
+                    tryGetLastEvent.Switch(
+                        maybeLastEvent =>
                         {
                             if (!maybeLastEvent.HasValue) return;
                             var lastEvent = (AppendedEvent)maybeLastEvent;
@@ -95,17 +102,14 @@ public static class ProjectionEventContextExtensions
                                 Event = lastEvent,
                                 Changeset = changeset
                             });
-                        }
-
-                        // TODO: We need to have a fulfillment strategy here: https://github.com/Cratis/Chronicle/issues/50
-                        tryGetLastEvent.Switch(HandleResolveJoin, error =>
+                        },
+                        error =>
                         {
 #pragma warning disable CA1848
                             logger.LogError("Error when trying to resolve join: {Error}", error);
 #pragma warning restore CA1848
-                            throw error;
+                            observer.OnError(error);
                         });
-                    }
                 },
                 observer.OnError,
                 observer.OnCompleted));
