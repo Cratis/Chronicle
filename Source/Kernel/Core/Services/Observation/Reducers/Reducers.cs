@@ -79,11 +79,18 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    var readModel = grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
                         result =>
                         {
-                            model = result.Result;
-                            registrationTcs.SetResult(register);
+                            if (result.IsFaulted)
+                            {
+                                registrationTcs.TrySetException(result.Exception!.InnerExceptions);
+                            }
+                            else
+                            {
+                                model = result.Result;
+                                registrationTcs.TrySetResult(register);
+                            }
                         },
                         TaskScheduler.Current);
                     break;
