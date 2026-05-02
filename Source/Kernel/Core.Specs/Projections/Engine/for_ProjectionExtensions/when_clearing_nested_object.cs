@@ -12,7 +12,7 @@ public class when_clearing_nested_object : given.an_observable_and_event_setup
     void Establish()
     {
         _nestedProperty = new PropertyPath("command");
-        _observable.ClearNested(_nestedProperty);
+        _observable.ClearNested(_nestedProperty).Subscribe();
     }
 
     void Because() => _observable.OnNext(_eventContext);
