@@ -70,7 +70,7 @@ public static class ProjectionEventContextExtensions
         ILogger logger)
     {
         return observable
-            .SelectMany(async context =>
+            .Select(context => Observable.FromAsync(async () =>
             {
                 var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
                 if (onValue is null) return [];
@@ -108,7 +108,8 @@ public static class ProjectionEventContextExtensions
                     });
 
                 return results;
-            })
+            }))
+            .Concat()
             .SelectMany(resolved => resolved);
     }
 
