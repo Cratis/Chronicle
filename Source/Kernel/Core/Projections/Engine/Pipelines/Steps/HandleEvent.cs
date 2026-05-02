@@ -19,6 +19,13 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
         logger.HandlingEvent(context.Event.Context.SequenceNumber);
+
+        if (context.IsUnresolvable)
+        {
+            logger.SkippingDueToUnresolvableKey(context.Event.Context.SequenceNumber, projection.Identifier, projection.Path);
+            return context;
+        }
+
         var eventType = context.Event.Context.EventType;
         if (projection.Accepts(eventType))
         {
@@ -42,6 +49,13 @@ public class HandleEvent(IEventSequenceStorage eventSequenceStorage, ISink sink,
                 {
                     logger.ChildKeyResolutionDeferred(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
                     context.AddDeferredFuture(deferredChild.Future);
+                    continue;
+                }
+
+                // Handle permanently unresolvable key — skip this child with no future created
+                if (keyResult is UnresolvableKey)
+                {
+                    logger.ChildKeyUnresolvable(child.Path, eventType.Id, context.Event.Context.SequenceNumber);
                     continue;
                 }
 

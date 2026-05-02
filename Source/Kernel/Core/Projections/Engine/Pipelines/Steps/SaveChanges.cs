@@ -18,8 +18,8 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
-        // Don't save if the event was deferred (waiting for parent data)
-        if (context.IsDeferred)
+        // Don't save if the event was deferred or the key is permanently unresolvable
+        if (context.IsDeferred || context.IsUnresolvable)
         {
             logger.NotSavingDueToDeferred(context.Event.Context.SequenceNumber);
             return context;

@@ -499,7 +499,14 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         // For a 4-level hierarchy (Root → Feature → Slice → EventItem), the parent (Slice) has
         // ChildrenPropertyPath = "slices" which is relative to Feature, not to root. We need
         // "features.slices.id" — so we must walk up the hierarchy to collect all segments.
+        // For a 2-level hierarchy (Root → Hub) where the parent is the root (ChildrenPropertyPath
+        // not set), the child's ChildrenPropertyPath ("hubs") provides the collection prefix, giving
+        // "hubs.id" so the sink can locate the root document containing the matching hub.
         var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
+        if (!parentProjection.ChildrenPropertyPath.IsSet && projection.ChildrenPropertyPath.IsSet)
+        {
+            childPropertyPath = new PropertyPath($"{projection.ChildrenPropertyPath}.{childPropertyPath}");
+        }
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
@@ -522,22 +529,14 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         logger.FromParentHierarchySinkDidNotFindRoot(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
-        // Determine which identifier to use:
-        // - For root parents: use the child's identifier (how the child is identified in the root's collection)
-        // - For nested parents: use the parent's identifier (how the parent is identified in its parent's collection)
-        var parentIdentifierForFuture = parentProjection.HasParent
-            ? parentProjection.IdentifiedByProperty
-            : projection.IdentifiedByProperty;
-
-        var future = CreateDeferredFutureObject(
-            projection,
-            @event,
-            parentProjection.ChildrenPropertyPath,
-            identifiedByProperty,
-            parentIdentifierForFuture,
-            parentKey);
-
-        return new ParentEventResult(null, KeyResolverResult.Deferred(future));
+        // All resolution strategies failed: event log, child creation event, and sink lookup all returned nothing.
+        // This is almost always a sign of a badly-defined projection (wrong parent key property, missing parent
+        // event type, or out-of-order events whose parent truly never exists). Creating a deferred future here
+        // would cause it to accumulate across every subsequent event in the batch without ever resolving, creating
+        // an ever-growing MongoDB read on each event. Signal this as permanently unresolvable instead so the
+        // event is silently skipped and no future is stored.
+        logger.FromParentHierarchyKeyUnresolvable(projection.Path, parentKey.Value?.ToString() ?? "null");
+        return new ParentEventResult(null, KeyResolverResult.Unresolvable());
     }
 
     ProjectionFuture CreateDeferredFutureObject(
