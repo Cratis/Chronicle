@@ -68,48 +68,51 @@ public static class ProjectionEventContextExtensions
         PropertyPath onModelProperty,
         ILogger logger)
     {
-        return observable
-            .Select(context => Observable.FromAsync(async () =>
-            {
-                var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
-                if (onValue is null) return [];
+        // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
+        // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
+        // after projection.OnNext() returns, so the join resolution must complete synchronously.
+        // A proper async refactor would require restructuring the entire projection pipeline.
+        // See: https://github.com/Cratis/Chronicle/issues/50
+        return Observable.Create<ProjectionEventContext>(observer =>
+            observable.Subscribe(
+                context =>
+                {
+                    var onValue = onModelProperty.GetValue(context.Changeset.CurrentState, context.Key.ArrayIndexers);
+                    if (onValue is null) return;
 
-                var tryGetLastEvent = await eventSequenceStorage.TryGetLastEventBefore(
-                    joinEventType.Id,
-                    onValue.ToString()!,
-                    context.EventSequenceNumber);
+#pragma warning disable CA2007
+                    var tryGetLastEvent = eventSequenceStorage.TryGetLastEventBefore(
+                        joinEventType.Id,
+                        onValue.ToString()!,
+                        context.EventSequenceNumber).GetAwaiter().GetResult();
+#pragma warning restore CA2007
 
-                var results = new List<ProjectionEventContext>();
-
-                // TODO: We need to have a fulfillment strategy here: https://github.com/Cratis/Chronicle/issues/50
-                tryGetLastEvent.Switch(
-                    maybeLastEvent =>
-                    {
-                        if (!maybeLastEvent.HasValue) return;
-                        var lastEvent = (AppendedEvent)maybeLastEvent;
-                        var changeset = context.Changeset.ResolvedJoin(
-                            onModelProperty,
-                            context.Key.Value,
-                            lastEvent,
-                            context.Key.ArrayIndexers);
-                        results.Add(context with
+                    tryGetLastEvent.Switch(
+                        maybeLastEvent =>
                         {
-                            Event = lastEvent,
-                            Changeset = changeset
-                        });
-                    },
-                    error =>
-                    {
+                            if (!maybeLastEvent.HasValue) return;
+                            var lastEvent = (AppendedEvent)maybeLastEvent;
+                            var changeset = context.Changeset.ResolvedJoin(
+                                onModelProperty,
+                                context.Key.Value,
+                                lastEvent,
+                                context.Key.ArrayIndexers);
+                            observer.OnNext(context with
+                            {
+                                Event = lastEvent,
+                                Changeset = changeset
+                            });
+                        },
+                        error =>
+                        {
 #pragma warning disable CA1848
-                        logger.LogError("Error when trying to resolve join: {Error}", error);
+                            logger.LogError("Error when trying to resolve join: {Error}", error);
 #pragma warning restore CA1848
-                        throw error;
-                    });
-
-                return results;
-            }))
-            .Concat()
-            .SelectMany(resolved => resolved);
+                            observer.OnError(error);
+                        });
+                },
+                observer.OnError,
+                observer.OnCompleted));
     }
 
     /// <summary>
