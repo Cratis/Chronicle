@@ -11,7 +11,7 @@ public class when_projecting_nested_object : given.an_observable_and_event_setup
 {
     IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> _propertyMappers = [];
 
-    void Establish() => _observable.ProjectNested(_propertyMappers);
+    void Establish() => _observable.ProjectNested(_propertyMappers).Subscribe();
 
     void Because() => _observable.OnNext(_eventContext);
 
