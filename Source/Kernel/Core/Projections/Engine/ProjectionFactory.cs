@@ -141,13 +141,14 @@ public class ProjectionFactory(
                     .WhereEventTypeEquals(eventType);
             if (isChild)
             {
-                observable.RemoveChild(
-                    childrenAccessorProperty,
-                    actualIdentifiedByProperty);
+                projection.Subscriptions.Add(
+                    observable.RemoveChild(
+                        childrenAccessorProperty,
+                        actualIdentifiedByProperty).Subscribe());
             }
             else
             {
-                observable.Remove();
+                projection.Subscriptions.Add(observable.Remove().Subscribe());
             }
         }
     }
@@ -156,11 +157,12 @@ public class ProjectionFactory(
     {
         foreach (var (eventType, _) in projectionDefinition.RemovedWithJoin)
         {
-            projection.Event
-                   .WhereEventTypeEquals(eventType)
-                   .RemoveChildFromAll(
-                       childrenAccessorProperty,
-                       actualIdentifiedByProperty);
+            projection.Subscriptions.Add(
+                projection.Event
+                       .WhereEventTypeEquals(eventType)
+                       .RemoveChildFromAll(
+                           childrenAccessorProperty,
+                           actualIdentifiedByProperty).Subscribe());
         }
     }
 
@@ -284,16 +286,18 @@ public class ProjectionFactory(
                 var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
 
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .ProjectNested(propertyMappers);
+                projection.Subscriptions.Add(
+                    projection.Event
+                        .WhereEventTypeEquals(eventType)
+                        .ProjectNested(propertyMappers).Subscribe());
             }
 
             foreach (var (eventType, _) in nestedDefinition.RemovedWith)
             {
-                projection.Event
-                    .WhereEventTypeEquals(eventType)
-                    .ClearNested(nestedPropertyPath);
+                projection.Subscriptions.Add(
+                    projection.Event
+                        .WhereEventTypeEquals(eventType)
+                        .ClearNested(nestedPropertyPath).Subscribe());
             }
 
             // Recursively set up nested objects within this nested object
@@ -401,9 +405,10 @@ public class ProjectionFactory(
             };
 
             var valueProvider = eventValueProviderExpressionResolvers.Resolve(schemaProperty, projectionDefinition.FromEventProperty.PropertyExpression);
-            projection.Event
-                .WhereEventTypeEquals(projectionDefinition.FromEventProperty.Event)
-                .AddChildFromEventProperty(childrenAccessorProperty, valueProvider);
+            projection.Subscriptions.Add(
+                projection.Event
+                    .WhereEventTypeEquals(projectionDefinition.FromEventProperty.Event)
+                    .AddChildFromEventProperty(childrenAccessorProperty, valueProvider).Subscribe());
         }
 
         var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
@@ -489,14 +494,16 @@ public class ProjectionFactory(
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
-                    propertyMappers);
+                    propertyMappers,
+                    subscriptions: projection.Subscriptions);
 
             if (projectionDefinition.FromEvery.IncludeChildren)
             {
                 joinObservable.Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
-                    propertyMappersForEveryEventType);
+                    propertyMappersForEveryEventType,
+                    subscriptions: projection.Subscriptions);
             }
         }
     }
@@ -522,7 +529,8 @@ public class ProjectionFactory(
                 childrenAccessorProperty,
                 actualIdentifiedByProperty,
                 propertyMappers,
-                childrenAccessorProperty.IsRoot ? null : projection.InitialModelState);
+                childrenAccessorProperty.IsRoot ? null : projection.InitialModelState,
+                subscriptions: projection.Subscriptions);
     }
 
     void SetupJoinsForFromDefinition(
@@ -562,7 +570,8 @@ public class ProjectionFactory(
                 .Project(
                     childrenAccessorProperty,
                     actualIdentifiedByProperty,
-                    joinPropertyMappers);
+                    joinPropertyMappers,
+                    subscriptions: projection.Subscriptions);
         }
     }
 

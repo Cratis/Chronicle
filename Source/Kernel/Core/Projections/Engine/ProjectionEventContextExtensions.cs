@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
@@ -41,16 +41,15 @@ public static class ProjectionEventContextExtensions
         this IObservable<ProjectionEventContext> observable,
         PropertyPath onModelProperty)
     {
-        var joinSubject = new Subject<ProjectionEventContext>();
-        observable.Subscribe(_ =>
-        {
-            var changeset = _.Changeset.Join(onModelProperty, _.JoinKey ?? _.Key.Value, _.Key.ArrayIndexers);
-            joinSubject.OnNext(_ with
-            {
-                Changeset = changeset
-            });
-        });
-        return joinSubject;
+        return Observable.Create<ProjectionEventContext>(observer =>
+            observable.Subscribe(
+                _ =>
+                {
+                    var changeset = _.Changeset.Join(onModelProperty, _.JoinKey ?? _.Key.Value, _.Key.ArrayIndexers);
+                    observer.OnNext(_ with { Changeset = changeset });
+                },
+                observer.OnError,
+                observer.OnCompleted));
     }
 
     /// <summary>
@@ -121,22 +120,25 @@ public static class ProjectionEventContextExtensions
     /// <param name="identifiedByProperty">The property that identifies a child.</param>
     /// <param name="propertyMappers">PropertyMappers used to map from the event to the child object.</param>
     /// <param name="childInitialState">Optional initial state for new child items. Used to pre-initialize nested collections.</param>
+    /// <param name="subscriptions">Optional <see cref="CompositeDisposable"/> that receives ownership of the subscription, enabling explicit disposal.</param>
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> Project(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty,
         IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers,
-        ExpandoObject? childInitialState = null)
+        ExpandoObject? childInitialState = null,
+        CompositeDisposable? subscriptions = null)
     {
+        IDisposable subscription;
         if (childrenProperty.IsRoot)
         {
-            observable.Subscribe(context =>
+            subscription = observable.Subscribe(context =>
                 context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
         }
         else
         {
-            observable.Subscribe(context =>
+            subscription = observable.Subscribe(context =>
             {
                 if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
                 {
@@ -162,6 +164,7 @@ public static class ProjectionEventContextExtensions
             });
         }
 
+        subscriptions?.Add(subscription);
         return observable;
     }
 
@@ -177,7 +180,7 @@ public static class ProjectionEventContextExtensions
         PropertyPath childrenProperty,
         ValueProvider<AppendedEvent> valueProvider)
     {
-        observable.Subscribe(_ =>
+        return observable.Do(_ =>
         {
             var value = valueProvider(_.Event);
             if (!value.GetType().IsAPrimitiveType())
@@ -187,8 +190,6 @@ public static class ProjectionEventContextExtensions
 
             _.Changeset.AddChild(childrenProperty, value);
         });
-
-        return observable;
     }
 
     /// <summary>
@@ -196,11 +197,8 @@ public static class ProjectionEventContextExtensions
     /// </summary>
     /// <param name="observable"><see cref="IObservable{T}"/> to work with.</param>
     /// <returns>The observable for continuation.</returns>
-    public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable)
-    {
-        observable.Subscribe(_ => _.Changeset.Remove());
-        return observable;
-    }
+    public static IObservable<ProjectionEventContext> Remove(this IObservable<ProjectionEventContext> observable) =>
+        observable.Do(_ => _.Changeset.Remove());
 
     /// <summary>
     /// Remove child based on event.
@@ -214,7 +212,7 @@ public static class ProjectionEventContextExtensions
         PropertyPath childrenProperty,
         PropertyPath identifiedByProperty)
     {
-        observable.Subscribe(_ =>
+        return observable.Do(_ =>
         {
             var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
             var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
@@ -228,7 +226,6 @@ public static class ProjectionEventContextExtensions
                     _.Key.ArrayIndexers);
             }
         });
-        return observable;
     }
 
     /// <summary>
@@ -241,11 +238,8 @@ public static class ProjectionEventContextExtensions
     public static IObservable<ProjectionEventContext> RemoveChildFromAll(
         this IObservable<ProjectionEventContext> observable,
         PropertyPath childrenProperty,
-        PropertyPath identifiedByProperty)
-    {
-        observable.Subscribe(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
-        return observable;
-    }
+        PropertyPath identifiedByProperty) =>
+        observable.Do(_ => _.Changeset.RemoveChildFromAll(childrenProperty, identifiedByProperty, _.Key.Value, _.Key.ArrayIndexers));
 
     /// <summary>
     /// Project properties from event onto a nested single-object model.
@@ -256,13 +250,8 @@ public static class ProjectionEventContextExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> ProjectNested(
         this IObservable<ProjectionEventContext> observable,
-        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers)
-    {
-        observable.Subscribe(context =>
-            context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
-
-        return observable;
-    }
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers) =>
+        observable.Do(context => context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers));
 
     /// <summary>
     /// Clear (set to null) a nested single-object property based on event.
@@ -272,9 +261,6 @@ public static class ProjectionEventContextExtensions
     /// <returns>The observable for continuation.</returns>
     public static IObservable<ProjectionEventContext> ClearNested(
         this IObservable<ProjectionEventContext> observable,
-        PropertyPath nestedProperty)
-    {
-        observable.Subscribe(_ => _.Changeset.ClearNested(nestedProperty, _.Key.ArrayIndexers));
-        return observable;
-    }
+        PropertyPath nestedProperty) =>
+        observable.Do(_ => _.Changeset.ClearNested(nestedProperty, _.Key.ArrayIndexers));
 }
