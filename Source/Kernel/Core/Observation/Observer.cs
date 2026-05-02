@@ -126,6 +126,9 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
+    public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
 
     /// <inheritdoc/>

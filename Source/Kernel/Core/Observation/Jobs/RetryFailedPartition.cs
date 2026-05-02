@@ -25,17 +25,19 @@ public class RetryFailedPartition(
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
-        {
-            logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
-            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
-        }
-
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
             logger.NoEventsWereHandled(nameof(RetryFailedPartition));
             return;
         }
+
+        if (!State.HandledAllEvents)
+        {
+            logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
+            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+            return;
+        }
+
         await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
     }
 
