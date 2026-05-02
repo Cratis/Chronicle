@@ -139,7 +139,10 @@ public class ReactorHandler(
     /// <summary>
     /// Disconnect the handler.
     /// </summary>
-    public void Disconnect() => _cancellationTokenSource.Cancel();
+    public void Disconnect()
+    {
+        _cancellationTokenSource.Cancel();
+    }
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();

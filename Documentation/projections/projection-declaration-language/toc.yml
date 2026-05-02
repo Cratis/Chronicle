@@ -20,6 +20,8 @@
   href: joins.md
 - name: Children
   href: children.md
+- name: Nested Objects
+  href: nested.md
 - name: Removal
   href: removal.md
 - name: Expressions

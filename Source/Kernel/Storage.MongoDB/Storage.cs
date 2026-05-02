@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using System.Text.Json;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
@@ -21,7 +20,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Represents an implementation of <see cref="IStorage"/> for MongoDB.
 /// </summary>
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -30,7 +28,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 public class Storage(
     IDatabase database,
-    IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
@@ -89,7 +86,6 @@ public class Storage(
         var eventStoreStorage = new EventStoreStorage(
             eventStore,
             database.GetEventStoreDatabase(eventStore),
-            complianceManager,
             expandoObjectConverter,
             jsonSerializerOptions,
             @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.EventStoreSubscriptions;
 
@@ -15,6 +16,7 @@ public class EventStoreSubscriptionDefinition
     /// <summary>
     /// Gets or sets the unique identifier of the subscription.
     /// </summary>
+    [BsonId]
     public EventStoreSubscriptionId Id { get; set; } = EventStoreSubscriptionId.Unspecified;
 
     /// <summary>

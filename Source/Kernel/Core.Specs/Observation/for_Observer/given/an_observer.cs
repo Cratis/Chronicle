@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -8,7 +10,10 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,6 +21,8 @@ using Orleans.Core;
 using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
+using IChronicleEventStoreStorage = Cratis.Chronicle.Storage.IEventStoreStorage;
+using IChronicleStorage = Cratis.Chronicle.Storage.IStorage;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
@@ -39,6 +46,11 @@ public class an_observer : Specification
     protected TestStorageStats _failedPartitionsStorageStats => _silo.StorageManager.GetStorageStats(nameof(FailedPartition))!;
     protected IEventSequence _eventSequence;
     protected IConfigurationForObserverProvider _configurationProvider;
+    protected IChronicleStorage _storage;
+    protected IChronicleEventStoreStorage _eventStoreStorage;
+    protected IEventTypesStorage _eventTypesStorage;
+    protected IJsonComplianceManager _complianceManager;
+    protected IExpandoObjectConverter _expandoObjectConverter;
     protected Observers _observersConfig;
 
     async Task Establish()
@@ -50,6 +62,22 @@ public class an_observer : Specification
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
         _eventSequence = Substitute.For<IEventSequence>();
+        _storage = Substitute.For<IChronicleStorage>();
+        _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+
+        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage
+        _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
+        _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
+
+        // By default, no schemas are known — events pass through unchanged.
+        _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
+
+        _silo.AddService(_storage);
+        _silo.AddService(_complianceManager);
+        _silo.AddService(_expandoObjectConverter);
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
@@ -79,6 +107,9 @@ public class an_observer : Specification
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+
+        _jobsManager.GetJobsOfType<IRetryFailedPartition, RetryFailedPartitionRequest>()
+            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
 
         _observer = await _silo.CreateGrainAsync<Observer>(_observerKey);
 

@@ -1,8 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+extern alias KernelCore;
+extern alias KernelConcepts;
+
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Storage;
+using KernelCore::Cratis.Chronicle.Namespaces;
+using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,12 +47,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
         // Re-initialize test-specific fields (e.g. Tcs, Reactor, Observers) on the current
         // fixture and update the shared MutableServiceRegistry so that DI resolves the new
-        // instances for this test run.
+        // instances for this test run. Clear first so that services from the previous test
+        // (e.g. a different UserProjection variant) are not still discoverable by DiscoverAll.
+        var registry = Services.GetRequiredService<MutableServiceRegistry>();
+        registry.Clear();
         var capturingCollection = new CapturingServiceCollection();
         ConfigureServices(capturingCollection);
         if (capturingCollection.Count > 0)
         {
-            var registry = Services.GetRequiredService<MutableServiceRegistry>();
             registry.Update(capturingCollection);
         }
 
@@ -60,17 +68,86 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    and can be deactivated.
         await DeactivateAllGrains();
 
-        // 3. Re-discover artifacts from the current test fixture. Discover() creates new
+        // 2b. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
+        //     service whose cache persists across test classes. Without this, a test that registers
+        //     ProjectionX can leave a stale pipeline in the cache that is then reused — with the
+        //     wrong schema or Sink state — when a later test registers a different projection that
+        //     happens to resolve to the same pipeline key.
+        Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
+
+        // 3. Remove all databases again. The previous test's DisposeAsync already dropped
+        //    databases, but StateMachine.OnDeactivateAsync calls WriteStateAsync(), which
+        //    auto-creates MongoDB databases with stale grain state. A second cleanup ensures
+        //    grains start with a clean slate when they reactivate during RegisterAll.
+        await ChronicleFixture.RemoveAllDatabases();
+
+        // 3b. Re-bootstrap the kernel reactors for the system event store. The startup task
+        //     that normally does this has been removed from the test silo (it deadlocks when
+        //     PatchManager grain can't activate during silo startup). Since DB was wiped, the
+        //     system Namespaces grain and ReactorsReactor are gone. Without this, events like
+        //     EventStoreAdded/NamespaceAdded won't be processed and webhook/subscription
+        //     definitions never get saved.
+        var grainFactory = Services.GetRequiredService<IGrainFactory>();
+        await grainFactory.GetGrain<INamespaces>(
+            (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System).EnsureDefault();
+        var kernelReactors = Services.GetRequiredService<IReactors>();
+        await kernelReactors.DiscoverAndRegister(
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // 3c. Drop all test event store databases a second time, preserving the system event
+        //     store databases written by step 3b. Grain OnDeactivateAsync writes in step 2
+        //     can re-create test databases after the drop in step 3, carrying stale event type
+        //     schemas into the next test. By this point (after step 3b), all deactivation
+        //     writes have had sufficient time to complete, so this second drop leaves a clean
+        //     slate without destroying the kernel reactor state.
+        await ChronicleFixture.RemoveAllDatabases(
+            excludePrefixes: [(string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System]);
+
+        // 3c.5. Re-bootstrap the test event store namespace and kernel reactors.
+        //       After step 3c drops the test databases the INamespaces grain for the test event
+        //       store loses its state. Webhooks.Add calls INamespaces.GetAll() to find namespaces
+        //       to subscribe webhook observers; if the namespace list is empty, no observer is
+        //       subscribed and webhook HTTP calls never fire. EnsureDefault() re-creates the
+        //       default namespace in the grain (and persists it to the now-clean test DB).
+        //       DiscoverAndRegister re-subscribes kernel reactors (e.g. WebhookReactor) for the
+        //       test event store AFTER the drop so their observer states survive into the test.
+        //       The ReactorsReactor won't re-do this automatically because it already processed
+        //       the EventStoreAdded event for the test event store in the previous test.
+        await grainFactory.GetGrain<INamespaces>(
+            (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore)
+            .EnsureDefault();
+        await kernelReactors.DiscoverAndRegister(
+            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // 3d. Reset the EventTypesStorage in-memory cache for the test event store.
+        //     EventTypesStorage caches registered schemas in a ConcurrentBag<EventType> field
+        //     that is never cleared by database drops — HasFor/GetFor check this cache first and
+        //     can return stale schemas from a previous test's event types, causing
+        //     EventTypeSchemaChanged when two test suites define the same event type name with
+        //     different properties. Calling Populate() re-reads from MongoDB (now empty) and
+        //     replaces the cache, ensuring the next RegisterAll starts with a clean schema state.
+        var storage = Services.GetRequiredService<IStorage>();
+        await storage.GetEventStore(Constants.EventStore).EventTypes.Populate();
+
+        // 4. Re-discover artifacts from the current test fixture. Discover() creates new
         //    handler objects with fresh CancellationTokens (but does not register them yet).
         var eventStore = Services.GetRequiredService<IEventStore>();
         await eventStore.DiscoverAll();
 
-        // 4. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
+        // 5. Reconnect — registers with ConnectedClients, re-creates keep-alive stream,
         //    then fires lifecycle.Connected() which triggers RegisterAll() via OnConnected.
         if (connection is ChronicleConnection chronicleConnection)
         {
             await chronicleConnection.Reconnect();
         }
+
+        // Diagnostic: call RegisterAll directly so that any exception surfaces instead
+        // of being swallowed by ConnectionLifecycle.Connected's catch block.
+        // If lifecycle.Connected already succeeded, Register() is a no-op (_registered = true).
+        // If it failed, this retries and surfaces the actual error.
+        await eventStore.RegisterAll();
     }
 
     /// <inheritdoc/>
@@ -116,6 +193,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         try
         {
             var managementGrain = GrainFactory.GetGrain<IManagementGrain>(0);
+
             await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
             // ForceActivationCollection only schedules deactivation; the actual deactivation

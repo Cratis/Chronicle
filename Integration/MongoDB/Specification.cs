@@ -3,4 +3,9 @@
 
 namespace Cratis.Chronicle.MongoDB.Integration;
 
-public abstract class Specification(ChronicleInProcessFixture fixture) : Specification<ChronicleInProcessFixture>(fixture);
+/// <summary>
+/// Lightweight base specification for MongoDB integration tests.
+/// Does not start an Orleans silo — only the MongoDB container is required.
+/// </summary>
+/// <param name="fixture">The <see cref="ChronicleInProcessFixture"/> providing the MongoDB container.</param>
+public abstract class Specification(ChronicleInProcessFixture fixture) : MongoDBSpecification(fixture);

@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 
@@ -13,7 +14,7 @@ public class when_getting_for_unknown_type : Specification
 
     void Establish() => _sinks = new(string.Empty, string.Empty, new KnownInstancesOf<ISinkFactory>([]));
 
-    void Because() => _result = Catch.Exception(() => _sinks.GetFor("bc5e82fd-9845-4464-9802-a7e21bd8a919", SinkConfigurationId.None, new ReadModelDefinition(
+    async Task Because() => _result = await Catch.Exception(async () => await _sinks.GetFor(new ReadModelDefinition(
         string.Empty,
         string.Empty,
         string.Empty,
@@ -21,7 +22,7 @@ public class when_getting_for_unknown_type : Specification
         ReadModelSource.Code,
         ReadModelObserverType.Projection,
         ReadModelObserverIdentifier.Unspecified,
-        null!,
+        new SinkDefinition(SinkConfigurationId.None, "bc5e82fd-9845-4464-9802-a7e21bd8a919"),
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         [])));
 

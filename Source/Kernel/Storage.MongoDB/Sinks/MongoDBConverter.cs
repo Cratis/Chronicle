@@ -60,11 +60,11 @@ public class MongoDBConverter(
                             var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
                             var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
                             propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
-                            var filter = new ExpandoObject();
-                            var key = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
-                            ((IDictionary<string, object?>)filter).Add($"{collectionIdentifier}.{key}", arrayIndexer.Identifier);
-                            var document = ToBsonValue(filter) as BsonDocument;
-                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(document));
+                            var identifierPropertyName = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
+                            var identifierPath = currentPropertyPath + arrayIndexer.IdentifierProperty;
+                            var identifierBsonValue = ToBsonValue(arrayIndexer.Identifier, identifierPath);
+                            var filterDocument = new BsonDocument { [$"{collectionIdentifier}.{identifierPropertyName}"] = identifierBsonValue };
+                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(filterDocument));
                         }
                         else
                         {
@@ -91,7 +91,7 @@ public class MongoDBConverter(
                 ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
-        return bsonValue == BsonNull.Value ? new BsonString(key.Value.ToString()) : bsonValue;
+        return bsonValue == BsonNull.Value ? new BsonString(key.Value?.ToString() ?? string.Empty) : bsonValue;
     }
 
     /// <inheritdoc/>

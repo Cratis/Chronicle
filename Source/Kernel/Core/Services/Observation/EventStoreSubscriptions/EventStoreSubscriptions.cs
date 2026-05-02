@@ -28,6 +28,7 @@ internal sealed class EventStoreSubscriptions(
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
     {
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
+        var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
 
         foreach (var subscription in request.Subscriptions)
         {
@@ -36,15 +37,32 @@ internal sealed class EventStoreSubscriptions(
                 new EventStoreName(subscription.SourceEventStore),
                 subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)));
 
-            var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(request.TargetEventStore);
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
             var existing = existingSubscriptions.FirstOrDefault(s => s.Identifier == definition.Identifier);
 
-            if (existing is null)
+            if (existing is null || !HasSameDefinition(existing, definition))
             {
+                // Reserve the definition in the manager before appending the event so a second
+                // immediate Subscribe() call observes the pending subscription instead of
+                // appending a duplicate EventStoreSubscriptionAdded event.
+                await subscriptionsManager.Add(definition);
                 await eventSequence.Append(subscription.Identifier, new EventStoreSubscriptionAdded(
                     definition.SourceEventStore,
                     definition.EventTypes));
+
+                // Wait for the subscription to be ready before returning to the client
+                // This ensures that events are not lost if the client immediately starts publishing
+                try
+                {
+                    await subscriptionsManager.WaitUntilSubscribed(
+                        new EventStoreSubscriptionId(subscription.Identifier),
+                        TimeSpan.FromSeconds(5));
+                }
+                catch (TimeoutException)
+                {
+                    // Log but don't fail - the subscription may still activate asynchronously
+                    // This prevents blocking the client indefinitely if there are issues
+                }
             }
         }
     }
@@ -70,5 +88,17 @@ internal sealed class EventStoreSubscriptions(
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList()
         });
+    }
+
+    static bool HasSameDefinition(ConceptsEventStoreSubscriptionDefinition existing, ConceptsEventStoreSubscriptionDefinition incoming)
+    {
+        if (existing.SourceEventStore != incoming.SourceEventStore)
+        {
+            return false;
+        }
+
+        var existingEventTypes = existing.EventTypes.ToHashSet();
+        var incomingEventTypes = incoming.EventTypes.ToHashSet();
+        return existingEventTypes.SetEquals(incomingEventTypes);
     }
 }

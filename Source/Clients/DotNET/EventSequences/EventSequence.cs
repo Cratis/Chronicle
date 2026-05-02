@@ -78,7 +78,8 @@ public class EventSequence(
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
-        DateTimeOffset? occurred = default)
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         var eventClrType = @event.GetType();
         eventStreamType ??= EventStreamType.All;
@@ -94,6 +95,8 @@ public class EventSequence(
             : default;
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
+
+        subject ??= SubjectResolver.ResolveFrom(@event);
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
@@ -125,7 +128,8 @@ public class EventSequence(
             CausedBy = identity.ToContract(),
             Tags = allTags,
             ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract(),
-            Occurred = occurred
+            Occurred = occurred,
+            Subject = subject?.Value
         });
 
         var result = ResolveViolationMessages(response.ToClient());

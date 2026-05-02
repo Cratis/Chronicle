@@ -35,6 +35,9 @@ public class EventSequenceStorage(
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public async Task<Chronicle.Storage.EventSequences.EventSequenceState> GetState()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
@@ -91,7 +94,8 @@ public class EventSequenceStorage(
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
-        IDictionary<EventTypeGeneration, EventHash> contentHashes)
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject = null)
     {
         try
         {
@@ -116,7 +120,8 @@ public class EventSequenceStorage(
                 causation,
                 causedByChain,
                 occurred,
-                content);
+                content,
+                subject?.IsSet == true ? subject : null);
 
             scope.DbContext.Events.Add(eventEntry);
             await scope.DbContext.SaveChangesAsync();

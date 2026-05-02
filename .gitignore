@@ -305,3 +305,4 @@ vite*.map
 certificates/
 
 .grpc-schema-gen*
+.playwright-mcp

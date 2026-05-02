@@ -53,7 +53,7 @@ public class a_projection_replay_handler : Specification
         _projectionPipelineManager.GetFor(
             _observerDetails.Key.EventStore,
             _observerDetails.Key.Namespace,
-            Arg.Any<Engine.IProjection>()).Returns(_projectionPipeline);
+            Arg.Any<Engine.IProjection>()).Returns(Task.FromResult(_projectionPipeline));
 
         _handler = new ProjectionReplayHandler(
             _projections,

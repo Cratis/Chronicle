@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -28,12 +29,14 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
+    IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
     /// <inheritdoc/>
@@ -111,7 +114,7 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetDefinition();
         var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-        var sink = sinks.GetFor(definition);
+        var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
         Concepts.ReadModels.ReadModelContainerName? occurrence = null;
@@ -125,7 +128,21 @@ internal sealed class ReadModels(
             skip,
             request.PageSize);
 
-        var instancesAsJson = instances?.Select(instance => JsonSerializer.Serialize(instance)).ToList() ?? [];
+        var schema = definition.GetSchemaForLatestGeneration();
+        var decryptedInstances = new List<ExpandoObject>();
+        foreach (var instance in instances ?? [])
+        {
+            var decrypted = await ReadModelComplianceHelper.Release(
+                complianceManager,
+                request.EventStore,
+                request.Namespace,
+                schema,
+                instance,
+                expandoObjectConverter);
+            decryptedInstances.Add(decrypted);
+        }
+
+        var instancesAsJson = decryptedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
         return new()
         {
             Instances = instancesAsJson,
@@ -286,17 +303,23 @@ internal sealed class ReadModels(
 
                 var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
 
-                var subscription = await stream.SubscribeAsync((changeset, _) =>
+                var schema = definition.GetSchemaForLatestGeneration();
+                var subscription = await stream.SubscribeAsync(async (changeset, _) =>
                 {
+                    var decrypted = await ReadModelComplianceHelper.ReleaseJson(
+                        complianceManager,
+                        request.EventStore,
+                        changeset.Namespace,
+                        schema,
+                        changeset.ReadModel);
+
                     observer.OnNext(new ReadModelChangeset
                     {
                         Namespace = changeset.Namespace,
                         ModelKey = changeset.ReadModelKey,
-                        ReadModel = changeset.ReadModel.ToJsonString(jsonSerializerOptions),
+                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
                         Removed = false
                     });
-
-                    return Task.CompletedTask;
                 });
 
                 context.CancellationToken.Register(() => subscription.UnsubscribeAsync().GetAwaiter().GetResult());
@@ -378,11 +401,6 @@ internal sealed class ReadModels(
 
         while (await cursor.MoveNext())
         {
-            if (!cursor.Current.Any())
-            {
-                break;
-            }
-
             foreach (var appendedEvent in cursor.Current)
             {
                 var correlationId = appendedEvent.Context.CorrelationId;

@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="LastUpdated">The last time the projection definition was updated.</param>
 /// <param name="Tags">Collection of tags the projection belongs to.</param>
 /// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
+/// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
@@ -48,10 +49,11 @@ public record ProjectionDefinition(
     FromEventPropertyDefinition? FromEventProperty = default,
     DateTimeOffset? LastUpdated = default,
     IEnumerable<string>? Tags = default,
-    AutoMap AutoMap = AutoMap.Enabled)
+    AutoMap AutoMap = AutoMap.Enabled,
+    IDictionary<PropertyPath, ChildrenDefinition>? Nested = default)
 {
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.
     /// </summary>
-    public bool IsEmpty => From.Count == 0 && Children.Count == 0;
+    public bool IsEmpty => From.Count == 0 && Children.Count == 0 && (Nested is null || Nested.Count == 0);
 }

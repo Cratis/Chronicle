@@ -84,6 +84,7 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The caused by chain.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content per generation.</param>
+    /// <param name="subject">Optional subject identifying the compliance target.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
         EventSequenceNumber sequenceNumber,
@@ -96,7 +97,8 @@ public static class EventEntryConverter
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content)
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        Subject? subject = null)
     {
         var contentDict = content.ToDictionary(
             kvp => ((uint)kvp.Key).ToString(),
@@ -115,7 +117,8 @@ public static class EventEntryConverter
             EventStreamType = eventStreamType.Value,
             EventStreamId = eventStreamId.Value,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
-            Compensations = new Dictionary<string, string>()
+            Compensations = new Dictionary<string, string>(),
+            Subject = subject?.Value
         };
     }
 

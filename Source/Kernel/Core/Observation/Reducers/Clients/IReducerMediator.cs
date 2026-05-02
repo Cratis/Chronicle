@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 
@@ -16,22 +17,28 @@ public interface IReducerMediator
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> to subscribe for.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to subscribe for.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to subscribe for.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to subscribe for.</param>
     /// <param name="target"><see cref="ReducerEventsObserver"/> delegate that will be called with events.</param>
-    void Subscribe(ReducerId reducerId, ConnectionId connectionId, ReducerEventsObserver target);
+    void Subscribe(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReducerEventsObserver target);
 
     /// <summary>
     /// Notify that events should be observed.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> to send to.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> to send to.</param>
+    /// <param name="eventStore"><see cref="EventStoreName"/> to send to.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> to send to.</param>
     /// <param name="operation"><see cref="ReduceOperation"/> to send.</param>
     /// <param name="taskCompletionSource"><see cref="TaskCompletionSource{T}"/> to return <see cref="ObserverSubscriberResult"/> to.</param>
-    void OnNext(ReducerId reducerId, ConnectionId connectionId, ReduceOperation operation, TaskCompletionSource<ReducerSubscriberResult> taskCompletionSource);
+    void OnNext(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReduceOperation operation, TaskCompletionSource<ReducerSubscriberResult> taskCompletionSource);
 
     /// <summary>
-    /// Notify that a client has connected.
+    /// Notify that a client has disconnected.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> for the client that disconnected.</param>
     /// <param name="connectionId"><see cref="ConnectionId"/> for the client that disconnected.</param>
-    void Disconnected(ReducerId reducerId, ConnectionId connectionId);
+    /// <param name="eventStore"><see cref="EventStoreName"/> for the client that disconnected.</param>
+    /// <param name="namespace"><see cref="EventStoreNamespaceName"/> for the client that disconnected.</param>
+    void Disconnected(ReducerId reducerId, ConnectionId connectionId, EventStoreName eventStore, EventStoreNamespaceName @namespace);
 }

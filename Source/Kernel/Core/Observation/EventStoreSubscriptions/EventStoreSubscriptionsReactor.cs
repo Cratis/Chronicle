@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -15,9 +16,10 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// Represents a reactor that handles event store subscription lifecycle events.
 /// </summary>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="storage"><see cref="IStorage"/> for getting all event stores.</param>
 /// <param name="logger">The <see cref="ILogger{EventStoreSubscriptionsReactor}"/> for logging.</param>
 [Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false, defaultNamespaceOnly: true)]
-public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, ILogger<EventStoreSubscriptionsReactor> logger) : Reactor
+public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage storage, ILogger<EventStoreSubscriptionsReactor> logger) : Reactor
 {
     /// <summary>
     /// Handles the addition of an event store subscription.
@@ -56,5 +58,43 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, ILogger<
         await subscriptionsManager.Remove(subscriptionId);
 
         logger.SubscriptionRemoved(eventContext.EventSourceId);
+    }
+
+    /// <summary>
+    /// Handles the addition of a source event store and retries any pending subscriptions immediately.
+    /// </summary>
+    /// <param name="event">The event containing the event store information.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Await Task.</returns>
+    public async Task EventStoreAdded(EventStoreAdded @event, EventContext eventContext)
+    {
+        if (eventContext.EventStore != Concepts.EventStoreName.System)
+        {
+            return;
+        }
+
+        var targetEventStores = (await storage.GetEventStores()).ToArray();
+        logger.SourceEventStoreAdded(@event.EventStore, targetEventStores.Length);
+
+        var tasks = targetEventStores.Select(targetEventStore =>
+            NotifySubscriptionsManagerOfSourceEventStore(targetEventStore, @event.EventStore));
+        await Task.WhenAll(tasks);
+    }
+
+    async Task NotifySubscriptionsManagerOfSourceEventStore(Concepts.EventStoreName targetEventStore, Concepts.EventStoreName sourceEventStore)
+    {
+        try
+        {
+            var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(targetEventStore.Value);
+            await subscriptionsManager.SourceEventStoreAdded(sourceEventStore);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);
+        }
     }
 }

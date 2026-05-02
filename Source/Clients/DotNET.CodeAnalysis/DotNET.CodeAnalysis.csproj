@@ -18,9 +18,10 @@
         <NoWarn>$(NoWarn);NU5128;NU1507</NoWarn>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+        <PackageReference Update="Microsoft.CodeAnalysis.Common" VersionOverride="5.0.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.3.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="5.3.0" />
+        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" VersionOverride="5.3.0" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Remove="Cratis.Fundamentals" />

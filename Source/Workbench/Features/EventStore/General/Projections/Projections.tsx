@@ -421,7 +421,7 @@ export const Projections = () => {
 
                                         const instances = (result.response?.readModelEntries ?? []).map((entry: unknown) => {
                                             const instance = new ReadModelInstance();
-                                            instance.instance = entry as Record<string, unknown>;
+                                            instance.instance = entry as Record<string, Record<string, unknown>>;
                                             return instance;
                                         });
                                         setReadModelInstances(instances);

@@ -57,5 +57,5 @@ public class and_there_are_matching_observers : given.all_dependencies
     [Fact] void should_return_one_observer() => _result.Count().ShouldEqual(1);
     [Fact] void should_have_correct_observer_id() => _result.First().Id.ShouldEqual(_replayableDefinition.Identifier.Value);
     [Fact] void should_be_marked_as_replayable() => _result.First().IsReplayable.ShouldBeTrue();
-    [Fact] void should_have_correct_type() => _result.First().Type.ShouldEqual(Contracts.Observation.ObserverType.Reactor);
+    [Fact] void should_have_correct_type() => _result.First().Type.ShouldEqual(ObserverType.Reactor);
 }

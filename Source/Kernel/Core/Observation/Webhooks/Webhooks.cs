@@ -24,8 +24,6 @@ public class Webhooks(
     ILogger<Webhooks> logger) : Grain<WebhooksState>, IWebhooks, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "webhook-subscribe:";
-    static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
-    static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
@@ -49,7 +47,8 @@ public class Webhooks(
         State.Webhooks = webhooks;
         await WriteStateAsync();
 
-        await ScheduleSubscriptionReminder(definition.Identifier);
+        var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+        await SetDefinitionAndSubscribe(namespaces, definition);
     }
 
     /// <inheritdoc/>
@@ -63,7 +62,8 @@ public class Webhooks(
             State.Webhooks = webhooks;
             await WriteStateAsync();
 
-            await ScheduleSubscriptionReminder(definition.Identifier);
+            var namespaces = await GrainFactory.GetGrain<INamespaces>(_eventStoreName).GetAll();
+            await SetDefinitionAndSubscribe(namespaces, definition);
         }
     }
 
@@ -224,19 +224,20 @@ public class Webhooks(
 
     async Task SubscribeIfNotSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GetObserver(definition, namespaceName);
-        var subscribed = await observer.IsSubscribed();
-
-        if (!subscribed && definition.IsActive)
+        if (!definition.IsActive)
         {
-            logger.Subscribing(definition.Identifier, namespaceName);
-            await observer.Subscribe<IWebhookObserverSubscriber>(
-                ObserverType.External,
-                definition.EventTypes.ToArray(),
-                localSiloDetails.SiloAddress);
             return;
         }
-        logger.AlreadySubscribed(definition.Identifier, namespaceName);
+
+        var observer = GetObserver(definition, namespaceName);
+
+        // Always call Subscribe — for [KeepAlive] grains the in-memory
+        // subscription state can be stale after databases are dropped.
+        logger.Subscribing(definition.Identifier, namespaceName);
+        await observer.Subscribe<IWebhookObserverSubscriber>(
+            ObserverType.External,
+            definition.EventTypes.ToArray(),
+            localSiloDetails.SiloAddress);
     }
 
     async Task UnsubscribeIfSubscribed(WebhookDefinition definition, EventStoreNamespaceName namespaceName)
@@ -255,12 +256,6 @@ public class Webhooks(
 
     IObserver GetObserver(WebhookDefinition definition, EventStoreNamespaceName namespaceName) =>
         GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
-
-    Task<IGrainReminder> ScheduleSubscriptionReminder(WebhookId webhookId)
-    {
-        var reminderName = GetSubscriptionReminderName(webhookId);
-        return this.RegisterOrUpdateReminder(reminderName, _subscriptionReminderDelay, _subscriptionReminderPeriod);
-    }
 
     async Task RemoveReminder(string reminderName)
     {
@@ -289,6 +284,4 @@ public class Webhooks(
         webhookId = new WebhookId(id);
         return true;
     }
-
-    string GetSubscriptionReminderName(WebhookId webhookId) => $"{SubscriptionReminderPrefix}{webhookId.Value}";
 }

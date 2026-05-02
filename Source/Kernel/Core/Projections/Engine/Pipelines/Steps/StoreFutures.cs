@@ -17,6 +17,11 @@ public class StoreFutures(
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
+        if (context.IsUnresolvable)
+        {
+            return context;
+        }
+
         // Store any deferred futures that were created during processing
         foreach (var future in context.DeferredFutures)
         {

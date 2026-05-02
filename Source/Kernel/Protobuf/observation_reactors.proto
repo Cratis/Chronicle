@@ -79,6 +79,11 @@ enum ObservationState {
    Success = 1;
    Failed = 2;
 }
+message ObserverFilters {
+   repeated string FilterTags = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3; // default value could not be applied: All
+}
 message OneOf_RegisterReactor_ReactorResult {
    RegisterReactor Value0 = 1;
    ReactorResult Value1 = 2;
@@ -89,6 +94,7 @@ message ReactorDefinition {
    repeated EventTypeWithKeyExpression EventTypes = 3;
    bool IsReplayable = 4; // default value could not be applied: True
    repeated string Tags = 5;
+   ObserverFilters Filters = 6;
 }
 message ReactorMessage {
    OneOf_RegisterReactor_ReactorResult Content = 1;

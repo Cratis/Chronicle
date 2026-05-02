@@ -19,7 +19,7 @@ public class without_explicit_read_model_and_incompatible_event_property_types :
     {
         var compileResult = _languageService.Compile(
             Declaration,
-            Cratis.Chronicle.Concepts.Projections.ProjectionOwner.Client,
+            Concepts.Projections.ProjectionOwner.Client,
             [],
             _eventTypeSchemas);
 

@@ -21,13 +21,20 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
-        // Don't set initial state if the event was deferred (key is undefined)
-        if (context.IsDeferred)
+        // Don't set initial state if the event was deferred or the key is permanently unresolvable
+        if (context.IsDeferred || context.IsUnresolvable)
         {
             return context;
         }
 
+        // For join events, initial state is resolved via the join key resolution path — skip here.
         if (context.IsJoin)
+        {
+            return context;
+        }
+
+        // Don't set initial state if the key value could not be resolved.
+        if (context.Key.Value is null)
         {
             return context;
         }

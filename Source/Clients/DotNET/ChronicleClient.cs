@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -296,6 +297,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             WriteIndented = false
         };
         Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new EventSourceIdJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());

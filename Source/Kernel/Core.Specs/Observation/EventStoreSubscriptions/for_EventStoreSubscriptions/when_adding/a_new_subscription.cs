@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
 using ContractEventStoreSubscriptionDefinition = Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -63,4 +64,9 @@ public class a_new_subscription : given.an_event_store_subscriptions_service
             Arg.Any<EventSourceType>(),
             Arg.Any<EventStreamType>(),
             Arg.Any<EventStreamId>());
+
+    [Fact] void should_wait_until_subscription_is_ready() =>
+        _subscriptionsManager.Received(1).WaitUntilSubscribed(
+            Arg.Is<EventStoreSubscriptionId>(id => id.Value == "test-subscription-id"),
+            Arg.Any<TimeSpan>());
 }

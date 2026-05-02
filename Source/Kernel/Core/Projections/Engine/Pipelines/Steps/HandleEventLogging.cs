@@ -33,4 +33,10 @@ internal static partial class HandleEventLogging
 
     [LoggerMessage(LogLevel.Debug, "Child projection '{ChildPath}' key resolution deferred for event type '{EventType}' at sequence {SequenceNumber} - creating future")]
     internal static partial void ChildKeyResolutionDeferred(this ILogger<HandleEvent> logger, string childPath, EventTypeId eventType, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Child projection '{ChildPath}' key is unresolvable for event type '{EventType}' at sequence {SequenceNumber} - child event skipped with no future created. This typically indicates a badly-defined projection.")]
+    internal static partial void ChildKeyUnresolvable(this ILogger<HandleEvent> logger, string childPath, EventTypeId eventType, ulong sequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping HandleEvent for sequence {SequenceNumber} — projection '{ProjectionId}' at path '{Path}' has an unresolvable root key")]
+    internal static partial void SkippingDueToUnresolvableKey(this ILogger<HandleEvent> logger, ulong sequenceNumber, string projectionId, string path);
 }

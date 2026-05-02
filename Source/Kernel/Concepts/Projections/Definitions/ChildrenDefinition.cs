@@ -20,6 +20,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="RemovedWithJoin">All the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.</param>
 /// <param name="FromEventProperty">Optional <see cref="FromEventPropertyDefinition"/> definition.</param>
 /// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
+/// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 public record ChildrenDefinition(
     PropertyPath IdentifiedBy,
     IDictionary<EventType, FromDefinition> From,
@@ -29,7 +30,8 @@ public record ChildrenDefinition(
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
-    AutoMap AutoMap = AutoMap.Inherit) :
+    AutoMap AutoMap = AutoMap.Inherit,
+    IDictionary<PropertyPath, ChildrenDefinition>? Nested = default) :
     ProjectionDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,
@@ -46,4 +48,5 @@ public record ChildrenDefinition(
         RemovedWith,
         RemovedWithJoin,
         FromEventProperty,
-        AutoMap: AutoMap);
+        AutoMap: AutoMap,
+        Nested: Nested);

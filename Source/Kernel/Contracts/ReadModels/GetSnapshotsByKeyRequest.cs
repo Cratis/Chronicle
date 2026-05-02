@@ -30,8 +30,8 @@ public class GetSnapshotsByKeyRequest
     /// <summary>
     /// Gets or sets the event sequence identifier.
     /// </summary>
-    [ProtoMember(4)]
-    public string EventSequenceId { get; set; } = string.Empty;
+    [ProtoMember(4), DefaultValue("event-log")]
+    public string EventSequenceId { get; set; } = "event-log";
 
     /// <summary>
     /// Gets or sets the read model key.

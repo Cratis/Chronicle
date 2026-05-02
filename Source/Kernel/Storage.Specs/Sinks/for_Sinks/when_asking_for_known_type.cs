@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Storage.Sinks.for_Sinks;
 

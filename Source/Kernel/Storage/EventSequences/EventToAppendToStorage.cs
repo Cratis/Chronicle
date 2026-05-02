@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// <param name="Occurred">The date and time the event occurred.</param>
 /// <param name="Content">The content of the event.</param>
 /// <param name="Hash">The <see cref="EventHash"/> of the event content.</param>
+/// <param name="Subject">Optional <see cref="Subject"/> that identifies the compliance target for the event.</param>
 public record EventToAppendToStorage(
     EventSequenceNumber SequenceNumber,
     EventSourceType EventSourceType,
@@ -37,4 +38,5 @@ public record EventToAppendToStorage(
     IEnumerable<Tag> Tags,
     DateTimeOffset Occurred,
     ExpandoObject Content,
-    EventHash Hash);
+    EventHash Hash,
+    Subject? Subject = null);

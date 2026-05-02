@@ -1,0 +1,16 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.for_SubjectResolver;
+
+public class when_event_has_subject_on_constructor_parameter : Specification
+{
+    record EventWithParameterSubject([Subject] string CustomerId, string Name);
+
+    Subject? _result;
+
+    void Because() => _result = SubjectResolver.ResolveFrom(new EventWithParameterSubject("customer-77", "Alice"));
+
+    [Fact] void should_resolve_subject() => _result.ShouldNotBeNull();
+    [Fact] void should_carry_the_parameter_value() => _result!.Value.ShouldEqual("customer-77");
+}

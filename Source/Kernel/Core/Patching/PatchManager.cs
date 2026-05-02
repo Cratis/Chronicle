@@ -103,7 +103,6 @@ public class PatchManager(
             State = new PatchManagerState(appliedPatches);
             await WriteStateAsync();
         }
-
         await base.OnActivateAsync(cancellationToken);
     }
 }

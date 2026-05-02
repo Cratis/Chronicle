@@ -14,6 +14,12 @@ namespace Cratis.Chronicle.Storage.EventTypes;
 public interface IEventTypesStorage
 {
     /// <summary>
+    /// Populate the in-memory cache from the underlying storage.
+    /// </summary>
+    /// <returns>Async task.</returns>
+    Task Populate();
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>
@@ -83,4 +89,18 @@ public interface IEventTypesStorage
     /// If generation is not provided, it will get what is associated with the <see cref="EventType"/>.
     /// </remarks>
     Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default);
+
+    /// <summary>
+    /// Gets a collection of <see cref="EventTypeSchema"/> for a collection of <see cref="EventTypeId"/>.
+    /// </summary>
+    /// <param name="eventTypeIds">The <see cref="EventTypeId"/> collection to get for.</param>
+    /// <returns>A collection of <see cref="EventTypeSchema"/>, one per matched type.</returns>
+    Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds);
+
+    /// <summary>
+    /// Gets a collection of <see cref="EventTypeSchema"/> for a collection of <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="eventTypes">The <see cref="EventType"/> collection to get for.</param>
+    /// <returns>A collection of <see cref="EventTypeSchema"/>, one per matched type respecting each type's generation.</returns>
+    Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes);
 }
