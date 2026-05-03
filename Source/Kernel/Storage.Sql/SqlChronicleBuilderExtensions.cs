@@ -41,6 +41,23 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
+
+        AddHealthCheck(builder, options);
+
         return builder;
+    }
+
+    static void AddHealthCheck(IChronicleBuilder builder, ChronicleOptions options)
+    {
+        var connectionString = options.Storage.ConnectionDetails;
+
+        if (string.Equals(options.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddHealthChecks().AddNpgSql(connectionString, name: "postgresql", timeout: TimeSpan.FromSeconds(3));
+        }
+        else if (string.Equals(options.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddHealthChecks().AddSqlServer(connectionString, name: "mssql", timeout: TimeSpan.FromSeconds(3));
+        }
     }
 }

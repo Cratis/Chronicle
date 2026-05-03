@@ -53,6 +53,11 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IStorage, Storage.Storage>();
+
+            services.AddHealthChecks().AddMongoDb(
+                _ => new MongoDB.Driver.MongoClient(server),
+                name: "mongodb",
+                timeout: TimeSpan.FromSeconds(3));
         });
 
         return builder;

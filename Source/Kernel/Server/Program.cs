@@ -45,14 +45,7 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-var healthChecks = builder.Services.AddHealthChecks();
-if (!isSqlStorage)
-{
-    healthChecks.AddMongoDb(
-        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
-        name: "mongodb",
-        timeout: TimeSpan.FromSeconds(3));
-}
+builder.Services.AddHealthChecks();
 
 if (chronicleOptions.Features.Api)
 {
