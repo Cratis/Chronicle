@@ -286,8 +286,15 @@ public class HandleEventsForPartition(
             {
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(subscriberTimeout);
-                var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext).WaitAsync(timeoutCts.Token);
-                return (result, eventsToHandle);
+                try
+                {
+                    var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext).WaitAsync(timeoutCts.Token);
+                    return (result, eventsToHandle);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    return new TimeoutException($"Subscriber did not respond within the configured timeout of {subscriberTimeout.TotalSeconds:F0} seconds");
+                }
             }
 
             logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);

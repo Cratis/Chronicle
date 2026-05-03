@@ -12,6 +12,10 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </summary>
 public class FailedPartitions
 {
+    /// <summary>
+    /// Maximum number of resolved partitions to keep in memory for observability.
+    /// Oldest entries are evicted once this limit is reached to prevent unbounded memory growth.
+    /// </summary>
     const int MaxResolvedPartitions = 100;
 
     readonly List<FailedPartition> _resolvedPartitions = [];
