@@ -187,7 +187,9 @@ public partial class Observer
         {
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
-                var identifier = @event.Context.Subject.Value;
+                // Subject may be null on events appended before the Subject field was introduced.
+                // Fall back to EventSourceId so decryption can still proceed.
+                var identifier = @event.Context.Subject?.Value ?? @event.Context.EventSourceId.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
                     @event.Context.EventStore,
