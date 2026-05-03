@@ -25,15 +25,9 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
 
-        uint actualRevision;
-        if (IsLatest(revision))
-        {
-            actualRevision = await GetNextRevision(scope.DbContext, identifier);
-        }
-        else
-        {
-            actualRevision = revision!.Value;
-        }
+        var actualRevision = IsLatest(revision)
+            ? await GetNextRevision(scope.DbContext, identifier)
+            : revision!.Value;
 
         await scope.DbContext.EncryptionKeys.Upsert(new EncryptionKey
         {
