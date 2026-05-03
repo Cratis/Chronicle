@@ -187,11 +187,13 @@ public partial class Observer
             return [];
         }
 
+        var anyDecrypted = false;
         var releasedEvents = new List<AppendedEvent>(events.Length);
         foreach (var @event in events)
         {
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
+                anyDecrypted = true;
                 var identifier = @event.Context.Subject.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
@@ -209,7 +211,7 @@ public partial class Observer
             }
         }
 
-        return releasedEvents.ToArray();
+        return anyDecrypted ? releasedEvents.ToArray() : events;
     }
 
     bool ShouldHandleEvent(Key partition)
