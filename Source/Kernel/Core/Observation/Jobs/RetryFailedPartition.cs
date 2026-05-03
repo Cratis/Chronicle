@@ -27,11 +27,19 @@ public class RetryFailedPartition(
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
-            // No events were found to process. This happens when the observer's
-            // NextEventSequenceNumber is already past the failed sequence number —
-            // the events were processed despite the caller timing out. The failed
-            // partition record is stale, so recover it using the original sequence number.
             logger.NoEventsWereHandled(nameof(RetryFailedPartition));
+
+            if (!State.HandledAllEvents)
+            {
+                // The step ran but the subscriber failed every event — the partition is still
+                // legitimately failed. Do not clear it; the next scheduled retry will try again.
+                return;
+            }
+
+            // HandledAllEvents is true but no sequence number was recorded: the step succeeded
+            // but found nothing to process. This means the observer already advanced past the
+            // failed sequence number (the events were processed despite the caller timing out).
+            // The failed partition record is stale — clear it.
             await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
             return;
         }
