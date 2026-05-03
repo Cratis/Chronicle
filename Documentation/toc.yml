@@ -24,6 +24,8 @@
   href: compliance/toc.yml
 - name: Read Models
   href: read-models/toc.yml
+- name: Sinks
+  href: sinks/toc.yml
 - name: Projections
   href: projections/toc.yml
 - name: Reactors

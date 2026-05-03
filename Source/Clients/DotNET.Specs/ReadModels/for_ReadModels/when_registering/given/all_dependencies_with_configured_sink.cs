@@ -8,20 +8,20 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Cratis.Chronicle.ReadModels.for_ReadModels.given;
+namespace Cratis.Chronicle.ReadModels.for_ReadModels.when_registering.given;
 
-public class all_dependencies : Specification
+public class all_dependencies_with_configured_sink : Specification
 {
     protected IEventStore _eventStore;
     protected INamingPolicy _namingPolicy;
     protected IProjections _projections;
     protected IReducers _reducers;
     protected IEventTypes _eventTypes;
-    protected IEnumerable<IHaveReadModel> _additionalReadModels;
     protected IJsonSchemaGenerator _schemaGenerator;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
@@ -29,6 +29,8 @@ public class all_dependencies : Specification
     protected IReducerObservers _reducerObservers;
     protected JsonSerializerOptions _jsonSerializerOptions;
     protected ReadModels _readModels;
+
+    protected virtual SinkTypeId DefaultSinkTypeId => WellKnownSinkTypes.MongoDB;
 
     void Establish()
     {
@@ -40,11 +42,12 @@ public class all_dependencies : Specification
         _projections = Substitute.For<IProjections>();
         _reducers = Substitute.For<IReducers>();
         _eventTypes = Substitute.For<IEventTypes>();
-        _additionalReadModels = [];
         _schemaGenerator = Substitute.For<IJsonSchemaGenerator>();
         _readModelWatcherManager = Substitute.For<IReadModelWatcherManager>();
         _reducerObservers = Substitute.For<IReducerObservers>();
         _jsonSerializerOptions = new();
+
+        _schemaGenerator.Generate(Arg.Any<Type>()).Returns(new Cratis.Chronicle.Schemas.JsonSchema());
 
         _services = Substitute.For<IServices>();
 
@@ -60,7 +63,7 @@ public class all_dependencies : Specification
             _reducers,
             _eventTypes,
             _schemaGenerator,
-            Options.Create(new ChronicleOptions()),
+            Options.Create(new ChronicleOptions { DefaultSinkTypeId = DefaultSinkTypeId }),
             _jsonSerializerOptions,
             _readModelWatcherManager,
             _reducerObservers,

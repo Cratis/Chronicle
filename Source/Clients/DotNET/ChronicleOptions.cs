@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Chronicle.Sinks;
 
 namespace Cratis.Chronicle;
 
@@ -134,6 +135,13 @@ public class ChronicleOptions(
     /// Gets or sets the port for the Management API and well-known certificate endpoint.
     /// </summary>
     public int ManagementPort { get; set; } = 8080;
+
+    /// <summary>
+    /// Gets or sets the default <see cref="SinkTypeId"/> used when registering projections and reducers.
+    /// When not explicitly configured, defaults to <see cref="WellKnownSinkTypes.MongoDB"/>.
+    /// Set to <see cref="WellKnownSinkTypes.SQL"/> to persist read models into a SQL database.
+    /// </summary>
+    public SinkTypeId DefaultSinkTypeId { get; set; } = WellKnownSinkTypes.MongoDB;
 
     /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
