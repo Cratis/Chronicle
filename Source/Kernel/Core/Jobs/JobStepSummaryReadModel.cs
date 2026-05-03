@@ -59,7 +59,7 @@ public record JobStepSummary(
 
     private static JobStepSummary ToJobStep(JobStepState step) =>
         new(
-            step.Id.StepId,
+            step.Id.JobStepId,
             step.Type,
             step.Name,
             (JobStepStatus)(int)step.Status,

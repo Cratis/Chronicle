@@ -39,6 +39,6 @@ public class EventStoreQueries : ControllerBase
     [HttpGet("observe")]
     public ISubject<IEnumerable<string>> AllEventStores() =>
         _eventStores.InvokeAndWrapWithTransformSubject(
-            token => _eventStores.ObserveEventStores(token),
+            token => _eventStores.AllEventStores(token),
             es => es);
 }

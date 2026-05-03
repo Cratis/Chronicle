@@ -5,7 +5,6 @@ using System.Security.Claims;
 using Cratis.Arc;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Security;
-using Cratis.Chronicle.Storage.Security;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;

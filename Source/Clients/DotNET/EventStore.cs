@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
-using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventStores;
 using Cratis.Chronicle.Contracts.Namespaces;

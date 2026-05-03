@@ -37,6 +37,21 @@ internal sealed class Jobs(IGrainFactory grainFactory, IStorage storage) : IJobs
             .CompletedBy(callContext.CancellationToken)
             .Select(jobs => (IEnumerable<JobSummaryResponse>)jobs.Select(j => ToResponse(j)).ToList());
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<JobStepSummaryResponse>> GetJobSteps(GetJobStepsRequest request, CallContext callContext = default)
+    {
+        var steps = await Chronicle.Jobs.JobStepSummary.GetJobSteps(request.EventStore, request.Namespace, request.JobId, storage);
+        return steps.Select(s => new JobStepSummaryResponse
+        {
+            Id = s.Id,
+            Type = s.Type,
+            Name = s.Name,
+            Status = s.Status,
+            StatusChanges = s.StatusChanges,
+            Progress = s.Progress
+        });
+    }
+
     static JobSummaryResponse ToResponse(Chronicle.Jobs.JobSummary job) => new()
     {
         Id = job.Id,

@@ -9,14 +9,6 @@ namespace Cratis.Chronicle.Jobs;
 public class Job
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Job"/> class.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="IEventStore"/> this job belongs to.</param>
-    public Job(IEventStore eventStore)
-    {
-    }
-
-    /// <summary>
     /// Gets or sets the unique identifier for the job.
     /// </summary>
     public JobId Id { get; set; } = JobId.NotSet;

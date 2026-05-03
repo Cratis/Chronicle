@@ -36,7 +36,7 @@ public class TypeDiscovery(Assembly assembly)
             // that loaded successfully and emit a warning for each failure.
             foreach (var loaderEx in ex.LoaderExceptions.OfType<Exception>())
             {
-                Console.WriteLine($"  WARNING: Failed to load one or more types: {loaderEx.Message}");
+                Console.WriteLine($"  Skipped types in assembly (cannot resolve dependent assembly): {loaderEx.Message}");
             }
 
             types = ex.Types.OfType<Type>();
@@ -53,7 +53,7 @@ public class TypeDiscovery(Assembly assembly)
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  WARNING: Skipping type '{type.FullName}' — could not determine class/abstract status: {ex.Message}");
+                Console.WriteLine($"  Skipped type '{type.FullName}' (could not determine class/abstract status): {ex.Message}");
                 continue;
             }
 
@@ -80,7 +80,7 @@ public class TypeDiscovery(Assembly assembly)
 
                 if (hasCommandAttr || hasReadModelAttr)
                 {
-                    Console.WriteLine($"  WARNING: Type '{type.FullName}' has [Command] or [ReadModel] but no [BelongsTo] attribute. Skipping.");
+                    Console.WriteLine($"  Skipped type '{type.FullName}' (has [Command] or [ReadModel] but no [BelongsTo] attribute).");
                 }
 
                 continue;
@@ -176,17 +176,12 @@ public class TypeDiscovery(Assembly assembly)
             catch { return false; }
         });
 
-            if (attr is null)
-            {
-                return null;
-            }
-
-            return attr.ConstructorArguments.FirstOrDefault().Value as string;
-        }
-        catch (Exception)
+        if (attr is null)
         {
             return null;
         }
+
+        return attr.ConstructorArguments.FirstOrDefault().Value as string;
     }
 
     static List<QueryMethodDefinition> DiscoverQueryMethods(Type readModelType)

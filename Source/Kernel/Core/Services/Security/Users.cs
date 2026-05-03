@@ -3,7 +3,6 @@
 
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
@@ -19,7 +18,6 @@ internal sealed class Users(
     IGrainFactory grainFactory,
     IStorage storage) : IUsers
 {
-
     /// <inheritdoc/>
     public Task AddUser(AddUserRequest request, CallContext callContext = default) =>
         new Chronicle.Security.AddUser(request.UserId, request.Username, request.Email, request.Password)
@@ -60,7 +58,7 @@ internal sealed class Users(
     public IObservable<IEnumerable<UserResponse>> AllUsers(CallContext callContext = default) =>
         Chronicle.Security.User.AllUsers(storage)
             .CompletedBy(callContext.CancellationToken)
-            .Select(users => (IEnumerable<UserResponse>)users.Select(u => ToResponse(u)).ToList());
+            .Select(users => (IEnumerable<UserResponse>)users.Select<Chronicle.Security.User, UserResponse>(u => ToResponse(u)).ToList());
 
     static UserResponse ToResponse(Chronicle.Security.User user) => new()
     {
