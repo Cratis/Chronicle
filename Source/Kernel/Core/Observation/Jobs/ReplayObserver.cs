@@ -78,6 +78,14 @@ public class ReplayObserver(
     protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result, jsonSerializerOptions);
+        var progress = State.Progress;
+        if (progress.TotalSteps > 0)
+        {
+            var completedSteps = progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps;
+            var percentComplete = (double)completedSteps / progress.TotalSteps * 100;
+            logger.ReplayProgress(completedSteps, progress.TotalSteps, percentComplete, State.LastHandledEventSequenceNumber);
+        }
+
         return Task.CompletedTask;
     }
 

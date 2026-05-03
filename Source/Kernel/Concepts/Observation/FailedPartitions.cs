@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </summary>
 public class FailedPartitions
 {
+    const int MaxResolvedPartitions = 100;
+
     readonly List<FailedPartition> _resolvedPartitions = [];
     Dictionary<Key, FailedPartition> _partitions = [];
 
@@ -96,7 +98,23 @@ public class FailedPartitions
         if (!TryGet(partition, out var failedPartition)) return;
 
         _resolvedPartitions.Add(failedPartition);
+        if (_resolvedPartitions.Count > MaxResolvedPartitions)
+        {
+            _resolvedPartitions.RemoveAt(0);
+        }
         _partitions.Remove(partition);
+    }
+
+    /// <summary>
+    /// Quarantine a failed partition, preventing further automatic retries.
+    /// </summary>
+    /// <param name="partition"><see cref="Key"/> to quarantine.</param>
+    public void Quarantine(Key partition)
+    {
+        if (TryGet(partition, out var failedPartition))
+        {
+            failedPartition.IsQuarantined = true;
+        }
     }
 
     void Add(FailedPartition failedPartition) => _partitions.Add(failedPartition.Partition, failedPartition);
