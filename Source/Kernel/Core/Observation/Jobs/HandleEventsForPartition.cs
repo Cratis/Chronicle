@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -26,14 +25,12 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting observer configuration.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
-    IConfigurationForObserverProvider configurationProvider,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -148,8 +145,6 @@ public class HandleEventsForPartition(
                 cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
-            var config = await configurationProvider.GetFor(currentState.ObserverKey);
-            var subscriberTimeout = TimeSpan.FromSeconds(config.SubscriberTimeout);
 
             var failed = false;
             var exceptionMessages = Enumerable.Empty<string>().ToArray();
@@ -165,7 +160,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, cancellationToken);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -275,26 +270,15 @@ public class HandleEventsForPartition(
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
-        ObserverSubscriberContext subscriberContext,
-        TimeSpan subscriberTimeout,
-        CancellationToken cancellationToken)
+        ObserverSubscriberContext subscriberContext)
     {
         try
         {
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
             if (eventsToHandle.Length != 0)
             {
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutCts.CancelAfter(subscriberTimeout);
-                try
-                {
-                    var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext).WaitAsync(timeoutCts.Token);
-                    return (result, eventsToHandle);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    return new TimeoutException($"Subscriber did not respond within the configured timeout of {subscriberTimeout.TotalSeconds:F0} seconds");
-                }
+                var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext);
+                return (result, eventsToHandle);
             }
 
             logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
