@@ -64,7 +64,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
 
-        EncryptionKey? entity = IsLatest(revision)
+        var entity = IsLatest(revision)
             ? await scope.DbContext.EncryptionKeys
                 .Where(e => e.Identifier == identifier.Value)
                 .OrderByDescending(e => e.Revision)
