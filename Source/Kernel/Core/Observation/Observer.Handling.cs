@@ -194,7 +194,9 @@ public partial class Observer
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
                 anyDecrypted = true;
-                var identifier = @event.Context.Subject.Value;
+                var identifier = @event.Context.Subject?.IsSet == true
+                    ? @event.Context.Subject.Value
+                    : @event.Context.EventSourceId.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
                     @event.Context.EventStore,
