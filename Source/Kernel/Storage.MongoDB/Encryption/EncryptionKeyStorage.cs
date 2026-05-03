@@ -31,9 +31,10 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ? await GetNextRevision(collection, identifier)
             : revision!;
 
+        var id = new EncryptionKeyId(identifier, actualRevision);
         await collection.ReplaceOneAsync(
-            _ => _.Identifier == identifier && _.Revision == actualRevision,
-            new EncryptionKeyForIdentifier(identifier, actualRevision, key.Public, key.Private),
+            _ => _.Id == id,
+            new EncryptionKeyForIdentifier(id, key.Public, key.Private),
             new ReplaceOptions() { IsUpsert = true });
     }
 
@@ -47,10 +48,11 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         var collection = GetCollection(eventStore, eventStoreNamespace);
         if (IsLatest(revision))
         {
-            return await collection.CountDocumentsAsync(_ => _.Identifier == identifier) > 0;
+            return await collection.CountDocumentsAsync(_ => _.Id.Identifier == identifier) > 0;
         }
 
-        return await collection.CountDocumentsAsync(_ => _.Identifier == identifier && _.Revision == revision) == 1;
+        var id = new EncryptionKeyId(identifier, revision!);
+        return await collection.CountDocumentsAsync(_ => _.Id == id) == 1;
     }
 
     /// <inheritdoc/>
@@ -66,13 +68,14 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         if (IsLatest(revision))
         {
             keyDoc = await collection
-                .Find(_ => _.Identifier == identifier)
-                .SortByDescending(_ => _.Revision)
+                .Find(_ => _.Id.Identifier == identifier)
+                .SortByDescending(_ => _.Id.Revision)
                 .FirstOrDefaultAsync();
         }
         else
         {
-            using var result = await collection.FindAsync(_ => _.Identifier == identifier && _.Revision == revision);
+            var id = new EncryptionKeyId(identifier, revision!);
+            using var result = await collection.FindAsync(_ => _.Id == id);
             keyDoc = await result.SingleOrDefaultAsync();
         }
 
@@ -90,11 +93,12 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
         var collection = GetCollection(eventStore, eventStoreNamespace);
         if (IsLatest(revision))
         {
-            await collection.DeleteManyAsync(_ => _.Identifier == identifier);
+            await collection.DeleteManyAsync(_ => _.Id.Identifier == identifier);
         }
         else
         {
-            await collection.DeleteOneAsync(_ => _.Identifier == identifier && _.Revision == revision);
+            var id = new EncryptionKeyId(identifier, revision!);
+            await collection.DeleteOneAsync(_ => _.Id == id);
         }
     }
 
@@ -103,11 +107,11 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     static async Task<EncryptionKeyRevision> GetNextRevision(IMongoCollection<EncryptionKeyForIdentifier> collection, EncryptionKeyIdentifier identifier)
     {
         var latestDoc = await collection
-            .Find(_ => _.Identifier == identifier)
-            .SortByDescending(_ => _.Revision)
+            .Find(_ => _.Id.Identifier == identifier)
+            .SortByDescending(_ => _.Id.Revision)
             .FirstOrDefaultAsync();
 
-        return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Revision.Value + 1u;
+        return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Id.Revision.Value + 1u;
     }
 
     void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier? key)

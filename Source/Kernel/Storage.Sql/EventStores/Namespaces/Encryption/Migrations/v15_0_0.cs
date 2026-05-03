@@ -22,10 +22,11 @@ public class v15_0_0 : Migration
             columns: table => new
             {
                 Identifier = table.StringColumn(migrationBuilder),
+                Revision = table.NumberColumn<uint>(migrationBuilder),
                 PublicKey = table.Column<byte[]>(nullable: false),
                 PrivateKey = table.Column<byte[]>(nullable: false)
             },
-            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EncryptionKeys}", x => x.Identifier));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EncryptionKeys}", x => new { x.Identifier, x.Revision }));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

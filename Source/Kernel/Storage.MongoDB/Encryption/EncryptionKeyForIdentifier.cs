@@ -3,16 +3,14 @@
 
 #pragma warning disable CA1819 // Allow arrays for properties
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Compliance.MongoDB;
 
 /// <summary>
-/// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
+/// Represents the stored version of an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyId"/>.
 /// </summary>
-/// <param name="Identifier"><see cref="EncryptionKeyIdentifier"/> it is for.</param>
-/// <param name="Revision">The <see cref="EncryptionKeyRevision"/> of the key.</param>
+/// <param name="Id">The composite <see cref="EncryptionKeyId"/> that uniquely identifies this key revision.</param>
 /// <param name="PublicKey">The public part of the key.</param>
 /// <param name="PrivateKey">The private part of the key.</param>
-public record EncryptionKeyForIdentifier(EncryptionKeyIdentifier Identifier, EncryptionKeyRevision Revision, byte[] PublicKey, byte[] PrivateKey);
+public record EncryptionKeyForIdentifier(EncryptionKeyId Id, byte[] PublicKey, byte[] PrivateKey);
