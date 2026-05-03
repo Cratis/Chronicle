@@ -6,6 +6,10 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition.when_completed;
 
+/// <summary>
+/// When the step ran but the subscriber failed every event — HandledAllEvents stays false.
+/// The partition is still legitimately failed; do not clear it.
+/// </summary>
 public class and_no_events_were_handled : given.a_retry_failed_partition_job
 {
     async Task Because() => await _job.Start(_request);

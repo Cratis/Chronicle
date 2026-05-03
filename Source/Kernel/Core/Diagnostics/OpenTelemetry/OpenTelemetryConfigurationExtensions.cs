@@ -90,7 +90,11 @@ public static class OpenTelemetryConfigurationExtensions
             })
                 .WithMetrics(metrics =>
             {
+                // Reduce pre-allocated MetricPoint arrays from the default 2000 to 500.
+                // The default causes ~25 MB of committed memory at startup for all metric instruments;
+                // 500 is sufficient for all Chronicle's instruments (max cardinality is ~22 observers).
                 metrics
+                    .AddView("*", new MetricStreamConfiguration { CardinalityLimit = 500 })
                     .AddChronicleInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation()
