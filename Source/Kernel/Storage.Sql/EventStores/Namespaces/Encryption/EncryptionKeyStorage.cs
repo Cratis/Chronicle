@@ -70,20 +70,14 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     {
         await using var scope = await database.Namespace(eventStore, eventStoreNamespace);
 
-        EncryptionKey? entity;
-        if (IsLatest(revision))
-        {
-            entity = await scope.DbContext.EncryptionKeys
+        EncryptionKey? entity = IsLatest(revision)
+            ? await scope.DbContext.EncryptionKeys
                 .Where(e => e.Identifier == identifier.Value)
                 .OrderByDescending(e => e.Revision)
-                .FirstOrDefaultAsync() ?? throw new MissingEncryptionKey(identifier);
-        }
-        else
-        {
-            entity = await scope.DbContext.EncryptionKeys
+                .FirstOrDefaultAsync() ?? throw new MissingEncryptionKey(identifier)
+            : await scope.DbContext.EncryptionKeys
                 .SingleOrDefaultAsync(e => e.Identifier == identifier.Value && e.Revision == revision!.Value)
                 ?? throw new MissingEncryptionKey(identifier);
-        }
 
         return new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey);
     }
