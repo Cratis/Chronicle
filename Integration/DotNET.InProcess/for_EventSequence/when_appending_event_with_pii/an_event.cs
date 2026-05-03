@@ -60,5 +60,5 @@ public class an_event(context context) : Given<context>(context)
 
     [Fact]
     void should_have_created_an_encryption_key_for_the_event_source() =>
-        Context.StoredEncryptionKey["_id"].AsString.ShouldEqual(Context.EventSourceId.Value);
+        Context.StoredEncryptionKey["_id"].AsBsonDocument["Identifier"].AsString.ShouldEqual(Context.EventSourceId.Value);
 }
