@@ -232,7 +232,7 @@ public partial class Observer(
         }
 
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
-        if (partition?.IsQuarantined == false)
+        if (partition is { IsQuarantined: false })
         {
             await StartRecoverJobForFailedPartition(partition);
         }
