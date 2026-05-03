@@ -27,7 +27,12 @@ public class RetryFailedPartition(
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
+            // No events were found to process. This happens when the observer's
+            // NextEventSequenceNumber is already past the failed sequence number —
+            // the events were processed despite the caller timing out. The failed
+            // partition record is stale, so recover it using the original sequence number.
             logger.NoEventsWereHandled(nameof(RetryFailedPartition));
+            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
             return;
         }
 
