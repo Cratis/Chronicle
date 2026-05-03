@@ -233,27 +233,24 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 while (_queue.TryDequeue(out var events))
                 {
-                    var eventsNotHandled = true;
-                    while (eventsNotHandled)
+                    try
                     {
-                        try
-                        {
-                            var count = events.Count;
-                            Func<IReadOnlyList<AppendedEvent>, Task> handler = count == 1 ?
-                                HandleSingle :
-                                HandlePartitioned;
+                        var count = events.Count;
+                        Func<IReadOnlyList<AppendedEvent>, Task> handler = count == 1 ?
+                            HandleSingle :
+                            HandlePartitioned;
 
-                            await handler(events);
+                        await handler(events);
 
-                            _metrics?.EventsHandled(count);
-                            eventsNotHandled = false;
-                        }
-                        catch (Exception ex)
-                        {
-                            // We ignore any failures, the queue should never fail
-                            _logger.NotifyingObserversFailed(ex);
-                            _metrics?.EventsHandlingFailures();
-                        }
+                        _metrics?.EventsHandled(count);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log and move on — the observer's own partition-failure and
+                        // catchup mechanism handles recovery. Retrying here would cause
+                        // an unbounded tight loop that exhausts memory.
+                        _logger.NotifyingObserversFailed(ex);
+                        _metrics?.EventsHandlingFailures();
                     }
                 }
 

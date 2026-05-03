@@ -24,19 +24,9 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
             }
         };
 
-        var callCount = 0;
         _observer
             .When(_ => _.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()))
-            .Do(_ =>
-            {
-                switch (callCount++)
-                {
-                    case 0:
-                        throw new Exception();
-                    case 1:
-                        break;
-                }
-            });
+            .Do(_ => throw new Exception());
     }
 
     async Task Because()
@@ -45,5 +35,5 @@ public class with_subscriber_that_throws_exception_on_first_handle : given.a_sin
         await _queue.AwaitQueueDepletion();
     }
 
-    [Fact] void should_call_handle_on_observer_twice() => _handledEventsPerPartition[_eventSourceId].Count.ShouldEqual(2);
+    [Fact] void should_not_retry_the_failed_batch() => _observer.Received(1).Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>());
 }
