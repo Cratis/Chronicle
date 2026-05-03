@@ -180,9 +180,14 @@ public partial class Observer
         }
     }
 
-    async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
+    async Task<AppendedEvent[]> DecryptEvents(AppendedEvent[] events)
     {
-        var releasedEvents = new List<AppendedEvent>();
+        if (events.Length == 0)
+        {
+            return [];
+        }
+
+        var releasedEvents = new List<AppendedEvent>(events.Length);
         foreach (var @event in events)
         {
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
@@ -204,7 +209,7 @@ public partial class Observer
             }
         }
 
-        return releasedEvents;
+        return releasedEvents.ToArray();
     }
 
     bool ShouldHandleEvent(Key partition)
