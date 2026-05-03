@@ -426,7 +426,7 @@ internal sealed class Projections(
         {
             try
             {
-                schema = JsonSchema.FromJsonAsync(draft.Schema).GetAwaiter().GetResult();
+                schema = JsonSchema.FromJson(draft.Schema);
             }
             catch
             {

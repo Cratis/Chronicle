@@ -30,35 +30,38 @@ public class but_not_third_time(context context) : Given<context>(context)
 
         async Task Because()
         {
+            // The retry backoff uses exponential delay: 2s for the first retry, 4s for the second.
+            // The default 5s timeout is too tight for the second cycle, so use a longer timeout.
+            var retryTimeout = TimeSpan.FromSeconds(10);
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
+
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
-            await reducer.WaitTillActive();
+            await reducer.WaitTillActive(startupTimeout);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = true;
             Observers[2].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
 
             // Wait for the first event to have been handled
-            await Tcs[0].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Tcs[0].Task.WaitAsync(retryTimeout);
 
             FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition));
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition), retryTimeout);
 
             // Wait for the second event to have been handled
-            await Tcs[1].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Tcs[1].Task.WaitAsync(retryTimeout);
 
             FailedPartitionsBeforeRetry = await reducer.WaitForThereToBeFailedPartitions();
-            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition));
+            Jobs = await EventStore.Jobs.WaitForThereToBeJobOfType(nameof(RetryFailedPartition), retryTimeout);
 
             // Wait for the third event to have been handled
-            await Tcs[2].Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
-            await EventStore.Jobs.WaitForThereToBeNoJobs();
+            await Tcs[2].Task.WaitAsync(retryTimeout);
+            await EventStore.Jobs.WaitForThereToBeNoJobs(retryTimeout, JobStatus.CompletedWithFailures);
 
             FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
-            await reducer.WaitTillActive();
-
             await Observers[2].WaitTillHandledEventReaches(1);
 
-            ReducerState = await reducer.GetState();
+            ReducerState = await reducer.WaitTillActiveAndGetState(startupTimeout);
         }
     }
 

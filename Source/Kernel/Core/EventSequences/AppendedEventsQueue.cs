@@ -24,12 +24,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
     readonly ILogger<AppendedEventsQueue> _logger;
-    readonly ConcurrentQueue<IEnumerable<AppendedEvent>> _queue = new();
+    readonly ConcurrentQueue<IReadOnlyList<AppendedEvent>> _queue = new();
     readonly AsyncManualResetEvent _queueEvent = new();
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
+    readonly Lock _subscriptionsLock = new();
+    readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
-    ConcurrentBag<AppendedEventsQueueObserverSubscription> _subscriptions = [];
     IMeterScope<AppendedEventsQueue>? _metrics;
 
     /// <summary>
@@ -70,16 +71,21 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        _queue.Enqueue(appendedEvents);
+        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToList();
+        _queue.Enqueue(batch);
         _queueEvent.Set();
-        _metrics?.EventsEnqueued(appendedEvents.Count());
+        _metrics?.EventsEnqueued(batch.Count);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes)
+    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
-        _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray()));
+        lock (_subscriptionsLock)
+        {
+            _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -91,10 +97,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return Task.CompletedTask;
         }
 
-        var subscription = _subscriptions.SingleOrDefault(subscription => subscription.ObserverKey == observerKey);
-        if (subscription != null)
+        lock (_subscriptionsLock)
         {
-            _subscriptions = [.. _subscriptions.Except([subscription])];
+            _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
         }
 
         return Task.CompletedTask;
@@ -164,6 +169,45 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         });
     }
 
+    static bool MatchesFilters(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
+    {
+        var filters = subscription.Filters;
+        if (filters is null)
+        {
+            return true;
+        }
+
+        if (filters.EventSourceType is { } eventSourceType &&
+            !eventSourceType.IsDefaultOrUnspecified &&
+            @event.Context.EventSourceType != eventSourceType)
+        {
+            return false;
+        }
+
+        if (filters.EventStreamType is { } eventStreamType &&
+            !eventStreamType.IsAll &&
+            @event.Context.EventStreamType != eventStreamType)
+        {
+            return false;
+        }
+
+        if (filters.Tags.Any() &&
+            !filters.Tags.Any(tag => @event.Context.Tags.Any(t => t.Value == tag)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
+    {
+        lock (_subscriptionsLock)
+        {
+            return [.. _subscriptions];
+        }
+    }
+
     void StartQueueHandler()
     {
         if (_isDisposed)
@@ -189,27 +233,24 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 while (_queue.TryDequeue(out var events))
                 {
-                    var eventsNotHandled = true;
-                    while (eventsNotHandled)
+                    try
                     {
-                        try
-                        {
-                            var count = events.Count();
-                            Func<IEnumerable<AppendedEvent>, Task> handler = count == 1 ?
-                                HandleSingle :
-                                HandlePartitioned;
+                        var count = events.Count;
+                        Func<IReadOnlyList<AppendedEvent>, Task> handler = count == 1 ?
+                            HandleSingle :
+                            HandlePartitioned;
 
-                            await handler(events);
+                        await handler(events);
 
-                            _metrics?.EventsHandled(count);
-                            eventsNotHandled = false;
-                        }
-                        catch (Exception ex)
-                        {
-                            // We ignore any failures, the queue should never fail
-                            _logger.NotifyingObserversFailed(ex);
-                            _metrics?.EventsHandlingFailures();
-                        }
+                        _metrics?.EventsHandled(count);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log and move on — the observer's own partition-failure and
+                        // catchup mechanism handles recovery. Retrying here would cause
+                        // an unbounded tight loop that exhausts memory.
+                        _logger.NotifyingObserversFailed(ex);
+                        _metrics?.EventsHandlingFailures();
                     }
                 }
 
@@ -221,25 +262,34 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 _logger.QueueHandlerFailed(exception);
             }
         }
-        StartQueueHandler();
+        if (!_isDisposed)
+        {
+            StartQueueHandler();
+        }
     }
 
-    async Task HandleSingle(IEnumerable<AppendedEvent> events)
+    async Task HandleSingle(IReadOnlyList<AppendedEvent> events)
     {
-        var @event = events.First();
-        foreach (var subscription in _subscriptions)
+        var @event = events[0];
+        foreach (var subscription in GetSubscriptionsSnapshot())
         {
             if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
             {
                 continue;
             }
+
+            if (!MatchesFilters(subscription, @event))
+            {
+                continue;
+            }
+
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
             var eventToHandle = new List<AppendedEvent> { @event };
             await observer.Handle(@event.Context.EventSourceId, eventToHandle);
         }
     }
 
-    async Task HandlePartitioned(IEnumerable<AppendedEvent> events)
+    async Task HandlePartitioned(IReadOnlyList<AppendedEvent> events)
     {
         // Sort events by sequence number and deliver consecutive same-partition batches.
         // This prevents a race condition where processing one partition's events first
@@ -260,10 +310,10 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var partitionEvents = sorted.GetRange(start, index - start);
 
             var tasks = new List<Task>();
-            foreach (var subscription in _subscriptions)
+            foreach (var subscription in GetSubscriptionsSnapshot())
             {
                 var actualEvents = partitionEvents
-                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
                     .ToList();
                 if (actualEvents.Count == 0)
                 {

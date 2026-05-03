@@ -8,16 +8,18 @@ namespace Cratis.Chronicle.Concepts.Observation.Reactors;
 /// <summary>
 /// Represents the registration of a single client observer.
 /// </summary>
-/// <param name="Identifier"><see cref="ReactorId"/> of the reducer.</param>
+/// <param name="Identifier"><see cref="ReactorId"/> of the reactor.</param>
 /// <param name="Owner">The owner of the reactor.</param>
-/// <param name="EventSequenceId">The <see cref="EventSequenceId"/> the reducer is for.</param>
+/// <param name="EventSequenceId">The <see cref="EventSequenceId"/> the reactor is for.</param>
 /// <param name="EventTypes">The type of events the observer is interested in.</param>
 /// <param name="IsReplayable">Whether the reactor supports replay scenarios.</param>
 /// <param name="Tags">Collection of tags the reactor belongs to.</param>
+/// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
 public record ReactorDefinition(
     ReactorId Identifier,
     ReactorOwner Owner,
     EventSequenceId EventSequenceId,
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     bool IsReplayable = true,
-    IEnumerable<string>? Tags = default);
+    IEnumerable<string>? Tags = default,
+    ObserverFilters? Filters = default);

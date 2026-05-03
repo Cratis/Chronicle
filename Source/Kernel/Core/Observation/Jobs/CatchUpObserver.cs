@@ -83,6 +83,8 @@ public class CatchUpObserver(
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        var failedPartitions = await observer.GetFailedPartitionKeys();
+        var failedPartitionSet = failedPartitions.ToHashSet();
 
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
@@ -93,6 +95,11 @@ public class CatchUpObserver(
 
         await foreach (var key in keys)
         {
+            if (failedPartitionSet.Contains(key))
+            {
+                continue;
+            }
+
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,

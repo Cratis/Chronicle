@@ -18,6 +18,17 @@ public interface IEventSequence
     EventSequenceId Id { get; }
 
     /// <summary>
+    /// Gets an observable that emits a collection of <see cref="AppendedEventWithResult"/> after each append operation.
+    /// </summary>
+    /// <remarks>
+    /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, Events.EventStreamType?, Events.EventStreamId?, Events.EventSourceType?, CorrelationId?, System.Collections.Generic.IEnumerable{string}?, Concurrency.ConcurrencyScope?, System.DateTimeOffset?)"/>
+    /// emit through this observable. A single-event append emits a collection of one element;
+    /// a batch append emits the full batch. Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
+    /// This observable does not fire for transactional appends through <see cref="ITransactionalEventSequence"/>.
+    /// </remarks>
+    IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations { get; }
+
+    /// <summary>
     /// Gets the transactional event sequence.
     /// </summary>
     /// <remarks>
@@ -98,6 +109,7 @@ public interface IEventSequence
     /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> identifying the target the event is about. Used as the identity for compliance concerns such as PII encryption keys. When omitted, the <paramref name="eventSourceId"/> is used as the subject.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
@@ -108,7 +120,8 @@ public interface IEventSequence
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
-        DateTimeOffset? occurred = default);
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.

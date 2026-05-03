@@ -71,4 +71,9 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// Gets or sets the projection futures DbSet.
     /// </summary>
     public DbSet<Projections.ProjectionFutureEntity> ProjectionFutures { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the encryption keys DbSet.
+    /// </summary>
+    public DbSet<Encryption.EncryptionKey> EncryptionKeys { get; set; } = null!;
 }

@@ -19,7 +19,7 @@ public interface IProjectionPipelineManager
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the pipeline is for.</param>
     /// <param name="projection"><see cref="EngineProjection"/> the pipeline is for.</param>
     /// <returns>The <see cref="IProjectionPipeline"/> instance.</returns>
-    IProjectionPipeline GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
+    Task<IProjectionPipeline> GetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, EngineProjection projection);
 
     /// <summary>
     /// Evict any projection pipeline for a specific projection identifier.
@@ -28,4 +28,9 @@ public interface IProjectionPipelineManager
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the projection is for.</param>
     /// <param name="id"><see cref="ProjectionId"/> of the projection to evict.</param>
     void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id);
+
+    /// <summary>
+    /// Clears all cached projection pipelines.
+    /// </summary>
+    void Clear();
 }

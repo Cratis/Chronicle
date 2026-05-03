@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -23,14 +22,12 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the converter is for.</param>
 /// <param name="eventTypesStorage"><see cref="IEventTypesStorage"/> for event schemas.</param>
 /// <param name="identityStorage"><see cref="IIdentityStorage"/>.</param>
-/// <param name="jsonComplianceManager"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 public class EventConverter(
     EventStoreName eventStoreName,
     EventStoreNamespaceName eventStoreNamespace,
     IEventTypesStorage eventTypesStorage,
     IIdentityStorage identityStorage,
-    IJsonComplianceManager jsonComplianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter) : IEventConverter
 {
     /// <inheritdoc/>
@@ -38,7 +35,7 @@ public class EventConverter(
     {
         var (eventType, generationKey, content) = ExtractContent(@event);
         var hash = ExtractHash(@event, generationKey);
-        var resolvedContent = await ResolveContent(eventType, @event.EventSourceId, content);
+        var resolvedContent = await ResolveContent(eventType, content);
         var revisions = await ResolveRevisions(@event);
 
         var originalContent = @event.Revisions.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
@@ -62,7 +59,8 @@ public class EventConverter(
                 @event.Causation,
                 await identityStorage.GetFor(@event.CausedBy),
                 @event.Tags.Select(_ => new Tag(_)).ToArray(),
-                hash),
+                hash,
+                Subject: @event.Subject?.IsSet == true ? @event.Subject : new Subject(@event.EventSourceId.Value)),
             resolvedContent)
         {
             OriginalContent = originalContent,
@@ -138,14 +136,21 @@ public class EventConverter(
         return (eventType, generationKey, ParseContent(@event.Content, generationKey));
     }
 
-    async Task<ExpandoObject> ResolveContent(EventType eventType, EventSourceId eventSourceId, JsonObject content)
+    async Task<ExpandoObject> ResolveContent(EventType eventType, JsonObject content)
     {
+        // Redaction events store their content as RedactionEventContent (with EventTypeId as a
+        // string), but the registered EventRedacted schema uses Type for OriginalEventType.
+        // Using the schema-based converter would produce null for that field and potentially
+        // throw for array fields whose schema carries no item type info.  Raw conversion
+        // preserves every field exactly as stored.
+        if (eventType.Id == GlobalEventTypes.Redaction)
+            return ConvertToRawExpandoObject(content);
+
         if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
             return ConvertToRawExpandoObject(content);
 
         var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
-        var released = await jsonComplianceManager.Release(eventStoreName, eventStoreNamespace, schema.Schema, eventSourceId, content);
-        return expandoObjectConverter.ToExpandoObject(released, schema.Schema);
+        return expandoObjectConverter.ToExpandoObject(content, schema.Schema);
     }
 
     async Task<IEnumerable<ConceptsEventRevision>> ResolveRevisions(Event @event)

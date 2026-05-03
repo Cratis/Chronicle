@@ -7,6 +7,12 @@ message Constraint {
    ConstraintType Type = 2;
    string RemovedWith = 3;
    OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition Definition = 4;
+   ConstraintScope Scope = 5;
+}
+message ConstraintScope {
+   string EventSourceType = 1;
+   string EventStreamType = 2;
+   string EventStreamId = 3;
 }
 enum ConstraintType {
    Unknown = 0;

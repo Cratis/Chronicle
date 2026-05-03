@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
@@ -14,6 +15,7 @@ using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -29,6 +31,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="readModelWatcherManager"><see cref="IReadModelWatcherManager"/> for managing watchers.</param>
 /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
+/// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 public class ReadModels(
     IEventStore eventStore,
     INamingPolicy namingPolicy,
@@ -38,7 +41,8 @@ public class ReadModels(
     IJsonSchemaGenerator schemaGenerator,
     JsonSerializerOptions jsonSerializerOptions,
     IReadModelWatcherManager readModelWatcherManager,
-    IReducerObservers reducerObservers) : IReadModels
+    IReducerObservers reducerObservers,
+    ILogger<ReadModels> logger) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
 
@@ -328,6 +332,59 @@ public class ReadModels(
         };
 
         await _chronicleServicesAccessor.Services.ReadModels.DehydrateSession(request);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TReadModel> Release<TReadModel>(TReadModel instance)
+    {
+        var subject = ReadModelSubjectResolver.ResolveFrom(instance!);
+        if (subject is null)
+        {
+            return instance;
+        }
+
+        return await Release(subject, instance);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances)
+    {
+        var result = new List<TReadModel>();
+        foreach (var instance in instances)
+        {
+            result.Add(await Release(instance));
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance)
+    {
+        var schema = schemaGenerator.Generate(typeof(TReadModel));
+        if (!schema.HasComplianceMetadata())
+        {
+            return instance;
+        }
+
+        var payload = JsonSerializer.Serialize(instance, jsonSerializerOptions);
+        var request = new ReleaseRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            Subject = subject.Value,
+            Schema = schema.ToJson(),
+            Payload = payload
+        };
+
+        var response = await _chronicleServicesAccessor.Services.Compliance.Release(request);
+        if (response.HasError)
+        {
+            logger.FailedToRelease(typeof(TReadModel).Name, subject.Value, response.Error);
+            return instance;
+        }
+
+        return JsonSerializer.Deserialize<TReadModel>(response.Payload, jsonSerializerOptions) ?? instance;
     }
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)

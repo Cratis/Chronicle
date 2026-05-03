@@ -16,6 +16,12 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 public interface IEventSequenceStorage
 {
     /// <summary>
+    /// Ensure any required indexes exist on the event sequence collection.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task EnsureIndexes();
+
+    /// <summary>
     /// Get the state of an event sequence.
     /// </summary>
     /// <returns><see cref="EventSequenceState"/> for the event sequence.</returns>
@@ -51,6 +57,8 @@ public interface IEventSequenceStorage
     /// <param name="tags">Collection of tags associated with the event.</param>
     /// <param name="occurred">The date and time the event occurred.</param>
     /// <param name="content">The content of the event per generation.</param>
+    /// <param name="contentHashes">The content hashes per generation.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> that identifies the compliance target for the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<Result<AppendedEvent, DuplicateEventSequenceNumber>> Append(
         EventSequenceNumber sequenceNumber,
@@ -64,7 +72,9 @@ public interface IEventSequenceStorage
         IEnumerable<IdentityId> causedByChain,
         IEnumerable<Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content);
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Subject? subject = null);
 
     /// <summary>
     /// Append multiple events to the event store transactional.

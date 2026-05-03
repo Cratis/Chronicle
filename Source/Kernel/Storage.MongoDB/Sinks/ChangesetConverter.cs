@@ -38,11 +38,12 @@ public class ChangesetConverter(
         var hasChanges = false;
         var updateDefinitionBuilder = Builders<BsonDocument>.Update;
         UpdateDefinition<BsonDocument>? updateBuilder = default;
+        var normalizedChanges = NormalizeJoinedChanges(changeset.Changes);
 
         var arrayFiltersForDocument = new ArrayFilters();
         await ApplyActualChanges(
             key,
-            changeset.Changes,
+            normalizedChanges,
             updateDefinitionBuilder,
             ref updateBuilder,
             ref hasChanges,
@@ -57,6 +58,51 @@ public class ChangesetConverter(
         var distinctArrayFilters = arrayFiltersForDocument.DistinctBy(_ => _.Document).ToArray();
 
         return new(updateBuilder!, distinctArrayFilters, hasChanges);
+    }
+
+    static bool TryMergeJoinedChangeIntoChildAdded(IList<Change> changes, Joined joined)
+    {
+        if (joined.ArrayIndexers.IsEmpty)
+        {
+            return false;
+        }
+
+        var targetIndexer = joined.ArrayIndexers.All.Last();
+        var matchingChild = changes
+            .OfType<ChildAdded>()
+            .FirstOrDefault(_ =>
+                _.ChildrenProperty == targetIndexer.ArrayProperty &&
+                _.IdentifiedByProperty == targetIndexer.IdentifierProperty &&
+                _.Key.ToString() == joined.Key.ToString());
+
+        if (matchingChild?.Child is not ExpandoObject child)
+        {
+            return false;
+        }
+
+        ApplyJoinedChangesToChild(child, joined.Changes);
+        return true;
+    }
+
+    static void ApplyJoinedChangesToChild(ExpandoObject child, IEnumerable<Change> changes)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    foreach (var difference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()))
+                    {
+                        difference.PropertyPath.SetValue(child, difference.Changed!, ArrayIndexers.NoIndexers);
+                    }
+
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    ApplyJoinedChangesToChild(child, resolvedJoin.Changes);
+                    break;
+            }
+        }
     }
 
     Task ApplyActualChanges(
@@ -85,6 +131,11 @@ public class ChangesetConverter(
 
                 case ChildRemoved childRemoved:
                     BuildChildRemoved(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childRemoved);
+                    hasChanges = true;
+                    break;
+
+                case NestedCleared nestedCleared:
+                    BuildNestedCleared(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, nestedCleared);
                     hasChanges = true;
                     break;
 
@@ -166,6 +217,16 @@ public class ChangesetConverter(
             : updateDefinitionBuilder.Push(property, bsonValue);
     }
 
+    void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)
+    {
+        var (property, arrayFilters) = converter.ToMongoDBProperty(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
+        arrayFiltersForDocument.AddRange(arrayFilters);
+
+        updateBuilder = updateBuilder is not null
+            ? updateBuilder.Set(property, BsonNull.Value)
+            : updateDefinitionBuilder.Set(property, BsonNull.Value);
+    }
+
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
     {
         BsonValue bsonValue;
@@ -218,12 +279,39 @@ public class ChangesetConverter(
 
     FilterDefinition<BsonDocument> CreateJoinedFilterDefinition(Key key, Joined joined)
     {
+        // When array indexers are present, the join key (key.Value) is the root document key — not
+        // the child identifier. Use the last array indexer's property path and value to build a filter
+        // that matches ALL root documents containing this child, so UpdateManyAsync updates every
+        // document that has the child (e.g. all groups that contain the user), not just the first one
+        // found during key resolution.
         if (!key.ArrayIndexers.IsEmpty)
         {
-            return FilterDefinition<BsonDocument>.Empty;
+            var lastIndexer = key.ArrayIndexers.All.Last();
+            var filterPath = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
+            var (property, _) = converter.ToMongoDBProperty(filterPath, ArrayIndexers.NoIndexers);
+            var value = converter.ToBsonValue(lastIndexer.Identifier, filterPath);
+            return Builders<BsonDocument>.Filter.Eq(property, value);
         }
 
-        var (property, _) = converter.ToMongoDBProperty(joined.OnProperty, joined.ArrayIndexers);
-        return Builders<BsonDocument>.Filter.Eq(property, key.Value);
+        var (prop, _) = converter.ToMongoDBProperty(joined.OnProperty, ArrayIndexers.NoIndexers);
+        return Builders<BsonDocument>.Filter.Eq(prop, joined.Key);
+    }
+
+    IEnumerable<Change> NormalizeJoinedChanges(IEnumerable<Change> changes)
+    {
+        var normalizedChanges = changes.ToList();
+        var joinedChangesToSkip = new HashSet<Joined>();
+
+        foreach (var joined in normalizedChanges.OfType<Joined>())
+        {
+            if (!TryMergeJoinedChangeIntoChildAdded(normalizedChanges, joined))
+            {
+                continue;
+            }
+
+            joinedChangesToSkip.Add(joined);
+        }
+
+        return normalizedChanges.Where(change => change is not Joined joined || !joinedChangesToSkip.Contains(joined));
     }
 }

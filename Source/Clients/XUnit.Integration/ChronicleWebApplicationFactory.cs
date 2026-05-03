@@ -20,6 +20,8 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     /// <inheritdoc/>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(fixture);
+
         builder
             .UseContentRoot(contentRoot)
             .ConfigureServices(services =>
@@ -27,8 +29,9 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
                 services.Configure<ChronicleOptions>(options =>
                     options.ConnectionString = "chronicle://localhost:35001?disableTls=true");
 
-                // Override the artifacts provider with the integration test fixture.
-                services.AddSingleton<IClientArtifactsProvider>(fixture);
+                // Use delegating provider so the shared factory can serve artifacts
+                // from whichever test fixture is currently active.
+                services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
             });
     }
 }

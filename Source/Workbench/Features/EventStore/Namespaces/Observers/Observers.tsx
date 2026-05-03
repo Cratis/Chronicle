@@ -171,7 +171,7 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
         namespace: viewModel.currentNamespace
     };
 
-    const [observers] = AllObservers.use(queryArgs);
+    const [observers] = AllObservers.when(!!viewModel.currentNamespace).use(queryArgs);
 
     const observerRows = (observers.data ?? []).map(observer => ({
         ...observer,

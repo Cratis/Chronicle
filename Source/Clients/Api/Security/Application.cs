@@ -28,7 +28,7 @@ public record Application(
     /// </summary>
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>An observable for observing a collection of applications.</returns>
-    internal static ISubject<IEnumerable<Application>> AllApplications(IApplications applications) =>
+    public static ISubject<IEnumerable<Application>> AllApplications(IApplications applications) =>
         applications.InvokeAndWrapWithTransformSubject(
             token => applications.AllApplications(token),
             response => response.ToApi());

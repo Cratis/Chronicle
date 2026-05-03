@@ -61,6 +61,7 @@ internal class ModelBoundProjectionBuilder(
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
             Children = new Dictionary<string, ChildrenDefinition>(),
+            Nested = new Dictionary<string, ChildrenDefinition>(),
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
@@ -195,6 +196,34 @@ internal class ModelBoundProjectionBuilder(
                 var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
                 fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
             }
+        }
+    }
+
+    void ApplyClassLevelFromEventConfiguration(Attribute attr, Type eventType, IDictionary<EventType, FromDefinition> targetFrom)
+    {
+        var eventTypeId = GetOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+
+        var key = (attr as IKeyedAttribute)?.Key;
+        if (!string.IsNullOrEmpty(key))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, key);
+            var keyPropertyPath = new PropertyPath(key);
+            fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+        }
+
+        var parentKey = (attr as IFromEventAttribute)?.ParentKey;
+        if (!string.IsNullOrEmpty(parentKey))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, parentKey);
+            var parentKeyPropertyPath = new PropertyPath(parentKey);
+            fromDefinition.ParentKey = _namingPolicy.GetPropertyName(parentKeyPropertyPath);
+        }
+
+        var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
+        if (!string.IsNullOrEmpty(constantKey))
+        {
+            fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
         }
     }
 
@@ -378,32 +407,18 @@ internal class ModelBoundProjectionBuilder(
             {
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
             }
+
+            if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+            {
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             allEventTypesReferencedByModel.Add(eventType);
-
-            // Only set custom key if specified, don't auto-map properties (server handles that based on AutoMap flag)
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
@@ -511,33 +526,19 @@ internal class ModelBoundProjectionBuilder(
                 var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
             }
+
+            if (Attribute.IsDefined(property, typeof(NestedAttribute)))
+            {
+                var memberType = property is PropertyInfo propInfo2 ? propInfo2.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             eventTypesReferencedByMember.Add(eventType);
-
-            // Create FromDefinition for class-level events
-            // The server handles auto-mapping properties based on AutoMap flag
-            var eventTypeId = GetOrCreateEventType(eventType);
-            var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-
-            // Only set custom key if specified
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();

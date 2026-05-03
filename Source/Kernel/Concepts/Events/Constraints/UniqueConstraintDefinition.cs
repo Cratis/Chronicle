@@ -10,7 +10,8 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <param name="EventDefinitions">Collection of <see cref="UniqueConstraintEventDefinition"/>.</param>
 /// <param name="RemovedWith">The <see cref="EventTypeId"/> of the event that removes the constraint.</param>
 /// <param name="IgnoreCasing">Whether this constraint should ignore casing.</param>
-public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, EventTypeId? RemovedWith = default, bool IgnoreCasing = false) : IConstraintDefinition
+/// <param name="Scope">The <see cref="ConstraintScope"/> for the constraint.</param>
+public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, EventTypeId? RemovedWith = default, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
 {
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => base.Equals(other);

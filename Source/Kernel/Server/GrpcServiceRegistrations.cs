@@ -19,6 +19,7 @@ public static class GrpcServiceRegistrations
     {
         services.AddCodeFirstGrpc(options => options.EnableDetailedErrors = true);
 
+        services.AddSingleton<Contracts.Compliance.ICompliance, Services.Compliance.ComplianceService>();
         services.AddSingleton<Contracts.EventStores.IEventStores, Services.EventStores>();
         services.AddSingleton<Contracts.Namespaces.INamespaces, Services.Namespaces>();
         services.AddSingleton<Contracts.Recommendations.IRecommendations, Services.Recommendations.Recommendations>();
@@ -53,6 +54,7 @@ public static class GrpcServiceRegistrations
     {
         app.UseEndpoints(_ =>
         {
+            _.MapGrpcService<Services.Compliance.ComplianceService>();
             _.MapGrpcService<Services.EventStores>();
             _.MapGrpcService<Services.Namespaces>();
             _.MapGrpcService<Services.Recommendations.Recommendations>();

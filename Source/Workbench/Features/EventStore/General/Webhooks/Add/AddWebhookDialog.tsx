@@ -105,7 +105,7 @@ export const AddWebhookDialog = () => {
                 authorizationType: AuthorizationType.none,
                 isActive: true,
                 isReplayable: true,
-                headers: {} as Record<string, unknown>
+                headers: {} as Record<string, string>
             }}
             currentValues={{ eventTypes: selectedEventTypes }}
             isValid={isValid}

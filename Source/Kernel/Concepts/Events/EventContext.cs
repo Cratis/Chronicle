@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="Tags">A collection of <see cref="Tag"/> for the event.</param>
 /// <param name="Hash">The <see cref="EventHash"/> of the event content.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
+/// <param name="Subject">The <see cref="Subject"/> identifying the compliance target for this event. Always set — defaults to the <see cref="EventSourceId"/> value when no explicit subject is provided.</param>
 public record EventContext(
     EventType EventType,
     EventSourceType EventSourceType,
@@ -39,7 +40,8 @@ public record EventContext(
     Identity CausedBy,
     IEnumerable<Tag> Tags,
     EventHash Hash,
-    EventObservationState ObservationState = EventObservationState.Initial)
+    EventObservationState ObservationState = EventObservationState.Initial,
+    Subject Subject = default!)
 {
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
@@ -57,6 +59,11 @@ public record EventContext(
         CorrelationId.NotSet);
 
     /// <summary>
+    /// Gets a value indicating whether the subject is the event source id (no explicit <see cref="Subject"/> was set, or <see cref="Subject"/> equals <see cref="EventSourceId"/>).
+    /// </summary>
+    public bool SubjectIsEventSourceId => !Subject.IsSet || Subject.Value == EventSourceId.Value;
+
+    /// <summary>
     /// Creates a new <see cref="EventContext"/> from <see cref="EventSourceId"/> and other optional parameters.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the context is for.</param>
@@ -70,6 +77,7 @@ public record EventContext(
     /// <param name="correlationId">The <see cref="CorrelationId"/> for the event.</param>
     /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="occurred">Optional occurred.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> identifying the compliance target. When omitted or not set, <paramref name="eventSourceId"/> is used as the subject.</param>
     /// <returns>A new <see cref="EventContext"/>.</returns>
     public static EventContext From(
         EventStoreName eventStore,
@@ -82,8 +90,10 @@ public record EventContext(
         EventSequenceNumber sequenceNumber,
         CorrelationId correlationId,
         IEnumerable<Tag>? tags = null,
-        DateTimeOffset? occurred = default)
+        DateTimeOffset? occurred = default,
+        Subject? subject = null)
     {
+        var resolvedSubject = subject?.IsSet == true ? subject : new Subject(eventSourceId.Value);
         return new(
             eventType,
             eventSourceType,
@@ -97,11 +107,10 @@ public record EventContext(
             correlationId,
             [],
             Identity.NotSet,
-            [],
-            EventHash.NotSet)
-        {
-            Tags = tags ?? []
-        };
+            tags ?? [],
+            EventHash.NotSet,
+            EventObservationState.Initial,
+            resolvedSubject);
     }
 
     /// <summary>

@@ -21,7 +21,7 @@ public record SeedData(
     /// <param name="eventSeeding">The event seeding contract.</param>
     /// <param name="eventStore">The event store name.</param>
     /// <returns>Global seed data organized by event type and event source.</returns>
-    internal static async Task<SeedData> GlobalSeedData(IEventSeeding eventSeeding, string eventStore)
+    public static async Task<SeedData> GlobalSeedData(IEventSeeding eventSeeding, string eventStore)
     {
         var response = await eventSeeding.GetGlobalSeedData(new GetSeedDataRequest
         {
@@ -44,7 +44,7 @@ public record SeedData(
     /// <param name="eventStore">The event store name.</param>
     /// <param name="namespace">The namespace name.</param>
     /// <returns>Namespace-specific seed data organized by event type and event source.</returns>
-    internal static async Task<SeedData> NamespaceSeedData(IEventSeeding eventSeeding, string eventStore, string @namespace)
+    public static async Task<SeedData> NamespaceSeedData(IEventSeeding eventSeeding, string eventStore, string @namespace)
     {
         var response = await eventSeeding.GetNamespaceSeedData(new GetSeedDataRequest
         {

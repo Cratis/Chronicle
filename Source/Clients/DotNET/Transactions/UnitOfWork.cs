@@ -123,12 +123,7 @@ public class UnitOfWork(
         {
             return;
         }
-        if (!_isCommitted && !_isRolledBack)
-        {
-            Rollback().GetAwaiter().GetResult();
-        }
-
-        _onCompleted(this);
+        Rollback().GetAwaiter().GetResult();
     }
 
     void ThrowIfUnitOfWorkIsCompleted()

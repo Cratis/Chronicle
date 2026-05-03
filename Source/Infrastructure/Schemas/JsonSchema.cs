@@ -330,7 +330,12 @@ public class JsonSchema
                 var nonNull = anyOf.FirstOrDefault(s =>
                     s.Type != JsonObjectType.Null &&
                     !(s.HasReference && s.Reference?.Type == JsonObjectType.Null));
-                return nonNull ?? this;
+                if (nonNull is not null)
+                {
+                    return nonNull.HasReference ? (nonNull.Reference ?? nonNull) : nonNull;
+                }
+
+                return this;
             }
 
             return this;
@@ -441,7 +446,7 @@ public class JsonSchema
                         schemaObj["format"] = _typeFormats.GetFormatForType(context.TypeInfo.Type);
                     }
 
-                    if (context.TypeInfo.Kind == System.Text.Json.Serialization.Metadata.JsonTypeInfoKind.Object)
+                    if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
                     {
                         schemaObj["title"] = context.TypeInfo.Type.Name;
                     }
@@ -483,6 +488,10 @@ public class JsonSchema
                 return errors;
             }
 
+            var schemaProperties = this
+                .GetFlattenedProperties()
+                .ToDictionary(_ => _.Name, StringComparer.OrdinalIgnoreCase);
+
             // Check required properties
             if (Node["required"] is JsonArray required)
             {
@@ -492,6 +501,12 @@ public class JsonSchema
                 {
                     if (!obj.ContainsKey(propName!))
                     {
+                        if (schemaProperties.TryGetValue(propName!, out var schemaProperty) &&
+                            (schemaProperty.Type.HasFlag(JsonObjectType.Null) || schemaProperty.IsNullable()))
+                        {
+                            continue;
+                        }
+
                         errors.Add(new JsonSchemaValidationError(propName, JsonSchemaValidationErrorKind.PropertyRequired, $"Property '{propName}' is required."));
                     }
                 }

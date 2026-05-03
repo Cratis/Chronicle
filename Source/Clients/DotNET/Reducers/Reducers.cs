@@ -77,6 +77,7 @@ public class Reducers : IReducers
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             _registered = false;
+            DisconnectHandlers();
             return Task.CompletedTask;
         };
         _eventStore = eventStore;
@@ -96,6 +97,7 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public Task Discover()
     {
+        DisconnectHandlers();
         _handlersByType = _clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
@@ -302,6 +304,15 @@ public class Reducers : IReducers
         return handler;
     }
 
+    void DisconnectHandlers()
+    {
+        foreach (var handler in _handlersByType.Values.ToList())
+        {
+            handler.Disconnect();
+            (handler as IDisposable)?.Dispose();
+        }
+    }
+
     void RegisterReducer(IReducerHandler handler)
     {
         _logger.RegisterReducer(
@@ -324,7 +335,13 @@ public class Reducers : IReducers
                 {
                     TypeId = WellKnownSinkTypes.MongoDB
                 },
-                Tags = handler.ReducerType.GetTags().ToArray()
+                Tags = handler.ReducerType.GetTags().ToArray(),
+                Filters = new()
+                {
+                    FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
+                    EventSourceType = handler.ReducerType.GetEventSourceType().Value,
+                    EventStreamType = handler.ReducerType.GetEventStreamType().Value
+                }
             }
         };
 
@@ -332,7 +349,7 @@ public class Reducers : IReducers
         var messages = new BehaviorSubject<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages);
+        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages, handler.CancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve

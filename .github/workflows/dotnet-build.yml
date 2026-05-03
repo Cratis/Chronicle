@@ -1,10 +1,15 @@
 name: .NET Build & Integration
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
+  DOTNET_OBJ_CACHE: "dotnet-obj-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -32,7 +37,23 @@ jobs:
           dotnet-version: |
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          path: ./**/obj
+          key: ${{ env.DOTNET_OBJ_CACHE }}
+          restore-keys: |
+            dotnet-obj-cache-
+
+      - uses: actions/cache@v4
         id: dotnet-x64-output
         with:
           path: ./**/bin
@@ -67,7 +88,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: dotnet-x64-output
         with:
           path: ./**/bin
@@ -80,6 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
     strategy:
+      fail-fast: false
       matrix:
         namespace:
           - 'for_EventSequence'
@@ -92,9 +114,9 @@ jobs:
           - 'Jobs'
           - 'Patches'
           - 'Projections'
-    continue-on-error: true
     env:
       NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
+      CHRONICLE_TEST_TIMEOUT_SECONDS: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,7 +129,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: dotnet-x64-output
         with:
           path: ./**/bin
@@ -132,7 +154,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: dotnet-x64-output
         with:
           path: ./**/bin
@@ -163,7 +185,7 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: dotnet-x64-output
         with:
           path: ./**/bin
@@ -179,4 +201,3 @@ jobs:
       - name: Run MongoDB integration tests
         working-directory: ./Integration/MongoDB
         run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
-

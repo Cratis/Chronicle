@@ -12,4 +12,6 @@ public class Hub
     public HubId HubId { get; set; } = HubId.NotSet;
 
     public string Name { get; set; } = string.Empty;
+
+    public IList<Metric> Metrics { get; set; } = [];
 }

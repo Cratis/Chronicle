@@ -44,7 +44,8 @@ public class EventSequenceMigrator(
                 EventStreamType = table.StringColumn(migrationBuilder),
                 EventStreamId = table.StringColumn(migrationBuilder),
                 Content = table.StringColumn(migrationBuilder),
-                Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
+                Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
+                Subject = table.StringColumn(migrationBuilder, nullable: true)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 

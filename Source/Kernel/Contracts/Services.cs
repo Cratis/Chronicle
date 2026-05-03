@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -25,6 +26,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <summary>
 /// Represents an implementation of <see cref="IServices"/>.
 /// </summary>
+/// <param name="Compliance"><see cref="ICompliance"/> instance.</param>
 /// <param name="EventStores"><see cref="IEventStores"/> instance.</param>
 /// <param name="Namespaces"><see cref="INamespaces"/> instance.</param>
 /// <param name="Recommendations"><see cref="IRecommendations"/> instance.</param>
@@ -46,6 +48,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Applications"><see cref="IApplications"/> instance.</param>
 /// <param name="Server"><see cref="IServer"/> instance.</param>
 public sealed record Services(
+    ICompliance Compliance,
     IEventStores EventStores,
     INamespaces Namespaces,
     IRecommendations Recommendations,

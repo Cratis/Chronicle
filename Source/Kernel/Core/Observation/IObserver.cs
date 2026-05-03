@@ -72,13 +72,15 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
     /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
     /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
+    /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        ObserverFilters? filters = default)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
@@ -137,16 +139,18 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
-    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task FailedPartitionRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
     /// Notify that the partition has partially recovered.
     /// </summary>
     /// <param name="partition">The partition that has recovered.</param>
-    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task FailedPartitionPartiallyRecovered(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
@@ -162,6 +166,13 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <returns>True if there are failed partitions, false otherwise.</returns>
     [AlwaysInterleave]
     Task<bool> HasFailedPartitions();
+
+    /// <summary>
+    /// Get the keys of all currently failed partitions.
+    /// </summary>
+    /// <returns>Collection of <see cref="Key"/> for failed partitions.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<Key>> GetFailedPartitionKeys();
 
     /// <summary>
     /// Catch up the observer.
@@ -180,8 +191,9 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <summary>
     /// Notify that the observer has been caught up.
     /// </summary>
-    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
     Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>

@@ -21,5 +21,11 @@ export abstract class INamespaces {
      * Gets the observable namespaces.
      */
     abstract readonly namespaces: BehaviorSubject<string[]>;
+
+    /**
+     * Notifies the service that the active event store has changed, triggering subscription if needed.
+     * @param eventStore - The name of the now-active event store.
+     */
+    abstract setEventStore(eventStore: string): void;
 }
 

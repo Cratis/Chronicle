@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <param name="eventSequenceId">The <c>EventSequenceId</c> this storage serves.</param>
 internal sealed class InMemoryEventSequenceStorage(
-    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
+    KernelConcept.EventSequences.EventSequenceId eventSequenceId) : IEventSequenceStorage
 {
     readonly List<KernelAppendedEvent> _events = [];
 
@@ -30,6 +30,9 @@ internal sealed class InMemoryEventSequenceStorage(
     /// Gets the events stored in this storage instance.
     /// </summary>
     internal IReadOnlyList<KernelAppendedEvent> Events => _events;
+
+    /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task<EventSequenceState> GetState() =>
@@ -70,7 +73,9 @@ internal sealed class InMemoryEventSequenceStorage(
         IEnumerable<KernelIdentities::IdentityId> causedByChain,
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content)
+        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
+        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes,
+        KernelEvents::Subject? subject = null)
     {
         if (_events.Exists(_ => _.Context.SequenceNumber == sequenceNumber))
         {

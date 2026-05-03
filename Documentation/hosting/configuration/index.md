@@ -23,7 +23,9 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 | Observers | Retry and timeout settings |
 | Events | Event queue configuration |
 | Authentication | External authority and default admin settings |
-| TLS | Certificate configuration for secure transport |
+| TLS | gRPC TLS certificate configuration |
+| Workbench TLS | Dedicated Workbench TLS and certificate configuration |
+| Identity Provider Certificate | Dedicated certificate configuration for internal OAuth authority |
 
 ## Topics
 
@@ -34,7 +36,9 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
 - [Events](events.md) - Configure event queues.
 - [Authentication](authentication.md) - External authority and default admin settings.
-- [TLS](tls.md) - Configure TLS certificates for Chronicle Server.
+- [TLS](tls.md) - Configure top-level gRPC TLS certificates.
+- [Workbench TLS](workbench-tls.md) - Configure Workbench TLS and certificates.
+- [Identity Provider Certificate](identity-provider-certificate.md) - Configure internal OAuth authority certificates.
 - [Environment Variables](environment-variables.md) - Configure with `Cratis__Chronicle__` settings.
 - [Open Telemetry](open-telemetry.md) - Export metrics, traces, and logs via OTLP.
 - [Docker Configuration](docker.md) - Configure Chronicle in Docker.

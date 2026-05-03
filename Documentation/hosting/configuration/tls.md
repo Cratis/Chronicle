@@ -1,6 +1,6 @@
 # TLS Configuration (Server)
 
-Chronicle Server supports TLS for secure communication. TLS is required in production and optional in development.
+Chronicle Server supports TLS for secure communication. TLS is enabled by default, but can be explicitly disabled when TLS is terminated upstream.
 
 For client-side TLS configuration, see [TLS Configuration (Client)](../../configuration/tls.md).
 
@@ -9,6 +9,7 @@ For client-side TLS configuration, see [TLS Configuration (Client)](../../config
 ```json
 {
   "tls": {
+    "enabled": true,
     "certificatePath": "/path/to/certificate.pfx",
     "certificatePassword": "your-password"
   }
@@ -18,6 +19,7 @@ For client-side TLS configuration, see [TLS Configuration (Client)](../../config
 ## Environment variables
 
 ```bash
+Cratis__Chronicle__Tls__Enabled=true
 Cratis__Chronicle__Tls__CertificatePath=/path/to/certificate.pfx
 Cratis__Chronicle__Tls__CertificatePassword=your-password
 ```
@@ -26,13 +28,28 @@ Cratis__Chronicle__Tls__CertificatePassword=your-password
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
+| enabled | boolean | true | Whether TLS is enabled. Set to `false` to run Chronicle without local HTTPS when TLS is terminated upstream. |
 | certificatePath | string | null | Path to the TLS certificate file (PFX format) |
 | certificatePassword | string | null | Password for the certificate file |
 
+## gRPC TLS behavior
+
+The top-level `tls` configuration controls the gRPC listener:
+
+- `tls.enabled=true` (default): Chronicle expects a certificate and uses HTTPS.
+- `tls.enabled=false`: Chronicle runs gRPC without HTTPS.
+
+Use `tls.enabled=false` only when TLS is terminated by upstream infrastructure such as ingress or reverse proxies.
+
+## Related TLS and certificate pages
+
+- [Workbench TLS Configuration](workbench-tls.md) for Workbench-specific TLS and certificates.
+- [Identity Provider Certificate Configuration](identity-provider-certificate.md) for internal OAuth authority certificates.
+
 ## Development vs production
 
-- **Development**: The server can start without TLS in Debug builds.
-- **Production**: The server will fail to start if TLS is not configured.
+- **Development**: The server can run with or without TLS.
+- **Production**: The server can run with or without TLS based on `tls.enabled`. When `tls.enabled=true`, a certificate is required. Workbench TLS can be configured independently.
 
 ## Certificate requirements
 
@@ -58,8 +75,10 @@ services:
 
 ### Server fails to start
 
-**Error**: "No TLS certificate is configured"
+**Error**: "No TLS certificate is configured for gRPC while TLS is enabled"
 
-**Solution**: Provide `certificatePath` and `certificatePassword` in configuration.
+**Solution**: Provide `certificatePath` and `certificatePassword` in the top-level `tls` configuration, or set `tls.enabled` to `false` when TLS is terminated upstream.
 
+**Error**: "No TLS certificate is configured for the Workbench"
 
+**Solution**: Either provide a certificate path, or set `workbench.tls.enabled` to `false` if TLS is terminated upstream.

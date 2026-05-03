@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.Events;
@@ -117,6 +118,13 @@ public class Projection : IProjection, IDisposable
     /// <inheritdoc/>
     public IEnumerable<EventTypeWithKeyResolver> EventTypesWithKeyResolver { get; private set; } = [];
 
+    /// <summary>
+    /// Gets the <see cref="CompositeDisposable"/> that holds all active pipeline subscriptions for this projection.
+    /// Pass this to extension methods such as <see cref="ProjectionEventContextExtensions.Project"/> so that
+    /// every subscription is tracked and explicitly disposed when the projection is disposed.
+    /// </summary>
+    internal CompositeDisposable Subscriptions { get; } = new();
+
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> FilterEventTypes(IObservable<ProjectionEventContext> observable) => observable.Where(_ => EventTypes.Any(et => et.Id == _.Event.Context.EventType.Id));
 
@@ -189,6 +197,8 @@ public class Projection : IProjection, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _subject.OnCompleted();
+        Subscriptions.Dispose();
         _subject.Dispose();
     }
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.given;
 
@@ -26,10 +28,14 @@ public class all_dependencies : Specification
     protected ISink _sink;
     protected IReadModel _readModel;
     protected ReadModelDefinition _readModelDefinition;
+    protected IJsonComplianceManager _complianceManager;
     protected Contracts.ReadModels.IReadModels _service;
+
+    protected IClusterClient _clusterClient;
 
     void Establish()
     {
+        _clusterClient = Substitute.For<IClusterClient, IKeyedServiceProvider>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
 
@@ -48,7 +54,7 @@ public class all_dependencies : Specification
             ReadModelObserverType.Projection,
             "test-observer",
             new SinkDefinition(SinkConfigurationId.None, SinkTypeId.None),
-            new Dictionary<ReadModelGeneration, JsonSchema>(),
+            new Dictionary<ReadModelGeneration, JsonSchema> { { (ReadModelGeneration)1, new JsonSchema() } },
             []);
 
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -59,14 +65,15 @@ public class all_dependencies : Specification
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
 
-        var clusterClient = Substitute.For<IClusterClient>();
         var expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _complianceManager = Substitute.For<IJsonComplianceManager>();
 
         _service = new ReadModels(
-            clusterClient,
+            _clusterClient,
             _grainFactory,
             _storage,
             expandoObjectConverter,
+            _complianceManager,
             new JsonSerializerOptions());
     }
 }

@@ -66,6 +66,11 @@ enum ObservationState {
    Success = 1;
    Failed = 2;
 }
+message ObserverFilters {
+   repeated string FilterTags = 1;
+   string EventSourceType = 2;
+   string EventStreamType = 3; // default value could not be applied: All
+}
 message OneOf_RegisterReducer_ReducerResult {
    RegisterReducer Value0 = 1;
    ReducerResult Value1 = 2;
@@ -83,6 +88,7 @@ message ReducerDefinition {
    bool IsActive = 5;
    SinkDefinition Sink = 6;
    repeated string Tags = 7;
+   ObserverFilters Filters = 8;
 }
 message ReducerMessage {
    OneOf_RegisterReducer_ReducerResult Content = 1;

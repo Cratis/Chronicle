@@ -37,7 +37,7 @@ public static class ChronicleClientServiceCollectionExtensions
     {
         services.AddHttpContextAccessor();
 
-        services.AddSingleton<IEventStoreNamespaceResolver>(sp =>
+        services.AddSingleton(sp =>
         {
             if (chronicleBuilder?.NamespaceResolver is not null)
             {
@@ -106,9 +106,9 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Projections);
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().ReadModels);
 
-        services.AddSingleton<IClientArtifactsProvider>(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
-        services.AddSingleton<INamingPolicy>(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
-        services.AddSingleton<ICorrelationIdAccessor>(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
+        services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
+        services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
+        services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
 
         return services;
     }

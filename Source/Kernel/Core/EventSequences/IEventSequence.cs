@@ -101,6 +101,7 @@ public interface IEventSequence : IGrainWithStringKey
     /// <param name="tags">Collection of <see cref="Tag"/> for the event.</param>
     /// <param name="concurrencyScope">The <see cref="ConcurrencyScope"/>.</param>
     /// <param name="occurred">Optional occurred time. If null, the server will set it to approximately the time of append.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> identifying the target the event is about. Used as the identity for compliance concerns such as PII encryption keys. When omitted, the <paramref name="eventSourceId"/> is used as the subject.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task<AppendResult> Append(
         EventSourceType eventSourceType,
@@ -114,7 +115,8 @@ public interface IEventSequence : IGrainWithStringKey
         Identity causedBy,
         IEnumerable<Tag> tags,
         ConcurrencyScope concurrencyScope,
-        DateTimeOffset? occurred = null);
+        DateTimeOffset? occurred = null,
+        Subject? subject = null);
 
     /// <summary>
     /// Append a single event to the event store.

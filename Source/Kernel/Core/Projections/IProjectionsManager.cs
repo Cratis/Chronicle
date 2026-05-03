@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -20,6 +21,7 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// Get all the <see cref="ProjectionDefinition">projection definitions</see> available.
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
+    [AlwaysInterleave]
     Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
 
     /// <summary>

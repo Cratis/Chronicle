@@ -18,7 +18,7 @@ internal sealed class JsonSchemaConverter : JsonConverter<JsonSchema>
         var jsonSchemaString = reader.GetString();
         if (jsonSchemaString is not null)
         {
-            return JsonSchema.FromJsonAsync(jsonSchemaString).GetAwaiter().GetResult();
+            return JsonSchema.FromJson(jsonSchemaString);
         }
 
         return null;

@@ -52,22 +52,25 @@ public class an_event_with_observers(context context) : Given<context>(context)
 
         async Task Because()
         {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reactorHandler = EventStore.Reactors.GetHandlerFor<SomeReactor>();
             var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
             var projectionHandler = EventStore.Projections.GetHandlerFor<SomeProjection>();
 
-            await reactorHandler.WaitTillActive();
-            await reducerHandler.WaitTillActive();
-            await projectionHandler.WaitTillActive();
+            await reactorHandler.WaitTillActive(startupTimeout);
+            await reducerHandler.WaitTillActive(startupTimeout);
+            await projectionHandler.WaitTillActive(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
-            await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
+            var lastAppendResult = await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
 
-            // Wait for all observers to process the 3 events.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
-            await projectionHandler.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First + 2);
+            var lastAppendedSequenceNumber = lastAppendResult.SequenceNumber;
+
+            // Wait for all observers to process the appended events.
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await projectionHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
 
             // Reset counters before revision to measure replay.
             Reactor.HandledEvents = 0;
@@ -80,8 +83,8 @@ public class an_event_with_observers(context context) : Given<context>(context)
             await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             // Wait for observers to finish processing the replay.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
+            await Reactor.WaitTillHandledEventReaches(3, startupTimeout);
+            await Reducer.WaitTillHandledEventReaches(3, startupTimeout);
 
             StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
             var systemStorage = GetSystemEventLogStorage();

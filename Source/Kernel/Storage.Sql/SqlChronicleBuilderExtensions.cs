@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 using Microsoft.Extensions.DependencyInjection;
 using SqlStorage = Cratis.Chronicle.Storage.Sql.SystemStorage;
 
@@ -29,7 +30,7 @@ public static class SqlChronicleBuilderExtensions
 
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
-        builder.Services.AddSingleton<IEncryptionKeyStorage, InMemoryEncryptionKeyStorage>();
+        builder.Services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
         builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
         {
             optionsBuilder

@@ -3,8 +3,10 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Changes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -21,6 +23,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="typeFormats"><see cref="ITypeFormats"/> for resolving actual CLR types for schemas.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for encrypting and decrypting PII fields.</param>
+/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [Singleton]
 public class ProjectionPipelineManager(
@@ -28,12 +32,14 @@ public class ProjectionPipelineManager(
     IGrainFactory grainFactory,
     IObjectComparer objectComparer,
     ITypeFormats typeFormats,
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter,
     ILoggerFactory loggerFactory) : IProjectionPipelineManager
 {
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
 
     /// <inheritdoc/>
-    public IProjectionPipeline GetFor(
+    public async Task<IProjectionPipeline> GetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         EngineProjection projection)
@@ -46,16 +52,18 @@ public class ProjectionPipelineManager(
 
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var eventSequenceStorage = namespaceStorage.GetEventSequence(projection.EventSequenceId);
-        var sink = namespaceStorage.Sinks.GetFor(projection.ReadModel);
+        var sink = await namespaceStorage.Sinks.GetFor(projection.ReadModel);
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, loggerFactory.CreateLogger<ResolveFutures>());
+        var resolveFuturesStep = new ResolveFutures(projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>());
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
             new ResolveKey(eventSequenceStorage, sink, typeFormats, loggerFactory.CreateLogger<ResolveKey>()),
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
+            new DecryptInitialState(complianceManager, expandoObjectConverter, eventStore, @namespace),
             new HandleEvent(eventSequenceStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
+            new EncryptChangeset(complianceManager, expandoObjectConverter, objectComparer, eventStore, @namespace),
             new StoreFutures(projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
@@ -75,4 +83,7 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+
+    /// <inheritdoc/>
+    public void Clear() => _pipelines.Clear();
 }

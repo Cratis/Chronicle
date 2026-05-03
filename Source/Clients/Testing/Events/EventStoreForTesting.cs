@@ -22,8 +22,6 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </summary>
 public class EventStoreForTesting : IEventStore
 {
-    EventSequenceForTesting? _defaultEventSequence;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
     /// </summary>
@@ -84,8 +82,7 @@ public class EventStoreForTesting : IEventStore
     public Task DiscoverAll() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public IEventSequence GetEventSequence(EventSequenceId id) =>
-        _defaultEventSequence ??= new(Defaults.Instance.EventTypes);
+    public IEventSequence GetEventSequence(EventSequenceId id) => throw new NotImplementedException();
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default) => throw new NotImplementedException();

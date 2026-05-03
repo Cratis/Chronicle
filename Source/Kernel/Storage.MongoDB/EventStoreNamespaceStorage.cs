@@ -3,7 +3,6 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
@@ -60,7 +59,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="eventStoreNamespaceDatabase">Provider for <see cref="IEventStoreNamespaceDatabase"/> to use.</param>
     /// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for working with the schema types.</param>
     /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
-    /// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for handling compliance.</param>
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
@@ -73,7 +71,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         IEventStoreNamespaceDatabase eventStoreNamespaceDatabase,
         IEventTypesStorage eventTypesStorage,
         IObserverDefinitionsStorage observerDefinitionsStorage,
-        IJsonComplianceManager complianceManager,
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
@@ -110,7 +107,6 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             @namespace,
             eventTypesStorage,
             Identities,
-            complianceManager,
             expandoObjectConverter);
     }
 

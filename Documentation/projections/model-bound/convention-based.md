@@ -122,6 +122,29 @@ public record Order(
     decimal TotalAmount);
 ```
 
+## Parent Key for Child Relationships
+
+When a child type has its own class-level `FromEvent` attribute, later child events can come from the child event source while still updating the correct parent document. Use `parentKey` to point Chronicle at the property on the event that identifies the parent:
+
+```csharp
+public record Dashboard(
+    [Key] Guid Id,
+    string Name,
+
+    [ChildrenFrom<ConfigurationAdded>(
+        key: nameof(ConfigurationAdded.ConfigurationId),
+        identifiedBy: nameof(Configuration.Id),
+        parentKey: nameof(ConfigurationAdded.DashboardId))]
+    IEnumerable<Configuration> Configurations);
+
+[FromEvent<ConfigurationRenamed>(parentKey: nameof(ConfigurationRenamed.DashboardId))]
+public record Configuration(
+    [Key] Guid Id,
+    string Name);
+```
+
+This is the model-bound equivalent of using `.UsingParentKey(e => e.DashboardId)` in a fluent child projection. It is primarily useful on child types that are populated through `ChildrenFrom` and later updated by events from their own event source streams.
+
 ### Key Validation
 
 The key property must exist on the event type. If you specify a non-existent property, you'll get a compile-time error:
@@ -426,4 +449,3 @@ public record Account(
 The `FromEvent` attribute provides powerful automatic property mapping capabilities that mirror the `.AutoMap()` functionality in regular projections. By following consistent naming conventions between events and read models, you can significantly reduce boilerplate code while maintaining type safety and performance. Use `FromEvent` as your starting point for model-bound projections, and add explicit attributes only when you need custom mapping logic or complex operations.
 
 This automatic mapping approach makes model-bound projections both concise and maintainable, allowing you to focus on your domain logic rather than repetitive property mapping code.
-

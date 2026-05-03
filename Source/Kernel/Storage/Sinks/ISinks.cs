@@ -23,5 +23,5 @@ public interface ISinks
     /// </summary>
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
     /// <returns><see cref="ISink"/> instance.</returns>
-    ISink GetFor(ReadModelDefinition readModel);
+    Task<ISink> GetFor(ReadModelDefinition readModel);
 }

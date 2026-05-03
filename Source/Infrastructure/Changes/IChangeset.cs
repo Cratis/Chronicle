@@ -88,14 +88,22 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="key">Key value.</param>
     /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
+    /// <param name="childInitialState">Optional initial state template for the new child item. When provided, cloned as the starting state so nested collections are pre-initialized.</param>
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
+    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers, TTarget? childInitialState = default)
         where TChild : new();
 
     /// <summary>
     /// Apply a remove change to the <see cref="IChangeset{TSource, TTarget}"/>.
     /// </summary>
     void Remove();
+
+    /// <summary>
+    /// Apply a clear change to a nested single-object property on the <see cref="IChangeset{TSource, TTarget}"/>.
+    /// </summary>
+    /// <param name="nestedProperty"><see cref="PropertyPath"/> for accessing the nested object.</param>
+    /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see> needed to target the correct element when the nested object lives inside a child collection.</param>
+    void ClearNested(PropertyPath nestedProperty, ArrayIndexers arrayIndexers);
 
     /// <summary>
     /// Apply a remove child change to the <see cref="IChangeset{TSource, TTarget}"/>.

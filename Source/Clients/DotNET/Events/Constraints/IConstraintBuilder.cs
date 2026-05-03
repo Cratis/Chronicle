@@ -12,6 +12,24 @@ namespace Cratis.Chronicle.Events.Constraints;
 public interface IConstraintBuilder
 {
     /// <summary>
+    /// Scope the constraint per event source type.
+    /// </summary>
+    /// <returns>Builder for continuation.</returns>
+    IConstraintBuilder PerEventSourceType();
+
+    /// <summary>
+    /// Scope the constraint per event stream type.
+    /// </summary>
+    /// <returns>Builder for continuation.</returns>
+    IConstraintBuilder PerEventStreamType();
+
+    /// <summary>
+    /// Scope the constraint per event stream identifier.
+    /// </summary>
+    /// <returns>Builder for continuation.</returns>
+    IConstraintBuilder PerEventStreamId();
+
+    /// <summary>
     /// Start building a unique constraint.
     /// </summary>
     /// <param name="callback">Callback with <see cref="IUniqueConstraintBuilder"/> for building.</param>

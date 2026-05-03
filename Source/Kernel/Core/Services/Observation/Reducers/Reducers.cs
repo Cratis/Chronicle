@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -66,7 +67,7 @@ internal sealed class Reducers(
             new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
 
-        messages.Subscribe(message =>
+        var messagesSubscription = messages.Subscribe(message =>
         {
             switch (message.Content.Value)
             {
@@ -78,11 +79,18 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    var readModel = grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
                         result =>
                         {
-                            model = result.Result;
-                            registrationTcs.SetResult(register);
+                            if (result.IsFaulted)
+                            {
+                                registrationTcs.TrySetException(result.Exception!.InnerExceptions);
+                            }
+                            else
+                            {
+                                model = result.Result;
+                                registrationTcs.TrySetResult(register);
+                            }
                         },
                         TaskScheduler.Current);
                     break;
@@ -119,6 +127,8 @@ internal sealed class Reducers(
 
         var connectionId = ConnectionId.NotSet;
         var observerId = ObserverId.Unspecified;
+        var eventStoreName = EventStoreName.NotSet;
+        var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
 
         var observable = Observable.Create<ReduceOperationMessage>(
@@ -130,6 +140,8 @@ internal sealed class Reducers(
                     var registration = await registrationTcs.Task;
                     connectionId = registration.ConnectionId;
                     observerId = registration.Reducer.ReducerId;
+                    eventStoreName = registration.EventStore;
+                    namespaceName = registration.Namespace;
 
                     logger.Subscribing(
                         registration.Reducer.ReducerId,
@@ -148,6 +160,8 @@ internal sealed class Reducers(
                     reducerMediator.Subscribe(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
+                        registration.EventStore,
+                        registration.Namespace,
                         (reduceOperation, tcs) =>
                         {
                             reducerResultTcs[reduceOperation.Partition] = tcs;
@@ -191,7 +205,8 @@ internal sealed class Reducers(
                 }
                 finally
                 {
-                    reducerMediator.Disconnected(observerId, connectionId);
+                    messagesSubscription.Dispose();
+                    reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
                     reducerResultTcs.Values.ForEach(_ => _.TrySetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
                     if (clientObserver is not null)
                     {
@@ -207,8 +222,7 @@ internal sealed class Reducers(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-            clientObserver?.Unsubscribe().GetAwaiter().GetResult();
-            reducerMediator.Disconnected(observerId, connectionId);
+            reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();
         });
 

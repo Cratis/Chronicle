@@ -4,6 +4,16 @@
   href: getting-started.md
 - name: Event Processing
   href: event-processing.md
+- name: Event Sequence
+  href: event-sequence.md
 - name: OnceOnly
   href: once-only.md
-
+- name: Filtering by appended event metadata
+  href: filtering.md
+  items:
+    - name: By tag
+      href: ../events/filtering/by-tag.md
+    - name: By event source type
+      href: ../events/filtering/by-event-source-type.md
+    - name: By event stream type
+      href: ../events/filtering/by-event-stream-type.md

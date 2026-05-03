@@ -14,7 +14,8 @@ export class a_view_model {
         this.namespaces = {
             currentNamespace: new BehaviorSubject<string>(''),
             setCurrentNamespace: sinon.stub(),
-            namespaces: new BehaviorSubject<string[]>([])
+            namespaces: new BehaviorSubject<string[]>([]),
+            setEventStore: sinon.stub()
 
         };
         this.replay = sinon.createStubInstance(Replay);

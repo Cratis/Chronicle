@@ -4,8 +4,10 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Storage;
@@ -18,6 +20,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// </summary>
 public interface IChronicleSetupFixture : IClientArtifactsProvider
 {
+    /// <summary>
+    /// Gets the MongoDB container.
+    /// </summary>
+    public IContainer MongoDBContainer { get; }
+
     /// <summary>
     /// Gets the docker network.
     /// </summary>
@@ -68,6 +75,18 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     /// Internal: Gets the <see cref="IEventStoreStorage"/> for the event store.
     /// </summary>
     internal IEventStoreStorage EventStoreStorage => Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
+
+    /// <summary>
+    /// Begins collecting appended events from this point forward.
+    /// </summary>
+    /// <remarks>
+    /// Returns a fresh <see cref="IEventAppendCollection"/> subscribed to the event log immediately.
+    /// Call <see cref="StartCollectingAppends"/> before the operation under test so no events are missed.
+    /// Dispose the collection when done to stop accumulation.
+    /// </remarks>
+    /// <returns>An active <see cref="IEventAppendCollection"/>.</returns>
+    public IEventAppendCollection StartCollectingAppends() =>
+        new EventAppendCollection(Services.GetRequiredService<IEventLog>());
 
     /// <summary>
     /// Sets the name of the fixture.

@@ -3,7 +3,6 @@
 
 using System.Reactive.Subjects;
 using System.Text.Json;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
@@ -18,7 +17,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// Represents an implementation of <see cref="IClusterStorage"/> for MongoDB.
 /// </summary>
 /// <param name="database">The <see cref="IDatabase"/> instance.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> instance.</param>
 /// <param name="expandoObjectConverter">The <see cref="Json.IExpandoObjectConverter"/> instance.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> instance.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> instance.</param>
@@ -26,7 +24,6 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> instance.</param>
 public class ClusterStorage(
     IDatabase database,
-    IJsonComplianceManager complianceManager,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IJobTypes jobTypes,
@@ -54,7 +51,6 @@ public class ClusterStorage(
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory) => new EventStoreStorage(
         eventStore,
         database.GetEventStoreDatabase(eventStore),
-        complianceManager,
         expandoObjectConverter,
         jsonSerializerOptions,
         sinksFactory,

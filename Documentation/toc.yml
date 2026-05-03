@@ -20,6 +20,8 @@
   href: constraints/toc.yml
 - name: Migrations
   href: migrations/toc.yml
+- name: Compliance
+  href: compliance/toc.yml
 - name: Read Models
   href: read-models/toc.yml
 - name: Projections

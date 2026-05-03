@@ -48,6 +48,7 @@ public class Sink(
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
     readonly Dictionary<string, ExpandoObject> _bulkStateCache = [];
+    readonly Dictionary<string, Key> _bulkKeysByCacheKey = [];
     int _currentBulkSize;
     bool _isBulkMode;
 
@@ -87,16 +88,22 @@ public class Sink(
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         EventSequenceNumber eventSequenceNumber)
     {
-        var filter = changeset.HasJoined() ?
+        var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
+            change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
+        var keyFilterValue = converter.ToBsonValue(key);
+
+        var filter = changeset.HasJoined() && !hasDirectKeyScopedChanges ?
             FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+            Builders<BsonDocument>.Filter.Eq("_id", keyFilterValue);
 
         if (changeset.HasBeenRemoved())
         {
             if (_isBulkMode)
             {
                 AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
-                _bulkStateCache.Remove(converter.ToBsonValue(key).ToString()!);
+                var cacheKey = converter.ToBsonValue(key).ToString()!;
+                _bulkStateCache.Remove(cacheKey);
+                _bulkKeysByCacheKey.Remove(cacheKey);
                 return await FlushBulkIfNeeded();
             }
 
@@ -107,7 +114,12 @@ public class Sink(
         // Run through and remove all children affected by ChildRemovedFromAll
         foreach (var childRemoved in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
-            await RemoveChildFromAll(key, childRemoved);
+            await RemoveChildFromAll(childRemoved);
+        }
+
+        if (_isBulkMode && changeset.HasJoined() && _bulkOperations.Count > 0)
+        {
+            await ExecuteBulk();
         }
 
         var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
@@ -123,8 +135,16 @@ public class Sink(
             AddToBulk(updateModel, key, eventSequenceNumber);
             if (!changeset.HasJoined())
             {
-                _bulkStateCache[converter.ToBsonValue(key).ToString()!] = changeset.CurrentState;
+                var cacheKey = converter.ToBsonValue(key).ToString()!;
+                _bulkStateCache[cacheKey] = changeset.CurrentState;
+                _bulkKeysByCacheKey[cacheKey] = key;
             }
+
+            if (changeset.HasJoined())
+            {
+                return await ExecuteBulk();
+            }
+
             return await FlushBulkIfNeeded();
         }
 
@@ -146,6 +166,7 @@ public class Sink(
         _bulkOperations.Clear();
         _bulkOperationMetadata.Clear();
         _bulkStateCache.Clear();
+        _bulkKeysByCacheKey.Clear();
         _currentBulkSize = 0;
         return Task.CompletedTask;
     }
@@ -161,6 +182,7 @@ public class Sink(
         _bulkOperations.Clear();
         _bulkOperationMetadata.Clear();
         _bulkStateCache.Clear();
+        _bulkKeysByCacheKey.Clear();
         _currentBulkSize = 0;
     }
 
@@ -191,6 +213,19 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
+        if (_isBulkMode)
+        {
+            var pathSegments = childPropertyPath.Segments.ToArray();
+            foreach (var (cacheKey, cachedState) in _bulkStateCache)
+            {
+                if (TryFindValueInDocument(cachedState, pathSegments, 0, childValue) &&
+                    _bulkKeysByCacheKey.TryGetValue(cacheKey, out var rootKey))
+                {
+                    return new Option<Key>(rootKey);
+                }
+            }
+        }
+
         var collection = Collection;
 
         var mongoPropertyPath = childPropertyPath.ToMongoDB();
@@ -207,6 +242,7 @@ public class Sink(
             });
 
         var document = await result.FirstOrDefaultAsync();
+
         if (document is not null && document.TryGetValue("_id", out var idValue))
         {
             var key = new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers);
@@ -219,11 +255,6 @@ public class Sink(
     /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
-        if (readModel.Indexes.Count == 0)
-        {
-            return;
-        }
-
         var collection = Collection;
         var existingIndexes = await GetExistingIndexNamesAsync(collection);
 
@@ -327,6 +358,54 @@ public class Sink(
         }
     }
 
+    bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
+    {
+        if (segmentIndex >= pathSegments.Length)
+        {
+            return false;
+        }
+
+        var currentSegment = pathSegments[segmentIndex];
+        var dict = (IDictionary<string, object?>)document;
+
+        if (!dict.TryGetValue(currentSegment.Value, out var value) || value is null)
+        {
+            return false;
+        }
+
+        if (segmentIndex == pathSegments.Length - 1)
+        {
+            return ValuesAreEqual(value, targetValue);
+        }
+
+        if (value is IEnumerable<object> collection)
+        {
+            foreach (var itemExpando in collection.OfType<ExpandoObject>())
+            {
+                if (TryFindValueInDocument(itemExpando, pathSegments, segmentIndex + 1, targetValue))
+                {
+                    return true;
+                }
+            }
+        }
+        else if (value is ExpandoObject nestedExpando)
+        {
+            return TryFindValueInDocument(nestedExpando, pathSegments, segmentIndex + 1, targetValue);
+        }
+
+        return false;
+    }
+
+    static bool ValuesAreEqual(object value, object targetValue)
+    {
+        if (value.Equals(targetValue))
+        {
+            return true;
+        }
+
+        return value.ToString() == targetValue.ToString();
+    }
+
     static int EstimateOperationSize(WriteModel<BsonDocument> operation)
     {
         // Rough estimate: most operations are less than 10KB
@@ -344,11 +423,11 @@ public class Sink(
         };
     }
 
-    async Task RemoveChildFromAll(Key key, ChildRemovedFromAll childRemoved)
+    async Task RemoveChildFromAll(ChildRemovedFromAll childRemoved)
     {
         var childrenProperty = (string)childRemoved.ChildrenProperty.GetChildrenProperty();
         var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
-        var propertyValue = key.Value.ToBsonValue();
+        var propertyValue = childRemoved.Key.ToBsonValue();
 
         var collection = Collection;
 

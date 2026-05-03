@@ -11,5 +11,11 @@ public class Events
     /// <summary>
     /// Number of appended event queues to use.
     /// </summary>
-    public int Queues { get; init; } = 8;
+    /// <remarks>
+    /// Each queue runs a dedicated async processing loop. Higher values allow
+    /// more observer parallelism but consume more memory and idle CPU overhead.
+    /// 2 queues is sufficient for most installations; increase for high-throughput
+    /// scenarios with many concurrent observers.
+    /// </remarks>
+    public int Queues { get; init; } = 2;
 }

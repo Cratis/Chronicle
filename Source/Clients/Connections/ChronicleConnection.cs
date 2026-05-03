@@ -6,6 +6,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
@@ -229,6 +230,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         _services = new Services(
+            callInvoker.CreateGrpcService<ICompliance>(clientFactory),
             callInvoker.CreateGrpcService<IEventStores>(clientFactory),
             callInvoker.CreateGrpcService<INamespaces>(clientFactory),
             callInvoker.CreateGrpcService<IRecommendations>(clientFactory),

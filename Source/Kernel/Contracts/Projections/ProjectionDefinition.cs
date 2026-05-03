@@ -112,4 +112,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(17)]
     public AutoMap AutoMap { get; set; }
+
+    /// <summary>
+    /// Gets or sets all the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.
+    /// </summary>
+    [ProtoMember(18, IsRequired = true)]
+    public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
 }

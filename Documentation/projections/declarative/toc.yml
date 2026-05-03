@@ -10,6 +10,8 @@
   href: set-properties.md
 - name: Children
   href: children.md
+- name: Nested Objects
+  href: nested.md
 - name: Joins
   href: joins.md
 - name: Functions
