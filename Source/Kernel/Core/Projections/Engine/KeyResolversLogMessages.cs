@@ -135,4 +135,7 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: all resolution strategies exhausted for child projection '{Path}' with parent key '{ParentKey}' — event will be skipped (no future created). This typically indicates a badly-defined projection.")]
     internal static partial void FromParentHierarchyKeyUnresolvable(this ILogger<KeyResolvers> logger, string path, string parentKey);
+
+    [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: child creation event at seq {CreationSeq} is not earlier than the current event at seq {CurrentSeq} — rejecting to prevent an infinite resolution cycle")]
+    internal static partial void FromParentHierarchyChildCreationEventNotEarlier(this ILogger<KeyResolvers> logger, ulong creationSeq, ulong currentSeq);
 }
