@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
@@ -29,6 +30,7 @@ using Cratis.Metrics;
 using Cratis.Monads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 using IObserver = Cratis.Chronicle.Observation.IObserver;
@@ -46,6 +48,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
+/// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 public class EventSequence(
@@ -57,8 +60,10 @@ public class EventSequence(
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
     IEventHashCalculator eventHashCalculator,
+    IOptions<ChronicleOptions> options,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    readonly int _maxConcurrentEventValidations = options.Value.Events.MaxConcurrentEventValidations;
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -257,10 +262,19 @@ public class EventSequence(
     {
         try
         {
+            using var validationSemaphore = new SemaphoreSlim(_maxConcurrentEventValidations);
             var tasks = events.Select(async e =>
             {
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
-                return (Event: e, Result: result);
+                await validationSemaphore.WaitAsync();
+                try
+                {
+                    var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
+                    return (Event: e, Result: result);
+                }
+                finally
+                {
+                    validationSemaphore.Release();
+                }
             });
 
             var getValidAndCompliantEvents = await Task.WhenAll(tasks);

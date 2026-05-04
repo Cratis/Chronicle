@@ -7,11 +7,13 @@ using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Types;
+using Microsoft.Extensions.Options;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
 using KernelEventSequences = KernelCore::Cratis.Chronicle.EventSequences;
 using KernelMigrations = KernelCore::Cratis.Chronicle.EventSequences.Migrations;
+using KernelOptions = KernelCore::Cratis.Chronicle.Configuration;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
@@ -102,6 +104,7 @@ internal static class InProcessEventSequence
                 expandoObjectConverter,
                 eventSerializer,
                 new KernelEventSequences::EventHashCalculator(),
+                Options.Create(new KernelOptions::ChronicleOptions()),
                 NullLogger<KernelEventSequences::EventSequence>.Instance);
         }
 
