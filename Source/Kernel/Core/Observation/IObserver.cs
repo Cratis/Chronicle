@@ -193,7 +193,6 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// </summary>
     /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
-    [AlwaysInterleave]
     Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
