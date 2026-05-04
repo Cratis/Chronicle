@@ -30,7 +30,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
     readonly Lock _subscriptionsLock = new();
     readonly List<AppendedEventsQueueObserverSubscription> _subscriptions = [];
-    readonly int _maxConcurrentObserverDispatches;
     int _pendingItems;
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
@@ -57,8 +56,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _logger = logger;
 
         var eventsConfig = options.Value.Events;
-        _maxConcurrentObserverDispatches = eventsConfig.MaxConcurrentObserverDispatches;
-
         var capacity = eventsConfig.QueueBoundedCapacity;
         _channel = capacity > 0
             ? Channel.CreateBounded<IReadOnlyList<AppendedEvent>>(new BoundedChannelOptions(capacity)
@@ -329,22 +326,22 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var partitionEvents = sorted.GetRange(start, index - start);
             var subscriptions = GetSubscriptionsSnapshot();
 
-            await Parallel.ForEachAsync(
-                subscriptions,
-                new ParallelOptions { MaxDegreeOfParallelism = _maxConcurrentObserverDispatches },
-                async (subscription, ct) =>
+            var tasks = new List<Task>();
+            foreach (var subscription in subscriptions)
+            {
+                var actualEvents = partitionEvents
+                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
+                    .ToList();
+                if (actualEvents.Count == 0)
                 {
-                    var actualEvents = partitionEvents
-                        .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
-                        .ToList();
-                    if (actualEvents.Count == 0)
-                    {
-                        return;
-                    }
+                    continue;
+                }
 
-                    var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                    await observer.Handle(partition, actualEvents);
-                });
+                var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
+                tasks.Add(observer.Handle(partition, actualEvents));
+            }
+
+            await Task.WhenAll(tasks);
         }
     }
 }
