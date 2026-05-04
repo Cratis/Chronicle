@@ -180,23 +180,14 @@ public partial class Observer
         }
     }
 
-    async Task<AppendedEvent[]> DecryptEvents(AppendedEvent[] events)
+    async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
-        if (events.Length == 0)
-        {
-            return [];
-        }
-
-        var anyDecrypted = false;
-        var releasedEvents = new List<AppendedEvent>(events.Length);
+        var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
-                anyDecrypted = true;
-                var identifier = @event.Context.Subject?.IsSet == true
-                    ? @event.Context.Subject.Value
-                    : @event.Context.EventSourceId.Value;
+                var identifier = @event.Context.Subject.Value;
                 var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
                 var released = await complianceManager.Release(
                     @event.Context.EventStore,
@@ -213,7 +204,7 @@ public partial class Observer
             }
         }
 
-        return anyDecrypted ? releasedEvents.ToArray() : events;
+        return releasedEvents;
     }
 
     bool ShouldHandleEvent(Key partition)
