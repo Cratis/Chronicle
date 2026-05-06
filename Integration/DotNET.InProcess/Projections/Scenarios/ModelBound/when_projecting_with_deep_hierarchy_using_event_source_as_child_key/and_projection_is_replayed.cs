@@ -10,13 +10,6 @@ using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.Mod
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.ModelBound.when_projecting_with_deep_hierarchy_using_event_source_as_child_key;
 
-/// <summary>
-/// Integration spec that reproduces the bug where deeply nested children (4th level) lose
-/// their data after a projection replay. The key distinction from other hierarchy tests is
-/// that ONLY the root model is registered as a model-bound projection — intermediate types
-/// are nested-only, not standalone projections. Events for the 4th-level child are appended
-/// to the grandparent (Slice) event source, not to the child's own event source.
-/// </summary>
 [Collection(ChronicleCollection.Name)]
 public class and_projection_is_replayed(context context) : Given<context>(context)
 {
@@ -82,36 +75,18 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
     [Fact] void should_have_event_on_the_slice() => Slice.Events.Any(e => e.Id == Context.EventItemId && e.Name == "AuthorRegistered").ShouldBeTrue();
 }
 
-/// <summary>
-/// Event appended to a Module's event source to create a module.
-/// </summary>
 [EventType]
 public record DeepHierarchyModuleCreated(string Name);
 
-/// <summary>
-/// Event appended to a Feature's own event source; carries ModuleId as parentKey.
-/// </summary>
 [EventType]
 public record DeepHierarchyFeatureCreated(Guid ModuleId, Guid FeatureId, string Name);
 
-/// <summary>
-/// Event appended to a Slice's own event source (SliceId = event source); carries FeatureId as parentKey.
-/// No explicit key on the ChildrenFrom → defaults to EventSourceId.
-/// </summary>
 [EventType]
 public record DeepHierarchySliceCreated(Guid FeatureId, Guid SliceId, string Name);
 
-/// <summary>
-/// Event appended to the SLICE's event source (not the EventItemId event source).
-/// The EventItemId is embedded as a property — this matches the Studio production pattern where
-/// EventAddedToSlice is appended to the Slice event source with EventItemId as a field.
-/// </summary>
 [EventType]
 public record DeepHierarchyEventCreated(Guid SliceId, Guid EventItemId, string Name);
 
-/// <summary>
-/// Root read model. Only this type is registered as a model-bound projection.
-/// </summary>
 [FromEvent<DeepHierarchyModuleCreated>]
 public record DeepHierarchyModule(
     Guid Id,
@@ -122,10 +97,6 @@ public record DeepHierarchyModule(
         identifiedBy: nameof(DeepHierarchyFeature.Id))]
     IEnumerable<DeepHierarchyFeature> Features);
 
-/// <summary>
-/// Nested child — NOT registered as a standalone projection.
-/// Uses EventSourceId as the child key (no explicit key on ChildrenFrom).
-/// </summary>
 [FromEvent<DeepHierarchyFeatureCreated>]
 public record DeepHierarchyFeature(
     Guid Id,
@@ -135,10 +106,6 @@ public record DeepHierarchyFeature(
         identifiedBy: nameof(DeepHierarchySlice.Id))]
     IEnumerable<DeepHierarchySlice> Slices);
 
-/// <summary>
-/// Grandchild — NOT registered as a standalone projection.
-/// Events has key=EventItemId, parentKey auto-discovered (SliceId property matches Slice.Id type).
-/// </summary>
 [FromEvent<DeepHierarchySliceCreated>]
 public record DeepHierarchySlice(
     Guid Id,
@@ -146,10 +113,6 @@ public record DeepHierarchySlice(
     [ChildrenFrom<DeepHierarchyEventCreated>(key: nameof(DeepHierarchyEventCreated.EventItemId))]
     IEnumerable<DeepHierarchyEvent> Events);
 
-/// <summary>
-/// Great-grandchild — NOT registered as a standalone projection.
-/// Updated via class-level FromEvent; identified by EventItemId (auto-discovered via Id convention).
-/// </summary>
 [FromEvent<DeepHierarchyEventCreated>(key: nameof(DeepHierarchyEventCreated.EventItemId))]
 public record DeepHierarchyEvent(Guid Id, string Name);
 

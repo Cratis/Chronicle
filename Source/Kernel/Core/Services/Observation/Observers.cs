@@ -71,10 +71,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             .GetNamespace(request.Namespace).Observers
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
-            .Select(observerStates =>
+            .SelectMany(async observerStates =>
             {
                 // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
-                var observerDefinitions = storage.GetEventStore(request.EventStore).Observers.GetAll().GetAwaiter().GetResult();
+                var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
                 var observers =
                     from definition in observerDefinitions
                     join state in observerStates on definition.Identifier equals state.Identifier

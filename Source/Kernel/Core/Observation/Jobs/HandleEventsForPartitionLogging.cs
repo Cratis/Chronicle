@@ -30,9 +30,6 @@ internal static partial class HandleEventsForPartitionLogging
     [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} has no more events to handle between sequence number {FromSequenceNumber} and sequence number {ToSequenceNumber}")]
     internal static partial void NoMoreEventsToHandle(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
 
-    [LoggerMessage(LogLevel.Debug, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events. Last handled event sequence number is {LastHandledEventSequenceNumber}")]
-    internal static partial void SuccessfullyHandledEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventCount eventCount, EventSequenceNumber lastHandledEventSequenceNumber);
-
     [LoggerMessage(LogLevel.Warning, "HandleEventsForPartition job step for partition {Partition} successfully handled {EventCount} events, but failed handling event at event sequence number {FailedEventSequenceNumber}. Last successfully handled event sequence number is {LastHandledEventSequenceNumber}")]
     internal static partial void FailedHandlingEvents(this ILogger<HandleEventsForPartition> logger, Key partition, EventCount eventCount, EventSequenceNumber failedEventSequenceNumber, EventSequenceNumber lastHandledEventSequenceNumber);
 

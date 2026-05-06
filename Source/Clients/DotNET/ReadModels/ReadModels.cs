@@ -16,6 +16,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="reducers">Reducers to get read models from.</param>
 /// <param name="eventTypes">The <see cref="IEventTypes"/> for resolving event types.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
+/// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="readModelWatcherManager"><see cref="IReadModelWatcherManager"/> for managing watchers.</param>
 /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
@@ -39,12 +41,14 @@ public class ReadModels(
     IReducers reducers,
     IEventTypes eventTypes,
     IJsonSchemaGenerator schemaGenerator,
+    IOptions<ChronicleOptions> options,
     JsonSerializerOptions jsonSerializerOptions,
     IReadModelWatcherManager readModelWatcherManager,
     IReducerObservers reducerObservers,
     ILogger<ReadModels> logger) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+    readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
 
     /// <inheritdoc/>
     public async Task Register()
@@ -82,7 +86,7 @@ public class ReadModels(
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = WellKnownSinkTypes.MongoDB
+                    TypeId = _defaultSinkTypeId
                 },
                 Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
                 Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
@@ -138,7 +142,7 @@ public class ReadModels(
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = WellKnownSinkTypes.MongoDB
+                    TypeId = _defaultSinkTypeId
                 },
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty),

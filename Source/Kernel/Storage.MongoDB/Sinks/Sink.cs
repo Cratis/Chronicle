@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -45,12 +46,13 @@ public class Sink(
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
+    readonly object _bulkLock = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> _bulkOperationMetadata = [];
-    readonly Dictionary<string, ExpandoObject> _bulkStateCache = [];
-    readonly Dictionary<string, Key> _bulkKeysByCacheKey = [];
+    readonly ConcurrentDictionary<string, ExpandoObject> _bulkStateCache = new();
+    readonly ConcurrentDictionary<string, Key> _bulkKeysByCacheKey = new();
     int _currentBulkSize;
-    bool _isBulkMode;
+    volatile bool _isBulkMode;
 
     /// <inheritdoc/>
     public SinkTypeName Name => "MongoDB";
@@ -102,8 +104,8 @@ public class Sink(
             {
                 AddToBulk(new DeleteOneModel<BsonDocument>(filter), key, eventSequenceNumber);
                 var cacheKey = converter.ToBsonValue(key).ToString()!;
-                _bulkStateCache.Remove(cacheKey);
-                _bulkKeysByCacheKey.Remove(cacheKey);
+                _bulkStateCache.TryRemove(cacheKey, out _);
+                _bulkKeysByCacheKey.TryRemove(cacheKey, out _);
                 return await FlushBulkIfNeeded();
             }
 
@@ -117,7 +119,10 @@ public class Sink(
             await RemoveChildFromAll(childRemoved);
         }
 
-        if (_isBulkMode && changeset.HasJoined() && _bulkOperations.Count > 0)
+        // For join events in bulk mode, flush pending operations first so that the join
+        // can read committed data. Skip the Count check outside the lock to avoid reading
+        // the list without synchronization.
+        if (_isBulkMode && changeset.HasJoined())
         {
             await ExecuteBulk();
         }
@@ -162,28 +167,33 @@ public class Sink(
     /// <inheritdoc/>
     public Task BeginBulk()
     {
-        _isBulkMode = true;
-        _bulkOperations.Clear();
-        _bulkOperationMetadata.Clear();
+        lock (_bulkLock)
+        {
+            _isBulkMode = true;
+            _bulkOperations.Clear();
+            _bulkOperationMetadata.Clear();
+            _currentBulkSize = 0;
+        }
+
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
-        _currentBulkSize = 0;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task EndBulk()
     {
-        if (_bulkOperations.Count > 0)
+        await ExecuteBulk();
+        lock (_bulkLock)
         {
-            await ExecuteBulk();
+            _isBulkMode = false;
+            _bulkOperations.Clear();
+            _bulkOperationMetadata.Clear();
+            _currentBulkSize = 0;
         }
-        _isBulkMode = false;
-        _bulkOperations.Clear();
-        _bulkOperationMetadata.Clear();
+
         _bulkStateCache.Clear();
         _bulkKeysByCacheKey.Clear();
-        _currentBulkSize = 0;
     }
 
     /// <inheritdoc/>
@@ -306,36 +316,53 @@ public class Sink(
 
     void AddToBulk(WriteModel<BsonDocument> operation, Key key, EventSequenceNumber eventSequenceNumber)
     {
-        var operationIndex = _bulkOperations.Count;
-        _bulkOperations.Add(operation);
-        _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
-
-        var estimatedSize = EstimateOperationSize(operation);
-        _currentBulkSize += estimatedSize;
+        lock (_bulkLock)
+        {
+            var operationIndex = _bulkOperations.Count;
+            _bulkOperations.Add(operation);
+            _bulkOperationMetadata[operationIndex] = (key, eventSequenceNumber);
+            _currentBulkSize += EstimateOperationSize(operation);
+        }
     }
 
     async Task<IEnumerable<FailedPartition>> FlushBulkIfNeeded()
     {
-        if (_bulkOperations.Count >= MaxBulkOperations || _currentBulkSize >= MaxBulkSizeInBytes)
+        bool shouldFlush;
+        lock (_bulkLock)
+        {
+            shouldFlush = _bulkOperations.Count >= MaxBulkOperations || _currentBulkSize >= MaxBulkSizeInBytes;
+        }
+
+        if (shouldFlush)
         {
             return await ExecuteBulk();
         }
+
         return [];
     }
 
     async Task<IEnumerable<FailedPartition>> ExecuteBulk()
     {
-        if (_bulkOperations.Count == 0)
+        List<WriteModel<BsonDocument>> snapshot;
+        Dictionary<int, (Key EventSourceId, EventSequenceNumber SequenceNumber)> metadataSnapshot;
+
+        lock (_bulkLock)
         {
-            return [];
+            if (_bulkOperations.Count == 0)
+            {
+                return [];
+            }
+
+            snapshot = [.._bulkOperations];
+            metadataSnapshot = new(_bulkOperationMetadata);
+            _bulkOperations.Clear();
+            _bulkOperationMetadata.Clear();
+            _currentBulkSize = 0;
         }
 
         try
         {
-            await Collection.BulkWriteAsync(_bulkOperations);
-            _bulkOperations.Clear();
-            _bulkOperationMetadata.Clear();
-            _currentBulkSize = 0;
+            await Collection.BulkWriteAsync(snapshot);
             return [];
         }
         catch (MongoBulkWriteException ex)
@@ -344,15 +371,11 @@ public class Sink(
 
             foreach (var writeError in ex.WriteErrors)
             {
-                if (_bulkOperationMetadata.TryGetValue(writeError.Index, out var metadata))
+                if (metadataSnapshot.TryGetValue(writeError.Index, out var metadata))
                 {
                     failedPartitions.Add(new FailedPartition(metadata.EventSourceId, metadata.SequenceNumber));
                 }
             }
-
-            _bulkOperations.Clear();
-            _bulkOperationMetadata.Clear();
-            _currentBulkSize = 0;
 
             return failedPartitions;
         }
