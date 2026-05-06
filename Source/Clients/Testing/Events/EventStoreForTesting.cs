@@ -34,6 +34,7 @@ using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
+using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using JobsImpl = Cratis.Chronicle.Jobs.Jobs;
@@ -123,6 +124,7 @@ public class EventStoreForTesting : IEventStore
             _eventTypes,
             _namingPolicy,
             _jsonSerializerOptions,
+            Options.Create(new ChronicleOptions()),
             new BaseIdentityProvider(),
             reducerObservers,
             NullLogger<Reducers.Reducers>.Instance);
@@ -137,6 +139,7 @@ public class EventStoreForTesting : IEventStore
             _reducers,
             _eventTypes,
             JsonSchemaGenerator,
+            Options.Create(new ChronicleOptions()),
             _jsonSerializerOptions,
             readModelWatcherManager,
             reducerObservers,
