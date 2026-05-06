@@ -188,7 +188,7 @@ public partial class Observer
             if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
             {
                 var subject = @event.Context.Subject;
-                if (subject?.IsSet != true)
+                if (subject is null)
                 {
                     releasedEvents.Add(@event);
                     continue;
