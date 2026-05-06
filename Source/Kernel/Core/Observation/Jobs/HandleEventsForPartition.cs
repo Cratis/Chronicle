@@ -178,7 +178,6 @@ public class HandleEventsForPartition(
                     switch (eventObserverResult.State)
                     {
                         case ObserverSubscriberState.Ok:
-                            logger.SuccessfullyHandledEvents(currentState.Partition, handledCount, eventObserverResult.LastSuccessfulObservation);
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;

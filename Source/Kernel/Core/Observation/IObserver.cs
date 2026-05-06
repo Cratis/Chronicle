@@ -121,7 +121,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition has been replayed.
     /// </summary>
     /// <param name="partition">The partition that has been replayed.</param>
-    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 
@@ -200,7 +200,7 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// Notify that the partition was caught.
     /// </summary>
     /// <param name="partition">The partition that has caught up.</param>
-    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that as handled in the catchup.</param>
+    /// <param name="lastHandledEventSequenceNumber">The event sequence number of the last event that was handled in the catchup.</param>
     /// <returns>Awaitable task.</returns>
     Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber);
 

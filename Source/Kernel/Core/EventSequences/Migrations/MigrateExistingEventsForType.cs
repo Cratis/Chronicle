@@ -30,7 +30,7 @@ public class MigrateExistingEventsForType(
     protected override JobDetails GetJobDetails() => $"Migrate events for type {Request.EventTypeId}";
 
     /// <inheritdoc/>
-    protected override Task OnCompleted()
+    protected override Task OnAllStepsCompleted()
     {
         if (AllStepsCompletedSuccessfully)
         {

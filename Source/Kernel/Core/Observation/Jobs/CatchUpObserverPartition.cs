@@ -19,7 +19,7 @@ public class CatchUpObserverPartition(
     ILogger<CatchUpObserverPartition> logger) : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
-    protected override async Task OnCompleted()
+    protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
