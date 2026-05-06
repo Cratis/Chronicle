@@ -15,8 +15,8 @@
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.2.4" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.8.1" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.8.1" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.8.2" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.8.2" />
     <PackageVersion Include="Cratis.Arc" Version="20.17.2" />
     <PackageVersion Include="Cratis.Arc.Core" Version="20.17.2" />
     <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.17.2" />
@@ -85,7 +85,7 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.1.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.63" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.70" />
     <!-- Not categorized -->
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.5.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
