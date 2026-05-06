@@ -35,5 +35,4 @@ public class and_multiple_source_namespaces_send_to_different_targets(context co
             TenantBInboxTail = await GetInboxTailSequenceNumber(SourceEventStoreName, TargetEventStoreName, TenantBNamespace);
         }
     }
-
 }

@@ -31,8 +31,8 @@ public class and_forwarding_to_default_namespace(context context) : Given<contex
 
             // Check the inbox in the target event store
             InboxTailSequenceNumber = await GetInboxTailSequenceNumber(
-                SourceEventStoreName, 
-                TargetEventStoreName, 
+                SourceEventStoreName,
+                TargetEventStoreName,
                 DefaultNamespace);
         }
     }

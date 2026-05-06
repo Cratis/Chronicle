@@ -36,6 +36,15 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
     }
 
     /// <summary>
+    /// Appends an event to a specific namespace in a specific event store's event log.
+    /// </summary>
+    protected async Task AppendEvent(string eventStoreName, Concepts.EventStoreNamespaceName @namespace, EventSourceId eventSourceId, object @event)
+    {
+        var eventStore = await ChronicleClient.GetEventStore(eventStoreName, @namespace.Value);
+        await eventStore.EventLog.Append(eventSourceId, @event);
+    }
+
+    /// <summary>
     /// Creates a subscription from a source event store to a target event store.
     /// </summary>
     protected async Task Subscribe(
@@ -44,7 +53,12 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
         string targetEventStoreName,
         Action<IEventStoreSubscriptionBuilder>? configure = null)
     {
+        var sourceEventStore = await ChronicleClient.GetEventStore(sourceEventStoreName);
+        await sourceEventStore.RegisterAll();
+
         var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
+        await targetEventStore.RegisterAll();
+
         await targetEventStore.Subscriptions.Subscribe(
             new EventStoreSubscriptionId(subscriptionId),
             sourceEventStoreName,
@@ -78,6 +92,33 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
             .GetEventSequence(inboxSequenceId);
 
         return await inboxSequence.GetTailSequenceNumber();
+    }
+
+    /// <summary>
+    /// Waits for inbox tail sequence number changes caused by forwarding.
+    /// </summary>
+    protected async Task<Concepts.Events.EventSequenceNumber> WaitForInboxTailSequenceNumber(
+        string sourceEventStoreName,
+        string targetEventStoreName,
+        Concepts.EventStoreNamespaceName targetNamespace,
+        Concepts.Events.EventSequenceNumber expected,
+        TimeSpan? timeout = null)
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
+        var current = Concepts.Events.EventSequenceNumber.Unavailable;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            current = await GetInboxTailSequenceNumber(sourceEventStoreName, targetEventStoreName, targetNamespace);
+            if (current.Equals(expected))
+            {
+                return current;
+            }
+
+            await Task.Delay(100);
+        }
+
+        return current;
     }
 
     /// <summary>
