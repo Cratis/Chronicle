@@ -188,7 +188,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// Waits until activation count stabilizes to ensure grains have fully deactivated before
     /// the next test starts registering artifacts against fresh grain activations.
     /// </summary>
-    async Task DeactivateAllGrains()
+    protected async Task DeactivateAllGrains()
     {
         try
         {

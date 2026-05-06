@@ -54,7 +54,8 @@ public class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
-        await projectionsService.Register(_eventStoreName, definitions);
+        var definitionsToRegister = definitions.ToList();
+        await projectionsService.Register(_eventStoreName, definitionsToRegister);
 
         // Merge new definitions with existing ones, replacing any with the same identifier
         var existingProjections = State.Projections.ToList();
