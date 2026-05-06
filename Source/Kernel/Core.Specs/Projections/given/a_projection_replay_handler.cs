@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
@@ -24,6 +25,7 @@ public class a_projection_replay_handler : Specification
     protected IReplayContexts _replayContexts;
     protected IReplayedReadModelsStorage _replayedModels;
     protected IProjectionPipeline _projectionPipeline;
+    protected IProjectionFactory _projectionFactory;
     protected ObserverDetails _observerDetails;
     protected IGrainFactory _grainFactory;
     protected IReadModelReplayManager _readModelReplayManager;
@@ -47,6 +49,7 @@ public class a_projection_replay_handler : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _readModelReplayManager = Substitute.For<IReadModelReplayManager>();
         _grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_readModelReplayManager);
+        _projectionFactory = Substitute.For<IProjectionFactory>();
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();
@@ -60,6 +63,7 @@ public class a_projection_replay_handler : Specification
             _grainFactory,
             _storage,
             _projectionPipelineManager,
+            _projectionFactory,
             NullLogger<ProjectionReplayHandler>.Instance);
     }
 }

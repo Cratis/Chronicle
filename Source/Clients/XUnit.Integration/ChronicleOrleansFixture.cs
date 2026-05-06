@@ -150,7 +150,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         await eventStore.RegisterAll();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Creates the in-process web application factory for the current test assembly.
+    /// </summary>
+    /// <returns>The web application factory instance for the discovered startup type.</returns>
     protected override IAsyncDisposable CreateWebApplicationFactory()
     {
         var startupType = TestAssembly!.ExportedTypes.FirstOrDefault(type => type.Name == "Startup");
@@ -188,6 +191,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// Waits until activation count stabilizes to ensure grains have fully deactivated before
     /// the next test starts registering artifacts against fresh grain activations.
     /// </summary>
+    /// <returns>A task that completes when grain deactivation has stabilized.</returns>
     protected async Task DeactivateAllGrains()
     {
         try

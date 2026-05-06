@@ -41,24 +41,6 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
 
-            // Debug: Fetch and inspect the definition that was registered
-            var projectionGrain = GrainFactory.GetGrain<global::Cratis.Chronicle.Projections.IProjection>(
-                new Cratis.Chronicle.Concepts.Projections.ProjectionKey(
-                    new Cratis.Chronicle.Concepts.Projections.ProjectionId(typeof(MaterializedProjection).Name),
-                    EventStore.Name));
-            var definition = await projectionGrain.GetDefinition();
-                var testEventFromRule = definition.From.FirstOrDefault(f => f.EventType == typeof(TestEvent).Name);
-                if (testEventFromRule is null)
-                {
-                    throw new InvalidOperationException("TestEvent from rule not found in definition");
-                }
-                var descriptionProperty = testEventFromRule.Properties.FirstOrDefault(p => p.Name == "Description");
-                if (descriptionProperty is null)
-                {
-                    var properties = string.Join(", ", testEventFromRule.Properties.Select(p => p.Name));
-                    throw new InvalidOperationException($"Description property not found in TestEvent from rule. Properties: {properties}");
-                }
-
             // Explicitly trigger replay to simulate SetDefinition() → observer.Replay() on definition change.
             // Register() updates the projection definition in the grain. We then manually call Replay()
             // to simulate the automatic replay that would happen if ReplayOnDefinitionChange was enabled.
