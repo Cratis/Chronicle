@@ -94,6 +94,5 @@ public class and_target_store_already_has_encryption_key : Specification
             Arg.Any<EventStoreName>(),
             Arg.Any<EventStoreNamespaceName>(),
             Arg.Any<EncryptionKeyIdentifier>(),
-            Arg.Any<EncryptionKey>(),
-            Arg.Any<EncryptionKeyRevision?>());
+            Arg.Any<EncryptionKey>());
 }
