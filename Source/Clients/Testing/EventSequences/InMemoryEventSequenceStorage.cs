@@ -32,6 +32,9 @@ internal sealed class InMemoryEventSequenceStorage(
     internal IReadOnlyList<KernelAppendedEvent> Events => _events;
 
     /// <inheritdoc/>
+    public Task EnsureIndexes() => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<EventSequenceState> GetState() =>
         Task.FromResult(new EventSequenceState
         {
@@ -71,7 +74,8 @@ internal sealed class InMemoryEventSequenceStorage(
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
         IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
-        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes)
+        IDictionary<KernelEvents::EventTypeGeneration, KernelEvents::EventHash> contentHashes,
+        KernelEvents::Subject? subject = null)
     {
         if (_events.Exists(_ => _.Context.SequenceNumber == sequenceNumber))
         {

@@ -202,6 +202,35 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         return arrayIndexers;
     }
 
+    /// <summary>
+    /// Builds the full property path from the root document to the identified-by property of
+    /// <paramref name="projection"/>, walking up the parent chain to collect all intermediate
+    /// array segment names.
+    /// </summary>
+    /// <param name="projection">The projection whose chain is walked to build the full path.</param>
+    /// <param name="identifiedByProperty">The property that identifies items at the leaf level.</param>
+    /// <remarks>
+    /// For a 3-level hierarchy (Root → Feature → Slice), the Feature projection's
+    /// <c>ChildrenPropertyPath</c> is already relative to root (e.g. "features"), so the path
+    /// is simply "features.id". For a 4-level hierarchy (Root → Feature → Slice → EventItem),
+    /// the Slice projection's <c>ChildrenPropertyPath</c> is "slices" (relative to Feature),
+    /// not to root. Walking up the chain gives ["features", "slices"], yielding the correct
+    /// MongoDB path "features.slices.id" for a flat document query.
+    /// </remarks>
+    static PropertyPath BuildFullParentChildPropertyPath(IProjection projection, PropertyPath identifiedByProperty)
+    {
+        var segments = new List<string>();
+        var current = projection;
+        while (current?.ChildrenPropertyPath.IsSet == true)
+        {
+            segments.Insert(0, current.ChildrenPropertyPath.Path);
+            current = current.Parent;
+        }
+
+        segments.Add(identifiedByProperty.Path);
+        return new PropertyPath(string.Join('.', segments));
+    }
+
     async Task<KeyResolverResult> ResolveParentKey(
         KeyResolver parentKeyResolver,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
@@ -267,6 +296,26 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         }
 
         logger.FromParentHierarchyNoParentEventFound(parentKey.Value?.ToString() ?? "null");
+
+        // When the parent event cannot be found by the parent key (e.g., for nested events within
+        // grandchild projections), resolve via the current projection's own creation event.
+        // Example: Module -> FeatureItem (child) -> SliceItem (grandchild) -> [Nested Command]
+        // CommandSetOnSlice is appended to SliceId and has no explicit parentKey, so it defaults
+        // to the event source (SliceId). FeatureItem events use FeatureId — the lookup fails.
+        // By finding SliceAddedToFeature (SliceItem's creation event) for SliceId, we obtain FeatureId
+        // and can resolve the full parent hierarchy correctly.
+        var childCreationResult = await TryResolveViaChildCreationEvent(
+            @event,
+            childKey,
+            parentProjection,
+            projection,
+            eventSequenceStorage,
+            sink);
+        if (childCreationResult is not null)
+        {
+            return childCreationResult;
+        }
+
         logger.FromParentHierarchyFallingBackToSink();
 
         return await TryFindParentByFallback(parentProjection, sink, projection, identifiedByProperty, parentKey, @event, childKey);
@@ -362,6 +411,79 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         return Option<AppendedEvent>.None();
     }
 
+    async Task<ParentEventResult?> TryResolveViaChildCreationEvent(
+        AppendedEvent @event,
+        Key childKey,
+        IProjection parentProjection,
+        IProjection projection,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink)
+    {
+        var childCreationEventTypes = projection.OwnEventTypes
+            .Where(et => et.Id != @event.Context.EventType.Id)
+            .Select(et => new EventType(et.Id, EventTypeGeneration.First))
+            .ToArray();
+
+        if (childCreationEventTypes.Length == 0)
+        {
+            return null;
+        }
+
+        var childEventSource = childKey.Value?.ToString()!;
+        logger.FromParentHierarchyAttemptingViaChildCreationEvent(childEventSource);
+
+        var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(childCreationEventTypes, childEventSource);
+        if (headSequenceNumber == EventSequenceNumber.Unavailable)
+        {
+            return null;
+        }
+
+        var cursor = await eventSequenceStorage.GetRange(headSequenceNumber, headSequenceNumber, childEventSource, childCreationEventTypes);
+        AppendedEvent? childCreationEvent = null;
+        while (await cursor.MoveNext())
+        {
+            childCreationEvent = cursor.Current.FirstOrDefault();
+            if (childCreationEvent is not null)
+            {
+                break;
+            }
+        }
+
+        if (childCreationEvent is null)
+        {
+            return null;
+        }
+
+        // A creation event must precede the event being resolved in sequence order.
+        // If the found event is at a later (or equal) sequence number, it is NOT a creation event —
+        // it is a modification event that came after. Accepting it would cause an infinite cycle
+        // (e.g. StateChangeSliceAdded_42 → CommandSetForSlice_43 → StateChangeSliceAdded_42 → ∞).
+        if (childCreationEvent.Context.SequenceNumber >= @event.Context.SequenceNumber)
+        {
+            logger.FromParentHierarchyChildCreationEventNotEarlier(childCreationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
+            return null;
+        }
+
+        var parentEventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == childCreationEvent.Context.EventType.Id);
+        if (parentEventType == default)
+        {
+            return null;
+        }
+
+        var parentResolver = parentProjection.GetKeyResolverFor(parentEventType);
+        var resolvedResult = await parentResolver(eventSequenceStorage, sink, childCreationEvent);
+        if (resolvedResult is not ResolvedKey resolvedKey)
+        {
+            return null;
+        }
+
+        logger.FromParentHierarchyResolvedViaChildCreationEvent(
+            childCreationEvent.Context.EventType.Id.ToString(),
+            resolvedKey.Key.Value?.ToString() ?? "null");
+
+        return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey.Key));
+    }
+
     async Task<ParentEventResult> TryFindParentByFallback(
         IProjection parentProjection,
         Storage.Sinks.ISink sink,
@@ -381,11 +503,20 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return new ParentEventResult(null, KeyResolverResult.Deferred(deferredFuture));
         }
 
-        // For root-level parents (ChildrenPropertyPath not set), use the child's path
-        // For nested parents, use the parent's path to query at the correct level
-        var childPropertyPath = parentProjection.ChildrenPropertyPath.IsSet
-            ? parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty
-            : projection.ChildrenPropertyPath + parentIdentifiedByProperty;
+        // Build the full path from root to the parent's identified-by property.
+        // For a 3-level hierarchy (Root → Feature → Slice), the parent's ChildrenPropertyPath
+        // is already relative to root (e.g. "features"), so "features.id" is correct.
+        // For a 4-level hierarchy (Root → Feature → Slice → EventItem), the parent (Slice) has
+        // ChildrenPropertyPath = "slices" which is relative to Feature, not to root. We need
+        // "features.slices.id" — so we must walk up the hierarchy to collect all segments.
+        // For a 2-level hierarchy (Root → Hub) where the parent is the root (ChildrenPropertyPath
+        // not set), the child's ChildrenPropertyPath ("hubs") provides the collection prefix, giving
+        // "hubs.id" so the sink can locate the root document containing the matching hub.
+        var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
+        if (!parentProjection.ChildrenPropertyPath.IsSet && projection.ChildrenPropertyPath.IsSet)
+        {
+            childPropertyPath = new PropertyPath($"{projection.ChildrenPropertyPath}.{childPropertyPath}");
+        }
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
@@ -408,9 +539,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         logger.FromParentHierarchySinkDidNotFindRoot(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
-        // Determine which identifier to use:
-        // - For root parents: use the child's identifier (how the child is identified in the root's collection)
-        // - For nested parents: use the parent's identifier (how the parent is identified in its parent's collection)
+        // All resolution strategies failed — the parent does not yet exist in the event log or sink.
+        // This is a normal out-of-order scenario: the child event arrived before its parent was created.
+        // Create a deferred future so the event is re-processed once the parent materializes.
         var parentIdentifierForFuture = parentProjection.HasParent
             ? parentProjection.IdentifiedByProperty
             : projection.IdentifiedByProperty;
@@ -504,7 +635,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
             if (parentIdentifiedByProperty is not null)
             {
-                var childPropertyPath = parentProjection.ChildrenPropertyPath + parentIdentifiedByProperty;
+                // Use the full path from root to avoid missing intermediate array segments
+                // when the parent is itself nested more than one level below root.
+                var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
                 logger.CollectParentIndexersLookup(childPropertyPath.Path, childKeyValue);
 
                 var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, childKeyValue);

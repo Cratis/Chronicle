@@ -6,11 +6,11 @@ namespace Cratis.Chronicle.Compliance.GDPR.for_PIIMetadataProvider.when_asking_i
 public class and_type_is_adorned_with_pii_attribute : given.a_provider
 {
     [PII]
-    class MyType;
+    record MyConceptValue(string Value) : ConceptAs<string>(Value);
 
     bool _result;
 
-    void Because() => _result = provider.CanProvide(typeof(MyType));
+    void Because() => _result = provider.CanProvide(typeof(MyConceptValue));
 
     [Fact] void should_be_able_to_provide() => _result.ShouldBeTrue();
 }

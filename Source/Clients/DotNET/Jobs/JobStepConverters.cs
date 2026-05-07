@@ -18,8 +18,8 @@ internal static class JobStepConverters
         return new()
         {
             Id = jobStep.Id,
-            Type = jobStep.Type,
-            Name = jobStep.Name,
+            Type = jobStep.Type ?? string.Empty,
+            Name = jobStep.Name ?? string.Empty,
             Status = (JobStepStatus)(int)jobStep.Status,
             StatusChanges = jobStep.StatusChanges.ToClient(),
             Progress = jobStep.Progress.ToClient(),

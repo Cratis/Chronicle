@@ -42,6 +42,12 @@ public class FailedPartition
     public bool IsResolved { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the partition has been quarantined after exceeding the maximum retry attempts.
+    /// A quarantined partition will not be retried automatically until explicitly cleared.
+    /// </summary>
+    public bool IsQuarantined { get; set; }
+
+    /// <summary>
     /// Gets the last attempt for the failed partition.
     /// </summary>
     public FailedPartitionAttempt LastAttempt { get; private set; } = FailedPartitionAttempt.NoAttempt;

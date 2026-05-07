@@ -35,6 +35,14 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
             return context;
         }
 
+        // Handle permanently unresolvable key - all resolution strategies exhausted with no parent found
+        if (keyResult is UnresolvableKey)
+        {
+            logger.KeyUnresolvable(context.Event.Context.SequenceNumber, projection.Identifier, projection.Path);
+            context.MarkKeyUnresolvable();
+            return context;
+        }
+
         var resolvedKey = (keyResult as ResolvedKey)!;
         var key = resolvedKey.Key;
         key = EnsureCorrectTypeForArrayIndexersOnKey(projection, key);

@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="Content">The content per event type generation.</param>
 /// <param name="ContentHashes">The content hashes per event type generation.</param>
 /// <param name="Revisions">Any revisions for the event.</param>
+/// <param name="Subject">Optional subject that identifies the compliance target for the event.</param>
 public record Event(
     EventSequenceNumber SequenceNumber,
     CorrelationId CorrelationId,
@@ -39,4 +40,6 @@ public record Event(
     IEnumerable<string> Tags,
     IDictionary<string, BsonDocument> Content,
     IDictionary<string, string> ContentHashes,
-    IEnumerable<EventRevision> Revisions);
+    IEnumerable<EventRevision> Revisions,
+    Subject? Subject = null);
+

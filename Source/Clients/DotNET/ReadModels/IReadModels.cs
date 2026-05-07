@@ -72,4 +72,43 @@ public interface IReadModels
     /// <param name="readModelKey"><see cref="ReadModelKey"/> to dehydrate for.</param>
     /// <returns>Awaitable task.</returns>
     Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey);
+
+    /// <summary>
+    /// Release (decrypt) PII-annotated properties in a read model instance by deriving the subject from the instance itself.
+    /// </summary>
+    /// <remarks>
+    /// The subject is resolved by looking for a property or constructor parameter decorated with <see cref="SubjectAttribute"/>,
+    /// falling back to a property named <c>Id</c>. If no subject can be derived, or the read model has no compliance-annotated
+    /// properties, the original instance is returned unchanged.
+    /// If decryption fails (e.g. the encryption key has been permanently deleted), the original instance is returned and
+    /// the failure is logged.
+    /// </remarks>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="instance">The read model instance to decrypt.</param>
+    /// <returns>The decrypted instance, or the original when release is not applicable or fails.</returns>
+    Task<TReadModel> Release<TReadModel>(TReadModel instance);
+
+    /// <summary>
+    /// Release (decrypt) PII-annotated properties in a collection of read model instances.
+    /// </summary>
+    /// <remarks>
+    /// The subject is derived from each instance individually. See <see cref="Release{TReadModel}(TReadModel)"/> for details.
+    /// </remarks>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="instances">The collection of instances to decrypt.</param>
+    /// <returns>The decrypted instances.</returns>
+    Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances);
+
+    /// <summary>
+    /// Release (decrypt) PII-annotated properties in a read model instance using an explicit subject.
+    /// </summary>
+    /// <remarks>
+    /// If decryption fails (e.g. the encryption key has been permanently deleted), the original instance is returned and
+    /// the failure is logged.
+    /// </remarks>
+    /// <typeparam name="TReadModel">The read model type.</typeparam>
+    /// <param name="subject">The explicit <see cref="Subject"/> used as the encryption key identifier.</param>
+    /// <param name="instance">The read model instance to decrypt.</param>
+    /// <returns>The decrypted instance, or the original when release fails.</returns>
+    Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance);
 }

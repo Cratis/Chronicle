@@ -5,8 +5,12 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using SqlStorage = Cratis.Chronicle.Storage.Sql.SystemStorage;
 
@@ -29,7 +33,7 @@ public static class SqlChronicleBuilderExtensions
 
         builder.Services.AddSingleton<IDatabase, Database>();
         builder.Services.AddSingleton<IClusterStorage, ClusterStorage>();
-        builder.Services.AddSingleton<IEncryptionKeyStorage, InMemoryEncryptionKeyStorage>();
+        builder.Services.AddSingleton<IEncryptionKeyStorage, EncryptionKeyStorage>();
         builder.Services.AddDbContextFactory<ClusterDbContext>((serviceProvider, optionsBuilder) =>
         {
             optionsBuilder
@@ -40,6 +44,8 @@ public static class SqlChronicleBuilderExtensions
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
+        builder.Services.AddSingleton<IReadModelMigrator, ReadModelMigrator>();
+        builder.Services.AddSingleton<ISinkFactory, SinkFactory>();
         return builder;
     }
 }

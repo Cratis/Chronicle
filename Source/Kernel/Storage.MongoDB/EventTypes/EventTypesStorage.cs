@@ -182,6 +182,29 @@ public class EventTypesStorage(
         return eventType.ToDefinition();
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
+    {
+        var ids = eventTypeIds.ToList();
+        var filter = Builders<EventType>.Filter.In(et => et.Id, ids);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var schemas = await result.ToListAsync();
+        return schemas.Select(_ => _.ToKernel());
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<Concepts.Events.EventType> eventTypes)
+    {
+        var eventTypesList = eventTypes.ToList();
+        var ids = eventTypesList.ConvertAll(et => et.Id);
+        var filter = Builders<EventType>.Filter.In(et => et.Id, ids);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var mongoTypeMap = (await result.ToListAsync()).ToDictionary(m => m.Id);
+        return eventTypesList
+            .Where(et => mongoTypeMap.ContainsKey(et.Id))
+            .Select(et => mongoTypeMap[et.Id].ToKernel(et.Generation));
+    }
+
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);
 
     FilterDefinition<EventType> GetFilterForSpecificEventType(EventTypeId type) => Builders<EventType>.Filter.Eq(et => et.Id, type);

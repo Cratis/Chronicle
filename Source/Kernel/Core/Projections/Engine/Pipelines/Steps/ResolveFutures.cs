@@ -30,8 +30,8 @@ public class ResolveFutures(
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
-        // If this event was deferred, don't try to resolve futures (we have no valid data yet)
-        if (context.IsDeferred)
+        // If this event was deferred or key is permanently unresolvable, don't try to resolve futures
+        if (context.IsDeferred || context.IsUnresolvable)
         {
             return context;
         }
@@ -68,7 +68,7 @@ public class ResolveFutures(
                         {
                             parentKey = TypeConversion.Convert(type, parentKey);
                         }
-                        catch
+                        catch (InvalidCastException)
                         {
                             // Keep original value — Contains() normalizes types during comparison
                         }

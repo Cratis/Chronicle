@@ -88,6 +88,10 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage
             var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(targetEventStore.Value);
             await subscriptionsManager.SourceEventStoreAdded(sourceEventStore);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.ErrorRetryingPendingSubscriptions(ex, targetEventStore, sourceEventStore);

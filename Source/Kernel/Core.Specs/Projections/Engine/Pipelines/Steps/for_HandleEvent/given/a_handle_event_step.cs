@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
@@ -50,6 +51,9 @@ public class a_handle_event_step : Specification
             NeedsInitialState: false);
 
         _projection = Substitute.For<IProjection>();
+        _projection.Identifier.Returns(new ProjectionId("test-projection"));
+        _projection.Path.Returns(new ProjectionPath("TestProjection"));
+        _projection.ChildProjections.Returns([]);
         _projection.InitialModelState.Returns(_projectionInitialModelState);
         _projection.TargetReadModelSchema.Returns(new JsonSchema { Title = "TestModel" });
     }

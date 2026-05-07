@@ -55,5 +55,6 @@ internal static class EventContextConverters
         context.CausedBy.ToClient(),
         context.Tags.Select(_ => (Tag)_).ToArray(),
         context.Hash,
-        context.ObservationState.ToClient());
+        context.ObservationState.ToClient(),
+        Subject: new Subject(context.EventSourceId));
 }

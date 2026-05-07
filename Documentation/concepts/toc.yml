@@ -6,6 +6,8 @@
   href: event-type-migrations.md
 - name: Event Source
   href: event-source.md
+- name: Subject
+  href: subject.md
 - name: Event Store
   href: event-store.md
 - name: Namespaces

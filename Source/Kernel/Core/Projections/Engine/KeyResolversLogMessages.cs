@@ -126,4 +126,16 @@ internal static partial class KeyResolversLogMessages
 
     [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: Sink did NOT find root for childPropertyPath='{ChildPropertyPath}', parentKeyValue='{ParentKeyValue}' - deferring")]
     internal static partial void FromParentHierarchySinkDidNotFindRoot(this ILogger<KeyResolvers> logger, string childPropertyPath, string parentKeyValue);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: parent event not found by parent key, attempting resolution via child's creation event for eventSource='{EventSourceId}'")]
+    internal static partial void FromParentHierarchyAttemptingViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventSourceId);
+
+    [LoggerMessage(LogLevel.Debug, "FromParentHierarchy: resolved key via child's creation event type='{EventType}', key='{Key}'")]
+    internal static partial void FromParentHierarchyResolvedViaChildCreationEvent(this ILogger<KeyResolvers> logger, string eventType, string key);
+
+    [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: all resolution strategies exhausted for child projection '{Path}' with parent key '{ParentKey}' — event will be skipped (no future created). This typically indicates a badly-defined projection.")]
+    internal static partial void FromParentHierarchyKeyUnresolvable(this ILogger<KeyResolvers> logger, string path, string parentKey);
+
+    [LoggerMessage(LogLevel.Warning, "FromParentHierarchy: child creation event at seq {CreationSeq} is not earlier than the current event at seq {CurrentSeq} — rejecting to prevent an infinite resolution cycle")]
+    internal static partial void FromParentHierarchyChildCreationEventNotEarlier(this ILogger<KeyResolvers> logger, ulong creationSeq, ulong currentSeq);
 }

@@ -182,7 +182,7 @@ public class EventStoreSubscriptionsManager(
                 await RefreshSubscription(definition, namespaces);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.ErrorProcessingSubscriptionReminder(ex, definition.Identifier);
         }
@@ -212,7 +212,11 @@ public class EventStoreSubscriptionsManager(
             var observer = GetObserver(definition, namespaceName);
             return await observer.IsSubscribed();
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             return false;
         }
@@ -273,8 +277,9 @@ public class EventStoreSubscriptionsManager(
             var observer = GetObserver(definition, namespaceName);
             return await observer.IsSubscribed();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
             return false;
         }
     }

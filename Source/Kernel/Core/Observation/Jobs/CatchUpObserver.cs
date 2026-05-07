@@ -41,7 +41,7 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
-    protected override async Task OnCompleted()
+    protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
@@ -59,7 +59,12 @@ public class CatchUpObserver(
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process CaughtUp().
+        _ = observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>
@@ -83,6 +88,8 @@ public class CatchUpObserver(
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(CatchUpObserverRequest request)
     {
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
+        var failedPartitions = await observer.GetFailedPartitionKeys();
+        var failedPartitionSet = failedPartitions.ToHashSet();
 
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
@@ -93,6 +100,11 @@ public class CatchUpObserver(
 
         await foreach (var key in keys)
         {
+            if (failedPartitionSet.Contains(key))
+            {
+                continue;
+            }
+
             steps.Add(CreateStep<IHandleEventsForPartition>(
                 new HandleEventsForPartitionArguments(
                     request.ObserverKey,

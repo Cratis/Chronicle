@@ -9,6 +9,8 @@ using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
 using Cratis.Serialization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModels.given;
 
@@ -58,8 +60,10 @@ public class all_dependencies : Specification
             _reducers,
             _eventTypes,
             _schemaGenerator,
+            Options.Create(new ChronicleOptions()),
             _jsonSerializerOptions,
             _readModelWatcherManager,
-            _reducerObservers);
+            _reducerObservers,
+            Substitute.For<ILogger<ReadModels>>());
     }
 }

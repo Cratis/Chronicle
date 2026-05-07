@@ -68,6 +68,11 @@ public class EventEntry
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the subject that identifies the compliance target for the event.
+    /// </summary>
+    public string? Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the compensations for the event.
     /// </summary>
     [Json]

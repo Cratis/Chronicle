@@ -95,6 +95,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     JsonNode TransformNode(JsonSchemaExporterContext context, JsonNode schema)
     {
         var type = context.TypeInfo.Type;
+        var formatType = Nullable.GetUnderlyingType(type) ?? type;
 
         // Handle concept types - redirect to the underlying primitive type's schema
         if (type.IsConcept())
@@ -107,14 +108,21 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             // so we check the actual property nullability via NullabilityInfoContext. When the property
             // is nullable we append '?' to the format so that IsNullable() returns true and
             // GetDefaultValue() returns null rather than the primitive default (e.g. 0 for ulong).
-            if (IsNullableConceptProperty(context) &&
-                conceptSchema is JsonObject conceptSchemaObj &&
-                conceptSchemaObj.TryGetPropertyValue("format", out var format))
+            if (conceptSchema is JsonObject conceptSchemaObj)
             {
-                var formatStr = format!.GetValue<string>();
-                if (!formatStr.EndsWith('?'))
+                if (_metadataResolver.HasMetadataFor(type))
                 {
-                    conceptSchemaObj["format"] = formatStr + "?";
+                    AddComplianceMetadata(conceptSchemaObj, _metadataResolver.GetMetadataFor(type));
+                }
+
+                if (IsNullableConceptProperty(context) &&
+                    conceptSchemaObj.TryGetPropertyValue("format", out var format))
+                {
+                    var formatStr = format!.GetValue<string>();
+                    if (!formatStr.EndsWith('?'))
+                    {
+                        conceptSchemaObj["format"] = formatStr + "?";
+                    }
                 }
             }
 
@@ -124,9 +132,9 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         if (schema is not JsonObject schemaObj) return schema;
 
         // Add format for known types
-        if (_typeFormats.IsKnown(type))
+        if (_typeFormats.IsKnown(formatType))
         {
-            schemaObj["format"] = _typeFormats.GetFormatForType(type);
+            schemaObj["format"] = _typeFormats.GetFormatForType(formatType);
         }
 
         // Add compliance metadata for the type
@@ -140,6 +148,17 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             _metadataResolver.HasMetadataFor(propInfo))
         {
             AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(propInfo));
+        }
+        else if (context.PropertyInfo?.AttributeProvider is ParameterInfo paramInfo &&
+            paramInfo.Member.DeclaringType is { } recordType)
+        {
+            var recordProp = recordType.GetProperty(
+                paramInfo.Name ?? string.Empty,
+                BindingFlags.Public | BindingFlags.Instance);
+            if (recordProp is not null && _metadataResolver.HasMetadataFor(recordProp))
+            {
+                AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(recordProp));
+            }
         }
 
         // Add title and compensation metadata — only applies to top-level type schema (no property context)

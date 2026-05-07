@@ -11,13 +11,13 @@ public class and_there_is_metadata_and_details : given.a_provider
 
     [PII]
     [ComplianceDetails(Details)]
-    class MyType;
+    record MyConceptValue(string Value) : ConceptAs<string>(Value);
 
     class MyClass
     {
-        public MyType Something { get; set; }
+        public MyConceptValue Something { get; set; }
 
-        public static PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance);
+        public static readonly PropertyInfo SomethingProperty = typeof(MyClass).GetProperty(nameof(Something), BindingFlags.Public | BindingFlags.Instance)!;
     }
 
     ComplianceMetadata _result;

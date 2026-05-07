@@ -5,9 +5,11 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
@@ -27,6 +29,7 @@ public class two_subscribers : all_dependencies
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
+            Options.Create(new ChronicleOptions()),
             Substitute.For<ILogger<AppendedEventsQueue>>());
         _firstObserverKey = new ObserverKey("First observer", "Some event store", "Some namespace", "Some event sequence");
         _firstObserver = Substitute.For<IObserver>();

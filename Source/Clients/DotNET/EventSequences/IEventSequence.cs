@@ -109,6 +109,7 @@ public interface IEventSequence
     /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> identifying the target the event is about. Used as the identity for compliance concerns such as PII encryption keys. When omitted, the <paramref name="eventSourceId"/> is used as the subject.</param>
     /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
     Task<AppendResult> Append(
         EventSourceId eventSourceId,
@@ -119,7 +120,8 @@ public interface IEventSequence
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
-        DateTimeOffset? occurred = default);
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.

@@ -25,6 +25,7 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle;
 
@@ -64,6 +65,7 @@ public class EventStore : IEventStore
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation. Defaults to <see langword="false"/>.</param>
+    /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
@@ -82,6 +84,7 @@ public class EventStore : IEventStore
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         bool enableEventTypeGenerationValidation,
+        IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
@@ -155,6 +158,7 @@ public class EventStore : IEventStore
             EventTypes,
             namingPolicy,
             jsonSerializerOptions,
+            options,
             identityProvider,
             reducerObservers,
             loggerFactory.CreateLogger<Reducers.Reducers>());
@@ -182,9 +186,11 @@ public class EventStore : IEventStore
             Reducers,
             EventTypes,
             schemaGenerator,
+            options,
             jsonSerializerOptions,
             readModelsWatcherManager,
-            reducerObservers);
+            reducerObservers,
+            loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
         Seeding = new EventSeeding(
             eventStoreName,
@@ -271,7 +277,7 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
-        // Ensure the event store is registered in the system before registering artifacts
+        // Ensure the event store exists before registering artifacts.
         await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
 
         // We need to register event types and read models first, as they are used by the other artifacts

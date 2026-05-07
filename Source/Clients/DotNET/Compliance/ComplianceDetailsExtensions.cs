@@ -24,7 +24,18 @@ public static class ComplianceDetailsExtensions
     /// <returns>The details - empty string if none is set.</returns>
     public static string GetComplianceMetadataDetails(this PropertyInfo property) =>
         property.GetCustomAttribute<ComplianceDetailsAttribute>()?.Details ??
+        GetConstructorParameterAttribute<ComplianceDetailsAttribute>(property)?.Details ??
         property.DeclaringType?.GetCustomAttribute<ComplianceDetailsAttribute>()?.Details ??
         property.PropertyType.GetComplianceMetadataDetails() ??
         string.Empty;
+
+    static T? GetConstructorParameterAttribute<T>(PropertyInfo property)
+        where T : Attribute
+    {
+        if (property.DeclaringType is null) return null;
+        var ctor = property.DeclaringType.GetConstructors().MaxBy(c => c.GetParameters().Length);
+        var param = ctor?.GetParameters().FirstOrDefault(p =>
+            string.Equals(p.Name, property.Name, StringComparison.OrdinalIgnoreCase));
+        return param?.GetCustomAttribute<T>();
+    }
 }

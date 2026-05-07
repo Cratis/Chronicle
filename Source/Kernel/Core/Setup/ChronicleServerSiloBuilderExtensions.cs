@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Chronicle;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
@@ -16,7 +17,6 @@ using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events.Constraints;
 using Cratis.Chronicle.Services.EventSequences;
 using Cratis.Chronicle.Services.Observation;
@@ -98,6 +98,9 @@ public static class ChronicleServerSiloBuilderExtensions
             var jsonSerializerOptions = sp.GetRequiredService<JsonSerializerOptions>();
             var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
             return new Cratis.Chronicle.Contracts.Services(
+                new Cratis.Chronicle.Services.Compliance.ComplianceService(
+                    sp.GetRequiredService<IJsonComplianceManager>(),
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
                 new Cratis.Chronicle.Services.EventStores(
                     grainFactory,
                     storage,
@@ -119,9 +122,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
                 new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 projections,
-                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
+                new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, jsonSerializerOptions),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),

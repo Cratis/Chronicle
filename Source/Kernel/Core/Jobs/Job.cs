@@ -289,7 +289,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     /// Job step being completed means either successfully completed, failed or partially failed.
     /// </remarks>
     /// <returns>A task representing the operation.</returns>
-    protected virtual Task OnCompleted() => Task.CompletedTask;
+    protected virtual Task OnAllStepsCompleted() => Task.CompletedTask;
 
     /// <summary>
     /// What needs to be done by the Job implementation when one or more job steps failed to prepare.
@@ -438,7 +438,7 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
             {
                 _logger.AllStepsNotCompletedSuccessfully();
             }
-            await OnCompleted();
+            await OnAllStepsCompleted();
             return Catch.Success();
         }
         catch (Exception ex)

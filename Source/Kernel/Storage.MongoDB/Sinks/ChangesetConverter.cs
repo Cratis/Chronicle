@@ -134,6 +134,11 @@ public class ChangesetConverter(
                     hasChanges = true;
                     break;
 
+                case NestedCleared nestedCleared:
+                    BuildNestedCleared(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, nestedCleared);
+                    hasChanges = true;
+                    break;
+
                 case Joined joined:
                     joinTasks.Add(PerformJoined(key, updateDefinitionBuilder, joined, eventSequenceNumber));
                     break;
@@ -210,6 +215,16 @@ public class ChangesetConverter(
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Push(property, bsonValue)
             : updateDefinitionBuilder.Push(property, bsonValue);
+    }
+
+    void BuildNestedCleared(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, NestedCleared nestedCleared)
+    {
+        var (property, arrayFilters) = converter.ToMongoDBProperty(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers);
+        arrayFiltersForDocument.AddRange(arrayFilters);
+
+        updateBuilder = updateBuilder is not null
+            ? updateBuilder.Set(property, BsonNull.Value)
+            : updateDefinitionBuilder.Set(property, BsonNull.Value);
     }
 
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)

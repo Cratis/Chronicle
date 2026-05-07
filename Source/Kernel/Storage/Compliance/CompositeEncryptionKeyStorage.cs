@@ -16,13 +16,13 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner) : IEncryptionKeyStorage
 {
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         IEncryptionKeyStorage? store = default;
 
         foreach (var innerStore in inner)
         {
-            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
+            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier, revision))
             {
                 store = innerStore;
             }
@@ -30,10 +30,10 @@ public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
 
         if (store != default)
         {
-            var key = await store.GetFor(eventStore, eventStoreNamespace, identifier);
+            var key = await store.GetFor(eventStore, eventStoreNamespace, identifier, revision);
             foreach (var storeToSaveIn in inner.Where(_ => _ != store))
             {
-                await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key);
+                await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
             }
 
             return key;
@@ -43,11 +43,11 @@ public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
     }
 
     /// <inheritdoc/>
-    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         foreach (var innerStore in inner)
         {
-            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier))
+            if (await innerStore.HasFor(eventStore, eventStoreNamespace, identifier, revision))
             {
                 return true;
             }
@@ -57,20 +57,20 @@ public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
     }
 
     /// <inheritdoc/>
-    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
         foreach (var innerStore in inner)
         {
-            await innerStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
+            await innerStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
         }
     }
 
     /// <inheritdoc/>
-    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
+    public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         foreach (var innerStore in inner)
         {
-            await innerStore.DeleteFor(eventStore, eventStoreNamespace, identifier);
+            await innerStore.DeleteFor(eventStore, eventStoreNamespace, identifier, revision);
         }
     }
 }

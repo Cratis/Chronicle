@@ -9,11 +9,11 @@ public class and_there_is_metadata_and_details : given.a_provider
 
     [PII]
     [ComplianceDetails(Details)]
-    class MyType;
+    record MyConceptValue(string Value) : ConceptAs<string>(Value);
 
     ComplianceMetadata _result;
 
-    void Because() => _result = provider.Provide(typeof(MyType));
+    void Because() => _result = provider.Provide(typeof(MyConceptValue));
 
     [Fact] void should_return_pii_metadata() => _result.MetadataType.ShouldEqual(ComplianceMetadataType.PII);
     [Fact] void should_return_metadata_with_details() => _result.Details.ShouldEqual(Details);
