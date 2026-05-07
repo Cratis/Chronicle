@@ -200,7 +200,7 @@ public class EventSequence(
             : new Dictionary<EventSourceId, ConcurrencyScope>();
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var causation = causationManager.GetCurrentChain();
+        var causation = causationManager.GetCurrentChain() ?? [];
         var identity = identityProvider.GetCurrent();
         var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes, causation);
         NotifyAppendMany(
@@ -255,7 +255,7 @@ public class EventSequence(
             });
         }
 
-        causation ??= causationManager.GetCurrentChain();
+        causation ??= causationManager.GetCurrentChain() ?? [];
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>(), causation);
