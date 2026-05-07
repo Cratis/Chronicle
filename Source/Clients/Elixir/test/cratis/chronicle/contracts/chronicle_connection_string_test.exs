@@ -8,7 +8,7 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionStringTest do
 
   test "parses api key connection strings" do
     connection_string =
-      ChronicleConnectionString.new(
+      ChronicleConnectionString.parse(
         "chronicle://localhost:35000?apiKey=secret&disableTls=true"
       )
 
@@ -24,7 +24,7 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionStringTest do
       ChronicleConnectionString.default()
       |> ChronicleConnectionString.with_credentials("client", "secret")
 
-    assert ChronicleConnectionString.to_string(connection_string) ==
+    assert ChronicleConnectionString.format(connection_string) ==
              "chronicle://client:secret@localhost:35000"
   end
 end

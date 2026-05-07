@@ -262,10 +262,10 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnection do
         options[:connection_string]
 
       is_binary(options[:connection_string]) ->
-        ChronicleConnectionString.new(options[:connection_string])
+        ChronicleConnectionString.parse(options[:connection_string])
 
       is_binary(options[:server_address]) ->
-        ChronicleConnectionString.new("chronicle://#{options[:server_address]}")
+        ChronicleConnectionString.parse("chronicle://#{options[:server_address]}")
 
       true ->
         ChronicleConnectionString.default()

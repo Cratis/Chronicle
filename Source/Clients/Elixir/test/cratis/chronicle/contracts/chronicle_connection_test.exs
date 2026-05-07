@@ -6,6 +6,8 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionTest do
 
   alias Cratis.Chronicle.Contracts.ChronicleConnection
 
+  @default_max_attempts 50
+
   test "retries the initial connection until it succeeds" do
     responses = [
       {:error, :unavailable},
@@ -91,7 +93,7 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionTest do
     spawn(fn -> Process.sleep(:infinity) end)
   end
 
-  defp assert_eventually(assertion, attempts \\ 50)
+  defp assert_eventually(assertion, attempts \\ @default_max_attempts)
 
   defp assert_eventually(assertion, attempts) when attempts > 0 do
     if assertion.() do

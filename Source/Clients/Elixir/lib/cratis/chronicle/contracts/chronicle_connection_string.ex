@@ -50,7 +50,7 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionString do
   """
   @spec default() :: t()
   def default do
-    new("chronicle://localhost:#{@default_port}")
+    parse("chronicle://localhost:#{@default_port}")
   end
 
   @doc """
@@ -58,14 +58,14 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionString do
   """
   @spec development() :: t()
   def development do
-    new("chronicle://#{@development_client}:#{@development_client_secret}@localhost:#{@default_port}")
+    parse("chronicle://#{@development_client}:#{@development_client_secret}@localhost:#{@default_port}")
   end
 
   @doc """
   Parses a Chronicle connection string into a struct.
   """
-  @spec new(String.t()) :: t()
-  def new(connection_string) when is_binary(connection_string) do
+  @spec parse(String.t()) :: t()
+  def parse(connection_string) when is_binary(connection_string) do
     uri = URI.parse(connection_string)
     scheme = uri.scheme || raise ArgumentError, "Connection string must include a scheme"
 
@@ -145,8 +145,8 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionString do
   @doc """
   Converts a parsed connection string back into its URI representation.
   """
-  @spec to_string(t()) :: String.t()
-  def to_string(%__MODULE__{} = connection_string) do
+  @spec format(t()) :: String.t()
+  def format(%__MODULE__{} = connection_string) do
     authority =
       build_authority(
         connection_string.server_address,
@@ -203,4 +203,13 @@ defmodule Cratis.Chronicle.Contracts.ChronicleConnectionString do
   end
 
   defp present?(value), do: is_binary(value) and value != ""
+end
+
+defimpl String.Chars, for: Cratis.Chronicle.Contracts.ChronicleConnectionString do
+  # Copyright (c) Cratis. All rights reserved.
+  # Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+  def to_string(connection_string) do
+    Cratis.Chronicle.Contracts.ChronicleConnectionString.format(connection_string)
+  end
 end

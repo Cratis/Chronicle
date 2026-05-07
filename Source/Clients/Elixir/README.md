@@ -59,6 +59,16 @@ By default the connection layer uses the Mint gRPC adapter with retry support
 enabled, and it schedules reconnect attempts when the adapter reports that the
 connection process went down.
 
+You can parse and format Chronicle connection strings directly:
+
+```elixir
+connection_string =
+  "chronicle://localhost:35000?disableTls=true"
+  |> Cratis.Chronicle.Contracts.ChronicleConnectionString.parse()
+
+formatted = Cratis.Chronicle.Contracts.ChronicleConnectionString.format(connection_string)
+```
+
 ## Using Generated Stubs
 
 After generating the Elixir sources, use the generated `*.Stub` modules under
