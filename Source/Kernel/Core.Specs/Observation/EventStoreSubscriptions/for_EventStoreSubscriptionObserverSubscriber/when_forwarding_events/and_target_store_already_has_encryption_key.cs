@@ -19,7 +19,7 @@ using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionObserverSubscriber.when_forwarding_events;
 
-public class and_event_has_explicit_subject : Specification
+public class and_target_store_already_has_encryption_key : Specification
 {
     static readonly Subject _explicitSubject = "person-123";
 
@@ -35,9 +35,7 @@ public class and_event_has_explicit_subject : Specification
         _silo.AddService(Substitute.For<ILogger<EventStoreSubscriptionObserverSubscriber>>());
 
         _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
-        _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.HasFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(true);
-        _encryptionKeyStorage.GetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKey([], []));
+        _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(true);
         _silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();
@@ -91,27 +89,11 @@ public class and_event_has_explicit_subject : Specification
     }
 
     [Fact]
-    void should_forward_with_original_subject() =>
-        _inboxSequence.Received(1).Append(
-            Arg.Any<EventSourceType>(),
-            Arg.Any<EventSourceId>(),
-            Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>(),
-            Arg.Any<EventType>(),
-            Arg.Any<JsonObject>(),
-            Arg.Any<CorrelationId>(),
-            Arg.Any<IEnumerable<Causation>>(),
-            Arg.Any<Concepts.Identities.Identity>(),
-            Arg.Any<IEnumerable<Tag>>(),
-            Arg.Any<Concepts.EventSequences.Concurrency.ConcurrencyScope>(),
-            Arg.Any<DateTimeOffset?>(),
-            Arg.Is<Subject?>(subject => subject == _explicitSubject));
-
-    [Fact]
-    Task should_copy_encryption_key_to_target_event_store() =>
-        _encryptionKeyStorage.Received(1).SaveFor(
-            "Lobby",
-            EventStoreNamespaceName.Default,
-            Arg.Is<EncryptionKeyIdentifier>(identifier => identifier.Value == _explicitSubject.Value),
-            Arg.Any<EncryptionKey>());
+    Task should_not_copy_encryption_key_to_target_event_store() =>
+        _encryptionKeyStorage.DidNotReceive().SaveFor(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<EncryptionKeyIdentifier>(),
+            Arg.Any<EncryptionKey>(),
+            Arg.Any<EncryptionKeyRevision?>());
 }
