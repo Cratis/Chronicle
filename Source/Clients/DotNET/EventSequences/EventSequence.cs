@@ -202,7 +202,7 @@ public class EventSequence(
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
-        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes);
+        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes, causation);
         NotifyAppendMany(
             eventsList,
             resolvedCorrelationId,
@@ -225,8 +225,16 @@ public class EventSequence(
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
         var eventsList = events.ToList();
-        var eventsToAppend = eventsList.ConvertAll(@event =>
+        var eventsToAppend = new List<Contracts.Events.EventToAppend>(eventsList.Count);
+        IImmutableList<Causation>? causation = null;
+
+        foreach (var @event in eventsList)
         {
+            if (causation is null && @event.Causation is not null)
+            {
+                causation = [@event.Causation];
+            }
+
             var eventClrType = @event.Event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
 
@@ -234,22 +242,23 @@ public class EventSequence(
             var staticTags = eventClrType.GetTags();
             var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
 
-            return new Contracts.Events.EventToAppend
+            eventsToAppend.Add(new Contracts.Events.EventToAppend
             {
                 EventSourceType = @event.EventSourceType,
                 EventSourceId = @event.EventSourceId,
                 EventStreamType = @event.EventStreamType,
                 EventStreamId = @event.EventStreamId,
                 EventType = eventType.ToContract(),
-                Content = eventSerializer.Serialize(@event.Event).GetAwaiter().GetResult().ToString(),
+                Content = (await eventSerializer.Serialize(@event.Event)).ToString(),
                 Tags = allTags,
                 Occurred = @event.Occurred
-            };
-        });
+            });
+        }
 
-        var causation = causationManager.GetCurrentChain();
+        causation ??= causationManager.GetCurrentChain();
+
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>());
+        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>(), causation);
 
         if (_appendedEventsRaised is not null)
         {
@@ -446,9 +455,12 @@ public class EventSequence(
         };
     }
 
-    async Task<AppendManyResult> AppendManyImplementation(IList<Contracts.Events.EventToAppend> eventsToAppend, CorrelationId correlationId, IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes)
+    async Task<AppendManyResult> AppendManyImplementation(
+        IList<Contracts.Events.EventToAppend> eventsToAppend,
+        CorrelationId correlationId,
+        IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes,
+        IImmutableList<Causation> causation)
     {
-        var causationChain = causationManager.GetCurrentChain().ToContract();
         var identity = identityProvider.GetCurrent();
         var request = new AppendManyRequest()
         {
@@ -457,7 +469,7 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             CorrelationId = correlationId,
             Events = eventsToAppend,
-            Causation = causationChain,
+            Causation = causation.ToContract(),
             CausedBy = identity.ToContract(),
             ConcurrencyScopes = concurrencyScopes
                 .Where(kvp => kvp.Value is not null)
