@@ -42,19 +42,38 @@ public static class ReactorTypeExtensions
     /// </param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     /// <exception cref="MultipleEventStoresDefined">Thrown when the reactor handles event types from multiple event stores.</exception>
+    /// <exception cref="EventStoreCannotBeCombinedWithExplicitEventSequence">Thrown when <see cref="EventStoreAttribute"/> is combined with explicit event sequence configuration.</exception>
     public static EventSequenceId GetEventSequenceId(this Type type, string? currentEventStoreName = null)
     {
         TypeMustImplementReactor.ThrowIfTypeDoesNotImplementReactor(type);
 
-        // [EventSequence] / [EventLog] on the class takes highest priority
+        var eventStoreAttribute = type.GetCustomAttribute<EventStoreAttribute>();
+
         var eventSequenceAttr = type.GetCustomAttribute<EventSequenceAttribute>();
+        var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
+
+        if (eventStoreAttribute is not null)
+        {
+            if (eventSequenceAttr is not null)
+            {
+                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, eventStoreAttribute.EventStore, eventSequenceAttr.Sequence);
+            }
+
+            if (reactorAttribute?.EventSequenceId is not null)
+            {
+                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, eventStoreAttribute.EventStore, reactorAttribute.EventSequenceId);
+            }
+
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStoreAttribute.EventStore}");
+        }
+
+        // [EventSequence] / [EventLog] on the class takes highest priority
         if (eventSequenceAttr is not null)
         {
             return eventSequenceAttr.Sequence;
         }
 
         // [Reactor(eventSequence: "...")] is the second priority
-        var reactorAttribute = type.GetCustomAttribute<ReactorAttribute>();
         if (reactorAttribute?.EventSequenceId is not null)
         {
             return reactorAttribute.EventSequenceId;

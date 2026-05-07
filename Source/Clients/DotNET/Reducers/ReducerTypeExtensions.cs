@@ -112,18 +112,36 @@ public static class ReducerTypeExtensions
     /// </param>
     /// <returns>The <see cref="EventSequenceId"/> for the type.</returns>
     /// <exception cref="MultipleEventStoresDefined">Thrown when the reducer handles event types from multiple event stores.</exception>
+    /// <exception cref="EventStoreCannotBeCombinedWithExplicitEventSequence">Thrown when <see cref="EventStoreAttribute"/> is combined with explicit event sequence configuration.</exception>
     public static EventSequenceId GetEventSequenceId(this Type type, string? currentEventStoreName = null)
     {
         TypeMustImplementReducer.ThrowIfTypeDoesNotImplementReducer(type);
 
-        // [EventSequence] / [EventLog] on the class takes highest priority
+        var eventStoreAttribute = type.GetCustomAttribute<EventStoreAttribute>();
+
         var eventSequenceAttr = type.GetCustomAttribute<EventSequenceAttribute>();
+        var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
+
+        if (eventStoreAttribute is not null)
+        {
+            if (eventSequenceAttr is not null)
+            {
+                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, eventStoreAttribute.EventStore, eventSequenceAttr.Sequence);
+            }
+
+            if (reducerAttribute?.EventSequenceId is not null)
+            {
+                throw new EventStoreCannotBeCombinedWithExplicitEventSequence(type, eventStoreAttribute.EventStore, reducerAttribute.EventSequenceId);
+            }
+
+            return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStoreAttribute.EventStore}");
+        }
+
+        // [EventSequence] / [EventLog] on the class takes highest priority
         if (eventSequenceAttr is not null)
         {
             return eventSequenceAttr.Sequence;
         }
-
-        var reducerAttribute = type.GetCustomAttribute<ReducerAttribute>();
 
         if (reducerAttribute?.EventSequenceId is not null)
         {
