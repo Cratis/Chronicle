@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
 
@@ -20,6 +21,7 @@ public class known_event : given.an_event_sequence
     JsonObject _eventContext;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
+    ConcurrencyScope _scope;
     AppendResponse _response;
 
     void Establish()
@@ -37,6 +39,7 @@ public class known_event : given.an_event_sequence
         ];
 
         _causedBy = new("Subject", "Name", "UserName", new("BehalfOf_Subject", "BehalfOf_Name", "BehalfOf_UserName"));
+        _scope = new(42UL, _eventSourceId);
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
@@ -44,6 +47,7 @@ public class known_event : given.an_event_sequence
             .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
             .Do(callInfo => _command = callInfo.Arg<AppendRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
+        _concurrencyScopeStrategy.GetScope(_eventSourceId, EventStreamType.All, EventStreamId.Default, EventSourceType.Default, default).Returns(Task.FromResult(_scope));
         _identityProvider.GetCurrent().Returns(_causedBy);
 
         _response = new()
@@ -65,4 +69,5 @@ public class known_event : given.an_event_sequence
     [Fact] void should_append_event_with_correct_event() => _command.Content.ShouldEqual(_eventContext.ToString());
     [Fact] void should_append_event_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);
     [Fact] void should_append_event_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
+    [Fact] void should_append_event_with_strategy_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)_scope.SequenceNumber);
 }
