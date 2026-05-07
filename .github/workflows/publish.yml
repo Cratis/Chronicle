@@ -357,6 +357,15 @@ jobs:
       version: ${{ needs.release.outputs.version }}
       protos-artifact: proto-files
 
+  publish-elixir-client:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-elixir-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
+
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -612,4 +621,3 @@ jobs:
           token: ${{ secrets.PAT_DOCUMENTATION }}
           repository: cratis/samples
           event-type: update-dependencies
-
