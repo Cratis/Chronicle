@@ -16,6 +16,8 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0006](CHR0006.md) | Reducer method signature must match allowed signatures | Warning | Reducer methods must follow allowed signatures |
 | [CHR0007](CHR0007.md) | Reducer event parameter must have [EventType] attribute | Error | Event parameters in reducer methods must be marked with [EventType] attribute |
 | [CHR0012](CHR0012.md) | Event types should avoid nullable properties | Warning | Nullable properties are supported on events but are often better modeled as separate event types |
+| [CHR0013](CHR0013.md) | Reactor cannot combine EventStore with explicit event sequence | Error | Reactors with [EventStore] must not also configure an explicit event sequence |
+| [CHR0014](CHR0014.md) | Reducer cannot combine EventStore with explicit event sequence | Error | Reducers with [EventStore] must not also configure an explicit event sequence |
 
 ## Quick Fixes
 
