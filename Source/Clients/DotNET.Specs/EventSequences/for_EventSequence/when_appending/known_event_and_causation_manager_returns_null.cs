@@ -16,7 +16,7 @@ public class known_event_and_causation_manager_returns_null : given.an_event_seq
     EventSourceId _eventSourceId;
     string _event;
     EventType _eventType;
-    AppendRequest _command;
+    AppendRequest _request;
     JsonObject _eventContext;
 
     void Establish()
@@ -32,7 +32,7 @@ public class known_event_and_causation_manager_returns_null : given.an_event_seq
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
         _eventSequences
             .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendRequest>());
+            .Do(callInfo => _request = callInfo.Arg<AppendRequest>());
 
         _causationManager.GetCurrentChain().Returns((System.Collections.Immutable.IImmutableList<Causation>)null!);
         _identityProvider.GetCurrent().Returns(new Identity("Subject", "Name", "UserName"));
@@ -48,7 +48,7 @@ public class known_event_and_causation_manager_returns_null : given.an_event_seq
 
     async Task Because() => await _eventSequence.Append(_eventSourceId, _event, concurrencyScope: ConcurrencyScope.None);
 
-    [Fact] void should_append_event() => _command.ShouldNotBeNull();
-    [Fact] void should_send_empty_causation_chain() => _command.Causation.ShouldBeEmpty();
-    [Fact] void should_send_explicit_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)ConcurrencyScope.None.SequenceNumber);
+    [Fact] void should_append_event() => _request.ShouldNotBeNull();
+    [Fact] void should_send_empty_causation_chain() => _request.Causation.ShouldBeEmpty();
+    [Fact] void should_send_explicit_concurrency_scope() => _request.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)ConcurrencyScope.None.SequenceNumber);
 }

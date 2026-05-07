@@ -195,11 +195,11 @@ public class EventSequence(
             .GetFor(this)
             .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
 
-        concurrencyScope = concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet
+        var resolvedConcurrencyScope = concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet
             ? ConcurrencyScope.None
             : concurrencyScope;
 
-        var concurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } };
+        var concurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, resolvedConcurrencyScope } };
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var causation = causationManager.GetCurrentChain() ?? [];
@@ -458,7 +458,7 @@ public class EventSequence(
     }
 
     static List<Contracts.Auditing.Causation> ToContractCausation(IEnumerable<Causation> causation) =>
-        causation.Select(_ => _.ToContract()).ToList();
+        causation.Select(causationItem => causationItem.ToContract()).ToList();
 
     static Contracts.EventSequences.Concurrency.ConcurrencyScope ToContractConcurrencyScope(ConcurrencyScope? concurrencyScope) =>
         (concurrencyScope ?? ConcurrencyScope.None).ToContract();
@@ -467,7 +467,7 @@ public class EventSequence(
         IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes) =>
         concurrencyScopes
             .Where(kvp => kvp.Value is not null && kvp.Value != ConcurrencyScope.NotSet)
-            .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract());
+            .ToDictionary(kvp => kvp.Key.Value, kvp => kvp.Value.ToContract());
 
     async Task<AppendManyResult> AppendManyImplementation(
         IList<Contracts.Events.EventToAppend> eventsToAppend,

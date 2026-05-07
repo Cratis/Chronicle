@@ -16,7 +16,7 @@ public class many_known_events_and_causation_manager_returns_null : given.an_eve
     EventSourceId _eventSourceId;
     List<string> _events;
     EventType _eventType;
-    AppendManyRequest _command;
+    AppendManyRequest _request;
     List<JsonObject> _eventContexts;
 
     void Establish()
@@ -35,7 +35,7 @@ public class many_known_events_and_causation_manager_returns_null : given.an_eve
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
         _eventSequences
             .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+            .Do(callInfo => _request = callInfo.Arg<AppendManyRequest>());
 
         _causationManager.GetCurrentChain().Returns((System.Collections.Immutable.IImmutableList<Causation>)null!);
         _identityProvider.GetCurrent().Returns(new Identity("Subject", "Name", "UserName"));
@@ -51,7 +51,7 @@ public class many_known_events_and_causation_manager_returns_null : given.an_eve
 
     async Task Because() => await _eventSequence.AppendMany(_eventSourceId, _events, concurrencyScope: ConcurrencyScope.None);
 
-    [Fact] void should_append_events() => _command.ShouldNotBeNull();
-    [Fact] void should_send_empty_causation_chain() => _command.Causation.ShouldBeEmpty();
-    [Fact] void should_send_explicit_concurrency_scope() => _command.ConcurrencyScopes.ContainsKey(_eventSourceId.Value).ShouldBeTrue();
+    [Fact] void should_append_events() => _request.ShouldNotBeNull();
+    [Fact] void should_send_empty_causation_chain() => _request.Causation.ShouldBeEmpty();
+    [Fact] void should_send_explicit_concurrency_scope() => _request.ConcurrencyScopes.ContainsKey(_eventSourceId.Value).ShouldBeTrue();
 }
