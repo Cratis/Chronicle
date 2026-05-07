@@ -67,7 +67,8 @@ public class EventStoreSubscriptionObserverSubscriber(
                     @event.Context.Causation,
                     @event.Context.CausedBy,
                     [],
-                    ConcurrencyScope.None);
+                    ConcurrencyScope.None,
+                    subject: @event.Context.Subject);
             }
 
             logger.SuccessfullyForwardedEvents(_key, targetEventStore, inboxSequenceId);
