@@ -8,6 +8,8 @@
   href: event-processing.md
 - name: Event Sequence
   href: event-sequence.md
+- name: Subscribe to External Event Stores
+  href: external-event-store-subscriptions.md
 - name: Filtering by appended event metadata
   href: filtering.md
   items:
