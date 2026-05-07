@@ -1,3 +1,4 @@
 .gradle/
+.gradle-bootstrap/
 build/
 src/main/proto/
