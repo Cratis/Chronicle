@@ -75,6 +75,6 @@ This is invalid and fails:
 
 ## See Also
 
-- [Implicit Event Store Subscriptions](../integration/implicit-subscriptions.md)
-- [Explicit Event Store Subscriptions](../integration/explicit-subscriptions.md)
+- [Implicit Event Store Subscriptions](../subscriptions/implicit-subscriptions.md)
+- [Explicit Event Store Subscriptions](../subscriptions/explicit-subscriptions.md)
 - [Event Sequence](event-sequence.md)
