@@ -46,6 +46,7 @@ on:
 permissions:
   contents: write
   deployments: write
+  id-token: write
 
 jobs:
   release:
@@ -65,6 +66,11 @@ jobs:
         with:
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
+
+  generate-protos:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release]
+    uses: ./.github/workflows/generate-protos.yml
 
   coverage-statistics:
     if: needs.release.outputs.publish == 'true'
@@ -335,94 +341,21 @@ jobs:
 
   publish-typescript-client:
     if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release]
-    permissions:
-      contents: read
-      id-token: write
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-typescript-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '23.x'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Configure npm for OIDC-based publishing
-        run: |
-          # setup-node writes a placeholder _authToken (XXXXX-XXXXX-XXXXX-XXXXX) into
-          # .npmrc and exports NODE_AUTH_TOKEN with the same placeholder. npm uses this
-          # token as-is for registry auth → 404. Remove it so npm falls back to OIDC.
-          sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG"
-          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-          echo "--- .npmrc after stripping placeholder ---"
-          cat "$NPM_CONFIG_USERCONFIG"
-
-      - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
-        run: |
-          npm install -g npm@11
-          NPM_VER="$(npm --version)"
-          echo "Installed npm $NPM_VER"
-          node -e "
-            const v = '$NPM_VER'.split('.').map(Number);
-            if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) {
-              console.error('npm >= 11.5.1 is required for trusted publishing, got $NPM_VER');
-              process.exit(1);
-            }
-          "
-
-      - name: Install protoc
-        run: |
-          PROTOC_VERSION="28.3"
-          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}
-          sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-          sudo unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
-          rm -f $PROTOC_ZIP
-          protoc --version
-
-      - name: Build Contracts
-        working-directory: ./Source/Kernel/Contracts
-        run: dotnet build -c Release
-
-      - name: Generate Proto Files
-        run: |
-          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
-          dotnet run \
-            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            $CONTRACTS_DLL \
-            Source/Kernel/Protobuf
-
-      - name: Install TypeScript dependencies
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn install --ignore-scripts
-
-      - name: Generate TypeScript from Proto
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          mkdir -p generated
-          yarn generate
-
-      - name: Build TypeScript package
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn build
-
-      - name: Set package version
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          npm version ${{ needs.release.outputs.version }} --no-git-tag-version
-
-      - name: Publish to NPM
-        working-directory: ./Source/Clients/TypeScript
-        run: npm publish --provenance --access public
+  publish-kotlin-client:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-kotlin-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
 
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
