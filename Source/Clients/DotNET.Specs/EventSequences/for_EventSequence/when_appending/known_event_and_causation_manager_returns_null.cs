@@ -5,53 +5,50 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
-public class and_causation_manager_returns_null : given.an_event_sequence
+public class known_event_and_causation_manager_returns_null : given.an_event_sequence
 {
-    List<EventForEventSourceId> _events;
+    EventSourceId _eventSourceId;
+    string _event;
     EventType _eventType;
+    AppendRequest _command;
     JsonObject _eventContext;
-    AppendManyRequest _command;
-    AppendManyResult _result;
 
     void Establish()
     {
+        _eventSourceId = Guid.NewGuid();
+        _event = "Actual event";
         _eventType = new(Guid.NewGuid().ToString(), EventTypeGeneration.First);
-        _eventContext = [];
-        _eventSerializer.Serialize(Arg.Any<string>()).Returns(_eventContext);
 
-        _events =
-        [
-            new EventForEventSourceId(Guid.NewGuid(), "Event1"),
-            new EventForEventSourceId(Guid.NewGuid(), "Event2")
-        ];
+        _eventContext = [];
+        _eventSerializer.Serialize(_event).Returns(_eventContext);
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
         _eventSequences
-            .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
-            .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
+            .When(_ => _.Append(Arg.Any<AppendRequest>(), CallContext.Default))
+            .Do(callInfo => _command = callInfo.Arg<AppendRequest>());
 
         _causationManager.GetCurrentChain().Returns((System.Collections.Immutable.IImmutableList<Causation>)null!);
         _identityProvider.GetCurrent().Returns(new Identity("Subject", "Name", "UserName"));
 
-        _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(new AppendManyResponse
+        _serviceAccessor.Services.EventSequences.Append(Arg.Any<AppendRequest>(), CallContext.Default).Returns(new AppendResponse
         {
             CorrelationId = Guid.NewGuid(),
-            SequenceNumbers = [42, 43],
+            SequenceNumber = 42,
             ConstraintViolations = [],
             Errors = []
         });
     }
 
-    async Task Because() => _result = await _eventSequence.AppendMany(_events);
+    async Task Because() => await _eventSequence.Append(_eventSourceId, _event, concurrencyScope: ConcurrencyScope.None);
 
-    [Fact] void should_append_events() => _command.ShouldNotBeNull();
+    [Fact] void should_append_event() => _command.ShouldNotBeNull();
     [Fact] void should_send_empty_causation_chain() => _command.Causation.ShouldBeEmpty();
-    [Fact] void should_send_empty_concurrency_scopes() => _command.ConcurrencyScopes.ShouldBeEmpty();
-    [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_send_explicit_concurrency_scope() => _command.ConcurrencyScope.SequenceNumber.ShouldEqual((ulong)ConcurrencyScope.None.SequenceNumber);
 }

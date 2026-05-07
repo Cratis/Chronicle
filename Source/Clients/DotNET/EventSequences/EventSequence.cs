@@ -100,8 +100,8 @@ public class EventSequence(
 
         var eventType = eventTypes.GetEventTypeFor(eventClrType);
         var content = await eventSerializer.Serialize(@event);
-        var causation = causationManager.GetCurrentChain();
-        var causationChain = causation.ToContract();
+        var causation = causationManager.GetCurrentChain() ?? [];
+        var causationChain = ToContractCausation(causation);
         var identity = identityProvider.GetCurrent();
 
         // Merge static tags from the event type with dynamic tags
@@ -127,7 +127,7 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract(),
             Tags = allTags,
-            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract(),
+            ConcurrencyScope = ToContractConcurrencyScope(concurrencyScope),
             Occurred = occurred,
             Subject = subject?.Value
         });
@@ -195,9 +195,11 @@ public class EventSequence(
             .GetFor(this)
             .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
 
-        var concurrencyScopes = concurrencyScope != ConcurrencyScope.NotSet
-            ? new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } }
-            : new Dictionary<EventSourceId, ConcurrencyScope>();
+        concurrencyScope = concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet
+            ? ConcurrencyScope.None
+            : concurrencyScope;
+
+        var concurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } };
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var causation = causationManager.GetCurrentChain() ?? [];
@@ -455,6 +457,18 @@ public class EventSequence(
         };
     }
 
+    static List<Contracts.Auditing.Causation> ToContractCausation(IEnumerable<Causation> causation) =>
+        causation.Select(_ => _.ToContract()).ToList();
+
+    static Contracts.EventSequences.Concurrency.ConcurrencyScope ToContractConcurrencyScope(ConcurrencyScope? concurrencyScope) =>
+        (concurrencyScope ?? ConcurrencyScope.None).ToContract();
+
+    static Dictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope> ToContractConcurrencyScopes(
+        IDictionary<EventSourceId, ConcurrencyScope> concurrencyScopes) =>
+        concurrencyScopes
+            .Where(kvp => kvp.Value is not null && kvp.Value != ConcurrencyScope.NotSet)
+            .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract());
+
     async Task<AppendManyResult> AppendManyImplementation(
         IList<Contracts.Events.EventToAppend> eventsToAppend,
         CorrelationId correlationId,
@@ -469,11 +483,9 @@ public class EventSequence(
             EventSequenceId = eventSequenceId,
             CorrelationId = correlationId,
             Events = eventsToAppend,
-            Causation = causation.ToContract(),
+            Causation = ToContractCausation(causation),
             CausedBy = identity.ToContract(),
-            ConcurrencyScopes = concurrencyScopes
-                .Where(kvp => kvp.Value is not null)
-                .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
+            ConcurrencyScopes = ToContractConcurrencyScopes(concurrencyScopes)
         };
         var response = await _servicesAccessor.Services.EventSequences.AppendMany(request);
 

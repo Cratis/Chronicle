@@ -5,30 +5,31 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.when_appending;
 
-public class and_causation_manager_returns_null : given.an_event_sequence
+public class many_known_events_and_causation_manager_returns_null : given.an_event_sequence
 {
-    List<EventForEventSourceId> _events;
+    EventSourceId _eventSourceId;
+    List<string> _events;
     EventType _eventType;
-    JsonObject _eventContext;
     AppendManyRequest _command;
-    AppendManyResult _result;
+    List<JsonObject> _eventContexts;
 
     void Establish()
     {
+        _eventSourceId = Guid.NewGuid();
+        _events = ["Event1", "Event2", "Event3"];
         _eventType = new(Guid.NewGuid().ToString(), EventTypeGeneration.First);
-        _eventContext = [];
-        _eventSerializer.Serialize(Arg.Any<string>()).Returns(_eventContext);
+        _eventContexts = _events.ConvertAll(e => new JsonObject { ["value"] = e });
 
-        _events =
-        [
-            new EventForEventSourceId(Guid.NewGuid(), "Event1"),
-            new EventForEventSourceId(Guid.NewGuid(), "Event2")
-        ];
+        for (var i = 0; i < _events.Count; i++)
+        {
+            _eventSerializer.Serialize(_events[i]).Returns(_eventContexts[i]);
+        }
 
         _eventTypes.HasFor(typeof(string)).Returns(true);
         _eventTypes.GetEventTypeFor(typeof(string)).Returns(_eventType);
@@ -42,16 +43,15 @@ public class and_causation_manager_returns_null : given.an_event_sequence
         _serviceAccessor.Services.EventSequences.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default).Returns(new AppendManyResponse
         {
             CorrelationId = Guid.NewGuid(),
-            SequenceNumbers = [42, 43],
+            SequenceNumbers = [42, 43, 44],
             ConstraintViolations = [],
             Errors = []
         });
     }
 
-    async Task Because() => _result = await _eventSequence.AppendMany(_events);
+    async Task Because() => await _eventSequence.AppendMany(_eventSourceId, _events, concurrencyScope: ConcurrencyScope.None);
 
     [Fact] void should_append_events() => _command.ShouldNotBeNull();
     [Fact] void should_send_empty_causation_chain() => _command.Causation.ShouldBeEmpty();
-    [Fact] void should_send_empty_concurrency_scopes() => _command.ConcurrencyScopes.ShouldBeEmpty();
-    [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_send_explicit_concurrency_scope() => _command.ConcurrencyScopes.ContainsKey(_eventSourceId.Value).ShouldBeTrue();
 }
