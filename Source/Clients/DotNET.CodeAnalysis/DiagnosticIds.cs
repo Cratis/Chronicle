@@ -67,4 +67,14 @@ public static class DiagnosticIds
     /// Event types should avoid nullable properties.
     /// </summary>
     public const string EventTypeShouldAvoidNullableProperties = "CHR0012";
+
+    /// <summary>
+    /// Reactor cannot combine EventStore attribute with an explicit event sequence.
+    /// </summary>
+    public const string ReactorCannotCombineEventStoreWithExplicitEventSequence = "CHR0013";
+
+    /// <summary>
+    /// Reducer cannot combine EventStore attribute with an explicit event sequence.
+    /// </summary>
+    public const string ReducerCannotCombineEventStoreWithExplicitEventSequence = "CHR0014";
 }

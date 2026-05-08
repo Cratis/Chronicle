@@ -16,3 +16,7 @@
   href: CHR0007.md
 - name: CHR0012 - Event types should avoid nullable properties
   href: CHR0012.md
+- name: CHR0013 - Reactor cannot combine EventStore with explicit event sequence
+  href: CHR0013.md
+- name: CHR0014 - Reducer cannot combine EventStore with explicit event sequence
+  href: CHR0014.md

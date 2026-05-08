@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Placement;
 using Microsoft.Extensions.Logging;
 
@@ -21,12 +20,10 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 /// will make the observer unique per connection, helping us to achieve this.
 /// </remarks>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying actual clients.</param>
-/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [ConnectedObserverPlacement]
 public class ReactorObserverSubscriber(
     IReactorMediator reactorMediator,
-    IConfigurationForObserverProvider configurationProvider,
     ILogger<ReactorObserverSubscriber> logger) : Grain, IReactorObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;
@@ -59,19 +56,13 @@ public class ReactorObserverSubscriber(
         var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         try
         {
-            var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
             reactorMediator.OnNext(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace, partition, events, tcs);
-            return await tcs.Task.WaitAsync(timeout);
+            return await tcs.Task;
         }
         catch (TaskCanceledException taskCanceledException)
         {
             logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
-        }
-        catch (TimeoutException timeoutException)
-        {
-            logger.OnNextException(timeoutException, _key.ObserverId, _key.EventStore, _key.Namespace);
-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
     }
 }

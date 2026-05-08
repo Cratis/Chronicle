@@ -32,10 +32,14 @@ internal static class ConcurrencyScopeConverters
     /// <param name="scopes"><see cref="IDictionary{TKey,TValue}"/> of <see cref="string"/> and <see cref="Contracts.EventSequences.Concurrency.ConcurrencyScope"/> to convert.</param>
     /// <returns>A converted <see cref="ConcurrencyScope"/>.</returns>
     public static ConcurrencyScopes ToChronicle(
-        this IDictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes) =>
-        new(scopes.ToDictionary(
-            eventSourceIdAndScope => new EventSourceId(eventSourceIdAndScope.Key),
-            eventSourceIdAndScope => eventSourceIdAndScope.Value.ToChronicle()));
+        this IDictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope>? scopes) =>
+        new((scopes ?? new Dictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope>())
+            .Where(eventSourceIdAndScope =>
+                !string.IsNullOrWhiteSpace(eventSourceIdAndScope.Key) &&
+                eventSourceIdAndScope.Value is not null)
+            .ToDictionary(
+                eventSourceIdAndScope => new EventSourceId(eventSourceIdAndScope.Key),
+                eventSourceIdAndScope => eventSourceIdAndScope.Value.ToChronicle()));
 
     static T? ToMaybeConcept<T>(string? value, Func<string, T> toConcept)
         where T : ConceptAs<string>

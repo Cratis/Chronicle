@@ -21,6 +21,7 @@ public partial class Observer
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        _metrics?.PartitionRetryAttempt(partition);
         var config = await configurationProvider.GetFor(_observerKey);
         var attemptCount = failure.Attempts.Count();
         if (config.MaxRetryAttempts == 0 || attemptCount <= config.MaxRetryAttempts)
@@ -29,8 +30,9 @@ public partial class Observer
         }
         else
         {
-            logger.GivingUpOnRecoveringFailedPartition(partition, attemptCount, config.MaxRetryAttempts);
-            await RemoveReminder(partition);
+            logger.QuarantiningFailedPartition(partition);
+            failures.State.Quarantine(partition);
+            _metrics?.PartitionQuarantined(partition);
         }
 
         await failures.WriteStateAsync();
@@ -72,7 +74,7 @@ public partial class Observer
     public async Task TryRecoverAllFailedPartitions()
     {
         var config = await configurationProvider.GetFor(_observerKey);
-        foreach (var partition in Failures.Partitions)
+        foreach (var partition in Failures.Partitions.Where(p => !p.IsQuarantined))
         {
             var attemptCount = partition.Attempts.Count();
             if (config.MaxRetryAttempts > 0 && attemptCount > config.MaxRetryAttempts)
