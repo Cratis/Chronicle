@@ -22,25 +22,7 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
 
     void Establish()
     {
-        var projectionDefinition = new ProjectionDefinition(
-            ProjectionOwner.Client,
-            Concepts.EventSequences.EventSequenceId.Log,
-            _observerDetails.Key.ObserverId.Value,
-            _readModelType.Identifier,
-            true,
-            true,
-            new System.Text.Json.Nodes.JsonObject(),
-            new Dictionary<Concepts.Events.EventType, FromDefinition>(),
-            new Dictionary<Concepts.Events.EventType, JoinDefinition>(),
-            new Dictionary<PropertyPath, ChildrenDefinition>(),
-            [],
-            new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
-            new Dictionary<Concepts.Events.EventType, RemovedWithDefinition>(),
-            new Dictionary<Concepts.Events.EventType, RemovedWithJoinDefinition>(),
-            null,
-            DateTimeOffset.UtcNow,
-            null,
-            AutoMap.Enabled);
+        var projectionDefinition = CreateProjectionDefinition();
 
         _projection = Substitute.For<Engine.IProjection>();
         _readModel = new ReadModelDefinition(
@@ -72,9 +54,9 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
                 return true;
             });
 
-        var projectionGrain = Substitute.For<global::Cratis.Chronicle.Projections.IProjection>();
-        projectionGrain.GetDefinition().Returns(projectionDefinition);
-        _grainFactory.GetGrain<global::Cratis.Chronicle.Projections.IProjection>(Arg.Any<string>()).Returns(projectionGrain);
+        var projectionGrainMock = Substitute.For<global::Cratis.Chronicle.Projections.IProjection>();
+        projectionGrainMock.GetDefinition().Returns(projectionDefinition);
+        _grainFactory.GetGrain<global::Cratis.Chronicle.Projections.IProjection>(Arg.Any<string>()).Returns(projectionGrainMock);
 
         var readModelDefinitions = Substitute.For<IReadModelDefinitionsStorage>();
         readModelDefinitions.Get(_readModelType.Identifier).Returns(_readModel);
@@ -84,4 +66,24 @@ public class a_projection_replay_handler_with_projection : a_projection_replay_h
         eventTypesStorage.GetLatestForAllEventTypes().Returns([]);
         _eventStoreStorage.EventTypes.Returns(eventTypesStorage);
     }
+
+    ProjectionDefinition CreateProjectionDefinition() => new(
+        ProjectionOwner.Client,
+        Concepts.EventSequences.EventSequenceId.Log,
+        _observerDetails.Key.ObserverId.Value,
+        _readModelType.Identifier,
+        true,
+        true,
+        new System.Text.Json.Nodes.JsonObject(),
+        new Dictionary<Concepts.Events.EventType, FromDefinition>(),
+        new Dictionary<Concepts.Events.EventType, JoinDefinition>(),
+        new Dictionary<PropertyPath, ChildrenDefinition>(),
+        [],
+        new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false),
+        new Dictionary<Concepts.Events.EventType, RemovedWithDefinition>(),
+        new Dictionary<Concepts.Events.EventType, RemovedWithJoinDefinition>(),
+        null,
+        DateTimeOffset.UtcNow,
+        null,
+        AutoMap.Enabled);
 }
