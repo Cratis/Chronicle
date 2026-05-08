@@ -3,7 +3,10 @@
 
 namespace Cratis.Chronicle.Setup.Execution;
 
-/// <inheritdoc/>
+/// <summary>
+/// Default implementation of <see cref="ICorrelationIdAccessor"/> that will first attempt to get the correlation id from the request context, and if not found, will fallback to the provided <see cref="Cratis.Execution.CorrelationIdAccessor"/>.
+/// </summary>
+/// <param name="correlationIdAccessor">The fallback correlation id accessor.</param>
 public class CorrelationIdAccessor(Cratis.Execution.CorrelationIdAccessor correlationIdAccessor) : ICorrelationIdAccessor
 {
     /// <inheritdoc/>
