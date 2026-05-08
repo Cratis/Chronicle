@@ -277,10 +277,19 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
+            var username = options.ConnectionString.Username;
+            var password = options.ConnectionString.Password;
+            if (string.IsNullOrEmpty(username) &&
+                string.IsNullOrEmpty(password))
+            {
+                username = ChronicleConnectionString.DevelopmentClient;
+                password = ChronicleConnectionString.DevelopmentClientSecret;
+            }
+
             return new OAuthTokenProvider(
                 options.ConnectionString.ServerAddress,
-                options.ConnectionString.Username ?? string.Empty,
-                options.ConnectionString.Password ?? string.Empty,
+                username ?? string.Empty,
+                password ?? string.Empty,
                 options.ManagementPort,
                 disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());

@@ -118,8 +118,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     {
         get
         {
-            var hasClientCredentials = !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password);
+            var hasUsername = !string.IsNullOrEmpty(Username);
+            var hasPassword = !string.IsNullOrEmpty(Password);
+            var hasClientCredentials = hasUsername && hasPassword;
             var hasApiKey = !string.IsNullOrEmpty(ApiKey);
+            var hasNoAuthentication = !hasUsername && !hasPassword && !hasApiKey;
 
             if (hasClientCredentials && hasApiKey)
             {
@@ -127,6 +130,11 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
             }
 
             if (hasClientCredentials)
+            {
+                return AuthenticationMode.ClientCredentials;
+            }
+
+            if (hasNoAuthentication)
             {
                 return AuthenticationMode.ClientCredentials;
             }
