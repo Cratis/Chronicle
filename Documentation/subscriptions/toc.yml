@@ -6,3 +6,5 @@
   href: explicit-subscriptions.md
 - name: Outbox and Inbox
   href: outbox-inbox.md
+- name: Compliance and PII
+  href: compliance-and-pii.md
