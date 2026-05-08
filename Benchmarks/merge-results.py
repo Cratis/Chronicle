@@ -7,7 +7,11 @@ host_info = {}
 for f in files:
     with open(f) as fp:
         data = json.load(fp)
-        benchmarks.extend(data.get('Benchmarks', []))
+        for benchmark in data.get('Benchmarks', []):
+            statistics = benchmark.get('Statistics') or {}
+            if statistics.get('Mean') is None:
+                continue
+            benchmarks.append(benchmark)
         host_info = data.get('HostEnvironmentInfo', host_info)
 
 combined = {

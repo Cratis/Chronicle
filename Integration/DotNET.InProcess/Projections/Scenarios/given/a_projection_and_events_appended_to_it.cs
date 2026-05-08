@@ -76,7 +76,19 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
     {
         await Projection.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
-        Result = await GetReadModelResult();
+        var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+        while (DateTime.UtcNow < timeout)
+        {
+            Result = await GetReadModelResult();
+            if (Result is not null)
+            {
+                return;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new TimeoutException($"Read model '{typeof(TReadModel).Name}' with id '{ReadModelId}' was not available within the timeout.");
     }
 
     protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId)

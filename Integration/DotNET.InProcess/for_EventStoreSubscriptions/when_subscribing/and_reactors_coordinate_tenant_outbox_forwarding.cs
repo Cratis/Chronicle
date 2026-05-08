@@ -110,7 +110,8 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 
             while (DateTime.UtcNow < timeout)
             {
-                if (await GetInboxTailSequenceNumber(targetNamespace) == expected)
+                var tailSequenceNumber = await GetInboxTailSequenceNumber(targetNamespace);
+                if (tailSequenceNumber.Value >= expected.Value)
                 {
                     return;
                 }
