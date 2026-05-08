@@ -60,9 +60,9 @@ public class EventStoreSubscriptionObserverSubscriber(
             var copiedSubjects = new HashSet<Subject>();
             foreach (var @event in events)
             {
-                if (@event.Context.Subject.IsSet && copiedSubjects.Add(@event.Context.Subject))
+                if (@event.Context.Subject is { IsSet: true } subject && copiedSubjects.Add(subject))
                 {
-                    await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore);
+                    await CopyEncryptionKeyIfMissingForTargetStore(subject, targetEventStore);
                 }
                 var content = SerializeContent(@event.Content);
                 await inboxSequence.Append(
