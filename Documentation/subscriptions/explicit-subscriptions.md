@@ -149,7 +149,7 @@ Explicit subscriptions are **kernel-managed** and **persistent**:
 A common pattern is to register all subscriptions once during application startup:
 
 ```csharp
-public static async Task RegisterIntegrationSubscriptions(IEventStore eventStore)
+public static async Task RegisterSubscriptions(IEventStore eventStore)
 {
     await eventStore.Subscriptions.Subscribe(
         "orders-from-fulfillment",
@@ -167,7 +167,7 @@ public static async Task RegisterIntegrationSubscriptions(IEventStore eventStore
 // In Program.cs
 var app = builder.Build();
 var eventStore = app.Services.GetRequiredService<IEventStore>();
-await RegisterIntegrationSubscriptions(eventStore);
+await RegisterSubscriptions(eventStore);
 await app.RunAsync();
 ```
 

@@ -60,4 +60,5 @@ public class IncomingOrdersReactor : IReactor
 
 ## See Also
 
-- [Event Store Subscriptions](event-store-subscriptions.md)
+- [Implicit Event Store Subscriptions](implicit-subscriptions.md)
+- [Explicit Event Store Subscriptions](explicit-subscriptions.md)
