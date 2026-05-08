@@ -12,7 +12,7 @@ top of later.
 ```elixir
 def deps do
   [
-    {:chronicle_contracts, organization: "cratis"}
+    {:chronicle_contracts, "~> 0.1.0", organization: "cratis"}
   ]
 end
 ```
