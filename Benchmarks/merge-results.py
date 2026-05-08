@@ -10,6 +10,7 @@ for f in files:
         for benchmark in data.get('Benchmarks', []):
             statistics = benchmark.get('Statistics') or {}
             if statistics.get('Mean') is None:
+                print(f"Skipping benchmark without mean statistics: {benchmark.get('FullName', '[unknown]')}")
                 continue
             benchmarks.append(benchmark)
         host_info = data.get('HostEnvironmentInfo', host_info)

@@ -88,7 +88,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
             await Task.Delay(100);
         }
 
-        throw new TimeoutException($"Read model '{typeof(TReadModel).Name}' with id '{ReadModelId}' was not available within the timeout.");
+        throw new TimeoutException($"Read model \"{typeof(TReadModel).Name}\" with id \"{ReadModelId}\" was not available within the timeout.");
     }
 
     protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId)
