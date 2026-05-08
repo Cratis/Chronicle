@@ -69,4 +69,7 @@ public class a_new_subscription : given.an_event_store_subscriptions_service
         _subscriptionsManager.Received(1).WaitUntilSubscribed(
             Arg.Is<EventStoreSubscriptionId>(id => id.Value == "test-subscription-id"),
             Arg.Any<TimeSpan>());
+
+    [Fact] void should_trigger_subscription_reactivation_for_the_source_event_store() =>
+        _subscriptionsManager.Received(1).SourceEventStoreAdded(Arg.Is<Concepts.EventStoreName>(name => name.Value == "source-event-store"));
 }
