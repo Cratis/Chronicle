@@ -9,7 +9,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
 
   def project do
     [
-      app: :cratis_chronicle_contracts,
+      app: :chronicle_contracts,
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -39,7 +39,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
 
   defp package do
     [
-      name: "cratis_chronicle_contracts",
+      name: "chronicle_contracts",
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       maintainers: ["Cratis"],

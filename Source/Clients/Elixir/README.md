@@ -1,4 +1,4 @@
-# cratis_chronicle_contracts
+# chronicle_contracts
 
 Generated Chronicle gRPC contracts for Elixir together with a small resilient
 connection layer.
@@ -12,7 +12,7 @@ top of later.
 ```elixir
 def deps do
   [
-    {:cratis_chronicle_contracts, "~> 0.1.0"}
+    {:chronicle_contracts, organization: "cratis"}
   ]
 end
 ```
