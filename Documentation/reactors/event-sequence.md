@@ -10,7 +10,7 @@ Apply `[EventSequence]` directly to your reactor class to pin it to a specific e
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors;
 
-[EventSequence("outbox")]
+[EventSequence("fulfillment-events")]
 public class ShipmentReactor : IReactor
 {
     public Task ShipmentDispatched(ShipmentDispatched @event, EventContext context)
@@ -29,7 +29,7 @@ When you are already using the `[Reactor]` attribute to set a custom identifier 
 ```csharp
 using Cratis.Chronicle.Reactors;
 
-[Reactor(id: "shipment-reactor", eventSequence: "outbox")]
+[Reactor(id: "shipment-reactor", eventSequence: "fulfillment-events")]
 public class ShipmentReactor : IReactor
 {
     public Task ShipmentDispatched(ShipmentDispatched @event, EventContext context)
@@ -63,11 +63,9 @@ public class LocalAuditReactor : IReactor
 }
 ```
 
-## Automatic Inbox Routing
+## External Event Store Inbox Routing
 
-When the event types handled by a reactor carry a `[EventStore]` attribute pointing to a **different** event store than the one the reactor is registered in, Chronicle automatically routes the reactor to the corresponding inbox sequence. No `[EventSequence]` annotation is needed in that case.
-
-When the `[EventStore]` attribute points to the **same** event store as the current one, Chronicle routes to the event log instead.
+For outbox-to-inbox subscriptions between event stores, including automatic inbox routing and observer-level `[EventStore]` usage, see [Subscribe Reactors to External Event Stores](external-event-store-subscriptions.md).
 
 ## When to Use `[EventSequence]` Explicitly
 

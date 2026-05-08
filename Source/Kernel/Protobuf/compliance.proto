@@ -1,0 +1,18 @@
+syntax = "proto3";
+package Cratis.Chronicle.Contracts.Compliance;
+
+message ReleaseRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string Subject = 3;
+   string Schema = 4;
+   string Payload = 5;
+}
+message ReleaseResponse {
+   string Payload = 1;
+   bool HasError = 2;
+   string Error = 3;
+}
+service Compliance {
+   rpc Release (ReleaseRequest) returns (ReleaseResponse);
+}

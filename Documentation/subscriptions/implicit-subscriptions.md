@@ -179,43 +179,12 @@ using var app = builder.Build();
 // are automatically routed to the inbox
 ```
 
-## Automatic Inbox Routing
+## Automatic Inbox Routing for Observers
 
-When an observer (reactor, projection, or reducer) handles event types all annotated with the same `[EventStore]` name, Chronicle automatically routes that observer to the corresponding inbox sequence — `inbox-{eventStoreName}`. No explicit subscription or event sequence configuration is needed.
+Automatic inbox routing is documented per observer type:
 
-### Reactors
-
-```csharp
-// No explicit event sequence needed
-public class FulfillmentReactor : IReactor
-{
-    public Task ShipmentDispatched(ShipmentDispatched @event, EventContext context)
-        => HandleDispatchedAsync(@event.OrderId, @event.TrackingNumber);
-
-    public Task ShipmentFailed(ShipmentFailed @event, EventContext context)
-        => HandleFailureAsync(@event.OrderId, @event.Reason);
-
-    Task HandleDispatchedAsync(Guid id, string tracking) => Task.CompletedTask;
-    Task HandleFailureAsync(Guid id, string reason) => Task.CompletedTask;
-}
-```
-
-### Reducers
-
-```csharp
-public class FulfillmentStatusReducer : IReducerFor<FulfillmentStatus>
-{
-    public FulfillmentStatus Reduce(ShipmentDispatched @event, FulfillmentStatus? current)
-        => (current ?? new FulfillmentStatus()) with 
-        { 
-            Status = "Dispatched", 
-            TrackingNumber = @event.TrackingNumber 
-        };
-
-    public FulfillmentStatus Reduce(ShipmentFailed @event, FulfillmentStatus? current)
-        => (current ?? new FulfillmentStatus()) with { Status = "Failed" };
-}
-```
+- Reactors: [Subscribe Reactors to External Event Stores](../reactors/external-event-store-subscriptions.md)
+- Reducers: [Subscribe Reducers to External Event Stores](../reducers/external-event-store-subscriptions.md)
 
 ### Projections
 

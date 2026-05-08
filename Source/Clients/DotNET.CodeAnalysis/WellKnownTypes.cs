@@ -26,6 +26,26 @@ public static class WellKnownTypes
     public const string EventStoreAttributeName = "Cratis.Chronicle.Events.EventStoreAttribute";
 
     /// <summary>
+    /// The full name of the EventSequence attribute.
+    /// </summary>
+    public const string EventSequenceAttributeName = "Cratis.Chronicle.EventSequences.EventSequenceAttribute";
+
+    /// <summary>
+    /// The full name of the EventLog attribute.
+    /// </summary>
+    public const string EventLogAttributeName = "Cratis.Chronicle.EventSequences.EventLogAttribute";
+
+    /// <summary>
+    /// The full name of the Reactor attribute.
+    /// </summary>
+    public const string ReactorAttributeName = "Cratis.Chronicle.Reactors.ReactorAttribute";
+
+    /// <summary>
+    /// The full name of the Reducer attribute.
+    /// </summary>
+    public const string ReducerAttributeName = "Cratis.Chronicle.Reducers.ReducerAttribute";
+
+    /// <summary>
     /// The sentinel value representing the default event store.
     /// </summary>
     public const string DefaultEventStoreName = "";

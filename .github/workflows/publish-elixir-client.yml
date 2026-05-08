@@ -1,0 +1,99 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+name: Publish Elixir Client
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+      protos-artifact:
+        description: Name of the artifact containing proto files. Leave empty to generate them.
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish
+        type: string
+        required: true
+        default: '0.0.0'
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  ELIXIR_VERSION: "1.17.3"
+  OTP_VERSION: "27.1"
+
+jobs:
+  publish-elixir-client:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        if: inputs.protos-artifact == ''
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Elixir and Erlang
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Download proto files
+        if: inputs.protos-artifact != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.protos-artifact }}
+          path: Source/Kernel/Protobuf/
+
+      - name: Build Contracts
+        if: inputs.protos-artifact == ''
+        working-directory: ./Source/Kernel/Contracts
+        run: dotnet build -c Release
+
+      - name: Generate proto files
+        if: inputs.protos-artifact == ''
+        run: |
+          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
+          dotnet run \
+            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
+            "$CONTRACTS_DLL" \
+            Source/Kernel/Protobuf
+
+      - name: Install Hex and Rebar
+        working-directory: ./Source/Clients/Elixir
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+
+      - name: Install Elixir dependencies
+        working-directory: ./Source/Clients/Elixir
+        run: mix deps.get
+
+      - name: Generate Elixir from proto files
+        working-directory: ./Source/Clients/Elixir
+        run: bash ./generate-protos.sh
+
+      - name: Run Elixir tests
+        working-directory: ./Source/Clients/Elixir
+        run: mix test
+
+      - name: Publish to Hex
+        working-directory: ./Source/Clients/Elixir
+        run: mix hex.publish --organization cratis --yes
+        env:
+          CHRONICLE_VERSION: ${{ inputs.version }}
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
