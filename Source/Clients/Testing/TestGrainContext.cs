@@ -53,18 +53,8 @@ internal sealed class TestGrainContext : IGrainContext
     public bool Equals(IGrainContext? other) => ReferenceEquals(this, other);
 
     /// <inheritdoc/>
-    public TComponent GetComponent<TComponent>()
-        where TComponent : class =>
-        throw new NotSupportedException($"GetComponent<{typeof(TComponent).Name}> is not supported in test scenarios.");
-
-    /// <inheritdoc/>
     public object? GetComponent(Type componentType) =>
         throw new NotSupportedException($"GetComponent({componentType.Name}) is not supported in test scenarios.");
-
-    /// <inheritdoc/>
-    public TTarget GetTarget<TTarget>()
-        where TTarget : class =>
-        throw new NotSupportedException($"GetTarget<{typeof(TTarget).Name}> is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public object? GetTarget() =>
