@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -28,10 +29,11 @@ public static class UniqueConstraintDefinitionExtensions
     /// <returns>Tuple with property and value.</returns>
     public static IEnumerable<UniqueConstraintPropertyAndValue> GetPropertiesAndValues(this UniqueConstraintDefinition definition, ConstraintValidationContext context)
     {
-        var contentAsDictionary = (context.Content as IDictionary<string, object>)!;
         var eventDefinition = definition.EventDefinitions.Single(_ => _.EventTypeId == context.EventTypeId);
         return eventDefinition.Properties
-                .ToDictionary(_ => _, property => contentAsDictionary[property]?.ToString())
+                .ToDictionary(
+                    _ => _,
+                    property => new PropertyPath(property).GetValue(context.Content, ArrayIndexers.NoIndexers)?.ToString())
                 .Where(kvp => kvp.Value != null)
                 .Select(kvp => new UniqueConstraintPropertyAndValue(kvp.Key, kvp.Value!));
     }
