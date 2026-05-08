@@ -3,7 +3,4 @@
 
 namespace Cratis.Chronicle.Events.Constraints;
 
-public record MobilePhoneNumber(string CountryPrefix, string Number)
-{
-    public string UniqueValue { get; init; } = $"{CountryPrefix}{Number}";
-}
+public record MobilePhoneNumber(string CountryPrefix, string Number);

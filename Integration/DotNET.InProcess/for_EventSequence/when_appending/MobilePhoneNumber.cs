@@ -3,7 +3,4 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending;
 
-public record MobilePhoneNumber(string CountryPrefix, string Number)
-{
-    public string UniqueValue { get; init; } = $"{CountryPrefix}{Number}";
-}
+public record MobilePhoneNumber(string CountryPrefix, string Number);

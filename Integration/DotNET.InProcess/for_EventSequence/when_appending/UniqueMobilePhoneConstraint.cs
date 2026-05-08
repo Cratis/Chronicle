@@ -8,5 +8,5 @@ namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appendin
 public class UniqueMobilePhoneConstraint : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
-        .Unique(b => b.On<PersonRegistered>(e => e.Mobile.Number));
+        .Unique(b => b.On<PersonRegistered>(e => e.Mobile.CountryPrefix, e => e.Mobile.Number));
 }
