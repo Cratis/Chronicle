@@ -19,7 +19,7 @@ public class with_unique_deep_property_path_concatenation_without_violation(cont
         PersonRegistered _firstEvent;
         PersonRegistered _secondEvent;
 
-        public void Establish()
+        void Establish()
         {
             _firstEvent = new(
                 Guid.NewGuid().ToString(),
@@ -31,7 +31,7 @@ public class with_unique_deep_property_path_concatenation_without_violation(cont
                 new("+47", "12345679"));
         }
 
-        public async Task Because()
+        async Task Because()
         {
             FirstResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), _firstEvent);
             SecondResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), _secondEvent);
