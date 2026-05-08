@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts;
+
 namespace Cratis.Chronicle.Jobs;
 
 /// <summary>
 /// Represents the state of a job.
 /// </summary>
-public class Job
+/// <param name="eventStore">The <see cref="IEventStore"/> this job belongs to.</param>
+public class Job(IEventStore eventStore)
 {
     /// <summary>
     /// Gets or sets the unique identifier for the job.
@@ -42,4 +45,21 @@ public class Job
     /// Gets or sets the <see cref="JobProgress"/>.
     /// </summary>
     public JobProgress Progress { get; set; } = new();
+
+    /// <summary>
+    /// Gets the job steps for this job.
+    /// </summary>
+    /// <returns>Collection of <see cref="JobStep"/>.</returns>
+    public async Task<IEnumerable<JobStep>> GetJobSteps()
+    {
+        var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
+        var result = await servicesAccessor.Services.Jobs.GetJobSteps(new()
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            JobId = Id
+        });
+
+        return (result ?? []).ToClient();
+    }
 }

@@ -12,9 +12,10 @@ internal static class JobsConverters
     /// Convert from <see cref="Contracts.Jobs.JobSummaryResponse"/> to <see cref="Job"/>.
     /// </summary>
     /// <param name="job"><see cref="Contracts.Jobs.JobSummaryResponse"/> to convert from.</param>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the job belongs to.</param>
     /// <returns>Converted <see cref="Job"/>.</returns>
-    public static Job ToClient(this Contracts.Jobs.JobSummaryResponse job) =>
-        new()
+    public static Job ToClient(this Contracts.Jobs.JobSummaryResponse job, IEventStore eventStore) =>
+        new(eventStore)
         {
             Id = job.Id,
             Details = job.Details ?? string.Empty,
@@ -26,9 +27,10 @@ internal static class JobsConverters
         };
 
     /// <summary>
-    /// Convert from <see cref="IEnumerable{JobResponse}"/> to <see cref="IEnumerable{Job}"/>.
+    /// Convert from <see cref="IEnumerable{JobSummaryResponse}"/> to <see cref="IEnumerable{Job}"/>.
     /// </summary>
     /// <param name="jobs">Collection of <see cref="Contracts.Jobs.JobSummaryResponse"/> to convert from.</param>
+    /// <param name="eventStore">The <see cref="IEventStore"/> the jobs belong to.</param>
     /// <returns>Converted collection of <see cref="Job"/>.</returns>
-    public static IEnumerable<Job> ToClient(this IEnumerable<Contracts.Jobs.JobSummaryResponse> jobs) => jobs.Select(_ => _.ToClient()).ToArray();
+    public static IEnumerable<Job> ToClient(this IEnumerable<Contracts.Jobs.JobSummaryResponse> jobs, IEventStore eventStore) => jobs.Select(_ => _.ToClient(eventStore)).ToArray();
 }

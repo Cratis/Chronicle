@@ -3,7 +3,10 @@
 
 namespace Cratis.Chronicle.Setup.Execution;
 
-/// <inheritdoc/>
+/// <summary>
+/// Represents an implementation of <see cref="ICorrelationIdAccessor"/> that reads from Orleans request context.
+/// </summary>
+/// <param name="correlationIdAccessor">The underlying <see cref="Cratis.Execution.CorrelationIdAccessor"/> to fall back to.</param>
 public class CorrelationIdAccessor(Cratis.Execution.CorrelationIdAccessor correlationIdAccessor) : ICorrelationIdAccessor
 {
     /// <inheritdoc/>

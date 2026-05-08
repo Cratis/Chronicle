@@ -56,6 +56,6 @@ public class Jobs(IEventStore eventStore) : IJobs
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace
         }).FirstAsync();
-        return (jobs ?? []).ToClient();
+        return (jobs ?? []).ToClient(eventStore);
     }
 }

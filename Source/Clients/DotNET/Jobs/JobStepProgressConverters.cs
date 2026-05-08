@@ -1,0 +1,22 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Jobs;
+
+/// <summary>
+/// Extension methods for converting between contract and client job step progress representations.
+/// </summary>
+public static class JobStepProgressConverters
+{
+    /// <summary>
+    /// Converts a contract <see cref="Contracts.Jobs.JobStepProgress"/> to client <see cref="JobStepProgress"/>.
+    /// </summary>
+    /// <param name="progress">The contract <see cref="Contracts.Jobs.JobStepProgress"/>.</param>
+    /// <returns>The client <see cref="JobStepProgress"/>.</returns>
+    public static JobStepProgress ToClient(this Contracts.Jobs.JobStepProgress progress) =>
+        new()
+        {
+            Percentage = progress.Percentage,
+            Message = progress.Message ?? string.Empty
+        };
+}

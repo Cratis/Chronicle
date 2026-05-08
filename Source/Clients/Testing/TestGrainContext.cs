@@ -52,7 +52,12 @@ internal sealed class TestGrainContext : IGrainContext
     /// <inheritdoc/>
     public bool Equals(IGrainContext? other) => ReferenceEquals(this, other);
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets the component of type <typeparamref name="TComponent"/> from the grain context.
+    /// </summary>
+    /// <typeparam name="TComponent">The type of the component to retrieve.</typeparam>
+    /// <returns>The component instance.</returns>
+    /// <exception cref="NotSupportedException">Always thrown — not supported in test scenarios.</exception>
     public TComponent GetComponent<TComponent>()
         where TComponent : class =>
         throw new NotSupportedException($"GetComponent<{typeof(TComponent).Name}> is not supported in test scenarios.");
@@ -61,7 +66,12 @@ internal sealed class TestGrainContext : IGrainContext
     public object? GetComponent(Type componentType) =>
         throw new NotSupportedException($"GetComponent({componentType.Name}) is not supported in test scenarios.");
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets the target grain of type <typeparamref name="TTarget"/> from the grain context.
+    /// </summary>
+    /// <typeparam name="TTarget">The type of the target grain.</typeparam>
+    /// <returns>The target grain instance.</returns>
+    /// <exception cref="NotSupportedException">Always thrown — not supported in test scenarios.</exception>
     public TTarget GetTarget<TTarget>()
         where TTarget : class =>
         throw new NotSupportedException($"GetTarget<{typeof(TTarget).Name}> is not supported in test scenarios.");
