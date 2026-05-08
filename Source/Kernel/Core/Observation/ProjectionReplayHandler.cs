@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
@@ -19,12 +20,14 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
+/// <param name="projectionFactory"><see cref="IProjectionFactory"/> for creating projections.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionReplayHandler(
     IProjectionsManager projections,
     IGrainFactory grainFactory,
     IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
+    IProjectionFactory projectionFactory,
     ILogger<ProjectionReplayHandler> logger) : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
@@ -86,6 +89,25 @@ public class ProjectionReplayHandler(
             {
                 return Result<ICanHandleReplayForObserver.Error>.Success();
             }
+
+            // CRITICAL: The cached projection may have a stale definition if the projection was
+            // recently re-registered with a new definition. The Projection grain is authoritative
+            // and always has the current definition persisted. To ensure replay uses the most
+            // up-to-date definition, always rebuild the projection from the authoritative source.
+            var projectionGrain = grainFactory.GetGrain<global::Cratis.Chronicle.Projections.IProjection>(new ProjectionKey(observerDetails.Key.ObserverId, observerDetails.Key.EventStore));
+            var currentDefinition = await projectionGrain.GetDefinition();
+
+            // Always rebuild the projection from the current definition to ensure freshness
+            var readModelDefinition = await storage.GetEventStore(observerDetails.Key.EventStore).ReadModels.Get(currentDefinition.ReadModel);
+            var eventStoreStorage = storage.GetEventStore(observerDetails.Key.EventStore);
+            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+            projection = await projectionFactory.Create(observerDetails.Key.EventStore, observerDetails.Key.Namespace, currentDefinition, readModelDefinition, eventTypeSchemas);
+
+            // CRITICAL: Evict the pipeline cache so that the fresh projection is used when
+            // the pipeline is built. The pipeline manager caches pipelines by projection ID,
+            // but doesn't include the definition version in the key, so it would otherwise
+            // return a stale pipeline built with the old definition.
+            projectionPipelineManager.EvictFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, observerDetails.Key.ObserverId);
 
             var getReplayContext = await getContext(projection);
             if (getReplayContext.TryPickT1(out _, out var replayContext))

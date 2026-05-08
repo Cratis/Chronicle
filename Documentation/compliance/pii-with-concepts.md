@@ -74,7 +74,7 @@ public record NationalIdNumber(string Value) : ConceptAs<string>(Value)
 
 Concept types belong in the feature folder they are primarily associated with, or at the feature root if they are shared across slices. Do not create a separate `Concepts/` folder — keep concepts co-located with the code that uses them.
 
-```
+```text
 Features/
 ├── Employees/
 │   ├── PersonName.cs          ← shared across Registration and Updates slices

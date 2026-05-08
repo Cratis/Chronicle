@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition;
 
 /// <summary>
 /// A testable subclass of <see cref="RetryFailedPartition"/> that returns no job steps from
-/// <see cref="PrepareSteps"/>, causing <see cref="Job{TRequest,TJobState}.OnCompleted"/> to
+/// <see cref="PrepareSteps"/>, causing <see cref="Job{TRequest,TJobState}.OnAllStepsCompleted"/> to
 /// fire immediately when <see cref="IJob{TRequest}.Start"/> is called.
 /// </summary>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>

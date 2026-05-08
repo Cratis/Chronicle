@@ -26,8 +26,17 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Trying to recover partition {Partition}")]
     internal static partial void TryingToRecoverFailedPartition(this ILogger<Observer> logger, Key partition);
 
-    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically")]
-    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition);
+    [LoggerMessage(LogLevel.Warning, "Giving up on trying to recover failed partition {Partition} automatically after {AttemptCount} attempts (max {MaxRetryAttempts})")]
+    internal static partial void GivingUpOnRecoveringFailedPartition(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
+
+    [LoggerMessage(LogLevel.Warning, "Skipping recovery of partition {Partition} — already exceeded max retry attempts ({AttemptCount}/{MaxRetryAttempts}). Partition requires manual intervention or server restart to retry")]
+    internal static partial void SkippingRecoveryMaxAttemptsExceeded(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
+
+    [LoggerMessage(LogLevel.Warning, "Starting recovery for partition {Partition} which has already failed {AttemptCount} times (max {MaxRetryAttempts}). This is a startup retry — the subscriber may be stuck")]
+    internal static partial void StartingRecoveryWithExistingAttempts(this ILogger<Observer> logger, Key partition, int attemptCount, int maxRetryAttempts);
+
+    [LoggerMessage(LogLevel.Warning, "Partition {Partition} has exceeded maximum retry attempts and is being quarantined. Manual intervention required to resume processing.")]
+    internal static partial void QuarantiningFailedPartition(this ILogger<Observer> logger, Key partition);
 
     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
     internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);

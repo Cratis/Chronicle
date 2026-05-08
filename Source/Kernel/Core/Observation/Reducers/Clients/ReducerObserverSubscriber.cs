@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Configuration;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -20,13 +19,11 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// </remarks>
 /// <param name="reducerPipelineFactory"><see cref="IReducerPipelineFactory"/> for creating pipelines.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
-/// <param name="configurationProvider"><see cref="IConfigurationForObserverProvider"/> for providing <see cref="Observers"/> config.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
 public class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
-    IConfigurationForObserverProvider configurationProvider,
     ILogger<ReducerObserverSubscriber> logger) : Grain<ReducerDefinition>, IReducerObserverSubscriber
 {
     ObserverKey _key = ObserverKey.NotSet;
@@ -65,7 +62,6 @@ public class ReducerObserverSubscriber(
                 events,
                 partition);
 
-            var timeout = await configurationProvider.GetSubscriberTimeoutForObserver(_key);
             await (_pipeline?.Handle(reducerContext, async (events, initialState) =>
             {
                 var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -77,22 +73,16 @@ public class ReducerObserverSubscriber(
                     new(partition, events, initialState),
                     reducerSubscriberResultTCS);
 
-                await reducerSubscriberResultTCS.Task.WaitAsync(timeout);
                 var result = await reducerSubscriberResultTCS.Task;
                 tcs.SetResult(result.ObserverResult);
                 return result;
             }) ?? Task.CompletedTask);
 
-            await tcs.Task.WaitAsync(timeout);
             return await tcs.Task;
         }
         catch (TaskCanceledException)
         {
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
-        }
-        catch (TimeoutException)
-        {
-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Timeout");
         }
     }
 

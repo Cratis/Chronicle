@@ -86,7 +86,7 @@ public class ChronicleBenchmarkFixture : IAsyncDisposable
             .AddCustomWaitStrategy(new HttpsHealthWait(8080));
 
         _container = new ContainerBuilder(imageName)
-            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
+            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}/?maxPoolSize=500")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(ChroniclePort, 35000)

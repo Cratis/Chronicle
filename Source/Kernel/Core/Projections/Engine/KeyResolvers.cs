@@ -454,6 +454,16 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return null;
         }
 
+        // A creation event must precede the event being resolved in sequence order.
+        // If the found event is at a later (or equal) sequence number, it is NOT a creation event —
+        // it is a modification event that came after. Accepting it would cause an infinite cycle
+        // (e.g. StateChangeSliceAdded_42 → CommandSetForSlice_43 → StateChangeSliceAdded_42 → ∞).
+        if (childCreationEvent.Context.SequenceNumber >= @event.Context.SequenceNumber)
+        {
+            logger.FromParentHierarchyChildCreationEventNotEarlier(childCreationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
+            return null;
+        }
+
         var parentEventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == childCreationEvent.Context.EventType.Id);
         if (parentEventType == default)
         {

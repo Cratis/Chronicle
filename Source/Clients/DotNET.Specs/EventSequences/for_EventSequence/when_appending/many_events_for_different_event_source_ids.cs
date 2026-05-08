@@ -16,6 +16,7 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
     List<EventForEventSourceId> _events;
     EventType _eventType;
     JsonObject _eventContext;
+    Causation _eventCausation;
     IEnumerable<Causation> _causation;
     Identity _causedBy;
     AppendManyRequest _command;
@@ -30,6 +31,7 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
 
         var causation1 = new Causation(DateTimeOffset.UtcNow, "type1", new Dictionary<string, string> { { "key", "1" } });
         var causation2 = new Causation(DateTimeOffset.UtcNow, "type2", new Dictionary<string, string> { { "key", "2" } });
+        _eventCausation = causation1;
 
         _events =
         [
@@ -70,7 +72,7 @@ public class many_events_for_different_event_source_ids : given.an_event_sequenc
     [Fact] void should_append_correct_number_of_events() => _command.Events.Count.ShouldEqual(_events.Count);
     [Fact] void should_append_events_with_correct_event_source_ids() => _command.Events.Select(e => (EventSourceId)e.EventSourceId).ShouldEqual(_events.Select(e => e.EventSourceId));
     [Fact] void should_append_events_with_correct_event_type() => _command.Events.All(e => e.EventType.ToClient().Equals(_eventType)).ShouldBeTrue();
-    [Fact] void should_append_events_with_correct_causations() => _command.Causation.ToClient().ShouldEqual(_causation);
+    [Fact] void should_append_events_with_correct_causations() => _command.Causation.ToClient().ShouldEqual([_eventCausation]);
     [Fact] void should_append_events_with_correct_caused_by() => _command.CausedBy.ToClient().ShouldEqual(_causedBy);
     [Fact] void should_return_result_with_sequence_numbers() => _result.SequenceNumbers.Select(_ => _.Value).ShouldEqual(_response.SequenceNumbers);
 }

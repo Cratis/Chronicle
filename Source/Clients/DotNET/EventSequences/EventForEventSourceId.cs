@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="EventSourceId"><see cref="EventSourceId"/> the event is for.</param>
 /// <param name="Event">The actual event.</param>
-/// <param name="Causation">The causation for the event.</param>
-public record EventForEventSourceId(EventSourceId EventSourceId, object Event, Causation Causation)
+/// <param name="Causation">Optional causation for the event. If not set, the current causation chain is used.</param>
+public record EventForEventSourceId(EventSourceId EventSourceId, object Event, Causation? Causation = default)
 {
     /// <summary>
     /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.

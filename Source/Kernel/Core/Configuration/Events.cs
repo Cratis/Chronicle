@@ -18,4 +18,14 @@ public class Events
     /// scenarios with many concurrent observers.
     /// </remarks>
     public int Queues { get; init; } = 2;
+
+    /// <summary>
+    /// Bounded capacity of each appended-events queue channel.
+    /// </summary>
+    /// <remarks>
+    /// When the channel is full the producer (AppendMany) awaits instead of returning, providing
+    /// backpressure that prevents the kernel from accepting more appends than observers can process.
+    /// A value of 0 means unbounded (no backpressure). Defaults to 2000 batches.
+    /// </remarks>
+    public int QueueBoundedCapacity { get; init; } = 2000;
 }

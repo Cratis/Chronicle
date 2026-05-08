@@ -18,6 +18,12 @@ internal static partial class ObserverMetrics
 
     [Counter<int>("chronicle-observer-partitions-failed", "Number of failed partitions per observer in a given event store and namespace")]
     internal static partial void PartitionFailed(this IMeterScope<Observer> meter, Key partition);
+
+    [Counter<int>("chronicle-observer-partition-retry-attempts", "Number of retry attempts per partition per observer")]
+    internal static partial void PartitionRetryAttempt(this IMeterScope<Observer> meter, Key partition);
+
+    [Counter<int>("chronicle-observer-partitions-quarantined", "Number of partitions moved to quarantine per observer")]
+    internal static partial void PartitionQuarantined(this IMeterScope<Observer> meter, Key partition);
 }
 
 internal static class ObserverMetricsScopes

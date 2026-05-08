@@ -24,12 +24,14 @@
   href: compliance/toc.yml
 - name: Read Models
   href: read-models/toc.yml
+- name: Sinks
+  href: sinks/toc.yml
 - name: Projections
   href: projections/toc.yml
 - name: Reactors
   href: reactors/toc.yml
-- name: Integration
-  href: integration/toc.yml
+- name: Subscriptions
+  href: subscriptions/toc.yml
 - name: Reducers
   href: reducers/toc.yml
 - name: Code Analysis

@@ -17,4 +17,7 @@ internal static partial class ObservationJobLogMessages
 
     [LoggerMessage(LogLevel.Warning, "No events were handled after performing '{JobName}' job")]
     internal static partial void NoEventsWereHandled(this ILogger<IJob> logger, string jobName);
+
+    [LoggerMessage(LogLevel.Information, "Replay progress: {CompletedSteps}/{TotalSteps} partitions completed ({PercentComplete:F1}%). Last handled sequence number: {LastSequenceNumber}")]
+    internal static partial void ReplayProgress(this ILogger<ReplayObserver> logger, int completedSteps, int totalSteps, double percentComplete, EventSequenceNumber lastSequenceNumber);
 }

@@ -10,7 +10,7 @@ Apply `[EventSequence]` directly to your reducer class to pin it to a specific e
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reducers;
 
-[EventSequence("outbox")]
+[EventSequence("fulfillment-events")]
 public class ShipmentSummaryReducer : IReducerFor<ShipmentSummary>
 {
     public ShipmentSummary OnShipmentDispatched(ShipmentDispatched @event, ShipmentSummary? current, EventContext context)
@@ -30,7 +30,7 @@ When you are already using the `[Reducer]` attribute to set a custom identifier 
 ```csharp
 using Cratis.Chronicle.Reducers;
 
-[Reducer(id: "shipment-summary", eventSequence: "outbox")]
+[Reducer(id: "shipment-summary", eventSequence: "fulfillment-events")]
 public class ShipmentSummaryReducer : IReducerFor<ShipmentSummary>
 {
     public ShipmentSummary OnShipmentDispatched(ShipmentDispatched @event, ShipmentSummary? current, EventContext context)
@@ -64,11 +64,9 @@ public class LocalOrderSummaryReducer : IReducerFor<LocalOrderSummary>
 }
 ```
 
-## Automatic Inbox Routing
+## External Event Store Inbox Routing
 
-When the event types handled by a reducer carry a `[EventStore]` attribute pointing to a **different** event store than the one the reducer is registered in, Chronicle automatically routes the reducer to the corresponding inbox sequence. No `[EventSequence]` annotation is needed in that case.
-
-When the `[EventStore]` attribute points to the **same** event store as the current one, Chronicle routes to the event log instead.
+For outbox-to-inbox subscriptions between event stores, including automatic inbox routing and observer-level `[EventStore]` usage, see [Subscribe Reducers to External Event Stores](external-event-store-subscriptions.md).
 
 ## When to Use `[EventSequence]` Explicitly
 
