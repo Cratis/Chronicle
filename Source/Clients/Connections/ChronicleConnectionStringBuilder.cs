@@ -129,12 +129,7 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
                 throw new AmbiguousAuthenticationMode();
             }
 
-            if (hasClientCredentials)
-            {
-                return AuthenticationMode.ClientCredentials;
-            }
-
-            if (hasNoAuthentication)
+            if (hasClientCredentials || hasNoAuthentication)
             {
                 return AuthenticationMode.ClientCredentials;
             }

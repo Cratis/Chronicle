@@ -288,8 +288,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
             return new OAuthTokenProvider(
                 options.ConnectionString.ServerAddress,
-                username ?? string.Empty,
-                password ?? string.Empty,
+                username!,
+                password!,
                 options.ManagementPort,
                 disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
