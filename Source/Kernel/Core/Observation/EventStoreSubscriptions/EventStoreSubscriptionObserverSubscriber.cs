@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -18,10 +20,12 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// Represents an implementation of <see cref="IEventStoreSubscriptionObserverSubscriber"/>.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for accessing event sequence grains.</param>
+/// <param name="encryptionKeyStorage"><see cref="IEncryptionKeyStorage"/> for key propagation between event stores.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serializing event content.</param>
 /// <param name="logger">The logger.</param>
 public class EventStoreSubscriptionObserverSubscriber(
     IGrainFactory grainFactory,
+    IEncryptionKeyStorage encryptionKeyStorage,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<EventStoreSubscriptionObserverSubscriber> logger) : Grain, IEventStoreSubscriptionObserverSubscriber
 {
@@ -53,8 +57,13 @@ public class EventStoreSubscriptionObserverSubscriber(
 
         try
         {
+            var copiedSubjects = new HashSet<Subject>();
             foreach (var @event in events)
             {
+                if (copiedSubjects.Add(@event.Context.Subject))
+                {
+                    await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore);
+                }
                 var content = SerializeContent(@event.Content);
                 await inboxSequence.Append(
                     @event.Context.EventSourceType,
@@ -67,7 +76,8 @@ public class EventStoreSubscriptionObserverSubscriber(
                     @event.Context.Causation,
                     @event.Context.CausedBy,
                     [],
-                    ConcurrencyScope.None);
+                    ConcurrencyScope.None,
+                    subject: @event.Context.Subject);
             }
 
             logger.SuccessfullyForwardedEvents(_key, targetEventStore, inboxSequenceId);
@@ -88,5 +98,24 @@ public class EventStoreSubscriptionObserverSubscriber(
     {
         var json = JsonSerializer.Serialize(content, jsonSerializerOptions);
         return JsonNode.Parse(json) as JsonObject ?? new JsonObject();
+    }
+
+    async Task CopyEncryptionKeyIfMissingForTargetStore(Subject subject, EventStoreName targetEventStore)
+    {
+        var identifier = new EncryptionKeyIdentifier(subject.Value);
+        var targetHasKey = await encryptionKeyStorage.HasFor(targetEventStore, _key.Namespace, identifier);
+        if (targetHasKey)
+        {
+            return;
+        }
+
+        var sourceHasKey = await encryptionKeyStorage.HasFor(_key.EventStore, _key.Namespace, identifier);
+        if (!sourceHasKey)
+        {
+            return;
+        }
+
+        var sourceKey = await encryptionKeyStorage.GetFor(_key.EventStore, _key.Namespace, identifier);
+        await encryptionKeyStorage.SaveFor(targetEventStore, _key.Namespace, identifier, sourceKey);
     }
 }
