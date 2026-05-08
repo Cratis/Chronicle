@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for getting all event stores.</param>
 /// <param name="logger">The <see cref="ILogger{EventStoreSubscriptionsReactor}"/> for logging.</param>
-[Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false, defaultNamespaceOnly: true)]
+[Reactor(eventSequence: WellKnownEventSequences.System, systemEventStoreOnly: false, defaultNamespaceOnly: false)]
 public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage storage, ILogger<EventStoreSubscriptionsReactor> logger) : Reactor
 {
     /// <summary>
