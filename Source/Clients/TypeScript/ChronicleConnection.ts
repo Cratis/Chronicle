@@ -333,6 +333,10 @@ export class ChronicleConnection implements ChronicleServices {
      * Creates call credentials with bearer token from token provider
      */
     private createAuthCallCredentials(): grpc.CallCredentials | undefined {
+        // Insecure channels cannot compose with call credentials — skip when TLS is disabled.
+        if (this._connectionString.disableTls) {
+            return undefined;
+        }
         return grpc.credentials.createFromMetadataGenerator(async (params, callback) => {
             try {
                 const token = await this.tokenProvider.getAccessToken();

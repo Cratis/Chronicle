@@ -35,6 +35,7 @@
         "prepare": "yarn clean && yarn build"
     },
     "dependencies": {
+        "@bufbuild/protobuf": "^2.0.0",
         "@grpc/grpc-js": "^1.12.4"
     },
     "devDependencies": {
