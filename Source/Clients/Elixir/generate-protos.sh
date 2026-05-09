@@ -26,7 +26,7 @@ PROTO_FILES=$(find priv/protos -name "*.proto" | sort)
 mix protobuf.generate \
   --output-path=./lib/generated \
   --include-path=./priv/protos \
-  --plugins=ProtobufGenerate.Plugins.GRPC \
+  --plugin=ProtobufGenerate.Plugins.GRPC \
   $PROTO_FILES
 
 echo "Elixir gRPC sources generated in $GENERATED_OUTPUT_DIR"
