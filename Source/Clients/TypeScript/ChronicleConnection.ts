@@ -317,45 +317,58 @@ export class ChronicleConnection implements ChronicleServices {
      * Creates a token provider based on connection configuration
      */
     private createTokenProvider(options: ChronicleConnectionOptions): ITokenProvider {
-        try {
-            const authMode = this._connectionString.authenticationMode;
+        const hasUsername = !!this._connectionString.username;
+        const hasPassword = !!this._connectionString.password;
+        const hasApiKey = !!this._connectionString.apiKey;
 
-            if (authMode === AuthenticationMode.ClientCredentials) {
-                const username = this._connectionString.username;
-                const password = this._connectionString.password;
-
-                if (!username || !password) {
-                    return new NoOpTokenProvider();
-                }
-
-                // Determine the authority URL
-                const managementPort = options.managementPort || 8080;
-                let authorityHost: string;
-                let authorityPort: number;
-
-                if (options.authority) {
-                    // Parse custom authority URL
-                    const authorityUrl = new URL(options.authority);
-                    authorityHost = authorityUrl.hostname;
-                    authorityPort = authorityUrl.port ? parseInt(authorityUrl.port, 10) : managementPort;
-                } else {
-                    // Use Chronicle server as authority
-                    authorityHost = this._connectionString.serverAddress.host;
-                    authorityPort = managementPort;
-                }
-
-                const scheme = this._connectionString.disableTls ? 'http' : 'https';
-                const tokenEndpoint = `${scheme}://${authorityHost}:${authorityPort}/connect/token`;
-
-                return new OAuthTokenProvider(tokenEndpoint, username, password);
-            }
-
-            // For API key or other modes, no token provider needed (handled by connection string)
-            return new NoOpTokenProvider();
-        } catch {
-            // If authentication mode check fails (no auth configured), use no-op provider
+        if (hasApiKey) {
+            // API key authentication is handled directly through call metadata.
             return new NoOpTokenProvider();
         }
+
+        if (hasUsername !== hasPassword) {
+            // Incomplete client credentials cannot produce a valid OAuth token.
+            return new NoOpTokenProvider();
+        }
+
+        if (hasUsername && hasPassword) {
+            return this.createOAuthTokenProvider(
+                options,
+                this._connectionString.username!,
+                this._connectionString.password!
+            );
+        }
+
+        // Development support: no app credentials provided, so use default dev credentials.
+        return this.createOAuthTokenProvider(
+            options,
+            ChronicleConnectionString.DEVELOPMENT_CLIENT,
+            ChronicleConnectionString.DEVELOPMENT_CLIENT_SECRET
+        );
+    }
+
+    private createOAuthTokenProvider(
+        options: ChronicleConnectionOptions,
+        username: string,
+        password: string
+    ): ITokenProvider {
+        const managementPort = options.managementPort || 8080;
+        let authorityHost: string;
+        let authorityPort: number;
+
+        if (options.authority) {
+            const authorityUrl = new URL(options.authority);
+            authorityHost = authorityUrl.hostname;
+            authorityPort = authorityUrl.port ? parseInt(authorityUrl.port, 10) : managementPort;
+        } else {
+            authorityHost = this._connectionString.serverAddress.host;
+            authorityPort = managementPort;
+        }
+
+        const scheme = this._connectionString.disableTls ? 'http' : 'https';
+        const tokenEndpoint = `${scheme}://${authorityHost}:${authorityPort}/connect/token`;
+
+        return new OAuthTokenProvider(tokenEndpoint, username, password);
     }
 
     /**
