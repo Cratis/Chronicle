@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import * as grpc from '@grpc/grpc-js';
-import { createClient } from 'nice-grpc';
+import { createClient, createClientFactory } from 'nice-grpc';
+import type { ClientMiddleware } from 'nice-grpc-common';
+import { Metadata } from 'nice-grpc-common';
 
 // Import service definitions from generated files
 import { EventStoresDefinition, NamespacesDefinition } from './generated/cratis_chronicle_contracts';
@@ -293,23 +295,32 @@ export class ChronicleConnection implements ChronicleServices {
     }
 
     private createServices(): ChronicleServices {
+        console.log('[Chronicle] Creating services with middleware');
+        // Create a client factory and attach auth middleware for all calls
+        let factory = createClientFactory();
+        
+        console.log('[Chronicle] Attaching auth middleware');
+        // Attach authentication middleware that works for both TLS and insecure channels
+        factory = factory.use(this.createAuthMiddleware());
+        console.log('[Chronicle] Middleware attached, creating service clients');
+
         return {
-            eventStores: createClient(EventStoresDefinition, this.channel),
-            namespaces: createClient(NamespacesDefinition, this.channel),
-            recommendations: createClient(RecommendationsDefinition, this.channel),
-            identities: createClient(IdentitiesDefinition, this.channel),
-            eventSequences: createClient(EventSequencesDefinition, this.channel),
-            eventTypes: createClient(EventTypesDefinition, this.channel),
-            constraints: createClient(ConstraintsDefinition, this.channel),
-            observers: createClient(ObserversDefinition, this.channel),
-            failedPartitions: createClient(FailedPartitionsDefinition, this.channel),
-            reactors: createClient(ReactorsDefinition, this.channel),
-            reducers: createClient(ReducersDefinition, this.channel),
-            projections: createClient(ProjectionsDefinition, this.channel),
-            readModels: createClient(ReadModelsDefinition, this.channel),
-            jobs: createClient(JobsDefinition, this.channel),
-            eventSeeding: createClient(EventSeedingDefinition, this.channel),
-            server: createClient(ServerDefinition, this.channel),
+            eventStores: factory.create(EventStoresDefinition, this.channel),
+            namespaces: factory.create(NamespacesDefinition, this.channel),
+            recommendations: factory.create(RecommendationsDefinition, this.channel),
+            identities: factory.create(IdentitiesDefinition, this.channel),
+            eventSequences: factory.create(EventSequencesDefinition, this.channel),
+            eventTypes: factory.create(EventTypesDefinition, this.channel),
+            constraints: factory.create(ConstraintsDefinition, this.channel),
+            observers: factory.create(ObserversDefinition, this.channel),
+            failedPartitions: factory.create(FailedPartitionsDefinition, this.channel),
+            reactors: factory.create(ReactorsDefinition, this.channel),
+            reducers: factory.create(ReducersDefinition, this.channel),
+            projections: factory.create(ProjectionsDefinition, this.channel),
+            readModels: factory.create(ReadModelsDefinition, this.channel),
+            jobs: factory.create(JobsDefinition, this.channel),
+            eventSeeding: factory.create(EventSeedingDefinition, this.channel),
+            server: factory.create(ServerDefinition, this.channel),
         };
     }
 
@@ -410,6 +421,60 @@ export class ChronicleConnection implements ChronicleServices {
      */
     get isConnected(): boolean {
         return this._isConnected;
+    }
+
+    /**
+     * Creates a middleware that injects authentication headers for all calls.
+     * This works for both TLS and insecure channels, similar to gRPC interceptors in C#.
+     */
+    private createAuthMiddleware(): ClientMiddleware {
+        const tokenProvider = this.tokenProvider;
+        const connectionString = this._connectionString;
+
+        return async function* authMiddleware(call, options) {
+                try {
+                    const token = await tokenProvider.getAccessToken();
+                
+                    if (token) {
+                        // Create metadata object with the Bearer token
+                        // The Metadata factory function from nice-grpc-common accepts an object
+                        const authMetadata = Metadata({ authorization: `Bearer ${token}` });
+                    
+                        // Merge with existing metadata if present
+                        if (options.metadata) {
+                            const mergedMetadata = Metadata(options.metadata);
+                            mergedMetadata.set('authorization', `Bearer ${token}`);
+                            options.metadata = mergedMetadata;
+                        } else {
+                            options.metadata = authMetadata;
+                        }
+                    } else {
+                        // Fallback to API key if no token
+                        try {
+                            const authMode = connectionString.authenticationMode;
+                            if (authMode === AuthenticationMode.ApiKey && connectionString.apiKey) {
+                                const apiKeyMetadata = Metadata({ 'api-key': connectionString.apiKey });
+                            
+                                if (options.metadata) {
+                                    const mergedMetadata = Metadata(options.metadata);
+                                    mergedMetadata.set('api-key', connectionString.apiKey);
+                                    options.metadata = mergedMetadata;
+                                } else {
+                                    options.metadata = apiKeyMetadata;
+                                }
+                            }
+                        } catch {
+                            // No API key configured, continue without additional auth
+                        }
+                    }
+                } catch (error) {
+                    // If token retrieval fails, continue without additional auth headers
+                    // This allows the connection to proceed with channel-level credentials if available
+                }
+            
+                // Pass through to next middleware/handler, properly returning the response
+                return yield* call.next(call.request, options);
+        };
     }
 
     /**
