@@ -2,23 +2,46 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import * as grpc from '@grpc/grpc-js';
-import { EventStoresClient } from './generated/cratis_chronicle_contracts';
-import { NamespacesClient } from './generated/cratis_chronicle_contracts';
-import { RecommendationsClient } from './generated/recommendations';
-import { IdentitiesClient } from './generated/identities';
-import { EventSequencesClient } from './generated/eventsequences';
-import { EventTypesClient } from './generated/events';
-import { ConstraintsClient } from './generated/events_constraints';
-import { ObserversClient } from './generated/observation';
-import { FailedPartitionsClient } from './generated/observation';
-import { ReactorsClient } from './generated/observation_reactors';
-import { ReducersClient } from './generated/observation_reducers';
-import { ProjectionsClient } from './generated/projections';
-import { ReadModelsClient } from './generated/readmodels';
-import { JobsClient } from './generated/jobs';
-import { EventSeedingClient } from './generated/seeding';
-import { ServerClient } from './generated/host';
-import { ConnectionServiceClient } from './generated/clients';
+import { createClient } from 'nice-grpc';
+
+// Import service definitions from generated files
+import { EventStoresDefinition, NamespacesDefinition } from './generated/cratis_chronicle_contracts';
+import { RecommendationsDefinition } from './generated/recommendations';
+import { IdentitiesDefinition } from './generated/identities';
+import { EventSequencesDefinition } from './generated/eventsequences';
+import { EventTypesDefinition } from './generated/events';
+import { ConstraintsDefinition } from './generated/events_constraints';
+import { ObserversDefinition, FailedPartitionsDefinition } from './generated/observation';
+import { ReactorsDefinition } from './generated/observation_reactors';
+import { ReducersDefinition } from './generated/observation_reducers';
+import { ProjectionsDefinition } from './generated/projections';
+import { ReadModelsDefinition } from './generated/readmodels';
+import { JobsDefinition } from './generated/jobs';
+import { EventSeedingDefinition } from './generated/seeding';
+import { ServerDefinition } from './generated/host';
+import { ConnectionServiceDefinition } from './generated/clients';
+
+// Import client types
+import type {
+    EventStoresClient,
+    NamespacesClient,
+    RecommendationsClient,
+    IdentitiesClient,
+    EventSequencesClient,
+    EventTypesClient,
+    ConstraintsClient,
+    ObserversClient,
+    FailedPartitionsClient,
+    ReactorsClient,
+    ReducersClient,
+    ProjectionsClient,
+    ReadModelsClient,
+    JobsClient,
+    EventSeedingClient,
+    ServerClient,
+    ConnectionServiceClient,
+} from './generated/index';
+
 import type { ChronicleServices } from './ChronicleServices';
 import { ChronicleConnectionString, AuthenticationMode } from './ChronicleConnectionString';
 import { ITokenProvider, OAuthTokenProvider, NoOpTokenProvider } from './TokenProvider';
@@ -234,49 +257,7 @@ export class ChronicleConnection implements ChronicleServices {
         // Create token provider for authentication
         this.tokenProvider = this.createTokenProvider(options);
 
-        // Create credentials
-        let channelCredentials = options.credentials;
-        if (!channelCredentials) {
-            channelCredentials = this._connectionString.createCredentials();
-
-            if (this._connectionString.disableTls) {
-                // gRPC forbids composing insecure channel credentials with call credentials.
-                // Use a channel interceptor to inject the auth token per-call instead.
-                const tokenProvider = this.tokenProvider;
-                const authInterceptor: grpc.Interceptor = (_options, nextCall) =>
-                    new grpc.InterceptingCall(nextCall(_options), {
-                        start: async (metadata, listener, next) => {
-                            try {
-                                const token = await tokenProvider.getAccessToken();
-                                if (token) {
-                                    metadata.add('authorization', `Bearer ${token}`);
-                                }
-                            } catch { /* no token available */ }
-                            next(metadata, listener);
-                        }
-                    });
-                const channelOptions: grpc.ChannelOptions = { interceptors: [authInterceptor] };
-                if (options.maxReceiveMessageSize) {
-                    channelOptions['grpc.max_receive_message_length'] = options.maxReceiveMessageSize;
-                }
-                if (options.maxSendMessageSize) {
-                    channelOptions['grpc.max_send_message_length'] = options.maxSendMessageSize;
-                }
-                this.channel = new grpc.Channel(serverAddress, channelCredentials, channelOptions);
-                this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials, channelOptions);
-                this.services = this.createServices(serverAddress, channelCredentials, channelOptions);
-                return;
-            }
-
-            const callCredentials = this.createAuthCallCredentials();
-            if (callCredentials) {
-                channelCredentials = grpc.credentials.combineChannelCredentials(
-                    channelCredentials,
-                    callCredentials
-                );
-            }
-        }
-
+        // Create channel options
         const channelOptions: grpc.ChannelOptions = {};
 
         if (options.maxReceiveMessageSize) {
@@ -287,33 +268,48 @@ export class ChronicleConnection implements ChronicleServices {
             channelOptions['grpc.max_send_message_length'] = options.maxSendMessageSize;
         }
 
+        // Create gRPC channel credentials
+        let channelCredentials = options.credentials;
+        if (!channelCredentials) {
+            channelCredentials = this._connectionString.createCredentials();
+
+            if (!this._connectionString.disableTls) {
+                const callCredentials = this.createAuthCallCredentials();
+                if (callCredentials) {
+                    channelCredentials = grpc.credentials.combineChannelCredentials(
+                        channelCredentials,
+                        callCredentials
+                    );
+                }
+            }
+        }
+
+        // Create the gRPC channel
         this.channel = new grpc.Channel(serverAddress, channelCredentials, channelOptions);
-        this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials, channelOptions);
-        this.services = this.createServices(serverAddress, channelCredentials, channelOptions);
+
+        // Create services using nice-grpc's createClient
+        this.connectionService = createClient(ConnectionServiceDefinition, this.channel);
+        this.services = this.createServices();
     }
 
-    private createServices(
-        serverAddress: string,
-        channelCredentials: grpc.ChannelCredentials,
-        channelOptions: grpc.ChannelOptions
-    ): ChronicleServices {
+    private createServices(): ChronicleServices {
         return {
-            eventStores: new EventStoresClient(serverAddress, channelCredentials, channelOptions),
-            namespaces: new NamespacesClient(serverAddress, channelCredentials, channelOptions),
-            recommendations: new RecommendationsClient(serverAddress, channelCredentials, channelOptions),
-            identities: new IdentitiesClient(serverAddress, channelCredentials, channelOptions),
-            eventSequences: new EventSequencesClient(serverAddress, channelCredentials, channelOptions),
-            eventTypes: new EventTypesClient(serverAddress, channelCredentials, channelOptions),
-            constraints: new ConstraintsClient(serverAddress, channelCredentials, channelOptions),
-            observers: new ObserversClient(serverAddress, channelCredentials, channelOptions),
-            failedPartitions: new FailedPartitionsClient(serverAddress, channelCredentials, channelOptions),
-            reactors: new ReactorsClient(serverAddress, channelCredentials, channelOptions),
-            reducers: new ReducersClient(serverAddress, channelCredentials, channelOptions),
-            projections: new ProjectionsClient(serverAddress, channelCredentials, channelOptions),
-            readModels: new ReadModelsClient(serverAddress, channelCredentials, channelOptions),
-            jobs: new JobsClient(serverAddress, channelCredentials, channelOptions),
-            eventSeeding: new EventSeedingClient(serverAddress, channelCredentials, channelOptions),
-            server: new ServerClient(serverAddress, channelCredentials, channelOptions),
+            eventStores: createClient(EventStoresDefinition, this.channel),
+            namespaces: createClient(NamespacesDefinition, this.channel),
+            recommendations: createClient(RecommendationsDefinition, this.channel),
+            identities: createClient(IdentitiesDefinition, this.channel),
+            eventSequences: createClient(EventSequencesDefinition, this.channel),
+            eventTypes: createClient(EventTypesDefinition, this.channel),
+            constraints: createClient(ConstraintsDefinition, this.channel),
+            observers: createClient(ObserversDefinition, this.channel),
+            failedPartitions: createClient(FailedPartitionsDefinition, this.channel),
+            reactors: createClient(ReactorsDefinition, this.channel),
+            reducers: createClient(ReducersDefinition, this.channel),
+            projections: createClient(ProjectionsDefinition, this.channel),
+            readModels: createClient(ReadModelsDefinition, this.channel),
+            jobs: createClient(JobsDefinition, this.channel),
+            eventSeeding: createClient(EventSeedingDefinition, this.channel),
+            server: createClient(ServerDefinition, this.channel),
         };
     }
 
