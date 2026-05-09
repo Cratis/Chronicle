@@ -238,8 +238,36 @@ export class ChronicleConnection implements ChronicleServices {
         let channelCredentials = options.credentials;
         if (!channelCredentials) {
             channelCredentials = this._connectionString.createCredentials();
-            
-            // Add call credentials with token provider
+
+            if (this._connectionString.disableTls) {
+                // gRPC forbids composing insecure channel credentials with call credentials.
+                // Use a channel interceptor to inject the auth token per-call instead.
+                const tokenProvider = this.tokenProvider;
+                const authInterceptor: grpc.Interceptor = (_options, nextCall) =>
+                    new grpc.InterceptingCall(nextCall(_options), {
+                        start: async (metadata, listener, next) => {
+                            try {
+                                const token = await tokenProvider.getAccessToken();
+                                if (token) {
+                                    metadata.add('authorization', `Bearer ${token}`);
+                                }
+                            } catch { /* no token available */ }
+                            next(metadata, listener);
+                        }
+                    });
+                const channelOptions: grpc.ChannelOptions = { interceptors: [authInterceptor] };
+                if (options.maxReceiveMessageSize) {
+                    channelOptions['grpc.max_receive_message_length'] = options.maxReceiveMessageSize;
+                }
+                if (options.maxSendMessageSize) {
+                    channelOptions['grpc.max_send_message_length'] = options.maxSendMessageSize;
+                }
+                this.channel = new grpc.Channel(serverAddress, channelCredentials, channelOptions);
+                this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials, channelOptions);
+                this.services = this.createServices(serverAddress, channelCredentials, channelOptions);
+                return;
+            }
+
             const callCredentials = this.createAuthCallCredentials();
             if (callCredentials) {
                 channelCredentials = grpc.credentials.combineChannelCredentials(
@@ -260,27 +288,32 @@ export class ChronicleConnection implements ChronicleServices {
         }
 
         this.channel = new grpc.Channel(serverAddress, channelCredentials, channelOptions);
+        this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials, channelOptions);
+        this.services = this.createServices(serverAddress, channelCredentials, channelOptions);
+    }
 
-        // Initialize all service clients
-        this.connectionService = new ConnectionServiceClient(serverAddress, channelCredentials);
-
-        this.services = {
-            eventStores: new EventStoresClient(serverAddress, channelCredentials),
-            namespaces: new NamespacesClient(serverAddress, channelCredentials),
-            recommendations: new RecommendationsClient(serverAddress, channelCredentials),
-            identities: new IdentitiesClient(serverAddress, channelCredentials),
-            eventSequences: new EventSequencesClient(serverAddress, channelCredentials),
-            eventTypes: new EventTypesClient(serverAddress, channelCredentials),
-            constraints: new ConstraintsClient(serverAddress, channelCredentials),
-            observers: new ObserversClient(serverAddress, channelCredentials),
-            failedPartitions: new FailedPartitionsClient(serverAddress, channelCredentials),
-            reactors: new ReactorsClient(serverAddress, channelCredentials),
-            reducers: new ReducersClient(serverAddress, channelCredentials),
-            projections: new ProjectionsClient(serverAddress, channelCredentials),
-            readModels: new ReadModelsClient(serverAddress, channelCredentials),
-            jobs: new JobsClient(serverAddress, channelCredentials),
-            eventSeeding: new EventSeedingClient(serverAddress, channelCredentials),
-            server: new ServerClient(serverAddress, channelCredentials),
+    private createServices(
+        serverAddress: string,
+        channelCredentials: grpc.ChannelCredentials,
+        channelOptions: grpc.ChannelOptions
+    ): ChronicleServices {
+        return {
+            eventStores: new EventStoresClient(serverAddress, channelCredentials, channelOptions),
+            namespaces: new NamespacesClient(serverAddress, channelCredentials, channelOptions),
+            recommendations: new RecommendationsClient(serverAddress, channelCredentials, channelOptions),
+            identities: new IdentitiesClient(serverAddress, channelCredentials, channelOptions),
+            eventSequences: new EventSequencesClient(serverAddress, channelCredentials, channelOptions),
+            eventTypes: new EventTypesClient(serverAddress, channelCredentials, channelOptions),
+            constraints: new ConstraintsClient(serverAddress, channelCredentials, channelOptions),
+            observers: new ObserversClient(serverAddress, channelCredentials, channelOptions),
+            failedPartitions: new FailedPartitionsClient(serverAddress, channelCredentials, channelOptions),
+            reactors: new ReactorsClient(serverAddress, channelCredentials, channelOptions),
+            reducers: new ReducersClient(serverAddress, channelCredentials, channelOptions),
+            projections: new ProjectionsClient(serverAddress, channelCredentials, channelOptions),
+            readModels: new ReadModelsClient(serverAddress, channelCredentials, channelOptions),
+            jobs: new JobsClient(serverAddress, channelCredentials, channelOptions),
+            eventSeeding: new EventSeedingClient(serverAddress, channelCredentials, channelOptions),
+            server: new ServerClient(serverAddress, channelCredentials, channelOptions),
         };
     }
 
@@ -333,6 +366,10 @@ export class ChronicleConnection implements ChronicleServices {
      * Creates call credentials with bearer token from token provider
      */
     private createAuthCallCredentials(): grpc.CallCredentials | undefined {
+        // Insecure channels cannot compose with call credentials — skip when TLS is disabled.
+        if (this._connectionString.disableTls) {
+            return undefined;
+        }
         return grpc.credentials.createFromMetadataGenerator(async (params, callback) => {
             try {
                 const token = await this.tokenProvider.getAccessToken();
