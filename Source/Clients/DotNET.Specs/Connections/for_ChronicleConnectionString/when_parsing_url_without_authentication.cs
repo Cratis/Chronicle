@@ -15,4 +15,5 @@ public class when_parsing_url_without_authentication : Specification
     [Fact] void should_have_correct_port() => _url.ServerAddress.Port.ShouldEqual(35000);
     [Fact] void should_not_have_username() => _url.Username.ShouldBeNull();
     [Fact] void should_not_have_password() => _url.Password.ShouldBeNull();
+    [Fact] void should_fallback_to_client_credentials_auth_mode() => _url.AuthenticationMode.ShouldEqual(AuthenticationMode.ClientCredentials);
 }
