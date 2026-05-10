@@ -123,6 +123,7 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
         /// </summary>
         /// <param name="targetNamespace">Namespace to inspect.</param>
         /// <param name="expected">Minimum expected sequence number.</param>
+        /// <exception cref="TimeoutException">Thrown when the inbox does not reach the expected sequence number before timeout.</exception>
         /// <remarks>
         /// Uses a greater-than-or-equal comparison to avoid timing races where the inbox advances past
         /// the exact sequence number before the polling loop observes it.
