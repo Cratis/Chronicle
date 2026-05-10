@@ -9,12 +9,12 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
 
   def project do
     [
-      app: :chronicle_contracts,
+      app: :cratis_chronicle_contracts,
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      description: "Generated Elixir gRPC contracts for Chronicle with connection handling",
+      description: "Generated Elixir gRPC contracts for Chronicle",
       package: package(),
       source_url: @source_url,
       homepage_url: @source_url
@@ -39,7 +39,7 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
 
   defp package do
     [
-      name: "chronicle_contracts",
+      name: "cratis_chronicle_contracts",
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       maintainers: ["Cratis"],

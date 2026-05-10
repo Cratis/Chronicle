@@ -1,7 +1,6 @@
-# chronicle_contracts
+# cratis_chronicle_contracts
 
-Generated Chronicle gRPC contracts for Elixir together with a small resilient
-connection layer.
+Generated Chronicle gRPC contracts for Elixir.
 
 This package is intentionally non-idiomatic. Its job is to expose generated
 protobuf and gRPC client modules that an idiomatic Elixir client can build on
@@ -12,18 +11,13 @@ top of later.
 ```elixir
 def deps do
   [
-    {:chronicle_contracts, "~> 0.1.0", organization: "cratis"}
+    {:cratis_chronicle_contracts, "~> 0.1.0"}
   ]
 end
 ```
 
 ## What Is In The Package
 
-- `Cratis.Chronicle.Contracts.ChronicleConnectionString` parses Chronicle
-  connection strings.
-- `Cratis.Chronicle.Contracts.ChronicleConnection` owns the gRPC channel,
-  retries initial connection attempts, and reconnects when the adapter reports
-  that the transport dropped.
 - `lib/generated` contains the generated protobuf message modules and `*.Stub`
   gRPC client modules.
 
@@ -43,37 +37,11 @@ The script:
 
 The generated files are not meant to be edited by hand.
 
-## Connecting To Chronicle
-
-```elixir
-{:ok, connection} =
-  Cratis.Chronicle.Contracts.ChronicleConnection.start_link(
-    connection_string: "chronicle://localhost:35000?disableTls=true"
-  )
-
-:ok = Cratis.Chronicle.Contracts.ChronicleConnection.connect(connection)
-{:ok, channel} = Cratis.Chronicle.Contracts.ChronicleConnection.channel(connection)
-```
-
-By default the connection layer uses the Mint gRPC adapter with retry support
-enabled, and it schedules reconnect attempts when the adapter reports that the
-connection process went down.
-
-You can parse and format Chronicle connection strings directly:
-
-```elixir
-connection_string =
-  "chronicle://localhost:35000?disableTls=true"
-  |> Cratis.Chronicle.Contracts.ChronicleConnectionString.parse()
-
-formatted = Cratis.Chronicle.Contracts.ChronicleConnectionString.format(connection_string)
-```
-
 ## Using Generated Stubs
 
 After generating the Elixir sources, use the generated `*.Stub` modules under
 `Cratis.Chronicle.Contracts.*` with the channel returned by
-`ChronicleConnection.channel/1`.
+your gRPC connection/channel implementation.
 
 For example, after generation you can call the generated services like this:
 
