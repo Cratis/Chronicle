@@ -11,8 +11,8 @@ public class and_forwarding_to_default_namespace(context context) : Given<contex
 {
     public class context(ChronicleInProcessFixture fixture) : given.multi_event_store_subscription_setup(fixture)
     {
-        public EventSourceId SourceId { get; private set; } = "test-source";
-        public Concepts.Events.EventSequenceNumber InboxTailSequenceNumber { get; private set; } = Concepts.Events.EventSequenceNumber.Unavailable;
+        public EventSourceId SourceId { get; } = "test-source";
+        public Concepts.Events.EventSequenceNumber ForwardedInboxTailSequenceNumber { get; private set; } = Concepts.Events.EventSequenceNumber.Unavailable;
 
         async Task Establish()
         {
@@ -30,7 +30,7 @@ public class and_forwarding_to_default_namespace(context context) : Given<contex
             await Task.Delay(500);
 
             // Check the inbox in the target event store
-            InboxTailSequenceNumber = await GetInboxTailSequenceNumber(
+            ForwardedInboxTailSequenceNumber = await GetInboxTailSequenceNumber(
                 SourceEventStoreName,
                 TargetEventStoreName,
                 DefaultNamespace);
@@ -43,5 +43,5 @@ public class and_forwarding_to_default_namespace(context context) : Given<contex
 
     [Fact]
     void should_have_basic_subscription_created() =>
-        Context.InboxTailSequenceNumber.ShouldNotBeNull();
+        Context.ForwardedInboxTailSequenceNumber.ShouldNotBeNull();
 }

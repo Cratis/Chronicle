@@ -5,12 +5,6 @@ using context = Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.whe
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_updating_projection_definition;
 
-/// <summary>
-/// Verifies that a replay triggered by a projection definition change uses the new definition,
-/// even when the <see cref="Cratis.Chronicle.Projections.ProjectionObserverSubscriber"/> grain
-/// was deactivated before the definition change was registered. This simulates the real-world
-/// scenario of an application restart between projection versions.
-/// </summary>
 [Collection(ChronicleCollection.Name)]
 public class for_materialized_projection_with_deactivated_subscriber(context context) : Given<context>(context)
 {

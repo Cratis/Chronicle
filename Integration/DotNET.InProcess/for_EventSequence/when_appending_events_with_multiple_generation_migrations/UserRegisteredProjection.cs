@@ -3,9 +3,6 @@
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_events_with_multiple_generation_migrations;
 
-/// <summary>
-/// Projection that consumes generation 2 of UserRegistered using auto-mapping.
-/// </summary>
 public class UserRegisteredProjection : IProjectionFor<UserReadModel>
 {
     public void Define(IProjectionBuilderFor<UserReadModel> builder) => builder

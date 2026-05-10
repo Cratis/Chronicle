@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventStoreSubscriptions.when_subscribing.and_multiple_source_namespaces_send_to_different_targets.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventStoreSubscriptions.when_subscribing;

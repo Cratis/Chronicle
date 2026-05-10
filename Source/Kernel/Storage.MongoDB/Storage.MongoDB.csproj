@@ -15,6 +15,7 @@
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
         <PackageReference Include="Snappier" />
+        <PackageReference Include="SharpCompress" />
     </ItemGroup>
 
     <ItemGroup>
