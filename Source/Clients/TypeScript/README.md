@@ -2,6 +2,13 @@
 
 TypeScript gRPC contracts for Chronicle with full type safety and IDE support.
 
+## Features
+
+- **Promise-based API**: Modern async/await support for all unary RPC calls
+- **AsyncIterable Streams**: Server streaming with `AsyncIterable` for easy iteration
+- **Full Type Safety**: Strongly-typed clients and message types generated from proto definitions
+- **Zero Wrapper Code**: Direct client method calls without manual Promise wrapping
+
 ## Installation
 
 ```bash
@@ -12,12 +19,12 @@ yarn add @cratis/chronicle.contracts
 
 ## Usage
 
-This package provides strongly-typed Chronicle gRPC service clients generated from proto definitions using ts-proto.
+This package provides strongly-typed Chronicle gRPC service clients with Promise-based unary methods and AsyncIterable for streaming, generated from proto definitions using ts-proto and nice-grpc.
 
 ### Quick Start
 
 ```typescript
-import { ChronicleConnection, ChronicleConnectionString } from '@cratis/chronicle.contracts';
+import { ChronicleConnection } from '@cratis/chronicle.contracts';
 
 // Create a connection using a connection string
 const connection = new ChronicleConnection({
@@ -27,12 +34,45 @@ const connection = new ChronicleConnection({
 // Connect to Chronicle
 await connection.connect();
 
-// Use the services with full type safety and IDE completion
-const eventStores = await connection.eventStores.GetEventStores({});
+// Use the services with full type safety, IDE completion, and async/await
+const eventStores = await connection.eventStores.getEventStores({});
 console.log('Event stores:', eventStores.items);
 
 // Clean up
 connection.dispose();
+```
+
+### Promise-Based API
+
+All unary RPC methods now return Promises directly, enabling ergonomic async/await:
+
+```typescript
+// Simple Promise-based call
+const namespaces = await connection.namespaces.getNamespaces({
+    eventStore: 'mystore'
+});
+
+// Error handling
+try {
+    await connection.recommendations.perform({
+        /* command */
+    });
+} catch (error) {
+    console.error('Recommendation failed:', error);
+}
+```
+
+### Server Streaming
+
+Server streaming methods return `AsyncIterable` for easy iteration:
+
+```typescript
+// Stream event store subscriptions
+for await (const subscription of connection.server.subscribeEvents({
+    /* options */
+})) {
+    console.log('Event:', subscription);
+}
 ```
 
 ### Connection Strings

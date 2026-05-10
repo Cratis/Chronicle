@@ -11,8 +11,8 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
 {
     public class context(ChronicleInProcessFixture fixture) : given.multi_event_store_subscription_setup(fixture)
     {
-        public string SubscriptionId { get; private set; } = "persisted-subscription";
-        public IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition> StoredSubscriptions { get; private set; } = [];
+        public string SubscriptionId { get; } = "persisted-subscription";
+        public IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition> PersistedSubscriptions { get; private set; } = [];
 
         async Task Because()
         {
@@ -23,19 +23,19 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
                 SourceEventStoreName);
 
             // Retrieve stored subscriptions from target event store
-            StoredSubscriptions = await GetStoredSubscriptions(TargetEventStoreName);
+            PersistedSubscriptions = await GetStoredSubscriptions(TargetEventStoreName);
         }
     }
 
     [Fact]
     void should_have_stored_one_subscription() =>
-        Context.StoredSubscriptions.Count().ShouldEqual(1);
+        Context.PersistedSubscriptions.Count().ShouldEqual(1);
 
     [Fact]
     void should_have_correct_subscription_id() =>
-        Context.StoredSubscriptions.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId);
+        Context.PersistedSubscriptions.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId);
 
     [Fact]
     void should_have_correct_source_event_store() =>
-        Context.StoredSubscriptions.Single().SourceEventStore.Value.ShouldEqual(Context.SourceEventStoreName);
+        Context.PersistedSubscriptions.Single().SourceEventStore.Value.ShouldEqual(Context.SourceEventStoreName);
 }
