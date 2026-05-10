@@ -55,8 +55,6 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 
             await sourceOutboxReactorA.WaitTillActive();
             await sourceOutboxReactorB.WaitTillActive();
-            await targetReactorA.WaitTillActive();
-            await targetReactorB.WaitTillActive();
 
             await targetTenantA.Subscriptions.Subscribe(
                 new EventStoreSubscriptionId("admin-subscription"),
@@ -64,7 +62,11 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 builder => builder.WithEventType<AdminUserInvited>());
 
             await WaitForSubscription(targetTenantA, TenantANamespace);
-            await WaitForSubscription(targetTenantA, TenantBNamespace);
+            await WaitForSubscription(targetTenantB, TenantBNamespace);
+            await targetReactorA.WaitTillSubscribed();
+            await targetReactorB.WaitTillSubscribed();
+            await targetReactorA.WaitTillActive();
+            await targetReactorB.WaitTillActive();
 
             Tracker.Prepare(TenantANamespace);
             var tenantAAppendResult = await sourceTenantA.EventLog.Append("tenant-a-user", new AdminUserInvited("tenant-a@chronicle.dev"));
