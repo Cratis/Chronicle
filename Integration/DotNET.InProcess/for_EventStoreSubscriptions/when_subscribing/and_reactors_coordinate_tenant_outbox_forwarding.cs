@@ -60,12 +60,12 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 sourceEventStore.EventTypes.Register(),
                 targetEventStore.EventTypes.Register());
 
-            var servicesAccessor = (targetTenantA.Connection as IChronicleServicesAccessor)!;
+            var connectionServices = (targetTenantA.Connection as IChronicleServicesAccessor)!;
             await Task.WhenAll(
-                servicesAccessor.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantANamespace }),
-                servicesAccessor.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantBNamespace }),
-                servicesAccessor.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantANamespace }),
-                servicesAccessor.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantBNamespace }));
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantANamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantBNamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantANamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantBNamespace }));
 
             var targetReactorA = await targetTenantA.Reactors.Register<LobbyReactor>();
             var targetReactorB = await targetTenantB.Reactors.Register<LobbyReactor>();
@@ -78,7 +78,6 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             var subscriptionsManager = Services.GetRequiredService<IGrainFactory>().GetGrain<IEventStoreSubscriptionsManager>(TargetEventStoreName);
             await subscriptionsManager.WaitUntilSubscribed(new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId(SubscriptionId), TimeSpanFactory.FromSeconds(60));
 
-            await Task.Delay(500);
             await targetReactorA.WaitTillSubscribed();
             await targetReactorB.WaitTillSubscribed();
             await targetReactorA.WaitTillActive();
