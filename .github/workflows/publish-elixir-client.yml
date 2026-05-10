@@ -93,7 +93,7 @@ jobs:
 
       - name: Publish to Hex
         working-directory: ./Source/Clients/Elixir
-        run: mix hex.publish --organization cratis --yes
+        run: mix hex.publish --yes
         env:
           CHRONICLE_VERSION: ${{ inputs.version }}
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}

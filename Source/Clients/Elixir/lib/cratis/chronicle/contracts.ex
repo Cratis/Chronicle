@@ -5,8 +5,7 @@ defmodule Cratis.Chronicle.Contracts do
   @moduledoc """
   Generated Chronicle gRPC contracts for Elixir.
 
-  Use `Cratis.Chronicle.Contracts.ChronicleConnection` to manage resilient
-  connections, and generate the protobuf-backed stubs into `lib/generated`
-  with `generate-protos.sh`.
+  Generate the protobuf-backed stubs into `lib/generated` with
+  `generate-protos.sh`.
   """
 end
