@@ -3,15 +3,13 @@
 
 using System.Diagnostics;
 using System.Text;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
 /// <summary>
-/// Represents a global fixture for the test runs only the MongoDB container.
+/// Represents a global fixture for in-process tests that run against an in-memory MongoDB server.
 /// </summary>
 public class ChronicleInProcessFixture : ChronicleFixture
 {
@@ -25,8 +23,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
     static readonly TimeSpan _mongoMemoryServerStartupTimeout = TimeSpan.FromMinutes(2);
     static readonly SemaphoreSlim _npmInstallLock = new(1, 1);
     static readonly string _mongoMemoryServerDirectory = Path.Combine(Path.GetTempPath(), "chronicle-mongodb-memory-server");
-    InMemoryMongoDBServer _mongoDBServer = default!;
-    bool _useContainerFallback;
+    InMemoryMongoDBServer? _mongoDBServer;
 
     /// <inheritdoc/>
     public override string MongoDBServer
@@ -34,22 +31,18 @@ public class ChronicleInProcessFixture : ChronicleFixture
         get
         {
             EnsureMongoDBInitialized();
-            if (_useContainerFallback)
-            {
-                return base.MongoDBServer;
-            }
-            return _mongoDBServer.MongoDBServer;
+            return _mongoDBServer!.MongoDBServer;
         }
     }
 
     /// <inheritdoc/>
-    public override IContainer MongoDBContainer => _useContainerFallback ? base.MongoDBContainer : throw new InvalidOperationException("MongoDBContainer is not available when using the in-memory MongoDB server.");
+    public override IContainer MongoDBContainer => throw new InvalidOperationException("MongoDBContainer is not available when using the in-memory MongoDB server.");
 
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
-        if (!_useContainerFallback && _mongoDBServer is not null)
+        if (_mongoDBServer is not null)
         {
             await _mongoDBServer.DisposeAsync();
         }
@@ -58,34 +51,12 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// <inheritdoc/>
     protected override async Task InitializeMongoDB()
     {
-        try
-        {
-            await EnsureMongoMemoryServerPackage();
-            _mongoDBServer = await InMemoryMongoDBServer.Start(_mongoMemoryServerDirectory);
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"Falling back to MongoDB container because in-memory startup failed: {exception.Message}");
-            _useContainerFallback = true;
-            await base.InitializeMongoDB();
-        }
+        await EnsureMongoMemoryServerPackage();
+        _mongoDBServer = await InMemoryMongoDBServer.Start(_mongoMemoryServerDirectory);
     }
 
     /// <inheritdoc/>
-    protected override IContainer BuildContainer(INetwork network)
-    {
-        return new ContainerBuilder("mongo")
-            .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
-            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-            .WithPortBinding(27017, assignRandomHostPort: true)
-            .WithHostname(HostName)
-            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
-            .WithNetwork(network)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilInternalTcpPortIsAvailable(27017)
-                .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
-            .Build();
-    }
+    protected override IContainer BuildContainer(INetwork network) => throw new InvalidOperationException("ChronicleInProcessFixture does not support MongoDB containers.");
 
     static async Task EnsureMongoMemoryServerPackage()
     {
