@@ -86,13 +86,12 @@ public class EventSequence(
         eventStreamId ??= EventStreamId.Default;
         eventSourceType ??= EventSourceType.Default;
         correlationId ??= correlationIdAccessor.Current;
-        concurrencyScope ??= await concurrencyScopeStrategies
-            .GetFor(this)
-            .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
-
-        concurrencyScope = concurrencyScope != ConcurrencyScope.NotSet
-            ? concurrencyScope
-            : default;
+        if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
+        {
+            concurrencyScope = await concurrencyScopeStrategies
+                .GetFor(this)
+                .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        }
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
 
@@ -127,7 +126,7 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract(),
             Tags = allTags,
-            ConcurrencyScope = concurrencyScope?.ToContract() ?? ConcurrencyScope.None.ToContract(),
+            ConcurrencyScope = concurrencyScope.ToContract(),
             Occurred = occurred,
             Subject = subject?.Value
         });
@@ -191,16 +190,17 @@ public class EventSequence(
             };
         });
 
-        concurrencyScope ??= await concurrencyScopeStrategies
-            .GetFor(this)
-            .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
+        {
+            concurrencyScope = await concurrencyScopeStrategies
+                .GetFor(this)
+                .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+        }
 
-        var concurrencyScopes = concurrencyScope != ConcurrencyScope.NotSet
-            ? new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } }
-            : new Dictionary<EventSourceId, ConcurrencyScope>();
+        var concurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } };
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var causation = causationManager.GetCurrentChain() ?? [];
+        var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
         var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes, causation);
         NotifyAppendMany(
@@ -255,10 +255,11 @@ public class EventSequence(
             });
         }
 
-        causation ??= causationManager.GetCurrentChain() ?? [];
+        causation ??= causationManager.GetCurrentChain();
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
-        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes ?? new Dictionary<EventSourceId, ConcurrencyScope>(), causation);
+        var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, concurrencyScopes);
+        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, resolvedConcurrencyScopes, causation);
 
         if (_appendedEventsRaised is not null)
         {
@@ -455,6 +456,32 @@ public class EventSequence(
         };
     }
 
+    async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
+        IEnumerable<EventForEventSourceId> events,
+        IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes)
+    {
+        var resolvedConcurrencyScopes = concurrencyScopes?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? [];
+        var strategy = concurrencyScopeStrategies.GetFor(this);
+
+        foreach (var eventsForEventSource in events.GroupBy(_ => _.EventSourceId))
+        {
+            if (resolvedConcurrencyScopes.TryGetValue(eventsForEventSource.Key, out var concurrencyScope) &&
+                concurrencyScope != ConcurrencyScope.NotSet)
+            {
+                continue;
+            }
+
+            var firstEvent = eventsForEventSource.First();
+            resolvedConcurrencyScopes[eventsForEventSource.Key] = await strategy.GetScope(
+                firstEvent.EventSourceId,
+                firstEvent.EventStreamType,
+                firstEvent.EventStreamId,
+                firstEvent.EventSourceType);
+        }
+
+        return resolvedConcurrencyScopes;
+    }
+
     async Task<AppendManyResult> AppendManyImplementation(
         IList<Contracts.Events.EventToAppend> eventsToAppend,
         CorrelationId correlationId,
@@ -471,9 +498,7 @@ public class EventSequence(
             Events = eventsToAppend,
             Causation = causation.ToContract(),
             CausedBy = identity.ToContract(),
-            ConcurrencyScopes = concurrencyScopes
-                .Where(kvp => kvp.Value is not null)
-                .ToDictionary(_ => _.Key.Value, _ => _.Value.ToContract())
+            ConcurrencyScopes = concurrencyScopes.ToDictionary(kvp => kvp.Key.Value, kvp => kvp.Value.ToContract())
         };
         var response = await _servicesAccessor.Services.EventSequences.AppendMany(request);
 

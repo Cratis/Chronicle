@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences.Operations;
 
@@ -78,9 +79,11 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
     public Task<AppendManyResult> Perform()
     {
         var events = GetEventsToAppend();
-        var concurrencyScopes = _eventSourceBuilders.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.ConcurrencyScope);
+        var concurrencyScopes = _eventSourceBuilders
+            .Where(kvp => kvp.Value.ConcurrencyScope != ConcurrencyScope.NotSet)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ConcurrencyScope);
 
         return eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
     }
