@@ -265,20 +265,30 @@ internal sealed class Reducers(
     static void ValidateReadModelDefinition(RegisterReducer registration, ReadModelDefinition readModel)
     {
         var schema = readModel.GetSchemaForLatestGeneration();
-        var keyPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
-        if (string.IsNullOrWhiteSpace(keyPropertyName))
+
+        if (schema.HasKeyProperty())
+        {
+            var keyPropertyName = schema.GetKeyProperty().Name;
+            var keyPropertyPath = new PropertyPath(keyPropertyName);
+            if (schema.GetSchemaPropertyForPropertyPath(keyPropertyPath) is null)
+            {
+                throw CreateRegistrationFailure(
+                    registration,
+                    new InvalidReadModelDefinitionForReducer(readModel.Identifier, $"The key property path '{keyPropertyPath.Path}' does not exist in the read model schema."));
+            }
+
+            return;
+        }
+
+        // When no explicit key property is declared, validate that there are properties at all
+        // so that the key can be inferred. The MongoDBConverter handles the case where the
+        // heuristic key name doesn't exist in the schema gracefully.
+        var likelyKeyPropertyName = schema.GetLikelyKeyPropertyName();
+        if (string.IsNullOrWhiteSpace(likelyKeyPropertyName))
         {
             throw CreateRegistrationFailure(
                 registration,
                 new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
-        }
-
-        var keyPropertyPath = new PropertyPath(keyPropertyName);
-        if (schema.GetSchemaPropertyForPropertyPath(keyPropertyPath) is null)
-        {
-            throw CreateRegistrationFailure(
-                registration,
-                new InvalidReadModelDefinitionForReducer(readModel.Identifier, $"The inferred key property path '{keyPropertyPath.Path}' does not exist in the read model schema."));
         }
     }
 }
