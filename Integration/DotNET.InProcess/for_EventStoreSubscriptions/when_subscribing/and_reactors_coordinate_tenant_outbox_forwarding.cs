@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
@@ -62,10 +63,10 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 
             var connectionServices = (targetTenantA.Connection as IChronicleServicesAccessor)!;
             await Task.WhenAll(
-                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantANamespace }),
-                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantBNamespace }),
-                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantANamespace }),
-                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantBNamespace }));
+                connectionServices.Services.Namespaces.EnsureNamespace(new EnsureNamespaceRequest { EventStore = SourceEventStoreName, Namespace = TenantANamespace }),
+                connectionServices.Services.Namespaces.EnsureNamespace(new EnsureNamespaceRequest { EventStore = SourceEventStoreName, Namespace = TenantBNamespace }),
+                connectionServices.Services.Namespaces.EnsureNamespace(new EnsureNamespaceRequest { EventStore = TargetEventStoreName, Namespace = TenantANamespace }),
+                connectionServices.Services.Namespaces.EnsureNamespace(new EnsureNamespaceRequest { EventStore = TargetEventStoreName, Namespace = TenantBNamespace }));
 
             var targetReactorA = await targetTenantA.Reactors.Register<LobbyReactor>();
             var targetReactorB = await targetTenantB.Reactors.Register<LobbyReactor>();
