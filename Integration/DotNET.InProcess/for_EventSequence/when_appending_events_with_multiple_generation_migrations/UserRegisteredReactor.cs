@@ -6,9 +6,6 @@ using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_events_with_multiple_generation_migrations;
 
-/// <summary>
-/// Reactor that consumes generation 2 of UserRegistered and records the received generation and content.
-/// </summary>
 [DependencyInjection.IgnoreConvention]
 public class UserRegisteredReactor : IReactor
 {

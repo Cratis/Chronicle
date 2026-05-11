@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Chronicle;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Storage;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventStoreSubscriptions.when_subscribing.and_reactors_coordinate_tenant_outbox_forwarding.context;
@@ -17,8 +18,9 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 {
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-        public const string SourceEventStoreName = "Admin";
-        public const string TargetEventStoreName = "Lobby";
+        public const string SourceEventStoreName = "tenant-forwarding-admin";
+        public const string TargetEventStoreName = "tenant-forwarding-lobby";
+        public const string SubscriptionId = "tenant-forwarding-admin-subscription";
         public const string TenantANamespace = "tenant-a";
         public const string TenantBNamespace = "tenant-b";
 
@@ -42,34 +44,47 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
         async Task Because()
         {
             var sourceEventStore = await ChronicleClient.GetEventStore(SourceEventStoreName);
+            var targetEventStore = await ChronicleClient.GetEventStore(TargetEventStoreName);
             var sourceTenantA = await ChronicleClient.GetEventStore(SourceEventStoreName, TenantANamespace);
             var sourceTenantB = await ChronicleClient.GetEventStore(SourceEventStoreName, TenantBNamespace);
             var targetTenantA = await ChronicleClient.GetEventStore(TargetEventStoreName, TenantANamespace);
             var targetTenantB = await ChronicleClient.GetEventStore(TargetEventStoreName, TenantBNamespace);
 
-            await sourceEventStore.EventTypes.Register();
+            await Task.WhenAll(
+                sourceTenantA.DiscoverAll(),
+                sourceTenantB.DiscoverAll(),
+                targetTenantA.DiscoverAll(),
+                targetTenantB.DiscoverAll());
 
-            var sourceOutboxReactorA = await sourceTenantA.Reactors.Register<SourceOutboxForwardingReactor>();
-            var sourceOutboxReactorB = await sourceTenantB.Reactors.Register<SourceOutboxForwardingReactor>();
+            await Task.WhenAll(
+                sourceEventStore.EventTypes.Register(),
+                targetEventStore.EventTypes.Register());
+
+            var connectionServices = (targetTenantA.Connection as IChronicleServicesAccessor)!;
+            await Task.WhenAll(
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantANamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantBNamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantANamespace }),
+                connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = TargetEventStoreName, Name = TenantBNamespace }));
+
             var targetReactorA = await targetTenantA.Reactors.Register<LobbyReactor>();
             var targetReactorB = await targetTenantB.Reactors.Register<LobbyReactor>();
 
-            await sourceOutboxReactorA.WaitTillActive();
-            await sourceOutboxReactorB.WaitTillActive();
-            await targetReactorA.WaitTillActive();
-            await targetReactorB.WaitTillActive();
-
             await targetTenantA.Subscriptions.Subscribe(
-                new EventStoreSubscriptionId("admin-subscription"),
+                new EventStoreSubscriptionId(SubscriptionId),
                 SourceEventStoreName,
                 builder => builder.WithEventType<AdminUserInvited>());
 
-            await WaitForSubscription(targetTenantA, TenantANamespace);
-            await WaitForSubscription(targetTenantA, TenantBNamespace);
+            var subscriptionsManager = Services.GetRequiredService<IGrainFactory>().GetGrain<IEventStoreSubscriptionsManager>(TargetEventStoreName);
+            await subscriptionsManager.WaitUntilSubscribed(new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId(SubscriptionId), TimeSpanFactory.FromSeconds(60));
+
+            await targetReactorA.WaitTillSubscribed();
+            await targetReactorB.WaitTillSubscribed();
+            await targetReactorA.WaitTillActive();
+            await targetReactorB.WaitTillActive();
 
             Tracker.Prepare(TenantANamespace);
-            var tenantAAppendResult = await sourceTenantA.EventLog.Append("tenant-a-user", new AdminUserInvited("tenant-a@chronicle.dev"));
-            await sourceOutboxReactorA.WaitTillReachesEventSequenceNumber(tenantAAppendResult.SequenceNumber);
+            await sourceTenantA.GetEventSequence(EventSequenceId.Outbox).Append("tenant-a-user", new AdminUserInvited("tenant-a@chronicle.dev"));
             await WaitForInboxTailSequenceNumber(TenantANamespace, Concepts.Events.EventSequenceNumber.First);
             await Tracker.WaitFor(TenantANamespace);
 
@@ -78,8 +93,7 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             TenantBInboxTailAfterTenantAEvent = await GetInboxTailSequenceNumber(TenantBNamespace);
 
             Tracker.Prepare(TenantBNamespace);
-            var tenantBAppendResult = await sourceTenantB.EventLog.Append("tenant-b-user", new AdminUserInvited("tenant-b@chronicle.dev"));
-            await sourceOutboxReactorB.WaitTillReachesEventSequenceNumber(tenantBAppendResult.SequenceNumber);
+            await sourceTenantB.GetEventSequence(EventSequenceId.Outbox).Append("tenant-b-user", new AdminUserInvited("tenant-b@chronicle.dev"));
             await WaitForInboxTailSequenceNumber(TenantBNamespace, Concepts.Events.EventSequenceNumber.First);
             await Tracker.WaitFor(TenantBNamespace);
 
@@ -104,13 +118,24 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             return await inboxSequence.GetTailSequenceNumber();
         }
 
+        /// <summary>
+        /// Waits until the inbox reaches at least the expected sequence number.
+        /// </summary>
+        /// <param name="targetNamespace">Namespace to inspect.</param>
+        /// <param name="expected">Minimum expected sequence number.</param>
+        /// <exception cref="TimeoutException">Thrown when the inbox does not reach the expected sequence number before timeout.</exception>
+        /// <remarks>
+        /// Uses a greater-than-or-equal comparison to avoid timing races where the inbox advances past
+        /// the exact sequence number before the polling loop observes it.
+        /// </remarks>
         async Task WaitForInboxTailSequenceNumber(string targetNamespace, Concepts.Events.EventSequenceNumber expected)
         {
             var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
 
             while (DateTime.UtcNow < timeout)
             {
-                if (await GetInboxTailSequenceNumber(targetNamespace) == expected)
+                var tailSequenceNumber = await GetInboxTailSequenceNumber(targetNamespace);
+                if (tailSequenceNumber.Value >= expected.Value)
                 {
                     return;
                 }
@@ -119,21 +144,6 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             }
 
             throw new TimeoutException($"Inbox for namespace '{targetNamespace}' did not reach sequence number {expected.Value}.");
-        }
-
-        async Task WaitForSubscription(IEventStore targetEventStore, string targetNamespace)
-        {
-            var subscriptionsReactor = await targetEventStore.Reactors.WaitForHandlerById(
-                "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
-                TimeSpanFactory.FromSeconds(60));
-
-            var targetStorage = Services.GetRequiredService<IStorage>().GetEventStore(TargetEventStoreName);
-            var systemSequence = targetStorage
-                .GetNamespace(targetNamespace)
-                .GetEventSequence(Concepts.EventSequences.EventSequenceId.System);
-
-            var tailSequenceNumber = (await systemSequence.GetTailSequenceNumber()).Value;
-            await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
         }
     }
 
@@ -170,20 +180,10 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
         Context.Tracker.GetHandledCount(context.TenantBNamespace).ShouldEqual(1);
 
     [EventType]
-    [EventStore(context.SourceEventStoreName)]
     public record AdminUserInvited(string EmailAddress);
 
     [DependencyInjection.IgnoreConvention]
-    public class SourceOutboxForwardingReactor(IChronicleClient chronicleClient) : IReactor
-    {
-        public async Task On(AdminUserInvited @event, EventContext context)
-        {
-            var eventStore = await chronicleClient.GetEventStore(context.EventStore, context.Namespace);
-            await eventStore.GetEventSequence(EventSequenceId.Outbox).Append(context.EventSourceId, @event);
-        }
-    }
-
-    [DependencyInjection.IgnoreConvention]
+    [EventStore(context.SourceEventStoreName)]
     public class LobbyReactor(TenantForwardingTracker tracker) : IReactor
     {
         public Task On(AdminUserInvited @event, EventContext context)

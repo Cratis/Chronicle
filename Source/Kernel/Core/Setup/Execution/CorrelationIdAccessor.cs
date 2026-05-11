@@ -4,11 +4,9 @@
 namespace Cratis.Chronicle.Setup.Execution;
 
 /// <summary>
-/// Represents an Orleans-aware implementation of <see cref="ICorrelationIdAccessor"/> that reads
-/// the correlation ID from the current Orleans request context, falling back to the ambient
-/// <see cref="Cratis.Execution.CorrelationIdAccessor"/> when no request context is available.
+/// Represents an <see cref="ICorrelationIdAccessor"/> for Chronicle setup execution.
 /// </summary>
-/// <param name="correlationIdAccessor">The ambient <see cref="Cratis.Execution.CorrelationIdAccessor"/> used as a fallback.</param>
+/// <param name="correlationIdAccessor">The fallback correlation ID accessor.</param>
 public class CorrelationIdAccessor(Cratis.Execution.CorrelationIdAccessor correlationIdAccessor) : ICorrelationIdAccessor
 {
     /// <inheritdoc/>
