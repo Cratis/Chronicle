@@ -26,27 +26,18 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
 
     public override IEnumerable<Type> EventTypes => [typeof(TestEvent), typeof(AnotherTestEvent)];
 
-    /// <summary>
-    /// Appends an event to a specific event store's event log.
-    /// </summary>
     protected async Task AppendEvent(string eventStoreName, EventSourceId eventSourceId, object @event)
     {
         var eventStore = await ChronicleClient.GetEventStore(eventStoreName);
         await eventStore.EventLog.Append(eventSourceId, @event);
     }
 
-    /// <summary>
-    /// Appends an event to a specific namespace in a specific event store's event log.
-    /// </summary>
     protected async Task AppendEvent(string eventStoreName, Concepts.EventStoreNamespaceName @namespace, EventSourceId eventSourceId, object @event)
     {
         var eventStore = await ChronicleClient.GetEventStore(eventStoreName, @namespace.Value);
         await eventStore.EventLog.Append(eventSourceId, @event);
     }
 
-    /// <summary>
-    /// Creates a subscription from a source event store to a target event store.
-    /// </summary>
     protected async Task Subscribe(
         string subscriptionId,
         string sourceEventStoreName,
@@ -77,9 +68,6 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
         await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
     }
 
-    /// <summary>
-    /// Gets the tail sequence number of the inbox for a specific source in a target event store.
-    /// </summary>
     protected async Task<Concepts.Events.EventSequenceNumber> GetInboxTailSequenceNumber(
         string sourceEventStoreName,
         string targetEventStoreName,
@@ -94,9 +82,6 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
         return await inboxSequence.GetTailSequenceNumber();
     }
 
-    /// <summary>
-    /// Waits for inbox tail sequence number changes caused by forwarding.
-    /// </summary>
     protected async Task<Concepts.Events.EventSequenceNumber> WaitForInboxTailSequenceNumber(
         string sourceEventStoreName,
         string targetEventStoreName,
@@ -121,9 +106,6 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
         return current;
     }
 
-    /// <summary>
-    /// Gets the count of events in the event log of a specific event store.
-    /// </summary>
     protected async Task<int> GetEventLogCount(string eventStoreName)
     {
         var storage = Services.GetRequiredService<IStorage>().GetEventStore(eventStoreName);
@@ -132,13 +114,11 @@ public class multi_event_store_subscription_setup(ChronicleInProcessFixture chro
             .GetEventSequence(Concepts.EventSequences.EventSequenceId.Log);
 
         var tail = await eventLogSequence.GetTailSequenceNumber();
+
         // If tail is max value, no events; otherwise count is tail + 1
         return tail.Equals(Concepts.Events.EventSequenceNumber.Unavailable) ? 0 : (int)(ulong)tail + 1;
     }
 
-    /// <summary>
-    /// Verifies that all subscriptions are stored in the target event store.
-    /// </summary>
     protected async Task<IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition>> GetStoredSubscriptions(string targetEventStoreName)
     {
         var storage = Services.GetRequiredService<IStorage>().GetEventStore(targetEventStoreName);
