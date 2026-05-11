@@ -21,6 +21,8 @@ public class ChronicleInProcessFixture : ChronicleFixture
     public const string HostName = "mongo";
 
     const string UriPrefix = "MONGODB_URI=";
+    static readonly TimeSpan _mongoMemoryServerInstallationTimeout = TimeSpan.FromMinutes(5);
+    static readonly TimeSpan _mongoMemoryServerStartupTimeout = TimeSpan.FromMinutes(2);
     static readonly SemaphoreSlim _npmInstallLock = new(1, 1);
     static readonly string _mongoMemoryServerDirectory = Path.Combine(Path.GetTempPath(), "chronicle-mongodb-memory-server");
     InMemoryMongoDBServer _mongoDBServer = default!;
@@ -39,6 +41,9 @@ public class ChronicleInProcessFixture : ChronicleFixture
             return _mongoDBServer.MongoDBServer;
         }
     }
+
+    /// <inheritdoc/>
+    public override IContainer MongoDBContainer => _useContainerFallback ? base.MongoDBContainer : throw new InvalidOperationException("MongoDBContainer is not available when using the in-memory MongoDB server.");
 
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
@@ -103,7 +108,7 @@ public class ChronicleInProcessFixture : ChronicleFixture
                 fileName: "npm",
                 arguments: $"install --no-save --prefix \"{_mongoMemoryServerDirectory}\" mongodb-memory-server",
                 _mongoMemoryServerDirectory,
-                TimeSpan.FromMinutes(5));
+                _mongoMemoryServerInstallationTimeout);
         }
         finally
         {
@@ -230,21 +235,29 @@ public class ChronicleInProcessFixture : ChronicleFixture
                 }
             };
 
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            var completedTask = await Task.WhenAny(uriReady.Task, Task.Delay(TimeSpan.FromMinutes(2)));
-            if (completedTask == uriReady.Task)
+            try
             {
-                var mongoDBServer = await uriReady.Task;
-                return new InMemoryMongoDBServer(process, mongoDBServer);
-            }
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync();
-            process.Dispose();
-            throw new TimeoutException($"Timed out waiting for in-memory MongoDB server startup.{Environment.NewLine}stdout:{Environment.NewLine}{output}{Environment.NewLine}stderr:{Environment.NewLine}{errors}");
+                var completedTask = await Task.WhenAny(uriReady.Task, Task.Delay(_mongoMemoryServerStartupTimeout));
+                if (completedTask == uriReady.Task)
+                {
+                    var mongoDBServer = await uriReady.Task;
+                    return new InMemoryMongoDBServer(process, mongoDBServer);
+                }
+
+                process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync();
+                process.Dispose();
+                throw new TimeoutException($"Timed out waiting for in-memory MongoDB server startup.{Environment.NewLine}stdout:{Environment.NewLine}{output}{Environment.NewLine}stderr:{Environment.NewLine}{errors}");
+            }
+            catch
+            {
+                process.Dispose();
+                throw;
+            }
         }
 
         public async ValueTask DisposeAsync()
