@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public interface IChronicleFixture : IAsyncDisposable
 {
     /// <summary>
+    /// Gets the MongoDB server connection string.
+    /// </summary>
+    string MongoDBServer { get; }
+
+    /// <summary>
     /// Get the container network.
     /// </summary>
     INetwork Network { get; }

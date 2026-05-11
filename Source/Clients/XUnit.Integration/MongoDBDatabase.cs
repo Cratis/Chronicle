@@ -19,21 +19,52 @@ public class MongoDBDatabase : IDisposable
     /// <summary>
     /// Initializes a new instance of <see cref="MongoDBDatabase"/>.
     /// </summary>
-    /// <param name="mongoDBContainer"><see cref="IContainer"/> for the MongoDB server.</param>
+    /// <param name="mongoDBServer">MongoDB server connection string.</param>
     /// <param name="database">Database to work with.</param>
-    public MongoDBDatabase(IContainer mongoDBContainer, string database)
+    public MongoDBDatabase(string mongoDBServer, string database)
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}")
-        {
-            DirectConnection = true
-        };
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
-
+        var settings = MongoClientSettings.FromConnectionString(mongoDBServer);
         _mongoClient = new(settings);
 
         Database = _mongoClient.GetDatabase(database);
         var changeDatabase = _mongoClient.GetDatabase($"{database}-changes");
+        StartChangeStream(changeDatabase);
+    }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="MongoDBDatabase"/>.
+    /// </summary>
+    /// <param name="mongoDBContainer"><see cref="IContainer"/> for the MongoDB server.</param>
+    /// <param name="database">Database to work with.</param>
+    public MongoDBDatabase(IContainer mongoDBContainer, string database)
+        : this($"mongodb://{mongoDBContainer.Hostname}:{mongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", database)
+    {
+    }
+
+    /// <summary>
+    /// Gets the <see cref="IMongoDatabase"/> for the database.
+    /// </summary>
+    public IMongoDatabase Database { get; }
+
+    /// <summary>
+    /// Gets the changes for the database.
+    /// </summary>
+    public IObservable<ChangeStreamDocument<BsonDocument>> Changes => _changes;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _changes.Dispose();
+        _mongoClient.Dispose();
+    }
+
+    /// <summary>
+    /// Called when complete.
+    /// </summary>
+    public void Complete() => _changes.OnCompleted();
+
+    void StartChangeStream(IMongoDatabase changeDatabase)
+    {
         _ = Task.Run(async () =>
         {
             var filter = Builders<ChangeStreamDocument<BsonDocument>>.Filter.Or(
@@ -75,26 +106,4 @@ public class MongoDBDatabase : IDisposable
             }
         });
     }
-
-    /// <summary>
-    /// Gets the <see cref="IMongoDatabase"/> for the database.
-    /// </summary>
-    public IMongoDatabase Database { get; }
-
-    /// <summary>
-    /// Gets the changes for the database.
-    /// </summary>
-    public IObservable<ChangeStreamDocument<BsonDocument>> Changes => _changes;
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _changes.Dispose();
-        _mongoClient.Dispose();
-    }
-
-    /// <summary>
-    /// Called when complete.
-    /// </summary>
-    public void Complete() => _changes.OnCompleted();
 }

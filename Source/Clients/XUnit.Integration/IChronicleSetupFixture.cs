@@ -21,6 +21,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 public interface IChronicleSetupFixture : IClientArtifactsProvider
 {
     /// <summary>
+    /// Gets the MongoDB server connection string.
+    /// </summary>
+    public string MongoDBServer { get; }
+
+    /// <summary>
     /// Gets the MongoDB container.
     /// </summary>
     public IContainer MongoDBContainer { get; }

@@ -65,6 +65,11 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual bool AutoDiscoverArtifacts { get; } = true;
 
     /// <summary>
+    /// Gets the MongoDB server connection string.
+    /// </summary>
+    public string MongoDBServer => ChronicleFixture.MongoDBServer;
+
+    /// <summary>
     /// Gets the MongoDB container.
     /// </summary>
     public IContainer MongoDBContainer => ChronicleFixture.MongoDBContainer;

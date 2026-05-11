@@ -21,14 +21,17 @@ public abstract class ChronicleFixture : IChronicleFixture
 
 #if NET8_0
     readonly object _containerLock = new();
+    readonly object _mongoDBInitializationLock = new();
 #else
     readonly Lock _containerLock = new();
+    readonly Lock _mongoDBInitializationLock = new();
 #endif
 
     MongoDBDatabase? _eventStore;
     MongoDBDatabase? _eventStoreForNamespace;
     MongoDBDatabase? _readModels;
     IContainer? _container;
+    bool _mongoDBInitialized;
     bool _started;
 
     /// <summary>
@@ -46,26 +49,27 @@ public abstract class ChronicleFixture : IChronicleFixture
         Network = new NetworkBuilder()
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
+    }
 
-        StartContainer(MongoDBContainer).GetAwaiter().GetResult();
+    /// <inheritdoc/>
+    public virtual string MongoDBServer
+    {
+        get
+        {
+            EnsureMongoDBInitialized();
+            return $"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
+        }
     }
 
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    public IContainer MongoDBContainer
+    public virtual IContainer MongoDBContainer
     {
         get
         {
-            lock (_containerLock)
-            {
-                if (_container is null)
-                {
-                    _container = BuildContainer(Network);
-                    StartContainer(_container).GetAwaiter().GetResult();
-                }
-                return _container;
-            }
+            EnsureMongoDBInitialized();
+            return _container!;
         }
     }
 
@@ -73,13 +77,34 @@ public abstract class ChronicleFixture : IChronicleFixture
     public INetwork Network { get; }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStore => _eventStore ??= new(MongoDBContainer, Constants.EventStoreDatabaseName);
+    public MongoDBDatabase EventStore
+    {
+        get
+        {
+            EnsureMongoDBInitialized();
+            return _eventStore ??= new(MongoDBServer, Constants.EventStoreDatabaseName);
+        }
+    }
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => _eventStoreForNamespace ??= new(MongoDBContainer, Constants.EventStoreNamespaceDatabaseName);
+    public MongoDBDatabase EventStoreForNamespace
+    {
+        get
+        {
+            EnsureMongoDBInitialized();
+            return _eventStoreForNamespace ??= new(MongoDBServer, Constants.EventStoreNamespaceDatabaseName);
+        }
+    }
 
     /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => _readModels ??= new(MongoDBContainer, Constants.ReadModelsDatabaseName);
+    public MongoDBDatabase ReadModels
+    {
+        get
+        {
+            EnsureMongoDBInitialized();
+            return _readModels ??= new(MongoDBServer, Constants.ReadModelsDatabaseName);
+        }
+    }
 
     /// <summary>
     /// Gets the logger factory for creating loggers.
@@ -96,6 +121,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async Task PerformBackupAsync(string? prefix = null)
     {
+        EnsureMongoDBInitialized();
+
         prefix ??= string.Empty;
         if (!string.IsNullOrEmpty(prefix))
         {
@@ -120,11 +147,8 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <inheritdoc/>
     public virtual async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}")
-        {
-            DirectConnection = true
-        };
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
+        EnsureMongoDBInitialized();
+        var settings = MongoClientSettings.FromConnectionString(MongoDBServer);
 
         using var mongoClient = new MongoClient(settings);
         var namesCursor = await mongoClient.ListDatabaseNamesAsync();
@@ -144,6 +168,37 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <param name="network">The network to use.</param>
     /// <returns>The built container.</returns>
     protected abstract IContainer BuildContainer(INetwork network);
+
+    /// <summary>
+    /// Initializes the MongoDB server for the fixture.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual async Task InitializeMongoDB()
+    {
+        IContainer container;
+        lock (_containerLock)
+        {
+            _container ??= BuildContainer(Network);
+            container = _container;
+        }
+
+        await StartContainer(container);
+    }
+
+    /// <summary>
+    /// Ensures that MongoDB has been initialized.
+    /// </summary>
+    protected void EnsureMongoDBInitialized()
+    {
+        if (_mongoDBInitialized) return;
+
+        lock (_mongoDBInitializationLock)
+        {
+            if (_mongoDBInitialized) return;
+            InitializeMongoDB().GetAwaiter().GetResult();
+            _mongoDBInitialized = true;
+        }
+    }
 
     async Task StartContainer(IContainer container)
     {

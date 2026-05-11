@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Arc.MongoDB;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using global::MongoDB.Driver;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -40,9 +41,14 @@ public abstract class MongoDBSpecification(ChronicleInProcessFixture fixture) : 
     public INetwork Network => fixture.Network;
 
     /// <summary>
+    /// Gets the MongoDB server connection string.
+    /// </summary>
+    protected string MongoDBServer => fixture.MongoDBServer;
+
+    /// <summary>
     /// Gets the host port that MongoDB is listening on.
     /// </summary>
-    protected int MongoDBPort => fixture.MongoDBContainer.GetMappedPublicPort(27017);
+    protected int MongoDBPort => new MongoUrl(fixture.MongoDBServer).Server.Port;
 
     /// <summary>
     /// Sets the name of the fixture. No-op for MongoDB-only specs.
