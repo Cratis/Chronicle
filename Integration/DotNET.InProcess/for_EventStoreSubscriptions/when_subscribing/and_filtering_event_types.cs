@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventStoreSubscriptions.when_subscribing.and_filtering_event_types.context;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventStoreSubscriptions.when_subscribing;
@@ -11,8 +10,7 @@ public class and_filtering_event_types(context context) : Given<context>(context
 {
     public class context(ChronicleInProcessFixture fixture) : given.multi_event_store_subscription_setup(fixture)
     {
-        public Concepts.Events.EventSequenceNumber InboxTailSequenceNumber { get; private set; } = Concepts.Events.EventSequenceNumber.Unavailable;
-        public int EventsInSourceLog { get; private set; } = 0;
+        public int EventsInSourceLog { get; private set; }
         public Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition Subscription { get; private set; }
 
         async Task Establish()
