@@ -84,11 +84,16 @@ public class MongoDBConverter(
     public BsonValue ToBsonValue(Key key)
     {
         var schema = readModel.GetSchemaForLatestGeneration();
-        var keyPropertyPath = ResolveKeyPropertyPath(schema);
+        var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
+
+        if (string.IsNullOrWhiteSpace(idPropertyName))
+        {
+            return new BsonString(key.Value?.ToString() ?? string.Empty);
+        }
 
         var bsonValue = key.Value is ExpandoObject ?
-                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(keyPropertyPath)) :
-                ToBsonValue(key.Value, keyPropertyPath);
+            expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
+            ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
         return bsonValue == BsonNull.Value ? new BsonString(key.Value?.ToString() ?? string.Empty) : bsonValue;
@@ -131,9 +136,8 @@ public class MongoDBConverter(
     /// <inheritdoc/>
     public BsonValue ToBsonValue(object? input, PropertyPath property)
     {
-        var schemaProperty = readModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(property) ??
-                             throw new InvalidReadModelPropertyPath(readModel.Identifier, property);
-        return ToBsonValue(input, schemaProperty);
+        var schemaProperty = readModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(property);
+        return schemaProperty is not null ? ToBsonValue(input, schemaProperty) : ToBsonValue(input!);
     }
 
     /// <inheritdoc/>
@@ -177,23 +181,6 @@ public class MongoDBConverter(
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         return value == BsonNull.Value ? BsonNull.Value : value;
-    }
-
-    PropertyPath ResolveKeyPropertyPath(JsonSchema schema)
-    {
-        var keyPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
-        if (string.IsNullOrWhiteSpace(keyPropertyName))
-        {
-            throw new InvalidReadModelKeySchema(readModel.Identifier, "No key property could be inferred from the read model schema.");
-        }
-
-        var keyPropertyPath = new PropertyPath(keyPropertyName);
-        if (schema.GetSchemaPropertyForPropertyPath(keyPropertyPath) is null)
-        {
-            throw new InvalidReadModelKeySchema(readModel.Identifier, $"The configured key property path '{keyPropertyPath.Path}' is not part of the read model schema.");
-        }
-
-        return keyPropertyPath;
     }
 
     BsonValue ToBsonValueForArrayIndexer(object? input, PropertyPath property)
