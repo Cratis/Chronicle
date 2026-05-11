@@ -5,6 +5,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 
@@ -36,6 +37,9 @@ public class EncryptChangeset(
 
         var schema = projection.TargetReadModelSchema;
         var currentState = context.Changeset.CurrentState;
+        var currentStateAsDictionary = (IDictionary<string, object?>)currentState;
+        currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
+        var currentSubject = currentSubjectValue as string;
 
         var encrypted = await ReadModelComplianceHelper.Apply(
             complianceManager,
@@ -47,10 +51,22 @@ public class EncryptChangeset(
             expandoObjectConverter);
 
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
+        var propertyDifferences = hasDifferences && differences is not null
+            ? differences.ToList()
+            : [];
 
-        if (hasDifferences && differences?.Any() == true)
+        var encryptedStateAsDictionary = (IDictionary<string, object?>)encrypted;
+        if (encryptedStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var encryptedSubjectValue) &&
+            encryptedSubjectValue is string encryptedSubject &&
+            currentSubject != encryptedSubject &&
+            propertyDifferences.TrueForAll(_ => _.PropertyPath != WellKnownProperties.Subject))
         {
-            context.Changeset.Add(new PropertiesChanged<System.Dynamic.ExpandoObject>(encrypted, differences));
+            propertyDifferences.Add(new PropertyDifference(WellKnownProperties.Subject, currentSubject, encryptedSubject));
+        }
+
+        if (propertyDifferences.Count != 0)
+        {
+            context.Changeset.Add(new PropertiesChanged<System.Dynamic.ExpandoObject>(encrypted, propertyDifferences));
         }
 
         return context;
