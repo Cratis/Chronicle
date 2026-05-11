@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Cratis.Reflection;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -30,14 +30,14 @@ public class UniqueConstraintBuilder(
     public IUniqueConstraintBuilder On<TEventType>(params Expression<Func<TEventType, object>>[] properties)
     {
         var eventType = eventTypes.GetEventTypeFor(typeof(TEventType));
-        var propertiesAsStrings = properties.Select(_ => _.GetPropertyInfo().Name).ToArray();
+        var propertiesAsStrings = properties.Select(_ => _.GetPropertyPath().Path).ToArray();
         return On(eventType, propertiesAsStrings);
     }
 
     /// <inheritdoc/>
     public IUniqueConstraintBuilder On(EventType eventType, params string[] properties)
     {
-        properties = properties.Select(namingPolicy.GetPropertyName).ToArray();
+        properties = properties.Select(_ => namingPolicy.GetPropertyName(new PropertyPath(_))).ToArray();
         var schema = eventTypes.GetSchemaFor(eventType.Id);
         ThrowIfEventTypeAlreadyAdded(eventType, properties);
         ThrowIfPropertyIsMissing(eventType, schema, properties);
@@ -110,10 +110,9 @@ public class UniqueConstraintBuilder(
 
     void ThrowIfPropertyIsMissing(EventType eventType, JsonSchema schema, IEnumerable<string> properties)
     {
-        var schemaProperties = schema.GetFlattenedProperties();
         foreach (var property in properties)
         {
-            if (!schemaProperties.Any(_ => _.Name == property))
+            if (schema.GetSchemaPropertyForPropertyPath(new PropertyPath(property)) is null)
             {
                 throw new PropertyDoesNotExistOnEventType(eventType, property);
             }

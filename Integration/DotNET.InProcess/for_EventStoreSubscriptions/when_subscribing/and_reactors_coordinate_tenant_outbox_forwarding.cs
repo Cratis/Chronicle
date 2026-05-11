@@ -118,13 +118,24 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
             return await inboxSequence.GetTailSequenceNumber();
         }
 
+        /// <summary>
+        /// Waits until the inbox reaches at least the expected sequence number.
+        /// </summary>
+        /// <param name="targetNamespace">Namespace to inspect.</param>
+        /// <param name="expected">Minimum expected sequence number.</param>
+        /// <exception cref="TimeoutException">Thrown when the inbox does not reach the expected sequence number before timeout.</exception>
+        /// <remarks>
+        /// Uses a greater-than-or-equal comparison to avoid timing races where the inbox advances past
+        /// the exact sequence number before the polling loop observes it.
+        /// </remarks>
         async Task WaitForInboxTailSequenceNumber(string targetNamespace, Concepts.Events.EventSequenceNumber expected)
         {
             var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
 
             while (DateTime.UtcNow < timeout)
             {
-                if (await GetInboxTailSequenceNumber(targetNamespace) == expected)
+                var tailSequenceNumber = await GetInboxTailSequenceNumber(targetNamespace);
+                if (tailSequenceNumber.Value >= expected.Value)
                 {
                     return;
                 }
