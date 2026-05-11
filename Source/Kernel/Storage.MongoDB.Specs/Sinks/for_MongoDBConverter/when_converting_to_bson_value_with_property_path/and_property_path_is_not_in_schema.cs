@@ -15,4 +15,3 @@ public class and_property_path_is_not_in_schema : a_mongodb_converter
     [Fact] void should_throw_invalid_read_model_property_path() => _exception.ShouldBeOfExactType<InvalidReadModelPropertyPath>();
     [Fact] void should_include_property_path_in_message() => _exception.Message.ShouldContain("not.in.schema");
 }
-

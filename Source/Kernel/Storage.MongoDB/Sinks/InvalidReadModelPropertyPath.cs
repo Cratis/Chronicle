@@ -12,4 +12,3 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="readModel">The identifier of the read model that failed validation.</param>
 /// <param name="propertyPath">The property path that could not be resolved in the schema.</param>
 public class InvalidReadModelPropertyPath(ReadModelIdentifier readModel, PropertyPath propertyPath) : Exception($"Read model '{readModel}' does not contain schema information for property path '{propertyPath}'.");
-

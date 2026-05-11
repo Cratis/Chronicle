@@ -83,4 +83,3 @@ public class and_read_model_schema_has_no_key_information : Specification
     [Fact] void should_fail_registration_before_subscribing() => _observedError.ShouldBeOfExactType<ReducerRegistrationFailed>();
     [Fact] void should_describe_the_key_schema_problem() => _observedError.Message.ShouldContain("No key property could be inferred");
 }
-

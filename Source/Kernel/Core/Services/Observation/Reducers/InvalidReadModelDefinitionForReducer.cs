@@ -11,4 +11,3 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="readModel">The read model identifier.</param>
 /// <param name="reason">The reason why the definition is invalid.</param>
 public class InvalidReadModelDefinitionForReducer(ReadModelIdentifier readModel, string reason) : Exception($"Read model '{readModel}' has an invalid definition for reducer registration. {reason}");
-

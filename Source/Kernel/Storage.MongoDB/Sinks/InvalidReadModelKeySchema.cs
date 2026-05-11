@@ -11,4 +11,3 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="readModel">The identifier of the read model that failed validation.</param>
 /// <param name="reason">The specific reason why key schema validation failed.</param>
 public class InvalidReadModelKeySchema(ReadModelIdentifier readModel, string reason) : Exception($"Read model '{readModel}' has an invalid key schema for MongoDB sink conversion. {reason}");
-
