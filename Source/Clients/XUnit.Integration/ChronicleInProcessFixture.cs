@@ -31,7 +31,11 @@ public class ChronicleInProcessFixture : ChronicleFixture
         get
         {
             EnsureMongoDBInitialized();
-            return _mongoDBServer!.MongoDBServer;
+            if (_mongoDBServer is null)
+            {
+                throw new InvalidOperationException("In-memory MongoDB server is not initialized.");
+            }
+            return _mongoDBServer.MongoDBServer;
         }
     }
 
