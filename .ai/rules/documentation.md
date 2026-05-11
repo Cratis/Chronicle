@@ -46,4 +46,8 @@ The project's voice is **direct, practical, and opinionated**. Write like an exp
 
 - Always end generated markdown with a single trailing newline in the file content itself.
 - Never use shell commands to modify files after writing them.
-- Run `verify-markdown.sh` in the Documentation folder after writing to validate links and formatting.
+- **Always run `verify-markdown.sh` after every documentation change** — before committing and before finishing any documentation task:
+  ```bash
+  bash Documentation/verify-markdown.sh
+  ```
+  Run from the repository root. Fix all errors it reports before proceeding. This is a required step, not optional.
