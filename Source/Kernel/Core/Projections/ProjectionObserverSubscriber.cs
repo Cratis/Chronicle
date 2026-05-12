@@ -109,8 +109,12 @@ public class ProjectionObserverSubscriber(
     {
         if (_pipeline is null)
         {
-            logger.PipelineDisconnected(_key);
-            return ObserverSubscriberResult.Disconnected();
+            logger.PipelineNotReady(_key);
+            return new(
+                ObserverSubscriberState.Failed,
+                EventSequenceNumber.Unavailable,
+                ["Projection pipeline is not yet ready — will be retried."],
+                string.Empty);
         }
 
         AppendedEvent? lastSuccessfullyObservedEvent = default;
