@@ -78,6 +78,14 @@ public class ReplayObserver(
     protected override Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
         State.HandleResult(result, jsonSerializerOptions);
+        var progress = State.Progress;
+        if (progress.TotalSteps > 0)
+        {
+            var completedSteps = progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps;
+            var percentComplete = (double)completedSteps / progress.TotalSteps * 100;
+            logger.ReplayProgress(completedSteps, progress.TotalSteps, percentComplete, State.LastHandledEventSequenceNumber);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -91,7 +99,7 @@ public class ReplayObserver(
         await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Fire-and-forget to avoid a reentrancy deadlock when OnCompleted is called from
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
         // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
         // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
         // grain become free to process Replayed().
@@ -99,7 +107,7 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override async Task OnCompleted()
+    protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         await replayStateServiceClient.EndReplayFor(State.ObserverDetails);
@@ -118,7 +126,7 @@ public class ReplayObserver(
         // TODO: Do we need to do anything special if any replaying partitions failed?
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Fire-and-forget to avoid a reentrancy deadlock when OnCompleted is called from
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
         // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
         // Replay(), so Replayed() would be queued and deadlock. Returning first lets the Observer
         // grain become free to process Replayed().

@@ -21,14 +21,18 @@ public partial class Observer
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        _metrics?.PartitionRetryAttempt(partition);
         var config = await configurationProvider.GetFor(_observerKey);
-        if (config.MaxRetryAttempts == 0 || failure.Attempts.Count() <= config.MaxRetryAttempts)
+        var attemptCount = failure.Attempts.Count();
+        if (config.MaxRetryAttempts == 0 || attemptCount <= config.MaxRetryAttempts)
         {
             await this.RegisterOrUpdateReminder(partition.ToString(), GetNextRetryDelay(failure, config), TimeSpan.FromHours(48));
         }
         else
         {
-            logger.GivingUpOnRecoveringFailedPartition(partition);
+            logger.QuarantiningFailedPartition(partition);
+            failures.State.Quarantine(partition);
+            _metrics?.PartitionQuarantined(partition);
         }
 
         await failures.WriteStateAsync();
@@ -69,8 +73,21 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task TryRecoverAllFailedPartitions()
     {
-        foreach (var partition in Failures.Partitions)
+        var config = await configurationProvider.GetFor(_observerKey);
+        foreach (var partition in Failures.Partitions.Where(p => !p.IsQuarantined))
         {
+            var attemptCount = partition.Attempts.Count();
+            if (config.MaxRetryAttempts > 0 && attemptCount > config.MaxRetryAttempts)
+            {
+                logger.SkippingRecoveryMaxAttemptsExceeded(partition.Partition, attemptCount, config.MaxRetryAttempts);
+                continue;
+            }
+
+            if (attemptCount > 0)
+            {
+                logger.StartingRecoveryWithExistingAttempts(partition.Partition, attemptCount, config.MaxRetryAttempts);
+            }
+
             await StartRecoverJobForFailedPartition(partition);
         }
     }

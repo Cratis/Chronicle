@@ -21,7 +21,7 @@ public class NullJobWithSomeRequest : INullJobWithSomeRequest
     public Task<Result<JobError>> OnStepSucceeded(JobStepId stepId, JobStepResult result) => Task.FromResult(Result.Success<JobError>());
     public Task<Result<JobError>> OnStepStopped(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
     public Task<Result<JobError>> OnStepFailed(JobStepId stepId, JobStepResult jobStepResult) => Task.FromResult(Result.Success<JobError>());
-    public Task OnCompleted() => Task.CompletedTask;
+    public Task OnAllStepsCompleted() => Task.CompletedTask;
     public Task<Result<JobError>> WriteStatusChanged(JobStatus status, Exception? exception = null) => Task.FromResult(Result.Success<JobError>());
     public Task<Result<JobError>> SetTotalSteps(int totalSteps) => Task.FromResult(Result.Success<JobError>());
     public Task Subscribe(IJobObserver observer) => Task.CompletedTask;

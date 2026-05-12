@@ -25,5 +25,5 @@ public class Causation
     /// Gets or sets properties associated with the causation.
     /// </summary>
     [ProtoMember(3)]
-    public IDictionary<string, string> Properties { get; set; }
+    public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
 }

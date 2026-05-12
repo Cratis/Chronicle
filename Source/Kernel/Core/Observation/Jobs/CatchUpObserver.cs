@@ -41,7 +41,7 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
-    protected override async Task OnCompleted()
+    protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         await catchupServiceClient.EndCatchupFor(State.ObserverDetails);
@@ -59,7 +59,12 @@ public class CatchUpObserver(
         }
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        await observer.CaughtUp(State.LastHandledEventSequenceNumber);
+
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process CaughtUp().
+        _ = observer.CaughtUp(State.LastHandledEventSequenceNumber);
     }
 
     /// <inheritdoc/>

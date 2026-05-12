@@ -12,6 +12,9 @@ The .NET client can read its connection string from configuration. A typical set
 }
 ```
 
+> [!NOTE]
+> For local development, `chronicle://localhost:35000` can be used without credentials. The .NET client automatically attempts development credentials.
+
 **Program.cs:**
 
 ```csharp
@@ -54,4 +57,3 @@ export CHRONICLE__URL="chronicle://clientId:clientSecret@server.example.com:3500
 
 - [DotNET client usage](dotnet-client.md)
 - [TLS configuration](../configuration/tls.md)
-

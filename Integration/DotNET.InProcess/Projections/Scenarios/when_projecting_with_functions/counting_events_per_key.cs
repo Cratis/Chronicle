@@ -29,7 +29,28 @@ public class counting_events_per_key(context context) : Given<context>(context)
             EventsWithEventSourceIdToAppend.Add(new(SecondEventSourceId, EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues()));
         }
 
-        async Task Because() => SecondResult = await GetReadModel(SecondEventSourceId);
+        async Task Because()
+        {
+            Result ??= await WaitForReadModel(EventSourceId);
+            SecondResult = await WaitForReadModel(SecondEventSourceId);
+        }
+
+        async Task<ReadModel> WaitForReadModel(EventSourceId eventSourceId)
+        {
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+            while (DateTime.UtcNow < timeout)
+            {
+                var model = await GetReadModel(eventSourceId);
+                if (model is not null)
+                {
+                    return model;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new TimeoutException($"Read model for event source '{eventSourceId}' was not materialized within timeout.");
+        }
     }
 
     [Fact] void should_hold_correct_count_for_first_key() => Context.Result.IntValue.ShouldEqual(3);

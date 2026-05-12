@@ -306,3 +306,4 @@ certificates/
 
 .grpc-schema-gen*
 .playwright-mcp
+.claude/worktrees

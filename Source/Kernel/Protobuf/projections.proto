@@ -18,6 +18,7 @@ message ChildrenDefinition {
    repeated KeyValuePair_EventType_RemovedWithDefinition RemovedWith = 7;
    repeated KeyValuePair_EventType_RemovedWithJoinDefinition RemovedWithJoin = 8;
    AutoMap AutoMap = 9;
+   map<string,ChildrenDefinition> Nested = 10;
 }
 message DraftReadModelDefinition {
    string ContainerName = 1;
@@ -140,6 +141,7 @@ message ProjectionDefinition {
    SerializableDateTimeOffset LastUpdated = 15;
    repeated string Tags = 16;
    AutoMap AutoMap = 17;
+   map<string,ChildrenDefinition> Nested = 18;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;

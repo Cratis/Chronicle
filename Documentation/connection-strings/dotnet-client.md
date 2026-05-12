@@ -18,6 +18,9 @@ var options = ChronicleOptions.FromDevelopmentConnectionString();
 var client = new ChronicleClient(ChronicleConnectionString.Development);
 ```
 
+> [!NOTE]
+> In development, you can use `chronicle://localhost:35000` without credentials. The .NET client automatically attempts the built-in development credentials (`chronicle-dev-client` / `chronicle-dev-secret`).
+
 Use explicit configuration for production environments.
 
 ## From connection string
@@ -44,4 +47,3 @@ var options = ChronicleOptions.FromConnectionString(connectionString);
 ## Authentication validation
 
 You cannot specify both client credentials and API key authentication in the same connection string. Doing so throws an `AmbiguousAuthenticationMode` error.
-

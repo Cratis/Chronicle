@@ -29,7 +29,6 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
             typeof(DeepHierarchyEventCreated)
         ];
 
-        // Only the top-level type is registered — nested types are NOT standalone projections
         public override IEnumerable<Type> ModelBoundProjections => [typeof(DeepHierarchyModule)];
 
         async Task Because()
@@ -43,13 +42,9 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
             await handler.WaitTillActive();
 
-            // Append to ModuleId event source
             await EventStore.EventLog.Append(ModuleId, new DeepHierarchyModuleCreated("Authors"));
-            // Append to FeatureId event source (contains ModuleId as parentKey)
             await EventStore.EventLog.Append(FeatureId, new DeepHierarchyFeatureCreated(ModuleId, FeatureId, "Registration"));
-            // Append to SliceId event source (contains FeatureId as parentKey; no explicit key → EventSourceId)
             await EventStore.EventLog.Append(SliceId, new DeepHierarchySliceCreated(FeatureId, SliceId, "Register Author"));
-            // Append to SliceId event source (NOT EventItemId) — EventItemId is a property inside the event
             var appendResult = await EventStore.EventLog.Append(SliceId, new DeepHierarchyEventCreated(SliceId, EventItemId, "AuthorRegistered"));
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);

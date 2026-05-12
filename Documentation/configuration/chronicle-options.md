@@ -21,6 +21,7 @@ All bindable settings live under `Cratis:Chronicle`:
       "ConnectionString": "chronicle://localhost:35000",
       "EventStore": "my-store",
       "EnableEventTypeGenerationValidation": false,
+      "DefaultSinkTypeId": "f7d3a1e2-4b5c-4d6e-8f9a-0b1c2d3e4f5a",
       "ConnectTimeout": 5,
       "AutoDiscoverAndRegister": true,
       "MaxReceiveMessageSize": 104857600,
@@ -100,6 +101,37 @@ Controls whether Chronicle automatically discovers event types, projections, rea
 | Default | `true` |
 
 Set to `false` when using a custom `IClientArtifactsProvider` or when you want full manual control over what gets registered.
+
+### DefaultSinkTypeId
+
+Controls which sink type is used when registering projections and reducers with the Kernel. Chronicle supports two built-in sink types:
+
+| Value | Description |
+|---|---|
+| `WellKnownSinkTypes.MongoDB` | Stores read models in MongoDB (default) |
+| `WellKnownSinkTypes.SQL` | Stores read models in a SQL database as JSON documents |
+
+| | |
+|---|---|
+| Type | `SinkTypeId` |
+| Default | `WellKnownSinkTypes.MongoDB` |
+
+To use SQL as the storage backend for all read models:
+
+```csharp
+builder.AddCratisChronicle(configureOptions: options =>
+{
+    options.DefaultSinkTypeId = WellKnownSinkTypes.SQL;
+});
+```
+
+In `appsettings.json`:
+
+```json
+{ "Cratis": { "Chronicle": { "DefaultSinkTypeId": "f7d3a1e2-4b5c-4d6e-8f9a-0b1c2d3e4f5a" } } }
+```
+
+See [Sinks](../sinks/index.md) for detailed guidance on storage backends.
 
 ### MaxReceiveMessageSize / MaxSendMessageSize
 

@@ -46,6 +46,46 @@ await scenario.Given
 scenario.Instance.Count.ShouldBe(11);
 ```
 
+## Injecting dependencies
+
+Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
+
+```csharp
+var pricingService = Substitute.For<IPricingService>();
+var services = new ServiceCollection()
+    .AddSingleton(pricingService)
+    .BuildServiceProvider();
+
+var scenario = new ReadModelScenario<OrderSummary>(initialState: null, serviceProvider: services);
+await scenario.Given
+    .ForEventSource("order-1")
+    .Events(new OrderCreated("order-1"));
+
+scenario.Instance!.Total.ShouldBe(0m);
+```
+
+## Pre-seeding read model instances
+
+Use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
+production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
+fetches a read model by ID without replaying events through a full projection:
+
+```csharp
+var scenario = new ReadModelScenario<OrderSummary>();
+await scenario.Given
+    .ForEventSourceId("order-1")
+    .ReadModel(new OrderSummary("order-1", 99.99m));
+
+// Pass scenario.ReadModels to production code under test
+var sut = new OrderService(scenario.ReadModels);
+var result = await sut.GetOrderTotal("order-1");
+
+result.ShouldBe(99.99m);
+```
+
+`scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
+instances and delegates everything else to the real read model implementation.
+
 ## Auto-detection
 
 `ReadModelScenario<TReadModel>` searches the current application's loaded assemblies for a handler in this order:
@@ -138,4 +178,6 @@ scenario.Instance!.DeliveredAt.ShouldNotBeNull();
 
 - `Instance` is `null` until `Given` is called, or if no events were processed.
 - Each `Given.ForEventSource(id).Events(...)` call applies events to the specified event source. Call it multiple times to simulate events from different event sources.
+- `Given.ForEventSourceId(id)` is an alias for `ForEventSource(id)` that also exposes `.ReadModel(instance)` for pre-seeding.
 - The `.ShouldBe()` assertions in the examples come from your test framework (e.g., [Cratis.Specifications](https://github.com/Cratis/Specifications), Shouldly, or FluentAssertions).
+

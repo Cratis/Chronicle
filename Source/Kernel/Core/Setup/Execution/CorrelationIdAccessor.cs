@@ -3,7 +3,10 @@
 
 namespace Cratis.Chronicle.Setup.Execution;
 
-/// <inheritdoc/>
+/// <summary>
+/// Represents an <see cref="ICorrelationIdAccessor"/> for Chronicle setup execution.
+/// </summary>
+/// <param name="correlationIdAccessor">The fallback correlation ID accessor.</param>
 public class CorrelationIdAccessor(Cratis.Execution.CorrelationIdAccessor correlationIdAccessor) : ICorrelationIdAccessor
 {
     /// <inheritdoc/>

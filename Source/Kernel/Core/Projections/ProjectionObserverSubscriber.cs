@@ -57,6 +57,32 @@ public class ProjectionObserverSubscriber(
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
+
+        // Always fetch the current definition from the IProjection grain rather than relying on
+        // the stored State. The stored State can be stale when this grain re-activates after
+        // a deactivation that occurred while the projection definition was being updated (for
+        // example, during an application restart). IProjection.State is always authoritative
+        // because it is persisted before the replay is started.
+        var currentDefinition = await projection.GetDefinition();
+        if (currentDefinition.ReadModel is not null)
+        {
+            // Check if definition has changed
+            var definitionChanged = HasDefinitionChanged(State, currentDefinition);
+
+            if (definitionChanged)
+            {
+                State = currentDefinition;
+                await WriteStateAsync();
+
+                // CRITICAL: If definition changed, we MUST evict the pipeline cache BEFORE calling
+                // HandlePipeline(), otherwise the old cached pipeline will be reused. The pipeline
+                // cache key is (eventStore, namespace, projectionId), which does NOT include the
+                // definition version, so a cache hit with the old definition will prevent the new
+                // definition from being used.
+                projectionPipelineManager.EvictFor(_key.EventStore, _key.Namespace, _key.ObserverId);
+            }
+        }
+
         await HandlePipeline();
     }
 
@@ -161,5 +187,54 @@ public class ProjectionObserverSubscriber(
         var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, State, readModel, eventTypeSchemas);
         _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
         _schema = readModel.GetSchemaForLatestGeneration();
+    }
+
+    bool HasDefinitionChanged(ProjectionDefinition oldDefinition, ProjectionDefinition newDefinition)
+    {
+        if (oldDefinition.ReadModel != newDefinition.ReadModel ||
+            oldDefinition.IsActive != newDefinition.IsActive ||
+            oldDefinition.IsRewindable != newDefinition.IsRewindable ||
+            oldDefinition.EventSequenceId != newDefinition.EventSequenceId)
+        {
+            return true;
+        }
+
+        if (oldDefinition.From.Count != newDefinition.From.Count ||
+            oldDefinition.Join.Count != newDefinition.Join.Count ||
+            oldDefinition.RemovedWith.Count != newDefinition.RemovedWith.Count ||
+            oldDefinition.RemovedWithJoin.Count != newDefinition.RemovedWithJoin.Count)
+        {
+            return true;
+        }
+
+        foreach (var (eventType, oldFromRule) in oldDefinition.From)
+        {
+            if (!newDefinition.From.TryGetValue(eventType, out var newFromRule))
+            {
+                return true;
+            }
+
+            if (oldFromRule.Key != newFromRule.Key ||
+                oldFromRule.Properties.Count != newFromRule.Properties.Count)
+            {
+                return true;
+            }
+        }
+
+        foreach (var (eventType, oldJoinRule) in oldDefinition.Join)
+        {
+            if (!newDefinition.Join.TryGetValue(eventType, out var newJoinRule))
+            {
+                return true;
+            }
+
+            if (oldJoinRule.Key != newJoinRule.Key ||
+                oldJoinRule.Properties.Count != newJoinRule.Properties.Count)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

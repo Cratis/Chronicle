@@ -56,6 +56,9 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public Task Discover()
     {
+        _typesByEventType.Clear();
+        _schemasByEventType.Clear();
+
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
         {
             ClrType = _,

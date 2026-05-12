@@ -68,4 +68,6 @@ public class and_get_definition_fails : Specification
     }
 
     [Fact] void should_surface_an_error_on_the_observable() => _observedError.ShouldNotBeNull();
+    [Fact] void should_wrap_it_as_a_reducer_registration_failure() => _observedError.ShouldBeOfExactType<ReducerRegistrationFailed>();
+    [Fact] void should_include_registration_context_in_the_error_message() => _observedError.Message.ShouldContain("test-reducer");
 }

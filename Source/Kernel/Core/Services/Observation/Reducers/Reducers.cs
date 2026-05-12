@@ -17,6 +17,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
@@ -84,12 +85,20 @@ internal sealed class Reducers(
                         {
                             if (result.IsFaulted)
                             {
-                                registrationTcs.TrySetException(result.Exception!.InnerExceptions);
+                                registrationTcs.TrySetException(CreateRegistrationFailure(register, result.Exception!));
                             }
                             else
                             {
                                 model = result.Result;
-                                registrationTcs.TrySetResult(register);
+                                try
+                                {
+                                    ValidateReadModelDefinition(register, model);
+                                    registrationTcs.TrySetResult(register);
+                                }
+                                catch (Exception exception)
+                                {
+                                    registrationTcs.TrySetException(CreateRegistrationFailure(register, exception));
+                                }
                             }
                         },
                         TaskScheduler.Current);
@@ -181,7 +190,14 @@ internal sealed class Reducers(
                         var reducerDefinition = registration.Reducer.ToChronicle();
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                        try
+                        {
+                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                        }
+                        catch (Exception exception)
+                        {
+                            throw CreateRegistrationFailure(registration, exception);
+                        }
                     }
 
                     await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -227,5 +243,52 @@ internal sealed class Reducers(
         });
 
         return observable;
+    }
+
+    static ReducerRegistrationFailed CreateRegistrationFailure(RegisterReducer registration, Exception exception)
+    {
+        if (exception is ReducerRegistrationFailed reducerRegistrationFailed)
+        {
+            return reducerRegistrationFailed;
+        }
+
+        var rootCause = exception is AggregateException aggregateException ? aggregateException.Flatten().InnerExceptions.FirstOrDefault() ?? exception : exception;
+        return new ReducerRegistrationFailed(
+            registration.Reducer.ReducerId,
+            registration.EventStore,
+            registration.Namespace,
+            registration.Reducer.EventSequenceId,
+            registration.ConnectionId,
+            rootCause);
+    }
+
+    static void ValidateReadModelDefinition(RegisterReducer registration, ReadModelDefinition readModel)
+    {
+        var schema = readModel.GetSchemaForLatestGeneration();
+
+        if (schema.HasKeyProperty())
+        {
+            var keyPropertyName = schema.GetKeyProperty().Name;
+            var keyPropertyPath = new PropertyPath(keyPropertyName);
+            if (schema.GetSchemaPropertyForPropertyPath(keyPropertyPath) is null)
+            {
+                throw CreateRegistrationFailure(
+                    registration,
+                    new InvalidReadModelDefinitionForReducer(readModel.Identifier, $"The key property path '{keyPropertyPath.Path}' does not exist in the read model schema."));
+            }
+
+            return;
+        }
+
+        // When no explicit key property is declared, validate that there are properties at all
+        // so that the key can be inferred. The MongoDBConverter handles the case where the
+        // heuristic key name doesn't exist in the schema gracefully.
+        var likelyKeyPropertyName = schema.GetLikelyKeyPropertyName();
+        if (string.IsNullOrWhiteSpace(likelyKeyPropertyName))
+        {
+            throw CreateRegistrationFailure(
+                registration,
+                new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
+        }
     }
 }
