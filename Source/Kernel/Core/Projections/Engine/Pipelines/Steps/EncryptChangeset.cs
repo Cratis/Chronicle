@@ -59,6 +59,7 @@ public class EncryptChangeset(
         if (encryptedStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var encryptedSubjectValue) &&
             encryptedSubjectValue is string encryptedSubject &&
             currentSubject is null &&
+            context.Changeset.Changes.All(_ => _ is not ChildRemovedFromAll) &&
             propertyDifferences.TrueForAll(_ => _.PropertyPath != WellKnownProperties.Subject))
         {
             propertyDifferences.Add(new PropertyDifference(WellKnownProperties.Subject, currentSubject, encryptedSubject));
