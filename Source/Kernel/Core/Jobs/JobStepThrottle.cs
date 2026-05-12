@@ -39,6 +39,11 @@ public class JobStepThrottle(IOptions<ChronicleOptions> options, ILogger<JobStep
         _semaphore.Dispose();
     }
 
+    /// <summary>
+    /// Gets the effective parallelism limit for job steps.
+    /// </summary>
+    /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
+    /// <returns>The effective parallelism limit.</returns>
     static int GetEffectiveParallelism(ChronicleOptions options) =>
         Math.Max(1, Math.Min(options.Jobs.GetEffectiveMaxParallelSteps(), options.Observers.MaxConcurrentPartitions));
 

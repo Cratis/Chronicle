@@ -59,5 +59,5 @@ public class when_observer_partition_limit_is_lower_than_job_step_limit : Specif
 
     [Fact] void should_apply_observer_partition_limit() => _completedTasks.ShouldEqual(2);
 
-    void Cleanup() => _throttle.Dispose();
+    void Destroy() => _throttle.Dispose();
 }
