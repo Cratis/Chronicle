@@ -8,6 +8,10 @@
         <ResourceNamespace>$(RootNamespace)</ResourceNamespace>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
+
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>obj/Generated</CompilerGeneratedFilesOutputPath>
+
         <NoWarn>$(NoWarn);RCS1140;CS1998;IDE0005;SA0001;MA0182</NoWarn>
     </PropertyGroup>
 
@@ -34,6 +38,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
         <PackageReference Include="Cratis.Arc" />
+        <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.Swagger" />
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
@@ -65,7 +70,6 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(DisableProxyGenerator)' != 'true'">
-      <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.ProxyGenerator.Build" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>

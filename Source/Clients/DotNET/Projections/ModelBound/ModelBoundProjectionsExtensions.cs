@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Projections.ModelBound;
 
@@ -17,26 +18,34 @@ public static class ModelBoundProjectionsExtensions
     /// <returns>True if the type has model-bound projection attributes; otherwise, false.</returns>
     public static bool HasModelBoundProjectionAttributes(this Type type)
     {
-        if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation))
+        try
         {
-            return true;
-        }
-
-        var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
-        var primaryConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
-
-        if (primaryConstructor is not null)
-        {
-            var parameters = primaryConstructor.GetParameters();
-            if (parameters.Any(param => param.GetCustomAttributes()
-                                                .Any(attr => attr is IProjectionAnnotation)))
+            if (type.GetCustomAttributes().Any(attr => attr is IProjectionAnnotation || attr is EventSequenceAttribute))
             {
                 return true;
             }
-        }
 
-        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        return properties.Any(property => property.GetCustomAttributes()
-                                                  .Any(attr => attr is IProjectionAnnotation));
+            var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+            var primaryConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+
+            if (primaryConstructor is not null)
+            {
+                var parameters = primaryConstructor.GetParameters();
+                if (parameters.Any(param => param.GetCustomAttributes()
+                                                    .Any(attr => attr is IProjectionAnnotation)))
+                {
+                    return true;
+                }
+            }
+
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            return properties.Any(property => property.GetCustomAttributes()
+                                                      .Any(attr => attr is IProjectionAnnotation));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or TypeLoadException or ReflectionTypeLoadException)
+        {
+            return false;
+        }
     }
 }
+

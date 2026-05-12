@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
@@ -44,6 +45,44 @@ public partial class Observer
             return;
         }
 
+        if (_subscription.Filters is { } filters)
+        {
+            if (filters.EventSourceType is { } eventSourceType &&
+                eventSourceType != EventSourceType.Unspecified &&
+                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.EventStreamType is { } eventStreamType &&
+                !eventStreamType.IsAll &&
+                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.Tags.Any() &&
+                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                };
+                await WriteStateAsync();
+                return;
+            }
+        }
+
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -70,7 +109,8 @@ public partial class Observer
 
                     var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
-                    var result = await subscriber.OnNext(partition, eventsToHandle, new(_subscription.Arguments));
+                    var decryptedEvents = await DecryptEvents(eventsToHandle);
+                    var result = await subscriber.OnNext(partition, decryptedEvents, new(_subscription.Arguments));
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                         : EventCount.Zero;
@@ -138,6 +178,40 @@ public partial class Observer
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
             }
         }
+    }
+
+    async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
+    {
+        var releasedEvents = new List<AppendedEvent>();
+        foreach (var @event in events)
+        {
+            if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
+            {
+                var subject = @event.Context.Subject;
+                if (subject is null)
+                {
+                    releasedEvents.Add(@event);
+                    continue;
+                }
+
+                var identifier = subject.Value;
+                var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
+                var released = await complianceManager.Release(
+                    @event.Context.EventStore,
+                    @event.Context.Namespace,
+                    schema.Schema,
+                    identifier,
+                    contentAsJson);
+                var releasedContent = expandoObjectConverter.ToExpandoObject(released, schema.Schema);
+                releasedEvents.Add(@event with { Content = releasedContent });
+            }
+            else
+            {
+                releasedEvents.Add(@event);
+            }
+        }
+
+        return releasedEvents;
     }
 
     bool ShouldHandleEvent(Key partition)

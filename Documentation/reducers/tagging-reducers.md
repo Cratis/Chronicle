@@ -2,6 +2,8 @@
 
 Tags provide a way to organize and categorize your reducers for better discoverability and management. By applying the `[Tag]` attribute to your reducer classes, you can assign one or more tags that describe the purpose or domain of the reducer.
 
+`[Tag]` and `[Tags]` label the reducer itself. They do not filter which appended events the reducer handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag.md), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type.md), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type.md).
+
 ## Adding Tags
 
 You can tag reducers in multiple ways:
@@ -112,4 +114,3 @@ Note: The specific querying capabilities depend on your Chronicle setup and tool
 
 - [Tagging](../concepts/tagging.md) - Comprehensive guide to tagging in Chronicle
 - [Reactors Tagging](../concepts/tagging-reactors.md) - Tagging reactors
-

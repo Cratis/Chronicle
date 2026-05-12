@@ -27,7 +27,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
         public SimulationDashboard Result;
         public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration), typeof(WeightsSetForSimulationConfiguration)];
+        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration), typeof(WeightsSetForSimulationConfiguration), typeof(MetricAddedToHub)];
         public override IEnumerable<Type> Projections => [typeof(SimulationDashboardProjection)];
 
         protected override void ConfigureServices(IServiceCollection services)

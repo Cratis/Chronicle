@@ -27,7 +27,7 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
         public SimulationDashboard Result;
         public EventSequenceNumber LastEventSequenceNumber = EventSequenceNumber.First;
 
-        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration), typeof(WeightsSetForSimulationConfiguration)];
+        public override IEnumerable<Type> EventTypes => [typeof(SimulationAdded), typeof(SimulationConfigurationAdded), typeof(HubAddedToSimulationConfiguration), typeof(WeightsSetForSimulationConfiguration), typeof(MetricAddedToHub)];
         public override IEnumerable<Type> Projections => [typeof(SimulationDashboardProjection)];
 
         protected override void ConfigureServices(IServiceCollection services)

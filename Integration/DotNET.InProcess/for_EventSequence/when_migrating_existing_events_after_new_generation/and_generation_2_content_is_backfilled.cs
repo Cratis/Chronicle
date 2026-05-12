@@ -53,18 +53,7 @@ public class and_generation_2_content_is_backfilled(context context) : Given<con
             // 4. Wait for the migration job to complete.
             if (result.IsSuccess)
             {
-                var timeout = DateTime.UtcNow.AddSeconds(30);
-                while (DateTime.UtcNow < timeout)
-                {
-                    var jobs = await jobsManager.GetAllJobs();
-                    var migrationJob = jobs.FirstOrDefault(j => j.Id == result.AsT0);
-                    if (migrationJob?.Status is KernelConcepts.Jobs.JobStatus.CompletedSuccessfully or KernelConcepts.Jobs.JobStatus.CompletedWithFailures)
-                    {
-                        break;
-                    }
-
-                    await Task.Delay(100);
-                }
+                _ = await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(result.AsT0.Value, TimeSpanFactory.FromSeconds(30));
             }
 
             // 5. Read the stored event after migration.

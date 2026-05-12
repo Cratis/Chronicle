@@ -1,5 +1,9 @@
 name: Publish
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
   DOTNET8_VERSION: "8.0.410"
@@ -31,7 +35,7 @@ on:
         - info
         - warning
         - debug
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches:
       - "**"
@@ -42,18 +46,11 @@ on:
 permissions:
   contents: write
   deployments: write
+  id-token: write
 
 jobs:
-  grpc-compatibility:
-    permissions:
-      contents: read
-    uses: ./.github/workflows/grpc-compatibility.yml
-    with:
-      base-ref: 'main'
-
   release:
     runs-on: ubuntu-latest
-    needs: [grpc-compatibility]
     outputs:
       version: ${{ steps.release.outputs.version }}
       publish: ${{ steps.release.outputs.should-publish }}
@@ -70,6 +67,11 @@ jobs:
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
+  generate-protos:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release]
+    uses: ./.github/workflows/generate-protos.yml
+
   coverage-statistics:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -82,6 +84,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_WORKFLOWS }}
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -134,6 +137,58 @@ jobs:
             echo "No coverage statistics changes to commit"
           else
             git commit -m "Update coverage statistics [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push
+          fi
+
+  benchmark-results:
+    if: needs.release.outputs.publish == 'true' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    needs: [release]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_WORKFLOWS }}
+
+      - name: Download benchmark data artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+          RUN_ID=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow benchmarks.yml \
+            --branch "$HEAD_BRANCH" \
+            --json databaseId,conclusion \
+            --jq '[.[] | select(.conclusion == "success")] | .[0].databaseId // empty')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "No successful benchmark run found for branch '$HEAD_BRANCH', skipping"
+            exit 0
+          fi
+
+          echo "Downloading benchmark data from run $RUN_ID"
+          mkdir -p Documentation/benchmarks
+          gh run download "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --name benchmark-data \
+            --dir Documentation/benchmarks/ \
+            || { echo "No benchmark-data artifact found in run $RUN_ID, skipping"; exit 0; }
+
+      - name: Commit benchmark results
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add Documentation/benchmarks/
+          if git diff --staged --quiet; then
+            echo "No benchmark result changes to commit"
+          else
+            git commit -m "Update benchmark results [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push
           fi
@@ -274,75 +329,42 @@ jobs:
           # Also pack the Contracts project from Kernel
           dotnet pack ./Source/Kernel/Contracts/Contracts.csproj --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
+      # Get a short-lived NuGet API key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push NuGet packages
-        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
 
   publish-typescript-client:
     if: needs.release.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    needs: [release]
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-typescript-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  publish-kotlin-client:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-kotlin-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '23.x'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install protoc
-        run: |
-          PROTOC_VERSION="28.3"
-          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}
-          sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-          sudo unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
-          rm -f $PROTOC_ZIP
-          protoc --version
-
-      - name: Build Contracts
-        working-directory: ./Source/Kernel/Contracts
-        run: dotnet build -c Release
-
-      - name: Generate Proto Files
-        run: |
-          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll"
-          dotnet run \
-            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            $CONTRACTS_DLL \
-            Source/Kernel/Protobuf
-
-      - name: Install TypeScript dependencies
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn install --ignore-scripts
-
-      - name: Generate TypeScript from Proto
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          mkdir -p generated
-          yarn generate
-
-      - name: Build TypeScript package
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn build
-
-      - name: Set package version
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          npm version ${{ needs.release.outputs.version }} --no-git-tag-version
-
-      - name: Publish to NPM
-        working-directory: ./Source/Clients/TypeScript
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  publish-elixir-client:
+    if: needs.release.outputs.publish == 'true'
+    needs: [release, generate-protos]
+    uses: ./.github/workflows/publish-elixir-client.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.release.outputs.version }}
+      protos-artifact: proto-files
 
   dotnet-x64-development:
     if: needs.release.outputs.publish == 'true'
@@ -599,4 +621,3 @@ jobs:
           token: ${{ secrets.PAT_DOCUMENTATION }}
           repository: cratis/samples
           event-type: update-dependencies
-

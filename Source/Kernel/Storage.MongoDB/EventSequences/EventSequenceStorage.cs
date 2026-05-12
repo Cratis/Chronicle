@@ -106,9 +106,11 @@ public class EventSequenceStorage(
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
-        IEnumerable<Cratis.Chronicle.Concepts.Events.Tag> tags,
+        IEnumerable<Concepts.Events.Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<EventTypeGeneration, ExpandoObject> content)
+        IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash> contentHashes,
+        Concepts.Events.Subject? subject = null)
     {
         try
         {
@@ -119,6 +121,10 @@ public class EventSequenceStorage(
                 var jsonObject = expandoObjectConverter.ToJsonObject(expandoContent, schema.Schema);
                 generationalContent[generation.ToString()] = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
             }
+
+            var hashesForStorage = contentHashes.ToDictionary(
+                kvp => kvp.Key.ToString(),
+                kvp => kvp.Value.Value);
 
             var @event = new Event(
                 sequenceNumber,
@@ -133,8 +139,9 @@ public class EventSequenceStorage(
                 eventStreamId,
                 tags.Select(_ => _.Value),
                 generationalContent,
-                new Dictionary<string, string>(),
-                []);
+                hashesForStorage,
+                [],
+                subject?.IsSet == true ? subject : null);
             var collection = _collection;
             await collection.InsertOneAsync(@event).ConfigureAwait(false);
 
@@ -149,6 +156,9 @@ public class EventSequenceStorage(
                     genContentDict[genNumber] = genDoc.ToString();
             }
 
+            var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
+
+            var resolvedSubject = subject?.IsSet == true ? subject : new Concepts.Events.Subject(eventSourceId.Value);
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
                     eventType,
@@ -164,7 +174,8 @@ public class EventSequenceStorage(
                     causation,
                     await identityStorage.GetFor(causedByChain),
                     tags,
-                    EventHash.NotSet),
+                    eventHash,
+                    Subject: resolvedSubject),
                 returnContent)
             {
                 GenerationalContent = genContentDict
@@ -507,8 +518,8 @@ public class EventSequenceStorage(
             .Project<BsonDocument>($"{{'{nameof(TailEventSequenceNumbers.Tail)}': {{ '$arrayElemAt': ['$tail.{nameof(TailEventSequenceNumbers.Tail)}',0] }}, '{nameof(TailEventSequenceNumbers.TailForEventTypes)}': {{ '$arrayElemAt': ['$tail2.{nameof(TailEventSequenceNumbers.TailForEventTypes)}',0] }} }}")
             .Single();
 
-        var hasTail = sequenceNumbers.TryGetValue("Tail", out var tail) && tail is not null && tail is not BsonNull;
-        var hasTailForEventTypes = sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes) && tailForEventTypes is not null && tailForEventTypes is not BsonNull;
+        var hasTail = !(!sequenceNumbers.TryGetValue("Tail", out var tail) || tail is null || tail is BsonNull);
+        var hasTailForEventTypes = !(!sequenceNumbers.TryGetValue("TailForEventTypes", out var tailForEventTypes) || tailForEventTypes is null || tailForEventTypes is BsonNull);
 
         return Task.FromResult(new TailEventSequenceNumbers(
             eventSequenceId,
@@ -815,6 +826,31 @@ public class EventSequenceStorage(
 
         var update = Builders<Event>.Update.Set(e => e.Content, generationalContent);
         await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task EnsureIndexes()
+    {
+        const string SubjectIndexName = "subject_index";
+        var existingIndexes = new HashSet<string>();
+        using var cursor = await _collection.Indexes.ListAsync().ConfigureAwait(false);
+        await cursor.ForEachAsync(index =>
+        {
+            if (index.TryGetValue("name", out var name))
+            {
+                existingIndexes.Add(name.AsString);
+            }
+        }).ConfigureAwait(false);
+
+        if (existingIndexes.Contains(SubjectIndexName))
+        {
+            return;
+        }
+
+        await _collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<Event>(
+                Builders<Event>.IndexKeys.Ascending(e => e.Subject),
+                new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
     }
 
     /// <summary>

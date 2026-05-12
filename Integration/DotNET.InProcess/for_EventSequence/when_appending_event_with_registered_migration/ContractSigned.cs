@@ -5,11 +5,5 @@ using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_registered_migration;
 
-/// <summary>
-/// Generation 1 of <see cref="ContractSigned"/>. Has only a contract identifier.
-/// Generation 2 adds a <c>Status</c> property, defaulting to <c>pending</c> for events
-/// stored before the property existed.
-/// </summary>
-/// <param name="ContractId">The contract identifier.</param>
 [EventType]
 public record ContractSigned(string ContractId);

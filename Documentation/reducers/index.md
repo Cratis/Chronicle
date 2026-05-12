@@ -44,8 +44,11 @@ public class AccountBalanceReducer : IReducerFor<AccountBalance>
 ## Topics
 
 - [Getting Started](getting-started.md) - Learn how to create your first reducer
+- [Subscribe to External Event Stores](external-event-store-subscriptions.md) - Configure outbox-to-inbox subscriptions for reducers
 - [Passive Reducers](passive-reducers.md) - Control when reducers actively observe events
 - [Event Processing](event-processing.md) - Understand how reducers process events
+- [Event Sequence](event-sequence.md) - Specify which event sequence a reducer observes
+- [Filtering by appended event metadata](../events/filtering/index.md) - Limit reducers to specific tags, event source types, or event stream types
 - [Tagging Reducers](tagging-reducers.md) - How to use tags with reducers
 
 ## Reading Your Reducer-Based Read Models

@@ -25,7 +25,8 @@ public static class ChildrenDefinitionConverters
             source.FromEvery.ToKernel(),
             source.RemovedWith.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
             source.RemovedWithJoin.ToDictionary(kv => EventType.Parse(kv.Key).ToKernel(), kv => kv.Value.ToKernel()),
-            source.FromEventProperty?.ToKernel());
+            source.FromEventProperty?.ToKernel(),
+            Nested: source.Nested.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()));
 
     /// <summary>
     /// Converts a Kernel ChildrenDefinition to a MongoDB ChildrenDefinition.
@@ -42,6 +43,7 @@ public static class ChildrenDefinitionConverters
             FromEvery = source.FromEvery.ToMongoDB(),
             RemovedWith = source.RemovedWith.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
             RemovedWithJoin = source.RemovedWithJoin.ToDictionary(kv => kv.Key.ToMongoDB().ToString(), kv => kv.Value.ToMongoDB()),
-            FromEventProperty = source.FromEventProperty?.ToMongoDB()
+            FromEventProperty = source.FromEventProperty?.ToMongoDB(),
+            Nested = (source.Nested ?? new Dictionary<PropertyPath, KernelDefs.ChildrenDefinition>()).ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.ToMongoDB())
         };
 }

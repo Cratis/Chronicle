@@ -22,6 +22,7 @@ public class Constraints(
     /// <inheritdoc/>
     public Task Discover()
     {
+        _constraints.Clear();
         constraintsProviders.ForEach(provider => _constraints.AddRange(provider.Provide()));
 
         return Task.CompletedTask;

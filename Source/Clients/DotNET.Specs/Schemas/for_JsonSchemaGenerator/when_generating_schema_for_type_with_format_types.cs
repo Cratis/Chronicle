@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaGenerator;
 
 public class when_generating_schema_for_type_with_format_types : given.a_json_schema_generator
 {
-    record TypeWithFormats(Guid AnId, int ACount, DateTimeOffset OccurredAt);
+    record TypeWithFormats(Guid AnId, int ACount, DateTimeOffset OccurredAt, DateTimeOffset? OptionalOccurredAt);
 
     JsonSchema _result;
 
@@ -14,4 +14,5 @@ public class when_generating_schema_for_type_with_format_types : given.a_json_sc
     [Fact] void should_inject_guid_format_for_guid_property() => _result.ActualProperties["AnId"].Format.ShouldEqual("guid");
     [Fact] void should_inject_int32_format_for_int_property() => _result.ActualProperties["ACount"].Format.ShouldEqual("int32");
     [Fact] void should_inject_date_time_offset_format_for_date_time_offset_property() => _result.ActualProperties["OccurredAt"].Format.ShouldEqual("date-time-offset");
+    [Fact] void should_inject_date_time_offset_format_for_nullable_date_time_offset_property() => _result.ActualProperties["OptionalOccurredAt"].Format.ShouldEqual("date-time-offset");
 }

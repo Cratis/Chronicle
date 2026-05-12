@@ -48,7 +48,8 @@ internal sealed class EventSequences(
             request.CausedBy.ToChronicle(),
             request.Tags.Select(t => new Tag(t)).ToArray(),
             request.ConcurrencyScope.ToChronicle(),
-            request.Occurred);
+            request.Occurred,
+            string.IsNullOrEmpty(request.Subject) ? null : new Subject(request.Subject));
 
         return result.ToContract();
     }

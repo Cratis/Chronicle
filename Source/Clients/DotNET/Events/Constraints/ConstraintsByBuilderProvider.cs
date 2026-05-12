@@ -22,43 +22,26 @@ public class ConstraintsByBuilderProvider(
     IClientArtifactsActivator artifactActivator,
     ILogger<ConstraintsByBuilderProvider> logger) : ICanProvideConstraints
 {
-    readonly object _sync = new();
-    IImmutableList<IConstraintDefinition>? _cachedDefinitions;
-
     /// <inheritdoc/>
     public IImmutableList<IConstraintDefinition> Provide()
     {
-        if (_cachedDefinitions is not null)
-        {
-            return _cachedDefinitions;
-        }
+        var definitions = ImmutableList.CreateBuilder<IConstraintDefinition>();
 
-        lock (_sync)
+        foreach (var constraintType in clientArtifactsProvider.ConstraintTypes)
         {
-            if (_cachedDefinitions is not null)
+            var activatedArtifactResult = artifactActivator.ActivateNonDisposable<IConstraint>(constraintType);
+            if (activatedArtifactResult.TryGetException(out var exception))
             {
-                return _cachedDefinitions;
+                logger.FailedToActivateConstraint(constraintType, exception);
+                continue;
             }
 
-            var definitions = ImmutableList.CreateBuilder<IConstraintDefinition>();
-
-            foreach (var constraintType in clientArtifactsProvider.ConstraintTypes)
-            {
-                var activatedArtifactResult = artifactActivator.ActivateNonDisposable<IConstraint>(constraintType);
-                if (activatedArtifactResult.TryGetException(out var exception))
-                {
-                    logger.FailedToActivateConstraint(constraintType, exception);
-                    continue;
-                }
-
-                var constraint = activatedArtifactResult.AsT0;
-                var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
-                constraint.Define(builder);
-                definitions.AddRange(builder.Build());
-            }
-
-            _cachedDefinitions = definitions.ToImmutable();
-            return _cachedDefinitions;
+            var constraint = activatedArtifactResult.AsT0;
+            var builder = new ConstraintBuilder(eventTypes, namingPolicy, constraintType);
+            constraint.Define(builder);
+            definitions.AddRange(builder.Build());
         }
+
+        return definitions.ToImmutable();
     }
 }

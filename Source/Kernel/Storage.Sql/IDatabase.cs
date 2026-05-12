@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
@@ -52,4 +53,13 @@ public interface IDatabase
     /// <param name="eventSequenceName">The name of the event sequence.</param>
     /// <returns>A <see cref="DbContextScope{EventSequenceDbContext}"/> for the specified event sequence table.</returns>
     Task<DbContextScope<EventSequenceDbContext>> EventSequenceTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string eventSequenceName);
+
+    /// <summary>
+    /// Gets a database context scope for a specific read model table within a namespace.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <param name="containerName">The container name of the read model (table name).</param>
+    /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the specified read model table.</returns>
+    Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName);
 }

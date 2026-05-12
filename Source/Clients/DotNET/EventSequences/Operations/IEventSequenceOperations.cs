@@ -38,6 +38,12 @@ public interface IEventSequenceOperations
     IEnumerable<object> GetAppendedEvents();
 
     /// <summary>
+    /// Gets the events to append as <see cref="EventForEventSourceId"/> records, preserving the order they will be sent to the server.
+    /// </summary>
+    /// <returns>A read-only list of <see cref="EventForEventSourceId"/> in append order.</returns>
+    IReadOnlyList<EventForEventSourceId> GetEventsToAppend();
+
+    /// <summary>
     /// Clears all operations that has been added.
     /// </summary>
     void Clear();

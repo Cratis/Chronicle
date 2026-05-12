@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -81,6 +82,12 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        _eventStore.Connection.Lifecycle.OnDisconnected += () =>
+        {
+            _registered = false;
+            DisconnectHandlers();
+            return Task.CompletedTask;
+        };
     }
 
     /// <inheritdoc/>
@@ -92,6 +99,9 @@ public class Reactors : IReactors
                                 _ => _,
                                 CreateHandlerFor);
 
+        DisconnectHandlers();
+        _handlers.Clear();
+        _registered = false;
         foreach (var handler in handlers)
         {
             _handlers.Add(handler);
@@ -229,7 +239,7 @@ public class Reactors : IReactors
             _eventStore,
             reactorType.GetReactorId(),
             reactorType,
-            reactorType.GetEventSequenceId(),
+            reactorType.GetEventSequenceId(_eventStore.Name?.Value),
             eventTypes,
             _causationManager,
             _identityProvider);
@@ -241,6 +251,15 @@ public class Reactors : IReactors
             register?.Dispose();
         });
         return handler;
+    }
+
+    void DisconnectHandlers()
+    {
+        foreach (var handler in _handlers.Values.ToList())
+        {
+            handler.Disconnect();
+            (handler as IDisposable)?.Dispose();
+        }
     }
 
     void RegisterReactor(IReactorHandler handler)
@@ -256,7 +275,13 @@ public class Reactors : IReactors
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
-                Tags = handler.ReactorType.GetTags().ToArray()
+                Tags = handler.ReactorType.GetTags().ToArray(),
+                Filters = new()
+                {
+                    FilterTags = handler.ReactorType.GetFilterTags().ToArray(),
+                    EventSourceType = handler.ReactorType.GetEventSourceType().Value,
+                    EventStreamType = handler.ReactorType.GetEventStreamType().Value
+                }
             }
         };
 
@@ -273,7 +298,46 @@ public class Reactors : IReactors
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe(_ => { }, messages.Dispose);
+            .Subscribe(
+                _ => { },
+                ex =>
+                {
+                    if (IsExpectedCancellation(ex, handler.CancellationToken))
+                    {
+                        _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                        messages.Dispose();
+                        return;
+                    }
+
+                    var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
+                    _logger.RegisteringReactorFailed(handler.Id, streamFailed);
+                    messages.Dispose();
+                });
+    }
+
+    bool IsExpectedCancellation(Exception exception, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return true;
+        }
+
+        if (exception is OperationCanceledException)
+        {
+            return true;
+        }
+
+        if (exception is RpcException rpcException && rpcException.StatusCode == StatusCode.Cancelled)
+        {
+            return true;
+        }
+
+        if (exception.InnerException is not null)
+        {
+            return IsExpectedCancellation(exception.InnerException, cancellationToken);
+        }
+
+        return false;
     }
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
@@ -333,7 +397,6 @@ public class Reactors : IReactors
                     FailedToHandleEvent(ex, @event.Context.EventType.Id);
                     break;
                 }
-
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)

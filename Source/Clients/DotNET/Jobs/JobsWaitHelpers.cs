@@ -22,15 +22,17 @@ public static class JobsWaitHelpers
     public static async Task<IEnumerable<Job>> WaitForThereToBeJobs(this IJobs jobs, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var currentJobs = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!currentJobs.Any() && !cts.IsCancellationRequested)
+        while (true)
         {
-            currentJobs = await jobs.GetJobs();
-            await Task.Delay(DefaultDelay);
-        }
+            var currentJobs = await jobs.GetJobs();
+            if (currentJobs.Any())
+            {
+                return currentJobs;
+            }
 
-        return currentJobs;
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
     }
 
     /// <summary>
@@ -45,13 +47,13 @@ public static class JobsWaitHelpers
         timeout ??= TimeSpanFactory.DefaultTimeout();
         var matching = Enumerable.Empty<Job>();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (!matching.Any() && !cts.IsCancellationRequested)
+        while (!matching.Any())
         {
             var currentJobs = await jobs.GetJobs();
             matching = currentJobs.Where(j => j.Type.Value.Contains(typeSubstring, StringComparison.Ordinal));
             if (!matching.Any())
             {
-                await Task.Delay(DefaultDelay);
+                await Task.Delay(DefaultDelay, cts.Token);
             }
         }
 
@@ -67,16 +69,18 @@ public static class JobsWaitHelpers
     /// <returns>Awaitable task.</returns>
     public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
     {
-        var statuses = new List<JobStatus>(includeStatuses);
         timeout ??= TimeSpanFactory.DefaultTimeout();
-        var currentJobs = await jobs.GetJobs();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (currentJobs.Any() && !currentJobs.All(_ => includeStatuses.Contains(_.Status)) && !cts.IsCancellationRequested)
+        while (true)
         {
-            currentJobs = await jobs.GetJobs();
-            await Task.Delay(DefaultDelay);
+            var currentJobs = await jobs.GetJobs();
+            if (!currentJobs.Any() || currentJobs.All(_ => includeStatuses.Contains(_.Status)))
+            {
+                return currentJobs;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
         }
-        return currentJobs;
     }
 
     /// <summary>
@@ -100,6 +104,37 @@ public static class JobsWaitHelpers
         jobs.WaitTillJobMeetsPredicate(jobId, state => state.Progress.IsStopped, timeout);
 
     /// <summary>
+    /// Waits for a job to reach a terminal state or to no longer exist.
+    /// </summary>
+    /// <param name="jobs"><see cref="IJobs"/> system.</param>
+    /// <param name="jobId">Job ID.</param>
+    /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
+    /// <returns>
+    /// The final <see cref="Job"/> state when it is retained; otherwise <see langword="null"/>
+    /// if the job has been removed after completion or deletion.
+    /// </returns>
+    public static async Task<Job?> WaitTillJobCompletesOrIsDeleted(this IJobs jobs, JobId jobId, TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            var currentJob = await jobs.GetJob(jobId);
+            if (currentJob is null)
+            {
+                return null;
+            }
+
+            if (currentJob.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
+            {
+                return currentJob;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    /// <summary>
     /// Waits for a job to be deleted.
     /// </summary>
     /// <param name="jobs"><see cref="IJobs"/> system.</param>
@@ -117,6 +152,7 @@ public static class JobsWaitHelpers
             {
                 return;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }
@@ -140,6 +176,7 @@ public static class JobsWaitHelpers
             {
                 return currentJob;
             }
+
             await Task.Delay(DefaultDelay, cts.Token);
         }
     }

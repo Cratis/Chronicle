@@ -17,6 +17,7 @@ using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -42,6 +43,7 @@ public class Reducers : IReducers
     readonly IIdentityProvider _identityProvider;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
+    readonly SinkTypeId _defaultSinkTypeId;
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
@@ -58,6 +60,7 @@ public class Reducers : IReducers
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
+    /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
@@ -70,6 +73,7 @@ public class Reducers : IReducers
         IEventTypes eventTypes,
         INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
+        IOptions<ChronicleOptions> options,
         IIdentityProvider identityProvider,
         IReducerObservers reducerObservers,
         ILogger<Reducers> logger)
@@ -77,6 +81,7 @@ public class Reducers : IReducers
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
             _registered = false;
+            DisconnectHandlers();
             return Task.CompletedTask;
         };
         _eventStore = eventStore;
@@ -88,6 +93,7 @@ public class Reducers : IReducers
         _eventTypes = eventTypes;
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
         _identityProvider = identityProvider;
         _reducerObservers = reducerObservers;
         _logger = logger;
@@ -96,6 +102,7 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public Task Discover()
     {
+        DisconnectHandlers();
         _handlersByType = _clientArtifacts.Reducers
                             .ToDictionary(
                                 _ => _,
@@ -103,7 +110,7 @@ public class Reducers : IReducers
                                 {
                                     var readModelType = reducerType.GetReadModelType();
                                     _reducerValidator.Validate(reducerType);
-                                    var eventSequenceId = reducerType.GetEventSequenceId();
+                                    reducerType.GetEventSequenceId(_eventStore.Name?.Value);
                                     return CreateHandlerFor(reducerType, readModelType) as IReducerHandler;
                                 });
 
@@ -281,7 +288,7 @@ public class Reducers : IReducers
             _eventStore,
             reducerType.GetReducerId(),
             reducerType,
-            reducerType.GetEventSequenceId(),
+            reducerType.GetEventSequenceId(_eventStore.Name?.Value),
             new ReducerInvoker(
                 _eventTypes,
                 _artifactActivator,
@@ -300,6 +307,15 @@ public class Reducers : IReducers
         });
 
         return handler;
+    }
+
+    void DisconnectHandlers()
+    {
+        foreach (var handler in _handlersByType.Values.ToList())
+        {
+            handler.Disconnect();
+            (handler as IDisposable)?.Dispose();
+        }
     }
 
     void RegisterReducer(IReducerHandler handler)
@@ -322,9 +338,15 @@ public class Reducers : IReducers
                 IsActive = handler.IsActive,
                 Sink = new SinkDefinition
                 {
-                    TypeId = WellKnownSinkTypes.MongoDB
+                    TypeId = _defaultSinkTypeId
                 },
-                Tags = handler.ReducerType.GetTags().ToArray()
+                Tags = handler.ReducerType.GetTags().ToArray(),
+                Filters = new()
+                {
+                    FilterTags = handler.ReducerType.GetFilterTags().ToArray(),
+                    EventSourceType = handler.ReducerType.GetEventSourceType().Value,
+                    EventStreamType = handler.ReducerType.GetEventStreamType().Value
+                }
             }
         };
 
@@ -332,7 +354,7 @@ public class Reducers : IReducers
         var messages = new BehaviorSubject<ReducerMessage>(new(new(registration)));
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages);
+        var operationsToObserve = _servicesAccessor.Services.Reducers.Observe(messages, handler.CancellationToken);
 
         // https://github.com/dotnet/reactive/issues/459
         operationsToObserve

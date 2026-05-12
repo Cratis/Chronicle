@@ -1,11 +1,17 @@
 - name: Overview
   href: index.md
+- name: Event Source Id
+  href: event-source-id.md
 - name: Appending
   href: appending.md
 - name: Appending with tags
   href: appending-with-tags.md
+- name: Filtering
+  href: filtering/toc.yml
 - name: Appending many
   href: appending-many.md
+- name: Observing appends
+  href: observing-appends.md
 - name: Getting events
   href: getting-events.md
 - name: Getting state
@@ -18,4 +24,3 @@
   href: revision.md
 - name: Redaction
   href: redaction.md
-

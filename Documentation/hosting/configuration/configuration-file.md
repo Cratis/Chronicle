@@ -33,6 +33,13 @@ Chronicle Server loads configuration from a `chronicle.json` file in the applica
         "authority": null,
         "defaultAdminUsername": "admin",
         "defaultAdminPassword": "admin"
+    },
+    "identityProvider": {
+        "certificate": {
+            "enabled": true,
+            "certificatePath": "/path/to/identity-provider.pfx",
+            "certificatePassword": "your-password"
+        }
     }
 }
 ```
@@ -47,4 +54,5 @@ Environment variables can override any of these values. See [Configuration Prece
 | observers | Retry and timeout settings for observers |
 | events | Event queue configuration |
 | authentication | Authentication and default admin settings |
+| identityProvider | Optional internal identity provider certificate settings |
 

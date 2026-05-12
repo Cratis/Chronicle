@@ -85,7 +85,7 @@ public class ReactorHandler(
     {
         try
         {
-            identityProvider.SetCurrentIdentity(Identity.System with { OnBehalfOf = context.CausedBy });
+            identityProvider.SetCurrentIdentity((Identity.System with { OnBehalfOf = context.CausedBy }).WithoutDuplicates());
             causationManager.Add(CausationType, new Dictionary<string, string>
             {
                 { CausationReactorIdProperty, Id.ToString() },
@@ -139,7 +139,10 @@ public class ReactorHandler(
     /// <summary>
     /// Disconnect the handler.
     /// </summary>
-    public void Disconnect() => _cancellationTokenSource.Cancel();
+    public void Disconnect()
+    {
+        _cancellationTokenSource.Cancel();
+    }
 
     /// <inheritdoc/>
     public void Dispose() => _cancellationTokenSource.Dispose();

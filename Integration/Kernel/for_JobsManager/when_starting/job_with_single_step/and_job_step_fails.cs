@@ -28,8 +28,16 @@ public class and_job_step_fails(context context) : Given<context>(context)
             var getJobStepState = await JobStepStorage.GetForJob(JobId);
 
             CompletedJobState = await EventStore.Jobs.WaitTillJobProgressCompleted(JobId.Value);
-            JobStep = await CompletedJobState.GetJobSteps();
             CompletedJobState = await EventStore.Jobs.WaitTillJobMeetsPredicate(JobId.Value, state => state.Status is JobStatus.CompletedWithFailures);
+
+            // The job step grain persists its state asynchronously after the job aggregates progress.
+            // Poll until the step's persisted status reflects the failure.
+            using var stepCts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            do
+            {
+                await Task.Delay(100, stepCts.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                JobStep = await CompletedJobState.GetJobSteps();
+            } while (JobStep.All(s => s.Status != JobStepStatus.CompletedWithFailure) && !stepCts.IsCancellationRequested);
         }
     }
 

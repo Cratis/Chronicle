@@ -179,6 +179,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (jsonNode is JsonArray array)
         {
+            // When the schema has no item definition (e.g. an any/empty schema generated for
+            // types with custom converters), fall back to unknown-type conversion for each element.
+            if (schemaProperty.Item is null)
+            {
+                return array.Select(_ => ConvertUnknownSchemaTypeToClrType(_!)).ToArray();
+            }
             return array.Select(_ => ConvertFromJsonNode(_!, schemaProperty.Item!)).ToArray();
         }
 
@@ -260,7 +266,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return value.GetValue<double>();
         }
 
-        return null!;
+        // No type information in the schema (e.g. an any/empty schema generated for types
+        // with custom converters). Fall back to extracting the raw CLR value from the node.
+        return ConvertUnknownSchemaTypeToClrType(jsonNode);
     }
 
     JsonNode? ConvertUnknownSchemaTypeToJsonValue(object? value)

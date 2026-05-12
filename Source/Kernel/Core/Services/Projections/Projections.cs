@@ -43,8 +43,14 @@ internal sealed class Projections(
     {
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var projections = request.Projections.Select(_ => _.ToChronicle((Concepts.Projections.ProjectionOwner)(int)request.Owner)).ToArray();
-
-        await projectionsManager.Register(projections);
+        try
+        {
+            await projectionsManager.Register(projections);
+        }
+        catch (Exception exception)
+        {
+            throw new ProjectionRegistrationFailed(request.EventStore, projections.Select(_ => _.Identifier), exception);
+        }
     }
 
     /// <inheritdoc/>
@@ -426,7 +432,7 @@ internal sealed class Projections(
         {
             try
             {
-                schema = JsonSchema.FromJsonAsync(draft.Schema).GetAwaiter().GetResult();
+                schema = JsonSchema.FromJson(draft.Schema);
             }
             catch
             {

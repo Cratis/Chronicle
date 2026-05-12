@@ -2,18 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +32,9 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="observerDefinition"><see cref="IPersistentState{T}"/> for the observer definition.</param>
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
+/// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
+/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -39,6 +46,9 @@ public partial class Observer(
     [PersistentState(nameof(FailedPartition), WellKnownGrainStorageProviders.FailedPartitions)]
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
+    IStorage storage,
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
@@ -52,6 +62,7 @@ public partial class Observer(
     IAppendedEventsQueues _appendedEventsQueues = null!;
     IMeterScope<Observer>? _metrics;
     bool _isPreparingCatchup;
+    Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
 
     /// <inheritdoc/>
     protected override Type InitialState => typeof(Routing);
@@ -96,7 +107,10 @@ public partial class Observer(
     public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
 
     /// <inheritdoc/>
-    public Task<ObserverState> GetState() => Task.FromResult(State);
+    public Task<ObserverState> GetState()
+    {
+        return Task.FromResult(State);
+    }
 #pragma warning restore CA1721 // Property namTes should not match get methods
 
     /// <inheritdoc/>
@@ -112,6 +126,9 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
+    public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
 
     /// <inheritdoc/>
@@ -120,12 +137,24 @@ public partial class Observer(
         IEnumerable<EventType> eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
-        bool isReplayable = true)
+        bool isReplayable = true,
+        ObserverFilters? filters = null)
         where TObserverSubscriber : IObserverSubscriber
     {
         var owner = GetOwner<TObserverSubscriber>();
 
+        var eventTypeSchemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(eventTypes);
+        _eventTypeSchemas = eventTypeSchemas.ToDictionary(s => s.Type);
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        // Re-read all persistent state from storage. When the silo is shared
+        // across tests (KeepAlive grains survive ForceActivationCollection),
+        // the in-memory state may be stale if databases were dropped between
+        // tests. Reading from storage detects this and resets to defaults.
+        await ReadStateAsync();
+        await observerDefinition.ReadStateAsync();
+        await failures.ReadStateAsync();
 
         logger.Subscribing();
         logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
@@ -146,7 +175,8 @@ public partial class Observer(
             typeof(TObserverSubscriber),
             siloAddress,
             subscriberArgs,
-            isReplayable);
+            isReplayable,
+            filters);
         await WriteStateAsync();
 
         if (await TransitionToReplayIfNeeded())
@@ -202,7 +232,7 @@ public partial class Observer(
         }
 
         var partition = failures.State.Partitions.FirstOrDefault(_ => _.Partition.ToString() == reminderName);
-        if (partition is not null)
+        if (partition is { IsQuarantined: false })
         {
             await StartRecoverJobForFailedPartition(partition);
         }

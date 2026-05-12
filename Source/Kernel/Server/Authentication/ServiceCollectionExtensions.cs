@@ -32,11 +32,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
         if (isSqlStorage)
-            services.AddSingleton<IUserStorage>(sp => sp.GetRequiredService<ISystemStorage>().Users);
+            services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Users);
         else
             services.AddSingleton<IUserStorage, UserStorage>();
         services.AddSingleton<IUserStore<User>, UserStore>();
@@ -57,15 +57,6 @@ public static class ServiceCollectionExtensions
                 encryptionCert.CertificatePassword);
             dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
         }
-#if !DEVELOPMENT
-        else
-        {
-            throw new InvalidOperationException(
-                "An encryption certificate is required in production for Data Protection key security. " +
-                "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
-                "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
-        }
-#endif
 
         // Add ASP.NET Identity
         services.AddIdentityCore<User>(options =>
@@ -118,14 +109,7 @@ public static class ServiceCollectionExtensions
         {
             options.Cookie.Name = "Chronicle.Auth";
             options.Cookie.HttpOnly = true;
-
-            // In development without a certificate, allow non-secure cookies
-            var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT
-            options.Cookie.SecurePolicy = hasSecureCertificate ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
-#else
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-#endif
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.ExpireTimeSpan = TimeSpan.FromDays(14);
             options.SlidingExpiration = true;

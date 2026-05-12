@@ -1,8 +1,0 @@
-- name: Overview
-  href: index.md
-- name: Event Store Subscriptions
-  href: event-store-subscriptions.md
-- name: Outbox and Inbox
-  href: outbox-inbox.md
-- name: Subscribing to External Event Stores
-  href: event-store-attribute.md

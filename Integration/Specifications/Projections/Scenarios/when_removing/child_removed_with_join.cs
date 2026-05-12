@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class child_removed_with_join(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithRemovedWithJoin, User>(chronicleFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UserProjectionWithRemovedWithJoin, User>(chronicleInProcessFixture)
     {
         public EventSourceId UserId;
         public EventSourceId FirstGroupId;
@@ -41,8 +41,12 @@ public class child_removed_with_join(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
-            Users = result.ToList().ToArray();
+            // Only consider IDs that could have been created by the events in this scenario to
+            // avoid picking up User documents written by other tests sharing the same fixture.
+            var relevantIds = new[] { ReadModelId, (string)FirstGroupId, (string)SecondGroupId };
+            var filter = Builders<User>.Filter.In(new StringFieldDefinition<User, string>("_id"), relevantIds);
+            var result = await ChronicleFixture.ReadModels.Database.GetCollection<User>().FindAsync(filter);
+            Users = (await result.ToListAsync()).ToArray();
         }
     }
 

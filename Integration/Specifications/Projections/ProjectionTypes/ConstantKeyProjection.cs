@@ -10,7 +10,7 @@ public class ConstantKeyProjection : IProjectionFor<ReadModel>
 {
     public void Define(IProjectionBuilderFor<ReadModel> builder) => builder
         .From<EventWithPropertiesForAllSupportedTypes>(_ => _
-            .UsingConstantKey(ConstantKeyProjection.ConstantKeyValue)
+            .UsingConstantKey(ConstantKeyValue)
             .Set(m => m.StringValue).To(e => e.StringValue));
 
     public const string ConstantKeyValue = "constant-key";

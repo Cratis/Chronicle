@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts.Projections;
@@ -35,6 +34,7 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
 #pragma warning disable SA1629, CA1002, MA0016 // Return abstract
     protected readonly Dictionary<EventType, FromDefinition> _fromDefinitions = [];
     protected readonly Dictionary<PropertyPath, ChildrenDefinition> _childrenDefinitions = [];
+    protected readonly Dictionary<PropertyPath, ChildrenDefinition> _nestedDefinitions = [];
     protected readonly Dictionary<EventType, JoinDefinition> _joinDefinitions = [];
     protected readonly List<FromDerivativesDefinition> _fromDerivativesDefinitions = [];
     protected readonly Dictionary<EventType, RemovedWithDefinition> _removedWithDefinitions = [];
@@ -177,12 +177,21 @@ public class ProjectionBuilder<TReadModel, TBuilder>(
         return (this as TBuilder)!;
     }
 
+    /// <inheritdoc/>
+    public TBuilder Nested<TNestedModel>(Expression<Func<TReadModel, TNestedModel?>> targetProperty, Action<INestedBuilder<TReadModel, TNestedModel>> builderCallback)
+    {
+        var builder = new NestedBuilder<TReadModel, TNestedModel>(namingPolicy, eventTypes, jsonSerializerOptions, Chronicle.Projections.AutoMap.Inherit);
+        builderCallback(builder);
+        _nestedDefinitions[namingPolicy.GetPropertyName(targetProperty.GetPropertyPath())] = builder.Build();
+        return (this as TBuilder)!;
+    }
+
     void CollectEventStore(Type eventType)
     {
-        var eventStoreAttribute = eventType.GetCustomAttribute<EventStoreAttribute>();
-        if (eventStoreAttribute is not null && !_observedEventStores.Contains(eventStoreAttribute.EventStore))
+        var eventStoreName = eventType.GetEventStoreName();
+        if (eventStoreName is not null && !_observedEventStores.Contains(eventStoreName))
         {
-            _observedEventStores.Add(eventStoreAttribute.EventStore);
+            _observedEventStores.Add(eventStoreName);
         }
     }
 }

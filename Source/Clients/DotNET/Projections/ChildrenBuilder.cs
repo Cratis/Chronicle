@@ -81,7 +81,8 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
             All = _fromEveryDefinition,
             RemovedWith = _removedWithDefinitions,
-            RemovedWithJoin = _removedWithJoinDefinitions
+            RemovedWithJoin = _removedWithJoinDefinitions,
+            Nested = _nestedDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value)
         };
     }
 }

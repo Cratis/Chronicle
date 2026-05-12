@@ -6,5 +6,5 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>
 /// Attribute for specifying that a property on a read model should be indexed.
 /// </summary>
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
 public sealed class IndexAttribute : Attribute;

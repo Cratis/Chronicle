@@ -6,11 +6,6 @@ using Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecti
 
 namespace Cratis.Chronicle.InProcess.Integration.Projections.Scenarios.when_projecting_with_children_within_children_using_parent_key_from_context;
 
-/// <summary>
-/// Projection that tests parent key resolution from context for nested children.
-/// Uses UsingParentKeyFromContext() to get the parent key from the event's event source ID
-/// rather than from a property in the event itself.
-/// </summary>
 public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
 {
     public void Define(IProjectionBuilderFor<SimulationDashboard> builder) => builder
@@ -22,5 +17,8 @@ public class SimulationDashboardProjection : IProjectionFor<SimulationDashboard>
             .From<WeightsSetForSimulationConfiguration>()
             .Children(m => m.Hubs, m => m
                 .IdentifiedBy(r => r.HubId)
-                .From<HubAddedToSimulationConfiguration>(e => e.UsingKey(e => e.HubId))));
+                .From<HubAddedToSimulationConfiguration>(e => e.UsingKey(e => e.HubId))
+                .Children(h => h.Metrics, h => h
+                    .IdentifiedBy(r => r.MetricId)
+                    .From<MetricAddedToHub>(e => e.UsingKey(e => e.MetricId)))));
 }

@@ -50,7 +50,7 @@ public class ProjectionCatchupHandler(
                 return Result<ICanHandleCatchupForObserver.Error>.Success();
             }
 
-            var pipeline = projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
+            var pipeline = await projectionPipelineManager.GetFor(observerDetails.Key.EventStore, observerDetails.Key.Namespace, projection);
             await doWork(pipeline);
             return Result<ICanHandleCatchupForObserver.Error>.Success();
         }

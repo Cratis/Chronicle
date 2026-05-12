@@ -47,7 +47,10 @@ public static class ProjectionDefinitionConverters
             source.FromEventProperty?.ToKernel(),
             source.LastUpdated,
             source.Tags,
-            source.AutoMap
+            source.AutoMap,
+            source.Nested.ToDictionary(
+                kv => (PropertyPath)kv.Key,
+                kv => kv.Value.ToKernel())
         );
 
     /// <summary>
@@ -85,6 +88,9 @@ public static class ProjectionDefinitionConverters
             FromEventProperty = source.FromEventProperty?.ToMongoDB(),
             LastUpdated = source.LastUpdated,
             Tags = source.Tags ?? [],
-            AutoMap = source.AutoMap
+            AutoMap = source.AutoMap,
+            Nested = (source.Nested ?? new Dictionary<PropertyPath, KernelDefs.ChildrenDefinition>()).ToDictionary(
+                kv => kv.Key.ToString(),
+                kv => kv.Value.ToMongoDB())
         };
 }

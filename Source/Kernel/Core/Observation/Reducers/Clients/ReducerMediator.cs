@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.DependencyInjection;
@@ -21,19 +22,23 @@ public class ReducerMediator : IReducerMediator
     public void Subscribe(
         ReducerId reducerId,
         ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         ReducerEventsObserver target)
     {
-        _observers[new(reducerId, connectionId)] = target;
+        _observers[new(reducerId, connectionId, eventStore, @namespace)] = target;
     }
 
     /// <inheritdoc/>
     public void OnNext(
         ReducerId reducerId,
         ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
         ReduceOperation operation,
         TaskCompletionSource<ReducerSubscriberResult> taskCompletionSource)
     {
-        if (_observers.TryGetValue(new(reducerId, connectionId), out var observable))
+        if (_observers.TryGetValue(new(reducerId, connectionId, eventStore, @namespace), out var observable))
         {
             observable(operation, taskCompletionSource);
         }
@@ -46,8 +51,10 @@ public class ReducerMediator : IReducerMediator
     /// <inheritdoc/>
     public void Disconnected(
         ReducerId reducerId,
-        ConnectionId connectionId)
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace)
     {
-        _observers.TryRemove(new(reducerId, connectionId), out var _);
+        _observers.TryRemove(new(reducerId, connectionId, eventStore, @namespace), out var _);
     }
 }

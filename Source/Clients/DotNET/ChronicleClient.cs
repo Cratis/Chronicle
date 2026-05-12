@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
@@ -225,6 +226,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
             Options.EnableEventTypeGenerationValidation,
+            Microsoft.Extensions.Options.Options.Create(Options),
             _loggerFactory);
         _eventStores[key] = eventStore;
 
@@ -275,10 +277,19 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
+            var username = options.ConnectionString.Username;
+            var password = options.ConnectionString.Password;
+            if (string.IsNullOrEmpty(username) &&
+                string.IsNullOrEmpty(password))
+            {
+                username = ChronicleConnectionString.DevelopmentClient;
+                password = ChronicleConnectionString.DevelopmentClientSecret;
+            }
+
             return new OAuthTokenProvider(
                 options.ConnectionString.ServerAddress,
-                options.ConnectionString.Username ?? string.Empty,
-                options.ConnectionString.Password ?? string.Empty,
+                username!,
+                password!,
                 options.ManagementPort,
                 disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
@@ -296,6 +307,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             WriteIndented = false
         };
         Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
+        Options.JsonSerializerOptions.Converters.Add(new EventSourceIdJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new ConceptAsJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());

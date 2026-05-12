@@ -10,11 +10,13 @@ using Cratis.Chronicle.Storage.Sql.Cluster;
 using Cratis.Chronicle.Storage.Sql.EventStores;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -34,6 +36,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>> _uniqueConstraintDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, EventSequenceDbContext>>>> _eventSequenceDbContexts = new();
+    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, ReadModelDbContext>>>> _readModelDbContexts = new();
 
     /// <inheritdoc/>
     public Task<DbContextScope<ClusterDbContext>> Cluster()
@@ -125,6 +128,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             eventSequenceName,
             _eventSequenceDbContexts,
             (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
+
+    /// <inheritdoc/>
+    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName) =>
+        GetOrCreateTableDbContext(
+            eventStore,
+            @namespace,
+            containerName,
+            _readModelDbContexts,
+            (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
 
     async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
         EventStoreName eventStore,

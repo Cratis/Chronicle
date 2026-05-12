@@ -40,6 +40,6 @@ public static class ReadModelDefinitionConverters
             ReadModelObserverType.NotSet,
             ReadModelObserverIdentifier.Unspecified,
             Concepts.Sinks.SinkDefinition.None,
-            schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult()),
+            schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJson(kvp.Value)),
             []);
 }

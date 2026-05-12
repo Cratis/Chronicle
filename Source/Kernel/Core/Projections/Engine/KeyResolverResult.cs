@@ -15,8 +15,9 @@ public abstract record KeyResolverResult
     /// Creates a resolved result with a key.
     /// </summary>
     /// <param name="key">The resolved key.</param>
+    /// <param name="joinKey">Optional key to use when applying direct joins.</param>
     /// <returns>A <see cref="ResolvedKey"/> result.</returns>
-    public static KeyResolverResult Resolved(Key key) => new ResolvedKey(key);
+    public static KeyResolverResult Resolved(Key key, object? joinKey = null) => new ResolvedKey(key, joinKey);
 
     /// <summary>
     /// Creates a deferred result with a future.
@@ -24,4 +25,11 @@ public abstract record KeyResolverResult
     /// <param name="future">The projection future.</param>
     /// <returns>A <see cref="DeferredKey"/> result.</returns>
     public static KeyResolverResult Deferred(ProjectionFuture future) => new DeferredKey(future);
+
+    /// <summary>
+    /// Creates an unresolvable result — all resolution strategies were exhausted.
+    /// No future is created; the event is silently skipped for the affected child projection.
+    /// </summary>
+    /// <returns>An <see cref="UnresolvableKey"/> result.</returns>
+    public static KeyResolverResult Unresolvable() => new UnresolvableKey();
 }

@@ -33,7 +33,7 @@ public class and_reactor_is_registered_while_there_are_events_in_sequence(contex
             await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAppended);
             await Reactor.WaitTillHandledEventReaches(HandledEventsBefore + Events.Count);
             await reactor.WaitTillActive();
-            ReactorState = await reactor.GetState();
+            ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }
 

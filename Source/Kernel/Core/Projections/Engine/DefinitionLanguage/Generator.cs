@@ -23,7 +23,8 @@ public class Generator : IGenerator
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
         var sb = new StringBuilder();
-        var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title;
+        var readModelName = readModelDefinition.GetSchemaForLatestGeneration().Title
+            ?? readModelDefinition.Identifier.Value;
         var projectionName = definition.Identifier.Value;
 
         // Projection declaration - use the original projection name from the definition
@@ -417,6 +418,13 @@ public class Generator : IGenerator
         if (normalizedExpression.StartsWith('\"') && normalizedExpression.EndsWith('\"'))
         {
             return normalizedExpression;
+        }
+
+        // Convert $value(innerValue) back to literal "innerValue" syntax for round-tripping
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+        {
+            var innerValue = normalizedExpression[(WellKnownExpressions.Value.Length + 1)..^1];
+            return $"literal \"{innerValue}\"";
         }
 
         // Numeric literals

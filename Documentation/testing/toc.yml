@@ -1,4 +1,8 @@
 - name: Overview
   href: index.md
+- name: Events
+  href: events/toc.yml
 - name: Read Models
-  href: read-models.md
+  href: read-models/toc.yml
+- name: Reactors
+  href: reactors/toc.yml

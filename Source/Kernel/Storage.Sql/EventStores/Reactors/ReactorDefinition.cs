@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 
@@ -38,4 +39,16 @@ public class ReactorDefinition
     /// Gets or sets a value indicating whether the reactor is replayable.
     /// </summary>
     public bool IsReplayable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the tags the reactor belongs to.
+    /// </summary>
+    [Json]
+    public IEnumerable<string> Tags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the filters to apply when observing events.
+    /// </summary>
+    [Json]
+    public ObserverFilters Filters { get; set; } = new();
 }

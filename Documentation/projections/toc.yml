@@ -4,6 +4,15 @@
   href: architecture.md
 - name: Eventual Consistency
   href: eventual-consistency.md
+- name: Appended event metadata filters
+  href: filtering.md
+  items:
+    - name: By tag
+      href: ../events/filtering/by-tag.md
+    - name: By event source type
+      href: ../events/filtering/by-event-source-type.md
+    - name: By event stream type
+      href: ../events/filtering/by-event-stream-type.md
 - name: Tagging Projections
   href: tagging-projections.md
 - name: Projection Declaration Language

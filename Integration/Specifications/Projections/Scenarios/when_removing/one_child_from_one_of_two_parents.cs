@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class one_child_from_one_of_two_parents(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleInProcessFixture)
     {
         public EventSourceId FirstGroupId;
         public EventSourceId SecondGroupId;
@@ -40,7 +40,7 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
         async Task Because()
         {
             var result = await ChronicleFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = result.ToList().ToArray();
+            Groups = (await result.ToListAsync()).ToArray();
             ResultingGroupIds = Groups.Select(_ => (EventSourceId)_.Id.Value).ToArray();
         }
     }

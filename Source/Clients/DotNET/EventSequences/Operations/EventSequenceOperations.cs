@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences.Concurrency;
 
 namespace Cratis.Chronicle.EventSequences.Operations;
 
@@ -47,20 +48,9 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
             .ToArray();
 
     /// <inheritdoc/>
-    public void Clear()
-    {
-        _eventSourceBuilders.Clear();
-        _causation = null;
-    }
-
-    /// <inheritdoc/>
-    public Task<AppendManyResult> Perform()
+    public IReadOnlyList<EventForEventSourceId> GetEventsToAppend()
     {
         var events = new List<EventForEventSourceId>();
-        var concurrencyScopes = _eventSourceBuilders.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.ConcurrencyScope);
-
         foreach (var (eventSourceId, operations) in _eventSourceBuilders)
         {
             var appendOperations = operations.GetOperationsOfType<AppendOperation>();
@@ -74,6 +64,27 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 }));
             }
         }
+
+        return events;
+    }
+
+    /// <inheritdoc/>
+    public void Clear()
+    {
+        _eventSourceBuilders.Clear();
+        _causation = null;
+    }
+
+    /// <inheritdoc/>
+    public Task<AppendManyResult> Perform()
+    {
+        var events = GetEventsToAppend();
+        var concurrencyScopes = _eventSourceBuilders
+            .Where(kvp => kvp.Value.ConcurrencyScope != ConcurrencyScope.NotSet)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ConcurrencyScope);
+
         return eventSequence.AppendMany(events, concurrencyScopes: concurrencyScopes);
     }
 }

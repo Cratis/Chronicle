@@ -30,9 +30,13 @@ This immutability is crucial for debugging, auditing, and maintaining a consiste
 
 ## Avoid nullables / empty values
 
-An event has happened, its not supposed to represent unclear states.
-As with singular purpose, nullables means its up for interpretation and logic needs to be in place to reason about it
-for every observers and consumers of the event.
+An event has happened, and it should not represent unclear states.
+As with singular purpose, nullable properties are open for interpretation and require extra logic
+for every observer and consumer of the event.
+
+Chronicle supports nullable properties on event types when needed.
+However, consider this a design smell and prefer introducing a new event type when the meaning differs.
+The .NET analyzer rule [CHR0012](../code-analysis/CHR0012.md) warns when nullable event properties are used so you can review the design choice.
 
 > Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
 > For instance, a person might not have a middle name.

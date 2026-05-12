@@ -24,9 +24,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
 {
     /// <inheritdoc/>
-    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value)
+    public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
-        var tableName = GetTableName(definition.Name);
+        var tableName = GetTableName(definition.Name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var query = scope.DbContext.Entries.Where(u => u.Value == value);
@@ -54,9 +54,9 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     }
 
     /// <inheritdoc/>
-    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value)
+    public async Task Save(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey = "")
     {
-        var tableName = GetTableName(name);
+        var tableName = GetTableName(name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var entry = await scope.DbContext.Entries
@@ -81,9 +81,9 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
     }
 
     /// <inheritdoc/>
-    public async Task Remove(EventSourceId eventSourceId, ConstraintName name)
+    public async Task Remove(EventSourceId eventSourceId, ConstraintName name, string scopeKey = "")
     {
-        var tableName = GetTableName(name);
+        var tableName = GetTableName(name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var entry = await scope.DbContext.Entries
@@ -96,6 +96,10 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         }
     }
 
-    string GetTableName(ConstraintName constraintName) =>
-        $"{eventSequenceId}_{constraintName}_constraint";
+    string GetTableName(ConstraintName constraintName, string scopeKey = "")
+    {
+        return string.IsNullOrEmpty(scopeKey)
+            ? $"{eventSequenceId}_{constraintName}_constraint"
+            : $"{eventSequenceId}_{constraintName}_{scopeKey}_constraint";
+    }
 }

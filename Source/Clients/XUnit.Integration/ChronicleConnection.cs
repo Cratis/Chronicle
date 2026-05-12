@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelConcepts;
 
 using System.Diagnostics;
 using Cratis.Chronicle.Connections;
@@ -9,6 +10,8 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
 using ConnectionService = KernelCore::Cratis.Chronicle.Services.Clients.ConnectionService;
+using IConnectedClients = KernelCore::Cratis.Chronicle.Clients.IConnectedClients;
+using KernelConnectionId = KernelConcepts::Cratis.Chronicle.Concepts.Clients.ConnectionId;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -60,6 +63,15 @@ internal class ChronicleConnection(
     /// <param name="services">Services to set.</param>
     internal void SetServices(IServices services) => _services = services;
 
+    /// <summary>
+    /// Re-establishes the client connection after a lifecycle disconnect.
+    /// Registers with the <c>ConnectedClients</c> grain, re-creates the keep-alive
+    /// stream, and signals <see cref="IConnectionLifecycle.Connected"/> which triggers
+    /// <c>RegisterAll</c> on the <see cref="IEventStore"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    internal Task Reconnect() => Connect();
+
     async Task ConnectIfNotConnected()
     {
         if (!lifecycle.IsConnected)
@@ -70,12 +82,26 @@ internal class ChronicleConnection(
 
     async Task Connect()
     {
+        // Register the client connection with the ConnectedClients grain BEFORE
+        // signaling connected. The OnConnected callbacks (e.g. RegisterAll) register
+        // observers whose grains call GetConnectedClient(). If the client hasn't been
+        // registered yet, that call throws ClientIsNotConnected and the observer
+        // silently fails to subscribe — causing flaky WaitForState timeouts.
+        // The production ChronicleConnection avoids this by waiting for the first
+        // keep-alive (which only arrives after OnClientConnected completes).
+        var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+        await connectedClients.OnClientConnected(
+            (KernelConnectionId)lifecycle.ConnectionId.Value,
+            string.Empty,
+            Debugger.IsAttached);
+
         _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
             IsRunningWithDebugger = Debugger.IsAttached,
         }).Subscribe(HandleConnection);
+
         await lifecycle.Connected();
     }
 

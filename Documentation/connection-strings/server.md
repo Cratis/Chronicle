@@ -33,7 +33,6 @@ You cannot combine client credentials and API key authentication in the same con
 
 ## TLS
 
-TLS is enabled by default. You can disable it for local development using `disableTls=true`, but production deployments should always use TLS.
+TLS is enabled by default. You can disable it using `disableTls=true` when TLS is terminated upstream (for example by an ingress or reverse proxy).
 
 See [TLS configuration](../hosting/configuration/tls.md) for certificate setup.
-

@@ -27,6 +27,8 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
         public SomeReducer Reducer { get; private set; }
         public NonReplayableReactor NonReplayableReactorInstance { get; private set; }
         public NonReplayableReducer NonReplayableReducerInstance { get; private set; }
+        public ReactorState NonReplayableReactorState { get; private set; }
+        public ReducerState NonReplayableReducerState { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent)];
         public override IEnumerable<Type> Reactors => [typeof(SomeReactor), typeof(NonReplayableReactor)];
@@ -54,25 +56,28 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
 
         async Task Because()
         {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reactorHandler = EventStore.Reactors.GetHandlerFor<SomeReactor>();
             var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
             var nonReplayableReactorHandler = EventStore.Reactors.GetHandlerFor<NonReplayableReactor>();
             var nonReplayableReducerHandler = EventStore.Reducers.GetHandlerFor<NonReplayableReducer>();
 
-            await reactorHandler.WaitTillActive();
-            await reducerHandler.WaitTillActive();
-            await nonReplayableReactorHandler.WaitTillActive();
-            await nonReplayableReducerHandler.WaitTillActive();
+            await reactorHandler.WaitTillActive(startupTimeout);
+            await reducerHandler.WaitTillActive(startupTimeout);
+            await nonReplayableReactorHandler.WaitTillActive(startupTimeout);
+            await nonReplayableReducerHandler.WaitTillActive(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
-            await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
+            var lastAppendResult = await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
 
-            // Wait for all observers to process the 3 events.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
-            await NonReplayableReactorInstance.WaitTillHandledEventReaches(3);
-            await NonReplayableReducerInstance.WaitTillHandledEventReaches(3);
+            var lastAppendedSequenceNumber = lastAppendResult.SequenceNumber;
+
+            // Wait for all observers to process the appended events.
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
 
             // Mark the non-replayable observers as non-replayable in storage.
             await MarkObserverAsNonReplayable(typeof(NonReplayableReactor).GetReactorId());
@@ -91,14 +96,13 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
             await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             // Wait for replayable observers to finish processing the replay.
-            await Reactor.WaitTillHandledEventReaches(3);
-            await Reducer.WaitTillHandledEventReaches(3);
-
-            // Give a brief window for non-replayable observers in case they would incorrectly be replayed.
-            await Task.Delay(500);
+            await Reactor.WaitTillHandledEventReaches(3, startupTimeout);
+            await Reducer.WaitTillHandledEventReaches(3, startupTimeout);
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
+            NonReplayableReactorState = await nonReplayableReactorHandler.GetState();
+            NonReplayableReducerState = await nonReplayableReducerHandler.GetState();
         }
 
         async Task MarkObserverAsNonReplayable(string observerId)
@@ -127,4 +131,10 @@ public class an_event_with_non_replayable_observers(context context) : Given<con
 
     [Fact]
     void should_have_reducer_in_active_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_keep_non_replayable_reactor_in_active_state() => Context.NonReplayableReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_keep_non_replayable_reducer_in_active_state() => Context.NonReplayableReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
 }

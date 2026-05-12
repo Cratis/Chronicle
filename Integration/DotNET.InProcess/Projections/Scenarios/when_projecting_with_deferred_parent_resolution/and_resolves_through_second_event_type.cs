@@ -71,16 +71,29 @@ public class and_resolves_through_second_event_type(context context) : Given<con
             LastEventSequenceNumber = appendResult.SequenceNumber;
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            // Give it some time to process
-            await Task.Delay(1000);
-
             // Get failures if any
             FailedPartitions = await projection.GetFailedPartitions();
 
-            // Get the result
+            Result = await WaitForUpdatedRoot();
+        }
+
+        async Task<Root> WaitForUpdatedRoot(TimeSpan? timeout = null)
+        {
+            timeout ??= TimeSpanFactory.DefaultTimeout();
+
+            using var cts = new CancellationTokenSource(timeout.Value);
             var collection = ChronicleFixture.ReadModels.Database.GetCollection<Root>();
-            var queryResult = await collection.FindAsync(filter => filter.Name == UpdatedRootName);
-            Result = queryResult.FirstOrDefault();
+            while (true)
+            {
+                var queryResult = await collection.FindAsync(filter => filter.Name == UpdatedRootName, cancellationToken: cts.Token);
+                var result = await queryResult.FirstOrDefaultAsync(cts.Token);
+                if (result is not null && result.__lastHandledEventSequenceNumber == LastEventSequenceNumber)
+                {
+                    return result;
+                }
+
+                await Task.Delay(50, cts.Token);
+            }
         }
     }
 

@@ -56,12 +56,14 @@ public class EventTypes : IEventTypes
     /// <inheritdoc/>
     public Task Discover()
     {
+        _typesByEventType.Clear();
+        _schemasByEventType.Clear();
+
         var eventTypes = _clientArtifacts.EventTypes.Select(_ => new
         {
             ClrType = _,
             EventType = _.GetEventType()
         }).ToArray();
-
         var duplicateEventTypes = eventTypes.GroupBy(_ => _.EventType).Where(_ => _.Count() > 1).ToArray();
         if (duplicateEventTypes.Length > 0)
         {

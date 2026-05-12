@@ -52,7 +52,8 @@ public class Observing(
         logger.SubscribingToStream(state.NextEventSequenceNumber);
 
         var key = new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId);
-        _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes);
+        var subscription = await Observer.GetSubscription();
+        _subscription = await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
 
         // Only check for missed events when there is no active catch-up in progress and no failed partitions.
         // When partitions are being caught up, the catch-up job handles historical events

@@ -15,7 +15,7 @@ public class EncryptionKeyForIdentifierClassMap : IBsonClassMapFor<EncryptionKey
     public void Configure(BsonClassMap<EncryptionKeyForIdentifier> classMap)
     {
         classMap.AutoMap();
-        classMap.MapIdProperty(_ => _.Identifier);
+        classMap.MapIdProperty(_ => _.Id);
         var serializer = new EncryptionKeySerializer();
         classMap.MapField(_ => _.PublicKey).SetSerializer(serializer);
         classMap.MapField(_ => _.PrivateKey).SetSerializer(serializer);

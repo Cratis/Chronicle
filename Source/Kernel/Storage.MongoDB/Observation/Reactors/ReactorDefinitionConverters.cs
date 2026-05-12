@@ -27,7 +27,8 @@ public static class ReactorDefinitionConverters
                 et => et.EventType.ToString(),
                 et => et.Key.ToString()),
             IsReplayable = definition.IsReplayable,
-            Tags = definition.Tags ?? []
+            Tags = definition.Tags?.ToArray() ?? [],
+            Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToMongoDB()
         };
 
     /// <summary>
@@ -42,5 +43,6 @@ public static class ReactorDefinitionConverters
             definition.EventSequenceId,
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
             definition.IsReplayable,
-            definition.Tags);
+            definition.Tags,
+            definition.Filters.ToKernel());
 }

@@ -17,6 +17,15 @@ public interface IConstraintValidation
     /// <param name="eventSourceId">The <see cref="EventSourceId"/> to establish the context for.</param>
     /// <param name="eventTypeId">The <see cref="EventType"/> to establish the context for.</param>
     /// <param name="content">The content of the event.</param>
+    /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the event.</param>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event.</param>
     /// <returns>A <see cref="ConstraintValidationContext"/> that can be used for validation.</returns>
-    ConstraintValidationContext Establish(EventSourceId eventSourceId, EventTypeId eventTypeId, ExpandoObject content);
+    ConstraintValidationContext Establish(
+        EventSourceId eventSourceId,
+        EventTypeId eventTypeId,
+        ExpandoObject content,
+        EventSourceType? eventSourceType = default,
+        EventStreamType? eventStreamType = default,
+        EventStreamId? eventStreamId = default);
 }

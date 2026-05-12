@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -24,6 +26,7 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle;
 
@@ -40,7 +43,9 @@ public class EventStore : IEventStore
     readonly IIdentityProvider _identityProvider;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IEventSerializer _eventSerializer;
+    readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
+    readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStore"/> class.
@@ -61,6 +66,7 @@ public class EventStore : IEventStore
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
     /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation. Defaults to <see langword="false"/>.</param>
+    /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public EventStore(
         EventStoreName eventStoreName,
@@ -79,6 +85,7 @@ public class EventStore : IEventStore
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
         bool enableEventTypeGenerationValidation,
+        IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<EventStore>();
@@ -86,6 +93,7 @@ public class EventStore : IEventStore
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _jsonSerializerOptions = jsonSerializerOptions;
+        _clientArtifactsProvider = clientArtifactsProvider;
         Name = eventStoreName;
         Namespace = @namespace;
         Connection = connection;
@@ -123,6 +131,7 @@ public class EventStore : IEventStore
             UnitOfWorkManager,
             identityProvider,
             jsonSerializerOptions);
+        _sequences[EventLog.Id] = EventLog;
 
         Jobs = new Jobs.Jobs(this);
 
@@ -150,6 +159,7 @@ public class EventStore : IEventStore
             EventTypes,
             namingPolicy,
             jsonSerializerOptions,
+            options,
             identityProvider,
             reducerObservers,
             loggerFactory.CreateLogger<Reducers.Reducers>());
@@ -177,9 +187,11 @@ public class EventStore : IEventStore
             Reducers,
             EventTypes,
             schemaGenerator,
+            options,
             jsonSerializerOptions,
             readModelsWatcherManager,
-            reducerObservers);
+            reducerObservers,
+            loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
         Seeding = new EventSeeding(
             eventStoreName,
@@ -266,7 +278,7 @@ public class EventStore : IEventStore
     {
         _logger.RegisterAllArtifacts();
 
-        // Ensure the event store is registered in the system before registering artifacts
+        // Ensure the event store exists before registering artifacts.
         await _servicesAccessor.Services.EventStores.Ensure(new EnsureEventStore { Name = Name.Value });
 
         // We need to register event types and read models first, as they are used by the other artifacts
@@ -282,31 +294,133 @@ public class EventStore : IEventStore
             Reducers.Register(),
             Projections.Register());
 
+        // Auto-subscribe to any external event stores referenced by observers
+        await RegisterExternalEventStoreSubscriptionsAsync();
+
         // Seed events only after all observers are registered
         await Seeding.Register();
     }
 
     /// <inheritdoc/>
     public IEventSequence GetEventSequence(EventSequenceId id) =>
-        new EventSequence(
-            _eventStoreName,
-            Namespace,
+        _sequences.GetOrAdd(
             id,
-            Connection,
-            EventTypes,
-            Constraints,
-            _eventSerializer,
-            _correlationIdAccessor,
-            _concurrencyScopeStrategies,
-            _causationManager,
-            UnitOfWorkManager,
-            _identityProvider,
-            _jsonSerializerOptions);
+            static (key, state) => new EventSequence(
+                state._eventStoreName,
+                state.Namespace,
+                key,
+                state.Connection,
+                state.EventTypes,
+                state.Constraints,
+                state._eventSerializer,
+                state._correlationIdAccessor,
+                state._concurrencyScopeStrategies,
+                state._causationManager,
+                state.UnitOfWorkManager,
+                state._identityProvider,
+                state._jsonSerializerOptions),
+            this);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreNamespaceName>> GetNamespaces(CancellationToken cancellationToken = default)
     {
         var namespaces = await _servicesAccessor.Services.Namespaces.GetNamespaces(new() { EventStore = _eventStoreName });
         return namespaces.Select(_ => (EventStoreNamespaceName)_).ToArray();
+    }
+
+    async Task RegisterExternalEventStoreSubscriptionsAsync()
+    {
+        var currentStoreName = _eventStoreName?.Value;
+
+        static string? ResolveSourceStoreForObserver(Type observerType)
+        {
+            var observerEventStore = observerType.GetCustomAttributes(typeof(EventStoreAttribute), inherit: true)
+                .OfType<EventStoreAttribute>()
+                .FirstOrDefault();
+            if (observerEventStore is not null)
+            {
+                return observerEventStore.EventStore;
+            }
+
+            var eventStores = observerType
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(m => !m.IsSpecialName)
+                .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
+                .OfType<Type>()
+                .Where(t => Attribute.IsDefined(t, typeof(EventTypeAttribute), inherit: true))
+                .Select(t => t.GetEventStoreName())
+                .Where(name => name is not null)
+                .Select(name => name!)
+                .Distinct()
+                .ToList();
+
+            if (eventStores.Count == 1)
+            {
+                return eventStores[0];
+            }
+
+            return null;
+        }
+
+        static IEnumerable<EventTypeId> ResolveObserverEventTypeIds(Type observerType, IEventTypes eventTypes) =>
+            observerType
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(m => !m.IsSpecialName)
+                .Select(m => m.GetParameters().FirstOrDefault()?.ParameterType)
+                .OfType<Type>()
+                .Where(t => Attribute.IsDefined(t, typeof(EventTypeAttribute), inherit: true))
+                .Select(t => eventTypes.GetEventTypeFor(t).Id)
+                .Distinct()
+                .ToArray();
+
+        var observerExternalSubscriptions = _clientArtifactsProvider.Reactors
+            .Where(r => !ReactorTypeExtensions.HasExplicitEventSequence(r))
+            .Concat(_clientArtifactsProvider.Reducers.Where(r => !ReducerTypeExtensions.HasExplicitEventSequence(r)))
+            .Select(observerType =>
+            {
+                var sourceStore = ResolveSourceStoreForObserver(observerType);
+                return (observerType, sourceStore);
+            })
+            .Where(item => item.sourceStore is not null && item.sourceStore != currentStoreName)
+            .GroupBy(item => item.sourceStore!, item => item.observerType)
+            .ToDictionary(
+                g => g.Key,
+                g => g.SelectMany(observerType => ResolveObserverEventTypeIds(observerType, EventTypes)).Distinct().ToList());
+
+        // Merge with projection external event store references (already filtered by GetExternalEventStoreSubscriptions)
+        var allByStore = new Dictionary<string, HashSet<EventTypeId>>();
+        foreach (var kvp in observerExternalSubscriptions)
+        {
+            allByStore[kvp.Key] = [.. kvp.Value];
+        }
+
+        foreach (var subscription in Projections.GetExternalEventStoreSubscriptions())
+        {
+            if (!allByStore.TryGetValue(subscription.EventStoreName, out var existing))
+            {
+                existing = [];
+                allByStore[subscription.EventStoreName] = existing;
+            }
+
+            foreach (var id in subscription.EventTypeIds)
+            {
+                existing.Add(id);
+            }
+        }
+
+        // Register a subscription for each external event store
+        foreach (var kvp in allByStore)
+        {
+            await Subscriptions.Subscribe(
+                new EventStoreSubscriptionId(kvp.Key),
+                kvp.Key,
+                builder =>
+                {
+                    foreach (var id in kvp.Value)
+                    {
+                        builder.WithEventType(id);
+                    }
+                });
+        }
     }
 }

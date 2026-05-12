@@ -21,12 +21,18 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </remarks>
 /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use for converting names during serialization.</param>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for providing event type information.</param>
+/// <param name="currentEventStoreName">
+/// The name of the event store this builder is targeting.
+/// Used to detect when event types belong to the same store, which means event-log rather than inbox routing.
+/// </param>
 internal class ModelBoundProjectionBuilder(
     INamingPolicy namingPolicy,
-    IEventTypes eventTypes) : IModelBoundProjectionBuilder
+    IEventTypes eventTypes,
+    string? currentEventStoreName = null) : IModelBoundProjectionBuilder
 {
     readonly INamingPolicy _namingPolicy = namingPolicy;
     readonly IEventTypes _eventTypes = eventTypes;
+    readonly string? _currentEventStoreName = currentEventStoreName;
     readonly Dictionary<string, EventType> _eventTypeCache = new();
     readonly List<(string PropertyName, FromEveryAttribute Attribute)> _fromEveryAttributes = [];
 
@@ -41,12 +47,12 @@ internal class ModelBoundProjectionBuilder(
 
         var projectionId = new ProjectionId(modelType.FullName!);
         var readModelIdentifier = modelType.GetReadModelIdentifier();
-        var fromEventSequenceAttr = modelType.GetCustomAttribute<FromEventSequenceAttribute>();
+        var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
         var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
 
         var definition = new ProjectionDefinition
         {
-            EventSequenceId = fromEventSequenceAttr?.EventSequenceId ?? EventSequenceId.Log,
+            EventSequenceId = fromEventSequenceAttr?.Sequence ?? EventSequenceId.Log,
             Identifier = projectionId,
             ReadModel = readModelIdentifier,
             IsActive = !modelType.IsPassive(),
@@ -55,6 +61,7 @@ internal class ModelBoundProjectionBuilder(
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
             Children = new Dictionary<string, ChildrenDefinition>(),
+            Nested = new Dictionary<string, ChildrenDefinition>(),
             All = new FromEveryDefinition(),
             RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(),
             RemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>(),
@@ -93,7 +100,7 @@ internal class ModelBoundProjectionBuilder(
 
         if (fromEventSequenceAttr is null)
         {
-            definition.EventSequenceId = InferEventSequenceId(modelType, definition);
+            definition.EventSequenceId = InferEventSequenceId(modelType, definition, _currentEventStoreName);
         }
 
         return definition;
@@ -127,14 +134,14 @@ internal class ModelBoundProjectionBuilder(
         };
     }
 
-    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition)
+    EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {
         var eventStores = definition.From.Keys
             .Where(et => _eventTypes.HasFor(new EventTypeId(et.Id)))
             .Select(et => _eventTypes.GetClrTypeFor(new EventTypeId(et.Id)))
-            .Select(t => t.GetCustomAttribute<EventStoreAttribute>())
-            .Where(a => a is not null)
-            .Select(a => a!.EventStore)
+            .Select(t => t.GetEventStoreName())
+            .Where(name => name is not null)
+            .Select(name => name!)
             .Distinct()
             .ToList();
 
@@ -145,6 +152,12 @@ internal class ModelBoundProjectionBuilder(
 
         if (eventStores.Count == 1)
         {
+            // If the event types belong to the same store as the one we're in, use event-log instead of inbox
+            if (currentEventStoreName is not null && eventStores[0] == currentEventStoreName)
+            {
+                return EventSequenceId.Log;
+            }
+
             return new EventSequenceId($"{EventSequenceId.InboxPrefix}{eventStores[0]}");
         }
 
@@ -183,6 +196,34 @@ internal class ModelBoundProjectionBuilder(
                 var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
                 fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
             }
+        }
+    }
+
+    void ApplyClassLevelFromEventConfiguration(Attribute attr, Type eventType, IDictionary<EventType, FromDefinition> targetFrom)
+    {
+        var eventTypeId = GetOrCreateEventType(eventType);
+        var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
+
+        var key = (attr as IKeyedAttribute)?.Key;
+        if (!string.IsNullOrEmpty(key))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, key);
+            var keyPropertyPath = new PropertyPath(key);
+            fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
+        }
+
+        var parentKey = (attr as IFromEventAttribute)?.ParentKey;
+        if (!string.IsNullOrEmpty(parentKey))
+        {
+            PropertyValidator.ValidatePropertyExists(eventType, parentKey);
+            var parentKeyPropertyPath = new PropertyPath(parentKey);
+            fromDefinition.ParentKey = _namingPolicy.GetPropertyName(parentKeyPropertyPath);
+        }
+
+        var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
+        if (!string.IsNullOrEmpty(constantKey))
+        {
+            fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
         }
     }
 
@@ -366,32 +407,18 @@ internal class ModelBoundProjectionBuilder(
             {
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, attr, eventType, ProcessMember, modelType);
             }
+
+            if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
+            {
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, memberName, parameter.ParameterType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             allEventTypesReferencedByModel.Add(eventType);
-
-            // Only set custom key if specified, don't auto-map properties (server handles that based on AutoMap flag)
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                var eventTypeId = GetOrCreateEventType(eventType);
-                var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = parameter.GetCustomAttribute<FromEveryAttribute>();
@@ -499,33 +526,19 @@ internal class ModelBoundProjectionBuilder(
                 var memberType = property is PropertyInfo propInfo ? propInfo.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
                 definition.ProcessChildrenFromAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, attr, eventType, ProcessMember, modelType);
             }
+
+            if (Attribute.IsDefined(property, typeof(NestedAttribute)))
+            {
+                var memberType = property is PropertyInfo propInfo2 ? propInfo2.PropertyType : throw new InvalidOperationException("Expected PropertyInfo");
+                definition.ProcessNestedAttribute(GetOrCreateEventType, _namingPolicy, property.Name, memberType, ProcessMember, modelType);
+            }
         }
 
         foreach (var attr in classLevelFromEvents)
         {
             var eventType = attr.GetType().GetGenericArguments()[0];
             eventTypesReferencedByMember.Add(eventType);
-
-            // Create FromDefinition for class-level events
-            // The server handles auto-mapping properties based on AutoMap flag
-            var eventTypeId = GetOrCreateEventType(eventType);
-            var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-
-            // Only set custom key if specified
-            var keyProperty = attr.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
-            var key = keyProperty?.GetValue(attr) as string;
-            if (!string.IsNullOrEmpty(key))
-            {
-                PropertyValidator.ValidatePropertyExists(eventType, key);
-                var keyPropertyPath = new PropertyPath(key);
-                fromDefinition.Key = _namingPolicy.GetPropertyName(keyPropertyPath);
-            }
-
-            var constantKey = (attr as IFromEventAttribute)?.ConstantKey;
-            if (!string.IsNullOrEmpty(constantKey))
-            {
-                fromDefinition.Key = $"{WellKnownExpressions.Value}({constantKey})";
-            }
+            ApplyClassLevelFromEventConfiguration(attr, eventType, targetFrom);
         }
 
         var fromEveryAttr = property.GetCustomAttribute<FromEveryAttribute>();

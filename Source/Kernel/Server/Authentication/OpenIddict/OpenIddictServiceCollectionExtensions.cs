@@ -87,12 +87,14 @@ public static class OpenIddictServiceCollectionExtensions
                 }
 #endif
 
-                // Determine if we have a secure certificate configured
-                var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
+                // Determine if the identity provider has TLS enabled (token endpoint runs on the management port).
+                // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls for backward compatibility.
+                var identityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
+                var identityProviderHasSecureCertificate = identityProviderCertificate.Enabled && !string.IsNullOrEmpty(identityProviderCertificate.CertificatePath);
 
-                // In development without a certificate, allow HTTP connections
+                // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
 #if DEVELOPMENT
-                if (!hasSecureCertificate)
+                if (!identityProviderHasSecureCertificate)
                 {
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough()
@@ -104,8 +106,17 @@ public static class OpenIddictServiceCollectionExtensions
                            .EnableTokenEndpointPassthrough();
                 }
 #else
-                options.UseAspNetCore()
-                       .EnableTokenEndpointPassthrough();
+                if (!identityProviderHasSecureCertificate)
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough()
+                           .DisableTransportSecurityRequirement();
+                }
+                else
+                {
+                    options.UseAspNetCore()
+                           .EnableTokenEndpointPassthrough();
+                }
 #endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
@@ -114,12 +125,9 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // In development without a certificate, use HTTP; otherwise use HTTPS
-#if DEVELOPMENT
-                    var internalScheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-#else
-                    var internalScheme = Uri.UriSchemeHttps;
-#endif
+                    // Use identity provider certificate config to determine the issuer scheme
+                    // since the token endpoint is served on the management port
+                    var internalScheme = identityProviderHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
                     options.SetIssuer(internalAuthority);
                 }
@@ -142,13 +150,11 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // In development without a certificate, use HTTP; otherwise use HTTPS
-                    var hasSecureCertificate = !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
-#if DEVELOPMENT
-                    scheme = hasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-#else
-                    scheme = Uri.UriSchemeHttps;
-#endif
+                    // Use identity provider certificate config since tokens are served on the management port.
+                    // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls.
+                    var validationIdentityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
+                    var validationHasSecureCertificate = validationIdentityProviderCertificate.Enabled && !string.IsNullOrEmpty(validationIdentityProviderCertificate.CertificatePath);
+                    scheme = validationHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
                     host = "localhost";
                 }
 

@@ -25,7 +25,9 @@ The development image is ideal for:
 
 ## Production Mode
 
-For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`) and lets you wire up an external MongoDB resource.
+For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`) and lets you wire up an external database resource.
+
+### MongoDB
 
 ```csharp
 var mongo = builder.AddConnectionString("chronicle-mongo");
@@ -41,6 +43,43 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 - A MongoDB Atlas connection string (`builder.AddConnectionString("...")`)
 - A Mongo container added directly in the AppHost: `builder.AddMongoDB("mongo")`
 - Any self-hosted or cloud MongoDB resource
+
+### PostgreSQL
+
+```csharp
+var postgres = builder.AddConnectionString("chronicle-postgres");
+
+var chronicle = builder.AddCratisChronicle(chronicle =>
+    chronicle.WithPostgreSql(postgres));
+```
+
+`postgres` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
+
+- A connection string (`builder.AddConnectionString("...")`)
+- A PostgreSQL container: `builder.AddPostgres("postgres").AddDatabase("chronicle")`
+
+### Microsoft SQL Server
+
+```csharp
+var sql = builder.AddConnectionString("chronicle-sql");
+
+var chronicle = builder.AddCratisChronicle(chronicle =>
+    chronicle.WithMsSql(sql));
+```
+
+`sql` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
+
+- A connection string (`builder.AddConnectionString("...")`)
+- A SQL Server container: `builder.AddSqlServer("sql").AddDatabase("chronicle")`
+
+### SQLite
+
+For SQLite, provide the connection string directly (SQLite is file-based and does not require a network resource):
+
+```csharp
+var chronicle = builder.AddCratisChronicle(chronicle =>
+    chronicle.WithSqlite("Data Source=/data/chronicle.db"));
+```
 
 ## Connecting a .NET Client
 
@@ -66,7 +105,7 @@ Both endpoints are registered automatically when you call `AddCratisChronicle()`
 
 ## Complete Example
 
-A typical Aspire AppHost `Program.cs` for a production setup:
+A typical Aspire AppHost `Program.cs` for a production setup with MongoDB:
 
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);

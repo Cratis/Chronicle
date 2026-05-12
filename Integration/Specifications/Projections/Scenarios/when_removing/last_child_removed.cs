@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when
 [Collection(ChronicleCollection.Name)]
 public class last_child_removed(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<GroupProjection, Group>(chronicleInProcessFixture)
     {
         public EventSourceId FirstGroupId;
         public override IEnumerable<Type> EventTypes => [typeof(GroupCreated), typeof(UserCreated), typeof(UserAddedToGroup), typeof(UserRemovedFromGroup)];
@@ -35,7 +35,7 @@ public class last_child_removed(context context) : Given<context>(context)
         async Task Because()
         {
             var result = await ChronicleFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = result.ToList().ToArray();
+            Groups = (await result.ToListAsync()).ToArray();
         }
     }
 

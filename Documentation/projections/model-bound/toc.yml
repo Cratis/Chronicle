@@ -2,6 +2,8 @@
   href: index.md
 - name: Basic Mapping
   href: basic-mapping.md
+- name: Set Constant Value
+  href: set-value.md
 - name: Convention-Based
   href: convention-based.md
 - name: FromEvery
@@ -12,6 +14,8 @@
   href: constant-key.md
 - name: Children
   href: children.md
+- name: Nested Objects
+  href: nested.md
 - name: Removal
   href: removal.md
 - name: Joins

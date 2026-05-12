@@ -54,7 +54,8 @@ public class ProjectionsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ProjectionDefinition> definitions)
     {
-        await projectionsService.Register(_eventStoreName, definitions);
+        var definitionsToRegister = definitions.ToList();
+        await projectionsService.Register(_eventStoreName, definitionsToRegister);
 
         // Merge new definitions with existing ones, replacing any with the same identifier
         var existingProjections = State.Projections.ToList();
@@ -177,26 +178,32 @@ public class ProjectionsManager(
 
     async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
-        var subscribed = await observer.IsSubscribed();
-
-        if (!subscribed && definition.IsActive)
+        if (!definition.IsActive)
         {
-            logger.Subscribing(definition.Identifier, namespaceName);
-            var eventStoreStorage = storage.GetEventStore(_eventStoreName);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
-
-            logger.SubscribingWithEventTypes(
-                definition.Identifier,
-                projection.EventTypes.Count(),
-                string.Join(", ", projection.EventTypes.Select(et => et.Id)));
-
-            await observer.Subscribe<IProjectionObserverSubscriber>(
-                ObserverType.Projection,
-                projection.EventTypes,
-                localSiloDetails.SiloAddress);
+            return;
         }
+
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, namespaceName, definition.EventSequenceId));
+
+        logger.Subscribing(definition.Identifier, namespaceName);
+        var eventStoreStorage = storage.GetEventStore(_eventStoreName);
+        var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
+        var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
+
+        logger.SubscribingWithEventTypes(
+            definition.Identifier,
+            projection.EventTypes.Count(),
+            string.Join(", ", projection.EventTypes.Select(et => et.Id)));
+
+        // Always call Subscribe even when the observer thinks it is already
+        // subscribed. For [KeepAlive] grains that survive deactivation
+        // collection, the in-memory subscription state can be stale after
+        // databases are dropped. Subscribe is idempotent and re-reads
+        // persistent state, which detects the reset.
+        await observer.Subscribe<IProjectionObserverSubscriber>(
+            ObserverType.Projection,
+            projection.EventTypes,
+            localSiloDetails.SiloAddress);
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;

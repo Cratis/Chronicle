@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.XUnit.Integration.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.XUnit.Integration</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../XUnit.Integration/XUnit.Integration.csproj" />
+    </ItemGroup>
+</Project>

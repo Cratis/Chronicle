@@ -27,7 +27,7 @@ public sealed class ReducerAttribute(string id = "", string? eventSequence = def
     /// </summary>
     /// <remarks>
     /// When <see langword="null"/>, the event sequence is inferred from the event types handled by the reducer.
-    /// If all handled event types originate from the same event store (via <see cref="Cratis.Chronicle.Events.EventStoreAttribute"/>),
+    /// If all handled event types originate from the same event store (via <see cref="Events.EventStoreAttribute"/>),
     /// the reducer will automatically subscribe to the corresponding inbox event sequence.
     /// </remarks>
     public EventSequenceId? EventSequenceId { get; } = eventSequence is null ? null : new EventSequenceId(eventSequence);

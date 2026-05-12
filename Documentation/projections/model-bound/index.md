@@ -53,6 +53,7 @@ Model-bound projections support all projection engine capabilities:
 See the following pages for detailed information on each feature:
 
 - [Basic Mapping](./basic-mapping.md) - SetFrom, AddFrom, SubtractFrom, SetFromContext
+- [Set Constant Value](./set-value.md) - Set a property to a fixed value with SetValue
 - [Convention-Based](./convention-based.md) - Automatic property mapping with FromEvent (equivalent to AutoMap)
 - [FromEvery](./from-every.md) - Update properties from all events
 - [Counters](./counters.md) - Increment, Decrement, Count
@@ -65,17 +66,17 @@ See the following pages for detailed information on each feature:
 
 ## When to Use
 
-Use model-bound projections when:
+Prefer model-bound projections by default:
 
-- You have simple to moderate projection logic
-- The projection mapping is straightforward and declarative
-- You prefer a more concise, attribute-based approach
+- They keep projection metadata next to the read model
+- They cover the common Chronicle projection capabilities without a separate class
+- They make the happy path concise and consistent across features
 
-Use fluent projections (`IProjectionFor<T>`) when:
+Use fluent projections (`IProjectionFor<T>`) as a fallback when the projection cannot be expressed cleanly with model-bound attributes:
 
-- You prefer to separate the concerns of the representation of a read model and its projection definition
-- You want more control over the projection building process
-- You need to share projection logic across multiple read models
+- You need projection construction that is more dynamic or procedural
+- You intentionally want to separate the read model from the projection definition
+- You need specialized builder features that do not map naturally to attributes
 
 ## Comparison with Fluent Projections
 

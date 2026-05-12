@@ -5,9 +5,11 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
@@ -41,9 +43,12 @@ public abstract class a_single_subscriber : all_dependencies
             _taskFactory,
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
+            Options.Create(new ChronicleOptions()),
             Substitute.For<ILogger<AppendedEventsQueue>>());
-        await _queue.Subscribe(_observerKey, EventTypes);
+        await _queue.Subscribe(_observerKey, EventTypes, Filters);
     }
 
     protected abstract IEnumerable<EventType> EventTypes { get; }
+
+    protected virtual ObserverFilters? Filters => null;
 }

@@ -14,9 +14,9 @@ public static class StorageType
     public const string Sqlite = "sqlite";
 
     /// <summary>
-    /// SQL Server storage type.
+    /// Microsoft SQL Server storage type.
     /// </summary>
-    public const string SqlServer = "sqlserver";
+    public const string MsSql = "mssql";
 
     /// <summary>
     /// PostgreSQL storage type.

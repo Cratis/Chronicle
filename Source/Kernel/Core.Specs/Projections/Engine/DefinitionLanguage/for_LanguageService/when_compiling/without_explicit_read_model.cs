@@ -22,7 +22,7 @@ public class without_explicit_read_model : for_LanguageService.given.a_language_
     {
         var compileResult = _languageService.Compile(
             Declaration,
-            Cratis.Chronicle.Concepts.Projections.ProjectionOwner.Client,
+            Concepts.Projections.ProjectionOwner.Client,
             [],
             _eventTypeSchemas);
 

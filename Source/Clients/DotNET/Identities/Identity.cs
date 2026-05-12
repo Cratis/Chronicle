@@ -29,4 +29,33 @@ public record Identity(string Subject, string Name, string UserName = "", Identi
     /// The identity used when the system is the cause.
     /// </summary>
     public static readonly Identity System = new("5d032c92-9d5e-41eb-947a-ee5314ed0032", "[System]", "[System]");
+
+    /// <summary>
+    /// Returns a new <see cref="Identity"/> chain with duplicate subjects removed.
+    /// The first occurrence of each subject is kept.
+    /// </summary>
+    /// <returns>A new <see cref="Identity"/> with duplicates removed from the chain.</returns>
+    public Identity WithoutDuplicates()
+    {
+        var seen = new HashSet<string>();
+        var chain = new List<Identity>();
+        var current = this;
+        while (current is not null)
+        {
+            if (seen.Add(current.Subject))
+            {
+                chain.Add(current);
+            }
+
+            current = current.OnBehalfOf;
+        }
+
+        Identity? result = null;
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            result = chain[i] with { OnBehalfOf = result };
+        }
+
+        return result!;
+    }
 }

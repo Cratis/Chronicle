@@ -32,4 +32,10 @@ public class Constraint
     /// </summary>
     [ProtoMember(4)]
     public OneOf<UniqueConstraintDefinition, UniqueEventTypeConstraintDefinition> Definition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional scope of the constraint.
+    /// </summary>
+    [ProtoMember(5)]
+    public ConstraintScope? Scope { get; set; }
 }

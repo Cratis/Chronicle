@@ -1,33 +1,27 @@
 # Hosting
 
-Chronicle provides multiple deployment options to suit different environments and requirements. Whether you're running in development, testing, or production environments, Chronicle offers flexible hosting solutions.
+Hosting Chronicle means running the **Chronicle Kernel** as a standalone server process. The Kernel is the heart of the system — it manages the event store, processes projections, coordinates observers, and exposes the API that client applications connect to. All event-sourced state flows through it, so the Kernel must be running before any client can append or query events.
 
-## Deployment Options
+Chronicle ships as a Docker image, making it straightforward to run anywhere containers are supported — locally for development, in CI, or in production clusters.
 
-- **[Production](production.md)** - Docker-based production deployment with MongoDB
-- **[Configuration](configuration/index.md)** - Complete configuration reference
-- **[Aspire](aspire.md)** - Microsoft Aspire hosting integration for development and production
-- **[Local Certificates](local-certificates.md)** - Generate and configure TLS certificates for local development
-- **[Data Protection Key Encryption](encryption-certificate.md)** - Encrypt data protection keys in production
-- **[Docker Compose](docker-compose.md)** - Multi-container setup for development and testing
-- **Development** - Local development setup with MongoDB
+## Getting Started
 
-## Common Requirements
+For day-to-day development, [Docker Compose](docker-compose.md) is the fastest way to get a Kernel and MongoDB running locally. [Aspire](aspire.md) is an alternative if your team uses the .NET Aspire application model.
 
-All Chronicle hosting environments require:
+## Going to Production
 
-- **.NET 9 Runtime** - Chronicle is built on .NET 9
-- **MongoDB** - Primary storage backend for events and projections
-- **Network Access** - Chronicle exposes multiple ports for different services
-- **Configuration** - See [Configuration](configuration/index.md) for details
+Running the Kernel in production requires two things beyond a basic Docker deployment:
 
-## Architecture Overview
+- **[Production](production.md)** — how to deploy the Chronicle Docker image with MongoDB, including port configuration, Docker Compose setup, health checks, and security considerations.
+- **[Data Protection Key Encryption](encryption-certificate.md)** — Chronicle uses ASP.NET Core Data Protection to protect sensitive values at rest. In production you must supply a certificate so that data protection keys are encrypted. Without this, the Kernel will either fail to start or leave keys unprotected.
 
-Chronicle operates as a distributed event store with the following components:
+Both steps are required. A production deployment that skips key encryption is not secure.
 
-- **API Server** - REST API for client interactions
-- **Event Store** - Core event storage and retrieval
-- **Observer Engine** - Event processing and projections
-- **Workbench** - Web-based management interface (optional)
+## All Hosting Topics
 
-Each component can be configured and scaled independently based on your hosting requirements.
+- **[Production](production.md)** — Docker-based production deployment
+- **[Data Protection Key Encryption](encryption-certificate.md)** — Certificate-backed key encryption for production
+- **[Configuration](configuration/index.md)** — Complete configuration reference
+- **[Aspire](aspire.md)** — Microsoft Aspire hosting integration
+- **[Docker Compose](docker-compose.md)** — Multi-container setup for development and testing
+- **[Local Certificates](local-certificates.md)** — TLS certificates for local development

@@ -24,7 +24,8 @@ public class UniqueEventTypeConstraintValidator(
     /// <inheritdoc/>
     public async Task<ConstraintValidationResult> Validate(ConstraintValidationContext context)
     {
-        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventTypeId, context.EventSourceId);
+        var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
+        var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventTypeId, context.EventSourceId, scopeKey);
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()

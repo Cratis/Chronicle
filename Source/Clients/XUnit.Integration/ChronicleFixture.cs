@@ -94,7 +94,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public virtual void PerformBackup(string? prefix = null)
+    public virtual async Task PerformBackupAsync(string? prefix = null)
     {
         prefix ??= string.Empty;
         if (!string.IsNullOrEmpty(prefix))
@@ -105,12 +105,12 @@ public abstract class ChronicleFixture : IChronicleFixture
         var backupName = $"{prefix}{DateTimeOffset.Now:yyyyMMdd-HHmmss}.tgz";
         try
         {
-            MongoDBContainer.ExecAsync(
+            await MongoDBContainer.ExecAsync(
             [
                 "mongodump",
                 $"--archive=/backups/{backupName}",
                 "--gzip"
-            ]).GetAwaiter().GetResult();
+            ]);
         }
         catch
         {
@@ -118,9 +118,9 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <inheritdoc/>
-    public virtual async Task RemoveAllDatabases()
+    public virtual async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
     {
-        var urlBuilder = new MongoUrlBuilder($"mongodb://{MongoDBContainer.Hostname}:{MongoDBContainer.GetMappedPublicPort(27017)}")
+        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}")
         {
             DirectConnection = true
         };
@@ -129,7 +129,10 @@ public abstract class ChronicleFixture : IChronicleFixture
         using var mongoClient = new MongoClient(settings);
         var namesCursor = await mongoClient.ListDatabaseNamesAsync();
         var names = await namesCursor.ToListAsync();
-        foreach (var name in names.Where(name => name != "admin" && name != "config" && name != "local"))
+        var systemNames = new[] { "admin", "config", "local" };
+        foreach (var name in names.Where(name =>
+            !systemNames.Contains(name) &&
+            excludePrefixes?.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true))
         {
             await mongoClient.DropDatabaseAsync(name);
         }
@@ -158,7 +161,7 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 await container.StartAsync();
             }
-            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException)
+            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
             {
                 Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;

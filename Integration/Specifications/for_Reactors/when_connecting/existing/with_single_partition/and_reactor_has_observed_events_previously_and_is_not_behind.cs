@@ -32,6 +32,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
 
             await reactor.WaitTillReachesEventSequenceNumber(LastHandledEventSequenceNumber);
             reactor.Disconnect();
+            await reactor.WaitForState(ObserverRunningState.Disconnected);
 
             NewEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeOtherEvent(42), 10, "Partition").ToList();
             result = await EventStore.EventLog.AppendMany(NewEvents);

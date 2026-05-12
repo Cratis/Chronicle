@@ -88,7 +88,8 @@ public class Reducer(
                 ObserverType.Reducer,
                 definition.EventTypes.Select(_ => _.EventType).ToArray(),
                 localSiloDetails.SiloAddress,
-                connectedClient);
+                connectedClient,
+                filters: definition.Filters);
 
             _subscribed = true;
         }

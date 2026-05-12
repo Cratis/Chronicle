@@ -41,21 +41,26 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks()
-    .AddMongoDb(
-        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
-        name: "mongodb",
-        timeout: TimeSpan.FromSeconds(3));
+builder.Services.AddHealthChecks();
 
 if (chronicleOptions.Features.Api)
 {
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
-var serverCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+var grpcCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
+var workbenchCertificate = CertificateLoader.LoadWorkbenchCertificate(chronicleOptions);
+var grpcTls = chronicleOptions.Tls;
 
-if (serverCertificate is not null)
+if (!grpcTls.Enabled)
+{
+    logger.TlsDisabled();
+}
+else if (grpcCertificate is not null)
 {
     logger.TlsCertificateLoaded();
 }
@@ -72,45 +77,55 @@ logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
 
 builder.WebHost.UseKestrel(options =>
 {
-    // Always listen on ManagementPort for API
+    // Listen on ManagementPort for Workbench and API (HTTP/1.1)
+    // Uses Workbench-specific TLS config, falling back to top-level TLS
     options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http1;
 
-        if (serverCertificate is not null)
+        if (workbenchCertificate is not null)
         {
-            listenOptions.UseHttps(serverCertificate);
+            listenOptions.UseHttps(workbenchCertificate);
         }
 #if !DEVELOPMENT
         else
         {
-            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+            // In production, Workbench TLS can be explicitly disabled for deployments
+            // behind an ingress/reverse proxy that terminates TLS upstream.
+            var workbenchTls = chronicleOptions.WorkbenchTls;
+            if (workbenchTls.Enabled)
+            {
+                throw new InvalidOperationException(
+                    "No TLS certificate is configured for the Workbench. " +
+                    "Either provide a certificate path in configuration, or set Workbench:Tls:Enabled to false " +
+                    "if TLS is terminated upstream by an ingress/reverse proxy.");
+            }
         }
 #endif
     });
 
+    // Listen on Port for gRPC (HTTP/2)
+    // Uses top-level TLS config and can run without TLS when explicitly disabled.
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
 
-        if (serverCertificate is not null)
+        if (grpcCertificate is not null)
         {
-            listenOptions.UseHttps(serverCertificate);
+            listenOptions.UseHttps(grpcCertificate);
         }
 #if !DEVELOPMENT
-        else
+        else if (grpcTls.Enabled)
         {
-            throw new InvalidOperationException("No TLS certificate is configured. Please provide a certificate path in configuration.");
+            throw new InvalidOperationException(
+                "No TLS certificate is configured for gRPC while TLS is enabled. " +
+                "Please provide a certificate path in configuration, or set Tls:Enabled to false.");
         }
 #endif
     });
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
-
-var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
 var hostBuilder = builder.Host
 .UseDefaultServiceProvider(_ =>
@@ -187,7 +202,6 @@ logger.ServerConfigured();
 app.UseRouting();
 
 app.UseCratisArc();
-app.UseRouting();
 
 // Map workbench static files BEFORE authentication so they are publicly accessible
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)

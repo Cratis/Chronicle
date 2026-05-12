@@ -20,22 +20,37 @@ public class RetryFailedPartition(
     ILogger<RetryFailedPartition> logger) : Job<RetryFailedPartitionRequest, JobStateWithLastHandledEvent>, IRetryFailedPartition
 {
     /// <inheritdoc/>
-    protected override async Task OnCompleted()
+    protected override async Task OnAllStepsCompleted()
     {
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
-        {
-            logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
-            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
-        }
-
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
             logger.NoEventsWereHandled(nameof(RetryFailedPartition));
+
+            if (!State.HandledAllEvents)
+            {
+                // The step ran but the subscriber failed every event — the partition is still
+                // legitimately failed. Do not clear it; the next scheduled retry will try again.
+                return;
+            }
+
+            // HandledAllEvents is true but no sequence number was recorded: the step succeeded
+            // but found nothing to process. This means the observer already advanced past the
+            // failed sequence number (the events were processed despite the caller timing out).
+            // The failed partition record is stale — clear it.
+            await observer.FailedPartitionRecovered(Request.Key, Request.FromSequenceNumber);
             return;
         }
+
+        if (!State.HandledAllEvents)
+        {
+            logger.NotAllEventsWereHandled(nameof(RetryFailedPartition), State.LastHandledEventSequenceNumber);
+            await observer.FailedPartitionPartiallyRecovered(Request.Key, State.LastHandledEventSequenceNumber);
+            return;
+        }
+
         await observer.FailedPartitionRecovered(Request.Key, State.LastHandledEventSequenceNumber);
     }
 

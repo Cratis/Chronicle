@@ -6,9 +6,6 @@ using Cratis.Chronicle.Reducers;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_events_with_multiple_generation_migrations;
 
-/// <summary>
-/// Reducer that consumes generation 2 of UserRegistered and records the received generation and content.
-/// </summary>
 [DependencyInjection.IgnoreConvention]
 public class UserRegisteredReducer : IReducerFor<UserReadModel>
 {
@@ -31,7 +28,7 @@ public class UserRegisteredReducer : IReducerFor<UserReadModel>
     {
         timeout ??= TimeSpanFactory.DefaultTimeout();
         using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEvents < count && !cts.IsCancellationRequested)
+        while (HandledEvents < count)
         {
             await Task.Delay(50, cts.Token);
         }

@@ -32,8 +32,9 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
 
         async Task Because()
         {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
-            await reducer.WaitTillActive();
+            await reducer.WaitTillActive(startupTimeout);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             Observers[1].HandleTime = 1.Seconds();
@@ -59,8 +60,8 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
             JobsAfterCompleted = await EventStore.Jobs.WaitForThereToBeNoJobs();
 
             FailedPartitionsAfterRetry = await reducer.GetFailedPartitions();
-            ReducerState = await reducer.GetState();
             await Observers[2].WaitTillHandledEventReaches(1);
+            ReducerState = await reducer.WaitTillActiveAndGetState(startupTimeout);
         }
     }
 

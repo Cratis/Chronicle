@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -16,6 +17,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
@@ -66,7 +68,7 @@ internal sealed class Reducers(
             new Dictionary<ReadModelGeneration, JsonSchema>(),
             []);
 
-        messages.Subscribe(message =>
+        var messagesSubscription = messages.Subscribe(message =>
         {
             switch (message.Content.Value)
             {
@@ -78,11 +80,26 @@ internal sealed class Reducers(
                         register.Reducer.EventSequenceId,
                         register.ConnectionId);
 
-                    var readModel = grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
+                    grainFactory.GetReadModel(register.Reducer.ReadModel, register.EventStore).GetDefinition().ContinueWith(
                         result =>
                         {
-                            model = result.Result;
-                            registrationTcs.SetResult(register);
+                            if (result.IsFaulted)
+                            {
+                                registrationTcs.TrySetException(CreateRegistrationFailure(register, result.Exception!));
+                            }
+                            else
+                            {
+                                model = result.Result;
+                                try
+                                {
+                                    ValidateReadModelDefinition(register, model);
+                                    registrationTcs.TrySetResult(register);
+                                }
+                                catch (Exception exception)
+                                {
+                                    registrationTcs.TrySetException(CreateRegistrationFailure(register, exception));
+                                }
+                            }
                         },
                         TaskScheduler.Current);
                     break;
@@ -119,6 +136,8 @@ internal sealed class Reducers(
 
         var connectionId = ConnectionId.NotSet;
         var observerId = ObserverId.Unspecified;
+        var eventStoreName = EventStoreName.NotSet;
+        var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<ReduceOperationMessage>? observableObserver = null;
 
         var observable = Observable.Create<ReduceOperationMessage>(
@@ -130,6 +149,8 @@ internal sealed class Reducers(
                     var registration = await registrationTcs.Task;
                     connectionId = registration.ConnectionId;
                     observerId = registration.Reducer.ReducerId;
+                    eventStoreName = registration.EventStore;
+                    namespaceName = registration.Namespace;
 
                     logger.Subscribing(
                         registration.Reducer.ReducerId,
@@ -148,6 +169,8 @@ internal sealed class Reducers(
                     reducerMediator.Subscribe(
                         registration.Reducer.ReducerId,
                         registration.ConnectionId,
+                        registration.EventStore,
+                        registration.Namespace,
                         (reduceOperation, tcs) =>
                         {
                             reducerResultTcs[reduceOperation.Partition] = tcs;
@@ -167,7 +190,14 @@ internal sealed class Reducers(
                         var reducerDefinition = registration.Reducer.ToChronicle();
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                        try
+                        {
+                            await clientObserver.SetDefinitionAndSubscribe(reducerDefinition);
+                        }
+                        catch (Exception exception)
+                        {
+                            throw CreateRegistrationFailure(registration, exception);
+                        }
                     }
 
                     await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -191,7 +221,8 @@ internal sealed class Reducers(
                 }
                 finally
                 {
-                    reducerMediator.Disconnected(observerId, connectionId);
+                    messagesSubscription.Dispose();
+                    reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
                     reducerResultTcs.Values.ForEach(_ => _.TrySetResult(new(ObserverSubscriberResult.Disconnected(), new ExpandoObject())));
                     if (clientObserver is not null)
                     {
@@ -207,11 +238,57 @@ internal sealed class Reducers(
         {
             logger.ObserverStreamDisconnected(observerId, connectionId);
             observableObserver?.OnCompleted();
-            clientObserver?.Unsubscribe().GetAwaiter().GetResult();
-            reducerMediator.Disconnected(observerId, connectionId);
+            reducerMediator.Disconnected(observerId, connectionId, eventStoreName, namespaceName);
             register?.Dispose();
         });
 
         return observable;
+    }
+
+    static ReducerRegistrationFailed CreateRegistrationFailure(RegisterReducer registration, Exception exception)
+    {
+        if (exception is ReducerRegistrationFailed reducerRegistrationFailed)
+        {
+            return reducerRegistrationFailed;
+        }
+
+        var rootCause = exception is AggregateException aggregateException ? aggregateException.Flatten().InnerExceptions.FirstOrDefault() ?? exception : exception;
+        return new ReducerRegistrationFailed(
+            registration.Reducer.ReducerId,
+            registration.EventStore,
+            registration.Namespace,
+            registration.Reducer.EventSequenceId,
+            registration.ConnectionId,
+            rootCause);
+    }
+
+    static void ValidateReadModelDefinition(RegisterReducer registration, ReadModelDefinition readModel)
+    {
+        var schema = readModel.GetSchemaForLatestGeneration();
+
+        if (schema.HasKeyProperty())
+        {
+            var keyPropertyName = schema.GetKeyProperty().Name;
+            var keyPropertyPath = new PropertyPath(keyPropertyName);
+            if (schema.GetSchemaPropertyForPropertyPath(keyPropertyPath) is null)
+            {
+                throw CreateRegistrationFailure(
+                    registration,
+                    new InvalidReadModelDefinitionForReducer(readModel.Identifier, $"The key property path '{keyPropertyPath.Path}' does not exist in the read model schema."));
+            }
+
+            return;
+        }
+
+        // When no explicit key property is declared, validate that there are properties at all
+        // so that the key can be inferred. The MongoDBConverter handles the case where the
+        // heuristic key name doesn't exist in the schema gracefully.
+        var likelyKeyPropertyName = schema.GetLikelyKeyPropertyName();
+        if (string.IsNullOrWhiteSpace(likelyKeyPropertyName))
+        {
+            throw CreateRegistrationFailure(
+                registration,
+                new InvalidReadModelDefinitionForReducer(readModel.Identifier, "No key property could be inferred from the read model schema."));
+        }
     }
 }

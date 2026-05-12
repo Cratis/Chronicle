@@ -38,7 +38,7 @@ public class all_dependencies : Specification
         _recommendationStorage.GetAll().Returns(_ => Task.FromResult<IImmutableList<RecommendationState>>([.. _storedRecommendations]));
 
         _silo.AddService(_storage);
-        _silo.AddProbe<ITheRecommendation>(_ => _theRecommendation);
+        _silo.AddProbe(_ => _theRecommendation);
 
         _managerKey = new("event-store", "namespace");
         _manager = await _silo.CreateGrainAsync<RecommendationsManager>(0, _managerKey);

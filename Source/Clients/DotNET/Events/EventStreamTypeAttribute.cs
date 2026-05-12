@@ -4,14 +4,29 @@
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Attribute to specify the <see cref="EventStreamType"/> for an event stream.
+/// Attribute to specify the <see cref="EventStreamType"/> for an event type, command, or observer.
 /// </summary>
-/// <param name="eventStreamType">The <see cref="EventStreamType"/> for the event stream.</param>
-[AttributeUsage(AttributeTargets.Class)]
-public sealed class EventStreamTypeAttribute(string eventStreamType) : Attribute
+/// <remarks>
+/// When applied to an observer (reactor, reducer, or projection), it filters observed events to only
+/// those belonging to the given event stream type. When applied to a command, setting
+/// <paramref name="concurrency"/> to <see langword="true"/> includes this value in the concurrency
+/// scope when appending events.
+/// </remarks>
+/// <param name="value">The <see cref="EventStreamType"/> value.</param>
+/// <param name="concurrency">
+/// Whether to include this metadata in the concurrency scope when appending events.
+/// Default is <see langword="false"/>.
+/// </param>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+public sealed class EventStreamTypeAttribute(string value, bool concurrency = false) : Attribute
 {
     /// <summary>
     /// Gets the <see cref="EventStreamType"/>.
     /// </summary>
-    public EventStreamType EventStreamType { get; } = eventStreamType;
+    public EventStreamType EventStreamType { get; } = value;
+
+    /// <summary>
+    /// Gets a value indicating whether this metadata should be included in the concurrency scope.
+    /// </summary>
+    public bool Concurrency { get; } = concurrency;
 }

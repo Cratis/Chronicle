@@ -1,3 +1,5 @@
+- name: Integration Tests
+  href: ./integration-tests.md
 - name: Clients
   href: ./clients/toc.yml
 - name: Kernel

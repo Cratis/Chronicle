@@ -78,13 +78,38 @@ public static class EventTypeConverters
     /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
     public static EventTypeSchema ToKernel(this EventType schema)
     {
-        var result = JsonSchema.FromJsonAsync(schema.Schemas.First().Value).GetAwaiter().GetResult();
+        var result = JsonSchema.FromJson(schema.Schemas.First().Value);
         result.EnsureComplianceMetadata();
 
         return new EventTypeSchema(
             new Concepts.Events.EventType(
                schema.Id,
                EventTypeGeneration.First,
+               schema.Tombstone),
+            schema.Owner,
+            schema.Source,
+            result);
+    }
+
+    /// <summary>
+    /// Convert to <see cref="EventTypeSchema"/> from <see cref="EventType"/> for a specific <see cref="EventTypeGeneration"/>.
+    /// </summary>
+    /// <param name="schema"><see cref="EventType"/> to convert from.</param>
+    /// <param name="generation">The <see cref="EventTypeGeneration"/> to use.</param>
+    /// <returns>Converted <see cref="EventTypeSchema"/>.</returns>
+    public static EventTypeSchema ToKernel(this EventType schema, EventTypeGeneration generation)
+    {
+        var schemaJson = schema.Schemas.TryGetValue((uint)generation, out var json)
+            ? json
+            : schema.Schemas.First().Value;
+
+        var result = JsonSchema.FromJson(schemaJson);
+        result.EnsureComplianceMetadata();
+
+        return new EventTypeSchema(
+            new Concepts.Events.EventType(
+               schema.Id,
+               generation,
                schema.Tombstone),
             schema.Owner,
             schema.Source,
@@ -100,7 +125,7 @@ public static class EventTypeConverters
     {
         var generations = eventType.Schemas.Select(kvp =>
         {
-            var schema = JsonSchema.FromJsonAsync(kvp.Value).GetAwaiter().GetResult();
+            var schema = JsonSchema.FromJson(kvp.Value);
             return new EventTypeGenerationDefinition(new EventTypeGeneration(kvp.Key), schema);
         }).ToList();
 

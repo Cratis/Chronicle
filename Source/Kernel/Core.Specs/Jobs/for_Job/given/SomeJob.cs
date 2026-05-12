@@ -16,7 +16,7 @@ public class SomeJob : Job<SomeRequest, SomeJobState>
         Task.FromResult<IImmutableList<JobStepDetails>>(StepsToPrepare.ToImmutableList());
 
     protected override bool KeepAfterCompleted => !ShouldBeRemovedAfterCompleted;
-    protected override Task OnCompleted() => OnCompletedThrows
+    protected override Task OnAllStepsCompleted() => OnCompletedThrows
         ? Task.FromException(new Exception())
         : Task.CompletedTask;
 

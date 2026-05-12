@@ -33,6 +33,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
 
             await reactor.WaitTillReachesEventSequenceNumber(LastHandledEventSequenceNumber);
             reactor.Disconnect();
+            await reactor.WaitForState(ObserverRunningState.Disconnected);
 
             NewEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeOtherEvent(42), 10).ToList();
             result = await EventStore.EventLog.AppendMany(NewEvents);
@@ -43,7 +44,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillActive();
-            ReactorState = await reactor.GetState();
+            ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }
 

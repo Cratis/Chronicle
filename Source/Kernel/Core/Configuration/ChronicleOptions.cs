@@ -67,6 +67,11 @@ public class ChronicleOptions
     public Authentication Authentication { get; init; } = new Authentication();
 
     /// <summary>
+    /// Gets or inits the optional identity provider configuration.
+    /// </summary>
+    public IdentityProviderOptions? IdentityProvider { get; init; }
+
+    /// <summary>
     /// Gets the encryption certificate configuration for Data Protection keys.
     /// When not configured, keys are auto-generated and stored in the database.
     /// </summary>
@@ -76,6 +81,24 @@ public class ChronicleOptions
     /// Gets or inits the TLS configuration.
     /// </summary>
     public Tls Tls { get; init; } = new Tls();
+
+    /// <summary>
+    /// Gets or inits the optional Workbench configuration.
+    /// When not set, the Workbench uses the top-level <see cref="Tls"/> configuration.
+    /// </summary>
+    public Workbench? Workbench { get; init; }
+
+    /// <summary>
+    /// Gets or inits the bootstrap client configurations.
+    /// Clients defined here are registered on startup with hashed secrets.
+    /// </summary>
+    public IEnumerable<ClientBootstrapConfig> Clients { get; init; } = [];
+
+    /// <summary>
+    /// Gets the effective TLS configuration for the Workbench.
+    /// Falls back to the top-level <see cref="Tls"/> if <see cref="Workbench"/> or <see cref="Workbench.Tls"/> is not set.
+    /// </summary>
+    public Tls WorkbenchTls => Workbench?.Tls ?? Tls;
 
     /// <summary>
     /// Adds the Chronicle configuration.

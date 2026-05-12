@@ -21,6 +21,9 @@ public class without_any_causation_set : given.event_sequence_operations_without
 
     async Task Because() => _result = await _operations.Perform();
 
-    [Fact] void should_call_append_many_on_event_sequence() => _eventSequence.Received().AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>(), concurrencyScopes: Arg.Any<Dictionary<EventSourceId, ConcurrencyScope>>());
+    [Fact]
+    void should_call_append_many_on_event_sequence() => _eventSequence.Received().AppendMany(
+        Arg.Any<IEnumerable<EventForEventSourceId>>(),
+        concurrencyScopes: Arg.Is<Dictionary<EventSourceId, ConcurrencyScope>>(scopes => scopes.Count == 0));
     [Fact] void should_return_append_many_result() => _result.ShouldNotBeNull();
 }
