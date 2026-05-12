@@ -364,7 +364,26 @@ public class Reducers : IReducers
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe(_ => { }, messages.Dispose);
+            .Subscribe(
+                _ => { },
+                ex =>
+                {
+                    messages.Dispose();
+
+                    if (!handler.CancellationToken.IsCancellationRequested)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                                _logger.ReconnectingReducer(handler.Id);
+                                RegisterReducer(handler);
+                            }
+                            catch (OperationCanceledException) { }
+                        });
+                    }
+                });
     }
 
     async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
