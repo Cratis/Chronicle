@@ -9,24 +9,37 @@ using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers.for_Reducers.when_observing;
 
-public class and_get_definition_fails : Specification
+public class and_read_model_schema_has_no_key_information : Specification
 {
     Subject<ReducerMessage> _messages;
-    IReadModel _readModelGrain;
     Reducers _reducers;
     Exception _observedError;
 
     void Establish()
     {
         var grainFactory = Substitute.For<IGrainFactory>();
-        _readModelGrain = Substitute.For<IReadModel>();
-        grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModelGrain);
-        _readModelGrain.GetDefinition()
-            .Returns(Task.FromException<ReadModelDefinition>(new InvalidOperationException("Read model definition unavailable")));
+        var readModel = Substitute.For<IReadModel>();
+        grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(readModel);
+        readModel.GetDefinition()
+            .Returns(new ReadModelDefinition(
+                "test-read-model",
+                "test-container",
+                "test-display-name",
+                ReadModelOwner.Client,
+                ReadModelSource.Code,
+                ReadModelObserverType.Reducer,
+                ReadModelObserverIdentifier.Unspecified,
+                Concepts.Sinks.SinkDefinition.None,
+                new Dictionary<ReadModelGeneration, JsonSchema>
+                {
+                    { ReadModelGeneration.First, new JsonSchema() }
+                },
+                []));
 
         _reducers = new Reducers(
             grainFactory,
@@ -67,7 +80,6 @@ public class and_get_definition_fails : Specification
         await errorSeen.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    [Fact] void should_surface_an_error_on_the_observable() => _observedError.ShouldNotBeNull();
-    [Fact] void should_wrap_it_as_a_reducer_registration_failure() => _observedError.ShouldBeOfExactType<ReducerRegistrationFailed>();
-    [Fact] void should_include_registration_context_in_the_error_message() => _observedError.Message.ShouldContain("test-reducer");
+    [Fact] void should_fail_registration_before_subscribing() => _observedError.ShouldBeOfExactType<ReducerRegistrationFailed>();
+    [Fact] void should_describe_the_key_schema_problem() => _observedError.Message.ShouldContain("No key property could be inferred");
 }
