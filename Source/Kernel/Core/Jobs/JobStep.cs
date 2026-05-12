@@ -88,6 +88,16 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        var cts = _cancellationTokenSource;
+        _cancellationTokenSource = null;
+        await (cts?.CancelAsync() ?? Task.CompletedTask);
+        cts?.Dispose();
+        await base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<StartJobStepError>> Start(GrainId jobGrainId)
     {
         using var scope = logger.BeginJobStepScope(State);
