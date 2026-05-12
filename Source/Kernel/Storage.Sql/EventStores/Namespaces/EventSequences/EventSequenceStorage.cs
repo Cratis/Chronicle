@@ -130,6 +130,7 @@ public class EventSequenceStorage(
 
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
+            var resolvedSubject = subject?.IsSet == true ? subject : new Subject(eventSourceId.Value);
             var eventContext = new EventContext(
                 eventType,
                 eventSourceType,
@@ -144,7 +145,8 @@ public class EventSequenceStorage(
                 causation,
                 await identityStorage.GetFor(causedByChain),
                 tags,
-                eventHash);
+                eventHash,
+                Subject: resolvedSubject);
 
             return new AppendedEvent(eventContext, returnContent);
         }
@@ -230,6 +232,9 @@ public class EventSequenceStorage(
 
                 scope.DbContext.Events.Add(eventEntry);
 
+                var resolvedSubject = eventToAppend.Subject?.IsSet == true
+                    ? eventToAppend.Subject
+                    : new Subject(eventToAppend.EventSourceId.Value);
                 var eventContext = new EventContext(
                     eventToAppend.EventType,
                     eventToAppend.EventSourceType,
@@ -244,7 +249,8 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     await identityStorage.GetFor(eventToAppend.CausedByChain),
                     eventToAppend.Tags,
-                    eventToAppend.Hash);
+                    eventToAppend.Hash,
+                    Subject: resolvedSubject);
 
                 appendedEvents.Add(new AppendedEvent(eventContext, eventToAppend.Content));
             }

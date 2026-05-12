@@ -20,4 +20,7 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Trace, "Handling of events received for Reducer {ReducerId} completed")]
     internal static partial void EventHandlingCompleted(this ILogger<Reducers> logger, ReducerId reducerId);
+
+    [LoggerMessage(LogLevel.Information, "Reconnecting Reducer '{ReducerId}' after stream failure")]
+    internal static partial void ReconnectingReducer(this ILogger<Reducers> logger, ReducerId reducerId);
 }
