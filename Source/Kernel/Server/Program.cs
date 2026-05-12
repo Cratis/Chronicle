@@ -41,12 +41,11 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks()
-    .AddMongoDb(
-        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
-        name: "mongodb",
-        timeout: TimeSpan.FromSeconds(3));
+builder.Services.AddHealthChecks();
 
 if (chronicleOptions.Features.Api)
 {
@@ -127,10 +126,6 @@ builder.WebHost.UseKestrel(options =>
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
-
-var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
 var hostBuilder = builder.Host
 .UseDefaultServiceProvider(_ =>

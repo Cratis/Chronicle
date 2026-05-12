@@ -10,6 +10,7 @@
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="MongoDB.Driver" />
+        <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Orleans.Providers.MongoDB" />
         <PackageReference Include="Cratis.Arc.Core" />

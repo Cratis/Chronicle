@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddChronicleAuthentication(this IServiceCollection services, Configuration.ChronicleOptions chronicleOptions)
     {
         var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
         if (isSqlStorage)
