@@ -75,6 +75,7 @@ public class HandleEventsForPartition(
     {
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
+        State.EventTypes = request.EventTypes;
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -141,7 +142,7 @@ public class HandleEventsForPartition(
                     : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
                 currentState.EndEventSequenceNumber,
                 _eventSourceId,
-                subscription.EventTypes,
+                currentState.EventTypes,
                 cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
