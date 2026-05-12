@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <param name="logger">Logger for logging.</param>
 public class JobStepThrottle(IOptions<ChronicleOptions> options, ILogger<JobStepThrottle> logger) : IJobStepThrottle, IDisposable
 {
-    readonly SemaphoreSlim _semaphore = CreateSemaphore(options.Value.Jobs.GetEffectiveMaxParallelSteps());
+    readonly SemaphoreSlim _semaphore = CreateSemaphore(GetEffectiveParallelism(options.Value));
 
     /// <inheritdoc/>
     public Task AcquireAsync(CancellationToken cancellationToken = default)
@@ -38,6 +38,9 @@ public class JobStepThrottle(IOptions<ChronicleOptions> options, ILogger<JobStep
     {
         _semaphore.Dispose();
     }
+
+    static int GetEffectiveParallelism(ChronicleOptions options) =>
+        Math.Max(1, Math.Min(options.Jobs.GetEffectiveMaxParallelSteps(), options.Observers.MaxConcurrentPartitions));
 
     static SemaphoreSlim CreateSemaphore(int maxParallelSteps) => new(maxParallelSteps, maxParallelSteps);
 }
