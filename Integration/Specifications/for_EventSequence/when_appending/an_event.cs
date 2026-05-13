@@ -3,6 +3,8 @@
 
 using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending.an_event.context;
+using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
+using KernelEventHash = Cratis.Chronicle.Concepts.Events.EventHash;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_EventSequence.when_appending;
 
@@ -13,6 +15,7 @@ public class an_event(context context) : Given<context>(context)
     {
         public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent Event { get; private set; }
+        public KernelAppendedEvent StoredEvent { get; private set; } = null!;
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
@@ -24,6 +27,7 @@ public class an_event(context context) : Given<context>(context)
         async Task Because()
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
+            StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
         }
     }
 
@@ -32,4 +36,6 @@ public class an_event(context context) : Given<context>(context)
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
 
     [Fact] Task should_have_the_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.Event.Content));
+
+    [Fact] void should_have_a_hash_set() => Context.StoredEvent.Context.Hash.ShouldNotEqual(KernelEventHash.NotSet);
 }

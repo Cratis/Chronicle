@@ -28,4 +28,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to register Reactor '{Id}' — the reactive observation stream errored out")]
     internal static partial void RegisteringReactorFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Reconnecting Reactor '{Id}' after stream failure")]
+    internal static partial void ReconnectingReactor(this ILogger<Reactors> logger, ReactorId id);
 }

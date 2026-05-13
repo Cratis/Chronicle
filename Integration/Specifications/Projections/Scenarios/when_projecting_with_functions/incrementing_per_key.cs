@@ -29,7 +29,22 @@ public class incrementing_per_key(context context) : Given<context>(context)
             EventsWithEventSourceIdToAppend.Add(new(SecondEventSourceId, EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues()));
         }
 
-        async Task Because() => SecondResult = await GetReadModel(SecondEventSourceId);
+        async Task Because()
+        {
+            SecondResult = await GetReadModel(SecondEventSourceId);
+
+            if (Result is not null)
+            {
+                return;
+            }
+
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+            while (Result is null && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+                Result = await GetReadModel(EventSourceId);
+            }
+        }
     }
 
     [Fact] void should_increment_correctly_for_first_key() => Context.Result.IntValue.ShouldEqual(3);

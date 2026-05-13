@@ -312,6 +312,20 @@ public class Reactors : IReactors
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
+
+                    if (!handler.CancellationToken.IsCancellationRequested)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                                _logger.ReconnectingReactor(handler.Id);
+                                RegisterReactor(handler);
+                            }
+                            catch (OperationCanceledException) { }
+                        });
+                    }
                 });
     }
 

@@ -4,8 +4,8 @@
 #pragma warning disable SA1402 // File may only contain a single type
 
 using Cratis.Chronicle.Events;
-using given = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;
 using context = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_nested_object.setting_the_nested_object.context;
+using given = Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.given;
 
 namespace Cratis.Chronicle.Integration.Specifications.Projections.Scenarios.when_projecting_with_nested_object;
 
