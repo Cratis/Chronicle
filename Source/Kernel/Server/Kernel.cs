@@ -3,7 +3,6 @@
 
 namespace Cratis.Chronicle.Server;
 
-
 /// <summary>
 /// Class used for logging purposes. We use this to have a logger specific to the server assembly.
 /// </summary>
