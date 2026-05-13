@@ -218,6 +218,10 @@ public class EventSequenceStorage(
                 var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, eventToAppend.EventType.Generation);
                 var jsonObject = expandoObjectConverter.ToJsonObject(eventToAppend.Content, schema.Schema);
                 var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                var resolvedSubject = eventToAppend.Subject?.IsSet == true
+                    ? eventToAppend.Subject
+                    : new Concepts.Events.Subject(eventToAppend.EventSourceId.Value);
+
                 var @event = new Event(
                     eventToAppend.SequenceNumber,
                     eventToAppend.CorrelationId,
@@ -238,7 +242,8 @@ public class EventSequenceStorage(
                     {
                         { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
                     },
-                    []);
+                    [],
+                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 eventsToInsert.Add(@event);
 
@@ -257,7 +262,8 @@ public class EventSequenceStorage(
                         eventToAppend.Causation,
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
                         eventToAppend.Tags,
-                        eventToAppend.Hash),
+                        eventToAppend.Hash,
+                        Subject: resolvedSubject),
                     eventToAppend.Content));
             }
 
