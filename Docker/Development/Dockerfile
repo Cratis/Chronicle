@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Development image — self-contained, includes Chronicle server + embedded MongoDB.
 
 ####################################
 # Cratis Chronicle Server - Preparation stage
