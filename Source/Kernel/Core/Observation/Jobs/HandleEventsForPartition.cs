@@ -1,12 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
@@ -25,12 +29,16 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII event content before dispatching to subscribers.</param>
+/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando objects and JSON.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -39,6 +47,7 @@ public class HandleEventsForPartition(
     IObserver _observer = null!;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
+    Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
 
     IHandleEventsForPartition _selfGrainReference = null!;
 
@@ -139,6 +148,8 @@ public class HandleEventsForPartition(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : subscription.EventTypes.ToArray();
+            _eventTypeSchemas = (await storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes.GetFor(eventTypesToRead))
+                .ToDictionary(_ => _.Type);
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -282,8 +293,9 @@ public class HandleEventsForPartition(
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
             if (eventsToHandle.Length != 0)
             {
-                var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext);
-                return (result, eventsToHandle);
+                var decryptedEvents = await DecryptEvents(eventsToHandle);
+                var result = await _subscriber!.OnNext(state.Partition, decryptedEvents, subscriberContext);
+                return (result, decryptedEvents);
             }
 
             logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
@@ -321,4 +333,26 @@ public class HandleEventsForPartition(
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    {
+        var releasedEvents = new List<AppendedEvent>();
+        foreach (var @event in events)
+        {
+            if (!_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) || !schema.Schema.HasComplianceMetadata())
+            {
+                releasedEvents.Add(@event);
+                continue;
+            }
+
+            var released = await EventComplianceHelper.ReleaseEventContent(
+                complianceManager,
+                expandoObjectConverter,
+                @event,
+                schema.Schema);
+            releasedEvents.Add(released);
+        }
+
+        return releasedEvents.ToArray();
+    }
 }

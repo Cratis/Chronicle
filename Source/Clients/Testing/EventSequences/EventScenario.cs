@@ -13,10 +13,13 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
+using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
@@ -152,9 +155,14 @@ public class EventScenario(
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
+        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
+        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
+            complianceManager,
+            expandoObjectConverter,
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

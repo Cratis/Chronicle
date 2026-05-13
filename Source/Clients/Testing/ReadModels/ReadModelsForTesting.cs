@@ -70,10 +70,6 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) =>
         inner.Release(instances);
 
-    /// <inheritdoc/>
-    public Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance) =>
-        inner.Release(subject, instance);
-
     /// <summary>
     /// Registers a pre-seeded read model instance so that subsequent <c>GetInstanceById</c> calls
     /// return it directly without hitting the server.
