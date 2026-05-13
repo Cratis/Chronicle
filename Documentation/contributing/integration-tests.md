@@ -2,6 +2,11 @@
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine and a short manual wait between consecutive runs so Docker has time to tear down and release the fixed MongoDB port.
 
+When you provide no runtime arguments, the suite defaults to:
+
+- mode: `outofprocess`
+- database: `mongodb`
+
 ## Prerequisites
 
 - Docker running locally
@@ -40,6 +45,38 @@ dotnet test Integration/Client/Client.csproj \
     -- inprocess mongodb
 ```
 
+### Runtime and database configurations (CLI)
+
+The first runtime argument is mode, and the second is database:
+
+```bash
+dotnet test Integration/Client/Client.csproj -- outofprocess mongodb
+dotnet test Integration/Client/Client.csproj -- outofprocess postgresql
+dotnet test Integration/Client/Client.csproj -- outofprocess mssql
+dotnet test Integration/Client/Client.csproj -- outofprocess sqlite
+dotnet test Integration/Client/Client.csproj -- inprocess mongodb
+```
+
+Named arguments are also supported:
+
+```bash
+dotnet test Integration/Client/Client.csproj -- --mode=outofprocess --database=postgresql
+dotnet test Integration/Client/Client.csproj -- --mode=inprocess --db=mongodb
+```
+
+For PostgreSQL and MsSql, set connection details before running tests:
+
+```bash
+export CHRONICLE_POSTGRESQL_CONNECTION_DETAILS="Host=localhost;Port=5432;Database=chronicle;Username=postgres;Password=postgres"
+export CHRONICLE_MSSQL_CONNECTION_DETAILS="Server=localhost,1433;Database=chronicle;User Id=sa;Password=Your_password123;TrustServerCertificate=true"
+```
+
+For SQLite, you can optionally set:
+
+```bash
+export CHRONICLE_SQLITE_CONNECTION_DETAILS="Data Source=/tmp/chronicle.db"
+```
+
 ### Running a single test
 
 Use `--filter` with the fully qualified type name or a substring of it:
@@ -50,6 +87,41 @@ dotnet test Integration/Client/Client.csproj \
     --no-build \
     -- outofprocess mongodb
 ```
+
+### From VS Code
+
+You can run the same configurations from VS Code by creating a dedicated test launch configuration in `.vscode/launch.json`:
+
+```json
+{
+  "name": ".NET Test (Client integration - outofprocess mongodb)",
+  "type": "coreclr",
+  "request": "launch",
+  "program": "dotnet",
+  "args": [
+    "test",
+    "${workspaceFolder}/Integration/Client/Client.csproj",
+    "--framework",
+    "net10.0",
+    "--configuration",
+    "Debug",
+    "--",
+    "outofprocess",
+    "mongodb"
+  ],
+  "cwd": "${workspaceFolder}",
+  "console": "integratedTerminal"
+}
+```
+
+For in-process mode, change only the last two arguments to:
+
+```json
+"inprocess",
+"mongodb"
+```
+
+For database changes in out-of-process mode, set the second argument to `postgresql`, `mssql`, or `sqlite`.
 
 ## Important: Wait Between Consecutive Runs
 
