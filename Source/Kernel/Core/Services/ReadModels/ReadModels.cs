@@ -278,7 +278,33 @@ internal sealed class ReadModels(
 
         // Process events to get all instances grouped by event source ID
         var result = await projection.Process(request.Namespace, events);
-        var readModels = result.Select(r => expandoObjectConverter.ToJsonObject(r, readModelDefinition.GetSchemaForLatestGeneration()).ToString()).ToList();
+        var schema = readModelDefinition.GetSchemaForLatestGeneration();
+        var readModels = new List<string>();
+        foreach (var instance in result)
+        {
+            var dictionary = (IDictionary<string, object?>)instance;
+            if (!dictionary.ContainsKey(WellKnownProperties.Subject))
+            {
+                if (dictionary.TryGetValue("_id", out var identifier) && identifier is not null)
+                {
+                    dictionary[WellKnownProperties.Subject] = identifier.ToString();
+                }
+                else if (dictionary.TryGetValue("id", out identifier) && identifier is not null)
+                {
+                    dictionary[WellKnownProperties.Subject] = identifier.ToString();
+                }
+            }
+
+            var decrypted = await ReadModelComplianceHelper.Release(
+                complianceManager,
+                request.EventStore,
+                request.Namespace,
+                schema,
+                instance,
+                expandoObjectConverter);
+
+            readModels.Add(expandoObjectConverter.ToJsonObject(decrypted, schema).ToJsonString(jsonSerializerOptions));
+        }
 
         return new GetAllInstancesResponse
         {

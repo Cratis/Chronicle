@@ -19,6 +19,7 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
@@ -299,10 +300,15 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
+        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
+        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
+            complianceManager,
+            expandoObjectConverter,
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();
