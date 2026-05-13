@@ -129,32 +129,27 @@ jobs:
           }
 
           # Project configuration
-          # Format: "ProjectName|Path|NamespacePrefix|NeedsDocker|IncludeShared|SpecificNamespacePrefix"
+          # Format: "ProjectName|Path|NamespacePrefix|NeedsDocker|Args"
           declare -a projects=(
-            "DotNET.InProcess|./Integration/DotNET.InProcess|Cratis.Chronicle.Integration.|false|true|Cratis.Chronicle.Integration.Specifications."
-            "DotNET|./Integration/DotNET|Cratis.Chronicle.Integration.|true|true|Cratis.Chronicle.Integration.Specifications."
-            "Kernel|./Integration/Kernel|Cratis.Chronicle.Kernel.Integration.|false|false|"
+            "Client.OutOfProcess|./Integration/Client|Cratis.Chronicle.Integration.|true|outofprocess mongodb"
+            "Client.InProcess|./Integration/Client|Cratis.Chronicle.Integration.|false|inprocess mongodb"
+            "Kernel|./Integration/Kernel|Cratis.Chronicle.Kernel.Integration.|false|"
           )
-
-          # Discover shared namespaces
-          shared_namespaces=$(ls -d Integration/DotNET/Specifications/*/ 2>/dev/null | xargs -n1 basename || echo "")
 
           # Build JSON matrix
           matrix='{"include":['
 
           # Process each project configuration
           for project_config in "${projects[@]}"; do
-            IFS='|' read -r project path ns_prefix needs_docker include_shared shared_ns_prefix <<< "$project_config"
-
-            # Add shared specs if configured
-            if [ "$include_shared" = "true" ]; then
-              add_to_matrix "$project" "$path" "$shared_ns_prefix" "$needs_docker" "$shared_namespaces"
-            fi
+            IFS='|' read -r project path ns_prefix needs_docker args <<< "$project_config"
 
             # Add project-specific namespaces
             project_dir="${path#./}"
             project_namespaces=$(discover_namespaces "$project_dir")
-            add_to_matrix "$project" "$path" "$ns_prefix" "$needs_docker" "$project_namespaces"
+            for ns in $project_namespaces; do
+              [ -z "$ns" ] && continue
+              matrix+="{\"project\":\"$project\",\"path\":\"$path\",\"namespace\":\"${ns_prefix}${ns}\",\"needs-docker\":$needs_docker,\"args\":\"$args\"},"
+            done
           done
 
           # Remove trailing comma and close JSON
@@ -197,7 +192,12 @@ jobs:
 
       - name: Run integration tests for ${{ matrix.project }} - ${{ matrix.namespace }}
         working-directory: ${{ matrix.path }}
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ matrix.namespace }} --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        run: |
+          args=""
+          if [ -n "${{ matrix.args }}" ]; then
+            args=" -- ${{ matrix.args }}"
+          fi
+          eval "dotnet test --no-build --filter FullyQualifiedName~${{ matrix.namespace }} --logger 'console;verbosity=normal' --configuration Release --framework net9.0${args}"
 
   integration-api:
     runs-on: ubuntu-latest
