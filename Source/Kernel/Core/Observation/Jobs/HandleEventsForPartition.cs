@@ -75,7 +75,7 @@ public class HandleEventsForPartition(
     {
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
-        State.EventTypes = request.EventTypes;
+        State.EventTypes = request.EventTypes.ToArray();
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -135,6 +135,10 @@ public class HandleEventsForPartition(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
                 currentState.ObserverKey.EventSequenceId);
+            var requestedEventTypes = currentState.EventTypes.ToArray();
+            var eventTypesToRead = requestedEventTypes.Length != 0
+                ? requestedEventTypes
+                : subscription.EventTypes.ToArray();
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -142,7 +146,7 @@ public class HandleEventsForPartition(
                     : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
                 currentState.EndEventSequenceNumber,
                 _eventSourceId,
-                currentState.EventTypes,
+                eventTypesToRead,
                 cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
