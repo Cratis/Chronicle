@@ -19,7 +19,7 @@ public static class UniqueConstraintIndexEntryConverter
         new(
             entry.EventSourceId,
             entry.Value,
-            (EventSequenceNumber)entry.SequenceNumber);
+            (EventSequenceNumber)(ulong)entry.SequenceNumber);
 
     /// <summary>
     /// Convert from <see cref="UniqueConstraintIndex"/> to <see cref="UniqueConstraintIndexEntry"/>.
