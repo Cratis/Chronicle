@@ -46,11 +46,16 @@ public class Webhook(
         {
             logger.WebhookHasChanged(key.WebhookId);
             await _definitionObservers.Notify(notifier => notifier.OnWebhookDefinitionsChanged());
-            var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
+            var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
+            // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
+            // Using dueTime=Zero ensures the timer fires after this grain turn completes,
+            // keeping registration fast and replay as a separate concern.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                await ReplayForAllNamespaces(key, namespaceNames);
+                this.RegisterGrainTimer(
+                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
+                    new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
             }
             else
             {

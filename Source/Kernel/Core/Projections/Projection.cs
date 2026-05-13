@@ -86,11 +86,18 @@ public class Projection(
             logger.ProjectionHasChanged(key.ProjectionId);
             _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
-            var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
+            var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
+            // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
+            // Replay triggers observer.Replay() which calls GetDefinition() back on this grain — if
+            // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
+            // still held by SetDefinition(). With dueTime=Zero the timer fires in a new grain turn,
+            // after this call has returned, so GetDefinition() is free to execute.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                await ReplayForAllNamespaces(key, namespaceNames);
+                this.RegisterGrainTimer(
+                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
+                    new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
             }
             else
             {
