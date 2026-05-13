@@ -64,7 +64,8 @@ dotnet test Integration/Client/Client.csproj -- --mode=outofprocess --database=p
 dotnet test Integration/Client/Client.csproj -- --mode=inprocess --db=mongodb
 ```
 
-For PostgreSQL and MsSql, set connection details before running tests:
+For PostgreSQL and MsSql, set connection details before running tests.
+The values below are examples only — replace credentials and hosts with values from your local environment:
 
 ```bash
 export CHRONICLE_POSTGRESQL_CONNECTION_DETAILS="Host=localhost;Port=5432;Database=chronicle;Username=postgres;Password=postgres"
