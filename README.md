@@ -134,28 +134,30 @@ Chronicle ships with:
 ### Prerequisites
 
 - [.NET 8+](https://dotnet.microsoft.com/download)
-- [Docker](https://www.docker.com/) (to run the Chronicle Kernel and MongoDB)
+- [Docker](https://www.docker.com/) (to run Chronicle)
 
 ### Installation
 
-**Run Chronicle and MongoDB with Docker Compose:**
+> **Note:** The `latest-development` Chronicle image bundles both Chronicle and MongoDB in a single container — no separate database setup needed.
+
+**Option 1 — Docker CLI:**
+
+```shell
+docker run -d --name chronicle \
+  -p 35000:35000 \
+  -p 8080:8080 \
+  cratis/chronicle:latest-development
+```
+
+**Option 2 — Docker Compose:**
 
 ```yaml
 services:
-  mongo:
-    image: mongo:6
-    ports:
-      - "27017:27017"
-
   chronicle:
-    image: cratis/chronicle:latest
+    image: cratis/chronicle:latest-development
     ports:
       - "35000:35000"   # gRPC / API
       - "8080:8080"     # Web Workbench
-    environment:
-      - CONNECTIONSTRINGS__EVENTSTORE=mongodb://mongo:27017
-    depends_on:
-      - mongo
 ```
 
 ```shell
