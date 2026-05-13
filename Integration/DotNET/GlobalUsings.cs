@@ -2,4 +2,4 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 global using Microsoft.Extensions.DependencyInjection;
-global using ChronicleFixture = Cratis.Chronicle.Integration.ChronicleOutOfProcessFixtureWithLocalImage;
+global using ChronicleFixture = Cratis.Chronicle.Integration.ChronicleConfigurableFixture;

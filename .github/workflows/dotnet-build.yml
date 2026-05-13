@@ -137,7 +137,7 @@ jobs:
           )
 
           # Discover shared namespaces
-          shared_namespaces=$(ls -d Integration/Specifications/*/ 2>/dev/null | xargs -n1 basename || echo "")
+          shared_namespaces=$(ls -d Integration/DotNET/Specifications/*/ 2>/dev/null | xargs -n1 basename || echo "")
 
           # Build JSON matrix
           matrix='{"include":['

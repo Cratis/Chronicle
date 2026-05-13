@@ -11,10 +11,6 @@
         <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <Compile Include="../Specifications/**/*.cs" LinkBase="Specifications" />
-    </ItemGroup>
-
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <Exec Command="rm -rf $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="mkdir $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />

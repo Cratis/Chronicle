@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Integration;
 
-public class Specification(ChronicleOutOfProcessFixtureWithLocalImage fixture) : Specification<ChronicleOutOfProcessFixtureWithLocalImage>(fixture)
+public class Specification(ChronicleConfigurableFixture fixture) : Specification<ChronicleConfigurableFixture>(fixture)
 {
     public override bool AutoDiscoverArtifacts => false;
 }
