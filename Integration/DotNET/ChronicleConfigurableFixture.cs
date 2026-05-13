@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Integration;
 /// </summary>
 public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.ChronicleFixture
 {
+    const string MongoReplicaSetCommand = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null";
+
     readonly ChronicleRuntimeOptions _options = ChronicleRuntimeOptions.Parse();
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development";
 
@@ -26,7 +28,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     IContainer BuildInProcessContainer(INetwork network) =>
         new ContainerBuilder("mongo")
-            .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
+            .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
@@ -59,8 +61,8 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         var connectionDetails = _options.StorageProvider switch
         {
             ChronicleStorageProvider.MongoDB => $"mongodb://localhost:{MongoDBPort}",
-            ChronicleStorageProvider.PostgreSql => Environment.GetEnvironmentVariable("CHRONICLE_POSTGRESQL_CONNECTION_DETAILS") ?? "Host=localhost;Port=5432;Database=chronicle;Username=postgres;Password=postgres",
-            ChronicleStorageProvider.MsSql => Environment.GetEnvironmentVariable("CHRONICLE_MSSQL_CONNECTION_DETAILS") ?? "Server=localhost,1433;Database=chronicle;User Id=sa;Password=Your_password123;TrustServerCertificate=true",
+            ChronicleStorageProvider.PostgreSql => GetRequiredEnvironmentVariable("CHRONICLE_POSTGRESQL_CONNECTION_DETAILS"),
+            ChronicleStorageProvider.MsSql => GetRequiredEnvironmentVariable("CHRONICLE_MSSQL_CONNECTION_DETAILS"),
             ChronicleStorageProvider.Sqlite => Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db",
             _ => $"mongodb://localhost:{MongoDBPort}",
         };
@@ -82,4 +84,11 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
         return builder.Build();
     }
+
+    static string GetRequiredEnvironmentVariable(string name) =>
+        Environment.GetEnvironmentVariable(name) switch
+        {
+            { Length: > 0 } value => value,
+            _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
+        };
 }

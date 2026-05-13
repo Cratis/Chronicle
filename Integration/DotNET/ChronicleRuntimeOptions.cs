@@ -68,8 +68,8 @@ public record ChronicleRuntimeOptions(
         var storageProvider = ChronicleStorageProvider.MongoDB;
 
         // Positional arguments:
-        //   arg1 => mode: inprocess|outofprocess
-        //   arg2 => database: mongodb|postgresql|mssql|sqlite
+        //   arg[1] => mode: inprocess|outofprocess
+        //   arg[2] => database: mongodb|postgresql|mssql|sqlite
         var positional = args
             .Skip(1)
             .Where(_ => !string.IsNullOrWhiteSpace(_))
@@ -96,9 +96,14 @@ public record ChronicleRuntimeOptions(
                 mode = parsedMode;
             }
 
-            if ((argument.StartsWith("--database=", StringComparison.OrdinalIgnoreCase) ||
-                 argument.StartsWith("--db=", StringComparison.OrdinalIgnoreCase)) &&
-                TryParseStorageProvider(argument[(argument.IndexOf('=') + 1)..], out parsedProvider))
+            if (argument.StartsWith("--database=", StringComparison.OrdinalIgnoreCase) &&
+                TryParseStorageProvider(argument["--database=".Length..], out parsedProvider))
+            {
+                storageProvider = parsedProvider;
+            }
+
+            if (argument.StartsWith("--db=", StringComparison.OrdinalIgnoreCase) &&
+                TryParseStorageProvider(argument["--db=".Length..], out parsedProvider))
             {
                 storageProvider = parsedProvider;
             }
@@ -106,7 +111,7 @@ public record ChronicleRuntimeOptions(
 
         if (mode == ChronicleRuntimeMode.InProcess && storageProvider != ChronicleStorageProvider.MongoDB)
         {
-            throw new InvalidOperationException("InProcess mode supports only MongoDB storage.");
+            throw new InvalidOperationException($"InProcess mode supports only MongoDB storage. Selected: {storageProvider}.");
         }
 
         return new(mode, storageProvider);
