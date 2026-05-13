@@ -283,16 +283,10 @@ internal sealed class ReadModels(
         foreach (var instance in result)
         {
             var dictionary = (IDictionary<string, object?>)instance;
-            if (!dictionary.ContainsKey(WellKnownProperties.Subject))
+            var subject = GetOrInferSubject(dictionary);
+            if (!string.IsNullOrWhiteSpace(subject))
             {
-                if (dictionary.TryGetValue("_id", out var identifier) && identifier is not null)
-                {
-                    dictionary[WellKnownProperties.Subject] = identifier.ToString();
-                }
-                else if (dictionary.TryGetValue("id", out identifier) && identifier is not null)
-                {
-                    dictionary[WellKnownProperties.Subject] = identifier.ToString();
-                }
+                dictionary[WellKnownProperties.Subject] = subject;
             }
 
             var decrypted = await ReadModelComplianceHelper.Release(
@@ -462,5 +456,25 @@ internal sealed class ReadModels(
 
         cursor.Dispose();
         return snapshots;
+    }
+
+    string? GetOrInferSubject(IDictionary<string, object?> instance)
+    {
+        if (instance.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is not null)
+        {
+            return subject.ToString();
+        }
+
+        if (instance.TryGetValue("_id", out var identifier) && identifier is not null)
+        {
+            return identifier.ToString();
+        }
+
+        if (instance.TryGetValue("id", out identifier) && identifier is not null)
+        {
+            return identifier.ToString();
+        }
+
+        return null;
     }
 }

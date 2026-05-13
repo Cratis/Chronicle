@@ -345,16 +345,12 @@ public class HandleEventsForPartition(
                 continue;
             }
 
-            var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
-            var released = await complianceManager.Release(
-                @event.Context.EventStore,
-                @event.Context.Namespace,
-                schema.Schema,
-                @event.Context.Subject.Value,
-                contentAsJson);
-
-            var releasedContent = expandoObjectConverter.ToExpandoObject(released, schema.Schema);
-            releasedEvents.Add(@event with { Content = releasedContent });
+            var released = await EventComplianceHelper.ReleaseEventContent(
+                complianceManager,
+                expandoObjectConverter,
+                @event,
+                schema.Schema);
+            releasedEvents.Add(released);
         }
 
         return releasedEvents.ToArray();
