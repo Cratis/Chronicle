@@ -26,7 +26,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_apply_patches_newer_than_current_version()
+    public void should_apply_patches_newer_than_current_version()
     {
         var storage = Substitute.For<IStorage>();
         var systemStorage = Substitute.For<ISystemStorage>();
@@ -48,7 +48,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_not_apply_patches_older_than_current_version()
+    public void should_not_apply_patches_older_than_current_version()
     {
         var currentVersion = new SemanticVersion(2, 0, 0);
         var olderPatch = new TestPatch(new SemanticVersion(1, 0, 0), "OlderPatch");
@@ -60,7 +60,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_not_apply_patches_with_same_version()
+    public void should_not_apply_patches_with_same_version()
     {
         var currentVersion = new SemanticVersion(1, 0, 0);
         var samePatch = new TestPatch(new SemanticVersion(1, 0, 0), "SamePatch");
@@ -72,7 +72,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_apply_multiple_patches_in_ascending_version_order()
+    public void should_apply_multiple_patches_in_ascending_version_order()
     {
         var currentVersion = new SemanticVersion(1, 0, 0);
         var patches = new List<ICanApplyPatch>
@@ -91,7 +91,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_apply_all_patches_when_no_current_version()
+    public void should_apply_all_patches_when_no_current_version()
     {
         var effectiveVersion = SemanticVersion.NotSet;
 
@@ -107,7 +107,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_filter_out_older_patches_from_mixed_set()
+    public void should_filter_out_older_patches_from_mixed_set()
     {
         var currentVersion = new SemanticVersion(1, 5, 0);
         var patches = new List<ICanApplyPatch>
@@ -125,7 +125,7 @@ public class PatchManagerBehaviorSpecs : Specification
     }
 
     [Fact]
-    public async Task should_determine_latest_version_from_applied_patches()
+    public void should_determine_latest_version_from_applied_patches()
     {
         var patches = new List<TestPatch>
         {

@@ -30,7 +30,7 @@ public class and_call_succeeds_on_first_attempt : given.an_authentication_client
         };
     }
 
-    async Task Because() => _result = _interceptor.AsyncUnaryCall(_request, _context, _continuation);
+    void Because() => _result = _interceptor.AsyncUnaryCall(_request, _context, _continuation);
 
     [Fact] async Task should_not_call_refresh() => await _tokenProvider.DidNotReceive().Refresh(Arg.Any<CancellationToken>());
     [Fact] async Task should_return_successful_response() => (await _result.ResponseAsync).Message.ShouldEqual("Success");
