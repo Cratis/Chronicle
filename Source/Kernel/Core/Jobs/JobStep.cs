@@ -88,6 +88,21 @@ public abstract class JobStep<TRequest, TResult, TState>(
     }
 
     /// <inheritdoc/>
+    /// <summary>
+    /// Cancels in-flight work and releases cancellation resources when the grain deactivates.
+    /// </summary>
+    /// <param name="reason">The <see cref="DeactivationReason"/> for the deactivation.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the operation.</param>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        var cts = _cancellationTokenSource;
+        _cancellationTokenSource = null;
+        await (cts?.CancelAsync() ?? Task.CompletedTask);
+        cts?.Dispose();
+        await base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<Result<StartJobStepError>> Start(GrainId jobGrainId)
     {
         using var scope = logger.BeginJobStepScope(State);
