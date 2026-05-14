@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.Jobs;
@@ -25,4 +26,6 @@ public class and_observer_has_catching_up_partitions_with_no_running_catchup_job
     async Task Because() => await _observer.RunWatchdogAsync();
 
     [Fact] void should_clear_catching_up_partitions() => _stateStorage.State.CatchingUpPartitions.ShouldBeEmpty();
+
+    [Fact] void should_be_in_active_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
 }
