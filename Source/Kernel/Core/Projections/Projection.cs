@@ -20,6 +20,7 @@ using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -168,7 +169,7 @@ public class Projection(
                 projection.GetOperationTypeFor(@event.Context.EventType),
                 false);
 
-            await HandleEventFor(projection!, context);
+            await HandleEventFor(projection!, context, eventSequenceStorage);
 
             state = ApplyActualChanges(key, changeset.Changes, state);
         }
@@ -218,6 +219,7 @@ public class Projection(
 
         // Second pass: process each group of events for each key
         var readModelsByKeyValue = new Dictionary<string, ExpandoObject>();
+        var lastSequenceByKeyValue = new Dictionary<string, EventSequenceNumber>();
 
         foreach (var (keyValue, (_, eventsForKey)) in eventsByKeyValue)
         {
@@ -237,15 +239,16 @@ public class Projection(
                     projection.GetOperationTypeFor(@event.Context.EventType),
                     false);
 
-                await HandleEventFor(projection!, context);
+                await HandleEventFor(projection!, context, eventSequenceStorage);
 
                 state = ApplyActualChanges(key, changeset.Changes, state);
+                lastSequenceByKeyValue[keyValue] = @event.Context.SequenceNumber;
             }
 
             readModelsByKeyValue[keyValue] = state;
         }
 
-        // Inject id property into each read model before returning
+        // Inject id and metadata properties into each read model before returning
         var results = new List<ExpandoObject>();
         foreach (var (keyValue, readModel) in readModelsByKeyValue)
         {
@@ -253,6 +256,12 @@ public class Projection(
 
             // Set the id property with the key value using the schema's property name
             readModelDict[_identifierPropertyName] = keyValue;
+
+            // Set the last handled event sequence number to mirror what the sink writes
+            if (lastSequenceByKeyValue.TryGetValue(keyValue, out var lastSeq))
+            {
+                readModelDict[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)lastSeq;
+            }
 
             results.Add(readModel);
         }
@@ -326,7 +335,7 @@ public class Projection(
                     projection.GetOperationTypeFor(@event.Context.EventType),
                     false);
 
-                await HandleEventFor(projection!, context);
+                await HandleEventFor(projection!, context, eventSequenceStorage);
 
                 state = ApplyActualChanges(key, changeset.Changes, state);
             }
@@ -349,7 +358,7 @@ public class Projection(
         return results;
     }
 
-    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context)
+    async Task HandleEventFor(EngineProjection projection, ProjectionEventContext context, IEventSequenceStorage? eventSequenceStorage = null)
     {
         if (projection.Accepts(context.Event.Context.EventType))
         {
@@ -358,7 +367,27 @@ public class Projection(
 
         foreach (var child in projection.ChildProjections)
         {
-            await HandleEventFor(child, context);
+            // For child projections, resolve the child key (which includes ArrayIndexers for the
+            // children property path). Without this, the child projection's Project subscriber
+            // returns early because context.Key.ArrayIndexers.HasFor(childrenProperty) is false.
+            if (eventSequenceStorage is not null && child.Accepts(context.Event.Context.EventType))
+            {
+                var childKeyResolver = child.GetKeyResolverFor(context.Event.Context.EventType);
+                var childKeyResult = await childKeyResolver(eventSequenceStorage, NullSink.Instance, context.Event);
+                if (childKeyResult is ResolvedKey childResolvedKey)
+                {
+                    var childContext = new ProjectionEventContext(
+                        childResolvedKey.Key,
+                        context.Event,
+                        context.Changeset,
+                        child.GetOperationTypeFor(context.Event.Context.EventType),
+                        context.IsJoin);
+                    await HandleEventFor(child, childContext, eventSequenceStorage);
+                    continue;
+                }
+            }
+
+            await HandleEventFor(child, context, eventSequenceStorage);
         }
     }
 
