@@ -88,8 +88,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // Keep every host-level Chronicle client registration pointed at the
                 // shared test event store so reconnect does not create a second unnamed
                 // event store with its own failing OnConnected registration.
-                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
-                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
 
                 // Register test services directly in DI so the first test works normally,
                 // and also capture them in the MutableServiceRegistry so subsequent tests

@@ -18,7 +18,7 @@ public class when_observer_partition_limit_is_lower_than_job_step_limit : Specif
         _options = new ChronicleOptions
         {
             Jobs = new Configuration.Jobs { MaxParallelSteps = 8 },
-            Observers = new Configuration.Observers { MaxConcurrentPartitions = 1 }
+            Observers = new Observers { MaxConcurrentPartitions = 1 }
         };
         _throttle = new JobStepThrottle(Options.Create(_options), NullLogger<JobStepThrottle>.Instance);
         _completedTasks = 0;
