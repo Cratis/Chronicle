@@ -7,8 +7,8 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
 
 public class and_next_sequence_number_is_behind_with_relevant_events : given.an_observer_with_client_owned_subscription
 {
-    static EventSequenceNumber _nextSequenceNumber;
-    static EventSequenceNumber _tailSequenceNumber;
+    EventSequenceNumber _nextSequenceNumber;
+    EventSequenceNumber _tailSequenceNumber;
 
     void Establish()
     {
