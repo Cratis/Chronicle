@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Observers
 {
     /// <summary>
+    /// Gets the maximum number of observer partitions that can be handled concurrently.
+    /// </summary>
+    public int MaxConcurrentPartitions { get; init; } = 32;
+
+    /// <summary>
     /// Gets the timeout in seconds for observer calling its subscriber.
     /// </summary>
     public int SubscriberTimeout { get; init; } = 5;

@@ -124,7 +124,12 @@ internal sealed class TestingServices(
         new KernelSeedingService(grainFactory));
 
     readonly Lazy<IEventSequences> _eventSequences = new(() =>
-        new KernelEventSequencesService(grainFactory, storage, jsonSerializerOptions));
+        new KernelEventSequencesService(
+            grainFactory,
+            storage,
+            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()),
+            jsonSerializerOptions));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
         new KernelNamespacesService(grainFactory, storage));

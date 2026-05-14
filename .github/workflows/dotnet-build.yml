@@ -227,7 +227,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run API integration tests for .Net 9
+      - name: Build Docker image from cached binaries
+        run: |
+          rm -rf Source/Kernel/Server/out
+          mkdir -p Source/Kernel/Server/out
+          cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
+          docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
+
+      - name: Run API integration tests
         working-directory: ./Integration/Api
         run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net9.0
 

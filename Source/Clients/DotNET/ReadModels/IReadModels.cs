@@ -98,17 +98,4 @@ public interface IReadModels
     /// <param name="instances">The collection of instances to decrypt.</param>
     /// <returns>The decrypted instances.</returns>
     Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances);
-
-    /// <summary>
-    /// Release (decrypt) PII-annotated properties in a read model instance using an explicit subject.
-    /// </summary>
-    /// <remarks>
-    /// If decryption fails (e.g. the encryption key has been permanently deleted), the original instance is returned and
-    /// the failure is logged.
-    /// </remarks>
-    /// <typeparam name="TReadModel">The read model type.</typeparam>
-    /// <param name="subject">The explicit <see cref="Subject"/> used as the encryption key identifier.</param>
-    /// <param name="instance">The read model instance to decrypt.</param>
-    /// <returns>The decrypted instance, or the original when release fails.</returns>
-    Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance);
 }

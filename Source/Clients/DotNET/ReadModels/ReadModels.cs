@@ -347,7 +347,7 @@ public class ReadModels(
             return instance;
         }
 
-        return await Release(subject, instance);
+        return await ReleaseWithSubject(subject, instance);
     }
 
     /// <inheritdoc/>
@@ -362,8 +362,7 @@ public class ReadModels(
         return result;
     }
 
-    /// <inheritdoc/>
-    public async Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance)
+    async Task<TReadModel> ReleaseWithSubject<TReadModel>(Subject subject, TReadModel instance)
     {
         var schema = schemaGenerator.Generate(typeof(TReadModel));
         if (!schema.HasComplianceMetadata())

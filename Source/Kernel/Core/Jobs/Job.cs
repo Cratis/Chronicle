@@ -434,6 +434,11 @@ public abstract partial class Job<TRequest, TJobState> : Grain<TJobState>, IJob<
     {
         try
         {
+            if (State.Status is JobStatus.CompletedSuccessfully or JobStatus.CompletedWithFailures or JobStatus.Failed)
+            {
+                return Catch.Success();
+            }
+
             if (!AllStepsCompletedSuccessfully)
             {
                 _logger.AllStepsNotCompletedSuccessfully();

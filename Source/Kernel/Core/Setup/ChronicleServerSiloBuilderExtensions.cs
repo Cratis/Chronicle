@@ -109,7 +109,12 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Namespaces(grainFactory, storage),
                 new Cratis.Chronicle.Services.Recommendations.Recommendations(grainFactory, storage),
                 new Cratis.Chronicle.Services.Identities.Identities(storage),
-                new EventSequences(grainFactory, storage, jsonSerializerOptions),
+                new EventSequences(
+                    grainFactory,
+                    storage,
+                    sp.GetRequiredService<IJsonComplianceManager>(),
+                    expandoObjectConverter,
+                    jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory),
                 new Constraints(grainFactory),
                 new Cratis.Chronicle.Services.Observation.Observers(grainFactory, storage),
