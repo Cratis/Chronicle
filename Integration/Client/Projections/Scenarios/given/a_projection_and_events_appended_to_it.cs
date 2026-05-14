@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Integration.AggregateRoots;
-using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.given;
 
@@ -12,10 +11,6 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     where TProjection : class, IProjectionFor<TReadModel>, new()
     where TReadModel : class
 {
-#pragma warning disable CA2213 // Disposable fields should be disposed
-    protected ChronicleFixture ChronicleFixture = chronicleFixture;
-#pragma warning restore CA2213 // Disposable fields should be disposed
-
     public EventSourceId EventSourceId;
     public string ReadModelId;
 
@@ -80,10 +75,6 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
         Result = await GetReadModelResult();
     }
 
-    protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId)
-    {
-        var filter = Builders<TReadModel>.Filter.Eq(new StringFieldDefinition<TReadModel, string>("_id"), eventSourceId);
-        var result = await ChronicleFixture.ReadModels.Database.GetCollection<TReadModel>().FindAsync(filter);
-        return await result.FirstOrDefaultAsync();
-    }
+    protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId) =>
+        await EventStore.ReadModels.GetInstanceById<TReadModel>(eventSourceId);
 }
