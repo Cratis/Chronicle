@@ -57,8 +57,7 @@ RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc \
         ${MONGO_PACKAGE}-database-tools-extra=$MONGO_VERSION \
     && rm -rf /var/lib/apt/lists/*
 
-# Create MongoDB data directories. Replica set initialisation is deferred to
-# entrypoint.sh at runtime — no need to bake 200+ MB of journal files into the image.
+# Create MongoDB data directories.
 RUN mkdir -p /data/db /data/configdb \
     && chown -R mongodb:mongodb /data/db /data/configdb
 
