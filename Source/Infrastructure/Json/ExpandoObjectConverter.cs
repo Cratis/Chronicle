@@ -60,12 +60,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 value = ConvertToJsonNode(keyValue.Value, schemaProperty);
             }
 
-            if (value is null)
+            if (value is null && schemaProperty is not null)
             {
                 var defaultValue = property.GetDefaultValue(typeFormats);
                 if (defaultValue is not null)
                 {
-                    value = defaultValue.ToJsonValue();
+                    value = ConvertToJsonNode(defaultValue, schemaProperty);
                 }
             }
 
@@ -148,9 +148,12 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {
             var items = new List<JsonNode?>();
+            var itemSchema = schemaProperty.Item?.Reference ?? schemaProperty.Item;
             foreach (var item in enumerable)
             {
-                items.Add(ConvertToJsonNode(item, schemaProperty.Item!.Reference ?? schemaProperty.Item));
+                items.Add(itemSchema is not null
+                    ? ConvertToJsonNode(item, itemSchema)
+                    : ConvertUnknownSchemaTypeToJsonValue(item));
             }
             return new JsonArray([.. items]);
         }
@@ -158,6 +161,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         if (typeFormats.IsKnown(schemaProperty.Format!))
         {
             return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
+        }
+
+        // Fall back to schema-agnostic conversion for collection types that didn't match
+        // the schema-typed array branch above (e.g. when NJsonSchema doesn't set Type=Array).
+        if (value is IEnumerable and not string)
+        {
+            return ConvertUnknownSchemaTypeToJsonValue(value);
         }
 
         return ConvertToJsonNodeFromUnknownFormat(value, schemaProperty);
@@ -253,12 +263,16 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return value.GetValue<bool>();
 
             case JsonObjectType.Integer:
-                if (genericArguments.Length == 1 &&
-                    genericArguments[0] == typeof(string) &&
-                    schemaProperty.Reference?.IsEnumeration == true)
+                JsonSchema? enumReadSchema = null;
+                if (schemaProperty.Reference?.IsEnumeration == true)
+                    enumReadSchema = schemaProperty.Reference;
+                else if (schemaProperty.IsEnumeration)
+                    enumReadSchema = schemaProperty;
+                if (enumReadSchema is not null && value.TryGetValue<string>(out var enumNameValue))
                 {
-                    var index = schemaProperty.Reference.EnumerationNames.IndexOf(value.GetValue<string>());
-                    return TypeConversion.Convert(typeof(int), schemaProperty.Reference.Enumeration.ToArray()[index]!);
+                    var index = enumReadSchema.EnumerationNames.IndexOf(enumNameValue);
+                    if (index >= 0 && index < enumReadSchema.Enumeration.Count)
+                        return TypeConversion.Convert(typeof(int), enumReadSchema.Enumeration.ToArray()[index]!);
                 }
                 return value.GetValue<int>();
 
@@ -302,6 +316,11 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 document[key] = ConvertUnknownSchemaTypeToJsonValue(valueProperty.GetValue(keyValuePair));
             }
             return document;
+        }
+
+        if (value?.GetType().IsEnum == true)
+        {
+            return JsonValue.Create(Convert.ToInt32(value));
         }
 
         var jsonValue = value.ToJsonValue();
@@ -413,6 +432,20 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return JsonValue.Create<bool>(value is bool actualBool ? actualBool : bool.Parse(value.ToString()!));
 
             case JsonObjectType.Integer:
+                JsonSchema? enumRef = null;
+                if (schemaProperty.Reference?.IsEnumeration == true)
+                    enumRef = schemaProperty.Reference;
+                else if (schemaProperty.IsEnumeration)
+                    enumRef = schemaProperty;
+                if (enumRef is not null)
+                {
+                    var enumValues = enumRef.Enumeration.ToList();
+                    var longValue = Convert.ToInt64(value);
+                    var enumIndex = enumValues.FindIndex(v => Convert.ToInt64(v) == longValue);
+                    if (enumIndex >= 0 && enumIndex < enumRef.EnumerationNames.Count)
+                        return JsonValue.Create<string>(enumRef.EnumerationNames[enumIndex]);
+                    return null;
+                }
                 return JsonValue.Create<int>(value is int actualInt ? actualInt : int.Parse(value.ToString()!));
 
             case JsonObjectType.Number:
