@@ -1,0 +1,14 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Observation.for_Observer.when_watchdog_runs;
+
+public class and_client_is_disconnected : given.an_observer_with_client_owned_subscription
+{
+    void Establish() =>
+        _connectedClientsGrain.IsConnected(_connectedClient.ConnectionId).Returns(Task.FromResult(false));
+
+    async Task Because() => await _observer.RunWatchdogAsync();
+
+    [Fact] async Task should_be_unsubscribed() => (await _observer.IsSubscribed()).ShouldBeFalse();
+}

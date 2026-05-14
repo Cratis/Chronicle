@@ -47,4 +47,11 @@ public class Observers
     /// instead of creating a recommendation for manual replay.
     /// </summary>
     public bool ReplayOnDefinitionChange { get; init; }
+
+    /// <summary>
+    /// Gets the interval in seconds between watchdog checks on each observer.
+    /// The watchdog verifies that connected clients are still active, that running jobs
+    /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
+    /// </summary>
+    public int WatchdogInterval { get; init; } = 60;
 }
