@@ -47,7 +47,7 @@ dotnet test Integration/Client/Client.csproj \
 
 ### Runtime and database configurations (CLI)
 
-The first runtime argument is mode, and the second is database:
+The first positional argument after `--` is the mode, and the second is the database:
 
 ```bash
 dotnet test Integration/Client/Client.csproj -- outofprocess mongodb
@@ -62,6 +62,13 @@ Named arguments are also supported:
 ```bash
 dotnet test Integration/Client/Client.csproj -- --mode=outofprocess --database=postgresql
 dotnet test Integration/Client/Client.csproj -- --mode=inprocess --db=mongodb
+```
+
+Alternatively, configure via environment variables or `--environment` flags:
+
+```bash
+dotnet test Integration/Client/Client.csproj --environment CHRONICLE_RUNTIME_MODE=inprocess
+CHRONICLE_RUNTIME_MODE=inprocess dotnet test Integration/Client/Client.csproj
 ```
 
 For PostgreSQL and MsSql, set connection details before running tests.
@@ -115,14 +122,9 @@ You can run the same configurations from VS Code by creating a dedicated test la
 }
 ```
 
-For in-process mode, change only the last two arguments to:
+For in-process mode, change the last two arguments to `"inprocess"` and `"mongodb"`.
 
-```json
-"inprocess",
-"mongodb"
-```
-
-For database changes in out-of-process mode, set the second argument to `postgresql`, `mssql`, or `sqlite`.
+For database changes in out-of-process mode, set the second argument to `"postgresql"`, `"mssql"`, or `"sqlite"`.
 
 ## Important: Wait Between Consecutive Runs
 
@@ -139,7 +141,9 @@ Each test collection automatically takes a MongoDB backup at the end of a run wh
 Set the `CHRONICLE_BACKUP_ENABLED` environment variable to `true` before running tests:
 
 ```bash
-CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/Client/Client.csproj -- inprocess mongodb
+CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/Client/Client.csproj \
+    --environment CHRONICLE_RUNTIME_MODE=inprocess \
+    --environment CHRONICLE_STORAGE_PROVIDER=mongodb
 ```
 
 ### Where backups are stored

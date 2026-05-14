@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+
 namespace Cratis.Chronicle.Integration;
 
 /// <summary>
@@ -55,7 +57,12 @@ public record ChronicleRuntimeOptions(
     ChronicleStorageProvider StorageProvider)
 {
     /// <summary>
-    /// Parse runtime options from command line arguments.
+    /// Parse runtime options from multiple sources, in priority order:
+    /// 1. Environment variables (<c>CHRONICLE_RUNTIME_MODE</c>, <c>CHRONICLE_STORAGE_PROVIDER</c>).
+    /// 2. The parent vstest process command line, which contains the original
+    ///    <c>dotnet test -- inprocess mongodb</c> arguments that vstest receives but does not
+    ///    forward to the test host's own <c>GetCommandLineArgs()</c>.
+    /// 3. Own process command line (for direct executable invocation, not via <c>dotnet test</c>).
     /// </summary>
     /// <returns>Parsed options with defaults when arguments are not provided.</returns>
     /// <exception cref="InvalidOperationException">
@@ -63,32 +70,141 @@ public record ChronicleRuntimeOptions(
     /// </exception>
     public static ChronicleRuntimeOptions Parse()
     {
-        var args = Environment.GetCommandLineArgs().Select(_ => _.Trim()).ToArray();
         var mode = ChronicleRuntimeMode.OutOfProcess;
         var storageProvider = ChronicleStorageProvider.MongoDB;
 
-        // Positional arguments:
-        //   arg[1] => mode: inprocess|outofprocess
-        //   arg[2] => database: mongodb|postgresql|mssql|sqlite
-        var positional = args
-            .Skip(1)
-            .Where(_ => !string.IsNullOrWhiteSpace(_))
-            .ToArray();
+        // 1. Environment variables have highest priority.
+        //    These are set by `dotnet test --environment KEY=VALUE` or by the shell.
+        ApplyArgs(GetEnvironmentArgs(), ref mode, ref storageProvider);
 
-        if (positional.Length >= 1 && TryParseMode(positional[0], out var parsedMode))
+        // 2. Parent process (vstest) command line.
+        //    `dotnet test -- inprocess mongodb` passes the extra args to vstest but vstest
+        //    does NOT forward them to the testhost process. Reading vstest's own command
+        //    line via the OS gives us the original args.
+        ApplyArgs(GetParentProcessSeparatorArgs(), ref mode, ref storageProvider);
+
+        // 3. Own GetCommandLineArgs() fallback.
+        //    Only applies when the test host is invoked directly without dotnet test.
+        ApplyArgs(GetOwnProcessArgs(), ref mode, ref storageProvider);
+
+        if (mode == ChronicleRuntimeMode.InProcess && storageProvider != ChronicleStorageProvider.MongoDB)
+        {
+            throw new InvalidOperationException($"InProcess mode supports only MongoDB storage. Selected: {storageProvider}.");
+        }
+
+        return new(mode, storageProvider);
+    }
+
+    static string[] GetEnvironmentArgs()
+    {
+        var result = new List<string>();
+        var envMode = Environment.GetEnvironmentVariable("CHRONICLE_RUNTIME_MODE");
+        if (envMode is not null)
+        {
+            result.Add(envMode);
+        }
+
+        var envStorage = Environment.GetEnvironmentVariable("CHRONICLE_STORAGE_PROVIDER");
+        if (envStorage is not null)
+        {
+            result.Add(envStorage);
+        }
+
+        return [.. result];
+    }
+
+    static string[] GetParentProcessSeparatorArgs()
+    {
+        try
+        {
+            // The testhost process has --parentprocessid <pid> in its args when launched by vstest.
+            var myArgs = Environment.GetCommandLineArgs();
+            var idx = Array.IndexOf(myArgs, "--parentprocessid");
+            if (idx < 0 || idx + 1 >= myArgs.Length)
+            {
+                return [];
+            }
+
+            if (!int.TryParse(myArgs[idx + 1], out var parentPid))
+            {
+                return [];
+            }
+
+            var parentCmdLine = ReadProcessCommandLine(parentPid);
+            if (string.IsNullOrWhiteSpace(parentCmdLine))
+            {
+                return [];
+            }
+
+            // Find the -- separator in the parent's command line and return everything after it.
+            var parts = parentCmdLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var sepIdx = Array.IndexOf(parts, "--");
+            if (sepIdx < 0)
+            {
+                return [];
+            }
+
+            return parts[(sepIdx + 1)..];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    static string ReadProcessCommandLine(int pid)
+    {
+        // Linux: /proc/{pid}/cmdline contains null-delimited args
+        var procFile = $"/proc/{pid}/cmdline";
+        if (File.Exists(procFile))
+        {
+            var bytes = File.ReadAllBytes(procFile);
+            return System.Text.Encoding.UTF8.GetString(bytes).Replace('\0', ' ').Trim();
+        }
+
+        // macOS / other Unix: use ps
+        try
+        {
+            var psi = new ProcessStartInfo("ps", $"-p {pid} -o args=")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return string.Empty;
+            }
+
+            var result = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return result;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    static string[] GetOwnProcessArgs()
+    {
+        var args = Environment.GetCommandLineArgs().Select(_ => _.Trim()).ToArray();
+        return args.Skip(1).Where(_ => !string.IsNullOrWhiteSpace(_)).ToArray();
+    }
+
+    static void ApplyArgs(string[] args, ref ChronicleRuntimeMode mode, ref ChronicleStorageProvider storageProvider)
+    {
+        if (args.Length >= 1 && TryParseMode(args[0], out var parsedMode))
         {
             mode = parsedMode;
         }
 
-        if (positional.Length >= 2 && TryParseStorageProvider(positional[1], out var parsedProvider))
+        if (args.Length >= 2 && TryParseStorageProvider(args[1], out var parsedProvider))
         {
             storageProvider = parsedProvider;
         }
 
-        // Named arguments override positional:
-        //   --mode=inprocess|outofprocess
-        //   --database=mongodb|postgresql|mssql|sqlite
-        foreach (var argument in positional)
+        foreach (var argument in args)
         {
             if (argument.StartsWith("--mode=", StringComparison.OrdinalIgnoreCase) &&
                 TryParseMode(argument["--mode=".Length..], out parsedMode))
@@ -108,13 +224,6 @@ public record ChronicleRuntimeOptions(
                 storageProvider = parsedProvider;
             }
         }
-
-        if (mode == ChronicleRuntimeMode.InProcess && storageProvider != ChronicleStorageProvider.MongoDB)
-        {
-            throw new InvalidOperationException($"InProcess mode supports only MongoDB storage. Selected: {storageProvider}.");
-        }
-
-        return new(mode, storageProvider);
     }
 
     static bool TryParseMode(string value, out ChronicleRuntimeMode mode)
