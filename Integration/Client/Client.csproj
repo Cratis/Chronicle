@@ -12,6 +12,7 @@
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />

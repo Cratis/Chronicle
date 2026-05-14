@@ -151,6 +151,21 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     }
 
     /// <summary>
+    /// Gets an optional action to configure Chronicle storage on the in-process silo.
+    /// Returns null to use the default MongoDB configuration.
+    /// </summary>
+    /// <param name="mongoServer">The MongoDB connection string from the fixture container.</param>
+    /// <returns>An optional storage configurator action, or null for default MongoDB.</returns>
+    protected virtual Action<KernelCore::Cratis.Chronicle.Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer) => null;
+
+    /// <summary>
+    /// Gets the default sink type identifier for projection registration.
+    /// Returns default to keep the MongoDB default.
+    /// </summary>
+    /// <returns>The sink type identifier, or default to preserve existing behavior.</returns>
+    protected virtual Cratis.Chronicle.Sinks.SinkTypeId? GetDefaultSinkTypeId() => null;
+
+    /// <summary>
     /// Creates the in-process web application factory for the current test assembly.
     /// </summary>
     /// <returns>The web application factory instance for the discovered startup type.</returns>
@@ -162,7 +177,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var configureServices = ConfigureServices;
         var configureMongoDB = ConfigureMongoDB;
         var configureWebHostBuilder = ConfigureWebHostBuilder;
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, ContentRoot]) as IAsyncDisposable)!;
+        var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
+        var storageConfigurator = GetStorageConfigurator(mongoServer);
+        var defaultSinkTypeId = GetDefaultSinkTypeId();
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, storageConfigurator, defaultSinkTypeId, ContentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>

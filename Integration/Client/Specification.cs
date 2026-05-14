@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.XUnit.Integration;
@@ -12,6 +13,40 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
     where TChronicleFixture : IChronicleFixture
 {
     public override bool AutoDiscoverArtifacts => false;
+
+    /// <inheritdoc/>
+    protected override Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer)
+    {
+        if (ChronicleFixture is not ChronicleConfigurableFixture configurable ||
+            configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess ||
+            configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB ||
+            configurable.InProcessStorageType is null)
+        {
+            return null;
+        }
+
+        var storageType = configurable.InProcessStorageType;
+        var connectionString = configurable.GetInProcessConnectionString();
+        var options = new Cratis.Chronicle.Configuration.ChronicleOptions
+        {
+            Storage = new Cratis.Chronicle.Configuration.Storage { Type = storageType, ConnectionDetails = connectionString }
+        };
+
+        return chronicleBuilder => Cratis.Chronicle.Setup.SqlChronicleBuilderExtensions.WithSql(chronicleBuilder, options);
+    }
+
+    /// <inheritdoc/>
+    protected override SinkTypeId? GetDefaultSinkTypeId()
+    {
+        if (ChronicleFixture is ChronicleConfigurableFixture configurable &&
+            configurable.Options.Mode == ChronicleRuntimeMode.OutOfProcess &&
+            configurable.Options.StorageProvider != ChronicleStorageProvider.MongoDB)
+        {
+            return WellKnownSinkTypes.SQL;
+        }
+
+        return null;
+    }
 
     public IEventStoreStorage EventStoreStorage =>
         Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);

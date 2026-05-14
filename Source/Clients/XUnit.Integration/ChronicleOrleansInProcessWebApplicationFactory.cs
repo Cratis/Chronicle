@@ -39,6 +39,8 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="configureServices">Action to configure the services.</param>
 /// <param name="configureMongoDB">Action to configure MongoDB options.</param>
 /// <param name="configureWebHost">Action to configure <see cref="IWebHostBuilder"/>.</param>
+/// <param name="configureStorage">Optional action to configure Chronicle storage on the in-process silo instead of the default MongoDB.</param>
+/// <param name="defaultSinkTypeId">Optional default sink type identifier for projection registration.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
@@ -47,6 +49,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     Action<IServiceCollection> configureServices,
     Action<IMongoDBBuilder> configureMongoDB,
     Action<IWebHostBuilder> configureWebHost,
+    Action<KernelCore::Cratis.Chronicle.Configuration.IChronicleBuilder>? configureStorage,
+    Cratis.Chronicle.Sinks.SinkTypeId? defaultSinkTypeId,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
@@ -90,6 +94,10 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // event store with its own failing OnConnected registration.
                 services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
                 services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                if (defaultSinkTypeId is not null)
+                {
+                    services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
+                }
 
                 // Register test services directly in DI so the first test works normally,
                 // and also capture them in the MutableServiceRegistry so subsequent tests
@@ -146,7 +154,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
-                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoServer, Constants.EventStore));
+                    chronicleBuilder =>
+                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore)))(chronicleBuilder));
 
                 silo.AddActivityPropagation();
 

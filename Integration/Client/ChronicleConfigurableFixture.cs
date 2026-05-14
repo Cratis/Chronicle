@@ -30,6 +30,40 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     /// </summary>
     public ChronicleRuntimeOptions Options => _options;
 
+    /// <summary>
+    /// Gets the storage type string for the in-process silo (matches Chronicle server StorageType constants).
+    /// Returns null for MongoDB (uses the default MongoDB path).
+    /// </summary>
+    public string? InProcessStorageType =>
+        _options.StorageProvider switch
+        {
+            ChronicleStorageProvider.Sqlite => "Sqlite",
+            ChronicleStorageProvider.PostgreSql => "PostgreSql",
+            ChronicleStorageProvider.MsSql => "MsSql",
+            _ => null,
+        };
+
+    /// <summary>
+    /// Gets the connection string for the in-process silo to use the selected SQL storage backend.
+    /// Only valid when <see cref="InProcessStorageType"/> is non-null.
+    /// </summary>
+    /// <returns>The SQL connection string for the in-process silo.</returns>
+    public string GetInProcessConnectionString() =>
+        _options.StorageProvider switch
+        {
+            ChronicleStorageProvider.Sqlite =>
+                Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle-inprocess-test.db",
+            ChronicleStorageProvider.PostgreSql when _databaseContainer is not null =>
+                $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database=chronicle-inprocess;Username=postgres;Password={PostgreSqlPassword}",
+            ChronicleStorageProvider.PostgreSql =>
+                GetRequiredEnvironmentVariable("CHRONICLE_POSTGRESQL_CONNECTION_DETAILS"),
+            ChronicleStorageProvider.MsSql when _databaseContainer is not null =>
+                $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database=chronicle-inprocess;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True",
+            ChronicleStorageProvider.MsSql =>
+                GetRequiredEnvironmentVariable("CHRONICLE_MSSQL_CONNECTION_DETAILS"),
+            _ => string.Empty,
+        };
+
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
@@ -112,6 +146,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         _databaseContainer = new ContainerBuilder("postgres:16")
             .WithImage("postgres:16")
             .WithHostname(PostgreSqlHostName)
+            .WithPortBinding(5432, assignRandomHostPort: true)
             .WithNetwork(network)
             .WithEnvironment("POSTGRES_PASSWORD", PostgreSqlPassword)
             .WithEnvironment("POSTGRES_DB", "chronicle")
@@ -135,6 +170,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         _databaseContainer = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
             .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
             .WithHostname(MsSqlHostName)
+            .WithPortBinding(1433, assignRandomHostPort: true)
             .WithNetwork(network)
             .WithEnvironment("ACCEPT_EULA", "Y")
             .WithEnvironment("MSSQL_SA_PASSWORD", MsSqlPassword)
@@ -150,6 +186,13 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
         return $"Server={MsSqlHostName},1433;Database=chronicle;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
     }
+
+    static string GetRequiredEnvironmentVariable(string name) =>
+        Environment.GetEnvironmentVariable(name) switch
+        {
+            { Length: > 0 } value => value,
+            _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
+        };
 
     /// <summary>
     /// Resets kernel grain state in development builds for the out-of-process server.
