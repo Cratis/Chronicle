@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -106,6 +107,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Observer needs to replay. Transitioning to replay state.")]
     internal static partial void NeedsToReplay(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that client {ConnectionId} is no longer connected. Unsubscribing observer.")]
+    internal static partial void WatchdogClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
+    internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
+    internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
+    internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
 }
 
 internal static class ObserverScopes
