@@ -68,6 +68,9 @@ public interface IObservers
     /// <param name="request">The <see cref="WaitForObserverCompletionRequest"/>.</param>
     /// <param name="context">gRPC call context.</param>
     /// <returns>A <see cref="WaitForObserverCompletionResponse"/> describing completion and failures.</returns>
+    /// <remarks>
+    /// The wait is bounded by the cancellation token on <paramref name="context"/>.
+    /// </remarks>
     Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default);
 
     /// <summary>
