@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
@@ -81,6 +83,7 @@ internal sealed class ChronicleServerStartupTask(
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
                 await jobsManager.Rehydrate();
+                await RehydrateReducerAndReactorObservers(eventStore, namespaceName);
             });
             await Task.WhenAll(rehydrateAll);
         }
@@ -90,5 +93,24 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await authenticationService.EnsureDefaultClientCredentials();
 #endif
+    }
+
+    async Task RehydrateReducerAndReactorObservers(EventStoreName eventStore, EventStoreNamespaceName namespaceName)
+    {
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var namespaceStorage = eventStoreStorage.GetNamespace(namespaceName);
+        var knownObserverIds = (await namespaceStorage.Observers.GetAll()).Select(_ => _.Identifier).ToHashSet();
+        var reducerDefinitions = await eventStoreStorage.Reducers.GetAll();
+        var reactorDefinitions = await eventStoreStorage.Reactors.GetAll();
+
+        var reducerObserverKeys = reducerDefinitions
+            .Where(_ => knownObserverIds.Contains(_.Identifier))
+            .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
+        var reactorObserverKeys = reactorDefinitions
+            .Where(_ => knownObserverIds.Contains(_.Identifier))
+            .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
+        var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
+
+        await Task.WhenAll(observerKeys.Select(_ => grainFactory.GetGrain<IObserver>(_).Ensure()));
     }
 }
