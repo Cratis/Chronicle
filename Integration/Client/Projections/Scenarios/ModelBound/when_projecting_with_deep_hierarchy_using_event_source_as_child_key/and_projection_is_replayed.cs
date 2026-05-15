@@ -6,7 +6,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections.ModelBound;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_deep_hierarchy_using_event_source_as_child_key.and_projection_is_replayed.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_deep_hierarchy_using_event_source_as_child_key;
@@ -54,8 +53,7 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
             await EventStore.Jobs.WaitForThereToBeNoJobs();
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<DeepHierarchyModule>();
-            Result = await (await collection.FindAsync(m => m.Id == ModuleId)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<DeepHierarchyModule>(ModuleId.ToString());
         }
     }
 

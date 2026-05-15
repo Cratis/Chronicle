@@ -6,7 +6,6 @@ using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_de
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.ReadModels;
 using Cratis.Chronicle.Observation;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.and_resolves_through_second_event_type.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution;
@@ -82,12 +81,10 @@ public class and_resolves_through_second_event_type(context context) : Given<con
             timeout ??= TimeSpanFactory.DefaultTimeout();
 
             using var cts = new CancellationTokenSource(timeout.Value);
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Root>();
             while (true)
             {
-                var queryResult = await collection.FindAsync(filter => filter.Name == UpdatedRootName, cancellationToken: cts.Token);
-                var result = await queryResult.FirstOrDefaultAsync(cts.Token);
-                if (result is not null && result.__lastHandledEventSequenceNumber == LastEventSequenceNumber)
+                var result = await EventStore.ReadModels.GetInstanceById<Root>(RootId.ToString());
+                if (result?.Name == UpdatedRootName && result.__lastHandledEventSequenceNumber == LastEventSequenceNumber)
                 {
                     return result;
                 }

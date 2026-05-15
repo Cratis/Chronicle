@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_nested_in_children.clearing_the_nested_object.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_nested_in_children;
@@ -47,10 +46,9 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
             await EventStore.EventLog.Append(SliceId, new CommandClearedFromSlice());
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<FeatureReadModel>();
             while (!cts.IsCancellationRequested)
             {
-                Result = await (await collection.FindAsync(_ => true)).FirstOrDefaultAsync();
+                Result = await EventStore.ReadModels.GetInstanceById<FeatureReadModel>(FeatureId.ToString());
                 if (Result?.Slices?.FirstOrDefault()?.Command is null)
                 {
                     break;
@@ -59,7 +57,7 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
                 await Task.Delay(50);
             }
 
-            Result = await (await collection.FindAsync(_ => true)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<FeatureReadModel>(FeatureId.ToString());
         }
     }
 

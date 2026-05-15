@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_deep_hierarchy_using_event_source_as_child_key.and_events_are_appended_sequentially.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_deep_hierarchy_using_event_source_as_child_key;
@@ -45,8 +44,7 @@ public class and_events_are_appended_sequentially(context context) : Given<conte
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<DeepHierarchyModule>();
-            Result = await (await collection.FindAsync(m => m.Id == ModuleId)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<DeepHierarchyModule>(ModuleId.ToString());
         }
     }
 

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_join_on_id.and_event_joined_has_happened_first.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_join_on_id;
@@ -29,11 +28,8 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
             EventsWithEventSourceIdToAppend.Add(new(BookId, new BookBorrowed(UserId)));
         }
 
-        protected override Task<BorrowedBook> GetReadModelResult()
-        {
-            var result = ChronicleFixture.ReadModels.Database.GetCollection<BorrowedBook>().Find(_ => _.Id == BookId);
-            return result.FirstOrDefaultAsync();
-        }
+        protected override Task<BorrowedBook> GetReadModelResult() =>
+            EventStore.ReadModels.GetInstanceById<BorrowedBook>(BookId.ToString());
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();

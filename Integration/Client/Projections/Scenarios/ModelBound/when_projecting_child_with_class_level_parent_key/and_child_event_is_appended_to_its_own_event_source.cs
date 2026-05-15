@@ -5,7 +5,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections.ModelBound;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_child_with_class_level_parent_key.and_child_event_is_appended_to_its_own_event_source.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_child_with_class_level_parent_key;
@@ -41,8 +40,7 @@ public class and_child_event_is_appended_to_its_own_event_source(context context
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<DashboardReadModel>();
-            Result = await (await collection.FindAsync(_ => true)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<DashboardReadModel>(DashboardId.ToString());
         }
     }
 

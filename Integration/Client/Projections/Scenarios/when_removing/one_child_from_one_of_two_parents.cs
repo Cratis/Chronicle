@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
 using Cratis.Chronicle.Integration.Projections.Events;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_removing.one_child_from_one_of_two_parents.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_removing;
@@ -39,8 +38,8 @@ public class one_child_from_one_of_two_parents(context context) : Given<context>
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = (await result.ToListAsync()).ToArray();
+            var instances = await EventStore.ReadModels.GetInstances<Group>();
+            Groups = instances.ToArray();
             ResultingGroupIds = Groups.Select(_ => (EventSourceId)_.Id.Value).ToArray();
         }
     }

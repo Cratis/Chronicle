@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_full_hierarchy.and_events_are_appended_sequentially.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_full_hierarchy;
@@ -55,8 +54,7 @@ public class and_events_are_appended_sequentially(context context) : Given<conte
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<ModuleReadModel>();
-            Result = await (await collection.FindAsync(m => m.Id == ModuleId)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<ModuleReadModel>(ModuleId.ToString());
         }
     }
 

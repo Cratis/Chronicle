@@ -5,7 +5,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
 using Cratis.Chronicle.Integration.Projections.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_removing.child_removed_with_join.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_removing;
@@ -43,10 +42,9 @@ public class child_removed_with_join(context context) : Given<context>(context)
         {
             // Only consider IDs that could have been created by the events in this scenario to
             // avoid picking up User documents written by other tests sharing the same fixture.
-            var relevantIds = new[] { ReadModelId, (string)FirstGroupId, (string)SecondGroupId };
-            var filter = Builders<User>.Filter.In(new StringFieldDefinition<User, string>("_id"), relevantIds);
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<User>().FindAsync(filter);
-            Users = (await result.ToListAsync()).ToArray();
+            var relevantIds = new HashSet<string> { ReadModelId, (string)FirstGroupId, (string)SecondGroupId };
+            var allUsers = await EventStore.ReadModels.GetInstances<User>();
+            Users = allUsers.Where(u => relevantIds.Contains(u.Id.Value)).ToArray();
         }
     }
 

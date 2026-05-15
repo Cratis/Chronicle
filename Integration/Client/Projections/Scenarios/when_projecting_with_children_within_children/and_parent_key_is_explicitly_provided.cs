@@ -6,7 +6,6 @@ using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_ch
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_children_within_children.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_children_within_children.ReadModels;
 using Cratis.Chronicle.Observation;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_children_within_children.and_parent_key_is_explicitly_provided.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_children_within_children;
@@ -66,9 +65,7 @@ public class and_parent_key_is_explicitly_provided(context context) : Given<cont
             FailedPartitions = await projection.GetFailedPartitions();
 
             // Get the result
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Simulation>();
-            var queryResult = await collection.FindAsync(_ => true);
-            Result = await queryResult.FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<Simulation>(SimulationId.ToString());
         }
     }
 

@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Integration.Projections.Events;
 using Cratis.Chronicle.Integration.Projections.ProjectionTypes;
 using Cratis.Chronicle.Integration.Projections.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_properties.using_composite_key_from_property_and_context_property.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_properties;
@@ -29,8 +28,7 @@ public class using_composite_key_from_property_and_context_property(context cont
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<ReadModelWithCompositeKey>().FindAsync(_ => _.Id == CompositeId);
-            ReadModel = await result.FirstOrDefaultAsync();
+            ReadModel = await EventStore.ReadModels.GetInstanceById<ReadModelWithCompositeKey>(CompositeId.ToString());
         }
     }
 

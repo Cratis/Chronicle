@@ -6,7 +6,6 @@ using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_de
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.ReadModels;
 using Cratis.Chronicle.Observation;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution.and_child_update_event_arrives_before_root_is_created.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_deferred_parent_resolution;
@@ -70,9 +69,7 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
             FailedPartitions = await projection.GetFailedPartitions();
 
             // Get the result
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Root>();
-            var queryResult = await collection.FindAsync(filter => filter.Name == RootName);
-            Result = await queryResult.FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<Root>(RootId.ToString());
         }
     }
 

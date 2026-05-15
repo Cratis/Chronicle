@@ -5,7 +5,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
 using Cratis.Chronicle.Integration.Projections.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event.with_from_every.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_join_for_children.waiting_for_each_event;
@@ -38,8 +37,7 @@ public class with_from_every(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<GroupWithLastUpdated>().FindAsync(_ => _.Id == UserId.ToString());
-            ReadModel = await result.FirstOrDefaultAsync();
+            ReadModel = await EventStore.ReadModels.GetInstanceById<GroupWithLastUpdated>(UserId.ToString());
         }
     }
 

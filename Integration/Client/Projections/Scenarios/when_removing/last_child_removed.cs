@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
 using Cratis.Chronicle.Integration.Projections.Events;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_removing.last_child_removed.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_removing;
@@ -34,8 +33,8 @@ public class last_child_removed(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleFixture.ReadModels.Database.GetCollection<Group>().FindAsync(_ => true);
-            Groups = (await result.ToListAsync()).ToArray();
+            var instances = await EventStore.ReadModels.GetInstances<Group>();
+            Groups = instances.ToArray();
         }
     }
 

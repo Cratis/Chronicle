@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.Events;
 using Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.ReadModels;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_nested_object.clearing_the_nested_object.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_with_nested_object;
@@ -35,8 +34,7 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
 
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
-            var collection = ChronicleFixture.ReadModels.Database.GetCollection<Slice>();
-            Result = await (await collection.FindAsync(_ => true)).FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<Slice>(SliceId.ToString());
         }
     }
 
