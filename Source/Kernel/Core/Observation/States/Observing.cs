@@ -40,6 +40,7 @@ public class Observing(
     {
         typeof(Routing),
         typeof(Replay),
+        typeof(QuarantinedObserver),
         typeof(Disconnected)
     }.ToImmutableList();
 
