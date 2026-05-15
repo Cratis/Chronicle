@@ -15,13 +15,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
 public class EncryptionKey
 {
     /// <summary>
-    /// Gets or sets the <see cref="Cratis.Chronicle.Compliance.EncryptionKeyIdentifier"/> value the key is for.
+    /// Gets or sets the <see cref="Chronicle.Compliance.EncryptionKeyIdentifier"/> value the key is for.
     /// </summary>
     [MaxLength(256)]
     public string Identifier { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the <see cref="Cratis.Chronicle.Compliance.EncryptionKeyRevision"/> of the key.
+    /// Gets or sets the <see cref="Chronicle.Compliance.EncryptionKeyRevision"/> of the key.
     /// </summary>
     public uint Revision { get; set; } = 1;
 

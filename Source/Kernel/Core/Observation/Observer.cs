@@ -87,6 +87,9 @@ public partial class Observer(
         var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
+
+        var config = await configurationProvider.GetFor(_observerKey);
+        RegisterWatchdog(config.WatchdogInterval);
     }
 
     /// <inheritdoc/>

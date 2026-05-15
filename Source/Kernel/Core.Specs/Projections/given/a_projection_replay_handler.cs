@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
@@ -27,10 +26,9 @@ public class a_projection_replay_handler : Specification
     protected IReplayContexts _replayContexts;
     protected IReplayedReadModelsStorage _replayedModels;
     protected IProjectionPipeline _projectionPipeline;
-    protected IProjectionFactory _projectionFactory;
     protected ObserverDetails _observerDetails;
     protected IGrainFactory _grainFactory;
-    protected global::Cratis.Chronicle.Projections.IProjection _projectionGrain;
+    protected IProjection _projectionGrain;
     protected IReadModelDefinitionsStorage _readModelDefinitions;
     protected IEventTypesStorage _eventTypesStorage;
     protected IReadModelReplayManager _readModelReplayManager;
@@ -52,17 +50,16 @@ public class a_projection_replay_handler : Specification
         _replayedModels = Substitute.For<IReplayedReadModelsStorage>();
         _eventStoreNamespaceStorage.ReplayedReadModels.Returns(_replayedModels);
         _grainFactory = Substitute.For<IGrainFactory>();
-        _projectionGrain = Substitute.For<global::Cratis.Chronicle.Projections.IProjection>();
+        _projectionGrain = Substitute.For<IProjection>();
         _readModelReplayManager = Substitute.For<IReadModelReplayManager>();
-        _grainFactory.GetGrain<global::Cratis.Chronicle.Projections.IProjection>(Arg.Any<string>()).Returns(_projectionGrain);
+        _grainFactory.GetGrain<IProjection>(Arg.Any<string>()).Returns(_projectionGrain);
         _grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_readModelReplayManager);
-        _projectionFactory = Substitute.For<IProjectionFactory>();
 
         _readModelDefinitions = Substitute.For<IReadModelDefinitionsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _eventStoreStorage.ReadModels.Returns(_readModelDefinitions);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
-        _eventTypesStorage.GetLatestForAllEventTypes().Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([]));
+        _eventTypesStorage.GetLatestForAllEventTypes().Returns(_ => Task.FromResult<IEnumerable<EventTypeSchema>>([]));
 
         _projectionPipelineManager = Substitute.For<IProjectionPipelineManager>();
         _projectionPipeline = Substitute.For<IProjectionPipeline>();
@@ -76,7 +73,6 @@ public class a_projection_replay_handler : Specification
             _grainFactory,
             _storage,
             _projectionPipelineManager,
-            _projectionFactory,
             NullLogger<ProjectionReplayHandler>.Instance);
     }
 }

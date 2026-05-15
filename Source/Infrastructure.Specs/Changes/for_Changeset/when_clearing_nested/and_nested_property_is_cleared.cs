@@ -5,7 +5,7 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes.for_Changeset.when_clearing_nested;
 
-public class and_nested_property_is_cleared : for_Changeset.when_adding_changes.given.a_changeset
+public class and_nested_property_is_cleared : when_adding_changes.given.a_changeset
 {
     PropertyPath _nestedProperty;
 

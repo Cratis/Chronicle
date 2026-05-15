@@ -110,7 +110,7 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
-        Concepts.Events.Subject? subject = null)
+        Subject? subject = null)
     {
         try
         {
@@ -158,7 +158,7 @@ public class EventSequenceStorage(
 
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
-            var resolvedSubject = subject?.IsSet == true ? subject : new Concepts.Events.Subject(eventSourceId.Value);
+            var resolvedSubject = subject?.IsSet == true ? subject : new Subject(eventSourceId.Value);
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
                     eventType,
@@ -220,7 +220,7 @@ public class EventSequenceStorage(
                 var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
                 var resolvedSubject = eventToAppend.Subject?.IsSet == true
                     ? eventToAppend.Subject
-                    : new Concepts.Events.Subject(eventToAppend.EventSourceId.Value);
+                    : new Subject(eventToAppend.EventSourceId.Value);
 
                 var @event = new Event(
                     eventToAppend.SequenceNumber,
