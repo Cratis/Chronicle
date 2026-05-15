@@ -18,5 +18,6 @@ public class and_projection_exists : given.a_projection_replay_handler_with_proj
     Task Because() => _handler.BeginReplayFor(_observerDetails);
 
     [Fact] void should_begin_replay() => _replayContexts.Received(1).Establish(_readModelType, _readModelName);
+    [Fact] void should_apply_replay_retention_policy() => _readModelReplayManager.Received(1).ApplyRetentionPolicy(_replayedVersionsToKeep);
     [Fact] void should_not_get_the_projection_definition() => _projectionGrain.DidNotReceive().GetDefinition();
 }

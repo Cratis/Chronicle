@@ -38,6 +38,12 @@ public class ReadModelReplayManagerStorageProvider(IStorage storage) : IGrainSto
             await namespaceStorage.ReplayedReadModels.Replayed(occurrence);
         }
 
+        foreach (var occurrence in actualGrainState.State.RemovedOccurrences)
+        {
+            await namespaceStorage.ReplayedReadModels.Remove(occurrence);
+        }
+
         actualGrainState.State.NewOccurrences.Clear();
+        actualGrainState.State.RemovedOccurrences.Clear();
     }
 }
