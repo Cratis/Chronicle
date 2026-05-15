@@ -21,7 +21,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Identities,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Subject = table.StringColumn(migrationBuilder),
                 Name = table.StringColumn(migrationBuilder),
                 UserName = table.StringColumn(migrationBuilder)

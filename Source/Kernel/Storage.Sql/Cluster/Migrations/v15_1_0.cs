@@ -22,7 +22,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Users,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Username = table.StringColumn(migrationBuilder),
                 Email = table.StringColumn(migrationBuilder, nullable: true),
                 PasswordHash = table.StringColumn(migrationBuilder, nullable: true),
@@ -39,7 +39,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Applications,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 ClientId = table.StringColumn(migrationBuilder),
                 ClientSecret = table.StringColumn(migrationBuilder, nullable: true),
                 DisplayName = table.StringColumn(migrationBuilder, nullable: true),

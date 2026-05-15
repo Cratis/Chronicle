@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.FailedPartitions,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Partition = table.StringColumn(migrationBuilder),
                 ObserverId = table.StringColumn(migrationBuilder),
                 IsResolved = table.BoolColumn(migrationBuilder),

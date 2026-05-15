@@ -22,9 +22,9 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.JobSteps,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
-                JobId = table.GuidColumn(migrationBuilder),
-                JobStepId = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
+                JobId = table.GuidColumn(migrationBuilder, nullable: false),
+                JobStepId = table.GuidColumn(migrationBuilder, nullable: false),
                 Type = table.StringColumn(migrationBuilder),
                 Name = table.StringColumn(migrationBuilder),
                 Status = table.NumberColumn<int>(migrationBuilder),

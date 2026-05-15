@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Recommendations,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Name = table.StringColumn(migrationBuilder),
                 Description = table.StringColumn(migrationBuilder),
                 Type = table.StringColumn(migrationBuilder),
