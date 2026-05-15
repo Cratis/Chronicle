@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.Vault.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.Vault</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.Vault/Storage.Vault.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Testcontainers" />
+    </ItemGroup>
+
+</Project>
