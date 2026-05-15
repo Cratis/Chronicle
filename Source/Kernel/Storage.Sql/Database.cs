@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -14,8 +15,6 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -47,9 +46,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
 
@@ -68,9 +65,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -99,9 +94,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = new NamespaceDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -168,9 +161,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();
@@ -208,6 +199,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             return dataSource;
         }
+
         if (TryReplaceFilename("Filename", postfix, out var filename))
         {
             return filename;
