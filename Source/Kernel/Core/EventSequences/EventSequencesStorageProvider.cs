@@ -31,6 +31,7 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
         var eventTypesStorage = storage.GetEventStore(key.EventStore).EventTypes;
         var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
+        await SetNextSequenceNumberFromActualTail(eventSequenceStorage, actualGrainState);
         await HandleTailSequenceNumbersForEventTypes(eventTypesStorage, eventSequenceStorage, actualGrainState);
     }
 
@@ -56,5 +57,13 @@ public class EventSequencesStorageProvider(IStorage storage) : IGrainStorage
                                                                         .ToDictionary(_ => _.Key.Id, _ => _.Value);
             await eventSequenceStorage.SaveState(actualGrainState.State);
         }
+    }
+
+    async Task SetNextSequenceNumberFromActualTail(IEventSequenceStorage eventSequenceStorage, IGrainState<EventSequenceState> actualGrainState)
+    {
+        var tailSequenceNumber = await eventSequenceStorage.GetTailSequenceNumber();
+        actualGrainState.State.SequenceNumber = tailSequenceNumber == EventSequenceNumber.Unavailable
+            ? EventSequenceNumber.First
+            : tailSequenceNumber.Next();
     }
 }
