@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.EventSequences.for_EventSequencesStorageProvider.when
 
 public class and_tail_sequence_number_is_unavailable : given.the_provider
 {
-    static GrainId _grainId;
-    static IGrainState<EventSequenceState> _state = null!;
+    GrainId _grainId;
+    IGrainState<EventSequenceState> _state = null!;
 
     void Establish()
     {
