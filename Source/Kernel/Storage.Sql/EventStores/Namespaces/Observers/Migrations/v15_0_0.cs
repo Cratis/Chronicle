@@ -28,7 +28,7 @@ public class v15_0_0 : Migration
                 ReplayingPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),
                 CatchingUpPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),
                 FailedPartitions = table.JsonColumn<IEnumerable<FailedPartition>>(migrationBuilder),
-                FailedPartitionCount = table.NumberColumn<int>(migrationBuilder),
+                FailedPartitionCount = table.NumberColumn<int>(migrationBuilder, nullable: false, defaultValue: 0),
                 IsReplaying = table.BoolColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Observers}", x => x.Id));
