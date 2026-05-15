@@ -85,6 +85,12 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // Ignore them so EF Core does not try to create shadow tables or require primary keys.
         modelBuilder.Ignore<WebhookTarget>()
             .Ignore<ObserverFilters>();
+
+        // ObserverDefinition is stored in the ObserverDefinitions table. Override the default
+        // convention (DbSet name "Observers") so it doesn't collide with the NamespaceDbContext's
+        // Observers table when both contexts share the same PostgreSQL/MSSQL database.
+        modelBuilder.Entity<ObserverDefinition>().ToTable(WellKnownTableNames.ObserverDefinitions);
+
         base.OnModelCreating(modelBuilder);
     }
 }
