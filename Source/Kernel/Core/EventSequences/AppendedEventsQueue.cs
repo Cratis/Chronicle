@@ -222,6 +222,26 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return true;
     }
 
+    static IEnumerable<AppendedEvent> GetFilteredEvents(
+        IEnumerable<AppendedEvent> events,
+        AppendedEventsQueueObserverSubscription subscription)
+    {
+        foreach (var @event in events)
+        {
+            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+            {
+                continue;
+            }
+
+            if (!MatchesFilters(subscription, @event))
+            {
+                continue;
+            }
+
+            yield return @event;
+        }
+    }
+
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
     {
         lock (_subscriptionsLock)
@@ -289,19 +309,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events[0];
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
-            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
-            {
-                continue;
-            }
-
-            if (!MatchesFilters(subscription, @event))
+            if (!GetFilteredEvents(events, subscription).Any())
             {
                 continue;
             }
 
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-            var eventToHandle = new List<AppendedEvent> { @event };
-            await observer.Handle(@event.Context.EventSourceId, eventToHandle);
+            await observer.Handle(@event.Context.EventSourceId, events);
         }
     }
 
@@ -329,10 +343,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in subscriptions)
             {
-                var actualEvents = partitionEvents
-                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
-                    .ToList();
-                if (actualEvents.Count == 0)
+                var actualEvents = GetFilteredEvents(partitionEvents, subscription);
+                if (!actualEvents.Any())
                 {
                     continue;
                 }
