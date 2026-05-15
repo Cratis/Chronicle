@@ -25,7 +25,7 @@ public class v15_0_0 : Migration
                 Id = table.GuidColumn(migrationBuilder, nullable: false),
                 JobId = table.GuidColumn(migrationBuilder, nullable: false),
                 JobStepId = table.GuidColumn(migrationBuilder, nullable: false),
-                Type = table.StringColumn(migrationBuilder),
+                Type = table.StringColumn(migrationBuilder, maxLength: 200),
                 Name = table.StringColumn(migrationBuilder),
                 Status = table.NumberColumn<int>(migrationBuilder),
                 IsPrepared = table.BoolColumn(migrationBuilder),

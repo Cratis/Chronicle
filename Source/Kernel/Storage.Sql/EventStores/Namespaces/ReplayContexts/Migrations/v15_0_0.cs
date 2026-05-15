@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             columns: table => new
             {
                 ReadModelIdentifier = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                ReadModel = table.StringColumn(migrationBuilder),
+                ReadModel = table.StringColumn(migrationBuilder, maxLength: 200),
                 RevertModel = table.StringColumn(migrationBuilder),
                 Started = table.Column<DateTimeOffset>(nullable: false)
             },

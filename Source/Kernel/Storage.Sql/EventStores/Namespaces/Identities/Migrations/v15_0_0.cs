@@ -22,9 +22,9 @@ public class v15_0_0 : Migration
             columns: table => new
             {
                 Id = table.GuidColumn(migrationBuilder, nullable: false),
-                Subject = table.StringColumn(migrationBuilder),
+                Subject = table.StringColumn(migrationBuilder, maxLength: 200),
                 Name = table.StringColumn(migrationBuilder),
-                UserName = table.StringColumn(migrationBuilder)
+                UserName = table.StringColumn(migrationBuilder, maxLength: 200)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Identities}", x => x.Id));
 

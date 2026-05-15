@@ -25,7 +25,7 @@ public class v15_0_0 : Migration
                 Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Name = table.StringColumn(migrationBuilder),
                 Description = table.StringColumn(migrationBuilder),
-                Type = table.StringColumn(migrationBuilder),
+                Type = table.StringColumn(migrationBuilder, maxLength: 200),
                 Occurred = table.Column<DateTimeOffset>(nullable: false),
                 RequestJson = table.JsonColumn<string>(migrationBuilder),
             },

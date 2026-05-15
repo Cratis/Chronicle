@@ -33,7 +33,7 @@ public class UniqueConstraintMigrator(
             columns: table => new
             {
                 EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                Value = table.StringColumn(migrationBuilder),
+                Value = table.StringColumn(migrationBuilder, maxLength: 200),
                 SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.EventSourceId));
