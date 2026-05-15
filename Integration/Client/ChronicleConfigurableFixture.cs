@@ -21,6 +21,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     const string MsSqlPassword = "Chronicle_P@ss1";
 
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
+    readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
 
@@ -119,6 +120,8 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleOutOfProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
+            .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
             .WithEnvironment("Storage__Type", storageType)
             .WithEnvironment("Storage__ConnectionDetails", connectionDetails);
 
@@ -148,14 +151,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             .WithPortBinding(5432, assignRandomHostPort: true)
             .WithNetwork(network)
             .WithEnvironment("POSTGRES_PASSWORD", PostgreSqlPassword)
-            .WithEnvironment("POSTGRES_DB", "chronicle")
+            .WithEnvironment("POSTGRES_DB", _outOfProcessSqlDatabaseName)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilCommandIsCompleted("pg_isready", "-U", "postgres"))
             .Build();
 
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
 
-        return $"Host={PostgreSqlHostName};Port=5432;Database=chronicle;Username=postgres;Password={PostgreSqlPassword}";
+        return $"Host={PostgreSqlHostName};Port=5432;Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
     }
 
     string BuildAndStartMsSql(INetwork network)
@@ -183,7 +186,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         // Give MSSQL a moment to fully initialize after the port is available
         Task.Delay(5000).GetAwaiter().GetResult();
 
-        return $"Server={MsSqlHostName},1433;Database=chronicle;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+        return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
     }
 
     static string GetRequiredEnvironmentVariable(string name) =>

@@ -82,7 +82,13 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
             dbContext = new NamespaceDbContext(GetOrCreateOptions<NamespaceDbContext>(connectionString));
-            await dbContext.Database.MigrateAsync();
+            try
+            {
+                await dbContext.Database.MigrateAsync();
+            }
+            catch (Exception exception) when (IsSharedEventSeedsDuplicate(exception))
+            {
+            }
             namespaces[@namespace.Value] = dbContext;
         }
 
@@ -205,6 +211,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         connectionString = null;
         return false;
+    }
+
+    bool IsSharedEventSeedsDuplicate(Exception exception)
+    {
+        var message = exception.Message;
+        return message.Contains("EventSeeds", StringComparison.OrdinalIgnoreCase) &&
+               (message.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("already an object named", StringComparison.OrdinalIgnoreCase));
     }
 
     DbContextOptions<T> GetOrCreateOptions<T>(string connectionString)
