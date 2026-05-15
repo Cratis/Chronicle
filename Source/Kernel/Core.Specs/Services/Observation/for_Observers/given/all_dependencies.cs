@@ -13,6 +13,7 @@ public class all_dependencies : Specification
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IObserverDefinitionsStorage _observerDefinitionsStorage;
     protected IObserverStateStorage _observerStateStorage;
+    protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected IGrainFactory _grainFactory;
     protected Contracts.Observation.IObservers _observers;
 
@@ -23,12 +24,14 @@ public class all_dependencies : Specification
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _observerDefinitionsStorage = Substitute.For<IObserverDefinitionsStorage>();
         _observerStateStorage = Substitute.For<IObserverStateStorage>();
+        _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
 
         _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.Observers.Returns(_observerDefinitionsStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<Concepts.EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _namespaceStorage.Observers.Returns(_observerStateStorage);
+        _namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
 
         _observers = new Observers(_grainFactory, _storage);
     }
