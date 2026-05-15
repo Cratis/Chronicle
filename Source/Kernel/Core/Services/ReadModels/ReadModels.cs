@@ -8,6 +8,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
@@ -206,7 +207,9 @@ internal sealed class ReadModels(
             // This correctly handles joins and events with custom key resolvers (UsingKey) because
             // the projection observer processes all events and stores the result in the sink.
             // ImmediateProjection only replays events by EventSourceId, which misses cross-source events.
-            if (string.IsNullOrEmpty(request.SessionId))
+            // Note: when ReadModelKey is unspecified ("*") we cannot look it up by key in the sink;
+            // fall through to ImmediateProjection which replays all events and returns the last state.
+            if (string.IsNullOrEmpty(request.SessionId) && request.ReadModelKey != ReadModelKey.Unspecified.Value)
             {
                 var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
                 var sink = await namespaceStorage.Sinks.GetFor(definition);
