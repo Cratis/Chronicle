@@ -34,6 +34,7 @@ public class and_there_are_matching_observers : given.all_dependencies
             new HashSet<Concepts.Keys.Key>(),
             new HashSet<Concepts.Keys.Key>(),
             [],
+            false,
             false)
         {
             NextEventSequenceNumber = 42

@@ -33,6 +33,7 @@ public class and_no_observer_states_match : given.all_dependencies
             new HashSet<Concepts.Keys.Key>(),
             new HashSet<Concepts.Keys.Key>(),
             [],
+            false,
             false);
 
         _observerDefinitionsStorage
