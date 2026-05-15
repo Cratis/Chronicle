@@ -13,7 +13,7 @@ public class ArrayIndexers
     /// </summary>
     public static readonly ArrayIndexers NoIndexers = new([]);
 
-    readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers = new Dictionary<PropertyPath, ArrayIndexer>();
+    readonly List<ArrayIndexer> _arrayIndexers = [];
 
     int? _computedHashCode;
 
@@ -49,8 +49,8 @@ public class ArrayIndexers
     /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
     public IEnumerable<ArrayIndexer> All
     {
-        get => _arrayIndexers.Values;
-        init => _arrayIndexers = value.ToDictionary(_ => _.ArrayProperty, _ => _);
+        get => _arrayIndexers;
+        init => _arrayIndexers = value.ToList();
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ public class ArrayIndexers
     public ArrayIndexer GetFor(PropertyPath propertyPath)
     {
         ThrowIfMissingArrayIndexerForPropertyPath(propertyPath);
-        return _arrayIndexers[propertyPath];
+        return _arrayIndexers.Last(_ => _.ArrayProperty == propertyPath);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class ArrayIndexers
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check for.</param>
     /// <returns>True if it has it, false if not.</returns>
-    public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.ContainsKey(propertyPath);
+    public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.Exists(_ => _.ArrayProperty == propertyPath);
 
     /// <inheritdoc/>
     public override bool Equals(object? obj)
@@ -95,7 +95,7 @@ public class ArrayIndexers
 
     void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)
     {
-        if (!_arrayIndexers.ContainsKey(propertyPath))
+        if (!HasFor(propertyPath))
         {
             throw new MissingArrayIndexerForPropertyPath(propertyPath);
         }
