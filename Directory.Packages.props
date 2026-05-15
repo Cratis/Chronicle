@@ -117,6 +117,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
+    <PackageVersion Include="VaultSharp" Version="1.17.5.1" />
     <PackageVersion Include="handlebars.net" Version="2.1.6" />
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="OneOf.SourceGenerator" Version="3.0.271" />
