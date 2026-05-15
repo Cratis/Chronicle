@@ -91,11 +91,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToList();
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
         await _channel.Writer.WriteAsync(batch);
-        _metrics?.EventsEnqueued(batch.Count);
+        _metrics?.EventsEnqueued(batch.Length);
     }
 
     /// <inheritdoc/>
@@ -226,52 +226,35 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event);
 
     /// <summary>
-    /// Tries to get the filtered events for a subscription without materializing a new collection.
+    /// Gets the filtered events for a subscription.
     /// </summary>
     /// <param name="events">The events to filter.</param>
     /// <param name="subscription">The subscription to match events against.</param>
-    /// <param name="filteredEvents">The lazily filtered events when any match was found; otherwise <see langword="null"/>.</param>
-    /// <returns><see langword="true"/> if at least one event matched the subscription; otherwise <see langword="false"/>.</returns>
-    static bool TryGetFilteredEvents(
+    /// <returns>An array of matching events.</returns>
+    static AppendedEvent[] GetFilteredEvents(
         List<AppendedEvent> events,
-        AppendedEventsQueueObserverSubscription subscription,
-        out IEnumerable<AppendedEvent>? filteredEvents)
+        AppendedEventsQueueObserverSubscription subscription)
     {
-        for (var index = 0; index < events.Count; index++)
+        var matchingEvents = new AppendedEvent[events.Count];
+        var numberOfMatchingEvents = 0;
+        foreach (var @event in events)
         {
-            if (!MatchesSubscription(subscription, events[index]))
+            if (!MatchesSubscription(subscription, @event))
             {
                 continue;
             }
 
-            filteredEvents = GetFilteredEvents(events, subscription, index);
-            return true;
+            matchingEvents[numberOfMatchingEvents++] = @event;
         }
 
-        filteredEvents = null;
-        return false;
-    }
-
-    /// <summary>
-    /// Gets lazily filtered events for a subscription starting from the first matching event index.
-    /// </summary>
-    /// <param name="events">The events to filter.</param>
-    /// <param name="subscription">The subscription to match events against.</param>
-    /// <param name="startIndex">The index of the first matching event.</param>
-    /// <returns>An <see cref="IEnumerable{T}"/> that yields only matching events.</returns>
-    static IEnumerable<AppendedEvent> GetFilteredEvents(
-        List<AppendedEvent> events,
-        AppendedEventsQueueObserverSubscription subscription,
-        int startIndex)
-    {
-        for (var index = startIndex; index < events.Count; index++)
+        if (numberOfMatchingEvents == 0)
         {
-            var @event = events[index];
-            if (MatchesSubscription(subscription, @event))
-            {
-                yield return @event;
-            }
+            return [];
         }
+
+        return numberOfMatchingEvents == matchingEvents.Length
+            ? matchingEvents
+            : matchingEvents[..numberOfMatchingEvents];
     }
 
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
@@ -375,13 +358,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in subscriptions)
             {
-                if (!TryGetFilteredEvents(partitionEvents, subscription, out var actualEvents))
+                var actualEvents = GetFilteredEvents(partitionEvents, subscription);
+                if (actualEvents.Length == 0)
                 {
                     continue;
                 }
 
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                tasks.Add(observer.Handle(partition, actualEvents!));
+                tasks.Add(observer.Handle(partition, actualEvents));
             }
 
             await Task.WhenAll(tasks);
