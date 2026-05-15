@@ -69,10 +69,10 @@ public class EventCursor(
 
             var eventMetadata = new EventContext(
                 eventType,
-                new EventSourceType(eventEntry.EventSourceType),
-                new EventSourceId(eventEntry.EventSourceId),
-                new EventStreamType(eventEntry.EventStreamType),
-                new EventStreamId(eventEntry.EventStreamId),
+                eventEntry.EventSourceType,
+                eventEntry.EventSourceId,
+                eventEntry.EventStreamType,
+                eventEntry.EventStreamId,
                 new EventSequenceNumber(eventEntry.SequenceNumber),
                 eventEntry.Occurred,
                 _eventStore,

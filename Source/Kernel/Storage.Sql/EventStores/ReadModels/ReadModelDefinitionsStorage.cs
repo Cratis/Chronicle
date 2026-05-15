@@ -34,12 +34,11 @@ public class ReadModelDefinitionsStorage(EventStoreName eventStore, IDatabase da
     public async Task<Concepts.ReadModels.ReadModelDefinition> Get(ReadModelIdentifier identifier)
     {
         await using var scope = await database.EventStore(eventStore);
-        var readModel = await scope.DbContext.ReadModels
+        var entity = await scope.DbContext.ReadModels
             .Where(rm => rm.Id == identifier)
-            .Select(rm => rm.ToKernel())
             .FirstOrDefaultAsync();
 
-        return readModel!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>

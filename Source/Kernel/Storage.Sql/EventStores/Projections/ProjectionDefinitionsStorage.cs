@@ -35,12 +35,11 @@ public class ProjectionDefinitionsStorage(EventStoreName eventStore, IDatabase d
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
         await using var scope = await database.EventStore(eventStore);
-        var projection = await scope.DbContext.Projections
-            .Where(projection => projection.Id == id)
-            .Select(projection => projection.ToKernel())
+        var entity = await scope.DbContext.Projections
+            .Where(p => p.Id == id)
             .FirstOrDefaultAsync();
 
-        return projection!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>

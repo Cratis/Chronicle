@@ -16,7 +16,7 @@ public class ObserverState
     /// Gets or sets the unique identifier for the observer.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ObserverId Id { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.

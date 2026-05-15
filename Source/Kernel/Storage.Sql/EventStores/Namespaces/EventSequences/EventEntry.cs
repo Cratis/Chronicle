@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -35,7 +36,7 @@ public class EventEntry
     /// <summary>
     /// Gets or sets the event type identifier.
     /// </summary>
-    public string Type { get; set; } = string.Empty;
+    public EventTypeId Type { get; set; } = EventTypeId.Unknown;
 
     /// <summary>
     /// Gets or sets the time the event occurred.
@@ -45,22 +46,22 @@ public class EventEntry
     /// <summary>
     /// Gets or sets the event source type.
     /// </summary>
-    public string EventSourceType { get; set; } = string.Empty;
+    public EventSourceType EventSourceType { get; set; } = EventSourceType.Default;
 
     /// <summary>
     /// Gets or sets the event source identifier.
     /// </summary>
-    public string EventSourceId { get; set; } = string.Empty;
+    public EventSourceId EventSourceId { get; set; } = EventSourceId.Unspecified;
 
     /// <summary>
     /// Gets or sets the event stream type.
     /// </summary>
-    public string EventStreamType { get; set; } = string.Empty;
+    public EventStreamType EventStreamType { get; set; } = EventStreamType.All;
 
     /// <summary>
     /// Gets or sets the event stream identifier.
     /// </summary>
-    public string EventStreamId { get; set; } = string.Empty;
+    public EventStreamId EventStreamId { get; set; } = EventStreamId.Default;
 
     /// <summary>
     /// Gets or sets the content per event type generation.
