@@ -26,19 +26,20 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
     /// <inheritdoc/>
     public async Task<bool> Has(ReactorId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Reactors.AnyAsync(reactor => reactor.Id == id);
+        return await scope.DbContext.Reactors.AnyAsync(reactor => reactor.Id == idValue);
     }
 
     /// <inheritdoc/>
     public async Task<Concepts.Observation.Reactors.ReactorDefinition> Get(ReactorId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        var reactor = await scope.DbContext.Reactors
-            .Where(reactor => reactor.Id == id)
-            .Select(reactor => reactor.ToKernel())
+        var entity = await scope.DbContext.Reactors
+            .Where(r => r.Id == idValue)
             .FirstOrDefaultAsync();
-        return reactor!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>

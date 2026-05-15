@@ -38,11 +38,12 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
             // This can be configured at the database level or by using specific collation in queries
         }
 
+        var eventSourceIdValue = eventSourceId.Value;
         var existing = await query.FirstOrDefaultAsync();
 
         if (existing is not null)
         {
-            if (existing.EventSourceId == eventSourceId)
+            if (existing.EventSourceId == eventSourceIdValue)
             {
                 return (true, (EventSequenceNumber)(ulong)existing.SequenceNumber);
             }
@@ -59,8 +60,9 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         var tableName = GetTableName(name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
+        var eventSourceIdValue = eventSourceId.Value;
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId);
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue);
 
         if (entry is not null)
         {
@@ -86,8 +88,9 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         var tableName = GetTableName(name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
+        var eventSourceIdValue = eventSourceId.Value;
         var entry = await scope.DbContext.Entries
-            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceId);
+            .FirstOrDefaultAsync(u => u.EventSourceId == eventSourceIdValue);
 
         if (entry is not null)
         {

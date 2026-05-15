@@ -37,6 +37,22 @@ public class ConceptAsParameterEvaluator : ExpressionVisitor
         // This is important because the original method might expect ConceptAs types
         if (left != node.Left || right != node.Right)
         {
+            // When one side was evaluated to a primitive but the other is still a ConceptAs type,
+            // coerce the primitive back to ConceptAs so the types match. This happens when a closure
+            // variable (e.g. ObserverId) is extracted to its string value while the column expression
+            // on the other side remains typed as ObserverId.
+            if (left.Type != right.Type)
+            {
+                if (left.Type.IsConcept() && left.Type.GetConceptValueType() == right.Type)
+                {
+                    right = Expression.Convert(right, left.Type);
+                }
+                else if (right.Type.IsConcept() && right.Type.GetConceptValueType() == left.Type)
+                {
+                    left = Expression.Convert(left, right.Type);
+                }
+            }
+
             // Clear the method to let Expression.MakeBinary choose the appropriate operator
             return Expression.MakeBinary(node.NodeType, left, right, node.IsLiftedToNull, null);
         }

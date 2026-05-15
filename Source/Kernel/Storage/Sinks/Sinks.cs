@@ -23,7 +23,9 @@ public class Sinks(
     EventStoreNamespaceName eventStoreNamespaceName,
     IInstancesOf<ISinkFactory> sinkFactories) : ISinks
 {
-    readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories.ToDictionary(_ => _.TypeId, _ => _);
+    readonly Dictionary<SinkTypeId, ISinkFactory> _factories = sinkFactories
+        .Where(f => f is not null)
+        .ToDictionary(_ => _.TypeId, _ => _);
     readonly ConcurrentDictionary<SinkKey, ISink> _sinks = new();
 
     /// <inheritdoc/>

@@ -106,7 +106,19 @@ public class ConceptAsExpressionRewriter : ExpressionVisitor
 
         if (visitedOperand != node.Operand)
         {
-            return Expression.MakeUnary(node.NodeType, visitedOperand, node.Type, node.Method);
+            // If the operand type changed, the method (op_Implicit) may no longer be applicable.
+            // Null out the method so Expression.MakeUnary picks the right operator automatically.
+            var method = node.Method;
+            if (method is not null)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length > 0 && parameters[0].ParameterType != visitedOperand.Type)
+                {
+                    method = null;
+                }
+            }
+
+            return Expression.MakeUnary(node.NodeType, visitedOperand, node.Type, method);
         }
 
         return base.VisitUnary(node);

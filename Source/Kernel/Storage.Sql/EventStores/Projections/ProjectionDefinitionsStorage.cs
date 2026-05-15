@@ -27,20 +27,20 @@ public class ProjectionDefinitionsStorage(EventStoreName eventStore, IDatabase d
     /// <inheritdoc/>
     public async Task<bool> Has(ProjectionId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Projections.AnyAsync(projection => projection.Id == id);
+        return await scope.DbContext.Projections.AnyAsync(projection => projection.Id == idValue);
     }
 
     /// <inheritdoc/>
     public async Task<ProjectionDefinition> Get(ProjectionId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        var projection = await scope.DbContext.Projections
-            .Where(projection => projection.Id == id)
-            .Select(projection => projection.ToKernel())
+        var entity = await scope.DbContext.Projections
+            .Where(p => p.Id == idValue)
             .FirstOrDefaultAsync();
-
-        return projection!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>

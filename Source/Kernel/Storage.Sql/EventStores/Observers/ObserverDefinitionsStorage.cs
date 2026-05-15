@@ -28,18 +28,20 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     /// <inheritdoc/>
     public async Task<bool> Has(ObserverId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Observers.AnyAsync(observer => observer.Id == id);
+        return await scope.DbContext.Observers.AnyAsync(observer => observer.Id == idValue);
     }
 
     /// <inheritdoc/>
     public async Task<Observation.ObserverDefinition> Get(ObserverId id)
     {
+        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Observers
-            .Where(observer => observer.Id == id)
-            .Select(observer => observer.ToKernel())
-            .FirstOrDefaultAsync() ?? Observation.ObserverDefinition.Empty;
+        var entity = await scope.DbContext.Observers
+            .Where(observer => observer.Id == idValue)
+            .FirstOrDefaultAsync();
+        return entity?.ToKernel() ?? Observation.ObserverDefinition.Empty;
     }
 
     /// <inheritdoc/>
@@ -68,10 +70,11 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     {
         var eventTypeIds = eventTypes.Select(et => et.Id).ToHashSet();
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Observers
+        var allObservers = await scope.DbContext.Observers.ToListAsync();
+        return allObservers
             .Where(observer => observer.EventTypes.Any(et => eventTypeIds.Contains(et.EventType)))
             .Select(observer => observer.ToKernel())
-            .ToListAsync();
+            .ToArray();
     }
 
     /// <inheritdoc/>

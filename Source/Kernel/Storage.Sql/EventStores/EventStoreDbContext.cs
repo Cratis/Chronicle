@@ -81,9 +81,10 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // WebhookTarget is a value object serialized as JSON via [Json] on WebhookDefinition.Target.
-        // Ignore it as an entity type so EF Core does not try to create a table or require a primary key.
-        modelBuilder.Ignore<WebhookTarget>();
+        // WebhookTarget and ObserverFilters are value objects serialized as JSON columns.
+        // Ignore them so EF Core does not try to create shadow tables or require primary keys.
+        modelBuilder.Ignore<WebhookTarget>()
+            .Ignore<ObserverFilters>();
         base.OnModelCreating(modelBuilder);
     }
 }

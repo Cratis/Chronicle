@@ -31,6 +31,10 @@ namespace Cratis.Chronicle.Storage.Sql;
 [Singleton]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
+    readonly ConceptAsQueryExpressionInterceptor _queryInterceptor = new();
+    readonly ConceptAsDbCommandInterceptor _commandInterceptor = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _optionsCache = new();
+
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
@@ -41,17 +45,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// <inheritdoc/>
     public Task<DbContextScope<ClusterDbContext>> Cluster()
     {
-        if (_clusterDbContext.Value == null)
-        {
-            var builder = new DbContextOptionsBuilder<ClusterDbContext>();
-            builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
-            _clusterDbContext.Value = new ClusterDbContext(builder.Options);
-        }
+        _clusterDbContext.Value ??= new ClusterDbContext(GetOrCreateOptions<ClusterDbContext>(options.Value.Storage.ConnectionDetails));
 
         return Task.FromResult(new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!));
     }
@@ -63,16 +57,8 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!_eventStoreDbContexts.Value.TryGetValue(eventStore.Value, out var dbContext))
         {
-            var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
             var connectionString = GetConnectionStringForEventStore(eventStore);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
-
-            dbContext = new EventStoreDbContext(builder.Options);
+            dbContext = new EventStoreDbContext(GetOrCreateOptions<EventStoreDbContext>(connectionString));
             await dbContext.Database.MigrateAsync();
             _eventStoreDbContexts.Value[eventStore.Value] = dbContext;
         }
@@ -94,16 +80,8 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!namespaces.TryGetValue(key, out var dbContext))
         {
-            var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
-
-            dbContext = new NamespaceDbContext(builder.Options);
+            dbContext = new NamespaceDbContext(GetOrCreateOptions<NamespaceDbContext>(connectionString));
             await dbContext.Database.MigrateAsync();
             namespaces[@namespace.Value] = dbContext;
         }
@@ -163,16 +141,8 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!tables.TryGetValue(tableName, out var dbContext))
         {
-            var builder = new DbContextOptionsBuilder<TDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
-
-            dbContext = createDbContext(builder.Options, tableName);
+            dbContext = createDbContext(GetOrCreateOptions<TDbContext>(connectionString), tableName);
             await dbContext.EnsureTableExists();
             tables[tableName] = dbContext;
         }
@@ -235,5 +205,27 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         connectionString = null;
         return false;
+    }
+
+    DbContextOptions<T> GetOrCreateOptions<T>(string connectionString)
+        where T : DbContext
+    {
+        var cacheKey = $"{typeof(T).FullName}:{connectionString}";
+        var state = (serviceProvider, connectionString, _queryInterceptor, _commandInterceptor);
+        return (DbContextOptions<T>)_optionsCache.GetOrAdd(
+            cacheKey,
+            static (_, s) =>
+            {
+                var (sp, cs, qi, ci) = s;
+                var builder = new DbContextOptionsBuilder<T>();
+                builder.UseDatabaseFromConnectionString(cs);
+                builder
+                    .UseApplicationServiceProvider(sp)
+                    .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
+                    .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
+                    .AddInterceptors(qi, ci);
+                return builder.Options;
+            },
+            state);
     }
 }

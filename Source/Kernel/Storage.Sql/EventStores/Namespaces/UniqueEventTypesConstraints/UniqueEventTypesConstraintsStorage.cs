@@ -23,9 +23,11 @@ public class UniqueEventTypesConstraintsStorage(EventStoreName eventStore, Event
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+        var eventTypeIdValue = eventTypeId.Value;
+        var eventSourceIdValue = eventSourceId.Value;
         var existing = await scope.DbContext.Events
-            .Where(e => e.Type == eventTypeId &&
-                       e.EventSourceId == eventSourceId)
+            .Where(e => e.Type == eventTypeIdValue &&
+                       e.EventSourceId == eventSourceIdValue)
             .FirstOrDefaultAsync();
 
         if (existing is not null)
