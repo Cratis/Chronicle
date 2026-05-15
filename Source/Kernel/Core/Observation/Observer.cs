@@ -221,6 +221,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
     }
@@ -276,6 +277,20 @@ public partial class Observer(
             _ => ObserverOwner.None
         };
 
+    async Task PauseJobs()
+    {
+        var allJobs = await _jobsManager.GetAllJobs();
+
+        // Explicitly do not pause replay jobs.
+        var pauseTasks = allJobs
+            .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
+                          observerJobRequest is not ReplayObserverRequest &&
+                          job.IsPreparingOrRunning &&
+                          observerJobRequest.ObserverKey == _observerKey)
+            .Select(job => _jobsManager.Stop(job.Id));
+        await Task.WhenAll(pauseTasks);
+    }
+
     async Task ResumeJobs()
     {
         var unfilteredJobs = await _jobsManager.GetAllJobs();
@@ -290,7 +305,7 @@ public partial class Observer(
         await Task.WhenAll(resumeTasks);
         return;
 
-        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.Stopped and not JobStatus.CompletedSuccessfully
+        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.CompletedSuccessfully
             and not JobStatus.CompletedWithFailures and not JobStatus.Removing;
     }
 
