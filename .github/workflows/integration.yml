@@ -1,0 +1,145 @@
+name: Integration Specs
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-cache-key:
+        description: "Cache key for dotnet build artifacts"
+        required: true
+        type: string
+      chronicle-image:
+        description: "Chronicle Docker image to use for out-of-process tests"
+        required: true
+        type: string
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      client-matrix: ${{ steps.client.outputs.matrix }}
+      kernel-matrix: ${{ steps.kernel.outputs.matrix }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Discover Client integration namespaces
+        id: client
+        run: |
+          namespaces=$(find Integration/Client -mindepth 1 -maxdepth 1 -type d \
+            ! -name 'bin' ! -name 'obj' \
+            -exec basename {} \; | sort)
+
+          # mode|database|needs-docker
+          declare -a configs=(
+            "inprocess|mongodb|false"
+            "outofprocess|mongodb|true"
+            "outofprocess|sqlite|true"
+            "outofprocess|postgresql|true"
+            "outofprocess|mssql|true"
+          )
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            for config in "${configs[@]}"; do
+              IFS='|' read -r mode database needs_docker <<< "$config"
+              matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.${ns}\",\"mode\":\"${mode}\",\"database\":\"${database}\",\"needs-docker\":${needs_docker}},"
+            done
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Discover Kernel integration namespaces
+        id: kernel
+        run: |
+          namespaces=$(find Integration/Kernel -mindepth 1 -maxdepth 1 -type d \
+            ! -name 'bin' ! -name 'obj' \
+            -exec basename {} \; | sort)
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  client-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.410
+            9.0.x
+            10.0.x
+
+      - name: Restore build output
+        uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Login to GitHub Docker Registry
+        if: matrix.needs-docker == true
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
+        working-directory: ./Integration/Client
+        env:
+          CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+        run: |
+          dotnet test --no-build \
+            --filter "FullyQualifiedName~${{ matrix.namespace }}" \
+            --logger "console;verbosity=normal" \
+            --configuration Release \
+            --framework net9.0 \
+            -- ${{ matrix.mode }} ${{ matrix.database }}
+
+  kernel-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.410
+            9.0.x
+            10.0.x
+
+      - name: Restore build output
+        uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Run Kernel integration tests (${{ matrix.namespace }})
+        working-directory: ./Integration/Kernel
+        run: |
+          dotnet test --no-build \
+            --filter "FullyQualifiedName~${{ matrix.namespace }}" \
+            --logger "console;verbosity=normal" \
+            --configuration Release \
+            --framework net9.0
