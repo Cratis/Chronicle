@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReadModelDefinitions,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder, maxLength: 200),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Name = table.StringColumn(migrationBuilder),
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)

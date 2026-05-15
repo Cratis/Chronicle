@@ -21,7 +21,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.EventStores,
             columns: table => new
             {
-                Name = table.StringColumn(migrationBuilder, maxLength: 200),
+                Name = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventStores}", x => x.Name));
 
@@ -29,7 +29,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Reminders,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder, maxLength: 200),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 GrainId = table.StringColumn(migrationBuilder),
                 GrainHash = table.NumberColumn<uint>(migrationBuilder),
                 ReminderName = table.StringColumn(migrationBuilder),

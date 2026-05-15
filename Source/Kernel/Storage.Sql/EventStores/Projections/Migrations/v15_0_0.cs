@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ProjectionDefinitions,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder, maxLength: 200),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 ReadModelName = table.StringColumn(migrationBuilder),
                 ReadModelGeneration = table.NumberColumn<int>(migrationBuilder),

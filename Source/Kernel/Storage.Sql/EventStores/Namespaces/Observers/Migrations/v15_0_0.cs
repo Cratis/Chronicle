@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Observers,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder, maxLength: 200),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 LastHandledEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
                 RunningState = table.NumberColumn<int>(migrationBuilder),
                 ReplayingPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),

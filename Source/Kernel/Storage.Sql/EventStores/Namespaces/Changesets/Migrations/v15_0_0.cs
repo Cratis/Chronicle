@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Changesets,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder, maxLength: 200),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 ReadModelName = table.StringColumn(migrationBuilder),
                 ReadModelKey = table.StringColumn(migrationBuilder),
                 EventType = table.StringColumn(migrationBuilder),
