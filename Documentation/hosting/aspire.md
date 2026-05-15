@@ -140,5 +140,6 @@ builder.Build().Run();
 |---------------------------------|---------------------------------------------------------|
 | `cratis/chronicle:latest`       | Production image — no embedded MongoDB                  |
 | `cratis/chronicle:latest-development` | Development image — includes embedded MongoDB |
+| `cratis/chronicle:latest-development-slim` | Development slim image — no embedded MongoDB |
 
 See [Production Hosting](./production.md) for guidance on running Chronicle in production environments.
