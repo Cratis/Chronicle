@@ -30,6 +30,7 @@ public class ObserverKeysAsyncEnumerator(
     CancellationToken cancellationToken) : IAsyncEnumerator<Key>
 {
     readonly string[] _eventTypeIds = eventTypes.Select(eventType => eventType.Value).ToArray();
+    DbContextScope<EventSequences.EventSequenceDbContext>? _scope;
     IAsyncEnumerator<EventSourceId>? _enumerator;
     Key? _current;
 
@@ -43,6 +44,11 @@ public class ObserverKeysAsyncEnumerator(
         {
             await _enumerator.DisposeAsync();
         }
+
+        if (_scope is not null)
+        {
+            await _scope.DisposeAsync();
+        }
     }
 
     /// <inheritdoc/>
@@ -50,10 +56,10 @@ public class ObserverKeysAsyncEnumerator(
     {
         if (_enumerator is null)
         {
-            await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+            _scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
             var fromSeqValue = fromEventSequenceNumber.Value;
-            var query = scope.DbContext.Events
+            var query = _scope.DbContext.Events
                 .Where(e => e.SequenceNumber >= fromSeqValue &&
                            _eventTypeIds.Contains(e.Type.Value))
                 .Select(e => e.EventSourceId)
