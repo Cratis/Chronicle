@@ -94,8 +94,14 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         try
         {
             var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
-            var publicKey = Convert.FromBase64String(secret.Data.Data[PublicKeyField].ToString()!);
-            var privateKey = Convert.FromBase64String(secret.Data.Data[PrivateKeyField].ToString()!);
+            if (!secret.Data.Data.TryGetValue(PublicKeyField, out var publicRaw) || publicRaw is null ||
+                !secret.Data.Data.TryGetValue(PrivateKeyField, out var privateRaw) || privateRaw is null)
+            {
+                throw new MissingEncryptionKey(identifier);
+            }
+
+            var publicKey = Convert.FromBase64String(publicRaw.ToString()!);
+            var privateKey = Convert.FromBase64String(privateRaw.ToString()!);
             return new EncryptionKey(publicKey, privateKey);
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
@@ -131,7 +137,14 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
 
     static VaultClient CreateVaultClient(string address)
     {
-        var token = Environment.GetEnvironmentVariable("VAULT_TOKEN") ?? string.Empty;
+        var token = Environment.GetEnvironmentVariable("VAULT_TOKEN");
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new InvalidOperationException(
+                "VAULT_TOKEN environment variable is required for HashiCorp Vault authentication. " +
+                "Set this variable to a valid Vault token before starting Chronicle.");
+        }
+
         var authMethod = new TokenAuthMethodInfo(token);
         var settings = new VaultClientSettings(address, authMethod);
         return new VaultClient(settings);
@@ -165,15 +178,10 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         EncryptionKeyIdentifier identifier)
     {
         var revisions = await ListRevisions(eventStore, eventStoreNamespace, identifier);
-        if (!revisions.Any())
-        {
-            return null;
-        }
-
-        return revisions.Max();
+        return revisions.Count == 0 ? null : revisions.Max();
     }
 
-    async Task<IEnumerable<EncryptionKeyRevision>> ListRevisions(
+    async Task<List<EncryptionKeyRevision>> ListRevisions(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier)
@@ -182,10 +190,16 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         try
         {
             var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(directory, mountPoint: _mountPoint);
-            return list.Data.Keys
-                .Select(k => k.TrimEnd('/'))
-                .Where(k => uint.TryParse(k, out _))
-                .Select(k => (EncryptionKeyRevision)uint.Parse(k));
+            var revisions = new List<EncryptionKeyRevision>();
+            foreach (var key in list.Data.Keys)
+            {
+                if (uint.TryParse(key.TrimEnd('/'), out var parsed))
+                {
+                    revisions.Add((EncryptionKeyRevision)parsed);
+                }
+            }
+
+            return revisions;
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
