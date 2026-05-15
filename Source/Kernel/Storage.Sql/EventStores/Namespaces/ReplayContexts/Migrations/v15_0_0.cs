@@ -21,7 +21,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReplayContexts,
             columns: table => new
             {
-                ReadModelIdentifier = table.StringColumn(migrationBuilder),
+                ReadModelIdentifier = table.StringColumn(migrationBuilder, maxLength: 200),
                 ReadModel = table.StringColumn(migrationBuilder),
                 RevertModel = table.StringColumn(migrationBuilder),
                 Started = table.Column<DateTimeOffset>(nullable: false)
