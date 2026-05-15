@@ -24,7 +24,7 @@ public class when_deactivating : Specification
             .SetValue(_connectedClients, _timer);
     }
 
-    async Task Because() => await _connectedClients.OnDeactivateAsync(default, default);
+    async Task Because() => await _connectedClients.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.None, string.Empty), CancellationToken.None);
 
     [Fact] void should_dispose_timer() => _timer.Received(1).Dispose();
 }
