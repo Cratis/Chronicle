@@ -92,6 +92,8 @@ All must pass before the slice is considered done:
 - `dotnet test` — zero failures
 - `yarn lint` — zero errors
 - `npx tsc -b` — zero errors
+- Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
+- `Documentation/verify-markdown.sh` passes when documentation is added or changed
 
 ---
 

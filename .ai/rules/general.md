@@ -51,6 +51,15 @@ When these instructions don't explicitly cover a situation, apply these values t
 - At the end of every task, from repository root run `dotnet clean` and then `dotnet build -c Release`. The task is not complete until build output is zero warnings and zero errors.
 - **After pushing changes to a PR**, use the GitHub MCP tools (`pull_request_read` with `get_check_runs`, `get_job_logs`) to monitor CI check results. If any checks fail, investigate the logs, fix the failures, and push again. The task is not complete until all CI checks pass or the remaining failures are confirmed to be pre-existing flaky tests unrelated to the PR changes.
 
+## Definition of Done
+
+Work is not done until all applicable items below are complete:
+
+- The affected solution or project builds successfully with zero warnings and zero errors.
+- Relevant specs/tests for every affected project pass.
+- For public-facing changes (clients, SDKs, public APIs, developer-facing behavior), associated documentation is added or updated.
+- Documentation verification passes by running `verify-markdown.sh` in the repository `Documentation/` folder when documentation is added or changed.
+
 ## Detailed Guides
 
 These guides contain the full rules, examples, and rationale for each topic. The sections above are the global defaults; the guides go deeper into each area:

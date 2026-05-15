@@ -111,6 +111,8 @@ The work is **not done** until all of the following pass:
 - [ ] `dotnet test` — all specs pass
 - [ ] `yarn lint` — zero errors (if frontend present)
 - [ ] `npx tsc -b` — zero TypeScript errors (if frontend present)
+- [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
+- [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
 - [ ] `code-reviewer` finds no blocking issues
 - [ ] `security-reviewer` finds no vulnerabilities
 - [ ] PR description follows the pull request template
