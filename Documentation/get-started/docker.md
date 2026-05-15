@@ -74,6 +74,9 @@ services:
 
 ### SQL Server with Docker Compose
 
+> [!WARNING]
+> The SQL Server credentials in this example are for local development only. For production, use secure credentials and manage secrets through Docker secrets, environment files, or an external secret manager.
+
 ```yaml
 services:
   chronicle:
