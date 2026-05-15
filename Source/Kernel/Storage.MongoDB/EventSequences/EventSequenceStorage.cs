@@ -530,8 +530,8 @@ public class EventSequenceStorage(
         return Task.FromResult(new TailEventSequenceNumbers(
             eventSequenceId,
             eventTypes.ToImmutableList(),
-            hasTail ? new EventSequenceNumber((ulong)tail!.AsInt64) : EventSequenceNumber.Unavailable,
-            hasTailForEventTypes ? new EventSequenceNumber((ulong)tailForEventTypes!.AsInt64) : EventSequenceNumber.Unavailable));
+            hasTail ? ToEventSequenceNumber(tail!) : EventSequenceNumber.Unavailable,
+            hasTailForEventTypes ? ToEventSequenceNumber(tailForEventTypes!) : EventSequenceNumber.Unavailable));
     }
 
     /// <inheritdoc/>
@@ -576,7 +576,7 @@ public class EventSequenceStorage(
             var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsString);
             if (eventType != null)
             {
-                resultAsDictionary[eventType] = new EventSequenceNumber((ulong)item["items"][0].AsInt64);
+                resultAsDictionary[eventType] = ToEventSequenceNumber(item["items"][0]);
             }
         }
 
@@ -857,6 +857,12 @@ public class EventSequenceStorage(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),
                 new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
+    }
+
+    static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
+    {
+        var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
+        return new EventSequenceNumber(sequenceNumber);
     }
 
     /// <summary>
