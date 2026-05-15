@@ -24,6 +24,12 @@ public partial class Observer
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
         _metrics?.PartitionRetryAttempt(partition);
         var config = await configurationProvider.GetFor(_observerKey);
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            await failures.WriteStateAsync();
+            return;
+        }
+
         if (ShouldQuarantineObserver(config))
         {
             await TransitionTo<QuarantinedObserver>();
@@ -168,12 +174,12 @@ public partial class Observer
                 .Distinct()
                 .Count();
 
-            var failedPartitionPercentage = totalObservedPartitions == 0
+            var failedPartitionRatio = totalObservedPartitions == 0
                 ? 0.0
                 : (double)failedPartitionCount / totalObservedPartitions;
-            if (failedPartitionPercentage > config.QuarantineOnFailedPartitionPercentage)
+            if (failedPartitionRatio > config.QuarantineOnFailedPartitionPercentage)
             {
-                logger.ObserverFailedPartitionPercentageThresholdExceeded(failedPartitionPercentage, config.QuarantineOnFailedPartitionPercentage);
+                logger.ObserverFailedPartitionPercentageThresholdExceeded(failedPartitionRatio, config.QuarantineOnFailedPartitionPercentage);
                 return true;
             }
         }

@@ -227,7 +227,6 @@ public partial class Observer(
 
         new QuarantinedObserver(
             _observerKey,
-            _jobsManager,
             loggerFactory.CreateLogger<QuarantinedObserver>()),
 
         new Observing(

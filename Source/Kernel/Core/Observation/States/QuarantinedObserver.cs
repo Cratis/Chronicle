@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
 
@@ -13,11 +12,9 @@ namespace Cratis.Chronicle.Observation.States;
 /// Represents the quarantined state of an observer.
 /// </summary>
 /// <param name="observerKey">The <see cref="ObserverKey"/> for the observer.</param>
-/// <param name="jobsManager"><see cref="IJobsManager"/> for working with jobs.</param>
 /// <param name="logger">Logger for logging.</param>
 public class QuarantinedObserver(
     ObserverKey observerKey,
-    IJobsManager jobsManager,
     ILogger<QuarantinedObserver> logger) : BaseObserverState
 {
     /// <inheritdoc/>
@@ -41,19 +38,9 @@ public class QuarantinedObserver(
         });
         logger.ObserverQuarantined();
 
-        if (Observer is Observer observer)
-        {
-            await observer.RemoveFailedPartitionReminders();
-            await observer.StopAllRetryFailedPartitionJobs();
-        }
-        else
-        {
-            var jobs = await jobsManager.GetAllJobs();
-            var stopTasks = jobs
-                .Where(_ => _.Request is Observation.Jobs.RetryFailedPartitionRequest request && request.ObserverKey == observerKey)
-                .Select(_ => jobsManager.Stop(_.Id));
-            await Task.WhenAll(stopTasks);
-        }
+        var observer = (Observer)Observer;
+        await observer.RemoveFailedPartitionReminders();
+        await observer.StopAllRetryFailedPartitionJobs();
 
         return state;
     }
