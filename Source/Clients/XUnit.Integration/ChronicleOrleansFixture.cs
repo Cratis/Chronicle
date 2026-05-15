@@ -166,6 +166,17 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     protected virtual Cratis.Chronicle.Sinks.SinkTypeId? GetDefaultSinkTypeId() => null;
 
     /// <summary>
+    /// Gets additional host configuration key-value pairs to inject when the in-process silo
+    /// uses a non-MongoDB storage backend. These are added to the host configuration before
+    /// the silo options are bound, so <c>IOptions&lt;ChronicleOptions&gt;</c> picks up the correct
+    /// storage type and connection string.
+    /// Returns null (the default) when no extra configuration is needed.
+    /// </summary>
+    /// <param name="mongoServer">The MongoDB connection string from the fixture container.</param>
+    /// <returns>An optional dictionary of configuration key-value pairs, or null for default MongoDB.</returns>
+    protected virtual IReadOnlyDictionary<string, string?>? GetStorageHostConfiguration(string mongoServer) => null;
+
+    /// <summary>
     /// Creates the in-process web application factory for the current test assembly.
     /// </summary>
     /// <returns>The web application factory instance for the discovered startup type.</returns>
@@ -180,7 +191,8 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
         var storageConfigurator = GetStorageConfigurator(mongoServer);
         var defaultSinkTypeId = GetDefaultSinkTypeId();
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, storageConfigurator, defaultSinkTypeId, ContentRoot]) as IAsyncDisposable)!;
+        var storageHostConfiguration = GetStorageHostConfiguration(mongoServer);
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, storageConfigurator, defaultSinkTypeId, storageHostConfiguration, ContentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>

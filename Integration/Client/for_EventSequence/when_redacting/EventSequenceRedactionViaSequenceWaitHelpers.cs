@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
-using KernelConcepts = Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
-using Microsoft.Extensions.DependencyInjection;
+using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
+using KernelConcepts = Cratis.Chronicle.Concepts;
+using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 

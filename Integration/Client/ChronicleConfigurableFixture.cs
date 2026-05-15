@@ -20,7 +20,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     const string PostgreSqlPassword = "Chronicle_P@ss1";
     const string MsSqlPassword = "Chronicle_P@ss1";
 
-    readonly ChronicleRuntimeOptions _options = ChronicleRuntimeOptions.Parse();
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
 
     IContainer? _databaseContainer;
@@ -28,14 +27,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     /// <summary>
     /// Gets the selected runtime options.
     /// </summary>
-    public ChronicleRuntimeOptions Options => _options;
+    public ChronicleRuntimeOptions Options { get; } = ChronicleRuntimeOptions.Parse();
 
     /// <summary>
     /// Gets the storage type string for the in-process silo (matches Chronicle server StorageType constants).
     /// Returns null for MongoDB (uses the default MongoDB path).
     /// </summary>
     public string? InProcessStorageType =>
-        _options.StorageProvider switch
+        Options.StorageProvider switch
         {
             ChronicleStorageProvider.Sqlite => "Sqlite",
             ChronicleStorageProvider.PostgreSql => "PostgreSql",
@@ -49,7 +48,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     /// </summary>
     /// <returns>The SQL connection string for the in-process silo.</returns>
     public string GetInProcessConnectionString() =>
-        _options.StorageProvider switch
+        Options.StorageProvider switch
         {
             ChronicleStorageProvider.Sqlite =>
                 Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle-inprocess-test.db",
@@ -73,7 +72,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network) =>
-        _options.Mode switch
+        Options.Mode switch
         {
             ChronicleRuntimeMode.InProcess => BuildInProcessContainer(network),
             _ => BuildOutOfProcessContainer(network),
@@ -94,7 +93,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     IContainer BuildOutOfProcessContainer(INetwork network)
     {
-        var connectionDetails = _options.StorageProvider switch
+        var connectionDetails = Options.StorageProvider switch
         {
             ChronicleStorageProvider.MongoDB => $"mongodb://localhost:{MongoDBPort}",
             ChronicleStorageProvider.PostgreSql => BuildAndStartPostgreSql(network),
@@ -103,7 +102,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             _ => $"mongodb://localhost:{MongoDBPort}",
         };
 
-        var storageType = _options.StorageProvider switch
+        var storageType = Options.StorageProvider switch
         {
             ChronicleStorageProvider.MongoDB => "MongoDB",
             ChronicleStorageProvider.PostgreSql => "PostgreSql",
@@ -123,7 +122,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             .WithEnvironment("Storage__Type", storageType)
             .WithEnvironment("Storage__ConnectionDetails", connectionDetails);
 
-        var waitStrategy = _options.StorageProvider == ChronicleStorageProvider.MongoDB
+        var waitStrategy = Options.StorageProvider == ChronicleStorageProvider.MongoDB
             ? Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(27017)
                 .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"))
@@ -200,7 +199,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     /// <returns>A task that completes when the reset request has finished.</returns>
     public async Task ResetKernelState()
     {
-        if (_options.Mode != ChronicleRuntimeMode.OutOfProcess)
+        if (Options.Mode != ChronicleRuntimeMode.OutOfProcess)
         {
             return;
         }

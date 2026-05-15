@@ -2,11 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_Reducers.when_handling_event.and_it_fails.but_not_second_time.context;
-
-using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Integration.for_Reducers.when_handling_event.and_it_fails;
 

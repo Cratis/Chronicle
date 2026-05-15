@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#pragma warning disable SA1402
+
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.XUnit.Integration;
 using KernelConcepts = Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Integration;
@@ -36,6 +37,24 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
     }
 
     /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, string?>? GetStorageHostConfiguration(string mongoServer)
+    {
+        if (ChronicleFixture is not ChronicleConfigurableFixture configurable ||
+            configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess ||
+            configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB ||
+            configurable.InProcessStorageType is null)
+        {
+            return null;
+        }
+
+        return new Dictionary<string, string?>
+        {
+            ["Cratis:Chronicle:Storage:Type"] = configurable.InProcessStorageType,
+            ["Cratis:Chronicle:Storage:ConnectionDetails"] = configurable.GetInProcessConnectionString()
+        };
+    }
+
+    /// <inheritdoc/>
     protected override SinkTypeId? GetDefaultSinkTypeId()
     {
         if (ChronicleFixture is ChronicleConfigurableFixture configurable &&
@@ -61,4 +80,8 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
         GetEventStoreNamespaceStorage(namespaceName).GetEventSequence(KernelConcepts.EventSequences.EventSequenceId.System);
 }
 
+/// <summary>
+/// Represents a non-generic specification using the default <see cref="ChronicleConfigurableFixture"/>.
+/// </summary>
+/// <param name="fixture">The <see cref="ChronicleConfigurableFixture"/>.</param>
 public class Specification(ChronicleFixture fixture) : Specification<ChronicleFixture>(fixture);

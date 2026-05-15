@@ -2,12 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_revising.an_event_with_non_replayable_observers.context;
-
-using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_revising;
 

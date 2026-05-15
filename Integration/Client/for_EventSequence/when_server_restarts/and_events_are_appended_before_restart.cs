@@ -7,12 +7,6 @@ using context = Cratis.Chronicle.Integration.for_EventSequence.when_server_resta
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_server_restarts;
 
-/// <summary>
-/// Spec that verifies the client reconnects after a server restart and continues appending events.
-/// </summary>
-/// <remarks>
-/// This is an OutOfProcess-specific spec. InProcess tests cannot simulate server restarts.
-/// </remarks>
 [Collection(ChronicleCollection.Name)]
 public class and_events_are_appended_before_restart(context context) : Given<context>(context)
 {

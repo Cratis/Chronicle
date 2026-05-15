@@ -3,9 +3,7 @@
 
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Integration.for_ReadModels;
 using context = Cratis.Chronicle.Integration.for_ReadModels.when_getting_paginated_instances.with_page_beyond_total.context;
-using given = Cratis.Chronicle.Integration.for_ReadModels.given;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.when_getting_paginated_instances;
 

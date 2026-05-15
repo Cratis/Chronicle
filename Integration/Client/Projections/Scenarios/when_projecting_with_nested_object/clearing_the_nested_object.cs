@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_object.clearing_the_nested_object.context;
-using given = Cratis.Chronicle.Integration.Projections.Scenarios.given;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_object;
 
