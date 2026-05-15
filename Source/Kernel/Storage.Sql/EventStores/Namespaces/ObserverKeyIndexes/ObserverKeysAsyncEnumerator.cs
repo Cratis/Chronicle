@@ -30,7 +30,7 @@ public class ObserverKeysAsyncEnumerator(
     CancellationToken cancellationToken) : IAsyncEnumerator<Key>
 {
     readonly string[] _eventTypeIds = eventTypes.Select(eventType => eventType.Value).ToArray();
-    IAsyncEnumerator<string>? _enumerator;
+    IAsyncEnumerator<EventSourceId>? _enumerator;
     Key? _current;
 
     /// <inheritdoc/>
@@ -52,9 +52,10 @@ public class ObserverKeysAsyncEnumerator(
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+            var fromSeqValue = fromEventSequenceNumber.Value;
             var query = scope.DbContext.Events
-                .Where(e => e.SequenceNumber >= fromEventSequenceNumber &&
-                           _eventTypeIds.Contains(e.Type))
+                .Where(e => e.SequenceNumber >= fromSeqValue &&
+                           _eventTypeIds.Contains(e.Type.Value))
                 .Select(e => e.EventSourceId)
                 .Distinct();
 
@@ -64,7 +65,7 @@ public class ObserverKeysAsyncEnumerator(
         var hasNext = await _enumerator.MoveNextAsync();
         if (hasNext)
         {
-            _current = new Key(_enumerator.Current, ArrayIndexers.NoIndexers);
+            _current = new Key(_enumerator.Current.Value, ArrayIndexers.NoIndexers);
             return true;
         }
 

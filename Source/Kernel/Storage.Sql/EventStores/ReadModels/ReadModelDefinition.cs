@@ -16,7 +16,7 @@ public class ReadModelDefinition
     /// Gets or sets the unique identifier for the read model.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ReadModelIdentifier Id { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the read model.

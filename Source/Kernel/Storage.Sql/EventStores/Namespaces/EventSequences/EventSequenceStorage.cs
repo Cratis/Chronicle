@@ -73,7 +73,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -290,10 +290,10 @@ public class EventSequenceStorage(
 
         var eventMetadata = new EventContext(
             eventType,
-            new EventSourceType(eventEntry.EventSourceType),
-            new EventSourceId(eventEntry.EventSourceId),
-            new EventStreamType(eventEntry.EventStreamType),
-            new EventStreamId(eventEntry.EventStreamId),
+            eventEntry.EventSourceType,
+            eventEntry.EventSourceId,
+            eventEntry.EventStreamType,
+            eventEntry.EventStreamId,
             new EventSequenceNumber(eventEntry.SequenceNumber),
             eventEntry.Occurred,
             eventStore,
@@ -316,7 +316,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -350,7 +350,7 @@ public class EventSequenceStorage(
         var query = scope.DbContext.Events.AsQueryable();
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -382,7 +382,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -429,7 +429,7 @@ public class EventSequenceStorage(
             : EventSequenceNumber.Unavailable;
 
         // Get the tail for the specified event types
-        var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
         var tailForEventTypes = await scope.DbContext.Events
             .Where(e => eventTypeIds.Contains(e.Type))
             .MaxAsync(e => (ulong?)e.SequenceNumber);
@@ -450,7 +450,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
         var eventTypeList = eventTypes.ToList();
 
         // Query to get the max sequence number for each event type
@@ -464,7 +464,7 @@ public class EventSequenceStorage(
 
         foreach (var eventType in eventTypeList)
         {
-            var tailEntry = tailSequenceNumbers.FirstOrDefault(t => t.EventTypeId == eventType.Id.Value);
+            var tailEntry = tailSequenceNumbers.FirstOrDefault(t => t.EventTypeId == eventType.Id);
             result[eventType] = tailEntry is not null
                 ? new EventSequenceNumber(tailEntry.MaxSequenceNumber)
                 : EventSequenceNumber.Unavailable;
@@ -482,7 +482,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -515,11 +515,12 @@ public class EventSequenceStorage(
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+            var currentSequenceNumberValue = currentSequenceNumber.Value;
             var eventEntry = await scope.DbContext.Events
                 .Where(e =>
                     e.Type == eventTypeId
                     && e.EventSourceId == eventSourceId
-                    && e.SequenceNumber < currentSequenceNumber)
+                    && e.SequenceNumber < currentSequenceNumberValue)
                 .OrderByDescending(e => e.SequenceNumber)
                 .FirstOrDefaultAsync();
 
@@ -535,10 +536,10 @@ public class EventSequenceStorage(
 
             var eventMetadata = new EventContext(
                 eventType,
-                new EventSourceType(eventEntry.EventSourceType),
-                new EventSourceId(eventEntry.EventSourceId),
-                new EventStreamType(eventEntry.EventStreamType),
-                new EventStreamId(eventEntry.EventStreamId),
+                eventEntry.EventSourceType,
+                eventEntry.EventSourceId,
+                eventEntry.EventStreamType,
+                eventEntry.EventStreamId,
                 new EventSequenceNumber(eventEntry.SequenceNumber),
                 eventEntry.Occurred,
                 eventStore,
@@ -574,10 +575,10 @@ public class EventSequenceStorage(
 
         var eventMetadata = new EventContext(
             eventType,
-            new EventSourceType(eventEntry.EventSourceType),
-            new EventSourceId(eventEntry.EventSourceId),
-            new EventStreamType(eventEntry.EventStreamType),
-            new EventStreamId(eventEntry.EventStreamId),
+            eventEntry.EventSourceType,
+            eventEntry.EventSourceId,
+            eventEntry.EventStreamType,
+            eventEntry.EventStreamId,
             new EventSequenceNumber(eventEntry.SequenceNumber),
             eventEntry.Occurred,
             eventStore,
@@ -596,7 +597,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventTypeIds = eventTypes.Select(et => et.Value).ToArray();
+        var eventTypeIds = eventTypes.ToArray();
 
         var eventEntry = await scope.DbContext.Events
             .Where(e =>
@@ -617,10 +618,10 @@ public class EventSequenceStorage(
 
         var eventMetadata = new EventContext(
             eventType,
-            new EventSourceType(eventEntry.EventSourceType),
-            new EventSourceId(eventEntry.EventSourceId),
-            new EventStreamType(eventEntry.EventStreamType),
-            new EventStreamId(eventEntry.EventStreamId),
+            eventEntry.EventSourceType,
+            eventEntry.EventSourceId,
+            eventEntry.EventStreamType,
+            eventEntry.EventStreamId,
             new EventSequenceNumber(eventEntry.SequenceNumber),
             eventEntry.Occurred,
             eventStore,
@@ -658,7 +659,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -682,7 +683,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
@@ -720,7 +721,7 @@ public class EventSequenceStorage(
 
         if (eventTypes?.Any() == true)
         {
-            var eventTypeIds = eventTypes.Select(et => et.Id.Value).ToArray();
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 

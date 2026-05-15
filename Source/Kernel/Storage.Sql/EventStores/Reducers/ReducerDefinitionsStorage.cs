@@ -34,12 +34,11 @@ public class ReducerDefinitionsStorage(EventStoreName eventStore, IDatabase data
     public async Task<Concepts.Observation.Reducers.ReducerDefinition> Get(ReducerId id)
     {
         await using var scope = await database.EventStore(eventStore);
-        var reducer = await scope.DbContext.Reducers
-            .Where(reducer => reducer.Id == id)
-            .Select(reducer => reducer.ToKernel())
+        var entity = await scope.DbContext.Reducers
+            .Where(r => r.Id == id)
             .FirstOrDefaultAsync();
 
-        return reducer!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>
