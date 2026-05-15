@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 
@@ -44,7 +45,7 @@ public static class EventSequenceStateConverter
         {
             tailSequenceNumbers = entry.TailSequenceNumberPerEventType.ToDictionary(
                 kvp => new EventTypeId(kvp.Key),
-                kvp => new EventSequenceNumber(Convert.ToUInt64(kvp.Value)));
+                kvp => new EventSequenceNumber(ToUInt64(kvp.Value)));
         }
 
         return new Chronicle.Storage.EventSequences.EventSequenceState
@@ -52,5 +53,24 @@ public static class EventSequenceStateConverter
             SequenceNumber = new EventSequenceNumber(entry.SequenceNumber),
             TailSequenceNumberPerEventType = tailSequenceNumbers
         };
+    }
+
+    static ulong ToUInt64(object value)
+    {
+        if (value is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind == JsonValueKind.Number)
+            {
+                return jsonElement.GetUInt64();
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.String &&
+                ulong.TryParse(jsonElement.GetString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return Convert.ToUInt64(value);
     }
 }

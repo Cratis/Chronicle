@@ -26,9 +26,14 @@ jobs:
       - name: Discover Client integration namespaces
         id: client
         run: |
-          namespaces=$(find Integration/Client -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
+          namespaces=""
+          while IFS= read -r dir; do
+            if grep -R -q '\[Fact\]' "$dir" --include='*.cs'; then
+              namespaces+="$(basename "$dir")"$'\n'
+            fi
+          done < <(find Integration/Client -mindepth 1 -maxdepth 1 -type d ! -name 'bin' ! -name 'obj' | sort)
+
+          namespaces=$(echo "$namespaces" | sed '/^$/d' | sort -u)
 
           # mode|database|needs-docker
           declare -a configs=(
