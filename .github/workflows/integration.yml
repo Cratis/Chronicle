@@ -99,16 +99,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
-        working-directory: ./Integration/Client
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+          CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
+          CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
         run: |
-          dotnet test --no-build \
+          dotnet test Integration/Client/Client.csproj \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
             --configuration Release \
-            --framework net9.0 \
-            -- ${{ matrix.mode }} ${{ matrix.database }}
+            -p:DisableDockerBuild=true
 
   kernel-integration-specs:
     needs: [discover]
@@ -136,10 +136,8 @@ jobs:
           key: ${{ inputs.dotnet-cache-key }}
 
       - name: Run Kernel integration tests (${{ matrix.namespace }})
-        working-directory: ./Integration/Kernel
         run: |
-          dotnet test --no-build \
+          dotnet test Integration/Kernel/Kernel.csproj \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
-            --configuration Release \
-            --framework net9.0
+            --configuration Release

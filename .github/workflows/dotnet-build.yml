@@ -107,7 +107,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration"
 
   integration:
     needs: [dotnet-build]
@@ -154,7 +154,7 @@ jobs:
 
       - name: Run API integration tests
         working-directory: ./Integration/Api
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --framework net9.0
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true
 
   mongodb:
     runs-on: ubuntu-latest
