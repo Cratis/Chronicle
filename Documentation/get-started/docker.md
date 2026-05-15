@@ -117,3 +117,32 @@ services:
 volumes:
   chronicle-data:
 ```
+
+## Optional: Add Aspire Dashboard for Logs, Traces, and Metrics
+
+If you want local observability while developing, run Chronicle with the Aspire Dashboard and set `OTEL_EXPORTER_OTLP_ENDPOINT` on the Chronicle container:
+
+```yaml
+services:
+  chronicle:
+    image: cratis/chronicle:latest-development
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+    ports:
+      - 27017:27017
+      - 8080:8080
+      - 11111:11111
+      - 30000:30000
+      - 35000:35000
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+      - DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=http://chronicle:18889
+      - ALLOW_UNSECURED_TRANSPORT=true
+      - DOTNET_ENVIRONMENT=Development
+    ports:
+      - 18888:18888
+      - 4317:18889
+```
