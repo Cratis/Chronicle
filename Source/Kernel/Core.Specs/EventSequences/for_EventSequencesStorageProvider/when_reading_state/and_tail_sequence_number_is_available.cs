@@ -24,16 +24,11 @@ public class and_tail_sequence_number_is_available : given.the_provider
             SequenceNumber = 3,
             TailSequenceNumberPerEventType = new Dictionary<EventTypeId, EventSequenceNumber> { ["event-type"] = 2 }
         }));
-        eventSequenceStorage.GetTailSequenceNumber(
-            Arg.Any<IEnumerable<EventType>?>(),
-            Arg.Any<EventSourceId?>(),
-            Arg.Any<EventSourceType?>(),
-            Arg.Any<EventStreamId?>(),
-            Arg.Any<EventStreamType?>()).Returns(Task.FromResult(_actualTailSequenceNumber));
+        eventSequenceStorage.GetTailSequenceNumber().Returns(Task.FromResult(_actualTailSequenceNumber));
     }
 
     Task Because() => provider.ReadStateAsync("name", _grainId, _state);
 
-    [Fact] void should_get_tail_sequence_number() => eventSequenceStorage.Received(1).GetTailSequenceNumber(null, null, null, null, null);
+    [Fact] void should_get_tail_sequence_number() => eventSequenceStorage.Received(1).GetTailSequenceNumber();
     [Fact] void should_set_next_sequence_number_from_actual_tail() => _state.State.SequenceNumber.ShouldEqual(_actualTailSequenceNumber.Next());
 }

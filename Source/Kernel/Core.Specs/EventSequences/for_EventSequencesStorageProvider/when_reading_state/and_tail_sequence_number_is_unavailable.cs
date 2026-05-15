@@ -24,12 +24,7 @@ public class and_tail_sequence_number_is_unavailable : given.the_provider
             SequenceNumber = 17,
             TailSequenceNumberPerEventType = new Dictionary<EventTypeId, EventSequenceNumber>()
         }));
-        eventSequenceStorage.GetTailSequenceNumber(
-            Arg.Any<IEnumerable<EventType>?>(),
-            Arg.Any<EventSourceId?>(),
-            Arg.Any<EventSourceType?>(),
-            Arg.Any<EventStreamId?>(),
-            Arg.Any<EventStreamType?>()).Returns(Task.FromResult(EventSequenceNumber.Unavailable));
+        eventSequenceStorage.GetTailSequenceNumber().Returns(Task.FromResult(EventSequenceNumber.Unavailable));
         eventTypesStorage.GetLatestForAllEventTypes().Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([]));
         eventSequenceStorage.GetTailSequenceNumbersForEventTypes(Arg.Any<IEnumerable<EventType>>())
             .Returns(Task.FromResult<IImmutableDictionary<EventType, EventSequenceNumber>>(ImmutableDictionary<EventType, EventSequenceNumber>.Empty));
