@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_getting_from_sequence_number;
+namespace Cratis.Chronicle.Integration.for_Reactors;
 
 [EventType]
-public record SomeEventWithPii(string Name, [property: PII] string SocialSecurityNumber);
+public record PiiEvent(int Number, [property: PII] string SocialSecurityNumber);

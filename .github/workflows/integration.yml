@@ -98,14 +98,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Restore Client project
+        run: dotnet restore Integration/Client/Client.csproj
+
       - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
         run: |
-          # Client integration tests currently fail with `--no-build` on .NET 10
-          # (invalid test assembly argument). Run with build enabled here.
           dotnet test Integration/Client/Client.csproj \
             --no-restore \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
@@ -137,6 +138,9 @@ jobs:
         with:
           path: ./**/bin
           key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Restore Kernel project
+        run: dotnet restore Integration/Kernel/Kernel.csproj
 
       - name: Run Kernel integration tests (${{ matrix.namespace }})
         run: |
