@@ -23,11 +23,17 @@ public class ObserverStateGrainStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ObserverState>)!;
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
-        var observers = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).Observers;
+        var eventStoreNamespace = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace);
+        var observers = eventStoreNamespace.Observers;
+        var failedPartitionsStorage = eventStoreNamespace.FailedPartitions;
+        var failedPartitions = await failedPartitionsStorage.GetFor(observerKey.ObserverId);
+        var actualFailedPartitions = failedPartitions.Partitions.ToArray();
         actualGrainState.State = await observers.Get(observerKey.ObserverId);
         actualGrainState.State = actualGrainState.State with
         {
-            Identifier = observerKey.ObserverId
+            Identifier = observerKey.ObserverId,
+            FailedPartitions = actualFailedPartitions,
+            FailedPartitionCount = actualFailedPartitions.Length
         };
     }
 

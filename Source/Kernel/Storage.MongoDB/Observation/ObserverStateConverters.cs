@@ -22,6 +22,7 @@ public static class ObserverStateConverters
             RunningState = state.RunningState,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
+            FailedPartitionCount = state.FailedPartitionCount,
             IsReplaying = state.IsReplaying
         };
 
@@ -38,6 +39,7 @@ public static class ObserverStateConverters
             state.ReplayingPartitions.ToHashSet(),
             state.CatchingUpPartitions.ToHashSet(),
             [],
+            state.FailedPartitionCount,
             state.IsReplaying)
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber
@@ -56,6 +58,7 @@ public static class ObserverStateConverters
             state.ReplayingPartitions.ToHashSet(),
             state.CatchingUpPartitions.ToHashSet(),
             state.FailedPartitions,
+            state.FailedPartitions.Count(),
             state.IsReplaying)
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber

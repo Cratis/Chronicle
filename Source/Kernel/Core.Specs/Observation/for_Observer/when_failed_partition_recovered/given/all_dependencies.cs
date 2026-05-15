@@ -20,7 +20,8 @@ public class all_dependencies : an_observer
         _stateStorage.State = _stateStorage.State with
         {
             LastHandledEventSequenceNumber = _lastHandledEventSequenceNumber,
-            NextEventSequenceNumber = _nextEventSequenceNumber
+            NextEventSequenceNumber = _nextEventSequenceNumber,
+            FailedPartitionCount = 1
         };
         _failedPartitionsStorage.State.AddFailedPartition(_partition, 12UL);
     }
