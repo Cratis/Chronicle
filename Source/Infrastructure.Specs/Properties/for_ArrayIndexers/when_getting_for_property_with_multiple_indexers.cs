@@ -16,7 +16,7 @@ public class when_getting_for_property_with_multiple_indexers : Specification
     {
         _arrayProperty = "children";
         _firstIndexer = new(_arrayProperty, "id", "first");
-        _secondIndexer = new(_arrayProperty, "id", "second");
+        _secondIndexer = new(_arrayProperty, "otherId", "second");
         _indexers = new ArrayIndexers([_firstIndexer, _secondIndexer]);
     }
 

@@ -58,18 +58,16 @@ public class ArrayIndexers
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to get for.</param>
     /// <returns>The <see cref="ArrayIndexer"/>.</returns>
+    /// <exception cref="MissingArrayIndexerForPropertyPath">Thrown when no matching <see cref="ArrayIndexer"/> exists for <paramref name="propertyPath"/>.</exception>
     public ArrayIndexer GetFor(PropertyPath propertyPath)
-    {
-        ThrowIfMissingArrayIndexerForPropertyPath(propertyPath);
-        return _arrayIndexers.Last(_ => _.ArrayProperty == propertyPath);
-    }
+        => FindFor(propertyPath) ?? throw new MissingArrayIndexerForPropertyPath(propertyPath);
 
     /// <summary>
     /// Check if there is an <see cref="ArrayIndexer"/> for a <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check for.</param>
     /// <returns>True if it has it, false if not.</returns>
-    public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.Exists(_ => _.ArrayProperty == propertyPath);
+    public bool HasFor(PropertyPath propertyPath) => FindFor(propertyPath) is not null;
 
     /// <inheritdoc/>
     public override bool Equals(object? obj)
@@ -93,11 +91,17 @@ public class ArrayIndexers
         }
     }
 
-    void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)
+    ArrayIndexer? FindFor(PropertyPath propertyPath)
     {
-        if (!HasFor(propertyPath))
+        for (var index = _arrayIndexers.Count - 1; index >= 0; index--)
         {
-            throw new MissingArrayIndexerForPropertyPath(propertyPath);
+            var candidate = _arrayIndexers[index];
+            if (candidate.ArrayProperty == propertyPath)
+            {
+                return candidate;
+            }
         }
+
+        return null;
     }
 }
