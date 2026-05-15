@@ -16,7 +16,10 @@ public class v15_2_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql($"ALTER TABLE \"{WellKnownTableNames.EventTypes}\" ADD COLUMN \"Source\" INTEGER");
+        migrationBuilder.AddColumn<int>(
+            name: "Source",
+            table: WellKnownTableNames.EventTypes,
+            nullable: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

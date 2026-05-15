@@ -16,8 +16,14 @@ public class v15_1_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql($"ALTER TABLE \"{WellKnownTableNames.ReducerDefinitions}\" ADD COLUMN \"Tags\" TEXT");
-        migrationBuilder.Sql($"ALTER TABLE \"{WellKnownTableNames.ReducerDefinitions}\" ADD COLUMN \"Filters\" TEXT");
+        migrationBuilder.AddColumn<string>(
+            name: "Tags",
+            table: WellKnownTableNames.ReducerDefinitions,
+            nullable: true);
+        migrationBuilder.AddColumn<string>(
+            name: "Filters",
+            table: WellKnownTableNames.ReducerDefinitions,
+            nullable: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

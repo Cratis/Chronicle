@@ -16,8 +16,14 @@ public class v15_1_0 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql($"ALTER TABLE \"{WellKnownTableNames.ReactorDefinitions}\" ADD COLUMN \"Tags\" TEXT");
-        migrationBuilder.Sql($"ALTER TABLE \"{WellKnownTableNames.ReactorDefinitions}\" ADD COLUMN \"Filters\" TEXT");
+        migrationBuilder.AddColumn<string>(
+            name: "Tags",
+            table: WellKnownTableNames.ReactorDefinitions,
+            nullable: true);
+        migrationBuilder.AddColumn<string>(
+            name: "Filters",
+            table: WellKnownTableNames.ReactorDefinitions,
+            nullable: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
