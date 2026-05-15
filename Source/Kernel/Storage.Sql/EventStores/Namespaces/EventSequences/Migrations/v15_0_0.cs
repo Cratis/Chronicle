@@ -23,7 +23,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.EventSequences,
             columns: table => new
             {
-                EventSequenceId = table.StringColumn(migrationBuilder),
+                EventSequenceId = table.StringColumn(migrationBuilder, maxLength: 200),
                 SequenceNumber = table.Column<decimal>(nullable: false),
                 TailSequenceNumberPerEventType = table.JsonColumn<IDictionary<string, object>>(migrationBuilder)
             },

@@ -57,7 +57,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.DataProtectionKeys,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200),
                 FriendlyName = table.StringColumn(migrationBuilder),
                 Xml = table.StringColumn(migrationBuilder),
                 Created = table.DateTimeOffsetColumn(migrationBuilder),
@@ -68,7 +68,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Patches,
             columns: table => new
             {
-                Name = table.StringColumn(migrationBuilder),
+                Name = table.StringColumn(migrationBuilder, maxLength: 200),
                 Version = table.StringColumn(migrationBuilder),
                 AppliedAt = table.DateTimeOffsetColumn(migrationBuilder),
             },

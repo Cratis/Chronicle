@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Constraints,
             columns: table => new
             {
-                Name = table.StringColumn(migrationBuilder),
+                Name = table.StringColumn(migrationBuilder, maxLength: 200),
                 Type = table.StringColumn(migrationBuilder),
                 Definition = table.JsonColumn<string>(migrationBuilder)
             },
