@@ -25,12 +25,7 @@ public static class AppendResultWaitForCompletionExtensions
             return new(true, []);
         }
 
-        var observers = appendResult switch
-        {
-            AppendResult append => append.Observers,
-            AppendManyResult appendMany => appendMany.Observers,
-            _ => null
-        };
+        var observers = appendResult.Observers;
 
         if (observers is null)
         {

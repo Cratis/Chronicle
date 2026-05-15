@@ -29,4 +29,15 @@ public interface IAppendResultForObserverCompletion
     /// Gets the last event sequence number represented by the append operation.
     /// </summary>
     EventSequenceNumber TailSequenceNumber { get; }
+
+    /// <summary>
+    /// Gets the observer service used for waiting for completion.
+    /// </summary>
+    internal Contracts.Observation.IObservers? Observers =>
+        this switch
+        {
+            AppendResult appendResult => appendResult.Observers,
+            AppendManyResult appendManyResult => appendManyResult.Observers,
+            _ => null
+        };
 }
