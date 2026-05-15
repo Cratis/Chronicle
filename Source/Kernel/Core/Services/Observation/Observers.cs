@@ -31,6 +31,10 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         grainFactory.GetObserver(command).ReplayPartition(command.Partition);
 
     /// <inheritdoc/>
+    public Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default) =>
+        grainFactory.GetObserver(command).ClearObserverQuarantine();
+
+    /// <inheritdoc/>
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
         var observer = grainFactory.GetObserver(request);

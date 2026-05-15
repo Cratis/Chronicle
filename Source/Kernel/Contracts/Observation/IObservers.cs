@@ -37,6 +37,15 @@ public interface IObservers
     Task RetryPartition(RetryPartition command, CallContext context = default);
 
     /// <summary>
+    /// Clear quarantine for an observer.
+    /// </summary>
+    /// <param name="command">The clear quarantine command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default);
+
+    /// <summary>
     /// Get the current details of an observer.
     /// </summary>
     /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>

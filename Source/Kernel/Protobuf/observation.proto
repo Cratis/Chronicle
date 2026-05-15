@@ -84,6 +84,12 @@ message Replay {
    string ObserverId = 3;
    string EventSequenceId = 4;
 }
+message ClearObserverQuarantine {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ObserverId = 3;
+   string EventSequenceId = 4;
+}
 message ReplayPartition {
    string EventStore = 1;
    string Namespace = 2;
@@ -112,6 +118,7 @@ service Observers {
    rpc GetReplayableObserversForEventTypes (GetReplayableObserversForEventTypesRequest) returns (IEnumerable_ObserverInformation);
    rpc ObserveObservers (AllObserversRequest) returns (stream IEnumerable_ObserverInformation);
    rpc Replay (.Cratis.Chronicle.Contracts.Observation.Replay) returns (.google.protobuf.Empty);
+   rpc ClearObserverQuarantine (.Cratis.Chronicle.Contracts.Observation.ClearObserverQuarantine) returns (.google.protobuf.Empty);
    rpc ReplayPartition (.Cratis.Chronicle.Contracts.Observation.ReplayPartition) returns (.google.protobuf.Empty);
    rpc RetryPartition (.Cratis.Chronicle.Contracts.Observation.RetryPartition) returns (.google.protobuf.Empty);
 }

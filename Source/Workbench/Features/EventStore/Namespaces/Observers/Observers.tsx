@@ -200,6 +200,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !viewModel.selectedObserver,
             command: () => viewModel.replay()
+        },
+        {
+            label: strings.eventStore.namespaces.observers.actions.clearQuarantine,
+            icon: <faIcons.FaShield className='mr-2' />,
+            disabled: !viewModel.canClearObserverQuarantine,
+            command: () => viewModel.clearObserverQuarantine()
         }
     ];
 

@@ -343,7 +343,8 @@
                 "empty": "No observers found",
                 "search": "Search observers...",
                 "actions": {
-                    "replay": "Replay"
+                    "replay": "Replay",
+                    "clearQuarantine": "Clear quarantine"
                 },
                 "columns": {
                     "id": "Identifier",
