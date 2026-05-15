@@ -277,6 +277,10 @@ public partial class Observer(
             _ => ObserverOwner.None
         };
 
+    /// <summary>
+    /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.
+    /// Replay jobs are excluded because they are managed independently of the observer's subscription lifecycle.
+    /// </summary>
     async Task PauseJobs()
     {
         var allJobs = await _jobsManager.GetAllJobs();
@@ -285,10 +289,13 @@ public partial class Observer(
         var pauseTasks = allJobs
             .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
                           observerJobRequest is not ReplayObserverRequest &&
-                          job.IsPreparingOrRunning &&
+                          ShouldPauseJob(job.Status) &&
                           observerJobRequest.ObserverKey == _observerKey)
             .Select(job => _jobsManager.Stop(job.Id));
         await Task.WhenAll(pauseTasks);
+        return;
+
+        static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
     }
 
     async Task ResumeJobs()
