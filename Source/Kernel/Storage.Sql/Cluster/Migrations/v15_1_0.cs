@@ -78,7 +78,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.SystemInformation,
             columns: table => new
             {
-                Id = table.NumberColumn<int>(migrationBuilder),
+                Id = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 Version = table.StringColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.SystemInformation}", x => x.Id));
