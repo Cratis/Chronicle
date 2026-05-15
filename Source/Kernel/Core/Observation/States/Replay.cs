@@ -30,6 +30,7 @@ public class Replay(
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Routing),
+        typeof(QuarantinedObserver),
         typeof(Disconnected)
     }.ToImmutableList();
 

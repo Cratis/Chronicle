@@ -146,6 +146,7 @@ const runningStateFilterTemplate = (options: ColumnFilterElementTemplateOptions)
             { label: strings.eventStore.namespaces.observers.states.suspended, value: ObserverRunningState.suspended },
             { label: strings.eventStore.namespaces.observers.states.replaying, value: ObserverRunningState.replaying },
             { label: strings.eventStore.namespaces.observers.states.disconnected, value: ObserverRunningState.disconnected },
+            { label: strings.eventStore.namespaces.observers.states.quarantined, value: ObserverRunningState.quarantined },
         ]}
         onChange={(e) => options.filterCallback(e.value)}
         optionLabel='label'

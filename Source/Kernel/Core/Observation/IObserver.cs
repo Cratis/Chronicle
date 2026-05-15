@@ -168,11 +168,24 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task<bool> HasFailedPartitions();
 
     /// <summary>
+    /// Check if the observer is currently quarantined.
+    /// </summary>
+    /// <returns>True if observer is quarantined, false otherwise.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsObserverQuarantined();
+
+    /// <summary>
     /// Get the keys of all currently failed partitions.
     /// </summary>
     /// <returns>Collection of <see cref="Key"/> for failed partitions.</returns>
     [AlwaysInterleave]
     Task<IEnumerable<Key>> GetFailedPartitionKeys();
+
+    /// <summary>
+    /// Clears observer quarantine and resumes normal state evaluation.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ClearObserverQuarantine();
 
     /// <summary>
     /// Catch up the observer.

@@ -69,6 +69,7 @@ enum ObserverRunningState {
    Suspended = 2;
    Replaying = 3;
    Disconnected = 4;
+   Quarantined = 5;
 }
 enum ObserverType {
    OBSERVER_TYPE_Unknown = 0;

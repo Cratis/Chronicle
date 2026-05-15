@@ -67,6 +67,7 @@ internal static class ObserverInformationConverters
             Concepts.Observation.ObserverRunningState.Suspended => ObserverRunningState.Suspended,
             Concepts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
             Concepts.Observation.ObserverRunningState.Disconnected => ObserverRunningState.Disconnected,
+            Concepts.Observation.ObserverRunningState.Quarantined => ObserverRunningState.Quarantined,
             _ => ObserverRunningState.Unknown
         };
 

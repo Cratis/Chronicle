@@ -377,7 +377,8 @@
                     "active": "Active",
                     "suspended": "Suspended",
                     "replaying": "Replaying",
-                    "disconnected": "Disconnected"
+                    "disconnected": "Disconnected",
+                    "quarantined": "Quarantined"
                 }
             },
             "failedPartitions": {
