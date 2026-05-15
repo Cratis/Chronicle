@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Api.Security;
 /// <param name="ClientSecret">The application's client secret.</param>
 [Command]
 public record AddApplication(
-    string Id,
+    Guid Id,
     string ClientId,
     string ClientSecret)
 {
@@ -23,7 +23,7 @@ public record AddApplication(
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IApplications applications) =>
-        applications.Add(new()
+        applications.AddApplication(new()
         {
             Id = Id,
             ClientId = ClientId,

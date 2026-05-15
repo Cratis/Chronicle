@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Auditing;
@@ -242,7 +243,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default)
     {
-        var eventStores = await _servicesAccessor.Services.EventStores.GetEventStores();
+        var eventStores = await _servicesAccessor.Services.EventStores.AllEventStores().FirstAsync();
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
     }
 

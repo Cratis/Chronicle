@@ -235,7 +235,7 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public Task Replay(ReducerId reducerId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new()
+        return _servicesAccessor.Services.Observers.ReplayObserver(new ReplayObserverRequest
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,

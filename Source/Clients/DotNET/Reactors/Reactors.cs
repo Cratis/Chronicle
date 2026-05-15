@@ -215,7 +215,7 @@ public class Reactors : IReactors
     /// <inheritdoc/>
     public Task Replay(ReactorId reactorId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Replay
+        return _servicesAccessor.Services.Observers.ReplayObserver(new ReplayObserverRequest
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,

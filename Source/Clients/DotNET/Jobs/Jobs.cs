@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts;
 
 namespace Cratis.Chronicle.Jobs;
@@ -15,7 +16,7 @@ public class Jobs(IEventStore eventStore) : IJobs
 
     /// <inheritdoc/>
     public Task Stop(JobId jobId) =>
-        _servicesAccessor.Services.Jobs.Stop(new()
+        _servicesAccessor.Services.Jobs.StopJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -24,7 +25,7 @@ public class Jobs(IEventStore eventStore) : IJobs
 
     /// <inheritdoc/>
     public Task Resume(JobId jobId) =>
-        _servicesAccessor.Services.Jobs.Resume(new()
+        _servicesAccessor.Services.Jobs.ResumeJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -33,7 +34,7 @@ public class Jobs(IEventStore eventStore) : IJobs
 
     /// <inheritdoc/>
     public Task Delete(JobId jobId) =>
-        _servicesAccessor.Services.Jobs.Delete(new()
+        _servicesAccessor.Services.Jobs.DeleteJob(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
@@ -43,29 +44,18 @@ public class Jobs(IEventStore eventStore) : IJobs
     /// <inheritdoc/>
     public async Task<Job?> GetJob(JobId jobId)
     {
-        var result = await _servicesAccessor.Services.Jobs.GetJob(new()
-        {
-            EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-            JobId = jobId
-        });
-
-        return result.Value switch
-        {
-            Contracts.Jobs.Job job => job.ToClient(eventStore),
-            Contracts.Jobs.JobError => null,
-            _ => null
-        };
+        var jobs = await GetJobs();
+        return jobs.FirstOrDefault(j => j.Id == jobId);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Job>> GetJobs()
     {
-        var jobs = await _servicesAccessor.Services.Jobs.GetJobs(new()
+        var jobs = await _servicesAccessor.Services.Jobs.AllJobs(new()
         {
             EventStore = eventStore.Name,
-            Namespace = eventStore.Namespace,
-        });
-        return jobs.ToClient(eventStore);
+            Namespace = eventStore.Namespace
+        }).FirstAsync();
+        return (jobs ?? []).ToClient(eventStore);
     }
 }
