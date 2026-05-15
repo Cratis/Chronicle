@@ -55,6 +55,14 @@ public static class EventSequenceStateConverter
         };
     }
 
+    /// <summary>
+    /// Converts a stored tail sequence number value to <see cref="ulong"/>.
+    /// </summary>
+    /// <param name="value">The stored value to convert.</param>
+    /// <returns>The converted <see cref="ulong"/> value.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the value is a <see cref="JsonElement"/> with an unsupported <see cref="JsonValueKind"/>.
+    /// </exception>
     static ulong ToUInt64(object value)
     {
         if (value is JsonElement jsonElement)
@@ -69,6 +77,8 @@ public static class EventSequenceStateConverter
             {
                 return parsed;
             }
+
+            throw new InvalidOperationException($"Unsupported JsonElement value kind '{jsonElement.ValueKind}' for EventSequenceNumber conversion.");
         }
 
         return Convert.ToUInt64(value);
