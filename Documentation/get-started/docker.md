@@ -120,7 +120,7 @@ volumes:
 
 ## Optional: Add Aspire Dashboard for Logs, Traces, and Metrics
 
-If you want local observability while developing, run Chronicle with the Aspire Dashboard and set `OTEL_EXPORTER_OTLP_ENDPOINT` on the Chronicle container:
+If you want local observability while developing, run Chronicle with the Aspire Dashboard and set `OTEL_EXPORTER_OTLP_ENDPOINT` on the Chronicle container. Use port `18888` for the dashboard UI in your browser, and port `18889` as the OTLP receiver that Chronicle exports telemetry to inside the Docker network:
 
 ```yaml
 services:
@@ -139,10 +139,8 @@ services:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
-      - DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=http://chronicle:18889
       - ALLOW_UNSECURED_TRANSPORT=true
       - DOTNET_ENVIRONMENT=Development
     ports:
       - 18888:18888
-      - 4317:18889
 ```
