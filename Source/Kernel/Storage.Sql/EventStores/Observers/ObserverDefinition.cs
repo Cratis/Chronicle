@@ -16,7 +16,7 @@ public class ObserverDefinition
     /// Gets or sets the unique identifier for the observer.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ObserverId Id { get; set; }
 
     /// <summary>
     /// Gets or sets the event types the observer is interested in.

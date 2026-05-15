@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -14,8 +15,6 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -31,10 +30,6 @@ namespace Cratis.Chronicle.Storage.Sql;
 [Singleton]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
-    readonly ConceptAsQueryExpressionInterceptor _queryInterceptor = new();
-    readonly ConceptAsDbCommandInterceptor _commandInterceptor = new();
-    readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _optionsCache = new();
-
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
@@ -45,7 +40,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     /// <inheritdoc/>
     public Task<DbContextScope<ClusterDbContext>> Cluster()
     {
-        _clusterDbContext.Value ??= new ClusterDbContext(GetOrCreateOptions<ClusterDbContext>(options.Value.Storage.ConnectionDetails));
+        if (_clusterDbContext.Value == null)
+        {
+            var builder = new DbContextOptionsBuilder<ClusterDbContext>();
+            builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddConceptAsSupport();
+            _clusterDbContext.Value = new ClusterDbContext(builder.Options);
+        }
 
         return Task.FromResult(new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!));
     }
@@ -57,8 +60,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!_eventStoreDbContexts.Value.TryGetValue(eventStore.Value, out var dbContext))
         {
+            var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
             var connectionString = GetConnectionStringForEventStore(eventStore);
-            dbContext = new EventStoreDbContext(GetOrCreateOptions<EventStoreDbContext>(connectionString));
+            builder.UseDatabaseFromConnectionString(connectionString);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddConceptAsSupport();
+
+            dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
             _eventStoreDbContexts.Value[eventStore.Value] = dbContext;
         }
@@ -80,15 +89,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!namespaces.TryGetValue(key, out var dbContext))
         {
+            var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            dbContext = new NamespaceDbContext(GetOrCreateOptions<NamespaceDbContext>(connectionString));
-            try
-            {
-                await dbContext.Database.MigrateAsync();
-            }
-            catch (Exception exception) when (IsSharedEventSeedsDuplicate(exception))
-            {
-            }
+            builder.UseDatabaseFromConnectionString(connectionString);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddConceptAsSupport();
+
+            dbContext = new NamespaceDbContext(builder.Options);
+            await dbContext.Database.MigrateAsync();
             namespaces[@namespace.Value] = dbContext;
         }
 
@@ -147,8 +156,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         if (!tables.TryGetValue(tableName, out var dbContext))
         {
+            var builder = new DbContextOptionsBuilder<TDbContext>();
             var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            dbContext = createDbContext(GetOrCreateOptions<TDbContext>(connectionString), tableName);
+            builder.UseDatabaseFromConnectionString(connectionString);
+            builder
+                .UseApplicationServiceProvider(serviceProvider)
+                .AddConceptAsSupport();
+
+            dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();
             tables[tableName] = dbContext;
         }
@@ -184,6 +199,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             return dataSource;
         }
+
         if (TryReplaceFilename("Filename", postfix, out var filename))
         {
             return filename;
@@ -211,35 +227,5 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 
         connectionString = null;
         return false;
-    }
-
-    bool IsSharedEventSeedsDuplicate(Exception exception)
-    {
-        var message = exception.Message;
-        return message.Contains("EventSeeds", StringComparison.OrdinalIgnoreCase) &&
-               (message.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
-                message.Contains("already an object named", StringComparison.OrdinalIgnoreCase));
-    }
-
-    DbContextOptions<T> GetOrCreateOptions<T>(string connectionString)
-        where T : DbContext
-    {
-        var cacheKey = $"{typeof(T).FullName}:{connectionString}";
-        var state = (serviceProvider, connectionString, _queryInterceptor, _commandInterceptor);
-        return (DbContextOptions<T>)_optionsCache.GetOrAdd(
-            cacheKey,
-            static (_, s) =>
-            {
-                var (sp, cs, qi, ci) = s;
-                var builder = new DbContextOptionsBuilder<T>();
-                builder.UseDatabaseFromConnectionString(cs);
-                builder
-                    .UseApplicationServiceProvider(sp)
-                    .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                    .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                    .AddInterceptors(qi, ci);
-                return builder.Options;
-            },
-            state);
     }
 }

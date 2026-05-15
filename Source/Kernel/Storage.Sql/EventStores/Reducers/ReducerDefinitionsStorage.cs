@@ -26,19 +26,18 @@ public class ReducerDefinitionsStorage(EventStoreName eventStore, IDatabase data
     /// <inheritdoc/>
     public async Task<bool> Has(ReducerId id)
     {
-        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Reducers.AnyAsync(reducer => reducer.Id == idValue);
+        return await scope.DbContext.Reducers.AnyAsync(reducer => reducer.Id == id);
     }
 
     /// <inheritdoc/>
     public async Task<Concepts.Observation.Reducers.ReducerDefinition> Get(ReducerId id)
     {
-        var idValue = id.Value;
         await using var scope = await database.EventStore(eventStore);
         var entity = await scope.DbContext.Reducers
-            .Where(r => r.Id == idValue)
+            .Where(r => r.Id == id)
             .FirstOrDefaultAsync();
+
         return entity?.ToKernel()!;
     }
 

@@ -59,12 +59,12 @@ public static class EventEntryConverter
             CorrelationId = correlationId.ToString(),
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
-            Type = eventType.Id.Value,
+            Type = eventType.Id,
             Occurred = occurred,
-            EventSourceType = eventSourceType.Value,
-            EventSourceId = eventSourceId.Value,
-            EventStreamType = eventStreamType.Value,
-            EventStreamId = eventStreamId.Value,
+            EventSourceType = eventSourceType,
+            EventSourceId = eventSourceId,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
             Compensations = new Dictionary<string, string>()
         };
@@ -110,12 +110,12 @@ public static class EventEntryConverter
             CorrelationId = correlationId.ToString(),
             Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
             CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
-            Type = eventType.Id.Value,
+            Type = eventType.Id,
             Occurred = occurred,
-            EventSourceType = eventSourceType.Value,
-            EventSourceId = eventSourceId.Value,
-            EventStreamType = eventStreamType.Value,
-            EventStreamId = eventStreamId.Value,
+            EventSourceType = eventSourceType,
+            EventSourceId = eventSourceId,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
             Compensations = new Dictionary<string, string>(),
             Subject = subject?.Value
@@ -159,7 +159,7 @@ public static class EventEntryConverter
     /// <returns>The event type.</returns>
     public static EventType GetEventType(EventEntry entry)
     {
-        return new EventType(new EventTypeId(entry.Type), EventTypeGeneration.First, false);
+        return new EventType(entry.Type, EventTypeGeneration.First, false);
     }
 
     /// <summary>

@@ -26,19 +26,18 @@ public class ReadModelDefinitionsStorage(EventStoreName eventStore, IDatabase da
     /// <inheritdoc/>
     public async Task<bool> Has(ReadModelIdentifier identifier)
     {
-        var identifierValue = identifier.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.ReadModels.AnyAsync(rm => rm.Id == identifierValue);
+        return await scope.DbContext.ReadModels.AnyAsync(rm => rm.Id == identifier);
     }
 
     /// <inheritdoc/>
     public async Task<Concepts.ReadModels.ReadModelDefinition> Get(ReadModelIdentifier identifier)
     {
-        var identifierValue = identifier.Value;
         await using var scope = await database.EventStore(eventStore);
         var entity = await scope.DbContext.ReadModels
-            .Where(rm => rm.Id == identifierValue)
+            .Where(rm => rm.Id == identifier)
             .FirstOrDefaultAsync();
+
         return entity?.ToKernel()!;
     }
 

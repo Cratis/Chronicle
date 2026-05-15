@@ -17,7 +17,7 @@ public class ReactorDefinition
     /// Gets or sets the unique identifier for the event type.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ReactorId Id { get; set; }
 
     /// <summary>
     /// Gets or sets the owner identifier for the event type.
