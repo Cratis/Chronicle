@@ -107,6 +107,8 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
+        # Integration tests are executed by .github/workflows/integration.yml.
+        # Keep regular specs focused on non-integration test suites.
         run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration"
 
   integration:
@@ -154,6 +156,8 @@ jobs:
 
       - name: Run API integration tests
         working-directory: ./Integration/Api
+        # Keep build enabled for .NET 10 test projects. `--no-build` causes an
+        # invalid test assembly argument failure in this workflow context.
         run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true
 
   mongodb:

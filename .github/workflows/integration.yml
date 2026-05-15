@@ -104,7 +104,10 @@ jobs:
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
         run: |
+          # Client integration tests currently fail with `--no-build` on .NET 10
+          # (invalid test assembly argument). Run with build enabled here.
           dotnet test Integration/Client/Client.csproj \
+            --no-restore \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
             --configuration Release \
@@ -137,7 +140,9 @@ jobs:
 
       - name: Run Kernel integration tests (${{ matrix.namespace }})
         run: |
+          # Kernel project does not have Client's Docker build target.
           dotnet test Integration/Kernel/Kernel.csproj \
+            --no-restore \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
             --configuration Release
