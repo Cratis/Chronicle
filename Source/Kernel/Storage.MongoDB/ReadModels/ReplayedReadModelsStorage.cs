@@ -33,4 +33,23 @@ public class ReplayedReadModelsStorage(IEventStoreNamespaceDatabase database) : 
         var result = await _collection.Find(filter).FirstOrDefaultAsync();
         return result?.Occurrences.Select(o => o.ToKernel(readModel)) ?? [];
     }
+
+    /// <inheritdoc/>
+    public async Task Remove(Chronicle.Storage.ReadModels.ReadModelOccurrence occurrence)
+    {
+        var filter = Builders<ReplayedReadModel>.Filter.Eq(r => r.ReadModel, occurrence.Type.Identifier);
+        var update = Builders<ReplayedReadModel>.Update.PullFilter(
+            r => r.Occurrences,
+            o => o.ObserverId == occurrence.ObserverId &&
+                 o.Occurred == occurrence.Occurred &&
+                 o.RevertContainerName == occurrence.RevertContainerName);
+
+        await _collection.UpdateOneAsync(filter, update);
+
+        var updated = await _collection.Find(filter).FirstOrDefaultAsync();
+        if (updated?.Occurrences.Any() != true)
+        {
+            await _collection.DeleteOneAsync(filter);
+        }
+    }
 }

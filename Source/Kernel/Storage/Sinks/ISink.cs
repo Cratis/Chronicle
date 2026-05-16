@@ -90,6 +90,13 @@ public interface ISink
     Task EndReplay(ReplayContext context);
 
     /// <summary>
+    /// Remove a read model occurrence container from the sink.
+    /// </summary>
+    /// <param name="containerName">The <see cref="ReadModelContainerName"/> to remove.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task Remove(ReadModelContainerName containerName);
+
+    /// <summary>
     /// Prepare the sink for an initial run.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

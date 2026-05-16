@@ -23,4 +23,11 @@ public interface IReplayedReadModelsStorage
     /// <param name="readModel">The <see cref="ReadModelIdentifier"/> to get occurrences for.</param>
     /// <returns>Collection of replayed read model occurrences.</returns>
     Task<IEnumerable<ReadModelOccurrence>> GetOccurrences(ReadModelIdentifier readModel);
+
+    /// <summary>
+    /// Remove a replayed read model occurrence.
+    /// </summary>
+    /// <param name="occurrence">The <see cref="ReadModelOccurrence"/> to remove.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Remove(ReadModelOccurrence occurrence);
 }

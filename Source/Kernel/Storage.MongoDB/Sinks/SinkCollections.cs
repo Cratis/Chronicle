@@ -64,6 +64,16 @@ public class SinkCollections(
     }
 
     /// <inheritdoc/>
+    public async Task Remove(ReadModelContainerName collectionName)
+    {
+        var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
+        if (collectionNames.Contains(collectionName.Value))
+        {
+            await database.DropCollectionAsync(collectionName);
+        }
+    }
+
+    /// <inheritdoc/>
     public IMongoCollection<BsonDocument> GetCollection() => _isReplaying ? database.GetCollection<BsonDocument>(ReplayCollectionName) : database.GetCollection<BsonDocument>(readModel.ContainerName);
 
     /// <inheritdoc/>

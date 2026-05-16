@@ -62,6 +62,11 @@ public class ChronicleOptions
     public Jobs Jobs { get; init; } = new Jobs();
 
     /// <summary>
+    /// Gets the read models configuration.
+    /// </summary>
+    public ReadModels ReadModels { get; init; } = new ReadModels();
+
+    /// <summary>
     /// Gets the authentication configuration.
     /// </summary>
     public Authentication Authentication { get; init; } = new Authentication();
