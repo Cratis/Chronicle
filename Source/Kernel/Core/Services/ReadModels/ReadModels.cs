@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -352,7 +353,18 @@ internal sealed class ReadModels(
                 instance,
                 expandoObjectConverter);
 
-            readModels.Add(expandoObjectConverter.ToJsonObject(decrypted, schema).ToJsonString(jsonSerializerOptions));
+            var jsonObject = expandoObjectConverter.ToJsonObject(decrypted, schema);
+
+            // Ensure __lastHandledEventSequenceNumber is included in the JSON output since
+            // ToJsonObject may drop it if it is not mapped by the schema converter.
+            var decryptedDict = (IDictionary<string, object?>)decrypted;
+            if (decryptedDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
+            {
+                try { jsonObject[WellKnownProperties.LasHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
+                catch { /* leave sequence number absent if conversion fails */ }
+            }
+
+            readModels.Add(jsonObject.ToJsonString(jsonSerializerOptions));
         }
 
         return new GetAllInstancesResponse

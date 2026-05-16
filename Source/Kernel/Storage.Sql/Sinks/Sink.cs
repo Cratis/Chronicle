@@ -82,6 +82,7 @@ public class Sink(
         var state = changeset.InitialState.Clone();
         state = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)state).id = key.Value;
+        ((IDictionary<string, object?>)state)[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)eventSequenceNumber;
 
         var document = SerializeDocument(state);
 
