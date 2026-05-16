@@ -193,7 +193,8 @@ public class JobStorage(
             }
 
             await using var scope = await database.Namespace(eventStore, @namespace);
-            var query = scope.DbContext.Jobs.Where(j => j.Type == jobType);
+            var jobTypeValue = jobType.Value;
+            var query = scope.DbContext.Jobs.Where(j => j.Type == jobTypeValue);
 
             if (statuses.Length > 0)
             {

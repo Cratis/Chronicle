@@ -148,10 +148,30 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             await context.Database.MigrateAsync();
         }
+        catch (Exception ex) when (IsAlreadyExistsException(ex))
+        {
+            // A concurrent migration already completed and created the tables.
+            // This is safe to ignore: the schema is in the correct final state.
+        }
         finally
         {
             migrationLock.Release();
         }
+    }
+
+    static bool IsAlreadyExistsException(Exception? ex)
+    {
+        while (ex is not null)
+        {
+            if (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            ex = ex.InnerException;
+        }
+
+        return false;
     }
 
     async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(

@@ -29,7 +29,8 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         var tableName = GetTableName(definition.Name, scopeKey);
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
-        var query = scope.DbContext.Entries.Where(u => u.Value == value);
+        var constraintValue = value.Value;
+        var query = scope.DbContext.Entries.Where(u => u.Value == constraintValue);
 
         // Apply case-insensitive comparison if needed
         if (definition.IgnoreCasing)
