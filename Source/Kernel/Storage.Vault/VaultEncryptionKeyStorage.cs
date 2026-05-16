@@ -79,16 +79,10 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         EncryptionKeyIdentifier identifier,
         EncryptionKeyRevision? revision = null)
     {
-        EncryptionKeyRevision? targetRevision;
-        if (IsLatest(revision))
-        {
-            targetRevision = await GetHighestRevision(eventStore, eventStoreNamespace, identifier)
-                ?? throw new MissingEncryptionKey(identifier);
-        }
-        else
-        {
-            targetRevision = revision;
-        }
+        var targetRevision = IsLatest(revision)
+            ? await GetHighestRevision(eventStore, eventStoreNamespace, identifier)
+                ?? throw new MissingEncryptionKey(identifier)
+            : revision;
 
         var path = BuildPath(eventStore, eventStoreNamespace, identifier, targetRevision!);
         try
