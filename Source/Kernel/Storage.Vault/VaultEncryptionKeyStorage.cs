@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using System.Linq;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
@@ -184,16 +185,11 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         try
         {
             var list = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretPathsAsync(directory, mountPoint: _mountPoint);
-            var revisions = new List<EncryptionKeyRevision>();
-            foreach (var key in list.Data.Keys)
-            {
-                if (uint.TryParse(key.TrimEnd('/'), out var parsed))
-                {
-                    revisions.Add((EncryptionKeyRevision)parsed);
-                }
-            }
-
-            return revisions;
+            return list.Data.Keys
+                .Select(key => key.TrimEnd('/'))
+                .Where(trimmed => uint.TryParse(trimmed, out _))
+                .Select(trimmed => (EncryptionKeyRevision)uint.Parse(trimmed))
+                .ToList();
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
