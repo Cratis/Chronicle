@@ -40,11 +40,8 @@ public class child_removed_with_join(context context) : Given<context>(context)
 
         async Task Because()
         {
-            // Only consider IDs that could have been created by the events in this scenario to
-            // avoid picking up User documents written by other tests sharing the same fixture.
-            var relevantIds = new HashSet<string> { ReadModelId, (string)FirstGroupId, (string)SecondGroupId };
             var allUsers = await EventStore.ReadModels.GetInstances<User>();
-            Users = allUsers.Where(u => relevantIds.Contains(u.Id.Value)).ToArray();
+            Users = allUsers.Where(u => u.Id.Value == ReadModelId).ToArray();
         }
     }
 

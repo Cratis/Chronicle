@@ -28,7 +28,8 @@ public class using_composite_key_from_property_and_context_property(context cont
 
         async Task Because()
         {
-            ReadModel = await EventStore.ReadModels.GetInstanceById<ReadModelWithCompositeKey>(CompositeId.ToString());
+            var all = (await EventStore.ReadModels.GetInstances<ReadModelWithCompositeKey>()).ToList();
+            ReadModel = all.FirstOrDefault(m => m is not null && m.LastUpdated != default);
         }
     }
 

@@ -72,6 +72,39 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     }
 
     /// <inheritdoc/>
+    public override async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
+    {
+        await base.RemoveAllDatabases(excludePrefixes);
+        if (Options.StorageProvider != ChronicleStorageProvider.Sqlite)
+        {
+            return;
+        }
+
+        var connectionString = GetInProcessConnectionString();
+        var builder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
+        if (!builder.TryGetValue("Data Source", out var dataSourceObj) &&
+            !builder.TryGetValue("Filename", out dataSourceObj))
+        {
+            return;
+        }
+
+        var dataSource = dataSourceObj?.ToString() ?? string.Empty;
+        var directory = Path.GetDirectoryName(dataSource) ?? string.Empty;
+        var baseName = Path.GetFileNameWithoutExtension(dataSource);
+        var extension = Path.GetExtension(dataSource);
+
+        var pattern = $"{baseName}*{extension}";
+        var matchingFiles = Directory.GetFiles(
+            string.IsNullOrEmpty(directory) ? "." : directory,
+            pattern);
+
+        foreach (var file in matchingFiles)
+        {
+            try { File.Delete(file); } catch { /* ignore */ }
+        }
+    }
+
+    /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network) =>
         Options.Mode switch
         {
