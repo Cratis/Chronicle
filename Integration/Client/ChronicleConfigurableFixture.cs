@@ -80,44 +80,9 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
-        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
-        {
-            // Delete SQLite database files inside the Chronicle server container between test runs
-            // to prevent accumulated state from previous tests causing failures in subsequent ones.
-            // Honors excludePrefixes so that system event store databases are preserved when the
-            // caller passes excludePrefixes: [System] (the second cleanup in OnBeforeInitializeAsync).
-            var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
-            var sqliteBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
-            if (sqliteBuilder.TryGetValue("Data Source", out var dataSourceObj) ||
-                sqliteBuilder.TryGetValue("Filename", out dataSourceObj))
-            {
-                var dataSource = dataSourceObj?.ToString() ?? "/tmp/chronicle.db";
-                var directory = Path.GetDirectoryName(dataSource) ?? "/tmp";
-                var baseName = Path.GetFileNameWithoutExtension(dataSource);
-                var extension = Path.GetExtension(dataSource);
-
-                // Only delete event-store and namespace databases (those with an underscore separator,
-                // e.g. chronicle_Testing.db, chronicle_System_default.db). Never delete the cluster
-                // database (chronicle.db) — it holds authentication state (OpenIddict, admin accounts)
-                // that must survive between test runs; deleting it causes 401 Unauthorized failures.
-                if (excludePrefixes?.Any() == true)
-                {
-                    // Build a shell command that deletes matching event-store files but preserves any
-                    // whose event-store prefix matches an excluded prefix (e.g. chronicle_System*.db).
-                    var excludeConditions = string.Join(" && ", excludePrefixes.Select(p => $"! echo \"$f\" | grep -q '/{baseName}_{p}'"));
-                    var deleteCmd = $"for f in {directory}/{baseName}_*{extension}; do if [ -f \"$f\" ] && {excludeConditions}; then rm -f \"$f\"; fi; done";
-                    await MongoDBContainer.ExecAsync(["sh", "-c", deleteCmd]);
-                }
-                else
-                {
-                    await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}_*{extension}"]);
-                }
-            }
-
-            await ResetKernelState();
-            return;
-        }
-
+        // Both InProcess and OutOfProcess SQLite modes run the Chronicle kernel in-process
+        // (via ChronicleOrleansInProcessWebApplicationFactory). Clean up the local SQLite
+        // files that the in-process silo writes to.
         var inProcessConnectionString = GetInProcessConnectionString();
         var inProcessBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = inProcessConnectionString };
         if (!inProcessBuilder.TryGetValue("Data Source", out var inProcessDataSourceObj) &&
@@ -131,13 +96,29 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         var inProcessBaseName = Path.GetFileNameWithoutExtension(inProcessDataSource);
         var inProcessExtension = Path.GetExtension(inProcessDataSource);
 
-        var pattern = $"{inProcessBaseName}*{inProcessExtension}";
+        // Only delete event-store and namespace databases (files with an underscore after the
+        // base name, e.g. chronicle-inprocess-test_Testing.db). Never delete the cluster
+        // database (chronicle-inprocess-test.db) — it holds auth state that must survive
+        // between test classes within the same test run.
+        var pattern = $"{inProcessBaseName}_*{inProcessExtension}";
         var matchingFiles = Directory.GetFiles(
             string.IsNullOrEmpty(inProcessDirectory) ? "." : inProcessDirectory,
             pattern);
 
         foreach (var file in matchingFiles)
         {
+            if (excludePrefixes?.Any() == true)
+            {
+                var fileBaseName = Path.GetFileNameWithoutExtension(file);
+                var suffix = fileBaseName.Length > inProcessBaseName.Length + 1
+                    ? fileBaseName[(inProcessBaseName.Length + 1)..]
+                    : string.Empty;
+                if (excludePrefixes.Any(p => suffix.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+            }
+
             try { File.Delete(file); } catch { /* ignore */ }
         }
     }
@@ -266,24 +247,4 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             { Length: > 0 } value => value,
             _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
         };
-
-    /// <summary>
-    /// Resets kernel grain state in development builds for the out-of-process server.
-    /// </summary>
-    /// <returns>A task that completes when the reset request has finished.</returns>
-    public async Task ResetKernelState()
-    {
-        if (Options.Mode != ChronicleRuntimeMode.OutOfProcess)
-        {
-            return;
-        }
-
-        using var client = new HttpClient
-        {
-            BaseAddress = new Uri("http://localhost:8081")
-        };
-
-        var response = await client.PostAsync("/api/development/kernel-state/reset", content: null);
-        response.EnsureSuccessStatusCode();
-    }
 }
