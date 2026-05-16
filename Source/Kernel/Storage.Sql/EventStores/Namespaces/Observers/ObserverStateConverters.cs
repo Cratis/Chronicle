@@ -33,6 +33,7 @@ public static class ObserverStateConverters
                     a.Messages,
                     a.StackTrace)),
                 fp.IsResolved)).ToList(),
+            FailedPartitionCount = definition.FailedPartitionCount,
             IsReplaying = definition.IsReplaying
         };
 
@@ -62,5 +63,6 @@ public static class ObserverStateConverters
                 }),
                 IsResolved = fp.IsResolved
             }).ToList(),
+            state.FailedPartitionCount,
             state.IsReplaying);
 }

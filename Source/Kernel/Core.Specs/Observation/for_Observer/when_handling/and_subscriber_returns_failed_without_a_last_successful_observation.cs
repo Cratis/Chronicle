@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 public class and_subscriber_returns_failed_without_a_last_successful_observation : given.an_observer_with_subscription_for_specific_event_type
@@ -32,9 +33,10 @@ public class and_subscriber_returns_failed_without_a_last_successful_observation
 
     async Task Because() => await _observer.Handle(EventSourceId, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, _eventSequenceNumberToHandle)]);
 
-    [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
+    [Fact] void should_write_state_once() => _storageStats.Writes.ShouldEqual(1);
     [Fact] void should_have_same_next_event_sequence_number_state() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_eventSequenceNumberToHandle);
     [Fact] void should_have_same_last_handled_event_sequence_number_state() => _stateStorage.State.LastHandledEventSequenceNumber.Value.ShouldEqual(41UL);
+    [Fact] void should_increment_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);
     [Fact] void should_write_failed_partitions_state_once() => _failedPartitionsStorageStats.Writes.ShouldEqual(1);
     [Fact] void should_add_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
     [Fact] void should_capture_partition() => _failedPartitionsState.Partitions.First().Partition.Value.ShouldEqual(EventSourceId);

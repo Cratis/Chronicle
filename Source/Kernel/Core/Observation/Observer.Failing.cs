@@ -21,7 +21,13 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         _metrics?.PartitionFailed(partition);
         logger.PartitionFailed(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        var partitionWasAlreadyFailed = Failures.IsFailed(partition);
         var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace);
+        if (!partitionWasAlreadyFailed)
+        {
+            State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
+        }
+
         _metrics?.PartitionRetryAttempt(partition);
         var config = await configurationProvider.GetFor(_observerKey);
         if (State.RunningState == ObserverRunningState.Quarantined)
@@ -54,6 +60,10 @@ public partial class Observer
         }
 
         await failures.WriteStateAsync();
+        if (!partitionWasAlreadyFailed)
+        {
+            await WriteStateAsync();
+        }
     }
 
     /// <inheritdoc/>
@@ -61,8 +71,14 @@ public partial class Observer
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.FailingPartitionRecovered(partition);
+        var partitionWasFailed = Failures.IsFailed(partition);
         failures.State.Remove(partition);
         await failures.WriteStateAsync();
+        if (partitionWasFailed)
+        {
+            State = State with { FailedPartitionCount = State.FailedPartitionCount - 1 };
+        }
+
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, lastHandledEventSequenceNumber);

@@ -20,11 +20,13 @@ public class and_partition_is_already_failed : given.an_observer
     void Establish()
     {
         _failedPartition = _failedPartitionsState.AddFailedPartition(EventSourceId, 42UL, [FirstMessage], FirstStackTrace);
+        _stateStorage.State = _stateStorage.State with { FailedPartitionCount = 1 };
     }
 
     async Task Because() => await _observer.PartitionFailed(EventSourceId, 44UL, [SecondMessage], SecondStackTrace);
 
     [Fact] void should_have_only_one_failed_partition() => _failedPartitionsState.Partitions.Count().ShouldEqual(1);
+    [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)1);
     [Fact] void should_have_two_attempts() => _failedPartitionsState.Partitions.First().Attempts.Count().ShouldEqual(2);
     [Fact] void should_have_the_correct_partition() => _failedPartitionsState.Partitions.First().Partition.ShouldEqual((Key)EventSourceId);
     [Fact] void should_have_the_correct_tail_for_the_first_attempt() => _failedPartitionsState.Partitions.First().Attempts.First().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);

@@ -66,6 +66,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             ReplayingPartitions = existing.ReplayingPartitions,
             CatchingUpPartitions = existing.CatchingUpPartitions,
             FailedPartitions = existing.FailedPartitions,
+            FailedPartitionCount = existing.FailedPartitionCount,
             IsReplaying = existing.IsReplaying
         };
 

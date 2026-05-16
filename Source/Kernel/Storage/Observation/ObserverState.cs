@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
 /// <param name="CatchingUpPartitions">The individual partitions that are catching up.</param>
 /// <param name="FailedPartitions">Collection of <see cref="FailedPartition"/>.</param>
+/// <param name="FailedPartitionCount">Count of failed partitions for the observer.</param>
 /// <param name="IsReplaying">Whether the observer is replaying.</param>
 public record ObserverState(
     ObserverId Identifier,
@@ -24,6 +25,7 @@ public record ObserverState(
     ISet<Key> ReplayingPartitions,
     ISet<Key> CatchingUpPartitions,
     IEnumerable<FailedPartition> FailedPartitions,
+    FailedPartitionCount FailedPartitionCount,
     bool IsReplaying)
 {
     /// <summary>
@@ -44,6 +46,7 @@ public record ObserverState(
               new HashSet<Key>(),
               new HashSet<Key>(),
               [],
+              FailedPartitionCount.Zero,
               false)
     {
     }
