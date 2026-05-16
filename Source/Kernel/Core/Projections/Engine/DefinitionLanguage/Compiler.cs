@@ -162,8 +162,8 @@ public class Compiler
             case EveryBlock every:
                 fromEvery = ProcessEveryBlock(every);
                 break;
-            case FromAllBlock fromAll:
-                fromEvery = ProcessFromAllBlock(fromAll);
+            case AllBlock all:
+                fromEvery = ProcessAllBlock(all);
                 break;
             case SequenceDirective:
                 // Sequence is handled before processing directives
@@ -453,18 +453,18 @@ public class Compiler
         };
     }
 
-    FromEveryDefinition ProcessFromAllBlock(FromAllBlock fromAll)
+    FromEveryDefinition ProcessAllBlock(AllBlock all)
     {
         var properties = new Dictionary<PropertyPath, string>();
 
-        foreach (var operation in fromAll.Mappings)
+        foreach (var operation in all.Mappings)
         {
             ProcessMappingOperation(operation, properties);
         }
 
         return new FromEveryDefinition(properties, IncludeChildren: true)
         {
-            AutoMap = GetAutoMapValue(fromAll.AutoMap)
+            AutoMap = GetAutoMapValue(all.AutoMap)
         };
     }
 

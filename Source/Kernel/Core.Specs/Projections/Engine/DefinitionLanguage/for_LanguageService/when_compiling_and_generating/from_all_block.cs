@@ -11,7 +11,7 @@ public class from_all_block : given.a_language_service_with_schemas<given.Model>
 {
     const string Definition = """
         projection Test => Model
-          from all
+          all
             count eventCount
             lastOccurred = $eventContext.occurred
         """;

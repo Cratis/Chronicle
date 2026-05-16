@@ -8,35 +8,22 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
 /// <summary>
-/// Visitor for parsing from all blocks.
+/// Visitor for parsing all blocks.
 /// </summary>
-public class FromAllBlockVisitor : IDirectiveVisitor
+public class AllBlockVisitor : IDirectiveVisitor
 {
     readonly MappingOperationParser _mappingOperations = new();
 
     /// <inheritdoc/>
     public ProjectionDirective? Visit(IParsingContext context)
     {
-        if (!context.Check(TokenType.From))
+        if (!context.Check(TokenType.All))
         {
             return null;
         }
 
-        var fromToken = context.Current;
-
-        // Peek ahead to check if this is a 'from all' expression
-        var nextToken = context.Peek();
-        if (nextToken.Type != TokenType.All)
-        {
-            return null;
-        }
-
-        // Consume 'from' and 'all'
-        context.Advance(); // Skip 'from'
+        var allToken = context.Current;
         context.Advance(); // Skip 'all'
-
-        // Skip newline if present
-        if (context.Check(TokenType.NewLine)) context.Advance();
 
         var mappings = new List<MappingOperation>();
         var autoMap = AutoMap.Inherit;
@@ -73,16 +60,13 @@ public class FromAllBlockVisitor : IDirectiveVisitor
                 }
             }
 
-            if (context.Check(TokenType.Dedent))
-            {
-                context.Advance();
-            }
+            context.Expect(TokenType.Dedent);
         }
 
-        return new FromAllBlock(mappings, autoMap)
+        return new AllBlock(mappings, autoMap)
         {
-            Line = fromToken.Line,
-            Column = fromToken.Column
+            Line = allToken.Line,
+            Column = allToken.Column
         };
     }
 }

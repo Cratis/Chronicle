@@ -11,7 +11,7 @@ public class from_all_with_dictionary : given.a_language_service_with_schemas<gi
 {
     const string Definition = """
         projection Test => Model
-          from all
+          all
             count eventCountByType.$eventContext.type.name
         """;
 

@@ -53,7 +53,7 @@ EveryBlock      = "every", NL,
                     [ "exclude", "children", NL ],
                   DEDENT ;
 
-FromAllBlock    = "from", "all", NL,
+FromAllBlock    = "all", NL,
                   [ INDENT,
                     [ "automap" | "no", "automap", NL ],
                     { MappingLine },
