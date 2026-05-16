@@ -20,6 +20,7 @@ internal static class ObserverRunningStateConverters
             Contracts.Observation.ObserverRunningState.Suspended => ObserverRunningState.Suspended,
             Contracts.Observation.ObserverRunningState.Replaying => ObserverRunningState.Replaying,
             Contracts.Observation.ObserverRunningState.Disconnected => ObserverRunningState.Disconnected,
+            Contracts.Observation.ObserverRunningState.Quarantined => ObserverRunningState.Quarantined,
             _ => ObserverRunningState.Unknown
         };
 }

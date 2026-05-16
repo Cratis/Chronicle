@@ -19,12 +19,22 @@ public class ConnectedClients(
     ILogger<ConnectedClients> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter) : Grain, IConnectedClients
 {
+    static readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(2);
     readonly List<ConnectedClient> _clients = [];
+    IGrainTimer? _reviseConnectedClientsTimer;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = TimeSpan.FromSeconds(1) });
+        _reviseConnectedClientsTimer = this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = _reviseConnectedClientsPeriod });
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _reviseConnectedClientsTimer?.Dispose();
+        _reviseConnectedClientsTimer = null;
         return Task.CompletedTask;
     }
 
