@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
@@ -121,7 +122,7 @@ public class MappingOperationParser
         var propToken = context.Expect(TokenType.Identifier);
         if (propToken is null) return null;
 
-        var propertyPath = propToken.Value;
+        var propertyPathBuilder = new StringBuilder(propToken.Value);
 
         // Check for dynamic dictionary key expression like: theDictionary.$eventContext.type.id
         while (context.Check(TokenType.Dot))
@@ -135,7 +136,7 @@ public class MappingOperationParser
                 var nameToken = context.Expect(TokenType.Identifier);
                 if (nameToken is null) return null;
 
-                propertyPath += ".$" + nameToken.Value;
+                propertyPathBuilder.Append(".$").Append(nameToken.Value);
 
                 // Continue building the expression path
                 while (context.Check(TokenType.Dot))
@@ -143,7 +144,7 @@ public class MappingOperationParser
                     context.Advance();
                     var nextToken = context.Expect(TokenType.Identifier);
                     if (nextToken is null) return null;
-                    propertyPath += "." + nextToken.Value;
+                    propertyPathBuilder.Append('.').Append(nextToken.Value);
                 }
             }
             else
@@ -151,10 +152,10 @@ public class MappingOperationParser
                 // Regular property path
                 var nextToken = context.Expect(TokenType.Identifier);
                 if (nextToken is null) return null;
-                propertyPath += "." + nextToken.Value;
+                propertyPathBuilder.Append('.').Append(nextToken.Value);
             }
         }
 
-        return propertyPath;
+        return propertyPathBuilder.ToString();
     }
 }
