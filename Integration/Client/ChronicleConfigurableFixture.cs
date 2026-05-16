@@ -80,22 +80,42 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
-        var connectionString = GetInProcessConnectionString();
-        var builder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
-        if (!builder.TryGetValue("Data Source", out var dataSourceObj) &&
-            !builder.TryGetValue("Filename", out dataSourceObj))
+        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
+        {
+            // Delete SQLite database files inside the Chronicle server container between test runs
+            // to prevent accumulated state from previous tests causing failures in subsequent ones.
+            var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
+            var sqliteBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
+            if (sqliteBuilder.TryGetValue("Data Source", out var dataSourceObj) ||
+                sqliteBuilder.TryGetValue("Filename", out dataSourceObj))
+            {
+                var dataSource = dataSourceObj?.ToString() ?? "/tmp/chronicle.db";
+                var directory = Path.GetDirectoryName(dataSource) ?? "/tmp";
+                var baseName = Path.GetFileNameWithoutExtension(dataSource);
+                var extension = Path.GetExtension(dataSource);
+                await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}*{extension}"]);
+            }
+
+            await ResetKernelState();
+            return;
+        }
+
+        var inProcessConnectionString = GetInProcessConnectionString();
+        var inProcessBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = inProcessConnectionString };
+        if (!inProcessBuilder.TryGetValue("Data Source", out var inProcessDataSourceObj) &&
+            !inProcessBuilder.TryGetValue("Filename", out inProcessDataSourceObj))
         {
             return;
         }
 
-        var dataSource = dataSourceObj?.ToString() ?? string.Empty;
-        var directory = Path.GetDirectoryName(dataSource) ?? string.Empty;
-        var baseName = Path.GetFileNameWithoutExtension(dataSource);
-        var extension = Path.GetExtension(dataSource);
+        var inProcessDataSource = inProcessDataSourceObj?.ToString() ?? string.Empty;
+        var inProcessDirectory = Path.GetDirectoryName(inProcessDataSource) ?? string.Empty;
+        var inProcessBaseName = Path.GetFileNameWithoutExtension(inProcessDataSource);
+        var inProcessExtension = Path.GetExtension(inProcessDataSource);
 
-        var pattern = $"{baseName}*{extension}";
+        var pattern = $"{inProcessBaseName}*{inProcessExtension}";
         var matchingFiles = Directory.GetFiles(
-            string.IsNullOrEmpty(directory) ? "." : directory,
+            string.IsNullOrEmpty(inProcessDirectory) ? "." : inProcessDirectory,
             pattern);
 
         foreach (var file in matchingFiles)
