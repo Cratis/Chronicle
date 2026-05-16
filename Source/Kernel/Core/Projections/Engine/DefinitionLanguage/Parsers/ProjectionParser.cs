@@ -15,6 +15,7 @@ internal sealed class ProjectionParser
     [
         TokenType.From,
         TokenType.Every,
+        TokenType.All,
         TokenType.Key,
         TokenType.Parent,
         TokenType.On,

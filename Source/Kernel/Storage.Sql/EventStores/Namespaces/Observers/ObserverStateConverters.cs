@@ -33,7 +33,8 @@ public static class ObserverStateConverters
                     a.Messages,
                     a.StackTrace)),
                 fp.IsResolved)).ToList(),
-            IsReplaying = definition.IsReplaying
+            IsReplaying = definition.IsReplaying,
+            SubscribesToAllEvents = definition.SubscribesToAllEvents
         };
 
     /// <summary>
@@ -62,5 +63,6 @@ public static class ObserverStateConverters
                 }),
                 IsResolved = fp.IsResolved
             }).ToList(),
-            state.IsReplaying);
+            state.IsReplaying,
+            state.SubscribesToAllEvents);
 }

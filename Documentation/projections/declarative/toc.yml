@@ -24,6 +24,8 @@
   href: event-context.md
 - name: FromEvery
   href: from-every.md
+- name: FromAll
+  href: from-all.md
 - name: Initial values
   href: initial-values.md
 - name: RemoveWithJoin

@@ -50,7 +50,8 @@ public static class ProjectionDefinitionConverters
             source.AutoMap,
             source.Nested.ToDictionary(
                 kv => (PropertyPath)kv.Key,
-                kv => kv.Value.ToKernel())
+                kv => kv.Value.ToKernel()),
+            SubscribesToAllEvents: source.SubscribesToAllEvents
         );
 
     /// <summary>
@@ -91,6 +92,7 @@ public static class ProjectionDefinitionConverters
             AutoMap = source.AutoMap,
             Nested = (source.Nested ?? new Dictionary<PropertyPath, KernelDefs.ChildrenDefinition>()).ToDictionary(
                 kv => kv.Key.ToString(),
-                kv => kv.Value.ToMongoDB())
+                kv => kv.Value.ToMongoDB()),
+            SubscribesToAllEvents = source.SubscribesToAllEvents
         };
 }

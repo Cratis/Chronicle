@@ -142,6 +142,7 @@ message ProjectionDefinition {
    repeated string Tags = 16;
    AutoMap AutoMap = 17;
    map<string,ChildrenDefinition> Nested = 18;
+   bool SubscribesToAllEvents = 19;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;

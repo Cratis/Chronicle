@@ -195,7 +195,8 @@ export class ProjectionDefinitionLanguageHoverProvider implements languages.Hove
         const keywords: Record<string, string> = {
             'projection': `**projection** - ${strings.components.projectionEditor.hover.projectionKeyword}`,
             'from': '**from** *<EventType>*\n\nHandles specific event types and maps their properties to the read model.',
-            'every': '**every**\n\nHandles all events with automatic property mapping.',
+            'all': '**all**\n\nSubscribes to **all event types in the system**, regardless of explicit `from` blocks. Mappings inside `all` run for every event that arrives system-wide.',
+            'every': '**every**\n\nHandles all events the projection **explicitly subscribes to** through `from` blocks, with automatic property mapping.',
             'key': '**key** *<expression>*\n\nDefines the projection key or composite key type.',
             'parent': '**parent** *<expression>*\n\nDefines a parent relationship for hierarchical projections.',
             'join': '**join** *<collection>* **on** *<property>*\n\nJoins with a child collection based on a property.',

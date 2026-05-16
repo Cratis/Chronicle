@@ -12,6 +12,8 @@
   href: event-context.md
 - name: From Every
   href: from-every.md
+- name: From All
+  href: from-all.md
 - name: Counters
   href: counters.md
 - name: Arithmetic
