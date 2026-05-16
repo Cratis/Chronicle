@@ -30,6 +30,8 @@ namespace Cratis.Chronicle.Storage.Sql;
 [Singleton]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
+
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
     readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
     readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
@@ -68,7 +70,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
                 .AddConceptAsSupport();
 
             dbContext = new EventStoreDbContext(builder.Options);
-            await dbContext.Database.MigrateAsync();
+            await MigrateWithLock(dbContext, connectionString);
             _eventStoreDbContexts.Value[eventStore.Value] = dbContext;
         }
 
@@ -97,7 +99,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
                 .AddConceptAsSupport();
 
             dbContext = new NamespaceDbContext(builder.Options);
-            await dbContext.Database.MigrateAsync();
+            await MigrateWithLock(dbContext, connectionString);
             namespaces[@namespace.Value] = dbContext;
         }
 
@@ -130,6 +132,27 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             containerName,
             _readModelDbContexts,
             (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+
+    /// <summary>
+    /// Serializes EF Core <c>MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions
+    /// when multiple grains access the same database simultaneously.
+    /// </summary>
+    /// <param name="context">The <see cref="DbContext"/> to migrate.</param>
+    /// <param name="connectionString">The connection string used as the lock key.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    static async Task MigrateWithLock(DbContext context, string connectionString)
+    {
+        var migrationLock = _migrationLocks.GetOrAdd(connectionString, _ => new SemaphoreSlim(1, 1));
+        await migrationLock.WaitAsync();
+        try
+        {
+            await context.Database.MigrateAsync();
+        }
+        finally
+        {
+            migrationLock.Release();
+        }
+    }
 
     async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
         EventStoreName eventStore,
