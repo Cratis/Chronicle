@@ -84,8 +84,12 @@ public class Reactors : IReactors
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            _registered = false;
-            DisconnectHandlers();
+            lock (_registerLock)
+            {
+                _registered = false;
+                RecreateHandlersForReconnect();
+            }
+
             return Task.CompletedTask;
         };
     }
@@ -259,6 +263,21 @@ public class Reactors : IReactors
         {
             handler.Disconnect();
             (handler as IDisposable)?.Dispose();
+        }
+    }
+
+    void RecreateHandlersForReconnect()
+    {
+        var reactorTypes = _handlers.Values
+            .Select(_ => _.ReactorType)
+            .ToArray();
+
+        DisconnectHandlers();
+        _handlers.Clear();
+
+        foreach (var reactorType in reactorTypes)
+        {
+            _handlers[reactorType] = CreateHandlerFor(reactorType);
         }
     }
 
