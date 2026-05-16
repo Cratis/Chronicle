@@ -10,6 +10,8 @@
   href: storage.md
 - name: Observers
   href: observers.md
+- name: Read Models
+  href: read-models.md
 - name: Events
   href: events.md
 - name: Authentication

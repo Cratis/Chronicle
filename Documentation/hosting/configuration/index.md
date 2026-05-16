@@ -21,6 +21,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 | Features | API, Workbench, and OAuth authority toggles |
 | Storage | Storage provider configuration |
 | Observers | Retry and timeout settings |
+| Read models | Replay retention for replay-generated read model versions |
 | Events | Event queue configuration |
 | Authentication | External authority and default admin settings |
 | TLS | gRPC TLS certificate configuration |
@@ -34,6 +35,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Features](features.md) - Toggle API, Workbench, and OAuth authority.
 - [Storage](storage.md) - Configure the storage provider and connection details.
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
+- [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
 - [Events](events.md) - Configure event queues.
 - [Authentication](authentication.md) - External authority and default admin settings.
 - [TLS](tls.md) - Configure top-level gRPC TLS certificates.
@@ -46,4 +48,3 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Best Practices](best-practices.md) - Recommended configuration guidelines.
 - [Port Reference](port-reference.md) - Ports exposed by Chronicle Server.
 - [Job Throttling](job-throttling.md) - Limit parallel job steps to control CPU usage.
-
