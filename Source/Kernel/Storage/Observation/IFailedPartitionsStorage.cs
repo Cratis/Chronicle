@@ -36,4 +36,11 @@ public interface IFailedPartitionsStorage
     /// <param name="observerId">Optional <see cref="ObserverId"/> to get for.</param>
     /// <returns><see cref="FailedPartitions"/> instance.</returns>
     Task<FailedPartitions> GetFor(ObserverId? observerId);
+
+    /// <summary>
+    /// Get all failed partitions for a set of <see cref="ObserverId"/>.
+    /// </summary>
+    /// <param name="observerIds">The <see cref="ObserverId"/> values to get for.</param>
+    /// <returns><see cref="FailedPartitions"/> instance.</returns>
+    Task<FailedPartitions> GetFor(IEnumerable<ObserverId> observerIds);
 }

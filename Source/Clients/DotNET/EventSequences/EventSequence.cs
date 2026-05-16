@@ -131,7 +131,13 @@ public class EventSequence(
             Subject = subject?.Value
         });
 
-        var result = ResolveViolationMessages(response.ToClient());
+        var result = ResolveViolationMessages(response.ToClient()) with
+        {
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            Observers = GetObservers()
+        };
         if (_appendedEventsRaised is not null)
         {
             var context = EventContext.From(
@@ -202,7 +208,13 @@ public class EventSequence(
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var causation = causationManager.GetCurrentChain();
         var identity = identityProvider.GetCurrent();
-        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes, causation);
+        var result = (await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, concurrencyScopes, causation)) with
+        {
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            Observers = GetObservers()
+        };
         NotifyAppendMany(
             eventsList,
             resolvedCorrelationId,
@@ -259,7 +271,13 @@ public class EventSequence(
 
         var resolvedCorrelationId = correlationId ?? correlationIdAccessor.Current;
         var resolvedConcurrencyScopes = await ResolveConcurrencyScopes(eventsList, concurrencyScopes);
-        var result = await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, resolvedConcurrencyScopes, causation);
+        var result = (await AppendManyImplementation(eventsToAppend, resolvedCorrelationId, resolvedConcurrencyScopes, causation)) with
+        {
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            Observers = GetObservers()
+        };
 
         if (_appendedEventsRaised is not null)
         {
@@ -440,20 +458,42 @@ public class EventSequence(
         }
     }
 
-    static AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult)
+    AppendResult ToAppendResult(CorrelationId correlationId, EventSequenceNumber sequenceNumber, AppendManyResult batchResult)
     {
         if (batchResult.IsSuccess)
         {
-            return AppendResult.Success(correlationId, sequenceNumber);
+            return AppendResult.Success(correlationId, sequenceNumber) with
+            {
+                EventStore = eventStoreName,
+                EventStoreNamespace = @namespace,
+                EventSequenceId = eventSequenceId,
+                Observers = GetObservers()
+            };
         }
 
         return new AppendResult
         {
             CorrelationId = correlationId,
+            EventStore = eventStoreName,
+            EventStoreNamespace = @namespace,
+            EventSequenceId = eventSequenceId,
             ConstraintViolations = batchResult.ConstraintViolations,
             ConcurrencyViolation = batchResult.ConcurrencyViolations.FirstOrDefault(),
-            Errors = batchResult.Errors
+            Errors = batchResult.Errors,
+            Observers = GetObservers()
         };
+    }
+
+    Contracts.Observation.IObservers? GetObservers()
+    {
+        try
+        {
+            return _servicesAccessor.Services.Observers;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
     }
 
     async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(

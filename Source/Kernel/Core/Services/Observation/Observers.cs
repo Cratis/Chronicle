@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="storage">The <see cref="IStorage"/>.</param>
 internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : IObservers
 {
+    const int ObserverCompletionPollingDelayMs = 50;
+
     /// <inheritdoc/>
     public Task RetryPartition(RetryPartition command, CallContext context = default) =>
         grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
@@ -29,6 +31,53 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
         grainFactory.GetObserver(command).ReplayPartition(command.Partition);
+
+    /// <inheritdoc/>
+    public async Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default)
+    {
+        while (true)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            var observers = (await GetObservers(
+                new AllObserversRequest
+                {
+                    EventStore = request.EventStore,
+                    Namespace = request.Namespace
+                },
+                context))
+                .Where(_ => _.EventSequenceId == request.EventSequenceId)
+                .ToArray();
+
+            if (observers.Length == 0)
+            {
+                return new WaitForObserverCompletionResponse
+                {
+                    IsSuccess = true
+                };
+            }
+
+            var observerIds = observers.Select(_ => (Concepts.Observation.ObserverId)_.Id).ToArray();
+            var failedPartitions = await storage
+                .GetEventStore(request.EventStore)
+                .GetNamespace(request.Namespace)
+                .FailedPartitions
+                .GetFor(observerIds);
+            var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
+            if (observers.All(_ =>
+                _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber ||
+                failedObserverIds.Contains(_.Id)))
+            {
+                return new WaitForObserverCompletionResponse
+                {
+                    IsSuccess = !failedPartitions.Partitions.Any(),
+                    FailedPartitions = failedPartitions.Partitions.ToContract().ToArray()
+                };
+            }
+
+            await Task.Delay(ObserverCompletionPollingDelayMs, context.CancellationToken);
+        }
+    }
 
     /// <inheritdoc/>
     public Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default) =>

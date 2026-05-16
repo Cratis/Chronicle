@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the result of an append operation.
 /// </summary>
-public record AppendResult : IAppendResult
+public record AppendResult : IAppendResult, IAppendResultForObserverCompletion
 {
     /// <inheritdoc />
     public CorrelationId CorrelationId { get; init; } = CorrelationId.NotSet;
@@ -19,6 +19,18 @@ public record AppendResult : IAppendResult
     /// Gets the sequence number of the event that was appended, if successful.
     /// </summary>
     public EventSequenceNumber SequenceNumber { get; init; } = EventSequenceNumber.Unavailable;
+
+    /// <inheritdoc />
+    public EventStoreName EventStore { get; internal init; } = EventStoreName.NotSet;
+
+    /// <inheritdoc />
+    public EventStoreNamespaceName EventStoreNamespace { get; internal init; } = EventStoreNamespaceName.NotSet;
+
+    /// <inheritdoc />
+    public EventSequenceId EventSequenceId { get; internal init; } = EventSequenceId.Unspecified;
+
+    /// <inheritdoc />
+    public EventSequenceNumber TailSequenceNumber => SequenceNumber;
 
     /// <inheritdoc />
     public bool IsSuccess => !HasConstraintViolations && !HasErrors && !HasConcurrencyViolations;
@@ -42,6 +54,11 @@ public record AppendResult : IAppendResult
 
     /// <inheritdoc />
     public IEnumerable<AppendError> Errors { get; init; } = [];
+
+    /// <summary>
+    /// Gets the observer service used for waiting for completion.
+    /// </summary>
+    internal Contracts.Observation.IObservers? Observers { get; init; }
 
     /// <summary>
     /// Create a successful result.
