@@ -28,23 +28,49 @@ Use `latest-development-slim` and configure Chronicle storage through Chronicle 
 
 ### MongoDB with Docker Compose
 
+Chronicle uses MongoDB change streams, so MongoDB must run as a replica set. The following example initializes a single-node replica set for local development.
+
 ```yaml
 services:
   chronicle:
     image: cratis/chronicle:latest-development-slim
     depends_on:
       - mongodb
+      - mongodb-init
     environment:
       - Cratis__Chronicle__Storage__Type=MongoDB
-      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
+      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?replicaSet=rs0
     ports:
       - 8080:8080
       - 35000:35000
 
   mongodb:
     image: mongo:8
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - 27017:27017
+
+  mongodb-init:
+    image: mongo:8
+    depends_on:
+      - mongodb
+    restart: "no"
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        until mongosh --host mongodb --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --host mongodb --quiet --eval "
+        try {
+          rs.status();
+        } catch (e) {
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'mongodb:27017' }]
+          });
+        }"
 ```
 
 ### PostgreSQL with Docker Compose
