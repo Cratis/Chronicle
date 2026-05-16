@@ -84,6 +84,8 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         {
             // Delete SQLite database files inside the Chronicle server container between test runs
             // to prevent accumulated state from previous tests causing failures in subsequent ones.
+            // Honors excludePrefixes so that system event store databases are preserved when the
+            // caller passes excludePrefixes: [System] (the second cleanup in OnBeforeInitializeAsync).
             var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var sqliteBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
             if (sqliteBuilder.TryGetValue("Data Source", out var dataSourceObj) ||
@@ -93,7 +95,19 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 var directory = Path.GetDirectoryName(dataSource) ?? "/tmp";
                 var baseName = Path.GetFileNameWithoutExtension(dataSource);
                 var extension = Path.GetExtension(dataSource);
-                await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}*{extension}"]);
+
+                if (excludePrefixes?.Any() == true)
+                {
+                    // Build a shell command that deletes matching files but preserves any whose
+                    // name starts with an excluded prefix (e.g. chronicle_System*.db).
+                    var excludeConditions = string.Join(" && ", excludePrefixes.Select(p => $"! echo \"$f\" | grep -q '/{baseName}_{p}'"));
+                    var deleteCmd = $"for f in {directory}/{baseName}*{extension}; do if [ -f \"$f\" ] && {excludeConditions}; then rm -f \"$f\"; fi; done";
+                    await MongoDBContainer.ExecAsync(["sh", "-c", deleteCmd]);
+                }
+                else
+                {
+                    await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}*{extension}"]);
+                }
             }
 
             await ResetKernelState();
