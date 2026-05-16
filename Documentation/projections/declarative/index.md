@@ -68,6 +68,7 @@ Use model-bound projections when:
 | [Composite keys](composite-keys.md) | Multi-property key identification |
 | [Event context](event-context.md) | Using event metadata in projections |
 | [FromEvery](from-every.md) | Setting properties for all events in a projection |
+| [FromAll](from-all.md) | Subscribe to all event types without filtering |
 | [Initial values](initial-values.md) | Default values for read model properties |
 | [RemoveWithJoin](remove-with-join.md) | Cross-stream child removal |
 | [FromEventSequence](from-event-sequence.md) | Sourcing events from specific event sequences |

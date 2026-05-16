@@ -60,8 +60,7 @@ public class ExpressionParser
                     context.Advance(); // Skip dot
                     var nextToken = context.Expect(TokenType.Identifier);
                     if (nextToken is null) return null;
-                    propertyPathBuilder.Append('.');
-                    propertyPathBuilder.Append(nextToken.Value);
+                    propertyPathBuilder.Append('.').Append(nextToken.Value);
                 }
 
                 return new EventContextExpression(propertyPathBuilder.ToString());
