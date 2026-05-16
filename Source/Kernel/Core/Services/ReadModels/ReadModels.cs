@@ -4,12 +4,17 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
@@ -199,6 +204,57 @@ internal sealed class ReadModels(
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
+            // When no session is active, try to read from the sink first (the stored projected value).
+            // This correctly handles joins and events with custom key resolvers (UsingKey) because
+            // the projection observer processes all events and stores the result in the sink.
+            // ImmediateProjection only replays events by EventSourceId, which misses cross-source events.
+            // Note: when ReadModelKey is unspecified ("*") we cannot look it up by key in the sink;
+            // fall through to ImmediateProjection which replays all events and returns the last state.
+            if (string.IsNullOrEmpty(request.SessionId) && request.ReadModelKey != ReadModelKey.Unspecified.Value)
+            {
+                var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
+                var sink = await namespaceStorage.Sinks.GetFor(definition);
+
+                // For passive projections the sink never has data; fall through to immediate projection.
+                if (sink.TypeId != WellKnownSinkTypes.Null)
+                {
+                    var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
+                    var storedState = await sink.FindOrDefault(key);
+
+                    if (storedState is not null)
+                    {
+                        var schema = definition.GetSchemaForLatestGeneration();
+                        var jsonObject = expandoObjectConverter.ToJsonObject(storedState, schema);
+                        var readModelJson = jsonObject.ToJsonString(jsonSerializerOptions);
+
+                        var lastSeq = EventSequenceNumber.Unavailable;
+                        var stateDict = (IDictionary<string, object?>)storedState;
+                        if (stateDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) &&
+                            seqObj is not null)
+                        {
+                            try { lastSeq = (EventSequenceNumber)Convert.ToUInt64(seqObj); }
+                            catch { /* value not convertible to ulong; leave as Unavailable */ }
+                        }
+
+                        return new GetInstanceByKeyResponse
+                        {
+                            ReadModel = readModelJson,
+                            ProjectedEventsCount = 0,
+                            LastHandledEventSequenceNumber = lastSeq
+                        };
+                    }
+
+                    // Document not found in the sink: either it was never created or it was removed.
+                    // Return a null-model response; the projection observer is authoritative for active sinks.
+                    return new GetInstanceByKeyResponse
+                    {
+                        ReadModel = "null",
+                        ProjectedEventsCount = 0,
+                        LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable
+                    };
+                }
+            }
+
             var projectionKey = !string.IsNullOrEmpty(request.SessionId)
                 ? new ImmediateProjectionKey(
                     (ProjectionId)definition.ObserverIdentifier.Value,
@@ -297,7 +353,18 @@ internal sealed class ReadModels(
                 instance,
                 expandoObjectConverter);
 
-            readModels.Add(expandoObjectConverter.ToJsonObject(decrypted, schema).ToJsonString(jsonSerializerOptions));
+            var jsonObject = expandoObjectConverter.ToJsonObject(decrypted, schema);
+
+            // Ensure __lastHandledEventSequenceNumber is included in the JSON output since
+            // ToJsonObject may drop it if it is not mapped by the schema converter.
+            var decryptedDict = (IDictionary<string, object?>)decrypted;
+            if (decryptedDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
+            {
+                try { jsonObject[WellKnownProperties.LasHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
+                catch { /* leave sequence number absent if conversion fails */ }
+            }
+
+            readModels.Add(jsonObject.ToJsonString(jsonSerializerOptions));
         }
 
         return new GetAllInstancesResponse

@@ -39,6 +39,9 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="configureServices">Action to configure the services.</param>
 /// <param name="configureMongoDB">Action to configure MongoDB options.</param>
 /// <param name="configureWebHost">Action to configure <see cref="IWebHostBuilder"/>.</param>
+/// <param name="configureStorage">Optional action to configure Chronicle storage on the in-process silo instead of the default MongoDB.</param>
+/// <param name="defaultSinkTypeId">Optional default sink type identifier for projection registration.</param>
+/// <param name="storageHostConfiguration">Optional key-value pairs injected into <see cref="IConfiguration"/> so that <c>IOptions&lt;ChronicleOptions&gt;</c> picks up the correct storage type and connection string for non-MongoDB backends.</param>
 /// <param name="contentRoot">The content root path.</param>
 /// <typeparam name="TStartup">Type of the startup type.</typeparam>
 /// <remarks>When deriving this class and overriding <see cref="ChronicleWebApplicationFactory{TStartup}.ConfigureWebHost"/> remember to call base.ConfigureWebHost.</remarks>
@@ -47,6 +50,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     Action<IServiceCollection> configureServices,
     Action<IMongoDBBuilder> configureMongoDB,
     Action<IWebHostBuilder> configureWebHost,
+    Action<KernelCore::Cratis.Chronicle.Configuration.IChronicleBuilder>? configureStorage,
+    Cratis.Chronicle.Sinks.SinkTypeId? defaultSinkTypeId,
+    IReadOnlyDictionary<string, string?>? storageHostConfiguration,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
 {
@@ -59,6 +65,14 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var chronicleOptions = new Configuration.ChronicleOptions();
 
         var mongoServer = $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
+
+        // When a non-MongoDB backend is configured, inject its storage settings into IConfiguration
+        // so that IOptions<ChronicleOptions> binds the correct Type and ConnectionDetails.
+        if (storageHostConfiguration is not null)
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(storageHostConfiguration));
+        }
 
         builder.AddCratisMongoDB(
             mongo =>
@@ -85,11 +99,31 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
+                // When a non-MongoDB backend is configured, remove any MongoDB storage
+                // implementations that AddBindingsByConvention() just registered at the
+                // host level. Without this, the FallbackServiceProvider falls back to the
+                // host-level MongoDB implementations for storage types not explicitly
+                // registered at the silo level.
+                if (storageHostConfiguration is not null)
+                {
+                    var mongoStorageDescriptors = services
+                        .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
+                        .ToList();
+                    foreach (var descriptor in mongoStorageDescriptors)
+                    {
+                        services.Remove(descriptor);
+                    }
+                }
+
                 // Keep every host-level Chronicle client registration pointed at the
                 // shared test event store so reconnect does not create a second unnamed
                 // event store with its own failing OnConnected registration.
-                services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
-                services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                if (defaultSinkTypeId is not null)
+                {
+                    services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
+                }
 
                 // Register test services directly in DI so the first test works normally,
                 // and also capture them in the MutableServiceRegistry so subsequent tests
@@ -146,9 +180,21 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
-                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoServer, Constants.EventStore));
+                    chronicleBuilder =>
+                        (configureStorage ?? (cb => cb.WithMongoDB(mongoServer, Constants.EventStore)))(chronicleBuilder));
 
                 silo.AddActivityPropagation();
+
+                // When a non-MongoDB backend is configured, bind IOptions<ChronicleOptions> so that
+                // kernel types (e.g. Database) can read the storage type and connection string.
+                // The in-memory values were added to IConfiguration by ConfigureAppConfiguration above.
+                if (storageHostConfiguration is not null)
+                {
+                    silo.ConfigureServices(services =>
+                        services
+                            .AddOptions<Configuration.ChronicleOptions>()
+                            .BindConfiguration(Configuration.ChronicleOptions.SectionPath));
+                }
 
                 silo.ConfigureServices(services =>
                 {
@@ -238,6 +284,22 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
                         return new TestClientArtifactsActivator(sp, registry, loggerFactory);
                     });
+
+                    // When a non-MongoDB backend is configured, remove any MongoDB storage
+                    // implementations that AddBindingsByConvention() just discovered.
+                    // Both Storage.MongoDB and Storage.Sql assemblies are loaded, so convention
+                    // scanning registers both; the MongoDB types override the SQL registrations
+                    // made by WithSql earlier. Removing them restores the intended SQL backend.
+                    if (storageHostConfiguration is not null)
+                    {
+                        var mongoStorageDescriptors = services
+                            .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
+                            .ToList();
+                        foreach (var descriptor in mongoStorageDescriptors)
+                        {
+                            services.Remove(descriptor);
+                        }
+                    }
                 });
             })
             .UseConsoleLifetime();

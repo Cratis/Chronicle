@@ -20,10 +20,16 @@ on:
     paths:
       - "Source/**/*.cs"
       - "Source/**/*.csproj"
+      - "Integration/**"
+      - ".github/workflows/dotnet-build.yml"
+      - ".github/workflows/integration.yml"
 
 jobs:
   dotnet-build:
     runs-on: ubuntu-latest
+    outputs:
+      dotnet-cache-key: ${{ steps.export-cache-key.outputs.key }}
+      chronicle-image: ${{ steps.export-cache-key.outputs.image }}
 
     steps:
       - name: Checkout code
@@ -33,6 +39,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
@@ -67,6 +75,12 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true
 
+      - name: Export cache key and image
+        id: export-cache-key
+        run: |
+          echo "key=${{ env.DOTNET_CACHE }}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
+
       - name: Publish Docker Image
         run: |
           docker push ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
@@ -93,49 +107,17 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings
+        # Integration tests are executed by .github/workflows/integration.yml.
+        # Keep regular specs focused on non-integration test suites.
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration"
 
-  integration-specs:
-    runs-on: ubuntu-latest
+  integration:
     needs: [dotnet-build]
-    strategy:
-      fail-fast: false
-      matrix:
-        namespace:
-          - 'for_EventSequence'
-          - 'for_EventStoreSubscriptions'
-          - 'for_JobsManager'
-          - 'for_Reactors'
-          - 'for_ReadModels'
-          - 'for_Reducers'
-          - 'for_Webhooks'
-          - 'Jobs'
-          - 'Patches'
-          - 'Projections'
-    env:
-      NAMESPACE: Cratis.Chronicle.InProcess.Integration.${{ matrix.namespace }}
-      CHRONICLE_TEST_TIMEOUT_SECONDS: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            ${{ env.DOTNET8_VERSION }}
-            ${{ env.DOTNET9_VERSION }}
-            ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v4
-        id: dotnet-x64-output
-        with:
-          path: ./**/bin
-          key: ${{ env.DOTNET_CACHE }}
-
-      - name: Run integration tests
-        working-directory: ./Integration/DotNET.InProcess
-        run: dotnet test --no-build --filter FullyQualifiedName~${{ env.NAMESPACE }} --logger "console;verbosity=normal" --configuration Release
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+    with:
+      dotnet-cache-key: ${{ needs.dotnet-build.outputs.dotnet-cache-key }}
+      chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
 
   integration-api:
     runs-on: ubuntu-latest
@@ -174,7 +156,10 @@ jobs:
 
       - name: Run API integration tests
         working-directory: ./Integration/Api
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
+        # Keep build enabled for .NET 10 test projects. `--no-build` causes an
+        # invalid test assembly argument failure in this workflow context.
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true
+
   mongodb:
     runs-on: ubuntu-latest
     needs: [dotnet-build]

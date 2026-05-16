@@ -21,8 +21,8 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.EncryptionKeys,
             columns: table => new
             {
-                Identifier = table.StringColumn(migrationBuilder),
-                Revision = table.NumberColumn<uint>(migrationBuilder),
+                Identifier = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Revision = table.NumberColumn<uint>(migrationBuilder, nullable: false),
                 PublicKey = table.Column<byte[]>(nullable: false),
                 PrivateKey = table.Column<byte[]>(nullable: false)
             },

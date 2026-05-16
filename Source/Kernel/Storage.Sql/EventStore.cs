@@ -14,5 +14,6 @@ public class EventStore
     /// Gets or sets the name of the event store.
     /// </summary>
     [Key]
+    [MaxLength(200)]
     public required string Name { get; set; }
 }

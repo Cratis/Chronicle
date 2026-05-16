@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 
@@ -44,7 +45,7 @@ public static class EventSequenceStateConverter
         {
             tailSequenceNumbers = entry.TailSequenceNumberPerEventType.ToDictionary(
                 kvp => new EventTypeId(kvp.Key),
-                kvp => new EventSequenceNumber(Convert.ToUInt64(kvp.Value)));
+                kvp => new EventSequenceNumber(ToUInt64(kvp.Value)));
         }
 
         return new Chronicle.Storage.EventSequences.EventSequenceState
@@ -52,5 +53,34 @@ public static class EventSequenceStateConverter
             SequenceNumber = new EventSequenceNumber(entry.SequenceNumber),
             TailSequenceNumberPerEventType = tailSequenceNumbers
         };
+    }
+
+    /// <summary>
+    /// Converts a stored tail sequence number value to <see cref="ulong"/>.
+    /// </summary>
+    /// <param name="value">The stored value to convert.</param>
+    /// <returns>The converted <see cref="ulong"/> value.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the value is a <see cref="JsonElement"/> with an unsupported <see cref="JsonValueKind"/>.
+    /// </exception>
+    static ulong ToUInt64(object value)
+    {
+        if (value is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind == JsonValueKind.Number)
+            {
+                return jsonElement.GetUInt64();
+            }
+
+            if (jsonElement.ValueKind == JsonValueKind.String &&
+                ulong.TryParse(jsonElement.GetString(), out var parsed))
+            {
+                return parsed;
+            }
+
+            throw new InvalidOperationException($"Unsupported JsonElement value kind '{jsonElement.ValueKind}' for EventSequenceNumber conversion.");
+        }
+
+        return Convert.ToUInt64(value);
     }
 }

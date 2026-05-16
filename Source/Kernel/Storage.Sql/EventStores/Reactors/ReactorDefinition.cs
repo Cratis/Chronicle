@@ -41,10 +41,9 @@ public class ReactorDefinition
     public bool IsReplayable { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the tags the reactor belongs to.
+    /// Gets or sets the tags the reactor belongs to, stored as a JSON array string.
     /// </summary>
-    [Json]
-    public IEnumerable<string> Tags { get; set; } = [];
+    public string Tags { get; set; } = "[]";
 
     /// <summary>
     /// Gets or sets the filters to apply when observing events.

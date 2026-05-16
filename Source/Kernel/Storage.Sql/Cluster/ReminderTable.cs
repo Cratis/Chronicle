@@ -64,7 +64,7 @@ public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
     public async Task<string> UpsertRow(ReminderEntry entry)
     {
         var entity = entry.ToSql();
-        dbContext.Reminders.Update(entity);
+        await dbContext.Reminders.Upsert(entity);
         await dbContext.SaveChangesAsync();
         return entity.Id;
     }

@@ -32,7 +32,7 @@ public class ReadModelMigrator(
             name: tableName,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Document = table.StringColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.Id));

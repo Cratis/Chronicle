@@ -22,12 +22,12 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Changesets,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 ReadModelName = table.StringColumn(migrationBuilder),
                 ReadModelKey = table.StringColumn(migrationBuilder),
                 EventType = table.StringColumn(migrationBuilder),
                 SequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
-                CorrelationId = table.GuidColumn(migrationBuilder),
+                CorrelationId = table.GuidColumn(migrationBuilder, nullable: false),
                 ChangesetData = table.JsonColumn<string>(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Changesets}", x => x.Id));

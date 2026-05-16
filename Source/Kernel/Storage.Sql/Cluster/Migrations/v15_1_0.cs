@@ -22,7 +22,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Users,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Username = table.StringColumn(migrationBuilder),
                 Email = table.StringColumn(migrationBuilder, nullable: true),
                 PasswordHash = table.StringColumn(migrationBuilder, nullable: true),
@@ -39,7 +39,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Applications,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 ClientId = table.StringColumn(migrationBuilder),
                 ClientSecret = table.StringColumn(migrationBuilder, nullable: true),
                 DisplayName = table.StringColumn(migrationBuilder, nullable: true),
@@ -57,7 +57,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.DataProtectionKeys,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 FriendlyName = table.StringColumn(migrationBuilder),
                 Xml = table.StringColumn(migrationBuilder),
                 Created = table.DateTimeOffsetColumn(migrationBuilder),
@@ -68,7 +68,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.Patches,
             columns: table => new
             {
-                Name = table.StringColumn(migrationBuilder),
+                Name = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Version = table.StringColumn(migrationBuilder),
                 AppliedAt = table.DateTimeOffsetColumn(migrationBuilder),
             },
@@ -78,7 +78,7 @@ public class v15_1_0 : Migration
             name: WellKnownTableNames.SystemInformation,
             columns: table => new
             {
-                Id = table.NumberColumn<int>(migrationBuilder),
+                Id = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 Version = table.StringColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.SystemInformation}", x => x.Id));

@@ -23,7 +23,8 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
         await using var scope = await database.Cluster();
-        return await scope.DbContext.EventStores.Select(es => (EventStoreName)es.Name).ToListAsync();
+        var names = await scope.DbContext.EventStores.Select(es => es.Name).ToListAsync();
+        return names.Select(name => (EventStoreName)name);
     }
 
     /// <inheritdoc/>

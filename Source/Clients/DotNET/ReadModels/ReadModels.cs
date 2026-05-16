@@ -5,6 +5,7 @@ using System.Collections;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -188,7 +189,28 @@ public class ReadModels(
         };
 
         var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstanceByKey(request);
-        var instance = JsonSerializer.Deserialize(response.ReadModel, readModelType, jsonSerializerOptions);
+        var readModelJson = response.ReadModel;
+
+        // A "null" JSON value means the model was not found in the sink (e.g. removed or never created).
+        if (readModelJson == "null")
+        {
+            return default!;
+        }
+
+        // Mirror the __lastHandledEventSequenceNumber that the sink writes so that
+        // GetInstanceById results are consistent with sink-stored read models.
+        if (response.LastHandledEventSequenceNumber != EventSequenceNumber.Unavailable)
+        {
+            var jsonNode = JsonNode.Parse(readModelJson);
+            if (jsonNode is JsonObject jsonObj)
+            {
+                jsonObj["__lastHandledEventSequenceNumber"] =
+                    JsonValue.Create(response.LastHandledEventSequenceNumber);
+                readModelJson = jsonObj.ToJsonString(jsonSerializerOptions);
+            }
+        }
+
+        var instance = JsonSerializer.Deserialize(readModelJson, readModelType, jsonSerializerOptions);
         return instance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
     }
 

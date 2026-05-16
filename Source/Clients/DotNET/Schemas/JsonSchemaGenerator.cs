@@ -131,6 +131,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
+        // For enum types, embed the integer values and string names so that converters can
+        // detect enum fields and map between integer BSON values and string enum names.
+        if (formatType.IsEnum)
+        {
+            var enumValues = Enum.GetValuesAsUnderlyingType(formatType).Cast<int>().ToArray();
+            var enumNames = Enum.GetNames(formatType);
+            schemaObj["enum"] = new JsonArray([.. enumValues.Select(v => (JsonNode?)JsonValue.Create(v))]);
+            schemaObj["x-enumNames"] = new JsonArray([.. enumNames.Select(n => (JsonNode?)JsonValue.Create(n))]);
+        }
+
         // Add format for known types
         if (_typeFormats.IsKnown(formatType))
         {

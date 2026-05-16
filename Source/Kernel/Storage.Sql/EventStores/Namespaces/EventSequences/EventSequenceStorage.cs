@@ -42,7 +42,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId);
+        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
         if (entry is null)
         {
             return new Chronicle.Storage.EventSequences.EventSequenceState();
@@ -68,7 +68,8 @@ public class EventSequenceStorage(
         var query = scope.DbContext.Events.AsQueryable();
         if (lastEventSequenceNumber is not null)
         {
-            query = query.Where(e => e.SequenceNumber <= lastEventSequenceNumber);
+            var lastSeqNumValue = lastEventSequenceNumber.Value;
+            query = query.Where(e => e.SequenceNumber <= lastSeqNumValue);
         }
 
         if (eventTypes?.Any() == true)
@@ -101,8 +102,9 @@ public class EventSequenceStorage(
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+            var seqNumValue = sequenceNumber.Value;
             var existingEvent = await scope.DbContext.Events
-                .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+                .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumValue);
 
             if (existingEvent is not null)
             {
@@ -170,7 +172,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumRevise = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == seqNumRevise);
         if (eventEntry is null)
         {
             return;
@@ -186,7 +189,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumReplace = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumReplace);
         EventEntryConverter.ReplaceAllGenerationContent(eventEntry, content);
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -209,8 +213,9 @@ public class EventSequenceStorage(
             foreach (var eventToAppend in eventsArray)
             {
                 // Check if sequence number already exists
+                var appendManySeqNum = eventToAppend.SequenceNumber.Value;
                 var existingEvent = await scope.DbContext.Events
-                    .FirstOrDefaultAsync(e => e.SequenceNumber == eventToAppend.SequenceNumber);
+                    .FirstOrDefaultAsync(e => e.SequenceNumber == appendManySeqNum);
 
                 if (existingEvent is not null)
                 {
@@ -270,7 +275,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumRedact = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumRedact);
 
         // Replace content with redaction marker
         eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
@@ -478,7 +484,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= sequenceNumber);
+        var nextSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= nextSeqNumValue);
 
         if (eventTypes?.Any() == true)
         {
@@ -564,8 +571,9 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+        var seqNumAt = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events
-            .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber)
+            .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumAt)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
         var eventType = EventEntryConverter.GetEventType(eventEntry);
@@ -638,9 +646,10 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= sequenceNumber);
+        var fromSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -663,18 +672,20 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+        var startValue = start.Value;
+        var endValue = end.Value;
         var query = scope.DbContext.Events
             .Where(e =>
-                e.SequenceNumber >= start
-                && e.SequenceNumber <= end);
+                e.SequenceNumber >= startValue
+                && e.SequenceNumber <= endValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -687,7 +698,7 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -700,9 +711,10 @@ public class EventSequenceStorage(
         IEnumerable<EventType>? eventTypes = default,
         CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= start);
+        var limitStartValue = start.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= limitStartValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -727,6 +739,6 @@ public class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 }

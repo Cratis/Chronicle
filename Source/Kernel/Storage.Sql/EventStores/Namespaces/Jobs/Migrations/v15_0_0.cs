@@ -22,8 +22,8 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Jobs,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
-                Type = table.StringColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
+                Type = table.StringColumn(migrationBuilder, maxLength: 200),
                 Status = table.NumberColumn<int>(migrationBuilder),
                 Created = table.Column<DateTimeOffset>(nullable: false),
                 StateJson = table.JsonColumn<string>(migrationBuilder),

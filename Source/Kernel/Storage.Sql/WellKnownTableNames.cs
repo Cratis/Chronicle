@@ -91,7 +91,7 @@ public static class WellKnownTableNames
     /// <summary>
     /// The table that holds observer definitions.
     /// </summary>
-    public const string ObserverDefinitions = "Observers";
+    public const string ObserverDefinitions = "ObserverDefinitions";
 
     /// <summary>
     /// The table that holds reducer definitions.

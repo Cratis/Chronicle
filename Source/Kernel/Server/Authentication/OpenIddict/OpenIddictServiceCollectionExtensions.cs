@@ -71,13 +71,11 @@ public static class OpenIddictServiceCollectionExtensions
                     options.AddEncryptionCertificate(cert)
                            .AddSigningCertificate(cert);
                 }
-#if DEVELOPMENT
-                else
+                else if (IsDevelopmentEnvironment())
                 {
                     options.AddEphemeralEncryptionKey()
                            .AddEphemeralSigningKey();
                 }
-#else
                 else
                 {
                     throw new InvalidOperationException(
@@ -85,7 +83,6 @@ public static class OpenIddictServiceCollectionExtensions
                         "Configure 'EncryptionCertificate:CertificatePath' and 'EncryptionCertificate:CertificatePassword' " +
                         "in your configuration. See the Chronicle documentation for more details on generating and configuring certificates.");
                 }
-#endif
 
                 // Determine if the identity provider has TLS enabled (token endpoint runs on the management port).
                 // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls for backward compatibility.
@@ -93,7 +90,6 @@ public static class OpenIddictServiceCollectionExtensions
                 var identityProviderHasSecureCertificate = identityProviderCertificate.Enabled && !string.IsNullOrEmpty(identityProviderCertificate.CertificatePath);
 
                 // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
-#if DEVELOPMENT
                 if (!identityProviderHasSecureCertificate)
                 {
                     options.UseAspNetCore()
@@ -105,19 +101,6 @@ public static class OpenIddictServiceCollectionExtensions
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough();
                 }
-#else
-                if (!identityProviderHasSecureCertificate)
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough()
-                           .DisableTransportSecurityRequirement();
-                }
-                else
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough();
-                }
-#endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
                 {
@@ -187,5 +170,13 @@ public static class OpenIddictServiceCollectionExtensions
             });
 
         return services;
+    }
+
+    static bool IsDevelopmentEnvironment()
+    {
+        var dotnetEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+        var aspnetcoreEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        return string.Equals(dotnetEnvironment, "Development", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(aspnetcoreEnvironment, "Development", StringComparison.OrdinalIgnoreCase);
     }
 }

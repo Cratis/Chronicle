@@ -21,8 +21,8 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReplayedReadModels,
             columns: table => new
             {
-                ObserverId = table.StringColumn(migrationBuilder),
-                ReadModelIdentifier = table.StringColumn(migrationBuilder),
+                ObserverId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                ReadModelIdentifier = table.StringColumn(migrationBuilder, maxLength: 200),
                 ReadModelName = table.StringColumn(migrationBuilder),
                 RevertModelName = table.StringColumn(migrationBuilder),
                 Started = table.Column<DateTimeOffset>(nullable: false)

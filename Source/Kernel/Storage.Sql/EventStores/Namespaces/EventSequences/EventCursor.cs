@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// Represents an implementation of <see cref="IEventCursor"/> for SQL-based event storage.
 /// </summary>
 /// <param name="query">The queryable source of events.</param>
+/// <param name="scope">The <see cref="DbContextScope{EventSequenceDbContext}"/> that owns the query context.</param>
 /// <param name="eventStore">The event store name.</param>
 /// <param name="namespace">The namespace name.</param>
 /// <param name="identityStorage">Identity storage for resolving identities.</param>
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
 public class EventCursor(
     IQueryable<EventEntry> query,
+    DbContextScope<EventSequenceDbContext> scope,
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IIdentityStorage identityStorage,
@@ -27,6 +29,7 @@ public class EventCursor(
     CancellationToken cancellationToken = default) : IEventCursor
 {
     readonly IQueryable<EventEntry> _query = query;
+    readonly DbContextScope<EventSequenceDbContext> _scope = scope;
     readonly EventStoreName _eventStore = eventStore;
     readonly EventStoreNamespaceName _namespace = @namespace;
     readonly IIdentityStorage _identityStorage = identityStorage;
@@ -94,8 +97,5 @@ public class EventCursor(
     }
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        // Nothing to dispose for EF Core queryables
-    }
+    public void Dispose() => _scope.DisposeAsync().AsTask().GetAwaiter().GetResult();
 }

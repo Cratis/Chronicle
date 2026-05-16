@@ -46,10 +46,9 @@ public class ReducerDefinition
     public Guid SinkConfigurationId { get; set; } = Guid.Empty;
 
     /// <summary>
-    /// Gets or sets the tags the reducer belongs to.
+    /// Gets or sets the tags the reducer belongs to, stored as a JSON array string.
     /// </summary>
-    [Json]
-    public IEnumerable<string> Tags { get; set; } = [];
+    public string Tags { get; set; } = "[]";
 
     /// <summary>
     /// Gets or sets the filters to apply when observing events.

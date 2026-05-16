@@ -6,7 +6,7 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
         <ServerGarbageCollection>true</ServerGarbageCollection>
-        <NoWarn>$(NoWarn);RCS1093</NoWarn>
+        <NoWarn>$(NoWarn);RCS1093;CS0436</NoWarn>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
