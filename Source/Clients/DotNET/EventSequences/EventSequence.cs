@@ -136,7 +136,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
-            Observers = _servicesAccessor.Services.Observers
+            Observers = GetObservers()
         };
         if (_appendedEventsRaised is not null)
         {
@@ -213,7 +213,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
-            Observers = _servicesAccessor.Services.Observers
+            Observers = GetObservers()
         };
         NotifyAppendMany(
             eventsList,
@@ -276,7 +276,7 @@ public class EventSequence(
             EventStore = eventStoreName,
             EventStoreNamespace = @namespace,
             EventSequenceId = eventSequenceId,
-            Observers = _servicesAccessor.Services.Observers
+            Observers = GetObservers()
         };
 
         if (_appendedEventsRaised is not null)
@@ -467,7 +467,7 @@ public class EventSequence(
                 EventStore = eventStoreName,
                 EventStoreNamespace = @namespace,
                 EventSequenceId = eventSequenceId,
-                Observers = _servicesAccessor.Services.Observers
+                Observers = GetObservers()
             };
         }
 
@@ -480,8 +480,20 @@ public class EventSequence(
             ConstraintViolations = batchResult.ConstraintViolations,
             ConcurrencyViolation = batchResult.ConcurrencyViolations.FirstOrDefault(),
             Errors = batchResult.Errors,
-            Observers = _servicesAccessor.Services.Observers
+            Observers = GetObservers()
         };
+    }
+
+    Contracts.Observation.IObservers? GetObservers()
+    {
+        try
+        {
+            return _servicesAccessor.Services.Observers;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
     }
 
     async Task<Dictionary<EventSourceId, ConcurrencyScope>> ResolveConcurrencyScopes(
