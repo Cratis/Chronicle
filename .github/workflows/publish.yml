@@ -683,7 +683,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Production/Dockerfile
+          file: ./Docker/DevelopmentSlim/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.docker-tags.outputs.tags }}
