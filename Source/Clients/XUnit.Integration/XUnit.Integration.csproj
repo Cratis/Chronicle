@@ -18,7 +18,7 @@
 
         <!-- Kernel assemblies as runtime-only with aliases -->
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
-            <Aliases>global,KernelConcepts</Aliases>
+            <Aliases>KernelConcepts</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
