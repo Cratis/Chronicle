@@ -49,6 +49,9 @@ public class NullSink : ISink
     public Task EndReplay(ReplayContext context) => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task Remove(ReadModelContainerName containerName) => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key) => Task.FromResult<ExpandoObject?>(null);
 
     /// <inheritdoc/>

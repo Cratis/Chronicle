@@ -51,11 +51,5 @@ public class ReplayedReadModelsStorage(IEventStoreNamespaceDatabase database) : 
         {
             await _collection.DeleteOneAsync(filter);
         }
-
-        var existingCollectionNames = await (await _collection.Database.ListCollectionNamesAsync()).ToListAsync();
-        if (existingCollectionNames.Contains(occurrence.RevertContainerName))
-        {
-            await _collection.Database.DropCollectionAsync(occurrence.RevertContainerName);
-        }
     }
 }

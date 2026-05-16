@@ -16,6 +16,8 @@ using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -114,6 +116,16 @@ public class Sink(
 
     /// <inheritdoc/>
     public Task EndReplay(ReplayContext context) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public async Task Remove(ReadModelContainerName containerName)
+    {
+        await using var scope = await database.Namespace(eventStoreName, @namespace);
+        var sqlGenerationHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
+        var delimitedTableName = sqlGenerationHelper.DelimitIdentifier(containerName.Value);
+        var sql = "DROP TABLE IF EXISTS " + delimitedTableName;
+        await scope.DbContext.Database.ExecuteSqlRawAsync(sql);
+    }
 
     /// <inheritdoc/>
     public async Task PrepareInitialRun()

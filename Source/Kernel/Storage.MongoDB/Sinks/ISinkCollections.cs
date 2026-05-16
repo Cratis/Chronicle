@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -55,4 +56,11 @@ public interface ISinkCollections
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task PrepareInitialRun();
+
+    /// <summary>
+    /// Remove a collection by name.
+    /// </summary>
+    /// <param name="collectionName">The collection name.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    Task Remove(ReadModelContainerName collectionName);
 }
