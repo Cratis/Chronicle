@@ -12,8 +12,8 @@
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.3.3" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.9.12" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.9.12" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.8.2" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.8.2" />
     <PackageVersion Include="Cratis.Arc" Version="20.18.8" />
     <PackageVersion Include="Cratis.Arc.Core" Version="20.18.8" />
     <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.18.8" />
