@@ -96,17 +96,21 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 var baseName = Path.GetFileNameWithoutExtension(dataSource);
                 var extension = Path.GetExtension(dataSource);
 
+                // Only delete event-store and namespace databases (those with an underscore separator,
+                // e.g. chronicle_Testing.db, chronicle_System_default.db). Never delete the cluster
+                // database (chronicle.db) — it holds authentication state (OpenIddict, admin accounts)
+                // that must survive between test runs; deleting it causes 401 Unauthorized failures.
                 if (excludePrefixes?.Any() == true)
                 {
-                    // Build a shell command that deletes matching files but preserves any whose
-                    // name starts with an excluded prefix (e.g. chronicle_System*.db).
+                    // Build a shell command that deletes matching event-store files but preserves any
+                    // whose event-store prefix matches an excluded prefix (e.g. chronicle_System*.db).
                     var excludeConditions = string.Join(" && ", excludePrefixes.Select(p => $"! echo \"$f\" | grep -q '/{baseName}_{p}'"));
-                    var deleteCmd = $"for f in {directory}/{baseName}*{extension}; do if [ -f \"$f\" ] && {excludeConditions}; then rm -f \"$f\"; fi; done";
+                    var deleteCmd = $"for f in {directory}/{baseName}_*{extension}; do if [ -f \"$f\" ] && {excludeConditions}; then rm -f \"$f\"; fi; done";
                     await MongoDBContainer.ExecAsync(["sh", "-c", deleteCmd]);
                 }
                 else
                 {
-                    await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}*{extension}"]);
+                    await MongoDBContainer.ExecAsync(["sh", "-c", $"rm -f {directory}/{baseName}_*{extension}"]);
                 }
             }
 
