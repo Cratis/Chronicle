@@ -49,7 +49,7 @@ public class an_oauth_client : Specification
         });
     }
 
-    protected class FakeHttpMessageHandler : HttpMessageHandler
+    public class FakeHttpMessageHandler : HttpMessageHandler
     {
         readonly Queue<HttpResponseMessage> _responses = new();
 
