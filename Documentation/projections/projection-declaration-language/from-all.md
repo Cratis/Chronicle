@@ -1,6 +1,8 @@
 # All Block
 
-The `all` keyword is a top-level block that applies mappings to every event that affects the projection, regardless of event type. Unlike `from Event`, which targets a specific event type, `all` runs for every event processed by the projection. This is useful for setting common properties like last-update timestamps without repeating the mapping in every `from` block.
+The `all` keyword makes the projection subscribe to **every event type in the system**, regardless of the explicit `from` blocks listed in the projection. Mappings defined inside `all` run for every event that arrives, across all event types.
+
+This is distinct from `every`, which only runs for event types the projection **explicitly subscribes to** through `from` blocks.
 
 ## Basic Syntax
 
@@ -12,129 +14,70 @@ all
 ## Simple Example
 
 ```pdl
-projection User => UserReadModel
+projection EventCounter => EventCounterReadModel
   all
-    LastUpdated = $eventContext.occurred
+    count totalEvents
+    lastOccurred = $eventContext.occurred
+```
+
+The projection above receives **all events in the system** — even event types not listed in any `from` block — and increments `totalEvents` for each one.
+
+## Combining `all` with `from` Blocks
+
+You can combine `all` with explicit `from` blocks:
+
+```pdl
+projection ActivityFeed => ActivityFeedModel
+  all
+    count totalSystemEvents
+    lastActivity = $eventContext.occurred
 
   from UserRegistered
-    Name = name
-    Email = email
-
-  from UserEmailChanged
-    Email = email
+    recentUsers = name
 ```
 
-Both `UserRegistered` and `UserEmailChanged` events set `LastUpdated`, while each `from` block handles its own properties.
-
-## With AutoMap
-
-Apply AutoMap across all events:
-
-```pdl
-projection Product => ProductReadModel
-  all
-    automap
-    LastModified = $eventContext.occurred
-```
-
-## Common Patterns
-
-### Audit Fields
-
-Track when the projection was last modified:
-
-```pdl
-all
-  LastModified = $eventContext.occurred
-  LastSequenceNumber = $eventContext.sequenceNumber
-  LastCorrelationId = $eventContext.correlationId
-```
-
-### Event Source Tracking
-
-Store which event source last modified the projection:
-
-```pdl
-all
-  LastModifiedBy = $eventContext.eventSourceId
-  LastModifiedAt = $eventContext.occurred
-```
-
-### Version Tracking
-
-Maintain the latest event sequence for optimistic concurrency:
-
-```pdl
-all
-  Version = $eventContext.sequenceNumber
-  UpdatedAt = $eventContext.occurred
-```
-
-## Examples
-
-### User Profile with Audit
-
-```pdl
-projection User => UserReadModel
-  all
-    LastUpdated = $eventContext.occurred
-    LastSequenceNumber = $eventContext.sequenceNumber
-
-  from UserRegistered
-    Name = name
-    Email = email
-    CreatedAt = $eventContext.occurred
-
-  from UserEmailChanged
-    Email = email
-
-  from UserNameChanged
-    Name = name
-```
-
-### Order with Tracking
-
-```pdl
-projection Order => OrderReadModel
-  all
-    LastEventTime = $eventContext.occurred
-    EventCount = $eventContext.sequenceNumber
-
-  from OrderPlaced
-    CustomerId = customerId
-    Total = total
-    Status = "Placed"
-
-  from OrderShipped
-    ShippedAt = $eventContext.occurred
-    Status = "Shipped"
-
-  from OrderDelivered
-    DeliveredAt = $eventContext.occurred
-    Status = "Delivered"
-```
+Here, `totalSystemEvents` increments for every event in the system, while `recentUsers` is only set when a `UserRegistered` event arrives.
 
 ## Difference Between `all` and `every`
 
 | Feature | `all` | `every` |
 |---------|--------|---------|
-| Applies to | All event types | All event types |
-| Scope | Whole projection | Whole projection |
-| AutoMap support | Yes | Yes |
-| Typical use | "subscribe to every event" | "common fields for every event" |
+| Event scope | **All event types in the system** | Only types listed in `from` blocks |
+| Subscription mechanism | `SubscribeToAllEvents` (implicit, system-wide) | Explicit per-type subscription |
+| Typical use | System-wide audit logs, global counters | Common fields across explicitly subscribed events |
 
-Both directives process all events. The distinction is conceptual: `all` expresses that the projection *subscribes* to all event types, while `every` adds common per-event side effects. In practice, both achieve the same result.
+### Example contrast
+
+```pdl
+# Uses 'every' — only runs for UserRegistered and UserEmailChanged
+projection UserProfile => UserProfileModel
+  every
+    LastUpdated = $eventContext.occurred
+
+  from UserRegistered
+    Name = name
+
+  from UserEmailChanged
+    Email = email
+```
+
+```pdl
+# Uses 'all' — runs for every event type in the entire system
+projection SystemAuditLog => AuditLogModel
+  all
+    count totalEvents
+    lastEventAt = $eventContext.occurred
+```
 
 ## When to Use
 
 **Use `all` when:**
 
-- Setting last-modified timestamps
-- Tracking sequence numbers or correlation IDs
-- Maintaining version counters
-- Applying AutoMap universally across all event types
+- Building system-wide audit logs or metrics
+- Tracking total event counts across all types
+- Updating timestamps based on any activity in the system
 
-**Avoid `all` when:**
+**Use `every` instead when:**
 
-- Only specific events should update a property
-- Different event types require different mapping logic
+- Only events the projection explicitly subscribes to should trigger the mapping
+- You want common fields across your own `from` blocks, not unrelated system events

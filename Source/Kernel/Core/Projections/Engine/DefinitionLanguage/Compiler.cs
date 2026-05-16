@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 public class Compiler
 {
     bool _hasNoAutoMapDirective;
+    bool _hasAllBlock;
 
     /// <summary>
     /// Gets the read model identifier from an AST Document.
@@ -95,6 +96,7 @@ public class Compiler
 
         // Check if NoAutoMapDirective is present in the projection
         _hasNoAutoMapDirective = projection.Directives.OfType<NoAutoMapDirective>().Any();
+        _hasAllBlock = projection.Directives.OfType<AllBlock>().Any();
 
         // Extract event sequence ID from sequence directive, or default to Log
         var eventSequenceId = EventSequenceId.Log;
@@ -135,7 +137,8 @@ public class Compiler
             FromEventProperty: null,
             LastUpdated: DateTimeOffset.UtcNow,
             Tags: default,
-            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled);
+            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled,
+            SubscribesToAllEvents: _hasAllBlock);
     }
 
     void ProcessDirective(

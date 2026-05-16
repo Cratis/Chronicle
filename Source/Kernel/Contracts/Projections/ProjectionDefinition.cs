@@ -118,4 +118,10 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(18, IsRequired = true)]
     public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
+
+    /// <summary>
+    /// Gets or sets whether the projection subscribes to all event types in the system.
+    /// </summary>
+    [ProtoMember(19)]
+    public bool SubscribesToAllEvents { get; set; }
 }
