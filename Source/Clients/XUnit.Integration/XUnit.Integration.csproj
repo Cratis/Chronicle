@@ -12,21 +12,13 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
     </ItemGroup>
 
-    <!-- The TypeDiscovery generator cannot handle extern-aliased Kernel assemblies in this
-         project and produces CS0234 errors in generated code. Remove it. -->
-    <Target Name="RemoveTypeDiscoveryGenerator" BeforeTargets="CoreCompile">
-        <ItemGroup>
-            <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'Cratis.Fundamentals.TypeDiscovery.Generator'" />
-        </ItemGroup>
-    </Target>
-
     <ItemGroup>
         <ProjectReference Include="../DotNET/DotNET.csproj" />
         <ProjectReference Include="../AspNetCore/AspNetCore.csproj" />
 
         <!-- Kernel assemblies as runtime-only with aliases -->
         <ProjectReference Include="../../Kernel/Concepts/Concepts.csproj">
-            <Aliases>KernelConcepts</Aliases>
+            <Aliases>global,KernelConcepts</Aliases>
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
         <ProjectReference Include="../../Kernel/Core/Core.csproj">
