@@ -34,7 +34,7 @@ public class and_all_affected_observers_have_reached_tail : given.all_dependenci
 
         _observerDefinitionsStorage.GetAll().Returns([observerDefinition]);
         _observerStateStorage.GetAll().Returns([observerState]);
-        _failedPartitionsStorage.GetFor(Arg.Any<Concepts.Observation.ObserverId?>()).Returns(new Concepts.Observation.FailedPartitions());
+        _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(new Concepts.Observation.FailedPartitions());
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(observer);
     }
 

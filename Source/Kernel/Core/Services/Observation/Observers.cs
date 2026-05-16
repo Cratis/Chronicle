@@ -57,31 +57,21 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
                 };
             }
 
-            var observerIds = observers.Select(_ => _.Id).ToHashSet(StringComparer.Ordinal);
+            var observerIds = observers.Select(_ => (Concepts.Observation.ObserverId)_.Id).ToArray();
             var failedPartitions = await storage
                 .GetEventStore(request.EventStore)
                 .GetNamespace(request.Namespace)
                 .FailedPartitions
-                .GetFor(default);
-            var relevantFailedPartitions = failedPartitions
-                .Partitions
-                .Where(_ => observerIds.Contains(_.ObserverId.Value))
-                .ToArray();
-
-            if (relevantFailedPartitions.Length > 0)
+                .GetFor(observerIds);
+            var failedObserverIds = failedPartitions.Partitions.Select(_ => _.ObserverId.Value).ToHashSet(StringComparer.Ordinal);
+            if (observers.All(_ =>
+                _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber ||
+                failedObserverIds.Contains(_.Id)))
             {
                 return new WaitForObserverCompletionResponse
                 {
-                    IsSuccess = false,
-                    FailedPartitions = relevantFailedPartitions.ToContract().ToArray()
-                };
-            }
-
-            if (observers.All(_ => _.LastHandledEventSequenceNumber >= request.TailEventSequenceNumber))
-            {
-                return new WaitForObserverCompletionResponse
-                {
-                    IsSuccess = true
+                    IsSuccess = !failedPartitions.Partitions.Any(),
+                    FailedPartitions = failedPartitions.Partitions.ToContract().ToArray()
                 };
             }
 

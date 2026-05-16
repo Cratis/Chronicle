@@ -45,7 +45,7 @@ public class and_any_affected_observer_has_failed_partitions : given.all_depende
 
         _observerDefinitionsStorage.GetAll().Returns([observerDefinition]);
         _observerStateStorage.GetAll().Returns([observerState]);
-        _failedPartitionsStorage.GetFor(Arg.Any<Concepts.Observation.ObserverId?>()).Returns(failedPartitions);
+        _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(failedPartitions);
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(observer);
     }
 

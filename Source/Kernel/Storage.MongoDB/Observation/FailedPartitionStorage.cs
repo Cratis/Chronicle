@@ -55,4 +55,21 @@ public class FailedPartitionStorage(IEventStoreNamespaceDatabase database) : IFa
             Partitions = await cursor.ToListAsync()
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<FailedPartitions> GetFor(IEnumerable<ObserverId> observerIds)
+    {
+        var ids = observerIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new FailedPartitions();
+        }
+
+        using var cursor = await _collection.FindAsync(_ => ids.Contains(_.ObserverId)).ConfigureAwait(false);
+
+        return new FailedPartitions
+        {
+            Partitions = await cursor.ToListAsync()
+        };
+    }
 }
