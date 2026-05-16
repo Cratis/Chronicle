@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
@@ -53,16 +54,17 @@ public class ExpressionParser
                 if (propertyToken is null) return null;
 
                 // Build property path by consuming all dot-separated identifiers
-                var propertyPath = propertyToken.Value;
+                var propertyPathBuilder = new StringBuilder(propertyToken.Value);
                 while (context.Check(TokenType.Dot))
                 {
                     context.Advance(); // Skip dot
                     var nextToken = context.Expect(TokenType.Identifier);
                     if (nextToken is null) return null;
-                    propertyPath += "." + nextToken.Value;
+                    propertyPathBuilder.Append('.');
+                    propertyPathBuilder.Append(nextToken.Value);
                 }
 
-                return new EventContextExpression(propertyPath);
+                return new EventContextExpression(propertyPathBuilder.ToString());
             }
 
             if (name.Equals("causedBy", StringComparison.OrdinalIgnoreCase))
