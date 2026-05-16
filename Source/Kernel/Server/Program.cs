@@ -165,6 +165,8 @@ hostBuilder
                 chronicleBuilder.WithSql(chronicleOptions);
             else
                 chronicleBuilder.WithMongoDB(chronicleOptions);
+
+            chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
         }))
    .ConfigureServices((context, services) =>
    {

@@ -28,6 +28,8 @@
         <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
         <Project Path="Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj" />
+        <Project Path="Source/Kernel/Storage.Vault/Storage.Vault.csproj" />
+        <Project Path="Source/Kernel/Storage.Vault.Specs/Storage.Vault.Specs.csproj" />
     </Folder>
     <Folder Name="/Source/Tools/">
         <Project Path="Source/Tools/AssemblyFixer/AssemblyFixer.csproj" />
