@@ -1,11 +1,11 @@
 # From All
 
-The `from $all` directive applies mappings to every event that affects the projection, regardless of event type. Unlike `from Event`, which targets a specific event type, `from $all` runs for every event processed by the projection. This is useful for setting common properties like last-update timestamps without repeating the mapping in every `from` block.
+The `from all` directive applies mappings to every event that affects the projection, regardless of event type. Unlike `from Event`, which targets a specific event type, `from all` runs for every event processed by the projection. This is useful for setting common properties like last-update timestamps without repeating the mapping in every `from` block.
 
 ## Basic Syntax
 
 ```pdl
-from $all
+from all
   {mappings}
 ```
 
@@ -13,7 +13,7 @@ from $all
 
 ```pdl
 projection User => UserReadModel
-  from $all
+  from all
     LastUpdated = $eventContext.occurred
 
   from UserRegistered
@@ -32,7 +32,7 @@ Apply AutoMap across all events:
 
 ```pdl
 projection Product => ProductReadModel
-  from $all
+  from all
     automap
     LastModified = $eventContext.occurred
 ```
@@ -44,7 +44,7 @@ projection Product => ProductReadModel
 Track when the projection was last modified:
 
 ```pdl
-from $all
+from all
   LastModified = $eventContext.occurred
   LastSequenceNumber = $eventContext.sequenceNumber
   LastCorrelationId = $eventContext.correlationId
@@ -55,7 +55,7 @@ from $all
 Store which event source last modified the projection:
 
 ```pdl
-from $all
+from all
   LastModifiedBy = $eventContext.eventSourceId
   LastModifiedAt = $eventContext.occurred
 ```
@@ -65,7 +65,7 @@ from $all
 Maintain the latest event sequence for optimistic concurrency:
 
 ```pdl
-from $all
+from all
   Version = $eventContext.sequenceNumber
   UpdatedAt = $eventContext.occurred
 ```
@@ -76,7 +76,7 @@ from $all
 
 ```pdl
 projection User => UserReadModel
-  from $all
+  from all
     LastUpdated = $eventContext.occurred
     LastSequenceNumber = $eventContext.sequenceNumber
 
@@ -96,7 +96,7 @@ projection User => UserReadModel
 
 ```pdl
 projection Order => OrderReadModel
-  from $all
+  from all
     LastEventTime = $eventContext.occurred
     EventCount = $eventContext.sequenceNumber
 
@@ -114,27 +114,27 @@ projection Order => OrderReadModel
     Status = "Delivered"
 ```
 
-## Difference Between `from $all` and `every`
+## Difference Between `from all` and `every`
 
-| Feature | `from $all` | `every` |
+| Feature | `from all` | `every` |
 |---------|-------------|---------|
 | Applies to | All event types | All event types |
 | Scope | Whole projection | Whole projection |
 | AutoMap support | Yes | Yes |
 | Typical use | "subscribe to every event" | "common fields for every event" |
 
-Both directives process all events. The distinction is conceptual: `from $all` expresses that the projection *subscribes* to all event types, while `every` adds common per-event side effects. In practice, both achieve the same result.
+Both directives process all events. The distinction is conceptual: `from all` expresses that the projection *subscribes* to all event types, while `every` adds common per-event side effects. In practice, both achieve the same result.
 
 ## When to Use
 
-**Use `from $all` when:**
+**Use `from all` when:**
 
 - Setting last-modified timestamps
 - Tracking sequence numbers or correlation IDs
 - Maintaining version counters
 - Applying AutoMap universally across all event types
 
-**Avoid `from $all` when:**
+**Avoid `from all` when:**
 
 - Only specific events should update a property
 - Different event types require different mapping logic

@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 
 /// <summary>
-/// Represents a from $all block in the projection DSL.
+/// Represents a from all block in the projection DSL.
 /// </summary>
 /// <param name="Mappings">The property mappings.</param>
 /// <param name="AutoMap">Auto-mapping setting for this block.</param>

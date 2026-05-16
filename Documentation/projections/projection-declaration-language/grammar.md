@@ -39,6 +39,7 @@ ProjDirective   = "no", "automap", NL
                 | CompositeKeyDecl ;
 
 Block           = EveryBlock
+                | FromAllBlock
                 | FromEventBlock
                 | JoinBlock
                 | ChildrenBlock
@@ -51,6 +52,12 @@ EveryBlock      = "every", NL,
                     { MappingLine },
                     [ "exclude", "children", NL ],
                   DEDENT ;
+
+FromAllBlock    = "from", "all", NL,
+                  [ INDENT,
+                    [ "automap" | "no", "automap", NL ],
+                    { MappingLine },
+                  DEDENT ] ;
 
 FromEventBlock  = "from", EventSpec, { ",", EventSpec },
                   NL,
@@ -207,6 +214,7 @@ Main building blocks of a projection:
 
 ```ebnf
 Block = EveryBlock
+      | FromAllBlock
       | FromEventBlock
       | JoinBlock
       | ChildrenBlock

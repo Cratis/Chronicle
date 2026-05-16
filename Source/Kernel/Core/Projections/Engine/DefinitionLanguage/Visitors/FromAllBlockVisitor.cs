@@ -8,7 +8,7 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Parsers;
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
 /// <summary>
-/// Visitor for parsing from $all blocks.
+/// Visitor for parsing from all blocks.
 /// </summary>
 public class FromAllBlockVisitor : IDirectiveVisitor
 {
@@ -24,23 +24,15 @@ public class FromAllBlockVisitor : IDirectiveVisitor
 
         var fromToken = context.Current;
 
-        // Peek ahead to check if this is a $all expression
+        // Peek ahead to check if this is a 'from all' expression
         var nextToken = context.Peek();
-        if (nextToken.Type != TokenType.Dollar)
+        if (nextToken.Type != TokenType.All)
         {
             return null;
         }
 
-        // Peek one more to verify it's 'all'
-        var thirdToken = context.Peek(2);
-        if (thirdToken.Type != TokenType.Identifier || !thirdToken.Value.Equals("all", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        // Now we know it's a from $all, so we can consume tokens
+        // Consume 'from' and 'all'
         context.Advance(); // Skip 'from'
-        context.Advance(); // Skip '$'
         context.Advance(); // Skip 'all'
 
         // Skip newline if present
