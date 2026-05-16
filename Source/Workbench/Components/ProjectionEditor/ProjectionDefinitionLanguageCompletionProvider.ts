@@ -382,7 +382,8 @@ export class ProjectionDefinitionLanguageCompletionProvider implements languages
         const keywords = [
             { label: 'sequence', insertText: 'sequence ', documentation: 'Specify which event sequence to use for this projection', detail: 'sequence <event-sequence-id>' },
             { label: 'from', insertText: 'from ', documentation: 'Handle specific event types', detail: 'from <EventType>' },
-            { label: 'every', insertText: 'every', documentation: 'Handle all events for automatic mapping', detail: 'every' },
+            { label: 'all', insertText: 'all', documentation: 'Subscribe to all event types in the system — mappings run for every event system-wide, regardless of explicit from blocks', detail: 'all' },
+            { label: 'every', insertText: 'every', documentation: 'Handle all events for automatic mapping (only events explicitly subscribed to via from blocks)', detail: 'every' },
             { label: 'key', insertText: 'key ', documentation: 'Define the projection key', detail: 'key <expression>' },
             { label: 'parent', insertText: 'parent ', documentation: 'Define parent relationship', detail: 'parent <expression>' },
             { label: 'join', insertText: 'join ', documentation: 'Join with child collection', detail: 'join <collection> on <property>' },
