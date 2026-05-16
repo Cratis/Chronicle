@@ -53,7 +53,7 @@ public class ChronicleOptions
 
     /// <summary>
     /// Gets or inits the compliance configuration.
-    /// When <see cref="Compliance.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
+    /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
     /// </summary>
     public Compliance Compliance { get; init; } = new Compliance();
 

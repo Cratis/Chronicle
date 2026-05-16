@@ -6,14 +6,16 @@ If no compliance storage is explicitly configured, Chronicle uses the general [s
 
 ## Configuration
 
-The `compliance` section mirrors the structure of the top-level `storage` section. Set a `type` and `connectionDetails` inside `compliance.storage`:
+The `compliance` section now contains an `encryption` subsection that holds the `storage` configuration. Set a `type` and `connectionDetails` inside `compliance.encryption.storage`:
 
 ```json
 {
   "compliance": {
-    "storage": {
-      "type": "<storage-type>",
-      "connectionDetails": "<connection-string-or-url>"
+    "encryption": {
+      "storage": {
+        "type": "<storage-type>",
+        "connectionDetails": "<connection-string-or-url>"
+      }
     }
   }
 }
@@ -32,9 +34,11 @@ Chronicle authenticates to Vault using a [token](https://developer.hashicorp.com
 ```json
 {
   "compliance": {
-    "storage": {
-      "type": "vault",
-      "connectionDetails": "http://vault:8200"
+    "encryption": {
+      "storage": {
+        "type": "vault",
+        "connectionDetails": "http://vault:8200"
+      }
     }
   }
 }

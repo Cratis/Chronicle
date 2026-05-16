@@ -9,8 +9,7 @@ namespace Cratis.Chronicle.Configuration;
 public class Compliance
 {
     /// <summary>
-    /// Gets the optional storage configuration for compliance data, such as encryption keys.
-    /// When not configured, the general <see cref="Storage"/> is used as the default.
+    /// Gets the encryption configuration for compliance data, such as encryption keys.
     /// </summary>
-    public Storage? Storage { get; init; }
+    public Encryption Encryption { get; init; } = new Encryption();
 }
