@@ -41,6 +41,7 @@ public class ReadModelReplayManagerStorageProvider(IStorage storage) : IGrainSto
 
         if (actualGrainState.State.RemovedOccurrences.Count > 0)
         {
+            // Resolve read model definition and sink only when there is anything to remove.
             var readModelDefinition = await eventStoreStorage.ReadModels.Get(key.ReadModel);
             var sink = await namespaceStorage.Sinks.GetFor(readModelDefinition);
             foreach (var occurrence in actualGrainState.State.RemovedOccurrences)

@@ -123,7 +123,7 @@ public class Sink(
         await using var scope = await database.Namespace(eventStoreName, @namespace);
         var sqlGenerationHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
         var delimitedTableName = sqlGenerationHelper.DelimitIdentifier(containerName.Value);
-        var sql = "DROP TABLE IF EXISTS " + delimitedTableName;
+        var sql = $"DROP TABLE IF EXISTS {delimitedTableName}";
         await scope.DbContext.Database.ExecuteSqlRawAsync(sql);
     }
 

@@ -67,7 +67,7 @@ public class SinkCollections(
     public async Task Remove(ReadModelContainerName collectionName)
     {
         var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
-        if (collectionNames.Contains(collectionName))
+        if (collectionNames.Contains(collectionName.Value))
         {
             await database.DropCollectionAsync(collectionName);
         }

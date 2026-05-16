@@ -79,4 +79,11 @@ public class and_there_are_removed_occurrences : Specification
 
     [Fact] void should_remove_replayed_occurrence() => _replayedReadModelsStorage.Received(1).Remove(_removedOccurrence);
     [Fact] void should_remove_replayed_read_model_container_from_sink() => _sink.Received(1).Remove(_removedOccurrence.RevertContainerName);
+    [Fact]
+    void should_remove_read_model_container_before_metadata() =>
+        Received.InOrder(() =>
+        {
+            _sink.Remove(_removedOccurrence.RevertContainerName);
+            _replayedReadModelsStorage.Remove(_removedOccurrence);
+        });
 }
