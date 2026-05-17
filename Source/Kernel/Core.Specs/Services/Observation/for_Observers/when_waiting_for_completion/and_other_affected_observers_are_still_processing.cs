@@ -34,22 +34,26 @@ public class and_other_affected_observers_are_still_processing : given.all_depen
         ]);
         _observerStateStorage.GetAll().Returns(
         [
-            new(
-                "observer-1",
-                12UL,
-                Concepts.Observation.ObserverRunningState.Active,
-                new HashSet<Concepts.Keys.Key>(),
-                new HashSet<Concepts.Keys.Key>(),
-                [],
-                false),
-            new(
-                "observer-2",
-                12UL,
-                Concepts.Observation.ObserverRunningState.Active,
-                new HashSet<Concepts.Keys.Key>(),
-                new HashSet<Concepts.Keys.Key>(),
-                [],
-                false)
+            new()
+            {
+                Identifier = "observer-1",
+                LastHandledEventSequenceNumber = 12UL,
+                RunningState = Concepts.Observation.ObserverRunningState.Active,
+                ReplayingPartitions = new HashSet<Concepts.Keys.Key>(),
+                CatchingUpPartitions = new HashSet<Concepts.Keys.Key>(),
+                FailedPartitions = [],
+                IsReplaying = false
+            },
+            new()
+            {
+                Identifier = "observer-2",
+                LastHandledEventSequenceNumber = 12UL,
+                RunningState = Concepts.Observation.ObserverRunningState.Active,
+                ReplayingPartitions = new HashSet<Concepts.Keys.Key>(),
+                CatchingUpPartitions = new HashSet<Concepts.Keys.Key>(),
+                FailedPartitions = [],
+                IsReplaying = false
+            }
         ]);
         _failedPartitionsStorage.GetFor(Arg.Any<IEnumerable<Concepts.Observation.ObserverId>>()).Returns(
             new Concepts.Observation.FailedPartitions

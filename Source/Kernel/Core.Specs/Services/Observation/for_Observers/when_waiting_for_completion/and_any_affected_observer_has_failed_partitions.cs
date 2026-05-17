@@ -23,14 +23,16 @@ public class and_any_affected_observer_has_failed_partitions : given.all_depende
             Concepts.Observation.ObserverType.Reactor,
             Concepts.Observation.ObserverOwner.Client,
             true);
-        var observerState = new ObserverState(
-            "observer-1",
-            12UL,
-            Concepts.Observation.ObserverRunningState.Active,
-            new HashSet<Concepts.Keys.Key>(),
-            new HashSet<Concepts.Keys.Key>(),
-            [],
-            false);
+        var observerState = new ObserverState
+        {
+            Identifier = "observer-1",
+            LastHandledEventSequenceNumber = 12UL,
+            RunningState = Concepts.Observation.ObserverRunningState.Active,
+            ReplayingPartitions = new HashSet<Concepts.Keys.Key>(),
+            CatchingUpPartitions = new HashSet<Concepts.Keys.Key>(),
+            FailedPartitions = [],
+            IsReplaying = false
+        };
         var failedPartitions = new Concepts.Observation.FailedPartitions
         {
             Partitions =

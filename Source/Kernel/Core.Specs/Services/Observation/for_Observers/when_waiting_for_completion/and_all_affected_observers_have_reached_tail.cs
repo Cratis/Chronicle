@@ -23,14 +23,16 @@ public class and_all_affected_observers_have_reached_tail : given.all_dependenci
             Concepts.Observation.ObserverType.Reactor,
             Concepts.Observation.ObserverOwner.Client,
             true);
-        var observerState = new ObserverState(
-            "observer-1",
-            42UL,
-            Concepts.Observation.ObserverRunningState.Active,
-            new HashSet<Concepts.Keys.Key>(),
-            new HashSet<Concepts.Keys.Key>(),
-            [],
-            false);
+        var observerState = new ObserverState
+        {
+            Identifier = "observer-1",
+            LastHandledEventSequenceNumber = 42UL,
+            RunningState = Concepts.Observation.ObserverRunningState.Active,
+            ReplayingPartitions = new HashSet<Concepts.Keys.Key>(),
+            CatchingUpPartitions = new HashSet<Concepts.Keys.Key>(),
+            FailedPartitions = [],
+            IsReplaying = false
+        };
 
         _observerDefinitionsStorage.GetAll().Returns([observerDefinition]);
         _observerStateStorage.GetAll().Returns([observerState]);
