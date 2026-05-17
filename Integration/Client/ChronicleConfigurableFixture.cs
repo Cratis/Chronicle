@@ -122,14 +122,18 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
-        // For outofprocess SQLite, delete the server's SQLite file inside the container so
-        // that the server starts fresh for the next test class. The TableMigrator recreates
-        // all tables automatically on first access after the file is gone.
+        // For outofprocess SQLite, the SQLite file must be deleted AND the container restarted.
+        // Deleting the file while the server is running only unlinks the directory entry; the
+        // server's connection pool keeps the old inode open via file descriptors. After the
+        // container restarts all fds are closed, the unlinked inode is freed, and the server
+        // creates a fresh database from scratch when it starts up again.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _outOfProcessContainer is not null)
         {
             var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
             await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
+            await _outOfProcessContainer.StopAsync();
+            await _outOfProcessContainer.StartAsync();
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.
