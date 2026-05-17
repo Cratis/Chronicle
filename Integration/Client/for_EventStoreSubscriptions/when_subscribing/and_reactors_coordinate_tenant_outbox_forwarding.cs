@@ -6,9 +6,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
-using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Reactors;
-using Cratis.Chronicle.Storage;
 using context = Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_subscribing.and_reactors_coordinate_tenant_outbox_forwarding.context;
 
 namespace Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_subscribing;
@@ -75,8 +73,14 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 SourceEventStoreName,
                 builder => builder.WithEventType<AdminUserInvited>());
 
-            var subscriptionsManager = Services.GetRequiredService<IGrainFactory>().GetGrain<IEventStoreSubscriptionsManager>(TargetEventStoreName);
-            await subscriptionsManager.WaitUntilSubscribed(new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId(SubscriptionId), TimeSpanFactory.DefaultTimeout());
+            // Wait for the subscriptions reactor to process the subscription event.
+            var subscriptionsReactor = await targetTenantA.Reactors.WaitForHandlerById(
+                "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
+                TimeSpanFactory.DefaultTimeout());
+
+            var systemLog = targetTenantA.GetEventSequence(EventSequenceId.System);
+            var systemTail = (await systemLog.GetTailSequenceNumber()).Value;
+            await subscriptionsReactor.WaitTillReachesEventSequenceNumber(systemTail);
 
             await targetReactorA.WaitTillSubscribed();
             await targetReactorB.WaitTillSubscribed();
@@ -110,24 +114,13 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 
         async Task<Concepts.Events.EventSequenceNumber> GetInboxTailSequenceNumber(string targetNamespace)
         {
-            var targetStorage = Services.GetRequiredService<IStorage>().GetEventStore(TargetEventStoreName);
-            var inboxSequence = targetStorage
-                .GetNamespace(targetNamespace)
-                .GetEventSequence(new Concepts.EventSequences.EventSequenceId($"inbox-{SourceEventStoreName}"));
-
-            return await inboxSequence.GetTailSequenceNumber();
+            var targetEventStore = await ChronicleClient.GetEventStore(TargetEventStoreName, targetNamespace);
+            var inboxSequenceId = new EventSequenceId($"inbox-{SourceEventStoreName}");
+            var inboxSequence = targetEventStore.GetEventSequence(inboxSequenceId);
+            var clientTail = await inboxSequence.GetTailSequenceNumber();
+            return new Concepts.Events.EventSequenceNumber(clientTail.Value);
         }
 
-        /// <summary>
-        /// Waits until the inbox reaches at least the expected sequence number.
-        /// </summary>
-        /// <param name="targetNamespace">Namespace to inspect.</param>
-        /// <param name="expected">Minimum expected sequence number.</param>
-        /// <exception cref="TimeoutException">Thrown when the inbox does not reach the expected sequence number before timeout.</exception>
-        /// <remarks>
-        /// Uses a greater-than-or-equal comparison to avoid timing races where the inbox advances past
-        /// the exact sequence number before the polling loop observes it.
-        /// </remarks>
         async Task WaitForInboxTailSequenceNumber(string targetNamespace, Concepts.Events.EventSequenceNumber expected)
         {
             var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());

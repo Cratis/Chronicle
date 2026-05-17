@@ -25,9 +25,9 @@ public class and_not_already_subscribed(context context) : Given<context>(contex
 
     [Fact]
     void should_have_correct_subscription_id() =>
-        Context.StoredSubscriptions.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId.Value);
+        Context.StoredSubscriptions.Single().Id.Value.ShouldEqual(Context.SubscriptionId.Value);
 
     [Fact]
     void should_have_correct_source_event_store() =>
-        Context.StoredSubscriptions.Single().SourceEventStore.Value.ShouldEqual(Context.SourceEventStore);
+        Context.StoredSubscriptions.Single().SourceEventStore.ShouldEqual(Context.SourceEventStore);
 }

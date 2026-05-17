@@ -12,17 +12,15 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
     public class context(ChronicleFixture fixture) : given.multi_event_store_subscription_setup(fixture)
     {
         public string SubscriptionId { get; } = "persisted-subscription";
-        public IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition> PersistedSubscriptions { get; private set; } = [];
+        public IEnumerable<EventStoreSubscriptionDefinition> PersistedSubscriptions { get; private set; } = [];
 
         async Task Because()
         {
-            // Create subscription using simpler pattern without reactor wait
             var targetEventStore = await ChronicleClient.GetEventStore(TargetEventStoreName);
             await targetEventStore.Subscriptions.Subscribe(
                 new EventStoreSubscriptionId(SubscriptionId),
                 SourceEventStoreName);
 
-            // Retrieve stored subscriptions from target event store
             PersistedSubscriptions = await GetStoredSubscriptions(TargetEventStoreName);
         }
     }
@@ -33,9 +31,9 @@ public class and_subscription_is_persisted(context context) : Given<context>(con
 
     [Fact]
     void should_have_correct_subscription_id() =>
-        Context.PersistedSubscriptions.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId);
+        Context.PersistedSubscriptions.Single().Id.Value.ShouldEqual(Context.SubscriptionId);
 
     [Fact]
     void should_have_correct_source_event_store() =>
-        Context.PersistedSubscriptions.Single().SourceEventStore.Value.ShouldEqual(Context.SourceEventStoreName);
+        Context.PersistedSubscriptions.Single().SourceEventStore.ShouldEqual(Context.SourceEventStoreName);
 }

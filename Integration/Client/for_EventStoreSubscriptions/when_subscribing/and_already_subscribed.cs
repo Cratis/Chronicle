@@ -28,5 +28,5 @@ public class and_already_subscribed(context context) : Given<context>(context)
 
     [Fact]
     void should_have_correct_subscription_id() =>
-        Context.StoredSubscriptions.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId.Value);
+        Context.StoredSubscriptions.Single().Id.Value.ShouldEqual(Context.SubscriptionId.Value);
 }

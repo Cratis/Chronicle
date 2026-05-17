@@ -14,12 +14,12 @@ public class and_subscription_persists_after_client_reconnects(context context) 
     {
         public readonly EventStoreSubscriptionId SubscriptionId = "persistent-subscription";
         public readonly string SourceEventStore = "another-event-store";
-        public IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition> StoredSubscriptionsAfterReconnect { get; private set; } = [];
+        public IEnumerable<EventStoreSubscriptionDefinition> StoredSubscriptionsAfterReconnect { get; private set; } = [];
 
         public async Task Because()
         {
             await Subscribe((SubscriptionId, SourceEventStore, default));
-            StoredSubscriptionsAfterReconnect = await EventStoreStorage.EventStoreSubscriptions.GetAll();
+            StoredSubscriptionsAfterReconnect = await EventStore.Subscriptions.GetAll();
         }
     }
 
@@ -29,9 +29,9 @@ public class and_subscription_persists_after_client_reconnects(context context) 
 
     [Fact]
     void should_have_the_correct_subscription_id() =>
-        Context.StoredSubscriptionsAfterReconnect.Single().Identifier.Value.ShouldEqual(Context.SubscriptionId.Value);
+        Context.StoredSubscriptionsAfterReconnect.Single().Id.Value.ShouldEqual(Context.SubscriptionId.Value);
 
     [Fact]
     void should_have_the_correct_source_event_store() =>
-        Context.StoredSubscriptionsAfterReconnect.Single().SourceEventStore.Value.ShouldEqual(Context.SourceEventStore);
+        Context.StoredSubscriptionsAfterReconnect.Single().SourceEventStore.ShouldEqual(Context.SourceEventStore);
 }

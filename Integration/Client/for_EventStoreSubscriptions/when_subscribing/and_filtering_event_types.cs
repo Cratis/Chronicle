@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.EventStoreSubscriptions;
 using context = Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_subscribing.and_filtering_event_types.context;
 
 namespace Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_subscribing;
@@ -11,7 +12,7 @@ public class and_filtering_event_types(context context) : Given<context>(context
     public class context(ChronicleFixture fixture) : given.multi_event_store_subscription_setup(fixture)
     {
         public int EventsInSourceLog { get; private set; }
-        public Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition Subscription { get; private set; }
+        public EventStoreSubscriptionDefinition Subscription { get; private set; }
 
         async Task Establish()
         {
@@ -43,7 +44,7 @@ public class and_filtering_event_types(context context) : Given<context>(context
 
             // Get subscription configuration
             var subscriptions = await GetStoredSubscriptions(TargetEventStoreName);
-            Subscription = subscriptions.Single(_ => _.Identifier.Value == "filtered-subscription");
+            Subscription = subscriptions.Single(_ => _.Id.Value == "filtered-subscription");
         }
     }
 
@@ -57,5 +58,5 @@ public class and_filtering_event_types(context context) : Given<context>(context
 
     [Fact]
     void should_only_filter_test_event_type() =>
-        Context.Subscription.EventTypes.Single().Id.Value.ShouldEqual("TestEvent");
+        Context.Subscription.EventTypes.Single().Value.ShouldEqual("TestEvent");
 }

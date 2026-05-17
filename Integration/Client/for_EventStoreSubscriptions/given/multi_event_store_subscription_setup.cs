@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Reactors;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Integration.for_EventStoreSubscriptions.given;
 
@@ -60,11 +60,8 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
             "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
             TimeSpanFactory.DefaultTimeout());
 
-        var targetStorage = Services.GetRequiredService<IStorage>().GetEventStore(targetEventStoreName);
-        var targetSystemSequence = targetStorage
-            .GetNamespace(DefaultNamespace)
-            .GetEventSequence(Concepts.EventSequences.EventSequenceId.System);
-        var tailSequenceNumber = (await targetSystemSequence.GetTailSequenceNumber()).Value;
+        var systemLog = targetEventStore.GetEventSequence(EventSequenceId.System);
+        var tailSequenceNumber = (await systemLog.GetTailSequenceNumber()).Value;
         await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
     }
 
@@ -73,13 +70,12 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
         string targetEventStoreName,
         Concepts.EventStoreNamespaceName targetNamespace)
     {
-        var targetStorage = Services.GetRequiredService<IStorage>().GetEventStore(targetEventStoreName);
-        var inboxSequenceId = new Concepts.EventSequences.EventSequenceId($"inbox-{sourceEventStoreName}");
-        var inboxSequence = targetStorage
-            .GetNamespace(targetNamespace)
-            .GetEventSequence(inboxSequenceId);
+        var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName, targetNamespace.Value);
+        var inboxSequenceId = new EventSequenceId($"inbox-{sourceEventStoreName}");
+        var inboxSequence = targetEventStore.GetEventSequence(inboxSequenceId);
 
-        return await inboxSequence.GetTailSequenceNumber();
+        var clientTail = await inboxSequence.GetTailSequenceNumber();
+        return new Concepts.Events.EventSequenceNumber(clientTail.Value);
     }
 
     protected async Task<Concepts.Events.EventSequenceNumber> WaitForInboxTailSequenceNumber(
@@ -95,6 +91,7 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
         while (DateTime.UtcNow < deadline)
         {
             current = await GetInboxTailSequenceNumber(sourceEventStoreName, targetEventStoreName, targetNamespace);
+
             if (current.Equals(expected))
             {
                 return current;
@@ -108,20 +105,14 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
 
     protected async Task<int> GetEventLogCount(string eventStoreName)
     {
-        var storage = Services.GetRequiredService<IStorage>().GetEventStore(eventStoreName);
-        var eventLogSequence = storage
-            .GetNamespace(DefaultNamespace)
-            .GetEventSequence(Concepts.EventSequences.EventSequenceId.Log);
-
-        var tail = await eventLogSequence.GetTailSequenceNumber();
-
-        // If tail is max value, no events; otherwise count is tail + 1
-        return tail.Equals(Concepts.Events.EventSequenceNumber.Unavailable) ? 0 : (int)(ulong)tail + 1;
+        var eventStore = await ChronicleClient.GetEventStore(eventStoreName);
+        var clientTail = await eventStore.EventLog.GetTailSequenceNumber();
+        return clientTail == EventSequenceNumber.Unavailable ? 0 : (int)clientTail.Value + 1;
     }
 
-    protected async Task<IEnumerable<Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition>> GetStoredSubscriptions(string targetEventStoreName)
+    protected async Task<IEnumerable<EventStoreSubscriptionDefinition>> GetStoredSubscriptions(string targetEventStoreName)
     {
-        var storage = Services.GetRequiredService<IStorage>().GetEventStore(targetEventStoreName);
-        return await storage.EventStoreSubscriptions.GetAll();
+        var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
+        return await targetEventStore.Subscriptions.GetAll();
     }
 }
