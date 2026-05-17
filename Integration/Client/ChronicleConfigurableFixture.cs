@@ -344,11 +344,18 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             _ => "MongoDB",
         };
 
-        var builder = new ContainerBuilder(_imageName)
+        // MongoDB mode uses fixed port 27018→27017 so the test client can reach MongoDB directly.
+        // SQL modes don't need a fixed MongoDB port — the Chronicle server has no MongoDB —
+        // so we use a random host port to allow multiple SQL outofprocess test processes to
+        // run concurrently without conflicting on port 27018.
+        var mongoPortBinding = Options.StorageProvider == ChronicleStorageProvider.MongoDB
+            ? new ContainerBuilder(_imageName).WithPortBinding(MongoDBPort, 27017)
+            : new ContainerBuilder(_imageName).WithPortBinding(27017, assignRandomHostPort: true);
+
+        var builder = mongoPortBinding
             .WithImage(_imageName)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
-            .WithPortBinding(MongoDBPort, 27017)
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleOutOfProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
