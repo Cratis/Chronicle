@@ -157,10 +157,16 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             // 1. Deactivate grains + clear SQLite pools (server-side) via the reset endpoint.
             await ResetOutOfProcessKernelState();
 
-            // 2. Delete the SQLite file — connections are now closed so the next open creates a fresh file.
+            // 2. Delete all Chronicle SQLite files — connections are now closed so the next open
+            //    creates fresh files. The server creates one file per event-store namespace
+            //    (e.g. chronicle.db, chronicle_Testing.db, chronicle_Testing_default.db), so we
+            //    must delete the base file AND all the underscore-suffixed namespace variants.
             var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
-            await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
+            var outOfProcessDirPath = Path.GetDirectoryName(outOfProcessDbPath) ?? "/tmp";
+            var outOfProcessBaseName = Path.GetFileNameWithoutExtension(outOfProcessDbPath);
+            var outOfProcessExt = Path.GetExtension(outOfProcessDbPath);
+            await _outOfProcessContainer.ExecAsync(["/bin/sh", "-c", $"rm -f {outOfProcessDbPath} {outOfProcessDirPath}/{outOfProcessBaseName}_*{outOfProcessExt}"]);
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.
