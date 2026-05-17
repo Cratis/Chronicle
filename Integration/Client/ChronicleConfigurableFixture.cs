@@ -27,7 +27,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
-    DateTimeOffset _lastOutOfProcessContainerRestart = DateTimeOffset.MinValue;
 
     /// <summary>
     /// Gets the selected runtime options.
@@ -86,17 +85,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         if (Options.Mode == ChronicleRuntimeMode.InProcess || Options.StorageProvider == ChronicleStorageProvider.MongoDB)
         {
             await base.RemoveAllDatabases(excludePrefixes);
-        }
-
-        // For outofprocess SQL backends the Chronicle server runs in a Docker container whose
-        // SQLite files or PostgreSQL/MSSQL tables persist between test classes and whose
-        // in-memory Orleans grain state cannot be cleared from the outside. Restart the
-        // container to get a fully clean server for each test class.
-        // A debounce prevents redundant restarts when RemoveAllDatabases is called multiple
-        // times in rapid succession during a single test-class boundary transition.
-        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && Options.StorageProvider != ChronicleStorageProvider.MongoDB)
-        {
-            await RestartOutOfProcessContainer();
         }
 
         switch (Options.StorageProvider)
@@ -165,52 +153,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
             try { File.Delete(file); } catch { /* ignore */ }
         }
-    }
-
-    async Task RestartOutOfProcessContainer()
-    {
-        // Debounce: skip if this container was restarted within the last 60 seconds.
-        // RemoveAllDatabases is called up to three times per test-class boundary; only
-        // the first call needs to do the full restart.
-        if ((DateTimeOffset.UtcNow - _lastOutOfProcessContainerRestart).TotalSeconds < 60)
-        {
-            return;
-        }
-
-        var container = MongoDBContainer;
-
-        if (Options.StorageProvider == ChronicleStorageProvider.Sqlite)
-        {
-            // Delete SQLite files inside the running container before stopping so the
-            // container filesystem starts clean after restart. The container's writable
-            // layer persists across stop/start, so we must delete explicitly.
-            try
-            {
-                await container.ExecAsync(["sh", "-c", "rm -f /tmp/chronicle*.db"]);
-            }
-            catch
-            {
-                // Ignore; the container will restart anyway
-            }
-        }
-
-        await container.StopAsync();
-
-        if (Options.StorageProvider == ChronicleStorageProvider.PostgreSql && _databaseContainer is not null)
-        {
-            var adminConnStr = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database=postgres;Username=postgres;Password={PostgreSqlPassword}";
-            await DropAndRecreateSqlDatabase("postgres", _outOfProcessSqlDatabaseName, adminConnStr);
-            NpgsqlConnection.ClearAllPools();
-        }
-        else if (Options.StorageProvider == ChronicleStorageProvider.MsSql && _databaseContainer is not null)
-        {
-            var adminConnStr = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database=master;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
-            await DropAndRecreateMsSqlDatabase("master", _outOfProcessSqlDatabaseName, adminConnStr);
-            SqlConnection.ClearAllPools();
-        }
-
-        await container.StartAsync();
-        _lastOutOfProcessContainerRestart = DateTimeOffset.UtcNow;
     }
 
     static async Task DropAndRecreateSqlDatabase(string adminDatabase, string databaseName, string connectionString)
