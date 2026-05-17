@@ -28,7 +28,7 @@ public class and_reactor_infers_external_inbox_subscription(context context) : G
 
             var subscriptionsReactor = await lobbyEventStore.Reactors.WaitForHandlerById(
                 "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
-                TimeSpanFactory.FromSeconds(60));
+                TimeSpanFactory.DefaultTimeout());
 
             var lobbyStorage = Services.GetRequiredService<IStorage>().GetEventStore(LobbyEventStoreName);
             var lobbySystemSequence = lobbyStorage

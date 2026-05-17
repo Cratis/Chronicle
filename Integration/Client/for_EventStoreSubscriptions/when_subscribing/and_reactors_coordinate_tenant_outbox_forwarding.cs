@@ -76,7 +76,7 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 builder => builder.WithEventType<AdminUserInvited>());
 
             var subscriptionsManager = Services.GetRequiredService<IGrainFactory>().GetGrain<IEventStoreSubscriptionsManager>(TargetEventStoreName);
-            await subscriptionsManager.WaitUntilSubscribed(new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId(SubscriptionId), TimeSpanFactory.FromSeconds(60));
+            await subscriptionsManager.WaitUntilSubscribed(new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId(SubscriptionId), TimeSpanFactory.DefaultTimeout());
 
             await targetReactorA.WaitTillSubscribed();
             await targetReactorB.WaitTillSubscribed();

@@ -103,9 +103,13 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                     await TruncateAllPostgreSqlTables(serverConnectionString);
                     if (_outOfProcessContainer is not null)
                     {
+                        // Clear MongoDB data before stopping — the overlay filesystem can
+                        // accumulate inconsistent replica-set state across multiple stop/start
+                        // cycles, eventually causing MongoDB to SIGABRT on restart. For SQL
+                        // storage modes MongoDB is unused so cleaning is safe.
+                        await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
                         await _outOfProcessContainer.StopAsync();
                         await _outOfProcessContainer.StartAsync();
-                        await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
                     }
                 }
 
@@ -114,17 +118,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
             case ChronicleStorageProvider.MsSql:
                 await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
-                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null && _outOfProcessContainer is not null)
                 {
-                    // Same reasoning as PostgreSql: truncate + restart.
+                    // Same reasoning as PostgreSql: truncate + restart with clean MongoDB data.
                     var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
                     await TruncateAllMsSqlTables(serverConnectionString);
-                    if (_outOfProcessContainer is not null)
-                    {
-                        await _outOfProcessContainer.StopAsync();
-                        await _outOfProcessContainer.StartAsync();
-                        await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
-                    }
+                    await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
+                    await _outOfProcessContainer.StopAsync();
+                    await _outOfProcessContainer.StartAsync();
                 }
 
                 SqlConnection.ClearAllPools();
@@ -145,15 +146,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         {
             var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
+            // Delete the SQLite file and MongoDB data before stopping. Overlay-filesystem
+            // MongoDB state can become inconsistent over multiple stop/start cycles and
+            // cause mongod to SIGABRT on the next restart; clearing it upfront is safe
+            // because SQLite mode does not use MongoDB for Chronicle storage.
             await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
+            await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
             await _outOfProcessContainer.StopAsync();
             await _outOfProcessContainer.StartAsync();
-
-            // The outofprocess server image embeds MongoDB. The entrypoint checks whether
-            // the replica set is initialised but does NOT wait for a primary to be elected
-            // before starting the Chronicle server. Poll until a primary exists so that
-            // Orleans grain storage (which writes to MongoDB) is functional before tests run.
-            await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.

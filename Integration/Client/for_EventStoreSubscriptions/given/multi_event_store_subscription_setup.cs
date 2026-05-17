@@ -58,7 +58,7 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
         // Wait for subscription reactor to process
         var subscriptionsReactor = await targetEventStore.Reactors.WaitForHandlerById(
             "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
-            TimeSpanFactory.FromSeconds(60));
+            TimeSpanFactory.DefaultTimeout());
 
         var targetStorage = Services.GetRequiredService<IStorage>().GetEventStore(targetEventStoreName);
         var targetSystemSequence = targetStorage
