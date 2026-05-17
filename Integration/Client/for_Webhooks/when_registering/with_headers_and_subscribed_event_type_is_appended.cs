@@ -49,8 +49,8 @@ public class with_headers_and_subscribed_event_type_is_appended(context context)
     [Fact]
     async Task should_have_no_failing_partitions_for_observer()
     {
-        var failedPartitions = await Context.GetEventStoreNamespaceStorage().FailedPartitions.GetFor(Context.WebhookId.Value);
-        failedPartitions.HasFailedPartitions.ShouldBeFalse();
+        var failedPartitions = await Context.EventStore.FailedPartitions.GetFailedPartitionsFor(new Observation.ObserverId(Context.WebhookId.Value));
+        failedPartitions.ShouldBeEmpty();
     }
 
     [Fact]
