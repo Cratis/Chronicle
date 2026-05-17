@@ -47,8 +47,8 @@ public class with_set_value_on_child : given.a_model_bound_projection_builder
         var eventType = event_types.GetEventTypeFor(typeof(UIRoleAdded)).ToContract();
         var childrenDef = _result.Children[nameof(CollectionRoles.Roles)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(CollectionRole.RoleType));
-        fromDef.Properties[nameof(CollectionRole.RoleType)].ShouldEqual("$value(0)");
+        fromDef.Properties.Keys.ShouldContain(nameof(CollectionRole.Kind));
+        fromDef.Properties[nameof(CollectionRole.Kind)].ShouldEqual("$value(0)");
     }
 
     [Fact]
@@ -57,12 +57,12 @@ public class with_set_value_on_child : given.a_model_bound_projection_builder
         var eventType = event_types.GetEventTypeFor(typeof(SystemRoleAdded)).ToContract();
         var childrenDef = _result.Children[nameof(CollectionRoles.Roles)];
         var fromDef = childrenDef.From.Single(kvp => kvp.Key.IsEqual(eventType)).Value;
-        fromDef.Properties.Keys.ShouldContain(nameof(CollectionRole.RoleType));
-        fromDef.Properties[nameof(CollectionRole.RoleType)].ShouldEqual("$value(1)");
+        fromDef.Properties.Keys.ShouldContain(nameof(CollectionRole.Kind));
+        fromDef.Properties[nameof(CollectionRole.Kind)].ShouldEqual("$value(1)");
     }
 }
 
-public enum RoleType
+public enum ChildRoleKind
 {
     UIRole = 0,
     SystemRole = 1
@@ -76,9 +76,9 @@ public record SystemRoleAdded(Guid CollectionId, Guid RoleId, string Name);
 
 public sealed record CollectionRole(
     [Key] Guid Id,
-    [SetValue<UIRoleAdded>(RoleType.UIRole)]
-    [SetValue<SystemRoleAdded>(RoleType.SystemRole)]
-    RoleType RoleType);
+    [SetValue<UIRoleAdded>(ChildRoleKind.UIRole)]
+    [SetValue<SystemRoleAdded>(ChildRoleKind.SystemRole)]
+    ChildRoleKind Kind);
 
 [Passive]
 [FromEvent<CollectionAdded>]
