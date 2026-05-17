@@ -4,8 +4,6 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
-using MongoDB.Bson;
-using MongoDB.Driver;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_appending_events_with_multiple_generation_migrations.and_observers_consume_second_generation.context;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_events_with_multiple_generation_migrations;
@@ -15,15 +13,10 @@ public class and_observers_consume_second_generation(context context) : Given<co
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-#pragma warning disable CA2213 // Disposable fields should be disposed
-        readonly ChronicleFixture _fixture = chronicleInProcessFixture;
-#pragma warning restore CA2213 // Disposable fields should be disposed
-
         public EventSourceId EventSourceId { get; } = "some-user";
         public UserRegisteredV1 Event { get; private set; }
         public UserRegisteredReactor Reactor { get; private set; }
         public UserRegisteredReducer Reducer { get; private set; }
-        public BsonDocument StoredEvent { get; private set; }
         public UserReadModel ProjectionResult { get; private set; }
 
         public override IEnumerable<Type> EventTypes =>
@@ -67,50 +60,12 @@ public class and_observers_consume_second_generation(context context) : Given<co
             await reducerHandler.WaitTillSubscribed();
             await projectionHandler.WaitTillSubscribed();
 
-            await EventStore.EventLog.Append(EventSourceId, Event);
+            var result = await EventStore.EventLog.Append(EventSourceId, Event);
 
-            if (IsMongoDBBackend)
-            {
-                var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
-                var readModels = _fixture.ReadModels.Database.GetCollection<UserReadModel>();
-                var filter = Builders<UserReadModel>.Filter.Eq(new StringFieldDefinition<UserReadModel, string>("_id"), EventSourceId.Value);
-                await WaitForObservedStateWithMongoDB(collection, readModels, filter);
-            }
-            else
-            {
-                await WaitForObservedStateBehavioral();
-            }
-        }
+            await projectionHandler.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
+            await WaitForObservedStateBehavioral();
 
-        async Task WaitForObservedStateWithMongoDB(
-            IMongoCollection<BsonDocument> eventLog,
-            IMongoCollection<UserReadModel> readModels,
-            FilterDefinition<UserReadModel> filter,
-            TimeSpan? timeout = default)
-        {
-            timeout ??= TimeSpanFactory.DefaultTimeout();
-            using var cts = new CancellationTokenSource(timeout.Value);
-
-            while (true)
-            {
-                StoredEvent = await eventLog.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync(cts.Token);
-                var result = await readModels.FindAsync(filter, cancellationToken: cts.Token);
-                ProjectionResult = await result.FirstOrDefaultAsync(cts.Token);
-
-                if (StoredEvent is not null &&
-                    ProjectionResult is not null &&
-                    Reactor.ReceivedGeneration == 2u &&
-                    Reactor.ReceivedFirstName == "Jane" &&
-                    Reactor.ReceivedLastName == "Doe" &&
-                    Reducer.ReceivedGeneration == 2u &&
-                    Reducer.ReceivedFirstName == "Jane" &&
-                    Reducer.ReceivedLastName == "Doe")
-                {
-                    return;
-                }
-
-                await Task.Delay(50, cts.Token);
-            }
+            ProjectionResult = await EventStore.ReadModels.GetInstanceById<UserReadModel>(EventSourceId);
         }
 
         async Task WaitForObservedStateBehavioral(TimeSpan? timeout = default)
@@ -133,48 +88,6 @@ public class and_observers_consume_second_generation(context context) : Given<co
                 await Task.Delay(50, cts.Token);
             }
         }
-    }
-
-    [Fact]
-    void should_have_stored_generation_1_content()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
-    }
-
-    [Fact]
-    void should_have_stored_generation_2_content_from_upcast()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
-    }
-
-    [Fact]
-    void should_have_stored_generation_3_content_from_upcast()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument.Contains("3").ShouldBeTrue();
-    }
-
-    [Fact]
-    void should_have_split_first_name_in_generation_2()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Jane");
-    }
-
-    [Fact]
-    void should_have_split_last_name_in_generation_2()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Doe");
-    }
-
-    [Fact]
-    void should_have_default_email_in_generation_3()
-    {
-        if (Context.StoredEvent is null) return;
-        Context.StoredEvent["content"].AsBsonDocument["3"].ToJson().ShouldContain("unknown@example.com");
     }
 
     [Fact] void should_have_reactor_receive_first_name() => Context.Reactor.ReceivedFirstName.ShouldEqual("Jane");

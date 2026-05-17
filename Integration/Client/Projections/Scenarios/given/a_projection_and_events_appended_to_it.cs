@@ -37,14 +37,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     async Task Because()
     {
         Projection = EventStore.Projections.GetHandlerFor<TProjection>();
-        if (IsMongoDBBackend)
-        {
-            await Projection.WaitTillActive();
-        }
-        else
-        {
-            await Projection.WaitTillSubscribed();
-        }
+        await Projection.WaitTillSubscribed();
 
         IAppendResult appendResult = null;
         foreach (var @event in EventsToAppend)

@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Storage.MongoDB;
-using MongoDB.Bson;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_appending.existing_sequence_number.context;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
@@ -19,59 +17,21 @@ public class existing_sequence_number(context context) : Given<context>(context)
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
-        async Task Establish()
+        void Establish()
         {
             FirstEvent = new SomeEvent("some value");
             SecondEvent = new SomeEvent("some other value");
-            if (!IsMongoDBBackend) return;
-            var database = EventStoreForNamespaceDatabase.Database;
-            var @event = new Event(
-                0,
-                CorrelationId.New(),
-                [],
-                [],
-                typeof(SomeEvent).GetEventType().Id.Value,
-                DateTimeOffset.UtcNow,
-                Concepts.Events.EventSourceType.Default,
-                EventSourceId.Value,
-                Concepts.Events.EventStreamType.All,
-                Concepts.Events.EventStreamId.Default,
-                [],
-                new Dictionary<string, BsonDocument>() { { "1", FirstEvent.ToBsonDocument() } },
-                new Dictionary<string, string>() { { "1", EventHash.NotSet } },
-                []);
-
-            await database.GetCollection<Event>(WellKnownCollectionNames.EventLog).InsertOneAsync(@event);
         }
 
-        async Task Because() => await EventStore.EventLog.Append(EventSourceId, SecondEvent);
+        async Task Because()
+        {
+            await EventStore.EventLog.Append(EventSourceId, FirstEvent);
+            await EventStore.EventLog.Append(EventSourceId, SecondEvent);
+        }
     }
 
-    [Fact]
-    Task should_have_correct_next_sequence_number()
-    {
-        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
-        return Context.ShouldHaveNextSequenceNumber(2);
-    }
-
-    [Fact]
-    Task should_have_correct_tail_sequence_number()
-    {
-        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
-        return Context.ShouldHaveTailSequenceNumber(1);
-    }
-
-    [Fact]
-    Task should_have_the_first_event_stored()
-    {
-        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
-        return Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
-    }
-
-    [Fact]
-    Task should_have_the_second_event_stored()
-    {
-        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
-        return Context.ShouldHaveAppendedEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
-    }
+    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(2);
+    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(1);
+    [Fact] Task should_have_the_first_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
+    [Fact] Task should_have_the_second_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
 }

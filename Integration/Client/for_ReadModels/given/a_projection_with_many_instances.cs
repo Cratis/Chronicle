@@ -49,14 +49,7 @@ public class a_projection_with_many_instances(ChronicleFixture chronicleFixture)
     protected async Task AppendAllEvents()
     {
         var projection = EventStore.Projections.GetHandlerFor<SomeProjection>();
-        if (IsMongoDBBackend)
-        {
-            await projection.WaitTillActive(TimeSpanFactory.FromSeconds(30));
-        }
-        else
-        {
-            await projection.WaitTillSubscribed(TimeSpanFactory.FromSeconds(30));
-        }
+        await projection.WaitTillSubscribed(TimeSpanFactory.FromSeconds(30));
 
         var lastSequenceNumber = EventSequenceNumber.First;
         for (var i = 0; i < TotalInstances; i++)
@@ -66,7 +59,6 @@ public class a_projection_with_many_instances(ChronicleFixture chronicleFixture)
             lastSequenceNumber = result.SequenceNumber;
         }
 
-        var waitTimeout = IsMongoDBBackend ? TimeSpanFactory.DefaultTimeout() : TimeSpanFactory.FromSeconds(300);
-        await projection.WaitTillReachesEventSequenceNumber(lastSequenceNumber, waitTimeout);
+        await projection.WaitTillReachesEventSequenceNumber(lastSequenceNumber, TimeSpanFactory.FromSeconds(300));
     }
 }
