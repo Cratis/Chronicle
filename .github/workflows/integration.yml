@@ -44,36 +44,11 @@ jobs:
             "outofprocess|mssql|true"
           )
 
-          # Namespaces that use direct server-side storage access (IStorage, IGrainFactory)
-          # and are only compatible with inprocess mode.
-          inprocess_only_namespaces=("for_EventStoreSubscriptions")
-
-          # Namespaces that require MongoDB as the storage backend (use direct MongoDB APIs,
-          # MongoDB-specific features like PII encryption, or kernel storage access patterns
-          # that only work when the in-process silo and the Chronicle server share MongoDB).
-          mongodb_only_namespaces=("for_EventSequence")
-
           matrix='{"include":['
           for ns in $namespaces; do
             [ -z "$ns" ] && continue
             for config in "${configs[@]}"; do
               IFS='|' read -r mode database needs_docker <<< "$config"
-              # Skip outofprocess configs for namespaces that require inprocess-only infrastructure.
-              if [[ "$mode" == "outofprocess" ]]; then
-                skip=false
-                for skip_ns in "${inprocess_only_namespaces[@]}"; do
-                  [[ "$ns" == "$skip_ns" ]] && skip=true && break
-                done
-                $skip && continue
-              fi
-              # Skip non-MongoDB outofprocess configs for namespaces that require MongoDB.
-              if [[ "$mode" == "outofprocess" && "$database" != "mongodb" ]]; then
-                skip=false
-                for skip_ns in "${mongodb_only_namespaces[@]}"; do
-                  [[ "$ns" == "$skip_ns" ]] && skip=true && break
-                done
-                $skip && continue
-              fi
               matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.${ns}\",\"mode\":\"${mode}\",\"database\":\"${database}\",\"needs-docker\":${needs_docker}},"
             done
           done
