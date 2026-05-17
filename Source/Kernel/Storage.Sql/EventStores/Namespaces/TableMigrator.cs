@@ -31,7 +31,15 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
 
         if (_migratedTables.ContainsKey(key))
         {
-            return;
+            // The database may have been dropped and recreated (e.g. between integration tests),
+            // which removes all tables while leaving the static cache intact. Verify the table
+            // still exists; if not, evict the stale cache entry so it is recreated below.
+            if (await TableExists(context, tableName))
+            {
+                return;
+            }
+
+            _migratedTables.TryRemove(key, out _);
         }
 
         // Get or create a lock for this specific table
