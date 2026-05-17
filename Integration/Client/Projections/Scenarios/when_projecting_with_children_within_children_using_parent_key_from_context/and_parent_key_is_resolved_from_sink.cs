@@ -44,7 +44,7 @@ public class and_parent_key_is_resolved_from_sink(context context) : Given<conte
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             // Root and configuration events on SimulationId source
             var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));

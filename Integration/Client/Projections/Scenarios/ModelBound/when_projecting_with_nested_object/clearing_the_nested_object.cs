@@ -26,7 +26,7 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<Slice>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(SliceId, new SliceItemCreated("Model-Bound Slice"));
             await EventStore.EventLog.Append(SliceId, new CommandSetOnSliceItem("Register", "{}"));

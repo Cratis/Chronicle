@@ -36,15 +36,15 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             });
 
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
-            await Projection.WaitTillActive();
+            await Projection.WaitTillSubscribed();
 
             // Allow the Watch's Orleans stream subscription to be established before appending.
-            // WaitTillActive may return immediately if the projection is already active, which
-            // is not enough time for the async stream.SubscribeAsync() in Watch() to complete.
-            // The outofprocess path involves an additional network hop and Orleans stream storage
-            // write; after a MongoDB database drop the stream consumer grain re-activates and
-            // must write its state before the subscription is durable — 10 seconds gives enough
-            // margin on loaded CI runners.
+            // WaitTillSubscribed ensures the projection event stream is ready, but the Watch
+            // observable stream subscription (Watch<ReadModel>) is a separate Orleans stream
+            // consumer that activates asynchronously. The outofprocess path involves an
+            // additional network hop and Orleans stream storage write; after a MongoDB database
+            // drop the stream consumer grain re-activates and must write its state before the
+            // subscription is durable — 10 seconds gives enough margin on loaded CI runners.
             await Task.Delay(TimeSpanFactory.FromSeconds(10));
 
             var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);

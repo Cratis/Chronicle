@@ -38,7 +38,7 @@ public class and_event_matches_filter(context context) : Given<context>(context)
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorFilteredByEventStreamType>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             await EventStore.EventLog.Append(EventSourceId, Event, eventStreamType: new EventStreamType("orders"));
             await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await reactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);

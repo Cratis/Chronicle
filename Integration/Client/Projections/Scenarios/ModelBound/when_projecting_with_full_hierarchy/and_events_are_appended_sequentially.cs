@@ -43,7 +43,7 @@ public class and_events_are_appended_sequentially(context context) : Given<conte
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<ModuleReadModel>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(ModuleId, new ModuleAdded("Authors"));
             await EventStore.EventLog.Append(FeatureId, new FeatureAddedToModule(ModuleId, FeatureId, "Registration"));

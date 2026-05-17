@@ -35,7 +35,7 @@ public class and_reactor_forwards_event_to_outbox(context context) : Given<conte
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<OutboxForwardingReactor>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             await EventStore.EventLog.Append(EventSourceId, Event);
             await Tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             OutboxTailSequenceNumber = await EventStore.GetEventSequence(EventSequenceId.Outbox).GetTailSequenceNumber();

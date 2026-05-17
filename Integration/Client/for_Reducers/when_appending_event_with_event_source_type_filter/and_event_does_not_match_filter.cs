@@ -40,7 +40,7 @@ public class and_event_does_not_match_filter(context context) : Given<context>(c
         async Task Because()
         {
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerFilteredByEventSourceType>();
-            await reducer.WaitTillActive();
+            await reducer.WaitTillSubscribed();
 
             // Append an event with a non-matching event source type (default) — should be filtered out
             await EventStore.EventLog.Append(EventSourceId, NonMatchingEvent);

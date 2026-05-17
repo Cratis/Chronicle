@@ -44,11 +44,23 @@ jobs:
             "outofprocess|mssql|true"
           )
 
+          # Namespaces that use direct server-side storage access (IStorage, IGrainFactory)
+          # and are only compatible with inprocess mode.
+          inprocess_only_namespaces=("for_EventStoreSubscriptions")
+
           matrix='{"include":['
           for ns in $namespaces; do
             [ -z "$ns" ] && continue
             for config in "${configs[@]}"; do
               IFS='|' read -r mode database needs_docker <<< "$config"
+              # Skip outofprocess configs for namespaces that require inprocess-only infrastructure.
+              if [[ "$mode" == "outofprocess" ]]; then
+                skip=false
+                for skip_ns in "${inprocess_only_namespaces[@]}"; do
+                  [[ "$ns" == "$skip_ns" ]] && skip=true && break
+                done
+                $skip && continue
+              fi
               matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.${ns}\",\"mode\":\"${mode}\",\"database\":\"${database}\",\"needs-docker\":${needs_docker}},"
             done
           done

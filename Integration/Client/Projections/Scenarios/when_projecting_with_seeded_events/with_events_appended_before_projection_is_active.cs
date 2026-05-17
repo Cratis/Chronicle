@@ -38,7 +38,7 @@ public class with_events_appended_before_projection_is_active(context context) :
             }
 
             var projection = EventStore.Projections.GetHandlerFor<ItemsProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
             await projection.WaitTillReachesEventSequenceNumber(LastEventSequenceNumber);
 
             Result = await EventStore.ReadModels.GetInstanceById<ItemsReadModel>(new ReadModelKey(EventSourceId));

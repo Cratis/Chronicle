@@ -34,7 +34,7 @@ public class for_materialized_projection(context context) : Given<context>(conte
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
 
-            await Projection.WaitTillActive();
+            await Projection.WaitTillSubscribed();
 
             var appendResult = await EventStore.EventLog.Append(EventSourceId, SecondEvent);
 

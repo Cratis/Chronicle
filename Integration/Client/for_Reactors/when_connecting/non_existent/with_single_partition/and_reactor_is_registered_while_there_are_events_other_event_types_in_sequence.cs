@@ -29,7 +29,7 @@ public class and_reactor_is_registered_while_there_are_events_other_event_types_
         async Task Because()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }

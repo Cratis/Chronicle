@@ -40,7 +40,7 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<DeepHierarchyModule>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(ModuleId, new DeepHierarchyModuleCreated("Authors"));
             await EventStore.EventLog.Append(FeatureId, new DeepHierarchyFeatureCreated(ModuleId, FeatureId, "Registration"));

@@ -35,7 +35,7 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<FeatureReadModel>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(FeatureId, new FeatureCreated("My Feature"));
             await EventStore.EventLog.Append(SliceId, new SliceAddedToFeature(FeatureId, SliceId, "My Slice"));

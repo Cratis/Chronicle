@@ -14,7 +14,7 @@ public class and_collecting_the_appended_event(context context) : Given<context>
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<AReactor>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             AppendedEventsCollector = StartCollectingAppends();
             await EventStore.EventLog.Append(EventSourceId, new AnEventHappened(42));

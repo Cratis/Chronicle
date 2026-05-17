@@ -18,7 +18,7 @@ public class and_the_constraint_is_satisfied(context context) : Given<context>(c
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<AReactorThatDirectlyAppendsUniqueEvent>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             UniqueValue = Guid.NewGuid().ToString();
             var firstEventSourceId = EventSourceId.New();

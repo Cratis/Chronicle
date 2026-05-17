@@ -44,7 +44,7 @@ public class and_child_event_arrives_before_parent(context context) : Given<cont
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             // Create root first
             var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));

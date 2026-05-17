@@ -43,7 +43,7 @@ public class and_resolves_through_second_event_type(context context) : Given<con
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<RootProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             // Event 1: ChildNameChanged arrives FIRST (deferred)
             var appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, "First Update"));

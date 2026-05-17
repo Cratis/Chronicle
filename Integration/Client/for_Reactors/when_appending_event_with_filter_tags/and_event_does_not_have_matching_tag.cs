@@ -40,7 +40,7 @@ public class and_event_does_not_have_matching_tag(context context) : Given<conte
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorFilteredByTag>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             // Append an event without the required tag — should be filtered out
             await EventStore.EventLog.Append(EventSourceId, NonMatchingEvent);

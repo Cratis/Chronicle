@@ -51,7 +51,7 @@ public class and_all_events_are_appended_in_one_transaction(context context) : G
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             var events = new EventForEventSourceId[]
             {

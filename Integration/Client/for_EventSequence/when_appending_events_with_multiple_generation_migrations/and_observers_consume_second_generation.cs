@@ -63,9 +63,9 @@ public class and_observers_consume_second_generation(context context) : Given<co
             var reducerHandler = EventStore.Reducers.GetHandlerFor<UserRegisteredReducer>();
             var projectionHandler = EventStore.Projections.GetHandlerFor<UserRegisteredProjection>();
 
-            await reactorHandler.WaitTillActive();
-            await reducerHandler.WaitTillActive();
-            await projectionHandler.WaitTillActive();
+            await reactorHandler.WaitTillSubscribed();
+            await reducerHandler.WaitTillSubscribed();
+            await projectionHandler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(EventSourceId, Event);
 

@@ -58,9 +58,9 @@ public class an_event_with_observers(context context) : Given<context>(context)
             var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
             var projectionHandler = EventStore.Projections.GetHandlerFor<SomeProjection>();
 
-            await reactorHandler.WaitTillActive(startupTimeout);
-            await reducerHandler.WaitTillActive(startupTimeout);
-            await projectionHandler.WaitTillActive(startupTimeout);
+            await reactorHandler.WaitTillSubscribed(startupTimeout);
+            await reducerHandler.WaitTillSubscribed(startupTimeout);
+            await projectionHandler.WaitTillSubscribed(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);

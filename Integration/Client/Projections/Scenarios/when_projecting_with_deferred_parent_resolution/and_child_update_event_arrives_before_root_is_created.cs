@@ -42,7 +42,7 @@ public class and_child_update_event_arrives_before_root_is_created(context conte
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<RootProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             // Event 1: ChildNameChanged arrives FIRST (before root even exists) - this gets deferred
             var appendResult = await EventStore.EventLog.Append(RootId, new ChildNameChanged(ChildId, UpdatedChildName));

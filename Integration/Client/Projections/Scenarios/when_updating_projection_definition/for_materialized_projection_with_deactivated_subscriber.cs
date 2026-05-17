@@ -45,7 +45,7 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             await Projection.WaitTillReachesEventSequenceNumber(LastEventSequenceNumber);
 
             // Then confirm active state
-            await Projection.WaitTillActive();
+            await Projection.WaitTillSubscribed();
 
             ResultAfterReplay = await GetReadModel(EventSourceId);
         }

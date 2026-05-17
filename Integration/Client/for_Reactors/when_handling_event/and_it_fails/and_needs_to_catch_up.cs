@@ -32,7 +32,7 @@ public class and_needs_to_catch_up(context context) : Given<context>(context)
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             Observers[1].HandleTime = TimeSpan.FromSeconds(1);

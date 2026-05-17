@@ -55,7 +55,7 @@ public class and_metric_event_arrives_before_hub_is_added(context context) : Giv
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<SimulationDashboardProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));
             await projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);

@@ -38,7 +38,7 @@ public class with_events_seeded_using_seeding_api(context context) : Given<conte
             await EventStore.Seeding.Register();
 
             var projection = EventStore.Projections.GetHandlerFor<ItemsProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             var appendedEvents = await EventStore.EventLog.GetForEventSourceIdAndEventTypes(
                 EventSourceId,

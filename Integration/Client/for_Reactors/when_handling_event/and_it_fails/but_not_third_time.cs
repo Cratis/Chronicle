@@ -35,7 +35,7 @@ public class but_not_third_time(context context) : Given<context>(context)
             var retryTimeout = TimeSpan.FromSeconds(10);
 
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = true;
             Observers[2].ShouldFail = false;

@@ -32,7 +32,7 @@ public class and_child_event_is_appended_to_its_own_event_source(context context
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<DashboardReadModel>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(DashboardId, new ModelBoundDashboardAdded(DashboardName));
             await EventStore.EventLog.Append(ConfigurationId, new ModelBoundConfigurationAddedToDashboard(DashboardId, ConfigurationId, InitialConfigurationName));

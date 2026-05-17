@@ -50,7 +50,7 @@ public class and_events_are_appended_before_projection_is_registered(context con
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<ModuleReadModel>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
             await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             Result = await EventStore.ReadModels.GetInstanceById<ModuleReadModel>(ModuleId.ToString());

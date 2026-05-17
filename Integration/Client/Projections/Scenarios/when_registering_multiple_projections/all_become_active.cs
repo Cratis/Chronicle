@@ -43,7 +43,7 @@ public class all_become_active(context context) : Given<context>(context)
         async Task Because()
         {
             Handlers = EventStore.Projections.GetAllHandlers().ToArray();
-            await Task.WhenAll(Handlers.Select(h => h.WaitTillActive()));
+            await Task.WhenAll(Handlers.Select(h => h.WaitTillSubscribed()));
             States = await Task.WhenAll(Handlers.Select(h => h.GetState()));
         }
     }

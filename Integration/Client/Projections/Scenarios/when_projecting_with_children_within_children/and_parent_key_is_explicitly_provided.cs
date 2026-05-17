@@ -44,7 +44,7 @@ public class and_parent_key_is_explicitly_provided(context context) : Given<cont
         async Task Because()
         {
             var projection = EventStore.Projections.GetHandlerFor<SimulationProjection>();
-            await projection.WaitTillActive();
+            await projection.WaitTillSubscribed();
 
             // Append root event to SimulationId event source
             var appendResult = await EventStore.EventLog.Append(SimulationId, new SimulationAdded(SimulationName));

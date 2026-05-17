@@ -24,7 +24,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         async Task Establish()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             EventsToHandle = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(EventsToHandle);
@@ -42,7 +42,7 @@ public class and_reactor_has_observed_events_previously_and_is_not_behind(contex
         async Task Because()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             ReactorState = await reactor.GetState();
         }
     }

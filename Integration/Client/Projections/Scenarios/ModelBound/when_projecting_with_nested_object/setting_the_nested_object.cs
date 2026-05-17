@@ -26,7 +26,7 @@ public class setting_the_nested_object(context context) : Given<context>(context
 
             var projectionId = EventStore.Projections.GetProjectionIdForModel<Slice>();
             var handler = EventStore.Projections.GetAllHandlers().Single(_ => _.Id == projectionId);
-            await handler.WaitTillActive();
+            await handler.WaitTillSubscribed();
 
             await EventStore.EventLog.Append(SliceId, new SliceItemCreated("Model-Bound Slice"));
             var appendResult = await EventStore.EventLog.Append(SliceId, new CommandSetOnSliceItem("Register", "{}"));

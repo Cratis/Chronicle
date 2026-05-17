@@ -24,7 +24,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
         async Task Establish()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10).ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
@@ -44,7 +44,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind_by_one
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             await Reactor.WaitTillHandledEventReaches(FirstEvents.Count + CatchupEvents.Count);
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }

@@ -26,7 +26,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
         {
             HandledEventsBefore = Reactor.HandledEvents;
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
 
             FirstEvents = EventForEventSourceIdHelpers.CreateMultiple(i => new SomeEvent(42), 10, "Partition").ToList();
             var result = await EventStore.EventLog.AppendMany(FirstEvents);
@@ -46,7 +46,7 @@ public class and_reactor_has_observed_events_previously_but_is_now_behind(contex
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
             await reactor.WaitTillReachesEventSequenceNumber(LastEventSequenceNumberAfterDisconnect);
             await Reactor.WaitTillHandledEventReaches(HandledEventsBefore + FirstEvents.Count + CatchupEvents.Count);
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }

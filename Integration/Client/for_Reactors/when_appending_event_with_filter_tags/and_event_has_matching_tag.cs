@@ -38,7 +38,7 @@ public class and_event_has_matching_tag(context context) : Given<context>(contex
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorFilteredByTag>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             await EventStore.EventLog.Append(EventSourceId, Event, tags: ["important"]);
             await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             await reactor.WaitTillReachesEventSequenceNumber(EventSequenceNumber.First);

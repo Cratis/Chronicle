@@ -59,10 +59,10 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             var nonReplayableReactorHandler = EventStore.Reactors.GetHandlerFor<NonReplayableReactor>();
             var nonReplayableReducerHandler = EventStore.Reducers.GetHandlerFor<NonReplayableReducer>();
 
-            await reactorHandler.WaitTillActive(startupTimeout);
-            await reducerHandler.WaitTillActive(startupTimeout);
-            await nonReplayableReactorHandler.WaitTillActive(startupTimeout);
-            await nonReplayableReducerHandler.WaitTillActive(startupTimeout);
+            await reactorHandler.WaitTillSubscribed(startupTimeout);
+            await reducerHandler.WaitTillSubscribed(startupTimeout);
+            await nonReplayableReactorHandler.WaitTillSubscribed(startupTimeout);
+            await nonReplayableReducerHandler.WaitTillSubscribed(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);

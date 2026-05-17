@@ -30,7 +30,7 @@ public class but_not_second_time(context context) : Given<context>(context)
         async Task Because()
         {
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorThatCanFail>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);

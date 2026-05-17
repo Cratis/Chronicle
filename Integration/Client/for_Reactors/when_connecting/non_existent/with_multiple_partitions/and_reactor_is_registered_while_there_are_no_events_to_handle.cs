@@ -26,7 +26,7 @@ public class and_reactor_is_registered_while_there_are_no_events_to_handle(conte
         async Task Because()
         {
             var reactor = await EventStore.Reactors.Register<ReactorWithoutDelay>();
-            await reactor.WaitTillActive();
+            await reactor.WaitTillSubscribed();
             ReactorState = await reactor.WaitTillActiveAndGetState();
         }
     }

@@ -30,7 +30,7 @@ public class but_not_second_time(context context) : Given<context>(context)
         {
             var startupTimeout = TimeSpanFactory.FromSeconds(30);
             var reducer = EventStore.Reducers.GetHandlerFor<ReducerThatCanFail>();
-            await reducer.WaitTillActive(startupTimeout);
+            await reducer.WaitTillSubscribed(startupTimeout);
             Observers[0].ShouldFail = true;
             Observers[1].ShouldFail = false;
             await EventStore.EventLog.Append(EventSourceId, Event);
