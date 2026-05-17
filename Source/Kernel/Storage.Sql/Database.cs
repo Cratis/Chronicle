@@ -40,19 +40,22 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, ReadModelDbContext>>>> _readModelDbContexts = new();
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ClusterDbContext>> Cluster()
+    public async Task<DbContextScope<ClusterDbContext>> Cluster()
     {
         if (_clusterDbContext.Value == null)
         {
             var builder = new DbContextOptionsBuilder<ClusterDbContext>();
-            builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
+            var connectionString = options.Value.Storage.ConnectionDetails;
+            builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
                 .AddConceptAsSupport();
-            _clusterDbContext.Value = new ClusterDbContext(builder.Options);
+            var dbContext = new ClusterDbContext(builder.Options);
+            await MigrateWithLock(dbContext, connectionString);
+            _clusterDbContext.Value = dbContext;
         }
 
-        return Task.FromResult(new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!));
+        return new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!);
     }
 
     /// <inheritdoc/>
