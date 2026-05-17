@@ -244,23 +244,24 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
+        // Switch to SIMPLE recovery so the transaction log is automatically reclaimed after
+        // each checkpoint — prevents unbounded log growth from repeated DELETE operations
+        // that would cause MSSQL to auto-grow the log and pause all writes for 30+ seconds.
+        var dbName = conn.Database;
+#pragma warning disable CA2100
+        await using var recoveryCmd = new SqlCommand($"IF EXISTS (SELECT 1 FROM sys.databases WHERE name = N'{dbName}' AND recovery_model_desc != 'SIMPLE') ALTER DATABASE [{dbName}] SET RECOVERY SIMPLE WITH NO_WAIT", conn);
+#pragma warning restore CA2100
+        await recoveryCmd.ExecuteNonQueryAsync();
+
+        // Use TRUNCATE TABLE (minimally logged, no per-row log writes) instead of DELETE FROM.
+        // Chronicle's SQL schema has no FK constraints, so TRUNCATE works directly.
         const string sql = """
             DECLARE @sql NVARCHAR(MAX) = N'';
-
-            SELECT @sql += 'ALTER TABLE [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '] NOCHECK CONSTRAINT all;' + CHAR(10)
-            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
-            EXEC sp_executesql @sql;
-
-            SET @sql = N'';
-            SELECT @sql += 'DELETE FROM [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '];' + CHAR(10)
+            SELECT @sql += 'TRUNCATE TABLE [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '];' + CHAR(10)
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME != '__EFMigrationsHistory';
             EXEC sp_executesql @sql;
-
-            SET @sql = N'';
-            SELECT @sql += 'ALTER TABLE [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '] WITH CHECK CHECK CONSTRAINT all;' + CHAR(10)
-            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
-            EXEC sp_executesql @sql;
+            CHECKPOINT;
             """;
         await using var cmd = new SqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
