@@ -104,12 +104,18 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
                 if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
                 {
-                    // Truncate (not drop/recreate) the outofprocess server's database. Drop/recreate
-                    // invalidates the server's connection pool; the server's first post-reset request
-                    // then hits a stale connection, which causes transient failures or slow retries.
-                    // Truncating keeps existing connections alive while clearing all data.
+                    // Truncate the outofprocess server's database, then restart the server container.
+                    // Truncating keeps connections alive (no stale-pool issue from drop/recreate).
+                    // Restarting the container is required to evict Orleans grains: without a restart
+                    // grains stay active with their old in-memory state (e.g. observer head position)
+                    // and skip events in the freshly-cleared event sequence, causing observer timeouts.
                     var serverConnectionString = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
                     await TruncateAllPostgreSqlTables(serverConnectionString);
+                    if (_outOfProcessContainer is not null)
+                    {
+                        await _outOfProcessContainer.StopAsync();
+                        await _outOfProcessContainer.StartAsync();
+                    }
                 }
 
                 NpgsqlConnection.ClearAllPools();
@@ -119,9 +125,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
                 if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
                 {
-                    // Same reasoning as PostgreSql: truncate instead of drop/recreate.
+                    // Same reasoning as PostgreSql: truncate + restart.
                     var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
                     await TruncateAllMsSqlTables(serverConnectionString);
+                    if (_outOfProcessContainer is not null)
+                    {
+                        await _outOfProcessContainer.StopAsync();
+                        await _outOfProcessContainer.StartAsync();
+                    }
                 }
 
                 SqlConnection.ClearAllPools();
