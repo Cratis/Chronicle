@@ -139,6 +139,22 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Restarts the MongoDB server so that client reconnection behavior can be tested.
+    /// </summary>
+    /// <remarks>
+    /// The default implementation stops and starts the <see cref="MongoDBContainer"/>.
+    /// Subclasses may override this to use a lighter-weight mechanism (e.g. killing only
+    /// the mongod process inside the container) when stopping the container would destroy
+    /// storage that must survive the restart.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public virtual async Task RestartMongoDBAsync()
+    {
+        await MongoDBContainer.StopAsync();
+        await MongoDBContainer.StartAsync();
+    }
+
+    /// <summary>
     /// Builds the container with the specified network.
     /// </summary>
     /// <param name="network">The network to use.</param>

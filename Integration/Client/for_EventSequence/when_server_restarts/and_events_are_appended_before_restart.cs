@@ -26,15 +26,11 @@ public class and_events_are_appended_before_restart(context context) : Given<con
 
         async Task Because()
         {
-            // Kill mongod inside the running container rather than stopping the container.
-            // Stopping the container clears the tmpfs /data/db mount; killing just the
-            // mongod process leaves the container (and its tmpfs) intact, so MongoDB
-            // restarts with the existing data and Chronicle can reconnect to it.
-            await ChronicleFixture.MongoDBContainer.ExecAsync(["/bin/sh", "-c", "kill $(pgrep mongod)"]);
-            await Task.Delay(2000);
-            await ChronicleFixture.MongoDBContainer.ExecAsync(["/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all --fork --logpath /tmp/mongod.log"]);
+            // Use the fixture's RestartMongoDBAsync to handle both inprocess (kill-in-process
+            // to preserve tmpfs) and outofprocess (stop+start, overlay filesystem survives).
+            await ChronicleFixture.RestartMongoDBAsync();
 
-            // Wait until the kernel has reconnected to MongoDB after the mongod restart.
+            // Wait until the kernel has reconnected to MongoDB after the restart.
             var deadline = DateTime.UtcNow.AddSeconds(60);
             while (DateTime.UtcNow < deadline)
             {

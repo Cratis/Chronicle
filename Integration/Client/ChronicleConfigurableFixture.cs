@@ -293,6 +293,27 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     }
 
     /// <inheritdoc/>
+    public override async Task RestartMongoDBAsync()
+    {
+        if (Options.Mode == ChronicleRuntimeMode.InProcess)
+        {
+            // Kill only the mongod process inside the still-running container.
+            // The container (and its tmpfs /data/db) stays alive, so MongoDB restarts
+            // with existing data intact and Chronicle can reconnect.
+            await MongoDBContainer.ExecAsync(["/bin/sh", "-c", "kill $(pgrep mongod)"]);
+            await Task.Delay(2000);
+            await MongoDBContainer.ExecAsync(["/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all --fork --logpath /tmp/mongod.log"]);
+        }
+        else
+        {
+            // For outofprocess the container uses an overlay filesystem (not tmpfs)
+            // so data survives a full container stop+start.
+            await MongoDBContainer.StopAsync();
+            await MongoDBContainer.StartAsync();
+        }
+    }
+
+    /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
         if (Options.Mode == ChronicleRuntimeMode.InProcess)
