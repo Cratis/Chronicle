@@ -94,10 +94,12 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
                 if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
                 {
-                    // Reset the outofprocess server's database to clear stale constraint and
-                    // namespace state that accumulates between test classes.
-                    var serverAdminConnectionString = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database=postgres;Username=postgres;Password={PostgreSqlPassword}";
-                    await DropAndRecreateSqlDatabase("postgres", _outOfProcessSqlDatabaseName, serverAdminConnectionString);
+                    // Truncate (not drop/recreate) the outofprocess server's database. Drop/recreate
+                    // invalidates the server's connection pool; the server's first post-reset request
+                    // then hits a stale connection, which causes transient failures or slow retries.
+                    // Truncating keeps existing connections alive while clearing all data.
+                    var serverConnectionString = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
+                    await TruncateAllPostgreSqlTables(serverConnectionString);
                 }
 
                 NpgsqlConnection.ClearAllPools();
@@ -107,10 +109,9 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
                 if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
                 {
-                    // Reset the outofprocess server's database to clear stale constraint and
-                    // namespace state that accumulates between test classes.
-                    var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database=master;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
-                    await DropAndRecreateMsSqlDatabase("master", _outOfProcessSqlDatabaseName, serverConnectionString);
+                    // Same reasoning as PostgreSql: truncate instead of drop/recreate.
+                    var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+                    await TruncateAllMsSqlTables(serverConnectionString);
                 }
 
                 SqlConnection.ClearAllPools();
@@ -184,6 +185,37 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
             try { File.Delete(file); } catch { /* ignore */ }
         }
+    }
+
+    static async Task TruncateAllPostgreSqlTables(string connectionString)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+        const string sql = """
+            DO $$ DECLARE
+                r RECORD;
+            BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables
+                          WHERE schemaname = 'public' AND tablename != '__EFMigrationsHistory') LOOP
+                    EXECUTE 'TRUNCATE TABLE "' || r.tablename || '" CASCADE';
+                END LOOP;
+            END $$;
+            """;
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    static async Task TruncateAllMsSqlTables(string connectionString)
+    {
+        await using var conn = new SqlConnection(connectionString);
+        await conn.OpenAsync();
+        const string sql = """
+            EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT all';
+            EXEC sp_MSforeachtable 'IF OBJECT_NAME(OBJECT_ID(''?'')) != ''__EFMigrationsHistory'' DELETE FROM ?';
+            EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all';
+            """;
+        await using var cmd = new SqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
     }
 
     static async Task DropAndRecreateSqlDatabase(string adminDatabase, string databaseName, string connectionString)
