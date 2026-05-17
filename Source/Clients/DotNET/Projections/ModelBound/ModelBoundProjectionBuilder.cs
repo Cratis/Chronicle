@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
@@ -106,33 +105,7 @@ internal class ModelBoundProjectionBuilder(
         return definition;
     }
 
-    static string ConvertValueToInvariantString(object value)
-    {
-        var actualValue = value;
-
-        if (actualValue.GetType().IsEnum)
-        {
-            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
-            if (underlyingType == typeof(int))
-            {
-                actualValue = Convert.ChangeType(actualValue, underlyingType);
-            }
-            else
-            {
-                return actualValue.ToString()!;
-            }
-        }
-
-        return actualValue switch
-        {
-            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
-            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
-            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => actualValue.ToString()!
-        };
-    }
+    static string ConvertValueToInvariantString(object value) => FromDefinitionExtensions.ConvertValueToInvariantString(value);
 
     EventSequenceId InferEventSequenceId(Type modelType, ProjectionDefinition definition, string? currentEventStoreName)
     {

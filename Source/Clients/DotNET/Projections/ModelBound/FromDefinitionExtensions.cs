@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
@@ -139,6 +140,39 @@ static class FromDefinitionExtensions
         var contextPropertyPath = new PropertyPath(contextPropertyName);
         var convertedContextPropertyName = namingPolicy.GetPropertyName(contextPropertyPath);
         fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
+    }
+
+    /// <summary>
+    /// Converts a CLR value to an invariant string representation suitable for use in projection expressions.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>An invariant string representation of the value.</returns>
+    internal static string ConvertValueToInvariantString(object value)
+    {
+        var actualValue = value;
+
+        if (actualValue.GetType().IsEnum)
+        {
+            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
+            if (underlyingType == typeof(int))
+            {
+                actualValue = Convert.ChangeType(actualValue, underlyingType);
+            }
+            else
+            {
+                return actualValue.ToString()!;
+            }
+        }
+
+        return actualValue switch
+        {
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => actualValue.ToString()!
+        };
     }
 
     /// <summary>
