@@ -64,8 +64,6 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
             await projectionHandler.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
             await WaitForObservedStateBehavioral();
-
-            ProjectionResult = await EventStore.ReadModels.GetInstanceById<UserReadModel>(EventSourceId);
         }
 
         async Task WaitForObservedStateBehavioral(TimeSpan? timeout = default)
