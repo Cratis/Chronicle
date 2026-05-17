@@ -266,44 +266,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         await cmd.ExecuteNonQueryAsync();
     }
 
-    static async Task DropAndRecreateSqlDatabase(string adminDatabase, string databaseName, string connectionString)
-    {
-        var builder = new NpgsqlConnectionStringBuilder(connectionString) { Database = adminDatabase };
-        await using var conn = new NpgsqlConnection(builder.ConnectionString);
-        await conn.OpenAsync();
-#pragma warning disable CA2100 // databaseName is an internal fixture-controlled value, not user input
-        await using var dropCmd = new NpgsqlCommand(
-            $"DROP DATABASE IF EXISTS \"{databaseName}\" WITH (FORCE)", conn);
-        await dropCmd.ExecuteNonQueryAsync();
-        await using var createCmd = new NpgsqlCommand(
-            $"CREATE DATABASE \"{databaseName}\"", conn);
-#pragma warning restore CA2100
-        await createCmd.ExecuteNonQueryAsync();
-    }
-
-    static async Task DropAndRecreateMsSqlDatabase(string adminDatabase, string databaseName, string connectionString)
-    {
-        var builder = new SqlConnectionStringBuilder(connectionString)
-        {
-            InitialCatalog = adminDatabase
-        };
-        await using var conn = new SqlConnection(builder.ConnectionString);
-        await conn.OpenAsync();
-#pragma warning disable CA2100, MA0101 // databaseName is an internal fixture-controlled value, not user input
-        var sql = $"""
-                IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{databaseName}')
-                BEGIN
-                    ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                    DROP DATABASE [{databaseName}];
-                END
-                CREATE DATABASE [{databaseName}];
-                """;
-#pragma warning disable CA2100
-        await using var cmd = new SqlCommand(sql, conn);
-#pragma warning restore CA2100, MA0101
-        await cmd.ExecuteNonQueryAsync();
-    }
-
     /// <inheritdoc/>
     public override async Task RestartMongoDBAsync()
     {
