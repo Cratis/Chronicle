@@ -25,7 +25,7 @@ public class v15_0_0 : Migration
                 Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 ReadModelName = table.StringColumn(migrationBuilder),
-                ReadModelGeneration = table.NumberColumn<int>(migrationBuilder),
+                ReadModelGeneration = table.NumberColumn<uint>(migrationBuilder),
                 SinkType = table.GuidColumn(migrationBuilder),
                 SinkConfigurationId = table.GuidColumn(migrationBuilder),
                 Definitions = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
