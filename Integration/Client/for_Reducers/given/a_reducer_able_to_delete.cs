@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Reducers;
-using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.for_Reducers.given;
 
@@ -16,11 +15,28 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
     public long CountAfterFirstEvent;
     public long CountAfterSecondEvent;
 
-    protected IMongoCollection<SomeReadModel> _collection => ReadModelsDatabase.Database.GetCollection<SomeReadModel>();
     protected IReducerHandler _reducer;
+
+    long _netCount;
+#pragma warning disable CA2213
+    IDisposable _subscription;
+#pragma warning restore CA2213
 
     async Task Establish()
     {
+        _subscription = EventStore.ReadModels.Watch<SomeReadModel>()
+            .Subscribe(cs =>
+            {
+                if (cs.Removed)
+                {
+                    Interlocked.Decrement(ref _netCount);
+                }
+                else
+                {
+                    Interlocked.Increment(ref _netCount);
+                }
+            });
+
         var startupTimeout = TimeSpanFactory.FromSeconds(30);
         _reducer = EventStore.Reducers.GetHandlerFor<TReducer>();
         await _reducer.WaitTillSubscribed(startupTimeout);
@@ -32,13 +48,15 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
         const string eventSourceId = "some source";
         var result = await EventStore.EventLog.Append(eventSourceId, new SomeEvent(42));
         await _reducer.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
-        CountAfterFirstEvent = await _collection.CountDocumentsAsync(Builders<SomeReadModel>.Filter.Empty);
+        CountAfterFirstEvent = Interlocked.Read(ref _netCount);
 
         result = await EventStore.EventLog.Append(eventSourceId, new SomeDeleteEvent());
         await _reducer.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
 
-        CountAfterSecondEvent = await _collection.CountDocumentsAsync(Builders<SomeReadModel>.Filter.Empty);
+        CountAfterSecondEvent = Interlocked.Read(ref _netCount);
     }
+
+    void Destroy() => _subscription?.Dispose();
 
     protected override void ConfigureServices(IServiceCollection services)
     {

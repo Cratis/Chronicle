@@ -84,6 +84,19 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         // its full serverSelectionTimeout (30 s) before failing — once per test-class boundary,
         // and twice because OnBeforeInitializeAsync calls RemoveAllDatabases twice.
         // Only invoke the base cleanup when it is actually needed.
+        // For outofprocess MongoDB, deactivate server grains BEFORE dropping the databases.
+        // This ensures OnDeactivateAsync writes go to the old MongoDB which is then dropped,
+        // leaving a clean slate. Without this, server grains keep stale in-memory state
+        // (stream subscriptions, sequence numbers) after the DB is wiped, causing intermittent
+        // failures such as Orleans stream notifications being lost because the stream consumer
+        // grain's subscription no longer matches the newly-reactivated projection grain.
+        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess &&
+            Options.StorageProvider == ChronicleStorageProvider.MongoDB &&
+            excludePrefixes is null)
+        {
+            await ResetOutOfProcessKernelState();
+        }
+
         if (Options.Mode == ChronicleRuntimeMode.InProcess || Options.StorageProvider == ChronicleStorageProvider.MongoDB)
         {
             await base.RemoveAllDatabases(excludePrefixes);

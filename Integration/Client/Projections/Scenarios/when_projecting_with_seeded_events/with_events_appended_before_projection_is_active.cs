@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using MongoDB.Driver;
+using Cratis.Chronicle.ReadModels;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_seeded_events.with_events_appended_before_projection_is_active.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_seeded_events;
@@ -12,10 +12,6 @@ public class with_events_appended_before_projection_is_active(context context) :
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
-#pragma warning disable CA2213 // Disposable fields should be disposed
-        ChronicleFixture _chronicleInProcessFixture = chronicleInProcessFixture;
-#pragma warning restore CA2213 // Disposable fields should be disposed
-
         public EventSourceId EventSourceId;
         public ItemsReadModel Result;
         public int NumberOfEvents;
@@ -45,9 +41,7 @@ public class with_events_appended_before_projection_is_active(context context) :
             await projection.WaitTillActive();
             await projection.WaitTillReachesEventSequenceNumber(LastEventSequenceNumber);
 
-            var filter = Builders<ItemsReadModel>.Filter.Eq(new StringFieldDefinition<ItemsReadModel, string>("_id"), EventSourceId);
-            var cursor = await _chronicleInProcessFixture.ReadModels.Database.GetCollection<ItemsReadModel>().FindAsync(filter);
-            Result = await cursor.FirstOrDefaultAsync();
+            Result = await EventStore.ReadModels.GetInstanceById<ItemsReadModel>(new ReadModelKey(EventSourceId));
         }
     }
 
