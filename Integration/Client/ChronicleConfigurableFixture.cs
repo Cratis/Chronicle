@@ -5,6 +5,9 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
+using Npgsql;
 
 namespace Cratis.Chronicle.Integration;
 
@@ -75,6 +78,20 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     public override async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
     {
         await base.RemoveAllDatabases(excludePrefixes);
+
+        switch (Options.StorageProvider)
+        {
+            case ChronicleStorageProvider.PostgreSql:
+                await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
+                NpgsqlConnection.ClearAllPools();
+                return;
+
+            case ChronicleStorageProvider.MsSql:
+                await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
+                SqlConnection.ClearAllPools();
+                return;
+        }
+
         if (Options.StorageProvider != ChronicleStorageProvider.Sqlite)
         {
             return;
@@ -105,6 +122,13 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             string.IsNullOrEmpty(inProcessDirectory) ? "." : inProcessDirectory,
             pattern);
 
+        // Release all pooled SQLite connections before deleting files.
+        // On Linux, deleting a file while a connection is open merely unlinks the directory
+        // entry; the old inode stays accessible via the pool and new connections reuse it,
+        // meaning the "deleted" database is still in use. Clearing the pool ensures the next
+        // DbContext creation opens a fresh connection to the newly-created file.
+        SqliteConnection.ClearAllPools();
+
         foreach (var file in matchingFiles)
         {
             if (excludePrefixes?.Any() == true)
@@ -123,6 +147,38 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         }
     }
 
+    static async Task DropAndRecreateSqlDatabase(string adminDatabase, string databaseName, string connectionString)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(connectionString) { Database = adminDatabase };
+        await using var conn = new NpgsqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+        await using var dropCmd = new NpgsqlCommand(
+            $"DROP DATABASE IF EXISTS \"{databaseName}\" WITH (FORCE)", conn);
+        await dropCmd.ExecuteNonQueryAsync();
+        await using var createCmd = new NpgsqlCommand(
+            $"CREATE DATABASE \"{databaseName}\"", conn);
+        await createCmd.ExecuteNonQueryAsync();
+    }
+
+    static async Task DropAndRecreateMsSqlDatabase(string adminDatabase, string databaseName, string connectionString)
+    {
+        var builder = new SqlConnectionStringBuilder(connectionString)
+        {
+            InitialCatalog = adminDatabase
+        };
+        await using var conn = new SqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+        var sql = $@"
+            IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{databaseName}')
+            BEGIN
+                ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE [{databaseName}];
+            END
+            CREATE DATABASE [{databaseName}];";
+        await using var cmd = new SqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network) =>
         Options.Mode switch
@@ -134,7 +190,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     IContainer BuildInProcessContainer(INetwork network) =>
         new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
-            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")

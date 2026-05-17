@@ -29,7 +29,23 @@ public class and_events_are_appended_before_restart(context context) : Given<con
             await ChronicleFixture.MongoDBContainer.StopAsync();
             await Task.Delay(2000);
             await ChronicleFixture.MongoDBContainer.StartAsync();
-            await Task.Delay(5000);
+
+            // Wait until the kernel has reconnected to MongoDB after container restart.
+            // The driver's server monitor retries every ~500ms when the server is down,
+            // so 60 seconds is a generous upper bound on CI machines.
+            var deadline = DateTime.UtcNow.AddSeconds(60);
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    await EventStore.EventLog.GetNextSequenceNumber();
+                    break;
+                }
+                catch
+                {
+                    await Task.Delay(500);
+                }
+            }
 
             AppendResultAfterRestart = await EventStore.EventLog.Append(EventSourceId, new SomeEvent("after-restart"));
             SequenceNumberAfterRestart = await EventStore.EventLog.GetNextSequenceNumber();
