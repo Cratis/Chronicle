@@ -27,6 +27,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
+    IContainer? _outOfProcessContainer;
 
     /// <summary>
     /// Gets the selected runtime options.
@@ -91,11 +92,27 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         {
             case ChronicleStorageProvider.PostgreSql:
                 await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                {
+                    // Reset the outofprocess server's database to clear stale constraint and
+                    // namespace state that accumulates between test classes.
+                    var serverAdminConnectionString = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database=postgres;Username=postgres;Password={PostgreSqlPassword}";
+                    await DropAndRecreateSqlDatabase("postgres", _outOfProcessSqlDatabaseName, serverAdminConnectionString);
+                }
+
                 NpgsqlConnection.ClearAllPools();
                 return;
 
             case ChronicleStorageProvider.MsSql:
                 await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                {
+                    // Reset the outofprocess server's database to clear stale constraint and
+                    // namespace state that accumulates between test classes.
+                    var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database=master;User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+                    await DropAndRecreateMsSqlDatabase("master", _outOfProcessSqlDatabaseName, serverConnectionString);
+                }
+
                 SqlConnection.ClearAllPools();
                 return;
         }
@@ -103,6 +120,16 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         if (Options.StorageProvider != ChronicleStorageProvider.Sqlite)
         {
             return;
+        }
+
+        // For outofprocess SQLite, delete the server's SQLite file inside the container so
+        // that the server starts fresh for the next test class. The TableMigrator recreates
+        // all tables automatically on first access after the file is gone.
+        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _outOfProcessContainer is not null)
+        {
+            var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
+            var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
+            await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.
@@ -188,12 +215,16 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     }
 
     /// <inheritdoc/>
-    protected override IContainer BuildContainer(INetwork network) =>
-        Options.Mode switch
+    protected override IContainer BuildContainer(INetwork network)
+    {
+        if (Options.Mode == ChronicleRuntimeMode.InProcess)
         {
-            ChronicleRuntimeMode.InProcess => BuildInProcessContainer(network),
-            _ => BuildOutOfProcessContainer(network),
-        };
+            return BuildInProcessContainer(network);
+        }
+
+        _outOfProcessContainer = BuildOutOfProcessContainer(network);
+        return _outOfProcessContainer;
+    }
 
     IContainer BuildInProcessContainer(INetwork network) =>
         new ContainerBuilder("mongo")
@@ -311,4 +342,15 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             { Length: > 0 } value => value,
             _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
         };
+
+    static string ExtractSqliteDataSource(string connectionString)
+    {
+        var builder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
+        if (builder.TryGetValue("Data Source", out var value) || builder.TryGetValue("Filename", out value))
+        {
+            return value?.ToString() ?? "/tmp/chronicle.db";
+        }
+
+        return "/tmp/chronicle.db";
+    }
 }
