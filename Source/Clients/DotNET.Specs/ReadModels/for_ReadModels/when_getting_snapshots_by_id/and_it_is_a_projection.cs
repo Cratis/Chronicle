@@ -32,6 +32,7 @@ public class and_it_is_a_projection : given.all_dependencies
 
         var eventTypeId = new EventTypeId("my-event");
         var eventType = new EventType(eventTypeId, 1);
+        _eventTypes.HasFor(eventTypeId).Returns(true);
         _eventTypes.GetClrTypeFor(eventTypeId).Returns(typeof(MyEvent));
 
         var eventContext = EventContext.EmptyWithEventSourceId(Guid.NewGuid()) with

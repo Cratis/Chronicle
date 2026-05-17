@@ -28,6 +28,7 @@ public class and_deserializing_multiple_events : given.an_event_sequence
             new("Event 3", 3)
         ];
 
+        _eventTypes.HasFor(_eventType.Id).Returns(true);
         _eventTypes.GetClrTypeFor(_eventType.Id).Returns(typeof(TestEvent));
 
         var contractEvents = _expectedEvents.Select((evt, idx) => new Contracts.Events.AppendedEvent
