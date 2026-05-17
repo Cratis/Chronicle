@@ -1,29 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage;
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using KernelConcepts = Cratis.Chronicle.Concepts;
-using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 
 static class EventSequenceRedactionViaSequenceWaitHelpers
 {
-    public static async Task<KernelAppendedEvent> WaitForRedactedEvent(this IChronicleSetupFixture fixture, Events.EventSequenceNumber sequenceNumber, TimeSpan? timeout = default)
+    public static async Task<AppendedEvent> WaitForRedactedEvent(this IChronicleSetupFixture fixture, Events.EventSequenceNumber sequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.FromSeconds(30);
         using var cts = new CancellationTokenSource(timeout.Value);
-        var storage = fixture.Services
-            .GetRequiredService<IStorage>()
-            .GetEventStore(Constants.EventStore)
-            .GetNamespace(KernelConcepts.EventStoreNamespaceName.Default)
-            .GetEventSequence(KernelConcepts.EventSequences.EventSequenceId.Log);
 
         while (true)
         {
-            var storedEvent = await storage.GetEventAt(sequenceNumber.Value);
-            if (storedEvent.Context.EventType.Id == KernelGlobalEventTypes.Redaction)
+            var events = await fixture.EventStore.EventLog.GetFromSequenceNumber(sequenceNumber);
+            var storedEvent = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
+
+            if (storedEvent is not null && storedEvent.Context.EventType.Id.Value == "EventRedacted")
             {
                 return storedEvent;
             }
@@ -32,23 +27,25 @@ static class EventSequenceRedactionViaSequenceWaitHelpers
         }
     }
 
-    public static async Task<KernelAppendedEvent> WaitForSystemEvent(this IChronicleSetupFixture fixture, string eventTypeId, TimeSpan? timeout = default)
+    public static async Task<AppendedEvent> WaitForSystemEvent(this IChronicleSetupFixture fixture, string eventTypeId, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.FromSeconds(30);
         using var cts = new CancellationTokenSource(timeout.Value);
-        var systemStorage = fixture.Services
-            .GetRequiredService<IStorage>()
-            .GetEventStore(Constants.EventStore)
-            .GetNamespace(KernelConcepts.EventStoreNamespaceName.Default)
-            .GetEventSequence(KernelConcepts.EventSequences.EventSequenceId.System);
+
+        var systemLog = fixture.EventStore.GetEventSequence(EventSequenceId.System);
 
         while (true)
         {
-            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
-            var storedEvent = await systemStorage.GetEventAt(tailSequenceNumber);
-            if (storedEvent.Context.EventType.Id.Value == eventTypeId)
+            var tail = await systemLog.GetTailSequenceNumber();
+            if (tail != EventSequenceNumber.Unavailable)
             {
-                return storedEvent;
+                var events = await systemLog.GetFromSequenceNumber(tail);
+                var storedEvent = events.FirstOrDefault();
+
+                if (storedEvent?.Context.EventType.Id.Value == eventTypeId)
+                {
+                    return storedEvent;
+                }
             }
 
             await Task.Delay(50, cts.Token);

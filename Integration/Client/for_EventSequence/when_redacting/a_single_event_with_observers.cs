@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_redacting.a_single_event_with_observers.context;
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 
@@ -21,8 +20,8 @@ public class a_single_event_with_observers(context context) : Given<context>(con
         public SomeEvent FirstEvent { get; private set; }
         public AnotherEvent SecondEvent { get; private set; }
         public SomeEvent ThirdEvent { get; private set; }
-        public KernelAppendedEvent RedactedStoredEvent { get; private set; }
-        public KernelAppendedEvent SystemStoredEvent { get; private set; }
+        public AppendedEvent RedactedStoredEvent { get; private set; }
+        public AppendedEvent SystemStoredEvent { get; private set; }
         public ReactorState ReactorState { get; private set; }
         public ReducerState ReducerState { get; private set; }
         public ProjectionState ProjectionState { get; private set; }
@@ -85,11 +84,14 @@ public class a_single_event_with_observers(context context) : Given<context>(con
             await Reactor.WaitTillHandledEventReaches(2, startupTimeout);
             await Reducer.WaitTillHandledEventReaches(2, startupTimeout);
 
-            var storage = GetEventLogStorage();
-            RedactedStoredEvent = await storage.GetEventAt((EventSequenceNumber.First + 1).Value);
-            var systemStorage = GetSystemEventLogStorage();
-            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
-            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
+            var redactedSeq = EventSequenceNumber.First + 1;
+            var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(redactedSeq);
+            RedactedStoredEvent = eventLogEvents.First();
+
+            var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
+            var systemTail = await systemLog.GetTailSequenceNumber();
+            var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
+            SystemStoredEvent = systemEvents.First();
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
@@ -98,7 +100,7 @@ public class a_single_event_with_observers(context context) : Given<context>(con
     }
 
     [Fact]
-    void should_mark_event_as_redacted() => Context.RedactedStoredEvent.Context.EventType.Id.Value.ShouldEqual(KernelGlobalEventTypes.Redaction.Value);
+    void should_mark_event_as_redacted() => Context.RedactedStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRedacted");
 
     [Fact]
     void should_have_appended_system_event() => Context.SystemStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRedactionRequested");

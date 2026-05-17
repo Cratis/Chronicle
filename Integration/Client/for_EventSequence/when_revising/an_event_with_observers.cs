@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_revising.an_event_with_observers.context;
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using KernelEventHash = Cratis.Chronicle.Concepts.Events.EventHash;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_revising;
 
@@ -22,8 +21,8 @@ public class an_event_with_observers(context context) : Given<context>(context)
         public AnotherEvent SecondEvent { get; private set; }
         public SomeEvent ThirdEvent { get; private set; }
         public SomeEvent RevisedEvent { get; private set; }
-        public KernelAppendedEvent StoredEvent { get; private set; }
-        public KernelAppendedEvent SystemStoredEvent { get; private set; }
+        public AppendedEvent StoredEvent { get; private set; }
+        public AppendedEvent SystemStoredEvent { get; private set; }
         public ReactorState ReactorState { get; private set; }
         public ReducerState ReducerState { get; private set; }
         public ProjectionState ProjectionState { get; private set; }
@@ -87,10 +86,13 @@ public class an_event_with_observers(context context) : Given<context>(context)
             await Reactor.WaitTillHandledEventReaches(3, startupTimeout);
             await Reducer.WaitTillHandledEventReaches(3, startupTimeout);
 
-            StoredEvent = await GetEventLogStorage().GetEventAt(EventSequenceNumber.First.Value);
-            var systemStorage = GetSystemEventLogStorage();
-            var tailSequenceNumber = await systemStorage.GetTailSequenceNumber();
-            SystemStoredEvent = await systemStorage.GetEventAt(tailSequenceNumber);
+            var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
+            StoredEvent = eventLogEvents.First();
+
+            var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
+            var systemTail = await systemLog.GetTailSequenceNumber();
+            var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
+            SystemStoredEvent = systemEvents.First();
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
@@ -102,7 +104,7 @@ public class an_event_with_observers(context context) : Given<context>(context)
     Task should_have_updated_content() => Context.ShouldHaveAppendedEvent<SomeEvent>(EventSequenceNumber.First, Context.EventSourceId, e => e.Content.ShouldEqual(Context.RevisedEvent.Content));
 
     [Fact]
-    void should_have_a_hash_set() => Context.StoredEvent.Context.Hash.ShouldNotEqual(KernelEventHash.NotSet);
+    void should_have_a_hash_set() => Context.StoredEvent.Context.Hash.ShouldNotEqual(EventHash.NotSet);
 
     [Fact]
     void should_have_appended_event_revised_to_system_log() => Context.SystemStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRevised");

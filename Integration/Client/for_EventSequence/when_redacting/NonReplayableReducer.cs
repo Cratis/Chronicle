@@ -7,6 +7,7 @@ using Cratis.Chronicle.Reducers;
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 
 [DependencyInjection.IgnoreConvention]
+[Observation.NonReplayable]
 public class NonReplayableReducer : IReducerFor<NonReplayableReadModel>
 {
     public int HandledEvents;

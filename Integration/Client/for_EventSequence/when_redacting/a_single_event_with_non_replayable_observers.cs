@@ -76,10 +76,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
             await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
 
-            // Mark the non-replayable observers as non-replayable in storage.
-            await MarkObserverAsNonReplayable(typeof(NonReplayableReactor).GetReactorId());
-            await MarkObserverAsNonReplayable(typeof(NonReplayableReducer).GetReducerId().Value);
-
             // Reset counters before redaction to measure replay.
             Reactor.HandledEvents = 0;
             Reducer.HandledEvents = 0;
@@ -100,14 +96,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             ReducerState = await reducerHandler.GetState();
             NonReplayableReactorState = await nonReplayableReactorHandler.GetState();
             NonReplayableReducerState = await nonReplayableReducerHandler.GetState();
-        }
-
-        async Task MarkObserverAsNonReplayable(string observerId)
-        {
-            var observerDefinitions = EventStoreStorage.Observers;
-            var definition = await observerDefinitions.Get(observerId);
-            var updated = definition with { IsReplayable = false };
-            await observerDefinitions.Save(updated);
         }
     }
 

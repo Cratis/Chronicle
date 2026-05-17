@@ -3,8 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_redacting.a_single_event_via_event_sequence.context;
-using KernelAppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using KernelGlobalEventTypes = Cratis.Chronicle.Concepts.Events.GlobalEventTypes;
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 
@@ -15,8 +13,8 @@ public class a_single_event_via_event_sequence(context context) : Given<context>
     {
         public EventSourceId EventSourceId { get; } = "source";
         public SomeEvent Event { get; private set; }
-        public KernelAppendedEvent StoredEvent { get; private set; }
-        public KernelAppendedEvent SystemStoredEvent { get; private set; }
+        public AppendedEvent StoredEvent { get; private set; }
+        public AppendedEvent SystemStoredEvent { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
@@ -36,7 +34,7 @@ public class a_single_event_via_event_sequence(context context) : Given<context>
     }
 
     [Fact]
-    void should_mark_event_as_redacted() => Context.StoredEvent.Context.EventType.Id.Value.ShouldEqual(KernelGlobalEventTypes.Redaction.Value);
+    void should_mark_event_as_redacted() => Context.StoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRedacted");
 
     [Fact]
     void should_have_appended_event_redaction_requested_to_system_log() => Context.SystemStoredEvent.Context.EventType.Id.Value.ShouldEqual("EventRedactionRequested");
