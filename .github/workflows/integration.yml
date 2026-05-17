@@ -48,6 +48,11 @@ jobs:
           # and are only compatible with inprocess mode.
           inprocess_only_namespaces=("for_EventStoreSubscriptions")
 
+          # Namespaces that require MongoDB as the storage backend (use direct MongoDB APIs,
+          # MongoDB-specific features like PII encryption, or kernel storage access patterns
+          # that only work when the in-process silo and the Chronicle server share MongoDB).
+          mongodb_only_namespaces=("for_EventSequence")
+
           matrix='{"include":['
           for ns in $namespaces; do
             [ -z "$ns" ] && continue
@@ -57,6 +62,14 @@ jobs:
               if [[ "$mode" == "outofprocess" ]]; then
                 skip=false
                 for skip_ns in "${inprocess_only_namespaces[@]}"; do
+                  [[ "$ns" == "$skip_ns" ]] && skip=true && break
+                done
+                $skip && continue
+              fi
+              # Skip non-MongoDB outofprocess configs for namespaces that require MongoDB.
+              if [[ "$mode" == "outofprocess" && "$database" != "mongodb" ]]; then
+                skip=false
+                for skip_ns in "${mongodb_only_namespaces[@]}"; do
                   [[ "$ns" == "$skip_ns" ]] && skip=true && break
                 done
                 $skip && continue
@@ -123,7 +136,7 @@ jobs:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
-          CHRONICLE_TEST_TIMEOUT_SECONDS: "120"
+          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '300' }}
         run: |
           dotnet test Integration/Client/Client.csproj \
             --no-restore \

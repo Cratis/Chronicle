@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 public interface ITableDbContext
 {
     /// <summary>
+    /// Gets the name of the dynamically managed table.
+    /// </summary>
+    string TableName { get; }
+
+    /// <summary>
     /// Ensures the table exists in the database.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>

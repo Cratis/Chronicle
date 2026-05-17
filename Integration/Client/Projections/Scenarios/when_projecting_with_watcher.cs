@@ -32,7 +32,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             _observable = EventStore.ReadModels.Watch<ReadModel>().Subscribe(result =>
             {
                 WatchResult = result;
-                _tcs.SetResult();
+                _tcs.TrySetResult();
             });
 
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
@@ -41,21 +41,18 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             // Allow the Watch's Orleans stream subscription to be established before appending.
             // WaitTillSubscribed ensures the projection event stream is ready, but the Watch
             // observable stream subscription (Watch<ReadModel>) is a separate Orleans stream
-            // consumer that activates asynchronously. The outofprocess path involves an
-            // additional network hop and Orleans stream storage write; after a MongoDB database
-            // drop the stream consumer grain re-activates and must write its state before the
-            // subscription is durable — 10 seconds gives enough margin on loaded CI runners.
+            // consumer that activates asynchronously. The delay gives the Watch grain time to
+            // activate and register its change stream cursor before the event is appended so
+            // the notification is not missed.
             await Task.Delay(TimeSpanFactory.FromSeconds(10));
-
-            var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
-            await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
-            Result = await GetReadModel(EventSourceId);
         }
 
         async Task Because()
         {
+            await EventStore.EventLog.Append(EventSourceId, EventAppended);
             await _tcs.Task.WaitAsync(TimeSpanFactory.DefaultTimeout());
             _observable.Dispose();
+            Result = await GetReadModel(EventSourceId);
         }
     }
 

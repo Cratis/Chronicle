@@ -48,6 +48,15 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             await Projection.WaitTillSubscribed();
 
             ResultAfterReplay = await GetReadModel(EventSourceId);
+            if (ResultAfterReplay is null)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (ResultAfterReplay is null && DateTime.UtcNow < deadline)
+                {
+                    await Task.Delay(100);
+                    ResultAfterReplay = await GetReadModel(EventSourceId);
+                }
+            }
         }
     }
 

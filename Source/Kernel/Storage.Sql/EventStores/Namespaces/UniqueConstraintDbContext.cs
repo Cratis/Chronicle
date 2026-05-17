@@ -22,6 +22,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="migrator">The <see cref="IUniqueConstraintMigrator"/> for managing table migrations.</param>
 public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContext> options, string tableName, IUniqueConstraintMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
+    /// <inheritdoc/>
+    public string TableName => tableName;
+
     /// <summary>
     /// Gets or sets the unique constraint index entries DbSet.
     /// </summary>
