@@ -282,6 +282,15 @@ app.MapPost(
 
             projectionPipelineManager.Clear();
 
+            // Clear SQLite connection pools so the test harness can delete and recreate
+            // the database file without restarting the container. Without this, pooled
+            // connections keep the old file's inode alive and the server reopens the old
+            // (deleted) database instead of the new empty one.
+            if (string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
+            {
+                Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            }
+
             return Results.NoContent();
         })
     .AllowAnonymous();

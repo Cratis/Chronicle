@@ -132,24 +132,22 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
-        // For outofprocess SQLite, the SQLite file must be deleted AND the container restarted.
-        // Deleting the file while the server is running only unlinks the directory entry; the
-        // server's connection pool keeps the old inode open via file descriptors. After the
-        // container restarts all fds are closed, the unlinked inode is freed, and the server
-        // creates a fresh database from scratch when it starts up again.
-        // Only restart on the first cleanup call (excludePrefixes == null); the second call
-        // (with system store excluded) is for inprocess grain state cleanup only.
+        // For outofprocess SQLite, the SQLite file must be deleted after the reset endpoint
+        // clears connection pools. The reset endpoint (when storage is SQLite) calls
+        // SqliteConnection.ClearAllPools() so pooled file descriptors are released before
+        // we delete the file. No container restart is needed — this eliminates the 30-45s
+        // restart overhead that was consuming the 120s Because() timeout budget.
+        // Only run on the first cleanup call (excludePrefixes == null); the second call is
+        // for inprocess grain state cleanup only.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _outOfProcessContainer is not null && excludePrefixes is null)
         {
-            // Deactivate grains first so their OnDeactivateAsync writes go to the OLD db file,
-            // then delete the file, then restart to close lingering file-descriptor handles.
+            // 1. Deactivate grains + clear SQLite pools (server-side) via the reset endpoint.
             await ResetOutOfProcessKernelState();
+
+            // 2. Delete the SQLite file — connections are now closed so the next open creates a fresh file.
             var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
             await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
-            await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
-            await _outOfProcessContainer.StopAsync();
-            await _outOfProcessContainer.StartAsync();
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.
