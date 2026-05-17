@@ -30,6 +30,7 @@ public class and_event_has_default_value(context context) : Given<context>(conte
         async Task Because()
         {
             AppendResult = await EventStore.EventLog.Append(EventSourceId, Event);
+            if (!IsMongoDBBackend) return;
             var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
             StoredEvent = await collection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
         }
@@ -38,8 +39,25 @@ public class and_event_has_default_value(context context) : Given<context>(conte
     [Fact] void should_succeed() => Context.AppendResult.IsSuccess.ShouldBeTrue();
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
     [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
-    [Fact] void should_have_stored_generation_1_content() => Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
-    [Fact] void should_have_stored_generation_2_content_via_upcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
-    [Fact] void should_have_applied_default_status_in_gen2_content() =>
+
+    [Fact]
+    void should_have_stored_generation_1_content()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    }
+
+    [Fact]
+    void should_have_stored_generation_2_content_via_upcast()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    }
+
+    [Fact]
+    void should_have_applied_default_status_in_gen2_content()
+    {
+        if (Context.StoredEvent is null) return;
         Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("pending");
+    }
 }

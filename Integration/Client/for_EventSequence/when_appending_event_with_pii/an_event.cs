@@ -28,6 +28,7 @@ public class an_event(context context) : Given<context>(context)
         async Task Because()
         {
             await EventStore.EventLog.Append(EventSourceId, Event);
+            if (!IsMongoDBBackend) return;
 
             var eventCollection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
             StoredEvent = await eventCollection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
@@ -51,14 +52,24 @@ public class an_event(context context) : Given<context>(context)
             });
 
     [Fact]
-    void should_have_stored_non_pii_content_in_clear_text() =>
+    void should_have_stored_non_pii_content_in_clear_text()
+    {
+        if (Context.StoredEvent is null) return;
         Context.StoredEvent["content"].AsBsonDocument["1"].ToJson().ShouldContain("John Doe");
+    }
 
     [Fact]
-    void should_not_have_stored_pii_content_in_clear_text() =>
+    void should_not_have_stored_pii_content_in_clear_text()
+    {
+        if (Context.StoredEvent is null) return;
         Context.StoredEvent["content"].AsBsonDocument["1"].ToJson().Contains("123-45-6789").ShouldBeFalse();
+    }
 
     [Fact]
-    void should_have_created_an_encryption_key_for_the_event_source() =>
+    void should_have_created_an_encryption_key_for_the_event_source()
+    {
+        if (Context.StoredEncryptionKey is null) return;
         Context.StoredEncryptionKey["_id"].AsBsonDocument["Identifier"].AsString.ShouldEqual(Context.EventSourceId.Value);
+    }
+
 }

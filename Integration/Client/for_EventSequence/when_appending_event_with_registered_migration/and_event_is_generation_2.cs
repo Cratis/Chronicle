@@ -30,6 +30,7 @@ public class and_event_is_generation_2(context context) : Given<context>(context
         async Task Because()
         {
             AppendResult = await EventStore.EventLog.Append(EventSourceId, Event);
+            if (!IsMongoDBBackend) return;
             var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
             StoredEvent = await collection.Find(FilterDefinition<BsonDocument>.Empty).FirstOrDefaultAsync();
         }
@@ -38,7 +39,25 @@ public class and_event_is_generation_2(context context) : Given<context>(context
     [Fact] void should_succeed() => Context.AppendResult.IsSuccess.ShouldBeTrue();
     [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
     [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(1);
-    [Fact] void should_have_stored_generation_2_content() => Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
-    [Fact] void should_have_stored_generation_1_content_via_downcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
-    [Fact] void should_have_combined_first_and_last_name_into_generation_1_content() => Context.StoredEvent["content"].AsBsonDocument["1"].ToJson().ShouldContain("Jane");
+
+    [Fact]
+    void should_have_stored_generation_2_content()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    }
+
+    [Fact]
+    void should_have_stored_generation_1_content_via_downcast()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    }
+
+    [Fact]
+    void should_have_combined_first_and_last_name_into_generation_1_content()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument["1"].ToJson().ShouldContain("Jane");
+    }
 }

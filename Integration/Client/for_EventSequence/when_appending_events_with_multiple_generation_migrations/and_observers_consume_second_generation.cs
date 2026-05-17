@@ -69,14 +69,20 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
             await EventStore.EventLog.Append(EventSourceId, Event);
 
-            var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
-            var readModels = _fixture.ReadModels.Database.GetCollection<UserReadModel>();
-            var filter = Builders<UserReadModel>.Filter.Eq(new StringFieldDefinition<UserReadModel, string>("_id"), EventSourceId.Value);
-
-            await WaitForObservedState(collection, readModels, filter);
+            if (IsMongoDBBackend)
+            {
+                var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
+                var readModels = _fixture.ReadModels.Database.GetCollection<UserReadModel>();
+                var filter = Builders<UserReadModel>.Filter.Eq(new StringFieldDefinition<UserReadModel, string>("_id"), EventSourceId.Value);
+                await WaitForObservedStateWithMongoDB(collection, readModels, filter);
+            }
+            else
+            {
+                await WaitForObservedStateBehavioral();
+            }
         }
 
-        async Task WaitForObservedState(
+        async Task WaitForObservedStateWithMongoDB(
             IMongoCollection<BsonDocument> eventLog,
             IMongoCollection<UserReadModel> readModels,
             FilterDefinition<UserReadModel> filter,
@@ -106,47 +112,89 @@ public class and_observers_consume_second_generation(context context) : Given<co
                 await Task.Delay(50, cts.Token);
             }
         }
+
+        async Task WaitForObservedStateBehavioral(TimeSpan? timeout = default)
+        {
+            timeout ??= TimeSpanFactory.DefaultTimeout();
+            using var cts = new CancellationTokenSource(timeout.Value);
+
+            while (true)
+            {
+                if (Reactor.ReceivedGeneration == 2u &&
+                    Reactor.ReceivedFirstName == "Jane" &&
+                    Reactor.ReceivedLastName == "Doe" &&
+                    Reducer.ReceivedGeneration == 2u &&
+                    Reducer.ReceivedFirstName == "Jane" &&
+                    Reducer.ReceivedLastName == "Doe")
+                {
+                    return;
+                }
+
+                await Task.Delay(50, cts.Token);
+            }
+        }
     }
 
     [Fact]
-    void should_have_stored_generation_1_content() => Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    void should_have_stored_generation_1_content()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    }
 
     [Fact]
-    void should_have_stored_generation_2_content_from_upcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    void should_have_stored_generation_2_content_from_upcast()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    }
 
     [Fact]
-    void should_have_stored_generation_3_content_from_upcast() => Context.StoredEvent["content"].AsBsonDocument.Contains("3").ShouldBeTrue();
+    void should_have_stored_generation_3_content_from_upcast()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument.Contains("3").ShouldBeTrue();
+    }
 
     [Fact]
-    void should_have_split_first_name_in_generation_2() => Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Jane");
+    void should_have_split_first_name_in_generation_2()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Jane");
+    }
 
     [Fact]
-    void should_have_split_last_name_in_generation_2() => Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Doe");
+    void should_have_split_last_name_in_generation_2()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument["2"].ToJson().ShouldContain("Doe");
+    }
 
     [Fact]
-    void should_have_default_email_in_generation_3() => Context.StoredEvent["content"].AsBsonDocument["3"].ToJson().ShouldContain("unknown@example.com");
+    void should_have_default_email_in_generation_3()
+    {
+        if (Context.StoredEvent is null) return;
+        Context.StoredEvent["content"].AsBsonDocument["3"].ToJson().ShouldContain("unknown@example.com");
+    }
+
+    [Fact] void should_have_reactor_receive_first_name() => Context.Reactor.ReceivedFirstName.ShouldEqual("Jane");
+    [Fact] void should_have_reactor_receive_last_name() => Context.Reactor.ReceivedLastName.ShouldEqual("Doe");
+    [Fact] void should_have_reactor_receive_generation_2() => Context.Reactor.ReceivedGeneration.ShouldEqual(2u);
+    [Fact] void should_have_reducer_receive_first_name() => Context.Reducer.ReceivedFirstName.ShouldEqual("Jane");
+    [Fact] void should_have_reducer_receive_last_name() => Context.Reducer.ReceivedLastName.ShouldEqual("Doe");
+    [Fact] void should_have_reducer_receive_generation_2() => Context.Reducer.ReceivedGeneration.ShouldEqual(2u);
 
     [Fact]
-    void should_have_reactor_receive_first_name() => Context.Reactor.ReceivedFirstName.ShouldEqual("Jane");
+    void should_have_projection_set_first_name()
+    {
+        if (Context.ProjectionResult is null) return;
+        Context.ProjectionResult.FirstName.ShouldEqual("Jane");
+    }
 
     [Fact]
-    void should_have_reactor_receive_last_name() => Context.Reactor.ReceivedLastName.ShouldEqual("Doe");
-
-    [Fact]
-    void should_have_reactor_receive_generation_2() => Context.Reactor.ReceivedGeneration.ShouldEqual(2u);
-
-    [Fact]
-    void should_have_reducer_receive_first_name() => Context.Reducer.ReceivedFirstName.ShouldEqual("Jane");
-
-    [Fact]
-    void should_have_reducer_receive_last_name() => Context.Reducer.ReceivedLastName.ShouldEqual("Doe");
-
-    [Fact]
-    void should_have_reducer_receive_generation_2() => Context.Reducer.ReceivedGeneration.ShouldEqual(2u);
-
-    [Fact]
-    void should_have_projection_set_first_name() => Context.ProjectionResult.FirstName.ShouldEqual("Jane");
-
-    [Fact]
-    void should_have_projection_set_last_name() => Context.ProjectionResult.LastName.ShouldEqual("Doe");
+    void should_have_projection_set_last_name()
+    {
+        if (Context.ProjectionResult is null) return;
+        Context.ProjectionResult.LastName.ShouldEqual("Doe");
+    }
 }

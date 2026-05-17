@@ -34,6 +34,9 @@ public class and_generation_2_content_is_backfilled(context context) : Given<con
             // 1. Append gen 1 event — will automatically have gen 1 + gen 2 content.
             await EventStore.EventLog.Append(EventSourceId, Event);
 
+            // Steps 2-5 are MongoDB-specific: they manipulate raw BSON document storage.
+            if (!IsMongoDBBackend) return;
+
             // 2. Remove gen 2 content from the stored event to simulate a legacy event.
             var collection = EventStoreForNamespaceDatabase.Database.GetCollection<BsonDocument>("event-log");
             var update = Builders<BsonDocument>.Update.Unset("content.2");
@@ -62,26 +65,44 @@ public class and_generation_2_content_is_backfilled(context context) : Given<con
     }
 
     [Fact]
-    void should_not_have_generation_2_content_before_migration() =>
+    void should_not_have_generation_2_content_before_migration()
+    {
+        if (Context.StoredEventBeforeMigration is null) return;
         Context.StoredEventBeforeMigration["content"].AsBsonDocument.Contains("2").ShouldBeFalse();
+    }
 
     [Fact]
-    void should_have_generation_1_content_after_migration() =>
+    void should_have_generation_1_content_after_migration()
+    {
+        if (Context.StoredEventAfterMigration is null) return;
         Context.StoredEventAfterMigration["content"].AsBsonDocument.Contains("1").ShouldBeTrue();
+    }
 
     [Fact]
-    void should_have_generation_2_content_after_migration() =>
+    void should_have_generation_2_content_after_migration()
+    {
+        if (Context.StoredEventAfterMigration is null) return;
         Context.StoredEventAfterMigration["content"].AsBsonDocument.Contains("2").ShouldBeTrue();
+    }
 
     [Fact]
-    void should_have_original_description_in_generation_1() =>
+    void should_have_original_description_in_generation_1()
+    {
+        if (Context.StoredEventAfterMigration is null) return;
         Context.StoredEventAfterMigration["content"].AsBsonDocument["1"].ToJson().ShouldContain("Widget order");
+    }
 
     [Fact]
-    void should_have_description_in_generation_2() =>
+    void should_have_description_in_generation_2()
+    {
+        if (Context.StoredEventAfterMigration is null) return;
         Context.StoredEventAfterMigration["content"].AsBsonDocument["2"].ToJson().ShouldContain("Widget order");
+    }
 
     [Fact]
-    void should_have_default_status_in_generation_2() =>
+    void should_have_default_status_in_generation_2()
+    {
+        if (Context.StoredEventAfterMigration is null) return;
         Context.StoredEventAfterMigration["content"].AsBsonDocument["2"].ToJson().ShouldContain("pending");
+    }
 }

@@ -67,6 +67,15 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
         return null;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the current test run uses MongoDB as the storage backend.
+    /// Returns false for SQL outofprocess backends (SQLite, PostgreSQL, MSSQL) where
+    /// MongoDB is not available, causing MongoDB-specific test code to be skipped.
+    /// </summary>
+    public bool IsMongoDBBackend =>
+        ChronicleFixture is not ChronicleConfigurableFixture configurable ||
+        configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB;
+
     public IEventStoreStorage EventStoreStorage =>
         Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);
 

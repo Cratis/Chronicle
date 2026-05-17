@@ -23,6 +23,7 @@ public class existing_sequence_number(context context) : Given<context>(context)
         {
             FirstEvent = new SomeEvent("some value");
             SecondEvent = new SomeEvent("some other value");
+            if (!IsMongoDBBackend) return;
             var database = EventStoreForNamespaceDatabase.Database;
             var @event = new Event(
                 0,
@@ -46,8 +47,31 @@ public class existing_sequence_number(context context) : Given<context>(context)
         async Task Because() => await EventStore.EventLog.Append(EventSourceId, SecondEvent);
     }
 
-    [Fact] Task should_have_correct_next_sequence_number() => Context.ShouldHaveNextSequenceNumber(2);
-    [Fact] Task should_have_correct_tail_sequence_number() => Context.ShouldHaveTailSequenceNumber(1);
-    [Fact] Task should_have_the_first_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
-    [Fact] Task should_have_the_second_event_stored() => Context.ShouldHaveAppendedEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
+    [Fact]
+    Task should_have_correct_next_sequence_number()
+    {
+        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
+        return Context.ShouldHaveNextSequenceNumber(2);
+    }
+
+    [Fact]
+    Task should_have_correct_tail_sequence_number()
+    {
+        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
+        return Context.ShouldHaveTailSequenceNumber(1);
+    }
+
+    [Fact]
+    Task should_have_the_first_event_stored()
+    {
+        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
+        return Context.ShouldHaveAppendedEvent<SomeEvent>(0, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.FirstEvent.Content));
+    }
+
+    [Fact]
+    Task should_have_the_second_event_stored()
+    {
+        if (!Context.IsMongoDBBackend) return Task.CompletedTask;
+        return Context.ShouldHaveAppendedEvent<SomeEvent>(1, Context.EventSourceId.Value, (someEvent) => someEvent.Content.ShouldEqual(Context.SecondEvent.Content));
+    }
 }
