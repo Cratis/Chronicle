@@ -75,6 +75,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     happens to resolve to the same pipeline key.
         Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
 
+        // 2c. Clear storage-level migration caches (SQL backends only). SQL table migrators
+        //     keep a static per-process cache so they can skip CREATE TABLE SQL on subsequent
+        //     accesses. When database files are deleted between test classes the cache can
+        //     cause EnsureTableMigrated to skip table creation, leading to "no such table"
+        //     errors on the next access. Subclasses that use SQL storage override this method
+        //     to call IDatabase.ClearTableMigrationCache.
+        await ClearStorageMigrationCaches();
+
         // 3. Remove all databases again. The previous test's DisposeAsync already dropped
         //    databases, but StateMachine.OnDeactivateAsync calls WriteStateAsync(), which
         //    auto-creates MongoDB databases with stale grain state. A second cleanup ensures
@@ -215,6 +223,15 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
     }
+
+    /// <summary>
+    /// Clears any storage-level migration caches that accumulate across test classes.
+    /// The default implementation is a no-op; SQL-backed fixtures override this to evict the
+    /// static <c>TableMigrator._migratedTables</c> cache so that deleted database files are
+    /// not mistakenly considered already-migrated by the next test.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected virtual Task ClearStorageMigrationCaches() => Task.CompletedTask;
 
     /// <summary>
     /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.

@@ -29,4 +29,15 @@ public interface ITableMigrator<TContext>
     /// <param name="migrationBuilder">The <see cref="MigrationBuilder"/> containing the operations.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task ExecuteMigrationOperations(TContext context, MigrationBuilder migrationBuilder);
+
+    /// <summary>
+    /// Clears all cached migration state for the given connection string prefix.
+    /// Use this when SQLite database files have been deleted and recreated so that
+    /// subsequent calls to <see cref="EnsureTableMigrated"/> re-create tables from scratch.
+    /// </summary>
+    /// <param name="connectionStringPrefix">
+    /// Connection string prefix to match. All cached entries whose key starts with this
+    /// prefix will be evicted. Pass an empty string to clear all cached entries.
+    /// </param>
+    void ClearMigrationCacheForConnectionString(string connectionStringPrefix);
 }

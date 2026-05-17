@@ -6,6 +6,7 @@
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.Sql;
 using KernelConcepts = Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Integration;
@@ -75,6 +76,13 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
     public bool IsMongoDBBackend =>
         ChronicleFixture is not ChronicleConfigurableFixture configurable ||
         configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB;
+
+    /// <inheritdoc/>
+    protected override Task ClearStorageMigrationCaches()
+    {
+        Services.GetService<IDatabase>()?.ClearTableMigrationCache(string.Empty);
+        return Task.CompletedTask;
+    }
 
     public IEventStoreStorage EventStoreStorage =>
         Services.GetRequiredService<IStorage>().GetEventStore(Constants.EventStore);

@@ -22,6 +22,10 @@ public class UniqueConstraintMigrator(
     public Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context) =>
         tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
 
+    /// <inheritdoc/>
+    public void ClearMigrationCache(string connectionStringPrefix) =>
+        tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)
     {
         logger.CreatingUniqueConstraintTable(tableName);

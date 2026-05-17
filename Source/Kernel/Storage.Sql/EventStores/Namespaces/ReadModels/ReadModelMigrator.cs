@@ -22,6 +22,10 @@ public class ReadModelMigrator(
     public Task EnsureTableMigrated(string tableName, ReadModelDbContext context) =>
         tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
 
+    /// <inheritdoc/>
+    public void ClearMigrationCache(string connectionStringPrefix) =>
+        tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
     async Task CreateTable(ReadModelDbContext context, string tableName)
     {
         logger.CreatingReadModelTable(tableName);

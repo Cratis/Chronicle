@@ -23,6 +23,10 @@ public class EventSequenceMigrator(
     public Task EnsureTableMigrated(string tableName, EventSequenceDbContext context) =>
         tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
 
+    /// <inheritdoc/>
+    public void ClearMigrationCache(string connectionStringPrefix) =>
+        tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
     async Task CreateTable(EventSequenceDbContext context, string tableName)
     {
         logger.CreatingEventSequenceTable(tableName);

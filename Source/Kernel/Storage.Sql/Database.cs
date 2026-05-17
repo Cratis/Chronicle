@@ -27,8 +27,9 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
 /// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
+/// <param name="readModelMigrator">The <see cref="IReadModelMigrator"/> for managing read model table migrations.</param>
 [Singleton]
-public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
+public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
 {
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
@@ -135,6 +136,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             containerName,
             _readModelDbContexts,
             (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+
+    /// <inheritdoc/>
+    public void ClearTableMigrationCache(string connectionStringPrefix)
+    {
+        eventSequenceMigrator.ClearMigrationCache(connectionStringPrefix);
+        uniqueConstraintMigrator.ClearMigrationCache(connectionStringPrefix);
+        readModelMigrator.ClearMigrationCache(connectionStringPrefix);
+    }
 
     /// <summary>
     /// Serializes EF Core <c>MigrateAsync</c> calls per connection string to prevent concurrent migration race conditions

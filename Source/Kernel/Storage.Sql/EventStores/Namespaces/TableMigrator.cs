@@ -85,6 +85,15 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : 
     }
 
     /// <inheritdoc/>
+    public void ClearMigrationCacheForConnectionString(string connectionStringPrefix)
+    {
+        foreach (var key in _migratedTables.Keys.Where(k => k.StartsWith(connectionStringPrefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            _migratedTables.TryRemove(key, out _);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task ExecuteMigrationOperations(TContext context, MigrationBuilder migrationBuilder)
     {
         var operations = migrationBuilder.Operations;

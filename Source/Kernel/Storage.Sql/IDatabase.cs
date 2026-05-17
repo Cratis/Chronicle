@@ -62,4 +62,16 @@ public interface IDatabase
     /// <param name="containerName">The container name of the read model (table name).</param>
     /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the specified read model table.</returns>
     Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName);
+
+    /// <summary>
+    /// Clears all cached table-migration state that was recorded for the given connection string prefix.
+    /// Call this after deleting or recreating SQLite database files so that the next access
+    /// re-creates every table from scratch instead of returning an early-out from the static cache.
+    /// </summary>
+    /// <param name="connectionStringPrefix">
+    /// Connection string prefix to match (e.g. the base file path).
+    /// All cache entries whose key starts with this prefix are evicted.
+    /// Pass an empty string to evict every entry.
+    /// </param>
+    void ClearTableMigrationCache(string connectionStringPrefix);
 }
