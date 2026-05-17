@@ -305,6 +305,44 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         }
     }
 
+    /// <summary>
+    /// Restarts the storage backend. For MongoDB this restarts the MongoDB server; for SQL backends
+    /// this restarts the SQL database container so the server reconnects to a temporarily unavailable store.
+    /// For SQLite (file-based), this restarts the out-of-process Chronicle server container instead.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public async Task RestartStorageAsync()
+    {
+        switch (Options.StorageProvider)
+        {
+            case ChronicleStorageProvider.MongoDB:
+                await RestartMongoDBAsync();
+                break;
+
+            case ChronicleStorageProvider.PostgreSql:
+            case ChronicleStorageProvider.MsSql:
+                // Restart the SQL database container so the Chronicle server must reconnect.
+                if (_databaseContainer is not null)
+                {
+                    await _databaseContainer.StopAsync();
+                    await _databaseContainer.StartAsync();
+                }
+
+                break;
+
+            case ChronicleStorageProvider.Sqlite:
+                // SQLite is a file embedded inside the Chronicle server container.
+                // Restart the server container itself; data persists via overlay filesystem.
+                if (_outOfProcessContainer is not null)
+                {
+                    await _outOfProcessContainer.StopAsync();
+                    await _outOfProcessContainer.StartAsync();
+                }
+
+                break;
+        }
+    }
+
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
