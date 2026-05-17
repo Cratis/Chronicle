@@ -49,16 +49,27 @@ public class a_projection_with_many_instances(ChronicleFixture chronicleFixture)
     protected async Task AppendAllEvents()
     {
         var projection = EventStore.Projections.GetHandlerFor<SomeProjection>();
-        await projection.WaitTillActive(TimeSpanFactory.FromSeconds(30));
+        await projection.WaitTillActive();
 
-        var lastSequenceNumber = EventSequenceNumber.First;
         for (var i = 0; i < TotalInstances; i++)
         {
             await EventStore.EventLog.Append(EventSourceIds[i], SomeEvents[i]);
-            var result = await EventStore.EventLog.Append(EventSourceIds[i], AnotherEvents[i]);
-            lastSequenceNumber = result.SequenceNumber;
+            await EventStore.EventLog.Append(EventSourceIds[i], AnotherEvents[i]);
         }
 
-        await projection.WaitTillReachesEventSequenceNumber(lastSequenceNumber, TimeSpanFactory.DefaultTimeout());
+        // Wait for all read model instances to materialise. For multi-partition projections
+        // on outofprocess SQL, LastHandledEventSequenceNumber may not advance to the global
+        // maximum via the observer state API, so we poll the read models directly instead.
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        while (true)
+        {
+            var instances = await EventStore.ReadModels.GetInstances<SomeReadModel>();
+            if (instances.Count() >= TotalInstances)
+            {
+                break;
+            }
+
+            await Task.Delay(100, cts.Token);
+        }
     }
 }
