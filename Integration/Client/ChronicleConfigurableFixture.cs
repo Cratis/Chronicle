@@ -25,7 +25,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
-    readonly string _mongoDataDir = Path.Combine(Path.GetTempPath(), $"chronicle-mongo-{Guid.NewGuid():N}");
+    readonly string _mongoVolumeName = $"chronicle-mongo-{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
     IContainer? _outOfProcessContainer;
@@ -74,9 +74,14 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     {
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
-        if (Directory.Exists(_mongoDataDir))
+        try
         {
-            try { Directory.Delete(_mongoDataDir, recursive: true); } catch { /* best-effort cleanup */ }
+            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("docker", $"volume rm {_mongoVolumeName}") { RedirectStandardOutput = true, RedirectStandardError = true });
+            await (proc?.WaitForExitAsync() ?? Task.CompletedTask);
+        }
+        catch
+        {
+            // Best-effort volume cleanup — ignore errors.
         }
     }
 
@@ -213,7 +218,16 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     static async Task TruncateAllMsSqlTables(string connectionString)
     {
         await using var conn = new SqlConnection(connectionString);
-        await conn.OpenAsync();
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (SqlException)
+        {
+            // Database may not exist yet on the first test class boundary.
+            // The server will create and migrate it on next connection — skip truncation.
+            return;
+        }
 
         const string sql = """
             DECLARE @sql NVARCHAR(MAX) = N'';
@@ -283,11 +297,10 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     IContainer BuildInProcessContainer(INetwork network)
     {
-        Directory.CreateDirectory(_mongoDataDir);
         return new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithPortBinding(MongoDBPort, 27017)
-            .WithBindMount(_mongoDataDir, "/data/db", AccessMode.ReadWrite)
+            .WithVolumeMount(_mongoVolumeName, "/data/db")
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
