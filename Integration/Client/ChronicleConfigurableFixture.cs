@@ -190,6 +190,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     IContainer BuildInProcessContainer(INetwork network) =>
         new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
+            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
