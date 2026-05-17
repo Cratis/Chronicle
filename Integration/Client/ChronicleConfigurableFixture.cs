@@ -25,6 +25,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
+    readonly string _mongoDataDir = Path.Combine(Path.GetTempPath(), $"chronicle-mongo-{Guid.NewGuid():N}");
 
     IContainer? _databaseContainer;
     IContainer? _outOfProcessContainer;
@@ -73,6 +74,10 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     {
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
+        if (Directory.Exists(_mongoDataDir))
+        {
+            try { Directory.Delete(_mongoDataDir, recursive: true); } catch { /* best-effort cleanup */ }
+        }
     }
 
     /// <inheritdoc/>
@@ -209,10 +214,24 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     {
         await using var conn = new SqlConnection(connectionString);
         await conn.OpenAsync();
+
         const string sql = """
-            EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT all';
-            EXEC sp_MSforeachtable 'IF OBJECT_NAME(OBJECT_ID(''?'')) != ''__EFMigrationsHistory'' DELETE FROM ?';
-            EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all';
+            DECLARE @sql NVARCHAR(MAX) = N'';
+
+            SELECT @sql += 'ALTER TABLE [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '] NOCHECK CONSTRAINT all;' + CHAR(10)
+            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
+            EXEC sp_executesql @sql;
+
+            SET @sql = N'';
+            SELECT @sql += 'DELETE FROM [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '];' + CHAR(10)
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME != '__EFMigrationsHistory';
+            EXEC sp_executesql @sql;
+
+            SET @sql = N'';
+            SELECT @sql += 'ALTER TABLE [' + TABLE_SCHEMA + '].[' + TABLE_NAME + '] WITH CHECK CHECK CONSTRAINT all;' + CHAR(10)
+            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
+            EXEC sp_executesql @sql;
             """;
         await using var cmd = new SqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
@@ -262,10 +281,13 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         return _outOfProcessContainer;
     }
 
-    IContainer BuildInProcessContainer(INetwork network) =>
-        new ContainerBuilder("mongo")
+    IContainer BuildInProcessContainer(INetwork network)
+    {
+        Directory.CreateDirectory(_mongoDataDir);
+        return new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithPortBinding(MongoDBPort, 27017)
+            .WithBindMount(_mongoDataDir, "/data/db", AccessMode.ReadWrite)
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
@@ -273,6 +295,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 .UntilInternalTcpPortIsAvailable(27017)
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
+    }
 
     IContainer BuildOutOfProcessContainer(INetwork network)
     {
