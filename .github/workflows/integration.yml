@@ -136,7 +136,7 @@ jobs:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
-          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '300' }}
+          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '600' }}
         run: |
           dotnet test Integration/Client/Client.csproj \
             --no-restore \

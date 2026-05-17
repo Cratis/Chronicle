@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -278,19 +277,22 @@ public class EventSequenceStorage(
         var seqNumRedact = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumRedact);
 
-        // Replace content with redaction marker
-        eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
-        {
-            { "redacted", true },
-            { "reason", reason },
-            { "redactedAt", occurred }
-        });
+        var originalEventTypeId = eventEntry.Type.Value;
+        var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
+
+        eventEntry.Type = GlobalEventTypes.Redaction;
+        eventEntry.Occurred = occurred;
+        eventEntry.CorrelationId = correlationId.ToString();
+        eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
+        eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
+        eventEntry.Content = redactionContent;
+
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
 
         // Return the redacted event
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+        var eventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First);
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, EventTypeGeneration.First);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -331,17 +333,25 @@ public class EventSequenceStorage(
 
         foreach (var eventEntry in eventsToRedact)
         {
-            // Replace content with redaction marker
-            eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
+            if (eventEntry.Type == GlobalEventTypes.Redaction)
             {
-                { "redacted", true },
-                { "reason", reason },
-                { "redactedAt", occurred }
-            });
-            scope.DbContext.Events.Update(eventEntry);
+                continue;
+            }
 
-            var eventType = EventEntryConverter.GetEventType(eventEntry);
-            affectedEventTypes.Add(eventType);
+            var originalEventTypeId = eventEntry.Type.Value;
+            var originalEventType = EventEntryConverter.GetEventType(eventEntry);
+            affectedEventTypes.Add(originalEventType);
+
+            var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
+
+            eventEntry.Type = GlobalEventTypes.Redaction;
+            eventEntry.Occurred = occurred;
+            eventEntry.CorrelationId = correlationId.ToString();
+            eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
+            eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
+            eventEntry.Content = redactionContent;
+
+            scope.DbContext.Events.Update(eventEntry);
         }
 
         await scope.DbContext.SaveChangesAsync();

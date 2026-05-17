@@ -29,9 +29,13 @@ public class with_from_every(context context) : Given<context>(context)
             EventSourceId = GroupId;
             ReadModelId = GroupId;
 
+            // UserCreated appended first so the last event (highest sequence number) belongs
+            // to the GroupId partition, allowing WaitTillReachesEventSequenceNumber to succeed.
+            // FromEvery handles UserCreated regardless of order; GroupCreated + UserAddedToGroup
+            // arrive later and establish the join relationship.
+            EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserCreated(UserName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new UserAddedToGroup(UserId)));
-            EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserCreated(UserName)));
         }
 
         async Task Because()

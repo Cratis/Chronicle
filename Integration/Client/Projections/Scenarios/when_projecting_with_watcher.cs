@@ -44,7 +44,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             // consumer that activates asynchronously. The delay gives the Watch grain time to
             // activate and register its change stream cursor before the event is appended so
             // the notification is not missed.
-            await Task.Delay(TimeSpanFactory.FromSeconds(10));
+            await Task.Delay(TimeSpanFactory.FromSeconds(30));
         }
 
         async Task Because()

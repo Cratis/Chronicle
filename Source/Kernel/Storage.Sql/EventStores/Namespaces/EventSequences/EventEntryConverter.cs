@@ -215,4 +215,56 @@ public static class EventEntryConverter
         var identityStrings = JsonSerializer.Deserialize<IEnumerable<string>>(entry.CausedBy, _jsonSerializerOptions) ?? [];
         return identityStrings.Select(id => new IdentityId(Guid.Parse(id)));
     }
+
+    /// <summary>
+    /// Create the serialized redaction content in generation-keyed format, matching the MongoDB storage pattern.
+    /// </summary>
+    /// <param name="originalEventTypeId">The original event type identifier before redaction.</param>
+    /// <param name="reason">The reason for the redaction.</param>
+    /// <param name="correlationId">The correlation identifier of the redaction operation.</param>
+    /// <param name="causation">The causation chain for the redaction.</param>
+    /// <param name="causedByChain">The identity chain that caused the redaction.</param>
+    /// <param name="occurred">When the redaction occurred.</param>
+    /// <returns>Serialized JSON string with generation "1" key wrapping the redaction content.</returns>
+    public static string CreateRedactionContent(
+        string originalEventTypeId,
+        RedactionReason reason,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred)
+    {
+        var content = new
+        {
+            reason = reason.Value,
+            originalEventType = originalEventTypeId,
+            occurred,
+            correlationId = correlationId.ToString(),
+            causation = causation.Select(c => new { type = c.Type.Value, occurred = c.Occurred }),
+            causedBy = causedByChain.Select(id => id.ToString())
+        };
+
+        var contentWrapper = new Dictionary<string, object>
+        {
+            { EventTypeGeneration.First.ToString(), content }
+        };
+
+        return JsonSerializer.Serialize(contentWrapper, _jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Serialize a causation chain to JSON.
+    /// </summary>
+    /// <param name="causation">The causation chain to serialize.</param>
+    /// <returns>Serialized JSON string.</returns>
+    public static string SerializeCausation(IEnumerable<Causation> causation) =>
+        JsonSerializer.Serialize(causation, _jsonSerializerOptions);
+
+    /// <summary>
+    /// Serialize a caused-by identity chain to JSON.
+    /// </summary>
+    /// <param name="causedByChain">The identity chain to serialize.</param>
+    /// <returns>Serialized JSON string.</returns>
+    public static string SerializeCausedBy(IEnumerable<IdentityId> causedByChain) =>
+        JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions);
 }

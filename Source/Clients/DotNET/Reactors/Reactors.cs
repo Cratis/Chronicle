@@ -275,6 +275,7 @@ public class Reactors : IReactors
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                IsReplayable = !handler.ReactorType.IsDefined(typeof(Observation.NonReplayableAttribute), inherit: false),
                 Tags = handler.ReactorType.GetTags().ToArray(),
                 Filters = new()
                 {
