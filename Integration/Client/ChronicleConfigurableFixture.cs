@@ -25,7 +25,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
 
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
-    readonly string _mongoVolumeName = $"chronicle-mongo-{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
     IContainer? _outOfProcessContainer;
@@ -74,15 +73,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     {
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
-        try
-        {
-            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("docker", $"volume rm {_mongoVolumeName}") { RedirectStandardOutput = true, RedirectStandardError = true });
-            await (proc?.WaitForExitAsync() ?? Task.CompletedTask);
-        }
-        catch
-        {
-            // Best-effort volume cleanup — ignore errors.
-        }
     }
 
     /// <inheritdoc/>
@@ -306,12 +296,11 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         return _outOfProcessContainer;
     }
 
-    IContainer BuildInProcessContainer(INetwork network)
-    {
-        return new ContainerBuilder("mongo")
+    IContainer BuildInProcessContainer(INetwork network) =>
+        new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
+            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(MongoDBPort, 27017)
-            .WithVolumeMount(_mongoVolumeName, "/data/db")
             .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
@@ -319,7 +308,6 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                 .UntilInternalTcpPortIsAvailable(27017)
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
-    }
 
     IContainer BuildOutOfProcessContainer(INetwork network)
     {
