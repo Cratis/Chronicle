@@ -42,8 +42,10 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             // WaitTillActive may return immediately if the projection is already active, which
             // is not enough time for the async stream.SubscribeAsync() in Watch() to complete.
             // The outofprocess path involves an additional network hop and Orleans stream storage
-            // write; 5 seconds covers both inprocess and outofprocess CI runners under load.
-            await Task.Delay(TimeSpanFactory.FromSeconds(5));
+            // write; after a MongoDB database drop the stream consumer grain re-activates and
+            // must write its state before the subscription is durable — 10 seconds gives enough
+            // margin on loaded CI runners.
+            await Task.Delay(TimeSpanFactory.FromSeconds(10));
 
             var appendResult = await EventStore.EventLog.Append(EventSourceId, EventAppended);
             await Projection.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
