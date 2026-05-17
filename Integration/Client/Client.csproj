@@ -27,8 +27,17 @@
         <PackageReference Include="OneOf" />
     </ItemGroup>
 
+    <!-- When building on macOS the publish must target linux-arm64 so the Docker image gets a
+         valid Linux binary. On Linux the default RID is already linux-arm64 or linux-x64. -->
+    <PropertyGroup Condition="'$(DisableDockerBuild)' != 'true'">
+        <_IsOSX>$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))</_IsOSX>
+        <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">linux-arm64</_DockerPublishRid>
+        <_DockerPublishRid Condition="'$(_IsOSX)' == 'True' And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">linux-amd64</_DockerPublishRid>
+        <_DockerRidArg Condition="'$(_DockerPublishRid)' != ''">-r $(_DockerPublishRid) --self-contained false</_DockerRidArg>
+    </PropertyGroup>
+
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
-        <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
+        <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../" />
     </Target>
 
