@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="Sink">Target sink.</param>
 /// <param name="Tags">Collection of tags the reducer belongs to.</param>
 /// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
+/// <param name="IsReplayable">Whether the reducer supports replay scenarios.</param>
 public record ReducerDefinition(
     ReducerId Identifier,
     EventSequenceId EventSequenceId,
@@ -26,4 +27,5 @@ public record ReducerDefinition(
     bool IsActive,
     SinkDefinition Sink,
     IEnumerable<string>? Tags = default,
-    ObserverFilters? Filters = default);
+    ObserverFilters? Filters = default,
+    bool IsReplayable = true);

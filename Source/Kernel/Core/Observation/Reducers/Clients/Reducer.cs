@@ -94,7 +94,8 @@ public class Reducer(
                 definition.EventTypes.Select(_ => _.EventType).ToArray(),
                 localSiloDetails.SiloAddress,
                 connectedClient,
-                filters: definition.Filters);
+                definition.IsReplayable,
+                definition.Filters);
 
             _subscribed = true;
         }

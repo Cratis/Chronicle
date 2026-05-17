@@ -58,4 +58,10 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(8)]
     public ObserverFilters Filters { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets whether the reducer supports replay scenarios.
+    /// </summary>
+    [ProtoMember(9), DefaultValue(true)]
+    public bool IsReplayable { get; set; } = true;
 }
