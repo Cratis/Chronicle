@@ -105,6 +105,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                     {
                         await _outOfProcessContainer.StopAsync();
                         await _outOfProcessContainer.StartAsync();
+                        await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
                     }
                 }
 
@@ -122,6 +123,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
                     {
                         await _outOfProcessContainer.StopAsync();
                         await _outOfProcessContainer.StartAsync();
+                        await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
                     }
                 }
 
@@ -146,6 +148,12 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
             await _outOfProcessContainer.StopAsync();
             await _outOfProcessContainer.StartAsync();
+
+            // The outofprocess server image embeds MongoDB. The entrypoint checks whether
+            // the replica set is initialised but does NOT wait for a primary to be elected
+            // before starting the Chronicle server. Poll until a primary exists so that
+            // Orleans grain storage (which writes to MongoDB) is functional before tests run.
+            await WaitForOutOfProcessMongoDbPrimary(_outOfProcessContainer);
         }
 
         // SQLite: clean up the local SQLite files that the in-process silo writes to.
@@ -422,5 +430,27 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         }
 
         return "/tmp/chronicle.db";
+    }
+
+    static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                var result = await container.ExecAsync(["/bin/sh", "-c", "mongosh --quiet --eval \"rs.status().members.filter(m=>m.stateStr==='PRIMARY').length\" 2>/dev/null"]);
+                if (result.ExitCode == 0 && result.Stdout.Trim() == "1")
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // Container might not be fully ready yet — keep polling.
+            }
+
+            await Task.Delay(1000);
+        }
     }
 }
