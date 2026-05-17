@@ -77,18 +77,50 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     /// <inheritdoc/>
     public override async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
     {
-        await base.RemoveAllDatabases(excludePrefixes);
+        // The base class connects to MongoDB to drop databases. For outofprocess non-MongoDB
+        // modes there is no MongoDB reachable at the mapped port, so the driver would wait
+        // serverSelectionTimeout (30 s) before giving up — once per test-class boundary.
+        // Only invoke the base cleanup when it is actually needed.
+        if (Options.Mode == ChronicleRuntimeMode.InProcess || Options.StorageProvider == ChronicleStorageProvider.MongoDB)
+        {
+            await base.RemoveAllDatabases(excludePrefixes);
+        }
 
         switch (Options.StorageProvider)
         {
             case ChronicleStorageProvider.PostgreSql:
                 await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                {
+                    // The outofprocess Chronicle server also uses a PostgreSQL database that
+                    // must be wiped between test classes so stale grain state does not bleed
+                    // across boundaries. Drop via the host-accessible port; the server's
+                    // Npgsql connection pool will recover automatically on the next access.
+                    await DropAndRecreateSqlDatabase("postgres", _outOfProcessSqlDatabaseName, GetOutOfProcessHostConnectionString());
+                }
                 NpgsqlConnection.ClearAllPools();
                 return;
 
             case ChronicleStorageProvider.MsSql:
                 await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                {
+                    await DropAndRecreateMsSqlDatabase("master", _outOfProcessSqlDatabaseName, GetOutOfProcessHostConnectionString());
+                }
                 SqlConnection.ClearAllPools();
+                return;
+
+            case ChronicleStorageProvider.Sqlite when Options.Mode == ChronicleRuntimeMode.OutOfProcess:
+                // For outofprocess SQLite the database files live inside the Chronicle server
+                // container. Restarting the container is the only way to atomically clear all
+                // open file handles and pools inside the server process. Only restart on the
+                // first cleanup call (excludePrefixes is null) to avoid a double restart; the
+                // second call (which preserves the system store) is a no-op after a restart.
+                if (excludePrefixes is null)
+                {
+                    await MongoDBContainer.StopAsync();
+                    await MongoDBContainer.StartAsync();
+                }
                 return;
         }
 
@@ -97,9 +129,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             return;
         }
 
-        // Both InProcess and OutOfProcess SQLite modes run the Chronicle kernel in-process
-        // (via ChronicleOrleansInProcessWebApplicationFactory). Clean up the local SQLite
-        // files that the in-process silo writes to.
+        // InProcess SQLite: clean up the local SQLite files that the in-process silo writes to.
         var inProcessConnectionString = GetInProcessConnectionString();
         var inProcessBuilder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = inProcessConnectionString };
         if (!inProcessBuilder.TryGetValue("Data Source", out var inProcessDataSourceObj) &&
@@ -146,6 +176,16 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
             try { File.Delete(file); } catch { /* ignore */ }
         }
     }
+
+    string GetOutOfProcessHostConnectionString() =>
+        Options.StorageProvider switch
+        {
+            ChronicleStorageProvider.PostgreSql when _databaseContainer is not null =>
+                $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}",
+            ChronicleStorageProvider.MsSql when _databaseContainer is not null =>
+                $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True",
+            _ => string.Empty,
+        };
 
     static async Task DropAndRecreateSqlDatabase(string adminDatabase, string databaseName, string connectionString)
     {
