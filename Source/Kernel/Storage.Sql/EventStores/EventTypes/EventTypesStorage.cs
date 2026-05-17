@@ -144,7 +144,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         generation ??= EventTypeGeneration.First;
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel(generation);
         }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
         if (eventType.Schemas.Count == 0)
