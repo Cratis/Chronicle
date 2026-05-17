@@ -164,6 +164,16 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         generation ??= EventTypeGeneration.First;
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
+            // Verify the cache is consistent with the database. After an external database
+            // reset (e.g. between integration test classes), the cache may still hold entries
+            // for event types that no longer exist in the backing store.
+            var dbEventType = await GetSpecificEventType(type);
+            if (dbEventType?.Schemas.ContainsKey(generation) != true)
+            {
+                _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type));
+                return false;
+            }
+
             return true;
         }
 
