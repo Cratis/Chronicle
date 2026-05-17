@@ -48,6 +48,7 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
+            schema.EnsureComplianceMetadata();
             var owner = (Concepts.Events.EventTypeOwner)(int)eventType.Owner;
             var source = (Concepts.Events.EventTypeSource)(int)eventType.Source;
             var eventTypeId = new EventTypeId(eventType.Type.Id);
@@ -75,6 +76,7 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
                 foreach (var genDef in eventType.Generations)
                 {
                     var genSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
+                    genSchema.EnsureComplianceMetadata();
                     generations.Add(new Concepts.Events.EventTypeGenerationDefinition(genDef.Generation, genSchema));
                 }
 
