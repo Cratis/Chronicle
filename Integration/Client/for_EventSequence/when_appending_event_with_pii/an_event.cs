@@ -71,5 +71,4 @@ public class an_event(context context) : Given<context>(context)
         if (Context.StoredEncryptionKey is null) return;
         Context.StoredEncryptionKey["_id"].AsBsonDocument["Identifier"].AsString.ShouldEqual(Context.EventSourceId.Value);
     }
-
 }

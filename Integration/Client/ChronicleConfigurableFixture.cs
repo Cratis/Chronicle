@@ -72,6 +72,7 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     public override async ValueTask DisposeAsync()
     {
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await (_outOfProcessContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
     }
 
@@ -91,41 +92,35 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         switch (Options.StorageProvider)
         {
             case ChronicleStorageProvider.PostgreSql:
-                await DropAndRecreateSqlDatabase("postgres", "chronicle-inprocess", GetInProcessConnectionString());
-                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null)
+                // Truncate rather than drop/recreate: schema stays, migrations never re-run.
+                // Drop/recreate caused grains' first write in a new test class to re-run EF
+                // migrations, which take >30s on CI and hit the 30s Orleans grain timeout.
+                await TruncateAllPostgreSqlTables(GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null && excludePrefixes is null)
                 {
-                    // Truncate the outofprocess server's database, then restart the server container.
-                    // Truncating keeps connections alive (no stale-pool issue from drop/recreate).
-                    // Restarting the container is required to evict Orleans grains: without a restart
-                    // grains stay active with their old in-memory state (e.g. observer head position)
-                    // and skip events in the freshly-cleared event sequence, causing observer timeouts.
+                    // Use the development reset endpoint to deactivate all server-side grains
+                    // instead of restarting the container. This avoids the 20-45s container
+                    // restart cost (per test class, 80 classes = 26-60 min) and replaces it
+                    // with a ~2s grain deactivation call.
+                    // Order: reset first (let grains write OnDeactivateAsync to old DB),
+                    // then truncate (removes all data including those writes).
                     var serverConnectionString = $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database={_outOfProcessSqlDatabaseName};Username=postgres;Password={PostgreSqlPassword}";
+                    await ResetOutOfProcessKernelState();
                     await TruncateAllPostgreSqlTables(serverConnectionString);
-                    if (_outOfProcessContainer is not null)
-                    {
-                        // Clear MongoDB data before stopping — the overlay filesystem can
-                        // accumulate inconsistent replica-set state across multiple stop/start
-                        // cycles, eventually causing MongoDB to SIGABRT on restart. For SQL
-                        // storage modes MongoDB is unused so cleaning is safe.
-                        await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
-                        await _outOfProcessContainer.StopAsync();
-                        await _outOfProcessContainer.StartAsync();
-                    }
                 }
 
                 NpgsqlConnection.ClearAllPools();
                 return;
 
             case ChronicleStorageProvider.MsSql:
-                await DropAndRecreateMsSqlDatabase("master", "chronicle-inprocess", GetInProcessConnectionString());
-                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null && _outOfProcessContainer is not null)
+                // Same reasoning: truncate keeps schema, avoids migration re-run timeouts.
+                await TruncateAllMsSqlTables(GetInProcessConnectionString());
+                if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _databaseContainer is not null && _outOfProcessContainer is not null && excludePrefixes is null)
                 {
-                    // Same reasoning as PostgreSql: truncate + restart with clean MongoDB data.
+                    // Same reasoning as PostgreSql: use reset endpoint instead of container restart.
                     var serverConnectionString = $"Server=localhost,{_databaseContainer.GetMappedPublicPort(1433)};Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
+                    await ResetOutOfProcessKernelState();
                     await TruncateAllMsSqlTables(serverConnectionString);
-                    await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
-                    await _outOfProcessContainer.StopAsync();
-                    await _outOfProcessContainer.StartAsync();
                 }
 
                 SqlConnection.ClearAllPools();
@@ -142,14 +137,15 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         // server's connection pool keeps the old inode open via file descriptors. After the
         // container restarts all fds are closed, the unlinked inode is freed, and the server
         // creates a fresh database from scratch when it starts up again.
-        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _outOfProcessContainer is not null)
+        // Only restart on the first cleanup call (excludePrefixes == null); the second call
+        // (with system store excluded) is for inprocess grain state cleanup only.
+        if (Options.Mode == ChronicleRuntimeMode.OutOfProcess && _outOfProcessContainer is not null && excludePrefixes is null)
         {
+            // Deactivate grains first so their OnDeactivateAsync writes go to the OLD db file,
+            // then delete the file, then restart to close lingering file-descriptor handles.
+            await ResetOutOfProcessKernelState();
             var outOfProcessConnectionDetails = Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db";
             var outOfProcessDbPath = ExtractSqliteDataSource(outOfProcessConnectionDetails);
-            // Delete the SQLite file and MongoDB data before stopping. Overlay-filesystem
-            // MongoDB state can become inconsistent over multiple stop/start cycles and
-            // cause mongod to SIGABRT on the next restart; clearing it upfront is safe
-            // because SQLite mode does not use MongoDB for Chronicle storage.
             await _outOfProcessContainer.ExecAsync(["rm", "-f", outOfProcessDbPath]);
             await _outOfProcessContainer.ExecAsync(["sh", "-c", "rm -rf /data/db/*"]);
             await _outOfProcessContainer.StopAsync();
@@ -209,7 +205,17 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
     static async Task TruncateAllPostgreSqlTables(string connectionString)
     {
         await using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (NpgsqlException)
+        {
+            // Database may not exist yet on the first test class boundary — skip truncation
+            // and let EF Core create and migrate the database on first grain access.
+            return;
+        }
+
         const string sql = """
             DO $$ DECLARE
                 r RECORD;
@@ -265,11 +271,13 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         var builder = new NpgsqlConnectionStringBuilder(connectionString) { Database = adminDatabase };
         await using var conn = new NpgsqlConnection(builder.ConnectionString);
         await conn.OpenAsync();
+#pragma warning disable CA2100 // databaseName is an internal fixture-controlled value, not user input
         await using var dropCmd = new NpgsqlCommand(
             $"DROP DATABASE IF EXISTS \"{databaseName}\" WITH (FORCE)", conn);
         await dropCmd.ExecuteNonQueryAsync();
         await using var createCmd = new NpgsqlCommand(
             $"CREATE DATABASE \"{databaseName}\"", conn);
+#pragma warning restore CA2100
         await createCmd.ExecuteNonQueryAsync();
     }
 
@@ -281,14 +289,18 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         };
         await using var conn = new SqlConnection(builder.ConnectionString);
         await conn.OpenAsync();
-        var sql = $@"
-            IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{databaseName}')
-            BEGIN
-                ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                DROP DATABASE [{databaseName}];
-            END
-            CREATE DATABASE [{databaseName}];";
+#pragma warning disable CA2100, MA0101 // databaseName is an internal fixture-controlled value, not user input
+        var sql = $"""
+                IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{databaseName}')
+                BEGIN
+                    ALTER DATABASE [{databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    DROP DATABASE [{databaseName}];
+                END
+                CREATE DATABASE [{databaseName}];
+                """;
+#pragma warning disable CA2100
         await using var cmd = new SqlCommand(sql, conn);
+#pragma warning restore CA2100, MA0101
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -451,6 +463,36 @@ public class ChronicleConfigurableFixture : Cratis.Chronicle.XUnit.Integration.C
         }
 
         return "/tmp/chronicle.db";
+    }
+
+    /// <summary>
+    /// Calls the Development-only kernel reset endpoint on the outofprocess Chronicle server.
+    /// The endpoint deactivates all Orleans grains and waits for stabilization, effectively
+    /// clearing all server-side in-memory grain state without restarting the container.
+    /// This is orders of magnitude faster than a full container restart (2s vs 30-45s).
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    static async Task ResetOutOfProcessKernelState()
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                var response = await client.PostAsync("http://localhost:8081/api/development/kernel-state/reset", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // Server may be temporarily unavailable — keep retrying.
+            }
+
+            await Task.Delay(500);
+        }
     }
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
