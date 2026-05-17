@@ -11,7 +11,7 @@ public class many_events_with_occurred(context context) : Given<context>(context
 {
     public class context(ChronicleFixture chronicleInProcessFixture) : Specification<ChronicleFixture>(chronicleInProcessFixture)
     {
-        public Events.EventSourceId EventSourceId { get; } = "source";
+        public EventSourceId EventSourceId { get; } = "source";
         public IList<SomeEvent> Events { get; private set; }
         public DateTimeOffset Occurred { get; private set; }
 

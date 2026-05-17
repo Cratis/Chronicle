@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
 
 static class EventSequenceRedactionViaSequenceWaitHelpers
 {
-    public static async Task<AppendedEvent> WaitForRedactedEvent(this IChronicleSetupFixture fixture, Events.EventSequenceNumber sequenceNumber, TimeSpan? timeout = default)
+    public static async Task<AppendedEvent> WaitForRedactedEvent(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, TimeSpan? timeout = default)
     {
         timeout ??= TimeSpanFactory.FromSeconds(30);
         using var cts = new CancellationTokenSource(timeout.Value);

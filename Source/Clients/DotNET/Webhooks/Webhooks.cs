@@ -48,10 +48,10 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
 
         return webhooks.Select(w => new WebhookDefinition(
             new WebhookId(w.Identifier),
-            w.EventTypes.Select(et => new Events.EventType(new Events.EventTypeId(et.Id), new Events.EventTypeGeneration((uint)et.Generation))),
+            w.EventTypes.Select(et => new EventType(new EventTypeId(et.Id), new EventTypeGeneration(et.Generation))),
             new WebhookTarget(
                 new WebhookTargetUrl(w.Target.Url),
-                OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None>.FromT3(new OneOf.Types.None()),
+                OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None>.FromT3(default),
                 new Dictionary<string, string>(w.Target.Headers ?? new Dictionary<string, string>())),
             new EventSequences.EventSequenceId(w.EventSequenceId),
             w.IsReplayable,

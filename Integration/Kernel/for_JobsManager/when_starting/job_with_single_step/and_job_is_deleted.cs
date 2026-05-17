@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_JobsManager.when_starting.job_
 [Collection(ChronicleCollection.Name)]
 public class and_job_is_deleted(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : a_jobs_manager(chronicleInProcessFixture)
     {
         public Result<Concepts.Jobs.JobId, StartJobError> StartJobResult;
         public IEnumerable<JobStep> JobSteps;

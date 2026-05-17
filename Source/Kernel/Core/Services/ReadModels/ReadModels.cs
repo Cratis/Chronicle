@@ -82,9 +82,9 @@ internal sealed class ReadModels(
             existingDefinition.ObserverType,
             existingDefinition.ObserverIdentifier,
             existingDefinition.Sink,
-            new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+            new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { (Concepts.ReadModels.ReadModelGeneration)request.ReadModel.Type.Generation, schema }
+                { (ReadModelGeneration)request.ReadModel.Type.Generation, schema }
             },
             indexes);
 
@@ -122,7 +122,7 @@ internal sealed class ReadModels(
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
-        Concepts.ReadModels.ReadModelContainerName? occurrence = null;
+        ReadModelContainerName? occurrence = null;
         if (!string.IsNullOrEmpty(request.Occurrence))
         {
             occurrence = request.Occurrence;

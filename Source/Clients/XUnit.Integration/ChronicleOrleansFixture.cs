@@ -171,7 +171,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     /// Returns default to keep the MongoDB default.
     /// </summary>
     /// <returns>The sink type identifier, or default to preserve existing behavior.</returns>
-    protected virtual Cratis.Chronicle.Sinks.SinkTypeId? GetDefaultSinkTypeId() => null;
+    protected virtual Sinks.SinkTypeId? GetDefaultSinkTypeId() => null;
 
     /// <summary>
     /// Gets additional host configuration key-value pairs to inject when the in-process silo

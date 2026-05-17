@@ -8,15 +8,15 @@ using Cratis.Chronicle.Storage.Sql;
 
 namespace Cratis.Chronicle.Integration;
 
-public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Cratis.Chronicle.XUnit.Integration.Specification<TChronicleFixture>(fixture)
+public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit.Integration.Specification<TChronicleFixture>(fixture)
     where TChronicleFixture : IChronicleFixture
 {
     public override bool AutoDiscoverArtifacts => false;
 
     /// <inheritdoc/>
-    protected override Action<Cratis.Chronicle.Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer)
+    protected override Action<Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer)
     {
-        if (ChronicleFixture is not ChronicleConfigurableFixture configurable ||
+        if (ChronicleFixture is not ChronicleFixture configurable ||
             configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess ||
             configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB ||
             configurable.InProcessStorageType is null)
@@ -26,9 +26,9 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
 
         var storageType = configurable.InProcessStorageType;
         var connectionString = configurable.GetInProcessConnectionString();
-        var options = new Cratis.Chronicle.Configuration.ChronicleOptions
+        var options = new Configuration.ChronicleOptions
         {
-            Storage = new Cratis.Chronicle.Configuration.Storage { Type = storageType, ConnectionDetails = connectionString }
+            Storage = new Configuration.Storage { Type = storageType, ConnectionDetails = connectionString }
         };
 
         return chronicleBuilder => Cratis.Chronicle.Setup.SqlChronicleBuilderExtensions.WithSql(chronicleBuilder, options);
@@ -37,7 +37,7 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
     /// <inheritdoc/>
     protected override IReadOnlyDictionary<string, string?>? GetStorageHostConfiguration(string mongoServer)
     {
-        if (ChronicleFixture is not ChronicleConfigurableFixture configurable ||
+        if (ChronicleFixture is not ChronicleFixture configurable ||
             configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess ||
             configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB ||
             configurable.InProcessStorageType is null)
@@ -55,7 +55,7 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
     /// <inheritdoc/>
     protected override SinkTypeId? GetDefaultSinkTypeId()
     {
-        if (ChronicleFixture is ChronicleConfigurableFixture configurable &&
+        if (ChronicleFixture is ChronicleFixture configurable &&
             configurable.Options.Mode == ChronicleRuntimeMode.OutOfProcess &&
             configurable.Options.StorageProvider != ChronicleStorageProvider.MongoDB)
         {
@@ -74,7 +74,7 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : Crati
 }
 
 /// <summary>
-/// Represents a non-generic specification using the default <see cref="ChronicleConfigurableFixture"/>.
+/// Represents a non-generic specification using the default <see cref="ChronicleFixture"/>.
 /// </summary>
-/// <param name="fixture">The <see cref="ChronicleConfigurableFixture"/>.</param>
+/// <param name="fixture">The <see cref="ChronicleFixture"/>.</param>
 public class Specification(ChronicleFixture fixture) : Specification<ChronicleFixture>(fixture);

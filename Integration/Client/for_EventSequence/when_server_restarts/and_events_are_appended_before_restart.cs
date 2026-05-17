@@ -30,7 +30,7 @@ public class and_events_are_appended_before_restart(context context) : Given<con
             // For MongoDB: restarts the MongoDB process or container.
             // For SQL: restarts the database container so the server must reconnect.
             // For SQLite: restarts the server container (data persists via overlay filesystem).
-            await ((ChronicleConfigurableFixture)ChronicleFixture).RestartStorageAsync();
+            await ((ChronicleFixture)ChronicleFixture).RestartStorageAsync();
 
             // Wait until the kernel has reconnected to the storage backend after the restart.
             var deadline = DateTime.UtcNow.AddSeconds(60);

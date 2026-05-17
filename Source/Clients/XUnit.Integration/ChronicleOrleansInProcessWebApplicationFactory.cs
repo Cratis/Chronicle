@@ -50,8 +50,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     Action<IServiceCollection> configureServices,
     Action<IMongoDBBuilder> configureMongoDB,
     Action<IWebHostBuilder> configureWebHost,
-    Action<KernelCore::Cratis.Chronicle.Configuration.IChronicleBuilder>? configureStorage,
-    Cratis.Chronicle.Sinks.SinkTypeId? defaultSinkTypeId,
+    Action<Configuration.IChronicleBuilder>? configureStorage,
+    Sinks.SinkTypeId? defaultSinkTypeId,
     IReadOnlyDictionary<string, string?>? storageHostConfiguration,
     ContentRoot contentRoot) : ChronicleWebApplicationFactory<TStartup>(fixture, contentRoot)
     where TStartup : class
@@ -118,11 +118,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // Keep every host-level Chronicle client registration pointed at the
                 // shared test event store so reconnect does not create a second unnamed
                 // event store with its own failing OnConnected registration.
-                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
-                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
                 if (defaultSinkTypeId is not null)
                 {
-                    services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
+                    services.PostConfigure<ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
                 }
 
                 // Register test services directly in DI so the first test works normally,
