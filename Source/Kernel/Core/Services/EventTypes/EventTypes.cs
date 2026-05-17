@@ -363,11 +363,11 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
             var existingSchema = await eventTypesStorage.GetFor(eventTypeId, generation);
             var newSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
 
-            // Normalize the existing schema through the same async round-trip as the incoming
-            // schema so that both JSON strings are produced by the same serializer path and
-            // are therefore directly comparable.
-            var normalizedExisting = await JsonSchema.FromJsonAsync(existingSchema.Schema.ToJson());
-            if (normalizedExisting.ToJson() != newSchema.ToJson())
+            // Storage applies EnsureComplianceMetadata() when deserializing a stored schema
+            // (in EventTypeConverters.ToKernel). Apply the same transformation to the incoming
+            // schema so both sides go through identical normalization before comparison.
+            newSchema.EnsureComplianceMetadata();
+            if (existingSchema.Schema.ToJson() != newSchema.ToJson())
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
             }
