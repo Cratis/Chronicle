@@ -62,8 +62,9 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
             return null;
         }
 
-        var normalizedTags = tags.ToArray();
-        return normalizedTags.Length == 0 ? null : normalizedTags.Order().ToArray();
+        // Tags are metadata; normalize ordering so different insertion order does not trigger a replay.
+        var normalizedTags = tags.Order().ToArray();
+        return normalizedTags.Length == 0 ? null : normalizedTags;
     }
 
     static IDictionary<PropertyPath, ChildrenDefinition>? NormalizeNested(IDictionary<PropertyPath, ChildrenDefinition>? nested)
