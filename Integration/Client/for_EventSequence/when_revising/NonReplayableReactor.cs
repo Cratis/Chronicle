@@ -7,7 +7,7 @@ using Cratis.Chronicle.Reactors;
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_revising;
 
 [DependencyInjection.IgnoreConvention]
-[Observation.NonReplayable]
+[OnceOnly]
 public class NonReplayableReactor : IReactor
 {
     public int HandledEvents;

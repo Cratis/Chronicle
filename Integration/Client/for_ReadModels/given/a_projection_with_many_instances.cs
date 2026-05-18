@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.XUnit.Integration;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.given;
 
@@ -57,14 +60,22 @@ public class a_projection_with_many_instances(ChronicleFixture chronicleFixture)
             await EventStore.EventLog.Append(EventSourceIds[i], AnotherEvents[i]);
         }
 
-        // Wait for all read model instances to materialise. For multi-partition projections
-        // on outofprocess SQL, LastHandledEventSequenceNumber may not advance to the global
-        // maximum via the observer state API, so we poll the read models directly instead.
+        // Poll the sink-based paginated endpoint (not in-memory GetAllInstances) to ensure
+        // all instances are materialised in the actual storage sink before assertions run.
         using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        var readModels = Services.GetRequiredService<IServices>().ReadModels;
         while (true)
         {
-            var instances = await EventStore.ReadModels.GetInstances<SomeReadModel>();
-            if (instances.Count() >= TotalInstances)
+            var response = await readModels.GetInstances(new GetInstancesRequest
+            {
+                EventStore = Constants.EventStore,
+                Namespace = "Default",
+                ReadModel = typeof(SomeReadModel).FullName,
+                Page = 0,
+                PageSize = TotalInstances + 1
+            });
+
+            if (response.TotalCount >= TotalInstances)
             {
                 break;
             }

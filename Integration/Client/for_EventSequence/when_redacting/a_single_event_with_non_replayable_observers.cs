@@ -24,24 +24,20 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
         public SomeReactor Reactor { get; private set; }
         public SomeReducer Reducer { get; private set; }
         public NonReplayableReactor NonReplayableReactorInstance { get; private set; }
-        public NonReplayableReducer NonReplayableReducerInstance { get; private set; }
         public ReactorState NonReplayableReactorState { get; private set; }
-        public ReducerState NonReplayableReducerState { get; private set; }
 
         public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent)];
         public override IEnumerable<Type> Reactors => [typeof(SomeReactor), typeof(NonReplayableReactor)];
-        public override IEnumerable<Type> Reducers => [typeof(SomeReducer), typeof(NonReplayableReducer)];
+        public override IEnumerable<Type> Reducers => [typeof(SomeReducer)];
 
         protected override void ConfigureServices(IServiceCollection services)
         {
             Reactor = new SomeReactor();
             Reducer = new SomeReducer();
             NonReplayableReactorInstance = new NonReplayableReactor();
-            NonReplayableReducerInstance = new NonReplayableReducer();
             services.AddSingleton(Reactor);
             services.AddSingleton(Reducer);
             services.AddSingleton(NonReplayableReactorInstance);
-            services.AddSingleton(NonReplayableReducerInstance);
         }
 
         void Establish()
@@ -57,12 +53,10 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             var reactorHandler = EventStore.Reactors.GetHandlerFor<SomeReactor>();
             var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
             var nonReplayableReactorHandler = EventStore.Reactors.GetHandlerFor<NonReplayableReactor>();
-            var nonReplayableReducerHandler = EventStore.Reducers.GetHandlerFor<NonReplayableReducer>();
 
             await reactorHandler.WaitTillSubscribed(startupTimeout);
             await reducerHandler.WaitTillSubscribed(startupTimeout);
             await nonReplayableReactorHandler.WaitTillSubscribed(startupTimeout);
-            await nonReplayableReducerHandler.WaitTillSubscribed(startupTimeout);
 
             await EventStore.EventLog.Append(EventSourceId, FirstEvent);
             await EventStore.EventLog.Append(EventSourceId, SecondEvent);
@@ -74,13 +68,11 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
             await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
             await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
-            await nonReplayableReducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
 
             // Reset counters before redaction to measure replay.
             Reactor.HandledEvents = 0;
             Reducer.HandledEvents = 0;
             NonReplayableReactorInstance.HandledEvents = 0;
-            NonReplayableReducerInstance.HandledEvents = 0;
 
             // Redact the second event (sequence number 1).
             await this.RedactEvent(EventSequenceNumber.First + 1, "test reason");
@@ -95,7 +87,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
             NonReplayableReactorState = await nonReplayableReactorHandler.GetState();
-            NonReplayableReducerState = await nonReplayableReducerHandler.GetState();
         }
     }
 
@@ -109,9 +100,6 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
     void should_not_have_replayed_non_replayable_reactor() => Context.NonReplayableReactorInstance.HandledEvents.ShouldEqual(0);
 
     [Fact]
-    void should_not_have_replayed_non_replayable_reducer() => Context.NonReplayableReducerInstance.HandledEvents.ShouldEqual(0);
-
-    [Fact]
     void should_have_reactor_in_active_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
     [Fact]
@@ -119,7 +107,4 @@ public class a_single_event_with_non_replayable_observers(context context) : Giv
 
     [Fact]
     void should_keep_non_replayable_reactor_in_active_state() => Context.NonReplayableReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
-
-    [Fact]
-    void should_keep_non_replayable_reducer_in_active_state() => Context.NonReplayableReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
 }

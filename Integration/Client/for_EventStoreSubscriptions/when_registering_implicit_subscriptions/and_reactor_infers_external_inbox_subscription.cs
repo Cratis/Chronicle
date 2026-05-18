@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
@@ -27,15 +26,20 @@ public class and_reactor_infers_external_inbox_subscription(context context) : G
             var lobbyEventStore = await ChronicleClient.GetEventStore(LobbyEventStoreName);
             await lobbyEventStore.RegisterAll();
 
-            var subscriptionsReactor = await lobbyEventStore.Reactors.WaitForHandlerById(
-                "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
-                TimeSpanFactory.DefaultTimeout());
+            // Poll until the implicit subscription has been persisted. Checking the system
+            // log tail first is unreliable because the tail may be Unavailable (no events yet),
+            // which would cause WaitTillReachesEventSequenceNumber to return immediately.
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (true)
+            {
+                StoredSubscriptions = await lobbyEventStore.Subscriptions.GetAll();
+                if (StoredSubscriptions.Any())
+                {
+                    break;
+                }
 
-            var systemLog = lobbyEventStore.GetEventSequence(EventSequenceId.System);
-            var tailSequenceNumber = (await systemLog.GetTailSequenceNumber()).Value;
-            await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
-
-            StoredSubscriptions = await lobbyEventStore.Subscriptions.GetAll();
+                await Task.Delay(100, cts.Token);
+            }
         }
     }
 
