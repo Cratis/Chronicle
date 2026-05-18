@@ -56,7 +56,8 @@ public class Projection(
     {
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);
-        var compareResult = await projectionDefinitionComparer.Compare(key, State, definition);
+        var previousDefinition = State;
+        var compareResult = await projectionDefinitionComparer.Compare(key, previousDefinition, definition);
 
         State = definition;
         await WriteStateAsync();
@@ -101,7 +102,7 @@ public class Projection(
             }
             else
             {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames, previousDefinition, definition);
             }
         }
     }
@@ -434,10 +435,29 @@ public class Projection(
         }
     }
 
-    async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task AddReplayRecommendationForAllNamespaces(
+        ProjectionKey key,
+        IEnumerable<EventStoreNamespaceName> namespaces,
+        ProjectionDefinition previousDefinition,
+        ProjectionDefinition currentDefinition)
     {
+        var eventTypesToCheckFor = ProjectionReplayRecommendationEvaluator.GetAddedEventTypesIfOnlyEventTypesChanged(
+            previousDefinition,
+            currentDefinition,
+            objectComparer);
+
         foreach (var @namespace in namespaces)
         {
+            if (eventTypesToCheckFor.Length > 0)
+            {
+                var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(State.EventSequenceId);
+                var tailSequenceNumberForAddedEventTypes = await eventSequenceStorage.GetTailSequenceNumber(eventTypes: eventTypesToCheckFor);
+                if (!tailSequenceNumberForAddedEventTypes.IsActualValue)
+                {
+                    continue;
+                }
+            }
+
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
                 "Projection definition has changed.",
