@@ -66,7 +66,12 @@ public static class MongoDBChronicleBuilderExtensions
         return builder;
     }
 
-    static MongoClientSettings GetMongoClientSettings(string server)
+    /// <summary>
+    /// Create <see cref="MongoClientSettings"/> from a server connection string.
+    /// </summary>
+    /// <param name="server">Connection string for the MongoDB server.</param>
+    /// <returns><see cref="MongoClientSettings"/> for the connection string.</returns>
+    internal static MongoClientSettings GetMongoClientSettings(string server)
     {
         var url = new MongoUrl(server);
         return MongoClientSettings.FromUrl(url);
