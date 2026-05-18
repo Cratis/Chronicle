@@ -74,12 +74,7 @@ internal static class ProjectionReplayRecommendationEvaluator
     }
 
     static void AddEventTypes(HashSet<EventType> target, IEnumerable<EventType> source)
-    {
-        foreach (var eventType in source)
-        {
-            target.Add(eventType);
-        }
-    }
+        => target.UnionWith(source);
 
     static ProjectionDefinition RemoveEventTypes(
         ProjectionDefinition definition,
