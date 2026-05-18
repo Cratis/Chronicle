@@ -19,8 +19,6 @@ namespace Cratis.Chronicle.Schemas;
 [Singleton]
 public class JsonSchemaGenerator : IJsonSchemaGenerator
 {
-    static FieldInfo? _paramDefaultValueField;
-
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
@@ -36,13 +34,10 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         _metadataResolver = metadataResolver;
         _typeFormats = new TypeFormats();
 
-        var resolver = new DefaultJsonTypeInfoResolver();
-        resolver.Modifiers.Add(FixStructDefaultValues);
-
         _serializerOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = namingPolicy.JsonPropertyNamingPolicy,
-            TypeInfoResolver = resolver,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             Converters =
             {
                 new EnumerableConceptAsJsonConverterFactory(),
@@ -62,47 +57,6 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     {
         var node = _serializerOptions.GetJsonSchemaAsNode(type, _exporterOptions);
         return new JsonSchema(node.AsObject());
-    }
-
-    static FieldInfo GetParameterDefaultValueField(JsonParameterInfo paramInfo)
-    {
-        if (_paramDefaultValueField is not null) return _paramDefaultValueField;
-
-        var type = paramInfo.GetType();
-        while (type is not null)
-        {
-            var field = type.GetField(
-                "<DefaultValue>k__BackingField",
-                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-
-            if (field is not null)
-            {
-                _paramDefaultValueField = field;
-                return field;
-            }
-
-            type = type.BaseType;
-        }
-
-        throw new InvalidOperationException("Could not find DefaultValue backing field on JsonParameterInfo.");
-    }
-
-    static void FixStructDefaultValues(JsonTypeInfo typeInfo)
-    {
-        if (typeInfo.Kind != JsonTypeInfoKind.Object) return;
-
-        foreach (var property in typeInfo.Properties)
-        {
-            if (property.AssociatedParameter is not { HasDefaultValue: true, DefaultValue: null } paramInfo)
-                continue;
-            if (!paramInfo.ParameterType.IsValueType)
-                continue;
-            if (Nullable.GetUnderlyingType(paramInfo.ParameterType) is not null)
-                continue;
-
-            var field = GetParameterDefaultValueField(paramInfo);
-            field.SetValue(paramInfo, Activator.CreateInstance(paramInfo.ParameterType));
-        }
     }
 
     static void AddComplianceMetadata(JsonObject schema, IEnumerable<ComplianceMetadata> metadata)
