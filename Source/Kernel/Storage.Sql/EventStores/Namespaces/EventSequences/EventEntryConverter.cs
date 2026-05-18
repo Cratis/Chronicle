@@ -153,6 +153,15 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Resolve the compliance <see cref="Subject"/> for an event entry. Defaults to the event
+    /// source identifier when no explicit subject was stored — mirrors the MongoDB backend.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The resolved <see cref="Subject"/>.</returns>
+    public static Subject ResolveSubject(EventEntry entry) =>
+        string.IsNullOrEmpty(entry.Subject) ? new Subject(entry.EventSourceId) : new Subject(entry.Subject);
+
+    /// <summary>
     /// Get the event type from an event entry. Selects the highest available generation so
     /// observers and projections subscribed to a newer generation receive the migrated content
     /// by default — mirrors the MongoDB backend.

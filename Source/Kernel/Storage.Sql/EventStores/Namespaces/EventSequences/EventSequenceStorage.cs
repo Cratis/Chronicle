@@ -311,7 +311,8 @@ public class EventSequenceStorage(
             eventCausation,
             await identityStorage.GetFor(eventCausedBy),
             [],
-            EventHash.NotSet);
+            EventHash.NotSet,
+            Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         return new AppendedEvent(eventMetadata, content);
     }
@@ -566,7 +567,8 @@ public class EventSequenceStorage(
                 causation,
                 await identityStorage.GetFor(causedBy),
                 [],
-                EventHash.NotSet);
+                EventHash.NotSet,
+                Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
             var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
             var appendedEvent = new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContent };
@@ -607,7 +609,8 @@ public class EventSequenceStorage(
             causation,
             await identityStorage.GetFor(causedBy),
             [],
-            EventHash.NotSet);
+            EventHash.NotSet,
+            Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         var generationalContentAt = EventEntryConverter.GetAllGenerationalContent(eventEntry);
         return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentAt };
@@ -651,7 +654,8 @@ public class EventSequenceStorage(
             causation,
             await identityStorage.GetFor(causedBy),
             [],
-            EventHash.NotSet);
+            EventHash.NotSet,
+            Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         var generationalContentLast = EventEntryConverter.GetAllGenerationalContent(eventEntry);
         return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentLast };

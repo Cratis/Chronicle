@@ -84,7 +84,8 @@ public class EventCursor(
                 causation,
                 await _identityStorage.GetFor(causedBy),
                 [],
-                EventHash.NotSet);
+                EventHash.NotSet,
+                Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
             var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
             appendedEvents.Add(new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContent });
