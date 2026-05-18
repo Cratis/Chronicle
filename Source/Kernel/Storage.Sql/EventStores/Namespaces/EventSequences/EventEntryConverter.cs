@@ -153,13 +153,41 @@ public static class EventEntryConverter
     }
 
     /// <summary>
-    /// Get the event type from an event entry.
+    /// Get the event type from an event entry. Selects the highest available generation so
+    /// observers and projections subscribed to a newer generation receive the migrated content
+    /// by default — mirrors the MongoDB backend.
     /// </summary>
     /// <param name="entry">The event entry.</param>
     /// <returns>The event type.</returns>
     public static EventType GetEventType(EventEntry entry)
     {
-        return new EventType(entry.Type, EventTypeGeneration.First, false);
+        var highestGeneration = GetHighestGeneration(entry);
+        return new EventType(entry.Type, new EventTypeGeneration(highestGeneration), false);
+    }
+
+    /// <summary>
+    /// Get the highest generation stored in an event entry's content.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The highest generation number, or 1 if none are stored.</returns>
+    public static uint GetHighestGeneration(EventEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.Content))
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (contentDict is null || contentDict.Count == 0)
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        var highest = contentDict.Keys
+            .Select(k => uint.TryParse(k, out var g) ? g : 0u)
+            .DefaultIfEmpty(EventTypeGeneration.First.Value)
+            .Max();
+        return highest == 0u ? EventTypeGeneration.First.Value : highest;
     }
 
     /// <summary>
