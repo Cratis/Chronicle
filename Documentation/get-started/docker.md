@@ -75,7 +75,7 @@ services:
 
 Why this setup:
 
-- `host: 'localhost:27017'` makes the replica-set topology usable from host tools (for example `mongosh` and Compass) when they connect to `mongodb://localhost:27017/?replicaSet=rs0`.
+- `host: 'localhost:27017'` makes the replica set topology usable from host tools (for example `mongosh` and Compass) when they connect to `mongodb://localhost:27017/?replicaSet=rs0`.
 - Chronicle still reaches MongoDB over the Docker network (`mongodb:27017`) and uses `directConnection=true` to avoid following the advertised host back to `localhost` inside the Chronicle container.
 - `directConnection=true` does not disable transactions; transactions still work because MongoDB is running as a replica set.
 - If your existing data volume was initialized with a different replica-set host, run `docker compose down -v` (or wipe the MongoDB data volume) before starting again so `rs.initiate()` can apply the new host.
