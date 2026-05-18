@@ -87,12 +87,12 @@ public class an_event_with_observers(context context) : Given<context>(context)
             await Reducer.WaitTillHandledEventReaches(3, startupTimeout);
 
             var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-            StoredEvent = eventLogEvents.First();
+            StoredEvent = eventLogEvents[0];
 
             var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
             var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
-            SystemStoredEvent = systemEvents.First();
+            SystemStoredEvent = systemEvents[0];
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();

@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventStoreSubscriptions;
-using Cratis.Chronicle.Reactors;
 
 namespace Cratis.Chronicle.Integration.for_EventStoreSubscriptions.given;
 
@@ -12,21 +10,26 @@ public class subscription_states_after_subscribing(ChronicleFixture chronicleInP
 {
     public IEnumerable<EventStoreSubscriptionDefinition> StoredSubscriptions { get; private set; } = [];
 
-    protected async Task Subscribe(params (EventStoreSubscriptionId, string, Action<IEventStoreSubscriptionBuilder>?)[] subscriptions)
+    protected async Task Subscribe(params (EventStoreSubscriptionId Id, string SourceEventStore, Action<IEventStoreSubscriptionBuilder>? Configure)[] subscriptions)
     {
         foreach (var (id, sourceEventStore, configure) in subscriptions)
         {
             await EventStore.Subscriptions.Subscribe(id, sourceEventStore, configure);
         }
 
-        var subscriptionsReactor = await EventStore.Reactors.WaitForHandlerById(
-            "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
-            TimeSpanFactory.DefaultTimeout());
+        // Poll until the subscriptions appear in storage. Waiting on the reactor's sequence
+        // number is unreliable on SQL backends because the internal subscriptions reactor
+        // may process events slower than the polling period.
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        while (true)
+        {
+            StoredSubscriptions = await EventStore.Subscriptions.GetAll();
+            if (StoredSubscriptions.Any())
+            {
+                break;
+            }
 
-        var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
-        var tailSequenceNumber = (await systemLog.GetTailSequenceNumber()).Value;
-        await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
-
-        StoredSubscriptions = await EventStore.Subscriptions.GetAll();
+            await Task.Delay(100, cts.Token);
+        }
     }
 }

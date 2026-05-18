@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventStoreSubscriptions;
 using Cratis.Chronicle.Reactors;
 using context = Cratis.Chronicle.Integration.for_EventStoreSubscriptions.when_registering_implicit_subscriptions.and_reactor_infers_external_inbox_subscription.context;
 
