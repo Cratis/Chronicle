@@ -149,7 +149,8 @@ public class EventSequenceStorage(
                 eventHash,
                 Subject: resolvedSubject);
 
-            return new AppendedEvent(eventContext, returnContent);
+            var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
+            return new AppendedEvent(eventContext, returnContent) { GenerationalContent = generationalContent };
         }
         catch (Exception ex)
         {

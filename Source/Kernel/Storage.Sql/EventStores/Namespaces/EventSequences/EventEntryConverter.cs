@@ -186,6 +186,22 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Build a generational content dictionary from the in-memory content map used during event append.
+    /// </summary>
+    /// <param name="content">The content per generation as ExpandoObjects.</param>
+    /// <returns>Dictionary mapping generation number to serialized JSON content string.</returns>
+    public static IReadOnlyDictionary<int, string> BuildGenerationalContent(IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        var result = new Dictionary<int, string>();
+        foreach (var (generation, expandoContent) in content)
+        {
+            result[(int)generation.Value] = JsonSerializer.Serialize(expandoContent, _jsonSerializerOptions);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Get all generational content from an event entry as a dictionary keyed by generation number.
     /// </summary>
     /// <param name="entry">The event entry.</param>
