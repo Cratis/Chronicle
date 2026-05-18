@@ -29,9 +29,10 @@ public class ObserverKeysAsyncEnumerator(
     IEnumerable<EventTypeId> eventTypes,
     CancellationToken cancellationToken) : IAsyncEnumerator<Key>
 {
-    readonly string[] _eventTypeIds = eventTypes.Select(eventType => eventType.Value).ToArray();
+    readonly string[] _eventTypeStringIds = eventTypes.Select(et => et.Value).ToArray();
+    List<EventSourceId>? _results;
+    int _currentIndex = -1;
     DbContextScope<EventSequences.EventSequenceDbContext>? _scope;
-    IAsyncEnumerator<EventSourceId>? _enumerator;
     Key? _current;
 
     /// <inheritdoc/>
@@ -40,11 +41,6 @@ public class ObserverKeysAsyncEnumerator(
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_enumerator is not null)
-        {
-            await _enumerator.DisposeAsync();
-        }
-
         if (_scope is not null)
         {
             await _scope.DisposeAsync();
@@ -54,24 +50,38 @@ public class ObserverKeysAsyncEnumerator(
     /// <inheritdoc/>
     public async ValueTask<bool> MoveNextAsync()
     {
-        if (_enumerator is null)
+        if (_results is null)
         {
+            if (_eventTypeStringIds.Length == 0)
+            {
+                _results = [];
+                _current = null;
+                return false;
+            }
+
             _scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
             var fromSeqValue = fromEventSequenceNumber.Value;
-            var query = _scope.DbContext.Events
-                .Where(e => e.SequenceNumber >= fromSeqValue &&
-                           _eventTypeIds.Contains(e.Type.Value))
-                .Select(e => e.EventSourceId)
-                .Distinct();
 
-            _enumerator = query.AsAsyncEnumerable().GetAsyncEnumerator(cancellationToken);
+            // Fetch event source IDs and types from the database using only the sequence number
+            // filter in SQL. The event type filter is applied in memory to avoid EF Core query
+            // translation issues with ConceptAs value-converted types in Contains expressions.
+            var entries = await _scope.DbContext.Events
+                .Where(e => e.SequenceNumber >= fromSeqValue)
+                .Select(e => new { e.EventSourceId, e.Type })
+                .ToListAsync(cancellationToken);
+
+            _results = entries
+                .Where(e => _eventTypeStringIds.Contains(e.Type.Value))
+                .Select(e => e.EventSourceId)
+                .Distinct()
+                .ToList();
         }
 
-        var hasNext = await _enumerator.MoveNextAsync();
-        if (hasNext)
+        _currentIndex++;
+        if (_currentIndex < _results.Count)
         {
-            _current = new Key(_enumerator.Current.Value, ArrayIndexers.NoIndexers);
+            _current = new Key(_results[_currentIndex].Value, ArrayIndexers.NoIndexers);
             return true;
         }
 
