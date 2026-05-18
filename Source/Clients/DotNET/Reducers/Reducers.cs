@@ -336,7 +336,6 @@ public class Reducers : IReducers
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
                 IsActive = handler.IsActive,
-                IsReplayable = !handler.ReducerType.IsDefined(typeof(NonReplayableAttribute), inherit: false),
                 Sink = new SinkDefinition
                 {
                     TypeId = _defaultSinkTypeId
