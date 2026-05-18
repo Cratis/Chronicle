@@ -36,9 +36,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         var databaseName = $"{eventStore}+es+{@namespace}";
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
-            DatabaseName = databaseName,
-            DirectConnection = mongoDBOptions.Value.DirectConnection
+            DatabaseName = databaseName
         };
+        if (mongoDBOptions.Value.DirectConnection)
+        {
+            urlBuilder.DirectConnection = true;
+        }
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
 
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.

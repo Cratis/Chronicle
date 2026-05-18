@@ -28,7 +28,7 @@ Use `latest-development-slim` and configure Chronicle storage through Chronicle 
 
 ### MongoDB with Docker Compose
 
-Chronicle uses MongoDB change streams, so MongoDB must run as a replica set. The following example initializes a single-node replica set for local development.
+Chronicle uses MongoDB transactions (and change streams), so MongoDB must run as a replica set or a sharded cluster. The following example initializes a single-node replica set for local development.
 
 ```yaml
 services:
@@ -39,7 +39,7 @@ services:
       - mongodb-init
     environment:
       - Cratis__Chronicle__Storage__Type=MongoDB
-      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?replicaSet=rs0
+      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
       - 8080:8080
       - 35000:35000
@@ -68,10 +68,17 @@ services:
         } catch (e) {
           rs.initiate({
             _id: 'rs0',
-            members: [{ _id: 0, host: 'mongodb:27017' }]
+            members: [{ _id: 0, host: 'localhost:27017' }]
           });
         }"
 ```
+
+Why this setup:
+
+- `host: 'localhost:27017'` makes the replica set topology usable from host tools (for example `mongosh` and Compass) when they connect to `mongodb://localhost:27017/?replicaSet=rs0`.
+- Chronicle still reaches MongoDB over the Docker network (`mongodb:27017`) and uses `directConnection=true` to avoid following the advertised host back to `localhost` inside the Chronicle container.
+- `directConnection=true` does not disable transactions; transactions still work because MongoDB is running as a replica set.
+- If your existing data volume was initialized with a different replica-set host, run `docker compose down -v` (or wipe the MongoDB data volume) before starting again so `rs.initiate()` can apply the new host.
 
 ### PostgreSQL with Docker Compose
 
