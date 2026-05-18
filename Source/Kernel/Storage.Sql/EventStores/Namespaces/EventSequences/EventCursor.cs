@@ -86,7 +86,8 @@ public class EventCursor(
                 [],
                 EventHash.NotSet);
 
-            appendedEvents.Add(new AppendedEvent(eventMetadata, content));
+            var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
+            appendedEvents.Add(new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContent });
         }
 
         Current = appendedEvents;

@@ -186,6 +186,36 @@ public static class EventEntryConverter
     }
 
     /// <summary>
+    /// Get all generational content from an event entry as a dictionary keyed by generation number.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>Dictionary mapping generation number to serialized JSON content.</returns>
+    public static IReadOnlyDictionary<int, string> GetAllGenerationalContent(EventEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.Content))
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (contentDict is null)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var result = new Dictionary<int, string>();
+        foreach (var (key, value) in contentDict)
+        {
+            if (int.TryParse(key, out var generation))
+            {
+                result[generation] = value.GetRawText();
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Get the causation chain from an event entry.
     /// </summary>
     /// <param name="entry">The event entry.</param>

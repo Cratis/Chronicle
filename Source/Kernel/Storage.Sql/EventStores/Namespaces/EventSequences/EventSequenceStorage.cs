@@ -567,7 +567,8 @@ public class EventSequenceStorage(
                 [],
                 EventHash.NotSet);
 
-            var appendedEvent = new AppendedEvent(eventMetadata, content);
+            var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
+            var appendedEvent = new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContent };
             return (Option<AppendedEvent>)appendedEvent;
         }
         catch (Exception ex)
@@ -607,7 +608,8 @@ public class EventSequenceStorage(
             [],
             EventHash.NotSet);
 
-        return new AppendedEvent(eventMetadata, content);
+        var generationalContentAt = EventEntryConverter.GetAllGenerationalContent(eventEntry);
+        return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentAt };
     }
 
     /// <inheritdoc/>
@@ -650,7 +652,8 @@ public class EventSequenceStorage(
             [],
             EventHash.NotSet);
 
-        return new AppendedEvent(eventMetadata, content);
+        var generationalContentLast = EventEntryConverter.GetAllGenerationalContent(eventEntry);
+        return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentLast };
     }
 
     /// <inheritdoc/>
