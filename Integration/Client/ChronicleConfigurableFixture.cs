@@ -364,7 +364,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         {
             ConnectionString = connectionString,
             EventStore = "Testing",
-            AutoDiscoverAndRegister = false
+            AutoDiscoverAndRegister = false,
+            ManagementPort = 8081
         };
 
         using var resetClient = new ChronicleClient(options);
