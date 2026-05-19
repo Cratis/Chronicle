@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -58,6 +59,8 @@ internal static class ProjectionReplayRecommendationEvaluator
     /// <returns>The recommended migration approach.</returns>
     public static ProjectionReadModelMigrationRecommendation GetReadModelMigrationRecommendation(ReadModelDefinition readModelDefinition)
     {
+        // No previous schema generation means there is no migration shape to evaluate, so we keep
+        // replay-required semantics for definition changes as the safe default.
         if (readModelDefinition.Schemas.Count < 2)
         {
             return ProjectionReadModelMigrationRecommendation.ReplayRequired;
@@ -77,6 +80,8 @@ internal static class ProjectionReplayRecommendationEvaluator
             .Where(_ => !previousPropertyNames.Contains(_.Name))
             .ToArray();
 
+        // If no properties were added between generations, this migration path does not apply and we
+        // keep the default replay recommendation for other potential change types.
         if (addedProperties.Length == 0)
         {
             return ProjectionReadModelMigrationRecommendation.ReplayRequired;
@@ -88,7 +93,10 @@ internal static class ProjectionReplayRecommendationEvaluator
     }
 
     static bool HasDefaultValueForMigration(JsonSchemaProperty property) =>
-        property.IsNullable() || property.GetDefaultValue(_typeFormats) is not null;
+        HasExplicitSchemaDefault(property) || property.IsNullable() || property.GetDefaultValue(_typeFormats) is not null;
+
+    static bool HasExplicitSchemaDefault(JsonSchemaProperty property) =>
+        JsonNode.Parse(property.ToJson()) is JsonObject propertyNode && propertyNode["default"] is not null;
 
     static HashSet<EventType> GetEventTypes(ProjectionDefinition definition)
     {

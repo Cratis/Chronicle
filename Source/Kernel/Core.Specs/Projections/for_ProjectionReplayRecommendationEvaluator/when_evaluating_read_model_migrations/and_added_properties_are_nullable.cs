@@ -5,7 +5,7 @@ using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionReplayRecommendationEvaluator.when_evaluating_read_model_migrations;
 
-public class and_added_properties_have_default_values : given.a_projection_replay_recommendation_evaluator
+public class and_added_properties_are_nullable : given.a_projection_replay_recommendation_evaluator
 {
     ProjectionReadModelMigrationRecommendation _result;
 
@@ -25,7 +25,7 @@ public class and_added_properties_have_default_values : given.a_projection_repla
               "type": "object",
               "properties": {
                 "name": { "type": "string" },
-                "nickname": { "type": "string", "default": "N/A" }
+                "nickname": { "type": "string", "format": "string?" }
               }
             }
             """);
