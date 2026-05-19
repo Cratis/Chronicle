@@ -4,6 +4,8 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,6 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static class ProjectionReplayRecommendationEvaluator
 {
+    static readonly ITypeFormats _typeFormats = new TypeFormats();
+
     /// <summary>
     /// Gets added event types if those are the only relevant changes in a projection definition.
     /// </summary>
@@ -46,6 +50,45 @@ internal static class ProjectionReplayRecommendationEvaluator
             ? addedEventTypes
             : [];
     }
+
+    /// <summary>
+    /// Evaluates whether a read model schema change can be handled without full replay.
+    /// </summary>
+    /// <param name="readModelDefinition">The read model definition to evaluate.</param>
+    /// <returns>The recommended migration approach.</returns>
+    public static ProjectionReadModelMigrationRecommendation GetReadModelMigrationRecommendation(ReadModelDefinition readModelDefinition)
+    {
+        if (readModelDefinition.Schemas.Count < 2)
+        {
+            return ProjectionReadModelMigrationRecommendation.ReplayRequired;
+        }
+
+        var schemasByGeneration = readModelDefinition.Schemas.OrderBy(_ => _.Key.Value).ToArray();
+        var previousSchema = schemasByGeneration[^2].Value;
+        var latestSchema = schemasByGeneration[^1].Value;
+
+        var previousPropertyNames = previousSchema
+            .GetFlattenedProperties()
+            .Select(_ => _.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var addedProperties = latestSchema
+            .GetFlattenedProperties()
+            .Where(_ => !previousPropertyNames.Contains(_.Name))
+            .ToArray();
+
+        if (addedProperties.Length == 0)
+        {
+            return ProjectionReadModelMigrationRecommendation.ReplayRequired;
+        }
+
+        return addedProperties.All(HasDefaultValueForMigration)
+            ? ProjectionReadModelMigrationRecommendation.UpdateAvailable
+            : ProjectionReadModelMigrationRecommendation.SelectiveReplayAvailable;
+    }
+
+    static bool HasDefaultValueForMigration(JsonSchemaProperty property) =>
+        property.IsNullable() || property.GetDefaultValue(_typeFormats) is not null;
 
     static HashSet<EventType> GetEventTypes(ProjectionDefinition definition)
     {

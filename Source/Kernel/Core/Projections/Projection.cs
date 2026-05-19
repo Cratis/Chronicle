@@ -441,10 +441,27 @@ public class Projection(
         ProjectionDefinition previousDefinition,
         ProjectionDefinition currentDefinition)
     {
+        var readModelDefinitions = storage.GetEventStore(key.EventStore).ReadModels;
+        var readModelDefinition = await readModelDefinitions.Get(currentDefinition.ReadModel);
+        var readModelMigrationRecommendation = ProjectionReplayRecommendationEvaluator.GetReadModelMigrationRecommendation(readModelDefinition);
+
         var eventTypesToCheckFor = ProjectionReplayRecommendationEvaluator.GetAddedEventTypesIfOnlyEventTypesChanged(
             previousDefinition,
             currentDefinition,
             objectComparer);
+
+        (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
+        {
+            ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
+                "Projection definition has changed. Update available.",
+                new ProjectionUpdateAvailableReplayCandidateReason()),
+            ProjectionReadModelMigrationRecommendation.SelectiveReplayAvailable => (
+                "Projection definition has changed. Selective replay available.",
+                new ProjectionSelectiveReplayAvailableReplayCandidateReason()),
+            _ => (
+                "Projection definition has changed.",
+                new ProjectionDefinitionChangedReplayCandidateReason())
+        };
 
         foreach (var @namespace in namespaces)
         {
@@ -460,12 +477,12 @@ public class Projection(
 
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                "Projection definition has changed.",
+                replayRecommendation.Description,
                 new()
                 {
                     ObserverId = key.ProjectionId,
                     ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
-                    Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
+                    Reasons = [replayRecommendation.Reason]
                 });
         }
     }
