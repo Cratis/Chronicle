@@ -19,6 +19,23 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
 public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : ICanPerformKernelStateReset
 {
+    /// <summary>
+    /// Tables that survive a reset. These carry identity and Data Protection key material;
+    /// wiping them would invalidate the test client's JWT (the kernel rotates signing keys
+    /// when the table is empty) and force every test-class boundary to fail with 401 even
+    /// though the bootstrap handler can recreate the rows.
+    /// </summary>
+    static readonly HashSet<string> _preservedTables = new(StringComparer.OrdinalIgnoreCase)
+    {
+        WellKnownTableNames.Users,
+        WellKnownTableNames.Applications,
+        WellKnownTableNames.DataProtectionKeys,
+        WellKnownTableNames.Patches,
+        WellKnownTableNames.SystemInformation,
+        WellKnownTableNames.EncryptionKeys,
+        "__EFMigrationsHistory",
+    };
+
     /// <inheritdoc/>
     public bool CanReset()
     {
@@ -85,6 +102,9 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
         return string.Empty;
     }
 
+    static string PreservedNamesForSql() =>
+        string.Join(", ", _preservedTables.Select(t => $"'{t}'"));
+
     static async Task TruncateAllPostgreSqlTables(string connectionString)
     {
         await using var conn = new NpgsqlConnection(connectionString);
@@ -98,15 +118,18 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
             return;
         }
 
-        const string sql =
+        var preserved = PreservedNamesForSql();
+        var sql =
             "DO $$ DECLARE r RECORD; " +
             "BEGIN " +
             "    FOR r IN (SELECT tablename FROM pg_tables " +
-            "              WHERE schemaname = 'public' AND tablename != '__EFMigrationsHistory') LOOP " +
+            $"              WHERE schemaname = 'public' AND tablename NOT IN ({preserved})) LOOP " +
             "        EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE'; " +
             "    END LOOP; " +
             "END $$;";
+#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
         await using var cmd = new NpgsqlCommand(sql, conn);
+#pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -123,19 +146,22 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
             return;
         }
 
-        const string sql =
+        var preserved = PreservedNamesForSql();
+        var sql =
             "DECLARE @sql NVARCHAR(MAX) = N''; " +
             "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] NOCHECK CONSTRAINT ALL;' + CHAR(13) " +
             "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            "    WHERE t.name <> N'__EFMigrationsHistory'; " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
             "SELECT @sql += N'DELETE FROM [' + s.name + N'].[' + t.name + N'];' + CHAR(13) " +
             "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            "    WHERE t.name <> N'__EFMigrationsHistory'; " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
             "SELECT @sql += N'ALTER TABLE [' + s.name + N'].[' + t.name + N'] WITH CHECK CHECK CONSTRAINT ALL;' + CHAR(13) " +
             "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            "    WHERE t.name <> N'__EFMigrationsHistory'; " +
+            $"    WHERE t.name NOT IN ({preserved}); " +
             "EXEC sp_executesql @sql;";
+#pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
         await using var cmd = new SqlCommand(sql, conn);
+#pragma warning restore CA2100
         await cmd.ExecuteNonQueryAsync();
     }
 }

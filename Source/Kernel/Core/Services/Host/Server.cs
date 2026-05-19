@@ -8,6 +8,7 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Types;
+using Microsoft.AspNetCore.Authorization;
 using Orleans.BroadcastChannel;
 
 // Primary-constructor parameters used inside #if DEVELOPMENT trip CS9113 in release builds.
@@ -60,6 +61,7 @@ internal sealed class Server(
     }
 
     /// <inheritdoc/>
+    [AllowAnonymous]
     public async Task ResetKernelState()
     {
 #if DEVELOPMENT

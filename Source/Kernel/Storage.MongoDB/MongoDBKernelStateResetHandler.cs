@@ -21,11 +21,19 @@ public class MongoDBKernelStateResetHandler(
     IOptions<MongoDBOptions> mongoDBOptions,
     IMongoDBClientManager clientManager) : ICanPerformKernelStateReset
 {
-    static readonly HashSet<string> _systemDatabases = new(StringComparer.OrdinalIgnoreCase)
+    static readonly HashSet<string> _preservedDatabases = new(StringComparer.OrdinalIgnoreCase)
     {
+        // MongoDB system databases
         "admin",
         "config",
         "local",
+
+        // Chronicle cluster database — holds users, applications, data protection keys,
+        // applied patches, and system information. Wiping these would invalidate the
+        // client's cached JWT (signing keys rotate) and force every test class boundary
+        // to re-bootstrap auth from scratch. The bootstrap handler can recreate them,
+        // but in-flight client tokens issued before the reset would still be rejected.
+        WellKnownDatabaseNames.Chronicle,
     };
 
     /// <inheritdoc/>
@@ -48,7 +56,7 @@ public class MongoDBKernelStateResetHandler(
 
         using var cursor = await client.ListDatabaseNamesAsync();
         var names = await cursor.ToListAsync();
-        foreach (var name in names.Where(n => !_systemDatabases.Contains(n)))
+        foreach (var name in names.Where(n => !_preservedDatabases.Contains(n)))
         {
             await client.DropDatabaseAsync(name);
         }
