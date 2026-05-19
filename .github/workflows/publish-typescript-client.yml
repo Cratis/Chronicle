@@ -44,17 +44,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '23.x'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Configure npm for OIDC-based publishing
-        run: |
-          # setup-node writes a placeholder _authToken into .npmrc and exports NODE_AUTH_TOKEN
-          # with the same placeholder. npm uses this token as-is for registry auth → 404.
-          # Remove it so npm falls back to OIDC.
-          sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG"
-          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-          echo "--- .npmrc after stripping placeholder ---"
-          cat "$NPM_CONFIG_USERCONFIG"
 
       - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
         run: |
