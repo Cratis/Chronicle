@@ -37,4 +37,20 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
 
         return occurrences.Select(ReplayedModelsConverters.ToReadModelOccurrence);
     }
+
+    /// <inheritdoc/>
+    public async Task Remove(ReadModelOccurrence occurrence)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var replayedModel = await scope.DbContext.ReplayedModels
+            .FirstOrDefaultAsync(_ => _.ObserverId == occurrence.ObserverId);
+        if (replayedModel is null)
+        {
+            return;
+        }
+
+        scope.DbContext.ReplayedModels.Remove(replayedModel);
+        await scope.DbContext.SaveChangesAsync();
+    }
 }

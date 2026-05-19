@@ -8,6 +8,8 @@
   href: convention-based.md
 - name: FromEvery
   href: from-every.md
+- name: FromAll
+  href: from-all.md
 - name: Counters
   href: counters.md
 - name: Constant key

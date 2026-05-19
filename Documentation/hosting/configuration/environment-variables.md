@@ -37,6 +37,7 @@ All configuration options can be set using environment variables with the prefix
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
 | Cratis__Chronicle__Observers__MaximumBackoffDelay | Maximum observer backoff delay in seconds |
+| Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep | Number of replay-generated read model versions to keep |
 | Cratis__Chronicle__Events__Queues | Number of event queues |
 | Cratis__Chronicle__Authentication__Authority | External OAuth authority URL |
 | Cratis__Chronicle__Authentication__DefaultAdminUsername | Default admin username |
@@ -119,6 +120,13 @@ Cratis__Chronicle__Observers__MaximumBackoffDelay=600
 Cratis__Chronicle__Events__Queues=8
 ```
 
+## Read models
+
+```bash
+# Number of replay-generated read model versions to keep per read model (default: 1)
+Cratis__Chronicle__ReadModels__ReplayedVersionsToKeep=1
+```
+
 ## Authentication
 
 ```bash
@@ -151,4 +159,3 @@ OTEL_SERVICE_NAME=Chronicle
 ```
 
 See the [Open Telemetry](open-telemetry.md) configuration page for full details.
-

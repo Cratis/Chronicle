@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Connections;
@@ -33,9 +34,13 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
     /// <inheritdoc/>
     public async Task Connected()
     {
+        // Set IsConnected = true before invoking handlers so that any handler that accesses
+        // services via IChronicleServicesAccessor does not deadlock on the connection lock.
         IsConnected = true;
 
         logger.Connected();
+
+        var exceptions = new ConcurrentBag<Exception>();
 
         var tasks = OnConnected.GetInvocationList().Select(_ => Task.Run(async () =>
         {
@@ -46,10 +51,19 @@ public class ConnectionLifecycle(ILogger<ConnectionLifecycle> logger) : IConnect
             catch (Exception ex)
             {
                 logger.FailureDuringConnected(ex);
+                exceptions.Add(ex);
             }
         })).ToArray();
 
         await Task.WhenAll(tasks);
+
+        if (!exceptions.IsEmpty)
+        {
+            // One or more handlers failed. Roll back IsConnected so callers cannot assume
+            // the client is fully operational, and surface all failures to the caller.
+            IsConnected = false;
+            throw new AggregateException(exceptions);
+        }
     }
 
     /// <inheritdoc/>

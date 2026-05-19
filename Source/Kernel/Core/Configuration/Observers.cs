@@ -42,6 +42,18 @@ public class Observers
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
 
     /// <summary>
+    /// Gets the threshold for quarantining an observer based on the number of failed partitions.
+    /// A value of 0 disables observer quarantine based on failed partition count.
+    /// </summary>
+    public int QuarantineOnFailedPartitionCount { get; init; }
+
+    /// <summary>
+    /// Gets the threshold for quarantining an observer based on the percentage of failed partitions.
+    /// A value of 0.0 disables observer quarantine based on failed partition percentage.
+    /// </summary>
+    public double QuarantineOnFailedPartitionPercentage { get; init; }
+
+    /// <summary>
     /// Gets whether observers should automatically replay when their definition changes.
     /// When enabled, projections, reducers, reactors, and webhooks replay immediately on definition change
     /// instead of creating a recommendation for manual replay.

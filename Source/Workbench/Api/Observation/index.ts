@@ -1,5 +1,6 @@
 export * from './AllFailedPartitions';
 export * from './AllObservers';
+export * from './ClearObserverQuarantine';
 export * from './FailedPartition';
 export * from './FailedPartitionAttempt';
 export * from './GetObservers';

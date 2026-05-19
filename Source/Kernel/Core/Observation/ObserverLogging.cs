@@ -21,6 +21,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Subscribing observer with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<Observer> logger, int count, string eventTypes);
 
+    [LoggerMessage(LogLevel.Information, "Subscribing observer to all event types")]
+    internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
 
@@ -38,6 +41,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} has exceeded maximum retry attempts and is being quarantined. Manual intervention required to resume processing.")]
     internal static partial void QuarantiningFailedPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "Observer is quarantined. Automatic retries and catch-up are paused until quarantine is cleared.")]
+    internal static partial void ObserverQuarantined(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Observer failed partition count threshold reached ({FailedPartitionCount}/{Threshold}). Transitioning observer to quarantined state.")]
+    internal static partial void ObserverFailedPartitionCountThresholdReached(this ILogger<Observer> logger, int failedPartitionCount, int threshold);
+
+    [LoggerMessage(LogLevel.Warning, "Observer failed partition percentage threshold exceeded ({FailedPartitionPercentage:P2} > {Threshold:P2}). Transitioning observer to quarantined state.")]
+    internal static partial void ObserverFailedPartitionPercentageThresholdExceeded(this ILogger<Observer> logger, double failedPartitionPercentage, double threshold);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery because observer is quarantined")]
+    internal static partial void SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
     internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);

@@ -35,7 +35,7 @@ on:
         - info
         - warning
         - debug
-  pull_request_target:
+  pull_request:
     types: [closed]
     branches:
       - "**"
@@ -683,7 +683,7 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
-          file: ./Docker/Production/Dockerfile
+          file: ./Docker/DevelopmentSlim/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.docker-tags.outputs.tags }}

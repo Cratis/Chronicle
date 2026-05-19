@@ -44,6 +44,7 @@
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
+        <ProjectReference Include="../Storage.Vault/Storage.Vault.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="..\Contracts\Contracts.csproj" />

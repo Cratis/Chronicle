@@ -8,8 +8,12 @@
   href: features.md
 - name: Storage
   href: storage.md
+- name: Compliance Storage
+  href: compliance-storage.md
 - name: Observers
   href: observers.md
+- name: Read Models
+  href: read-models.md
 - name: Events
   href: events.md
 - name: Authentication

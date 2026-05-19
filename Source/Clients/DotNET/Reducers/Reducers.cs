@@ -80,8 +80,12 @@ public class Reducers : IReducers
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            _registered = false;
-            DisconnectHandlers();
+            lock (_registerLock)
+            {
+                _registered = false;
+                RecreateHandlersForReconnect();
+            }
+
             return Task.CompletedTask;
         };
         _eventStore = eventStore;
@@ -316,6 +320,22 @@ public class Reducers : IReducers
             handler.Disconnect();
             (handler as IDisposable)?.Dispose();
         }
+    }
+
+    void RecreateHandlersForReconnect()
+    {
+        var reducerTypes = _handlersByType.Values
+            .Select(_ => (_.ReducerType, _.ReadModelType))
+            .ToArray();
+
+        DisconnectHandlers();
+
+        _handlersByType = reducerTypes.ToDictionary(
+            _ => _.ReducerType,
+            _ => CreateHandlerFor(_.ReducerType, _.ReadModelType) as IReducerHandler);
+        _handlersByModelType = _handlersByType.ToDictionary(
+            _ => _.Value.ReadModelType,
+            _ => _.Value);
     }
 
     void RegisterReducer(IReducerHandler handler)

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.EventSequences.for_AppendManyResult;
 
 public class when_empty_result : Specification
@@ -11,6 +13,7 @@ public class when_empty_result : Specification
 
     [Fact] void should_have_default_correlation_id() => _result.CorrelationId.ShouldEqual(CorrelationId.NotSet);
     [Fact] void should_have_empty_sequence_numbers() => _result.SequenceNumbers.ShouldBeEmpty();
+    [Fact] void should_have_unavailable_tail_sequence_number() => _result.TailSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_not_have_constraint_violations() => _result.HasConstraintViolations.ShouldBeFalse();
     [Fact] void should_not_have_concurrency_violations() => _result.HasConcurrencyViolations.ShouldBeFalse();
     [Fact] void should_not_have_errors() => _result.HasErrors.ShouldBeFalse();

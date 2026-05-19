@@ -31,6 +31,8 @@ public class and_observer_is_replayable : Specification
             new HashSet<Concepts.Keys.Key>(),
             new HashSet<Concepts.Keys.Key>(),
             [],
+            0,
+            false,
             false)
         {
             NextEventSequenceNumber = 42

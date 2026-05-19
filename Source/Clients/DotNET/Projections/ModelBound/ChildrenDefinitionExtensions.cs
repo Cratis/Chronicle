@@ -259,13 +259,26 @@ static class ChildrenDefinitionExtensions
                         childrenDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
                     }
 
+                    // Process SetValue attributes on constructor parameters
+                    foreach (var (setValueAttr, setValueEventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
+                    {
+                        var valueProperty = setValueAttr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+                        var value = valueProperty?.GetValue(setValueAttr);
+                        if (value is not null)
+                        {
+                            var invariantValue = FromDefinitionExtensions.ConvertValueToInvariantString(value);
+                            childrenDef.From.AddSetValueMapping(getOrCreateEventType, setValueEventType, paramPropertyName, invariantValue);
+                        }
+                    }
+
                     // Check if this parameter has any explicit mapping attributes
                     var hasExplicitMapping = parameter.GetCustomAttributes()
                         .Any(a => a.GetType().IsGenericType &&
                                    (a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(SetFromAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
-                                    a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
+                                    a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>) ||
+                                    a.GetType().GetGenericTypeDefinition() == typeof(SetValueAttribute<>)));
 
                     var isIdentifiedByProperty = parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase);
                     var hasKeyAttribute = parameter.GetCustomAttribute<KeyAttribute>() is not null;

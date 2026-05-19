@@ -44,7 +44,17 @@ public class ObserverState
     public IEnumerable<Key> CatchingUpPartitions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the count of failed partitions for the observer.
+    /// </summary>
+    public int FailedPartitionCount { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the observer is currently replaying events.
     /// </summary>
     public bool IsReplaying { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer subscribes to all event types.
+    /// </summary>
+    public bool SubscribesToAllEvents { get; set; }
 }

@@ -37,6 +37,20 @@ public class ObserverCommands : ControllerBase
         _observers.Replay(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
 
     /// <summary>
+    /// Clear quarantine for a specific observer in an event store and specific namespace.
+    /// </summary>
+    /// <param name="eventStore">Name of the event store the observer is for.</param>
+    /// <param name="namespace">Namespace within the event store the observer is for.</param>
+    /// <param name="observerId">Identifier of the observer to clear quarantine for.</param>
+    /// <returns>Awaitable task.</returns>
+    [HttpPost("{namespace}/clear-quarantine/{observerId}")]
+    public Task ClearObserverQuarantine(
+        [FromRoute] string eventStore,
+        [FromRoute] string @namespace,
+        [FromRoute] string observerId) =>
+        _observers.ClearObserverQuarantine(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
+
+    /// <summary>
     /// Retry a specific partition in an event store and specific namespace.
     /// </summary>
     /// <param name="eventStore">Name of the event store the observer is for.</param>

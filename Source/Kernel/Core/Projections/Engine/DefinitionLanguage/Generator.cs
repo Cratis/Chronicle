@@ -42,13 +42,20 @@ public class Generator : IGenerator
             sb.AppendLine($"{Indent(1)}no automap");
         }
 
-        // FromEvery block - only output if it has meaningful content
+        // All/Every block - only output if it has meaningful content
         // Don't output if it only has 'exclude children' directive without any other content
         var hasEveryContent = definition.FromEvery.Properties.Count > 0 || definition.FromEvery.AutoMap == AutoMap.Disabled;
         var hasNoOtherBlocks = definition.From.Count == 0 && definition.Join.Count == 0 && definition.Children.Count == 0;
         if (hasEveryContent || hasNoOtherBlocks)
         {
-            GenerateEveryBlock(sb, definition.FromEvery, 1);
+            if (definition.SubscribesToAllEvents)
+            {
+                GenerateAllBlock(sb, definition.FromEvery, 1);
+            }
+            else
+            {
+                GenerateEveryBlock(sb, definition.FromEvery, 1);
+            }
         }
 
         // On event blocks
@@ -131,6 +138,22 @@ public class Generator : IGenerator
         if (!isChildContext && !every.IncludeChildren)
         {
             sb.AppendLine($"{Indent(indent + 1)}exclude children");
+        }
+    }
+
+    void GenerateAllBlock(StringBuilder sb, FromEveryDefinition all, int indent)
+    {
+        sb.AppendLine($"{Indent(indent)}all");
+
+        // NoAutoMap directive - only output if disabled (since enabled is now the default)
+        if (all.AutoMap == AutoMap.Disabled)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}no automap");
+        }
+
+        foreach (var kv in all.Properties)
+        {
+            GeneratePropertyMapping(sb, kv.Key, kv.Value, indent + 1);
         }
     }
 

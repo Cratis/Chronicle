@@ -129,7 +129,19 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
+
+    /// <inheritdoc/>
+    public async Task ClearObserverQuarantine()
+    {
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            await TransitionTo<Routing>();
+        }
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
@@ -180,7 +192,64 @@ public partial class Observer(
             subscriberArgs,
             isReplayable,
             filters);
+
+        State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+        await ResumeJobs();
+        await TryRecoverAllFailedPartitions();
+        await TransitionTo<Routing>();
+    }
+
+    /// <inheritdoc/>
+    public async Task SubscribeToAllEvents<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var owner = GetOwner<TObserverSubscriber>();
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        logger.Subscribing();
+        logger.SubscribingToAllEvents();
+
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+
+        State = State with { SubscribesToAllEvents = true };
+        await WriteStateAsync();
+
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
 
         if (await TransitionToReplayIfNeeded())
         {
@@ -208,6 +277,10 @@ public partial class Observer(
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
+        new QuarantinedObserver(
+            _observerKey,
+            loggerFactory.CreateLogger<QuarantinedObserver>()),
+
         new Observing(
             _appendedEventsQueues,
             _observerKey.EventStore,
@@ -221,6 +294,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
     }
@@ -229,6 +303,11 @@ public partial class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
         if (!_subscription.IsSubscribed)
         {
             return;
@@ -248,6 +327,31 @@ public partial class Observer(
     internal void SetSubscription(ObserverSubscription subscription)
     {
         _subscription = subscription;
+    }
+
+    /// <summary>
+    /// Removes all reminders for currently failed partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task RemoveFailedPartitionReminders()
+    {
+        foreach (var partition in Failures.Partitions.Select(_ => _.Partition))
+        {
+            await RemoveReminder(partition);
+        }
+    }
+
+    /// <summary>
+    /// Stops all retry jobs for the current observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task StopAllRetryFailedPartitionJobs()
+    {
+        var jobs = await _jobsManager.GetAllJobs();
+        var stopTasks = jobs
+            .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
+            .Select(_ => _jobsManager.Stop(_.Id));
+        await Task.WhenAll(stopTasks);
     }
 
     /// <inheritdoc/>
@@ -276,6 +380,27 @@ public partial class Observer(
             _ => ObserverOwner.None
         };
 
+    /// <summary>
+    /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.
+    /// Replay jobs are excluded because they are managed independently of the observer's subscription lifecycle.
+    /// </summary>
+    async Task PauseJobs()
+    {
+        var allJobs = await _jobsManager.GetAllJobs();
+
+        // Explicitly do not pause replay jobs.
+        var pauseTasks = allJobs
+            .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
+                          observerJobRequest is not ReplayObserverRequest &&
+                          ShouldPauseJob(job.Status) &&
+                          observerJobRequest.ObserverKey == _observerKey)
+            .Select(job => _jobsManager.Stop(job.Id));
+        await Task.WhenAll(pauseTasks);
+        return;
+
+        static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
+    }
+
     async Task ResumeJobs()
     {
         var unfilteredJobs = await _jobsManager.GetAllJobs();
@@ -290,7 +415,7 @@ public partial class Observer(
         await Task.WhenAll(resumeTasks);
         return;
 
-        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.Stopped and not JobStatus.CompletedSuccessfully
+        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.CompletedSuccessfully
             and not JobStatus.CompletedWithFailures and not JobStatus.Removing;
     }
 

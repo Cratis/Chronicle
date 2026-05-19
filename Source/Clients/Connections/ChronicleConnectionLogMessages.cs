@@ -27,4 +27,7 @@ internal static partial class ChronicleConnectionLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Grpc channel created for address {Address}")]
     internal static partial void ChannelCreated(this ILogger<ChronicleConnection> logger, string address);
+
+    [LoggerMessage(LogLevel.Error, "Artifact registration failed after connecting to Chronicle")]
+    internal static partial void RegistrationFailed(this ILogger<ChronicleConnection> logger, Exception exception);
 }

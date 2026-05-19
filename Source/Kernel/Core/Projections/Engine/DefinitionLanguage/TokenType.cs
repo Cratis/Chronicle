@@ -243,5 +243,10 @@ public enum TokenType
     /// <summary>
     /// The keyword 'literal'.
     /// </summary>
-    Literal = 48
+    Literal = 48,
+
+    /// <summary>
+    /// The keyword 'all'.
+    /// </summary>
+    All = 49
 }

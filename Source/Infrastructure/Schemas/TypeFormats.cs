@@ -8,6 +8,11 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public class TypeFormats : ITypeFormats
 {
+    /// <summary>
+    /// The format identifier for dynamic/dictionary types.
+    /// </summary>
+    public const string DynamicFormat = "dynamic";
+
     static readonly Dictionary<string, string> _formatAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         { "uuid", "guid" }
@@ -68,6 +73,7 @@ public class TypeFormats : ITypeFormats
             {
                 new("boolean", typeof(bool), string.Empty),
                 new("string", typeof(string), string.Empty),
+                new("object", typeof(object), DynamicFormat),
             },
             ..typeFormats
         ];

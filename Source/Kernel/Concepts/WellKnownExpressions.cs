@@ -87,4 +87,9 @@ public static class WellKnownExpressions
     /// The combine expression for event migrations.
     /// </summary>
     public const string Combine = "$combine";
+
+    /// <summary>
+    /// The all expression for subscribing to all event types.
+    /// </summary>
+    public const string All = "$all";
 }

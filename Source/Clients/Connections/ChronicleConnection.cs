@@ -409,7 +409,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     await Lifecycle.Disconnected();
                 }
                 _logger.Reconnecting();
-                await Connect();
+                try
+                {
+                    await Connect();
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected on shutdown — let the task exit.
+                }
+                catch (Exception ex)
+                {
+                    // Registration failed (application code issue). Log prominently so the developer
+                    // can diagnose and fix the problem. The new watchdog started inside ConnectInternal's
+                    // finally block will continue monitoring the physical connection.
+                    _logger.RegistrationFailed(ex);
+                }
             },
             _cancellationToken);
     }

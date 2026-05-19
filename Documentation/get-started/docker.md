@@ -28,24 +28,57 @@ Use `latest-development-slim` and configure Chronicle storage through Chronicle 
 
 ### MongoDB with Docker Compose
 
+Chronicle uses MongoDB transactions (and change streams), so MongoDB must run as a replica set or a sharded cluster. The following example initializes a single-node replica set for local development.
+
 ```yaml
 services:
   chronicle:
     image: cratis/chronicle:latest-development-slim
     depends_on:
       - mongodb
+      - mongodb-init
     environment:
       - Cratis__Chronicle__Storage__Type=MongoDB
-      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017
+      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
       - 8080:8080
       - 35000:35000
 
   mongodb:
     image: mongo:8
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - 27017:27017
+
+  mongodb-init:
+    image: mongo:8
+    depends_on:
+      - mongodb
+    restart: "no"
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        until mongosh --host mongodb --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --host mongodb --quiet --eval "
+        try {
+          rs.status();
+        } catch (e) {
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'localhost:27017' }]
+          });
+        }"
 ```
+
+Why this setup:
+
+- `host: 'localhost:27017'` makes the replica set topology usable from host tools (for example `mongosh` and Compass) when they connect to `mongodb://localhost:27017/?replicaSet=rs0`.
+- Chronicle still reaches MongoDB over the Docker network (`mongodb:27017`) and uses `directConnection=true` to avoid following the advertised host back to `localhost` inside the Chronicle container.
+- `directConnection=true` does not disable transactions; transactions still work because MongoDB is running as a replica set.
+- If your existing data volume was initialized with a different replica-set host, run `docker compose down -v` (or wipe the MongoDB data volume) before starting again so `rs.initiate()` can apply the new host.
 
 ### PostgreSQL with Docker Compose
 

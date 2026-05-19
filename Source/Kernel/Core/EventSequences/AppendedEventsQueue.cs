@@ -91,11 +91,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToList();
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
         await _channel.Writer.WriteAsync(batch);
-        _metrics?.EventsEnqueued(batch.Count);
+        _metrics?.EventsEnqueued(batch.Length);
     }
 
     /// <inheritdoc/>
@@ -222,6 +222,41 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return true;
     }
 
+    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event) =>
+        subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event);
+
+    /// <summary>
+    /// Gets the filtered events for a subscription.
+    /// </summary>
+    /// <param name="events">The events to filter.</param>
+    /// <param name="subscription">The subscription to match events against.</param>
+    /// <returns>An array of matching events.</returns>
+    static AppendedEvent[] GetFilteredEvents(
+        List<AppendedEvent> events,
+        AppendedEventsQueueObserverSubscription subscription)
+    {
+        var matchingEvents = new AppendedEvent[events.Count];
+        var numberOfMatchingEvents = 0;
+        foreach (var @event in events)
+        {
+            if (!MatchesSubscription(subscription, @event))
+            {
+                continue;
+            }
+
+            matchingEvents[numberOfMatchingEvents++] = @event;
+        }
+
+        if (numberOfMatchingEvents == 0)
+        {
+            return [];
+        }
+
+        return numberOfMatchingEvents == matchingEvents.Length
+            ? matchingEvents
+            : matchingEvents[..numberOfMatchingEvents];
+    }
+
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
     {
         lock (_subscriptionsLock)
@@ -289,19 +324,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events[0];
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
-            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
-            {
-                continue;
-            }
-
-            if (!MatchesFilters(subscription, @event))
+            if (!MatchesSubscription(subscription, @event))
             {
                 continue;
             }
 
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-            var eventToHandle = new List<AppendedEvent> { @event };
-            await observer.Handle(@event.Context.EventSourceId, eventToHandle);
+            await observer.Handle(@event.Context.EventSourceId, events);
         }
     }
 
@@ -329,10 +358,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in subscriptions)
             {
-                var actualEvents = partitionEvents
-                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
-                    .ToList();
-                if (actualEvents.Count == 0)
+                var actualEvents = GetFilteredEvents(partitionEvents, subscription);
+                if (actualEvents.Length == 0)
                 {
                     continue;
                 }

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.AST;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage.Visitors;
 
@@ -24,9 +25,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new IncrementOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new IncrementOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -37,9 +38,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new DecrementOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new DecrementOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -50,9 +51,9 @@ public class MappingOperationParser
         {
             var token = context.Current;
             context.Advance();
-            var propToken = context.Expect(TokenType.Identifier);
-            if (propToken is null) return null;
-            return new CountOperation(propToken.Value)
+            var propPath = ParsePropertyPath(context);
+            if (propPath is null) return null;
+            return new CountOperation(propPath)
             {
                 Line = token.Line,
                 Column = token.Column
@@ -114,5 +115,47 @@ public class MappingOperationParser
 
         context.ReportError("Expected mapping operation");
         return null;
+    }
+
+    string? ParsePropertyPath(IParsingContext context)
+    {
+        var propToken = context.Expect(TokenType.Identifier);
+        if (propToken is null) return null;
+
+        var propertyPathBuilder = new StringBuilder(propToken.Value);
+
+        // Check for dynamic dictionary key expression like: theDictionary.$eventContext.type.id
+        while (context.Check(TokenType.Dot))
+        {
+            context.Advance(); // Skip dot
+
+            // Check if next token is a $ (expression)
+            if (context.Check(TokenType.Dollar))
+            {
+                context.Advance(); // Skip $
+                var nameToken = context.Expect(TokenType.Identifier);
+                if (nameToken is null) return null;
+
+                propertyPathBuilder.Append(".$").Append(nameToken.Value);
+
+                // Continue building the expression path
+                while (context.Check(TokenType.Dot))
+                {
+                    context.Advance();
+                    var nextToken = context.Expect(TokenType.Identifier);
+                    if (nextToken is null) return null;
+                    propertyPathBuilder.Append('.').Append(nextToken.Value);
+                }
+            }
+            else
+            {
+                // Regular property path
+                var nextToken = context.Expect(TokenType.Identifier);
+                if (nextToken is null) return null;
+                propertyPathBuilder.Append('.').Append(nextToken.Value);
+            }
+        }
+
+        return propertyPathBuilder.ToString();
     }
 }

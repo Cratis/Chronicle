@@ -32,4 +32,9 @@ public enum ObserverRunningState
     /// Observer is disconnected.
     /// </summary>
     Disconnected = 4,
+
+    /// <summary>
+    /// Observer is quarantined.
+    /// </summary>
+    Quarantined = 5,
 }
