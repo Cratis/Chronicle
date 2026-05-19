@@ -45,10 +45,10 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.Append(
-            request.EventSourceType,
+            request.EventSourceType is null ? EventSourceType.Default : (EventSourceType)request.EventSourceType,
             request.EventSourceId,
-            request.EventStreamType,
-            request.EventStreamId,
+            request.EventStreamType is null ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+            request.EventStreamId is null ? EventStreamId.Default : (EventStreamId)request.EventStreamId,
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.CorrelationId,
@@ -97,9 +97,9 @@ internal sealed class EventSequences(
 
         using var cursor = await eventSequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
-            request.EventSourceId,
-            request.EventStreamType,
-            request.EventStreamId,
+            request.EventSourceId is null ? null : (EventSourceId)request.EventSourceId,
+            request.EventStreamType is null ? null : (EventStreamType)request.EventStreamType,
+            request.EventStreamId is null ? null : (EventStreamId)request.EventStreamId,
             request.EventTypes.ToChronicle());
 
         var appendedEvents = new List<AppendedEvent>();
