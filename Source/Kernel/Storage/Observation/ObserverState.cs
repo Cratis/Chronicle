@@ -50,6 +50,7 @@ public record ObserverState(
               [],
               FailedPartitionCount.Zero,
               false,
+              false)
     {
     }
 
