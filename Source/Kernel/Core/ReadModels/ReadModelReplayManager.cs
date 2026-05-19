@@ -29,4 +29,28 @@ public class ReadModelReplayManager : Grain<ReadModelReplayManagerState>, IReadM
 
     /// <inheritdoc/>
     public Task<IEnumerable<ReadModelOccurrence>> GetOccurrences() => Task.FromResult(State.Occurrences.AsEnumerable());
+
+    /// <inheritdoc/>
+    public Task ApplyRetentionPolicy(int versionsToKeep)
+    {
+        versionsToKeep = Math.Max(0, versionsToKeep);
+        if (State.Occurrences.Count <= versionsToKeep)
+        {
+            return Task.CompletedTask;
+        }
+
+        var retainedOccurrences = State.Occurrences
+            .OrderByDescending(_ => _.Occurred)
+            .Take(versionsToKeep)
+            .ToArray();
+
+        var removedOccurrences = State.Occurrences.Except(retainedOccurrences).ToArray();
+        State.Occurrences = retainedOccurrences.ToList();
+        foreach (var occurrence in removedOccurrences)
+        {
+            State.RemovedOccurrences.Add(occurrence);
+        }
+
+        return WriteStateAsync();
+    }
 }

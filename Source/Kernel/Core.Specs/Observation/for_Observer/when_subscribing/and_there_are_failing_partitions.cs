@@ -21,6 +21,7 @@ public class and_there_are_failing_partitions : given.an_observer
         _secondFailedPartition = _failedPartitions.AddFailedPartition("some-event-source2");
         _type = ObserverType.Reactor;
         _failedPartitionsStorage.State = _failedPartitions;
+        _stateStorage.State = _stateStorage.State with { FailedPartitionCount = 2 };
     }
 
     async Task Because() => _error = await Catch.Exception(() => _observer.Subscribe<NullObserverSubscriber>(_type, [EventType.Unknown], SiloAddress.Zero));
@@ -38,6 +39,7 @@ public class and_there_are_failing_partitions : given.an_observer
     }
 
     [Fact] void should_be_in_running_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
+    [Fact] void should_keep_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual((FailedPartitionCount)2);
     [Fact]
     void should_start_retry_failed_partition_jobs_for_first_partition() => _jobsManager
         .Received(1)

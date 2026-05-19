@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.ReadModels;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionReplayHandler.given;
 
@@ -32,6 +33,7 @@ public class a_projection_replay_handler : Specification
     protected IReadModelDefinitionsStorage _readModelDefinitions;
     protected IEventTypesStorage _eventTypesStorage;
     protected IReadModelReplayManager _readModelReplayManager;
+    protected int _replayedVersionsToKeep = 3;
 
     void Establish()
     {
@@ -73,6 +75,13 @@ public class a_projection_replay_handler : Specification
             _grainFactory,
             _storage,
             _projectionPipelineManager,
+            Options.Create(new Configuration.ChronicleOptions
+            {
+                ReadModels = new Configuration.ReadModels
+                {
+                    ReplayedVersionsToKeep = _replayedVersionsToKeep
+                }
+            }),
             NullLogger<ProjectionReplayHandler>.Instance);
     }
 }
