@@ -5,13 +5,22 @@ namespace Cratis.Chronicle.Storage;
 
 /// <summary>
 /// Defines an extension point invoked from <c>IServer.ResetKernelState</c> in development builds.
-/// Storage providers implement this to release transient resources (connection pools, caches)
-/// when the kernel is being recycled between integration test specs without a container restart.
+/// Storage providers implement this to wipe their backing store between integration test specs
+/// without restarting the container — the kernel deactivates its grains, each provider clears
+/// only its own data, and the kernel then re-bootstraps the system event store and identity data.
 /// </summary>
 public interface ICanPerformKernelStateReset
 {
     /// <summary>
-    /// Reset any transient state held by this component.
+    /// Indicates whether this handler is responsible for resetting the currently configured
+    /// storage backend. Implementations typically check <c>ChronicleOptions.Storage.Type</c>.
+    /// Handlers whose <c>CanReset</c> returns <see langword="false"/> are skipped.
+    /// </summary>
+    /// <returns><see langword="true"/> when this handler should perform a reset, otherwise <see langword="false"/>.</returns>
+    bool CanReset();
+
+    /// <summary>
+    /// Reset the backing storage and any transient state owned by this component.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     Task Reset();
