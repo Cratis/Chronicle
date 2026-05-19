@@ -122,6 +122,7 @@ public class EventSequenceStorage(
                 causedByChain,
                 occurred,
                 content,
+                contentHashes,
                 subject?.IsSet == true ? subject : null);
 
             scope.DbContext.Events.Add(eventEntry);
@@ -233,7 +234,8 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
                     eventToAppend.Occurred,
-                    eventToAppend.Content);
+                    eventToAppend.Content,
+                    eventToAppend.Hash);
 
                 scope.DbContext.Events.Add(eventEntry);
 
@@ -311,7 +313,7 @@ public class EventSequenceStorage(
             eventCausation,
             await identityStorage.GetFor(eventCausedBy),
             [],
-            EventHash.NotSet,
+            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
             Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         return new AppendedEvent(eventMetadata, content);
@@ -567,7 +569,7 @@ public class EventSequenceStorage(
                 causation,
                 await identityStorage.GetFor(causedBy),
                 [],
-                EventHash.NotSet,
+                EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
                 Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
             var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
@@ -609,7 +611,7 @@ public class EventSequenceStorage(
             causation,
             await identityStorage.GetFor(causedBy),
             [],
-            EventHash.NotSet,
+            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
             Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         var generationalContentAt = EventEntryConverter.GetAllGenerationalContent(eventEntry);
@@ -654,7 +656,7 @@ public class EventSequenceStorage(
             causation,
             await identityStorage.GetFor(causedBy),
             [],
-            EventHash.NotSet,
+            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
             Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         var generationalContentLast = EventEntryConverter.GetAllGenerationalContent(eventEntry);

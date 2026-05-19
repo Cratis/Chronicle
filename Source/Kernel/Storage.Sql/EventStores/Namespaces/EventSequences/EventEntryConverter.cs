@@ -34,6 +34,7 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The caused by chain.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content.</param>
+    /// <param name="hash">Optional content hash, computed by the kernel.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
         EventSequenceNumber sequenceNumber,
@@ -46,12 +47,19 @@ public static class EventEntryConverter
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventHash? hash = null)
     {
         var contentDict = new Dictionary<string, object>
         {
             { eventType.Generation.ToString(), content }
         };
+
+        var contentHashesJson = hash is not null && !string.IsNullOrEmpty(hash.Value)
+            ? JsonSerializer.Serialize(
+                new Dictionary<string, string> { { ((uint)eventType.Generation).ToString(), hash.Value } },
+                _jsonSerializerOptions)
+            : string.Empty;
 
         return new EventEntry
         {
@@ -66,6 +74,7 @@ public static class EventEntryConverter
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
+            ContentHashes = contentHashesJson,
             Compensations = new Dictionary<string, string>()
         };
     }
@@ -84,6 +93,7 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The caused by chain.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content per generation.</param>
+    /// <param name="contentHashes">Optional hash per generation, computed by the kernel.</param>
     /// <param name="subject">Optional subject identifying the compliance target.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
@@ -98,11 +108,18 @@ public static class EventEntryConverter
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash>? contentHashes = null,
         Subject? subject = null)
     {
         var contentDict = content.ToDictionary(
             kvp => ((uint)kvp.Key).ToString(),
             kvp => (object)kvp.Value);
+
+        var contentHashesJson = contentHashes is { Count: > 0 }
+            ? JsonSerializer.Serialize(
+                contentHashes.ToDictionary(kvp => ((uint)kvp.Key).ToString(), kvp => kvp.Value.Value),
+                _jsonSerializerOptions)
+            : string.Empty;
 
         return new EventEntry
         {
@@ -117,6 +134,7 @@ public static class EventEntryConverter
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
+            ContentHashes = contentHashesJson,
             Compensations = new Dictionary<string, string>(),
             Subject = subject?.Value
         };
@@ -160,6 +178,30 @@ public static class EventEntryConverter
     /// <returns>The resolved <see cref="Subject"/>.</returns>
     public static Subject ResolveSubject(EventEntry entry) =>
         string.IsNullOrEmpty(entry.Subject) ? new Subject(entry.EventSourceId) : new Subject(entry.Subject);
+
+    /// <summary>
+    /// Get the stored content hash for a specific generation.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <param name="generation">The generation to read the hash for.</param>
+    /// <returns>The <see cref="EventHash"/> for the generation, or <see cref="EventHash.NotSet"/> when none was stored.</returns>
+    public static EventHash GetHashForGeneration(EventEntry entry, EventTypeGeneration generation)
+    {
+        if (string.IsNullOrEmpty(entry.ContentHashes))
+        {
+            return EventHash.NotSet;
+        }
+
+        var hashesByGeneration = JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions);
+        if (hashesByGeneration is null)
+        {
+            return EventHash.NotSet;
+        }
+
+        return hashesByGeneration.TryGetValue(((uint)generation).ToString(), out var hash)
+            ? new EventHash(hash)
+            : EventHash.NotSet;
+    }
 
     /// <summary>
     /// Get the event type from an event entry. Selects the highest available generation so

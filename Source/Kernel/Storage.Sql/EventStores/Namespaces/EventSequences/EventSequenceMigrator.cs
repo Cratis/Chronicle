@@ -48,6 +48,7 @@ public class EventSequenceMigrator(
                 EventStreamType = table.StringColumn(migrationBuilder, maxLength: 200),
                 EventStreamId = table.StringColumn(migrationBuilder, maxLength: 200),
                 Content = table.StringColumn(migrationBuilder),
+                ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true)
             },
