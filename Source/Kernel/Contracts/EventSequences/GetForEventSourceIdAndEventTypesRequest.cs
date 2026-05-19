@@ -42,7 +42,7 @@ public class GetForEventSourceIdAndEventTypesRequest : IEventSequenceRequest
     public string? EventStreamType { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional event stream type.
+    /// Gets or sets the optional event stream identifier.
     /// </summary>
     [ProtoMember(7)]
     public string? EventStreamId { get; set; }
