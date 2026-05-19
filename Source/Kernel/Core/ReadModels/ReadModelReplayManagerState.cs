@@ -19,4 +19,9 @@ public class ReadModelReplayManagerState
     /// Gets or sets the new occurrences of replayed read models.
     /// </summary>
     public IList<ReadModelOccurrence> NewOccurrences { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the removed occurrences of replayed read models.
+    /// </summary>
+    public IList<ReadModelOccurrence> RemovedOccurrences { get; set; } = [];
 }

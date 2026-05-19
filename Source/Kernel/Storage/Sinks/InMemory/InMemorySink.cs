@@ -114,6 +114,13 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
+    public Task Remove(ReadModelContainerName containerName)
+    {
+        _rewindCollection.Clear();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public Task PrepareInitialRun()
     {
         Collection.Clear();

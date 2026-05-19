@@ -31,13 +31,27 @@ public class ReadModelReplayManagerStorageProvider(IStorage storage) : IGrainSto
         var actualGrainState = (grainState as IGrainState<ReadModelReplayManagerState>)!;
 
         var key = ReadModelReplayManagerGrainKey.Parse(grainId.Key.ToString()!);
-        var namespaceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace);
+        var eventStoreStorage = storage.GetEventStore(key.EventStore);
+        var namespaceStorage = eventStoreStorage.GetNamespace(key.Namespace);
 
         foreach (var occurrence in actualGrainState.State.NewOccurrences)
         {
             await namespaceStorage.ReplayedReadModels.Replayed(occurrence);
         }
 
+        if (actualGrainState.State.RemovedOccurrences.Count > 0)
+        {
+            // Resolve read model definition and sink only when there is anything to remove.
+            var readModelDefinition = await eventStoreStorage.ReadModels.Get(key.ReadModel);
+            var sink = await namespaceStorage.Sinks.GetFor(readModelDefinition);
+            foreach (var occurrence in actualGrainState.State.RemovedOccurrences)
+            {
+                await sink.Remove(occurrence.RevertContainerName);
+                await namespaceStorage.ReplayedReadModels.Remove(occurrence);
+            }
+        }
+
         actualGrainState.State.NewOccurrences.Clear();
+        actualGrainState.State.RemovedOccurrences.Clear();
     }
 }

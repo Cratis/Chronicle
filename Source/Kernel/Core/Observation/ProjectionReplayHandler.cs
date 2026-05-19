@@ -9,6 +9,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -19,12 +20,14 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for working with storage.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> for managing projection pipelines.</param>
+/// <param name="options">The <see cref="IOptions{TOptions}"/> for <see cref="Configuration.ChronicleOptions"/>.</param>
 /// <param name="logger">The logger.</param>
 public class ProjectionReplayHandler(
     IProjectionsManager projections,
     IGrainFactory grainFactory,
     IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
+    IOptions<Configuration.ChronicleOptions> options,
     ILogger<ProjectionReplayHandler> logger) : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
@@ -32,7 +35,13 @@ public class ProjectionReplayHandler(
         observerDetails,
         async projection =>
         {
-            var replayContexts = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace).ReplayContexts;
+            var namespaceStorage = storage.GetEventStore(observerDetails.Key.EventStore).GetNamespace(observerDetails.Key.Namespace);
+            var replayManager = grainFactory.GetReadModelReplayManager(
+                observerDetails.Key.EventStore,
+                observerDetails.Key.Namespace,
+                projection.ReadModel.Identifier);
+            await replayManager.ApplyRetentionPolicy(options.Value.ReadModels.ReplayedVersionsToKeep);
+            var replayContexts = namespaceStorage.ReplayContexts;
             return await replayContexts.Establish(new(projection.ReadModel.Identifier, projection.ReadModel.LatestGeneration), projection.ReadModel.ContainerName);
         },
         (pipeline, _, context) => pipeline.BeginReplay(context));
