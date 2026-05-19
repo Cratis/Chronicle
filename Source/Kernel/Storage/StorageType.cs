@@ -1,13 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Storage.Sql;
+namespace Cratis.Chronicle.Storage;
 
 /// <summary>
-/// Storage types supported by Chronicle SQL.
+/// Storage backend types supported by Chronicle.
 /// </summary>
 public static class StorageType
 {
+    /// <summary>
+    /// MongoDB storage type. Also the default when <c>Storage.Type</c> is unspecified.
+    /// </summary>
+    public const string MongoDB = "mongodb";
+
     /// <summary>
     /// SQLite storage type.
     /// </summary>

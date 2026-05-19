@@ -6,7 +6,6 @@ using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
-using Cratis.Chronicle.Storage.Sql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
