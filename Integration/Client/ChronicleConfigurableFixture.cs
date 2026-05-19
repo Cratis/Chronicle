@@ -6,6 +6,9 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
+using Npgsql;
 
 namespace Cratis.Chronicle.Integration;
 
@@ -80,18 +83,110 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // For out-of-process modes the docker chronicle owns its data. Resetting it via the
         // development-only gRPC operation wipes the backing store (per storage type, via
         // ICanPerformKernelStateReset) and re-bootstraps identity + the system event store —
-        // all without restarting any container or process. The in-process test silo shares
-        // the same MongoDB / SQL storage with the docker chronicle, so this single call is
-        // also what restores a clean slate for the in-process side.
+        // all without restarting any container or process.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
         {
             await ResetOutOfProcessKernelState();
+
+            // MongoDB out-of-process shares the in-container mongod with the test silo,
+            // so the kernel-side reset already cleared the data the in-process silo sees.
+            // SQL backends keep a separate per-silo database (chronicle-inprocess) so the
+            // test silo's grains keep accumulating events across test classes if we stop
+            // here. Truncate the in-process database too so both sides start clean.
+            await WipeInProcessSqlStorageIfApplicable();
             return;
         }
 
         // In-process mode: defer to the base MongoDB-drop behavior.
         await base.RemoveAllDatabases(excludePrefixes);
     }
+
+    async Task WipeInProcessSqlStorageIfApplicable()
+    {
+        var connectionString = GetInProcessConnectionString();
+        switch (Options.StorageProvider)
+        {
+            case ChronicleStorageProvider.PostgreSql:
+                await TruncateInProcessPostgreSqlTables(connectionString);
+                NpgsqlConnection.ClearAllPools();
+                break;
+
+            case ChronicleStorageProvider.MsSql:
+                await TruncateInProcessMsSqlTables(connectionString);
+                SqlConnection.ClearAllPools();
+                break;
+
+            case ChronicleStorageProvider.Sqlite:
+                SqliteConnection.ClearAllPools();
+                var path = ExtractSqliteDataSource(connectionString);
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    var baseName = Path.GetFileNameWithoutExtension(path);
+                    var extension = Path.GetExtension(path);
+                    foreach (var file in Directory.GetFiles(directory, $"{baseName}_*{extension}"))
+                    {
+                        File.Delete(file);
+                    }
+                }
+
+                break;
+        }
+    }
+
+    static async Task TruncateInProcessPostgreSqlTables(string connectionString)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (NpgsqlException)
+        {
+            // Database may not exist yet on the first test-class boundary.
+            return;
+        }
+
+        const string sql =
+            "DO $$ DECLARE r RECORD; " +
+            "BEGIN " +
+            "    FOR r IN (SELECT tablename FROM pg_tables " +
+            "              WHERE schemaname = 'public' " +
+            "              AND tablename NOT IN ('Users', 'Applications', 'DataProtectionKeys', 'Patches', 'SystemInformation', 'EncryptionKeys', '__EFMigrationsHistory')) LOOP " +
+            "        EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE'; " +
+            "    END LOOP; " +
+            "END $$;";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    static async Task TruncateInProcessMsSqlTables(string connectionString)
+    {
+        await using var conn = new SqlConnection(connectionString);
+        try
+        {
+            await conn.OpenAsync();
+        }
+        catch (SqlException)
+        {
+            return;
+        }
+
+        const string sql =
+            "DECLARE @sql NVARCHAR(MAX) = N''; " +
+            "SELECT @sql += N'DELETE FROM [' + s.name + N'].[' + t.name + N'];' + CHAR(13) " +
+            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+            "    WHERE t.name NOT IN ('Users', 'Applications', 'DataProtectionKeys', 'Patches', 'SystemInformation', 'EncryptionKeys', '__EFMigrationsHistory'); " +
+            "EXEC sp_executesql @sql;";
+        await using var cmd = new SqlCommand(sql, conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
 
     /// <inheritdoc/>
     public override Task RestartMongoDBAsync() => Task.CompletedTask;

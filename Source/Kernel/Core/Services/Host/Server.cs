@@ -68,6 +68,13 @@ internal sealed class Server(
         var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);
         await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
+        // ForceActivationCollection returns once the broadcast is acknowledged, not when every
+        // grain has actually finished deactivating. Deactivating grains write their state on
+        // OnDeactivateAsync, so if we proceed straight to storage truncation the soon-to-die
+        // grains can re-persist stale state (e.g. EventSequence.SequenceNumber) right back
+        // into the table we just emptied. Give them a brief window to flush.
+        await Task.Delay(500);
+
         projectionPipelineManager.Clear();
 
         // IInstancesOf may include backend-specific handlers whose dependencies are not
