@@ -85,7 +85,7 @@ public static class ProjectionWaitExtensions
         while (true)
         {
             var state = await projection.GetState();
-            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            if (state.LastHandledEventSequenceNumber.IsActualValue && state.LastHandledEventSequenceNumber.Value >= eventSequenceNumber.Value)
             {
                 break;
             }
