@@ -72,6 +72,17 @@ public interface IObservers
     IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default);
 
     /// <summary>
+    /// Waits for all affected observers to complete for a specific append tail sequence number.
+    /// </summary>
+    /// <param name="request">The <see cref="WaitForObserverCompletionRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="WaitForObserverCompletionResponse"/> describing completion and failures.</returns>
+    /// <remarks>
+    /// The wait is bounded by the cancellation token on <paramref name="context"/>.
+    /// </remarks>
+    Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get all replayable observers for specific event types.
     /// </summary>
     /// <param name="request">The <see cref="GetReplayableObserversForEventTypesRequest"/>.</param>
