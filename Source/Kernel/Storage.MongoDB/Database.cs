@@ -35,7 +35,7 @@ public class Database : IDatabase
 
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
-        if (mongoDBOptions.Value.DirectConnection)
+        if (mongoDBOptions.Value.DirectConnection == true)
         {
             settings.DirectConnection = true;
         }
@@ -82,7 +82,7 @@ public class Database : IDatabase
         {
             DatabaseName = databaseName
         };
-        if (_mongoDBOptions.Value.DirectConnection)
+        if (_mongoDBOptions.Value.DirectConnection == true)
         {
             urlBuilder.DirectConnection = true;
         }
