@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle;
+using Cratis.Chronicle.Connections;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -491,32 +493,38 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     }
 
     /// <summary>
-    /// Calls the Development-only kernel reset endpoint on the outofprocess Chronicle server.
-    /// The endpoint deactivates all Orleans grains and waits for stabilization, effectively
-    /// clearing all server-side in-memory grain state without restarting the container.
-    /// This is orders of magnitude faster than a full container restart (2s vs 30-45s).
+    /// Reset the outofprocess Chronicle server's in-memory state via the development-only
+    /// gRPC operation on <see cref="Cratis.Chronicle.Contracts.Host.IServer"/>. The container
+    /// stays running; only the grain state and transient pools are recycled.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    static async Task ResetOutOfProcessKernelState()
+    async Task ResetOutOfProcessKernelState()
     {
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-        var deadline = DateTime.UtcNow.AddSeconds(60);
+        var connectionString = new ChronicleConnectionString("chronicle://localhost:35001/?disableTls=true");
+        var options = new ChronicleClientOptions
+        {
+            ConnectionString = connectionString,
+            EventStore = "Testing",
+            AutoDiscoverAndRegister = false
+        };
+
+        using var resetClient = new ChronicleClient(options);
+        var eventStore = await resetClient.GetEventStore("Testing");
+        var services = (eventStore.Connection as Cratis.Chronicle.Contracts.IChronicleServicesAccessor)!.Services;
+
+        var deadline = DateTime.UtcNow.AddSeconds(30);
         while (DateTime.UtcNow < deadline)
         {
             try
             {
-                var response = await client.PostAsync("http://localhost:8081/api/development/kernel-state/reset", null);
-                if (response.IsSuccessStatusCode)
-                {
-                    return;
-                }
+                await services.Server.ResetKernelState();
+                return;
             }
             catch
             {
-                // Server may be temporarily unavailable — keep retrying.
+                // Server may be temporarily unavailable — keep retrying briefly.
+                await Task.Delay(200);
             }
-
-            await Task.Delay(500);
         }
     }
 

@@ -24,6 +24,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -134,7 +135,11 @@ public static class ChronicleServerSiloBuilderExtensions
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
                 new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
-                new Cratis.Chronicle.Services.Host.Server(clusterClient));
+                new Cratis.Chronicle.Services.Host.Server(
+                    clusterClient,
+                    grainFactory,
+                    sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
+                    sp.GetRequiredService<IInstancesOf<IPerformKernelStateReset>>()));
         });
 
         return builder;

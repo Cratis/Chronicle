@@ -246,55 +246,8 @@ app.MapGrpcServices();
 app.MapCodeFirstGrpcReflectionService();
 app.MapHealthChecks(chronicleOptions.HealthCheckEndpoint).AllowAnonymous();
 
-#if DEVELOPMENT
-app.MapPost(
-        "/api/development/kernel-state/reset",
-        async (
-            IGrainFactory grainFactory,
-            Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager projectionPipelineManager) =>
-        {
-            var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);
-            await managementGrain.ForceActivationCollection(TimeSpan.Zero);
-
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            var stableReadCount = 0;
-            var previousCount = -1;
-
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                var currentCount = await managementGrain.GetTotalActivationCount();
-
-                if (currentCount == previousCount)
-                {
-                    if (++stableReadCount >= 3)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    stableReadCount = 0;
-                    previousCount = currentCount;
-                }
-
-                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-
-            projectionPipelineManager.Clear();
-
-            // Clear SQLite connection pools so the test harness can delete and recreate
-            // the database file without restarting the container. Without this, pooled
-            // connections keep the old file's inode alive and the server reopens the old
-            // (deleted) database instead of the new empty one.
-            if (string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
-            {
-                Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            }
-
-            return Results.NoContent();
-        })
-    .AllowAnonymous();
-#endif
+// Kernel state reset is exposed via the gRPC IServer.ResetKernelState operation, which
+// only honours the call in DEVELOPMENT builds. See Cratis.Chronicle.Services.Host.Server.
 
 // Map workbench fallback route AFTER API endpoints to avoid conflicts
 if (chronicleOptions.Features.Workbench && chronicleOptions.Features.Api)

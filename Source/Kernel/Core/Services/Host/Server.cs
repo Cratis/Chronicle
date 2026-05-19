@@ -4,7 +4,16 @@
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Host;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage;
+using Cratis.Types;
 using Orleans.BroadcastChannel;
+#if DEVELOPMENT
+using Orleans.Runtime;
+#endif
+
+// Primary-constructor parameters used inside #if DEVELOPMENT trip CS9113 in release builds.
+#pragma warning disable CS9113
 
 namespace Cratis.Chronicle.Services.Host;
 
@@ -12,7 +21,14 @@ namespace Cratis.Chronicle.Services.Host;
 /// Represents an implementation of <see cref="IServer"/>.
 /// </summary>
 /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
-internal sealed class Server(IClusterClient clusterClient) : IServer
+/// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
+/// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
+/// <param name="resetHandlers">Storage-specific reset handlers invoked during development resets.</param>
+internal sealed class Server(
+    IClusterClient clusterClient,
+    IGrainFactory grainFactory,
+    IProjectionPipelineManager projectionPipelineManager,
+    IInstancesOf<IPerformKernelStateReset> resetHandlers) : IServer
 {
     readonly IBroadcastChannelProvider _reloadStateChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ReloadState);
 
@@ -41,6 +57,26 @@ internal sealed class Server(IClusterClient clusterClient) : IServer
             Version = ParseVersionFromInformationalVersion(informationalVersion),
             CommitSha = ParseCommitShaFromInformationalVersion(informationalVersion)
         });
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetKernelState()
+    {
+#if DEVELOPMENT
+        var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);
+        await managementGrain.ForceActivationCollection(TimeSpan.Zero);
+
+        projectionPipelineManager.Clear();
+
+        foreach (var handler in resetHandlers)
+        {
+            await handler.Reset();
+        }
+#else
+        await Task.CompletedTask;
+        throw new NotSupportedException(
+            "ResetKernelState is only available when the server is compiled with the DEVELOPMENT preprocessor symbol.");
+#endif
     }
 
     /// <summary>
