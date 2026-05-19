@@ -118,7 +118,7 @@ public static class ReducerWaitExtensions
         while (true)
         {
             var state = await reducer.GetState();
-            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            if (state.LastHandledEventSequenceNumber.IsActualValue && state.LastHandledEventSequenceNumber.Value >= eventSequenceNumber.Value)
             {
                 break;
             }
