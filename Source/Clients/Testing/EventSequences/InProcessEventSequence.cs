@@ -11,6 +11,7 @@ using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelConstraints = KernelCore::Cratis.Chronicle.Events.Constraints;
 using KernelEventSequences = KernelCore::Cratis.Chronicle.EventSequences;
+using KernelEventTypes = KernelCore::Cratis.Chronicle.EventTypes;
 using KernelMigrations = KernelCore::Cratis.Chronicle.EventSequences.Migrations;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
@@ -117,5 +118,25 @@ internal static class InProcessEventSequence
         _constraintsField.SetValue(grain, constraints);
 
         return grain;
+    }
+
+    /// <summary>
+    /// Minimal in-memory implementation of the kernel <see cref="KernelEventTypes::IEventTypes"/> for in-process testing.
+    /// </summary>
+    /// <remarks>
+    /// Kept as a private nested class to prevent the Cratis.Fundamentals type-discovery source generator
+    /// from emitting a contract→implementor mapping that references the aliased <c>KernelCore</c> assembly
+    /// via a non-aliased <c>global::</c> path, which would not compile.
+    /// Only <see cref="KernelEventTypes::IEventTypes.GetJsonSchema"/> is used by
+    /// <see cref="KernelEventSequences::EventSerializer"/> during event serialization.
+    /// </remarks>
+    sealed class InMemoryKernelEventTypes : KernelEventTypes::IEventTypes
+    {
+        public Cratis.Chronicle.Schemas.JsonSchema GetJsonSchema(Type eventType) => new();
+
+        public Type GetClrTypeFor(KernelConceptsNs::Events.EventTypeId eventTypeId) =>
+            throw new NotSupportedException("GetClrTypeFor is not supported in in-process testing.");
+
+        public Task DiscoverAndRegister(KernelConceptsNs::EventStoreName eventStore) => Task.CompletedTask;
     }
 }
