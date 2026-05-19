@@ -38,7 +38,7 @@ public class with_default_parameters : given.an_event_sequence
 
     async Task Because() => await _eventSequence.GetForEventSourceIdAndEventTypes(_eventSourceId, _eventTypes);
 
-    [Fact] void should_use_default_event_stream_type() => _request.EventStreamType.ShouldEqual(EventStreamType.All.Value);
-    [Fact] void should_use_default_event_stream_id() => _request.EventStreamId.ShouldEqual(EventStreamId.Default);
-    [Fact] void should_use_default_event_source_type() => _request.EventSourceType.ShouldEqual(EventSourceType.Default.Value);
+    [Fact] void should_send_null_event_stream_type() => _request.EventStreamType.ShouldBeNull();
+    [Fact] void should_send_null_event_stream_id() => _request.EventStreamId.ShouldBeNull();
+    [Fact] void should_send_null_event_source_type() => _request.EventSourceType.ShouldBeNull();
 }
