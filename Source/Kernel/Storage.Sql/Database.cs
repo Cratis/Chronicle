@@ -13,7 +13,6 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
-using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -27,7 +26,6 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
 /// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
-[Singleton]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
