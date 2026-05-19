@@ -3,7 +3,6 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
-using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +13,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceMigrator}"/> for logging.</param>
-[Singleton]
 public class EventSequenceMigrator(
     ITableMigrator<EventSequenceDbContext> tableMigrator,
     ILogger<EventSequenceMigrator> logger) : IEventSequenceMigrator
