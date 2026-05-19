@@ -9,10 +9,10 @@ namespace Cratis.Chronicle.Observation.for_ObserverStateGrainStorageProvider;
 
 public class when_reading_state : given.the_provider
 {
-    static GrainId _grainId;
-    static IGrainState<ObserverState> _state;
-    static ObserverKey _observerKey;
-    static FailedPartitions _failedPartitions;
+    GrainId _grainId;
+    IGrainState<ObserverState> _state;
+    ObserverKey _observerKey;
+    FailedPartitions _failedPartitions;
 
     void Establish()
     {
