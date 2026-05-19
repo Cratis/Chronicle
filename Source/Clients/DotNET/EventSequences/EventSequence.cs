@@ -82,15 +82,15 @@ public class EventSequence(
         Subject? subject = default)
     {
         var eventClrType = @event.GetType();
-        eventStreamType ??= EventStreamType.All;
-        eventStreamId ??= EventStreamId.Default;
-        eventSourceType ??= EventSourceType.Default;
+        var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
+        var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
+        var resolvedEventSourceType = eventSourceType ?? EventSourceType.Default;
         correlationId ??= correlationIdAccessor.Current;
         if (concurrencyScope is null || concurrencyScope == ConcurrencyScope.NotSet)
         {
             concurrencyScope = await concurrencyScopeStrategies
                 .GetFor(this)
-                .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+                .GetScope(eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
         ThrowIfUnknownEventType(eventTypes, eventClrType);
@@ -112,10 +112,10 @@ public class EventSequence(
             EventStore = eventStoreName,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSourceType = eventSourceType,
+            EventSourceType = eventSourceType?.Value ?? default,
             EventSourceId = eventSourceId,
-            EventStreamType = eventStreamType,
-            EventStreamId = eventStreamId,
+            EventStreamType = eventStreamType?.Value ?? default,
+            EventStreamId = eventStreamId?.Value ?? default,
             CorrelationId = correlationId,
             EventType = new()
             {
@@ -144,10 +144,10 @@ public class EventSequence(
                 eventStoreName,
                 @namespace,
                 eventType,
-                eventSourceType,
+                resolvedEventSourceType,
                 eventSourceId,
-                eventStreamType,
-                eventStreamId,
+                resolvedEventStreamType,
+                resolvedEventStreamId,
                 result.SequenceNumber,
                 correlationId,
                 occurred) with
@@ -173,6 +173,9 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default)
     {
+        var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
+        var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
+        var resolvedEventSourceType = eventSourceType ?? EventSourceType.Default;
         var eventsList = events.ToList();
         var eventsToAppend = eventsList.ConvertAll(@event =>
         {
@@ -185,10 +188,10 @@ public class EventSequence(
 
             return new Contracts.Events.EventToAppend
             {
-                EventSourceType = eventSourceType ?? EventSourceType.Default,
+                EventSourceType = eventSourceType?.Value ?? default,
                 EventSourceId = eventSourceId,
-                EventStreamType = eventStreamType ?? EventStreamType.All,
-                EventStreamId = eventStreamId ?? EventStreamId.Default,
+                EventStreamType = eventStreamType?.Value ?? default,
+                EventStreamId = eventStreamId?.Value ?? default,
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString(),
                 Tags = allTags,
@@ -200,7 +203,7 @@ public class EventSequence(
         {
             concurrencyScope = await concurrencyScopeStrategies
                 .GetFor(this)
-                .GetScope(eventSourceId, eventStreamType, eventStreamId, eventSourceType);
+                .GetScope(eventSourceId, resolvedEventStreamType, resolvedEventStreamId, resolvedEventSourceType);
         }
 
         var concurrencyScopes = new Dictionary<EventSourceId, ConcurrencyScope> { { eventSourceId, concurrencyScope } };
@@ -219,9 +222,9 @@ public class EventSequence(
             eventsList,
             resolvedCorrelationId,
             eventSourceId,
-            eventSourceType ?? EventSourceType.Default,
-            eventStreamType ?? EventStreamType.All,
-            eventStreamId ?? EventStreamId.Default,
+            resolvedEventSourceType,
+            resolvedEventStreamType,
+            resolvedEventStreamId,
             causation,
             identity,
             result,
@@ -363,11 +366,11 @@ public class EventSequence(
         var result = await _servicesAccessor.Services.EventSequences.GetForEventSourceIdAndEventTypes(new()
         {
             EventStore = eventStoreName,
-            EventStreamType = eventStreamType ?? EventStreamType.All,
-            EventStreamId = eventStreamId ?? EventStreamId.Default,
+            EventStreamType = eventStreamType?.Value ?? default,
+            EventStreamId = eventStreamId?.Value ?? default,
             Namespace = @namespace,
             EventSequenceId = eventSequenceId,
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            EventSourceType = eventSourceType?.Value ?? default,
             EventSourceId = eventSourceId,
             EventTypes = filterEventTypes.ToContract()
         });
