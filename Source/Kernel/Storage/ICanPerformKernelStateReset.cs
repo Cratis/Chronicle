@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Storage;
 /// Storage providers implement this to release transient resources (connection pools, caches)
 /// when the kernel is being recycled between integration test specs without a container restart.
 /// </summary>
-public interface IPerformKernelStateReset
+public interface ICanPerformKernelStateReset
 {
     /// <summary>
     /// Reset any transient state held by this component.

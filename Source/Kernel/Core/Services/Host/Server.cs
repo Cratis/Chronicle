@@ -25,7 +25,7 @@ internal sealed class Server(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IProjectionPipelineManager projectionPipelineManager,
-    IInstancesOf<IPerformKernelStateReset> resetHandlers) : IServer
+    IInstancesOf<ICanPerformKernelStateReset> resetHandlers) : IServer
 {
     readonly IBroadcastChannelProvider _reloadStateChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ReloadState);
 

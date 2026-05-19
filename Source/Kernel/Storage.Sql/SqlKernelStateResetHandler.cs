@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// the underlying database; otherwise the next open reuses a stale handle.
 /// </summary>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
-public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IPerformKernelStateReset
+public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : ICanPerformKernelStateReset
 {
     /// <inheritdoc/>
     public Task Reset()
