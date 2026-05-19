@@ -153,7 +153,7 @@ internal sealed class TestingServices(
         new KernelApplicationsService(grainFactory, storage));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!, null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>()));
+        new KernelServerService(null!, null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
         new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));

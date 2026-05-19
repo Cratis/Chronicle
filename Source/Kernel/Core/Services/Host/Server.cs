@@ -5,6 +5,7 @@ using System.Reflection;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Host;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Orleans.BroadcastChannel;
@@ -20,12 +21,14 @@ namespace Cratis.Chronicle.Services.Host;
 /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
-/// <param name="resetHandlers">Storage-specific reset handlers invoked during development resets.</param>
+/// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
+/// <param name="bootstrapResetHandler">Re-runs kernel bootstrap (identity, system event store) after storage is wiped.</param>
 internal sealed class Server(
     IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IProjectionPipelineManager projectionPipelineManager,
-    IInstancesOf<ICanPerformKernelStateReset> resetHandlers) : IServer
+    IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
+    KernelBootstrapResetHandler bootstrapResetHandler) : IServer
 {
     readonly IBroadcastChannelProvider _reloadStateChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.ReloadState);
 
@@ -67,8 +70,18 @@ internal sealed class Server(
 
         foreach (var handler in resetHandlers)
         {
+            if (!handler.CanReset())
+            {
+                continue;
+            }
+
             await handler.Reset();
         }
+
+        // Re-run kernel bootstrap once storage is empty. The startup task only runs once per
+        // silo lifetime, so without this the next test class would hit an empty identity DB
+        // and every gRPC call would fail with 401.
+        await bootstrapResetHandler.Bootstrap();
 #else
         await Task.CompletedTask;
         throw new NotSupportedException(
