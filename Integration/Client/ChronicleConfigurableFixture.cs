@@ -133,13 +133,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     IContainer BuildOutOfProcessContainer(INetwork network)
     {
+        // Connection details are interpreted by the Chronicle kernel *inside* the container.
+        // For MongoDB the kernel and mongod live in the same container, so it must connect
+        // to localhost:27017 (internal mongod port), NOT the mapped host port.
         var connectionDetails = Options.StorageProvider switch
         {
-            ChronicleStorageProvider.MongoDB => $"mongodb://localhost:{MongoDBPort}",
+            ChronicleStorageProvider.MongoDB => "mongodb://localhost:27017",
             ChronicleStorageProvider.PostgreSql => BuildAndStartPostgreSql(network),
             ChronicleStorageProvider.MsSql => BuildAndStartMsSql(network),
             ChronicleStorageProvider.Sqlite => Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db",
-            _ => $"mongodb://localhost:{MongoDBPort}",
+            _ => "mongodb://localhost:27017",
         };
 
         var storageType = Options.StorageProvider switch
@@ -168,8 +171,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithNetwork(network)
             .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-            .WithEnvironment("Storage__Type", storageType)
-            .WithEnvironment("Storage__ConnectionDetails", connectionDetails);
+            .WithEnvironment("Cratis__Chronicle__Storage__Type", storageType)
+            .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails);
 
         var waitStrategy = Options.StorageProvider == ChronicleStorageProvider.MongoDB
             ? Wait.ForUnixContainer()
