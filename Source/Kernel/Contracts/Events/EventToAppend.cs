@@ -10,39 +10,39 @@ namespace Cratis.Chronicle.Contracts.Events;
 public class EventToAppend
 {
     /// <summary>
-    /// Gets or sets the event source type.
+    /// Gets or sets the optional event source type.
     /// </summary>
     [ProtoMember(1)]
-    public string EventSourceType { get; set; }
+    public string? EventSourceType { get; set; }
 
     /// <summary>
     /// Gets or sets the event source id.
     /// </summary>
-    [ProtoMember(2)]
+    [ProtoMember(2, IsRequired = true)]
     public string EventSourceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the event stream type.
+    /// Gets or sets the optional event stream type.
     /// </summary>
     [ProtoMember(3)]
-    public string EventStreamType { get; set; }
+    public string? EventStreamType { get; set; }
 
     /// <summary>
-    /// Gets or sets the event stream identifier.
+    /// Gets or sets the optional event stream identifier.
     /// </summary>
     [ProtoMember(4)]
-    public string EventStreamId { get; set; }
+    public string? EventStreamId { get; set; }
 
     /// <summary>
     /// Gets or sets the event type.
     /// </summary>
-    [ProtoMember(5)]
+    [ProtoMember(5, IsRequired = true)]
     public EventType EventType { get; set; }
 
     /// <summary>
     /// Gets or sets the content of the event - in the form of a JSON payload.
     /// </summary>
-    [ProtoMember(6)]
+    [ProtoMember(6, IsRequired = true)]
     public string Content { get; set; }
 
     /// <summary>
