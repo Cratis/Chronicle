@@ -70,9 +70,13 @@ internal sealed class Server(
 
         projectionPipelineManager.Clear();
 
+        // IInstancesOf may include backend-specific handlers whose dependencies are not
+        // registered in the active storage mode (e.g. MongoDBKernelStateResetHandler when
+        // running on SQL storage). Those handlers cannot be constructed by DI and surface
+        // as null entries in the enumeration; skip them.
         foreach (var handler in resetHandlers)
         {
-            if (!handler.CanReset())
+            if (handler is null || !handler.CanReset())
             {
                 continue;
             }
