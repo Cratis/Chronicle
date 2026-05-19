@@ -33,6 +33,8 @@ public static class ReminderEntryConverters
 
     /// <summary>
     /// Converts an Orleans reminder entry to a SQL reminder entity.
+    /// Orleans hands the table a fresh entry with a null ETag on first insert and expects the
+    /// table to generate one. Generate a new ETag when the entry has none.
     /// </summary>
     /// <param name="entry">The Orleans reminder entry.</param>
     /// <returns>The SQL reminder entity.</returns>
@@ -43,7 +45,7 @@ public static class ReminderEntryConverters
             GrainId = entry.GrainId.ToString(),
             GrainHash = (uint)entry.GrainId.GetHashCode(),
             ReminderName = entry.ReminderName,
-            ETag = entry.ETag,
+            ETag = string.IsNullOrEmpty(entry.ETag) ? Guid.NewGuid().ToString("N") : entry.ETag,
             StartAt = entry.StartAt.ToBinary(),
             Period = entry.Period.Milliseconds
         };
