@@ -83,8 +83,20 @@ public class Sink(
 
         var state = changeset.InitialState.Clone();
         state = ApplyActualChanges(key, changeset.Changes, state);
-        ((dynamic)state).id = key.Value;
-        ((IDictionary<string, object?>)state)[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)eventSequenceNumber;
+
+        // Ensure the document carries an identifier field, but match the case the projection
+        // already uses (or the schema declares). Blindly writing a lowercase `id` causes
+        // ExpandoObjectConverter to throw "Sequence contains more than one matching element"
+        // when the schema declares `Id` (PascalCase) and the projection populated it — the
+        // case-insensitive lookup finds both keys.
+        var stateDict = (IDictionary<string, object?>)state;
+        var hasIdProperty = stateDict.Keys.Any(k => string.Equals(k, "Id", StringComparison.OrdinalIgnoreCase));
+        if (!hasIdProperty)
+        {
+            stateDict[GetIdentifierPropertyName()] = key.Value;
+        }
+
+        stateDict[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)eventSequenceNumber;
 
         var document = SerializeDocument(state);
 
@@ -237,6 +249,17 @@ public class Sink(
         var schema = readModel.GetSchemaForLatestGeneration();
         var jsonObject = expandoObjectConverter.ToJsonObject(state, schema);
         return jsonObject.ToJsonString();
+    }
+
+    string GetIdentifierPropertyName()
+    {
+        var schema = readModel.GetSchemaForLatestGeneration();
+        if (schema.Properties.ContainsKey("Id"))
+        {
+            return "Id";
+        }
+
+        return "id";
     }
 
     ExpandoObject DeserializeDocument(string document)

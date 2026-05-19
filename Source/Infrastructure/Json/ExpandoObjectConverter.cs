@@ -47,10 +47,18 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             JsonNode? value = null;
 
-            var keyValue = expandoObject.SingleOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            // Prefer an exact-case match; fall back to a case-insensitive match. Using
+            // SingleOrDefault here would throw "Sequence contains more than one matching
+            // element" when the source expando carries both casings of the same name
+            // (e.g. both `Id` and `id`).
+            var keyValue = expandoObject.FirstOrDefault(_ => _.Key == property.Name);
+            if (keyValue.Key is null)
+            {
+                keyValue = expandoObject.FirstOrDefault(_ => _.Key.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+            }
 
             var name = property.Name;
-            var schemaProperty = schemaProperties.SingleOrDefault(_ => _.Name == name);
+            var schemaProperty = schemaProperties.FirstOrDefault(_ => _.Name == name);
             if (schemaProperty is null)
             {
                 ConvertUnknownSchemaTypeToJsonValue(keyValue.Value);
