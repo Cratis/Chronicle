@@ -8,9 +8,6 @@ using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Storage;
 using Cratis.Types;
 using Orleans.BroadcastChannel;
-#if DEVELOPMENT
-using Orleans.Runtime;
-#endif
 
 // Primary-constructor parameters used inside #if DEVELOPMENT trip CS9113 in release builds.
 #pragma warning disable CS9113

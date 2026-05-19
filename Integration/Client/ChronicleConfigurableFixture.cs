@@ -494,7 +494,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     /// <summary>
     /// Reset the outofprocess Chronicle server's in-memory state via the development-only
-    /// gRPC operation on <see cref="Cratis.Chronicle.Contracts.Host.IServer"/>. The container
+    /// gRPC operation on <see cref="Contracts.Host.IServer"/>. The container
     /// stays running; only the grain state and transient pools are recycled.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -510,7 +510,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         using var resetClient = new ChronicleClient(options);
         var eventStore = await resetClient.GetEventStore("Testing");
-        var services = (eventStore.Connection as Cratis.Chronicle.Contracts.IChronicleServicesAccessor)!.Services;
+        var services = (eventStore.Connection as Contracts.IChronicleServicesAccessor)!.Services;
 
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (DateTime.UtcNow < deadline)
