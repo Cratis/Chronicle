@@ -2,6 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Chronicle.Aspire</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Aspire</RootNamespace>
+        <NoWarn>$(NoWarn);ASPIREPROBES001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
