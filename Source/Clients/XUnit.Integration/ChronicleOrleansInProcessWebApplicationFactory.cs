@@ -122,7 +122,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
                 if (defaultSinkTypeId is not null)
                 {
+                    // ChronicleClientOptions is what host-level Chronicle client setup binds, but the
+                    // client classes (ReadModels, Reducers, EventStore) inject IOptions<ChronicleOptions>.
+                    // Options<ChronicleClientOptions> and Options<ChronicleOptions> are tracked as
+                    // separate option instances by Microsoft.Extensions.Options, so configure both.
                     services.PostConfigure<ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
+                    services.PostConfigure<ChronicleOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
                 }
 
                 // Register test services directly in DI so the first test works normally,
