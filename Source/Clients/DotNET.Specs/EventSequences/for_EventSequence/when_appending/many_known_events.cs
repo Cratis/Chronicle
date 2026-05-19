@@ -44,7 +44,7 @@ public class many_known_events : given.an_event_sequence
             .When(_ => _.AppendMany(Arg.Any<AppendManyRequest>(), CallContext.Default))
             .Do(callInfo => _command = callInfo.Arg<AppendManyRequest>());
         _causationManager.GetCurrentChain().Returns(_causation.ToImmutableList());
-        _concurrencyScopeStrategy.GetScope(_eventSourceId, default, default, default, default).Returns(Task.FromResult(_scope));
+        _concurrencyScopeStrategy.GetScope(_eventSourceId, EventStreamType.All, EventStreamId.Default, EventSourceType.Default, default).Returns(Task.FromResult(_scope));
         _identityProvider.GetCurrent().Returns(_causedBy);
         _response = new()
         {
