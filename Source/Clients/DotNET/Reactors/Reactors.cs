@@ -375,6 +375,12 @@ public class Reactors : IReactors
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
     {
+        if (events.ReplayState != ReplayState.None)
+        {
+            await HandleReplayNotification(handler, events.ReplayState, events.Partition);
+            return;
+        }
+
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -470,4 +476,33 @@ public class Reactors : IReactors
             messages.OnNext(new(new(result)));
         }
     }
-}
+
+    async Task HandleReplayNotification(IReactorHandler handler, ReplayState replayState, string partition)
+    {
+        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
+        var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
+        if (activatedReactorResult.TryGetException(out _))
+        {
+            return;
+        }
+
+        await using var activatedReactor = activatedReactorResult.AsT0;
+        switch (replayState)
+        {
+            case ReplayState.BeginReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.BeginReplay();
+                break;
+
+            case ReplayState.EndReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.EndReplay();
+                break;
+
+            case ReplayState.BeginReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.BeginReplayPartition(partition);
+                break;
+
+            case ReplayState.EndReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.EndReplayPartition(partition);
+                break;
+        }
+    }

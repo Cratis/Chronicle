@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Types;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
@@ -34,6 +35,12 @@ public class ObserverService(
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachReplayHandler(handler => handler.EndReplayFor(observerDetails));
+
+    /// <inheritdoc/>
+    public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.BeginReplayPartitionFor(observerDetails, partition));
+
+    /// <inheritdoc/>
+    public async Task EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachReplayHandler(handler => handler.EndReplayPartitionFor(observerDetails, partition));
 
     /// <inheritdoc/>
     public async Task BeginCatchupFor(ObserverDetails observerDetails) => await ForEachCatchupHandler(handler => handler.BeginCatchupFor(observerDetails));
