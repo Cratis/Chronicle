@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
@@ -17,6 +18,13 @@ public partial class Observer
     {
         _isPreparingCatchup = true;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
+
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            logger.SkippingCatchUpBecauseObserverIsReplaying();
+            _isPreparingCatchup = false;
+            return;
+        }
 
         var subscription = await GetSubscription();
         await _jobsManager.StartOrResumeObserverJobFor<ICatchUpObserver, CatchUpObserverRequest>(
@@ -77,6 +85,11 @@ public partial class Observer
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            logger.SkippingPartitionCatchUpBecauseObserverIsReplaying();
+            return;
+        }
         if (failures.State.IsFailed(partition))
         {
             logger.PartitionToCatchUpIsFailing(partition);
