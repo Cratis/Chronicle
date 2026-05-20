@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Contracts.Observation;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
 

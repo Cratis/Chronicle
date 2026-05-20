@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Observation;
 
 namespace Cratis.Chronicle.Contracts.Observation.Reducers;
 

@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
-using Cratis.Chronicle.Contracts.Observation;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;
 

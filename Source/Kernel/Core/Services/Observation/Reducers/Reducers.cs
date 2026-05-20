@@ -190,10 +190,7 @@ internal sealed class Reducers(
                         registration.ConnectionId,
                         registration.EventStore,
                         registration.Namespace,
-                        (replayState, partition) =>
-                        {
-                            observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = replayState });
-                        });
+                        (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = replayState }));
 
                     using (Tracing.RegisterObserver(key, ObserverType.Reducer))
                     {

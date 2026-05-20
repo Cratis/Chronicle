@@ -408,6 +408,12 @@ public class Reducers : IReducers
 
     async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
     {
+        if (operation.ReplayState != ReplayState.None)
+        {
+            await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
+            return;
+        }
+
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -478,6 +484,36 @@ public class Reducers : IReducers
             ExceptionStackTrace = exceptionStackTrace
         };
         messages.OnNext(new(new(result)));
+    }
+
+    async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
+    {
+        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
+        var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
+        if (activatedReducerResult.TryGetException(out _))
+        {
+            return;
+        }
+
+        await using var activatedReducer = activatedReducerResult.AsT0;
+        switch (replayState)
+        {
+            case ReplayState.BeginReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.BeginReplay();
+                break;
+
+            case ReplayState.EndReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.EndReplay();
+                break;
+
+            case ReplayState.BeginReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.BeginReplayPartition(partition);
+                break;
+
+            case ReplayState.EndReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.EndReplayPartition(partition);
+                break;
+        }
     }
 
     bool ShouldReducerBeActive(Type reducerType)
