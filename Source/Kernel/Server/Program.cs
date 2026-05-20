@@ -194,6 +194,17 @@ hostBuilder
            foreach (var descriptor in mongoStorageDescriptors)
                services.Remove(descriptor);
        }
+       else
+       {
+           // Convention binding auto-registers SQL storage implementations alongside MongoDB ones.
+           // In MongoDB mode, SQL implementations must be removed to prevent DI failures (they
+           // require SQL infrastructure such as ITableMigrator<> that is not registered in MongoDB mode).
+           var sqlStorageDescriptors = services
+               .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.Sql") == true)
+               .ToList();
+           foreach (var descriptor in sqlStorageDescriptors)
+               services.Remove(descriptor);
+       }
    });
 
 var app = builder.Build();
