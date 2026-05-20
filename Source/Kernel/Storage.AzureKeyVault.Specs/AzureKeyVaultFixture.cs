@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using AzureKeyVaultEmulator.TestContainers;
 using Azure.Security.KeyVault.Secrets;
+using AzureKeyVaultEmulator.TestContainers;
+using AzureKeyVaultEmulator.TestContainers.Helpers;
 
 namespace Cratis.Chronicle.Storage.AzureKeyVault;
 
@@ -10,7 +11,9 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// Provides a shared Azure Key Vault Emulator container for integration specs.
 /// Starts the emulator with automatic certificate generation and management.
 /// </summary>
+#pragma warning disable CA1001 // Cleanup handled in DisposeAsync
 public sealed class AzureKeyVaultFixture : IAsyncLifetime
+#pragma warning restore CA1001
 {
     AzureKeyVaultEmulatorContainer? _container;
 

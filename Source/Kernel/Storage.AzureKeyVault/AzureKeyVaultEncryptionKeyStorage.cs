@@ -36,7 +36,6 @@ public partial class AzureKeyVaultEncryptionKeyStorage(SecretClient secretClient
     const string PublicKeyField = "publicKey";
     const string PrivateKeyField = "privateKey";
 
-    // Properties (SA1201: properties before methods)
     [GeneratedRegex("[^a-z0-9]+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SanitizeRegex { get; }
 
