@@ -70,3 +70,49 @@ Each revision is an independent secret, which means individual revisions can be 
 | --- | --- | --- | --- |
 | type | string | Yes | Must be `vault` |
 | connectionDetails | string | Yes | The Vault server address, for example `http://vault:8200` |
+
+## Azure Key Vault
+
+Azure Key Vault provides a fully managed, cloud-native secrets backend for storing PII encryption keys. Chronicle uses the Azure Key Vault Secrets API to store each key revision as a distinct secret.
+
+### Authentication
+
+Chronicle authenticates to Azure Key Vault using [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential). This supports multiple authentication methods in order:
+
+- Environment variables (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`)
+- Workload identity
+- Managed identity
+- Azure CLI credentials
+- Visual Studio / VS Code credentials
+
+Ensure that the identity used has the **Key Vault Secrets Officer** role (or at minimum **Get**, **List**, **Set**, and **Delete** secret permissions) on the target Key Vault.
+
+### Configuration
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "storage": {
+        "type": "azure-key-vault",
+        "connectionDetails": "https://my-vault.vault.azure.net"
+      }
+    }
+  }
+}
+```
+
+### Secret naming
+
+Encryption keys are stored as individual secrets. Secret names follow this pattern:
+
+```text
+chronicle--{event-store}--{namespace}--{identifier}--{revision}
+```
+
+Each component is sanitized to lowercase alphanumeric characters with single hyphens replacing any other character sequences. Double hyphens (`--`) serve as unambiguous separators between components.
+
+| Property | Type | Required | Description |
+| --- | --- | --- | --- |
+| type | string | Yes | Must be `azure-key-vault` |
+| connectionDetails | string | Yes | The Azure Key Vault URI, for example `https://my-vault.vault.azure.net` |
