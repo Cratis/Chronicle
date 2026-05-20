@@ -64,9 +64,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add GitHub Package Registry credentials
-        run: dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
-
       - name: Build
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true
 
