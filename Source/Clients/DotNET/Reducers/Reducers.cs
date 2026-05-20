@@ -490,8 +490,9 @@ public class Reducers : IReducers
     {
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
-        if (activatedReducerResult.TryGetException(out _))
+        if (activatedReducerResult.TryGetException(out var ex))
         {
+            _logger.FailedActivatingReducerForReplayNotification(ex, handler.Id, replayState);
             return;
         }
 

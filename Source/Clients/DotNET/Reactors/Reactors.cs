@@ -481,8 +481,9 @@ public class Reactors : IReactors
     {
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
-        if (activatedReactorResult.TryGetException(out _))
+        if (activatedReactorResult.TryGetException(out var ex))
         {
+            _logger.FailedActivatingReactorForReplayNotification(ex, handler.Id, replayState);
             return;
         }
 
