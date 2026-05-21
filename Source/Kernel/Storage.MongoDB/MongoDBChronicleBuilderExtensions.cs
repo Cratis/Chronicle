@@ -6,6 +6,8 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Serialization;
+using Cratis.Chronicle.Storage.MongoDB.Sinks;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -56,6 +58,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IStorage, Storage.Storage>();
+            services.AddSingleton<ISinkFactory, SinkFactory>();
 
             services.AddHealthChecks().AddMongoDb(
                 _ => new MongoClient(settings),

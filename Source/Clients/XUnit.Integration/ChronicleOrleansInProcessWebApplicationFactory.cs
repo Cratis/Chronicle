@@ -149,17 +149,16 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
 
                 // Convention binding must run BEFORE WithMongoDB/WithSql so the explicit storage
-                // registrations from AddChronicleToSilo win in DI. AddBindingsByConvention scans
-                // both Storage.MongoDB and Storage.Sql assemblies and registers their classes; if
-                // it runs after WithMongoDB, the wrong backend's IStorage/IDatabase/etc. take over
-                // and grain activations fail with "Unable to resolve ITableMigrator<>" or similar
-                // because the inactive backend's services have no infrastructure wired up.
-                silo.ConfigureServices(services =>
-                {
-                    services.AddTypeDiscovery();
-                    services.AddBindingsByConvention();
-                    services.AddSelfBindings();
-                });
+                // registrations win in DI. AddBindingsByConvention scans both Storage.MongoDB and
+                // Storage.Sql assemblies and registers their classes by convention; if those
+                // registrations come last, they shadow the explicit ones and grain activations
+                // fail with "Unable to resolve ITableMigrator<>" because the inactive backend's
+                // services have no infrastructure wired up. Use silo.Services directly because
+                // silo.ConfigureServices QUEUES the action — it would run later than the
+                // IMMEDIATE registrations performed inside AddChronicleToSilo's WithMongoDB call.
+                silo.Services.AddTypeDiscovery();
+                silo.Services.AddBindingsByConvention();
+                silo.Services.AddSelfBindings();
 
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,

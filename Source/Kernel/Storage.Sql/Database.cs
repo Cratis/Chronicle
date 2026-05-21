@@ -23,12 +23,20 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <summary>
 /// Represents an implementation of <see cref="IDatabase"/>.
 /// </summary>
+/// <remarks>
+/// Marked with <see cref="IgnoreConventionAttribute"/> so convention binding does not register it
+/// automatically. The SQL database depends on services that are only wired up by <c>WithSql</c>
+/// (e.g. <see cref="IEventSequenceMigrator"/>); leaving it discoverable causes any
+/// <c>GetService&lt;IDatabase&gt;</c> call to fail in non-SQL modes with "Unable to resolve
+/// ITableMigrator&lt;&gt;" — even when the caller used <c>?.</c> expecting null for a missing
+/// registration.
+/// </remarks>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
 /// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
 /// <param name="readModelMigrator">The <see cref="IReadModelMigrator"/> for managing read model table migrations.</param>
-[Singleton]
+[IgnoreConvention]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator, IReadModelMigrator readModelMigrator) : IDatabase
 {
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
