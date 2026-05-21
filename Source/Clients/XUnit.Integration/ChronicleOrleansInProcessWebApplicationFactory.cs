@@ -104,17 +104,32 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 services.AddControllers();
                 ctx.Configuration.Bind(chronicleOptions);
 
-                // When a non-MongoDB backend is configured, remove any MongoDB storage
-                // implementations that AddBindingsByConvention() just registered at the
-                // host level. Without this, the FallbackServiceProvider falls back to the
-                // host-level MongoDB implementations for storage types not explicitly
-                // registered at the silo level.
+                // Convention binding loads both Storage.MongoDB and Storage.Sql assemblies and
+                // registers ALL discovered implementations. Without the cleanup below the wrong
+                // backend's services win when DI resolves IDatabase/IEventStoreNamespaceStorage,
+                // and downstream activations (e.g. SQL EventSequenceMigrator) fail with missing
+                // dependencies that were never wired up in the active mode.
                 if (storageHostConfiguration is not null)
                 {
+                    // SQL mode active — strip MongoDB implementations so the SQL ones (registered
+                    // by WithSql earlier) are the effective registrations.
                     var mongoStorageDescriptors = services
                         .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
                         .ToList();
                     foreach (var descriptor in mongoStorageDescriptors)
+                    {
+                        services.Remove(descriptor);
+                    }
+                }
+                else
+                {
+                    // MongoDB mode active — strip SQL implementations to prevent the SQL Database
+                    // and related services from being resolved. They depend on IEventSequenceMigrator
+                    // and ITableMigrator<>, which are only registered when WithSql is called.
+                    var sqlStorageDescriptors = services
+                        .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.Sql.") == true)
+                        .ToList();
+                    foreach (var descriptor in sqlStorageDescriptors)
                     {
                         services.Remove(descriptor);
                     }
@@ -306,17 +321,27 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         return new TestClientArtifactsActivator(sp, registry, loggerFactory);
                     });
 
-                    // When a non-MongoDB backend is configured, remove any MongoDB storage
-                    // implementations that AddBindingsByConvention() just discovered.
-                    // Both Storage.MongoDB and Storage.Sql assemblies are loaded, so convention
-                    // scanning registers both; the MongoDB types override the SQL registrations
-                    // made by WithSql earlier. Removing them restores the intended SQL backend.
+                    // Convention scanning at the silo level discovers both Storage.MongoDB and
+                    // Storage.Sql implementations. Strip the inactive backend's services so that
+                    // grain activations resolve only services backed by the actually configured
+                    // infrastructure (otherwise e.g. SQL Database injects IEventSequenceMigrator
+                    // which has no registration without WithSql, and grain ReadStateAsync fails).
                     if (storageHostConfiguration is not null)
                     {
                         var mongoStorageDescriptors = services
                             .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
                             .ToList();
                         foreach (var descriptor in mongoStorageDescriptors)
+                        {
+                            services.Remove(descriptor);
+                        }
+                    }
+                    else
+                    {
+                        var sqlStorageDescriptors = services
+                            .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.Sql.") == true)
+                            .ToList();
+                        foreach (var descriptor in sqlStorageDescriptors)
                         {
                             services.Remove(descriptor);
                         }
