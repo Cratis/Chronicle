@@ -12,15 +12,15 @@ namespace Cratis.Chronicle.Contracts.EventSequences;
 public class GetTailSequenceNumberRequest : IEventSequenceRequest
 {
     /// <inheritdoc/>
-    [ProtoMember(1)]
+    [ProtoMember(1, IsRequired = true)]
     public string EventStore { get; set; }
 
     /// <inheritdoc/>
-    [ProtoMember(2)]
+    [ProtoMember(2, IsRequired = true)]
     public string Namespace { get; set; }
 
     /// <inheritdoc/>
-    [ProtoMember(3)]
+    [ProtoMember(3, IsRequired = true)]
     public string EventSequenceId { get; set; }
 
     /// <summary>

@@ -18,7 +18,7 @@ static class EventSequenceRedactionViaSequenceWaitHelpers
             var events = await fixture.EventStore.EventLog.GetFromSequenceNumber(sequenceNumber);
             var storedEvent = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
 
-            if (storedEvent is not null && storedEvent.Context.EventType.Id.Value == "EventRedacted")
+            if (storedEvent?.Context.EventType.Id.Value == "EventRedacted")
             {
                 return storedEvent;
             }
@@ -40,7 +40,7 @@ static class EventSequenceRedactionViaSequenceWaitHelpers
             if (tail != EventSequenceNumber.Unavailable)
             {
                 var events = await systemLog.GetFromSequenceNumber(tail);
-                var storedEvent = events.FirstOrDefault();
+                var storedEvent = events.Count > 0 ? events[0] : null;
 
                 if (storedEvent?.Context.EventType.Id.Value == eventTypeId)
                 {

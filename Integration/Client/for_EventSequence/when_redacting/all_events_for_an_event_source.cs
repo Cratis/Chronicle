@@ -34,14 +34,14 @@ public class all_events_for_an_event_source(context context) : Given<context>(co
             await this.RedactEventsForEventSource(EventSourceId, "test reason");
 
             var firstEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-            StoredFirstEvent = firstEvents.First();
+            StoredFirstEvent = firstEvents[0];
             var secondEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First + 1);
-            StoredSecondEvent = secondEvents.First();
+            StoredSecondEvent = secondEvents[0];
 
             var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
             var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
-            SystemStoredEvent = systemEvents.First();
+            SystemStoredEvent = systemEvents[0];
         }
     }
 

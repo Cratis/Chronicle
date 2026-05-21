@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -17,7 +16,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </summary>
 /// <typeparam name="TContext">The type of <see cref="DbContext"/>.</typeparam>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
-[Singleton]
 public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger) : ITableMigrator<TContext>
     where TContext : DbContext
 {

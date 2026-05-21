@@ -12,14 +12,14 @@
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.3.3" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.8.2" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.8.2" />
-    <PackageVersion Include="Cratis.Arc" Version="20.18.8" />
-    <PackageVersion Include="Cratis.Arc.Core" Version="20.18.8" />
-    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.18.8" />
-    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.18.8" />
-    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.18.8" />
-    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.18.8" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.9.19" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.9.19" />
+    <PackageVersion Include="Cratis.Arc" Version="20.24.14" />
+    <PackageVersion Include="Cratis.Arc.Core" Version="20.24.14" />
+    <PackageVersion Include="Cratis.Arc.EntityFrameworkCore" Version="20.24.14" />
+    <PackageVersion Include="Cratis.Arc.MongoDB" Version="20.24.14" />
+    <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="20.24.14" />
+    <PackageVersion Include="Cratis.Arc.Swagger" Version="20.24.14" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
@@ -82,13 +82,13 @@
     <PackageVersion Include="Microsoft.Orleans.Analyzers" Version="10.1.0" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.85" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.87" />
     <!-- Testing & Specifications -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="3.0.5" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.5" />
-    <PackageVersion Include="Testcontainers" Version="4.11.0" />
+    <PackageVersion Include="Testcontainers" Version="4.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
@@ -97,7 +97,6 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.2.2" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.5.0" />
-    <PackageVersion Include="Polly.Core" Version="8.6.6" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="castle.core" Version="5.2.1" />
     <PackageVersion Include="humanizer" Version="3.0.10" />

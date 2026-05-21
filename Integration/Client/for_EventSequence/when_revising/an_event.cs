@@ -31,11 +31,11 @@ public class an_event(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, OriginalEvent);
             await this.ReviseEvent(EventSequenceNumber.First, RevisedEvent);
             var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-            StoredEvent = eventLogEvents.First();
+            StoredEvent = eventLogEvents[0];
             var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
             var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
-            SystemStoredEvent = systemEvents.First();
+            SystemStoredEvent = systemEvents[0];
         }
     }
 

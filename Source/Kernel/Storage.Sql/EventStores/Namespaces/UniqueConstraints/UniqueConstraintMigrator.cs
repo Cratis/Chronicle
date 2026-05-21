@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore;
-using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// </summary>
 /// <param name="tableMigrator">The <see cref="ITableMigrator{TContext}"/> for migrating tables.</param>
 /// <param name="logger">The <see cref="ILogger{UniqueConstraintMigrator}"/> for logging.</param>
-[Singleton]
 public class UniqueConstraintMigrator(
     ITableMigrator<UniqueConstraintDbContext> tableMigrator,
     ILogger<UniqueConstraintMigrator> logger) : IUniqueConstraintMigrator

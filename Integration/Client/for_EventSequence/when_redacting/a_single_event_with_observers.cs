@@ -86,12 +86,12 @@ public class a_single_event_with_observers(context context) : Given<context>(con
 
             var redactedSeq = EventSequenceNumber.First + 1;
             var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(redactedSeq);
-            RedactedStoredEvent = eventLogEvents.First();
+            RedactedStoredEvent = eventLogEvents[0];
 
             var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
             var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
-            SystemStoredEvent = systemEvents.First();
+            SystemStoredEvent = systemEvents[0];
 
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();

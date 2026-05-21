@@ -143,7 +143,7 @@ public static class ReactorWaitExtensions
         while (true)
         {
             var state = await reactor.GetState();
-            if (state.LastHandledEventSequenceNumber == eventSequenceNumber)
+            if (state.LastHandledEventSequenceNumber.IsActualValue && state.LastHandledEventSequenceNumber.Value >= eventSequenceNumber.Value)
             {
                 break;
             }

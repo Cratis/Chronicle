@@ -51,7 +51,10 @@ public class MongoDBKernelStateResetHandler(
     {
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
-        settings.DirectConnection = mongoDBOptions.Value.DirectConnection;
+        if (mongoDBOptions.Value.DirectConnection == true)
+        {
+            settings.DirectConnection = true;
+        }
         var client = clientManager.GetClientFor(settings);
 
         using var cursor = await client.ListDatabaseNamesAsync();

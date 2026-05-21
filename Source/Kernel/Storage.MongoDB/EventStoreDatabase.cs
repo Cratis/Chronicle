@@ -35,7 +35,7 @@ public class EventStoreDatabase : IEventStoreDatabase
         {
             DatabaseName = eventStore.Value
         };
-        if (mongoDBOptions.Value.DirectConnection)
+        if (mongoDBOptions.Value.DirectConnection == true)
         {
             urlBuilder.DirectConnection = true;
         }

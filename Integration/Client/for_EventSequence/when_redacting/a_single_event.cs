@@ -29,11 +29,11 @@ public class a_single_event(context context) : Given<context>(context)
             await EventStore.EventLog.Append(EventSourceId, Event);
             await this.RedactEvent(EventSequenceNumber.First, "test reason");
             var eventLogEvents = await EventStore.EventLog.GetFromSequenceNumber(EventSequenceNumber.First);
-            StoredEvent = eventLogEvents.First();
+            StoredEvent = eventLogEvents[0];
             var systemLog = EventStore.GetEventSequence(EventSequenceId.System);
             var systemTail = await systemLog.GetTailSequenceNumber();
             var systemEvents = await systemLog.GetFromSequenceNumber(systemTail);
-            SystemStoredEvent = systemEvents.First();
+            SystemStoredEvent = systemEvents[0];
         }
     }
 
