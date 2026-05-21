@@ -41,6 +41,13 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public ChronicleRuntimeOptions Options { get; } = ChronicleRuntimeOptions.Parse();
 
     /// <summary>
+    /// Gets a unique database name for the in-process Orleans silo when running in out-of-process MongoDB mode.
+    /// This isolates the in-process silo's grain state from the OOP container's MongoDB databases,
+    /// preventing cross-silo state conflicts when both share the same MongoDB instance.
+    /// </summary>
+    public string InProcessMongoDatabaseName { get; } = $"chronicle_inprocess_{Guid.NewGuid():N}";
+
+    /// <summary>
     /// Gets the storage type string for the in-process silo (matches Chronicle server StorageType constants).
     /// Returns null for MongoDB (uses the default MongoDB path).
     /// </summary>
@@ -91,10 +98,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // all without restarting any container or process.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
         {
-            await ResetOutOfProcessKernelState();
+            // Only reset the OOP container on the first (unconditional) call. The second call
+            // from OnBeforeInitializeAsync uses excludePrefixes to do a selective drop — for
+            // out-of-process mode this is a no-op because the first reset already wiped
+            // everything. Calling ResetOutOfProcessKernelState twice per test boundary would
+            // double the overhead and interrupt the re-bootstrapped state written between calls.
+            if (excludePrefixes is null || !excludePrefixes.Any())
+            {
+                await ResetOutOfProcessKernelState();
+            }
 
-            // MongoDB out-of-process shares the in-container mongod with the test silo,
-            // so the kernel-side reset already cleared the data the in-process silo sees.
             // SQL backends keep a separate per-silo database (chronicle-inprocess) so the
             // test silo's grains keep accumulating events across test classes if we stop
             // here. Truncate the in-process database too so both sides start clean.
@@ -194,7 +207,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         await using var cmd = new SqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
     }
-
 
     /// <inheritdoc/>
     public override Task RestartMongoDBAsync() => Task.CompletedTask;
@@ -333,14 +345,21 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("ACCEPT_EULA", "Y")
             .WithEnvironment("MSSQL_SA_PASSWORD", MsSqlPassword)
             .WithEnvironment("MSSQL_PID", "Developer")
+            // Wait for MSSQL to accept actual queries, not just TCP connections.
+            // MSSQL 2022 takes 20-60 seconds to fully initialize after the port opens;
+            // only checking the TCP port causes the Chronicle server to fail its EF Core
+            // migrations and crash before the health endpoint ever responds.
             .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilInternalTcpPortIsAvailable(1433))
+                .UntilCommandIsCompleted(
+                    "/opt/mssql-tools18/bin/sqlcmd",
+                    "-S", "localhost",
+                    "-U", "sa",
+                    "-P", MsSqlPassword,
+                    "-Q", "SELECT 1",
+                    "-C"))
             .Build();
 
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
-
-        // Give MSSQL a moment to fully initialize after the port is available
-        Task.Delay(5000).GetAwaiter().GetResult();
 
         return $"Server={MsSqlHostName},1433;Database={_outOfProcessSqlDatabaseName};User Id=sa;Password={MsSqlPassword};TrustServerCertificate=True";
     }

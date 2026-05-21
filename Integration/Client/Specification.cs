@@ -17,9 +17,24 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit
     protected override Action<Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer)
     {
         if (ChronicleFixture is not ChronicleFixture configurable ||
-            configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess ||
-            configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB ||
-            configurable.InProcessStorageType is null)
+            configurable.Options.Mode != ChronicleRuntimeMode.OutOfProcess)
+        {
+            return null;
+        }
+
+        // Out-of-process MongoDB: give the in-process Orleans silo its own isolated database
+        // so its grain state never conflicts with the OOP container's grain state. Both silos
+        // connect to the same mongod (exposed on the host at port 27018), but writing to
+        // different databases prevents cross-silo interference.
+        if (configurable.Options.StorageProvider == ChronicleStorageProvider.MongoDB)
+        {
+            var port = configurable.MongoDBContainer.GetMappedPublicPort(27017);
+            var server = $"mongodb://localhost:{port}/?directConnection=true";
+            var dbName = configurable.InProcessMongoDatabaseName;
+            return cb => Setup.MongoDBChronicleBuilderExtensions.WithMongoDB(cb, server, dbName);
+        }
+
+        if (configurable.InProcessStorageType is null)
         {
             return null;
         }
@@ -53,13 +68,13 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit
     }
 
     /// <inheritdoc/>
-    protected override SinkTypeId? GetDefaultSinkTypeId()
+    protected override Sinks.SinkTypeId? GetDefaultSinkTypeId()
     {
         if (ChronicleFixture is ChronicleFixture configurable &&
             configurable.Options.Mode == ChronicleRuntimeMode.OutOfProcess &&
             configurable.Options.StorageProvider != ChronicleStorageProvider.MongoDB)
         {
-            return WellKnownSinkTypes.SQL;
+            return Sinks.WellKnownSinkTypes.SQL;
         }
 
         return null;
