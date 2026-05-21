@@ -148,6 +148,10 @@ public class HandleEventsForPartition(
             var eventTypesToRead = requestedEventTypes.Length != 0
                 ? requestedEventTypes
                 : subscription.EventTypes.ToArray();
+            var nonRedactionEventTypeIds = eventTypesToRead
+                .Where(et => et.Id != GlobalEventTypes.Redaction)
+                .Select(et => et.Id)
+                .ToHashSet();
             _eventTypeSchemas = (await storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes.GetFor(eventTypesToRead))
                 .ToDictionary(_ => _.Type);
 
@@ -176,7 +180,7 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, nonRedactionEventTypeIds);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
@@ -281,16 +285,51 @@ public class HandleEventsForPartition(
 
         return events.Current.ToArray();
     }
+
+    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
+    {
+        if (nonRedactionEventTypeIds.Count == 0)
+        {
+            return events;
+        }
+
+        var filtered = new AppendedEvent[events.Length];
+        var count = 0;
+        foreach (var @event in events)
+        {
+            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
+            {
+                filtered[count++] = @event;
+                continue;
+            }
+
+            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+            {
+                continue;
+            }
+
+            var originalEventTypeId = originalEventTypeObj?.ToString();
+            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
+            {
+                filtered[count++] = @event;
+            }
+        }
+
+        return count == filtered.Length ? filtered : filtered[..count];
+    }
+
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
-        ObserverSubscriberContext subscriberContext)
+        ObserverSubscriberContext subscriberContext,
+        HashSet<EventTypeId> nonRedactionEventTypeIds)
     {
         try
         {
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
+            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
             if (eventsToHandle.Length != 0)
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
