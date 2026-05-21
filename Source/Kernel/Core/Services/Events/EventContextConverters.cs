@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Services.Auditing;
 using Cratis.Chronicle.Services.Identities;
+using static Cratis.Chronicle.Services.TypeScriptSequenceNumberCompatibility;
 
 namespace Cratis.Chronicle.Services.Events;
 
@@ -24,7 +25,7 @@ internal static class EventContextConverters
         EventSourceId = context.EventSourceId,
         EventStreamType = context.EventStreamType,
         EventStreamId = context.EventStreamId,
-        SequenceNumber = context.SequenceNumber,
+        SequenceNumber = SanitizeForWire(context.SequenceNumber),
         Occurred = context.Occurred,
         EventStore = context.EventStore,
         Namespace = context.Namespace,
