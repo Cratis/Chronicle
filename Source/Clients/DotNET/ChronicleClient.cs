@@ -47,6 +47,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly ILoggerFactory _loggerFactory;
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly INamingPolicy _namingPolicy;
+    readonly CancellationTokenSource? _ownedConnectionCancellation;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
 
     /// <summary>
@@ -124,6 +125,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var disableTls = string.IsNullOrEmpty(certificatePath) && (options.ConnectionString.DisableTls || options.Tls.IsDisabled);
 
         var tokenProvider = CreateTokenProvider(options, disableTls);
+        _ownedConnectionCancellation = new();
 
         _connection = new ChronicleConnection(
             options.ConnectionString,
@@ -134,7 +136,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new Tasks.TaskFactory(),
             _correlationIdAccessor,
             _loggerFactory,
-            CancellationToken.None,
+            _ownedConnectionCancellation.Token,
             _loggerFactory.CreateLogger<ChronicleConnection>(),
             disableTls,
             certificatePath,
@@ -194,6 +196,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _ownedConnectionCancellation?.Cancel();
+        _ownedConnectionCancellation?.Dispose();
         _connection.Dispose();
     }
 
