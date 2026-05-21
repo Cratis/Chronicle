@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using static Cratis.Chronicle.Services.TypeScriptSequenceNumberCompatibility;
 
 namespace Cratis.Chronicle.Services.Observation;
 
@@ -35,8 +34,8 @@ internal static class ObserverInformationConverters
             Type = definition.Type.ToContract(),
             Owner = definition.Owner.ToContract(),
             EventTypes = definition.EventTypes.ToContract(),
-            NextEventSequenceNumber = SanitizeForWire(state.NextEventSequenceNumber),
-            LastHandledEventSequenceNumber = SanitizeForWire(state.LastHandledEventSequenceNumber),
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             RunningState = state.RunningState.ToContract(),
             IsReplayable = definition.IsReplayable
         };
