@@ -62,17 +62,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
     protected override IHostBuilder CreateHostBuilder()
     {
         var builder = Host.CreateDefaultBuilder();
-        var chronicleOptions = new Configuration.ChronicleOptions();
 
-        // Only resolve the MongoDB port when running in MongoDB mode (storageHostConfiguration is
-        // null). SQL OOP modes pass a storageHostConfiguration dict and override Chronicle storage
-        // via configureStorage — they never use mongoServer for Chronicle grain persistence.
         var mongoServer = storageHostConfiguration is null
             ? $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true"
             : "mongodb://localhost:27017/?directConnection=true";
 
-        // When a non-MongoDB backend is configured, inject its storage settings into IConfiguration
-        // so that IOptions<ChronicleOptions> binds the correct Type and ConnectionDetails.
         if (storageHostConfiguration is not null)
         {
             builder.ConfigureAppConfiguration((_, config) =>
@@ -98,46 +92,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             .ConfigureServices((ctx, services) =>
             {
                 services.AddCratisArcMeter();
-                services.AddBindingsByConvention();
-                services.AddSelfBindings();
                 services.AddChronicleTelemetry(ctx.Configuration);
                 services.AddControllers();
-                ctx.Configuration.Bind(chronicleOptions);
 
-                // Convention binding loads both Storage.MongoDB and Storage.Sql assemblies and
-                // registers ALL discovered implementations. Without the cleanup below the wrong
-                // backend's services win when DI resolves IDatabase/IEventStoreNamespaceStorage,
-                // and downstream activations (e.g. SQL EventSequenceMigrator) fail with missing
-                // dependencies that were never wired up in the active mode.
-                if (storageHostConfiguration is not null)
-                {
-                    // SQL mode active — strip MongoDB implementations so the SQL ones (registered
-                    // by WithSql earlier) are the effective registrations.
-                    var mongoStorageDescriptors = services
-                        .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
-                        .ToList();
-                    foreach (var descriptor in mongoStorageDescriptors)
-                    {
-                        services.Remove(descriptor);
-                    }
-                }
-                else
-                {
-                    // MongoDB mode active — strip SQL implementations to prevent the SQL Database
-                    // and related services from being resolved. They depend on IEventSequenceMigrator
-                    // and ITableMigrator<>, which are only registered when WithSql is called.
-                    var sqlStorageDescriptors = services
-                        .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.Sql.") == true)
-                        .ToList();
-                    foreach (var descriptor in sqlStorageDescriptors)
-                    {
-                        services.Remove(descriptor);
-                    }
-                }
-
-                // Keep every host-level Chronicle client registration pointed at the
-                // shared test event store so reconnect does not create a second unnamed
-                // event store with its own failing OnConnected registration.
                 services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
                 services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
 
@@ -151,29 +108,21 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 {
                     services.PostConfigure<ChronicleClientOptions>(options => options.ManagementPort = 8081);
                 }
+
                 if (defaultSinkTypeId is not null)
                 {
-                    // ChronicleClientOptions is what host-level Chronicle client setup binds, but the
-                    // client classes (ReadModels, Reducers, EventStore) inject IOptions<ChronicleOptions>.
-                    // Options<ChronicleClientOptions> and Options<ChronicleOptions> are tracked as
-                    // separate option instances by Microsoft.Extensions.Options, so configure both.
                     services.PostConfigure<ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
                     services.PostConfigure<ChronicleOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);
                 }
 
-                // Register test services directly in DI so the first test works normally,
-                // and also capture them in the MutableServiceRegistry so subsequent tests
-                // can update instances without rebuilding the container.
                 var capturingCollection = new CapturingServiceCollection();
                 configureServices(capturingCollection);
                 var testServiceRegistry = new MutableServiceRegistry();
                 testServiceRegistry.Update(capturingCollection);
                 services.AddSingleton(testServiceRegistry);
 
-                // Register delegate factories that always resolve from MutableServiceRegistry.
-                // AddTransient ensures the factory runs on every resolution, so that when
-                // the registry is updated between tests, subsequent resolutions get the new
-                // per-test instance rather than a stale cached singleton.
+                // Register delegate factories that always resolve from MutableServiceRegistry so
+                // that updates between tests are picked up by subsequent resolutions.
                 foreach (var descriptor in capturingCollection)
                 {
                     services.AddTransient(descriptor.ServiceType, sp =>
@@ -183,21 +132,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                             ?? ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType ?? descriptor.ServiceType);
                     });
                 }
-
-                // Replace the convention-registered ClientArtifactsActivator with one
-                // that wraps any IServiceProvider with a FallbackServiceProvider before
-                // delegating. Microsoft DI's internal IServiceProvider injection bypasses
-                // our FallbackServiceProviderFactory wrapper, so this is the only
-                // reliable way to make MutableServiceRegistry types resolvable
-                // during artifact activation. We use RemoveAll + Add to ensure our
-                // registration wins regardless of ordering with AddBindingsByConvention.
-                services.RemoveAll<IClientArtifactsActivator>();
-                services.AddSingleton<IClientArtifactsActivator>(sp =>
-                {
-                    var registry = sp.GetRequiredService<MutableServiceRegistry>();
-                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                    return new TestClientArtifactsActivator(sp, registry, loggerFactory);
-                });
             });
         builder.AddCratisChronicle();
 
@@ -214,6 +148,19 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleOrleansInProcessWebApplicationFactory<TStartup>).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
 
+                // Convention binding must run BEFORE WithMongoDB/WithSql so the explicit storage
+                // registrations from AddChronicleToSilo win in DI. AddBindingsByConvention scans
+                // both Storage.MongoDB and Storage.Sql assemblies and registers their classes; if
+                // it runs after WithMongoDB, the wrong backend's IStorage/IDatabase/etc. take over
+                // and grain activations fail with "Unable to resolve ITableMigrator<>" or similar
+                // because the inactive backend's services have no infrastructure wired up.
+                silo.ConfigureServices(services =>
+                {
+                    services.AddTypeDiscovery();
+                    services.AddBindingsByConvention();
+                    services.AddSelfBindings();
+                });
+
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     silo,
                     chronicleBuilder =>
@@ -221,9 +168,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.AddActivityPropagation();
 
-                // When a non-MongoDB backend is configured, bind IOptions<ChronicleOptions> so that
-                // kernel types (e.g. Database) can read the storage type and connection string.
-                // The in-memory values were added to IConfiguration by ConfigureAppConfiguration above.
                 if (storageHostConfiguration is not null)
                 {
                     silo.ConfigureServices(services =>
@@ -234,12 +178,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 silo.ConfigureServices(services =>
                 {
-                    // Remove the ChronicleServerStartupTask that AddChronicleToSilo registered.
-                    // In tests, databases are fresh for each test and the fixture handles all
-                    // setup (artifact registration, namespace creation, etc.) itself.
-                    // Keeping the startup task causes a deadlock: PatchManager grain activation
-                    // can hang when the silo is starting for the first time while other test
-                    // infrastructure is being initialized concurrently.
+                    // The ChronicleServerStartupTask deadlocks during test silo startup because
+                    // PatchManager grain activation hangs while other test infrastructure is
+                    // initializing concurrently. Tests handle their own setup via the fixture.
                     var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
                         .GetType("Orleans.Hosting.ChronicleServerStartupTask");
                     if (startupTaskType is not null)
@@ -250,16 +191,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         }
                     }
 
-                    services.AddTypeDiscovery();
-                    services.AddBindingsByConvention();
-                    services.AddSelfBindings();
-
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
 
-                    // Use DelegatingClientArtifactsProvider so the shared silo can serve
-                    // artifacts from whichever test fixture is currently active.
-                    // RemoveAll ensures it wins over convention-based discovery.
+                    // The shared silo serves artifacts from whichever test fixture is currently
+                    // active; RemoveAll ensures this wins over convention-based discovery.
                     services.RemoveAll<IClientArtifactsProvider>();
                     services.AddSingleton<IClientArtifactsProvider>(delegatingProvider);
 
@@ -287,10 +223,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var connection = new ChronicleConnection(connectionLifecycle, grainFactory, loggerFactory);
                         connection.SetServices(chronicleServices);
 
-                        // Wrap the service provider with FallbackServiceProvider so that
-                        // ChronicleClient.InitializeInternal (which creates a new
-                        // ClientArtifactsActivator internally) uses a provider that can
-                        // resolve per-test types from MutableServiceRegistry.
                         var registry = sp.GetRequiredService<MutableServiceRegistry>();
                         var wrappedSp = new FallbackServiceProvider(sp, registry);
                         return new ChronicleClient(connection, options, artifactsProvider, wrappedSp, identityProvider, loggerFactory: loggerFactory);
@@ -310,9 +242,9 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Reducers);
                     services.AddSingleton(sp => sp.GetRequiredService<IEventStore>().Projections);
 
-                    // Override the convention-registered ClientArtifactsActivator with
-                    // TestClientArtifactsActivator so that artifact activation can
-                    // resolve types from the MutableServiceRegistry.
+                    // TestClientArtifactsActivator wraps the service provider with a fallback that
+                    // resolves per-test types from MutableServiceRegistry. RemoveAll ensures this
+                    // wins over any convention-registered IClientArtifactsActivator.
                     services.RemoveAll<IClientArtifactsActivator>();
                     services.AddSingleton<IClientArtifactsActivator>(sp =>
                     {
@@ -320,32 +252,6 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
                         return new TestClientArtifactsActivator(sp, registry, loggerFactory);
                     });
-
-                    // Convention scanning at the silo level discovers both Storage.MongoDB and
-                    // Storage.Sql implementations. Strip the inactive backend's services so that
-                    // grain activations resolve only services backed by the actually configured
-                    // infrastructure (otherwise e.g. SQL Database injects IEventSequenceMigrator
-                    // which has no registration without WithSql, and grain ReadStateAsync fails).
-                    if (storageHostConfiguration is not null)
-                    {
-                        var mongoStorageDescriptors = services
-                            .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.MongoDB.") == true)
-                            .ToList();
-                        foreach (var descriptor in mongoStorageDescriptors)
-                        {
-                            services.Remove(descriptor);
-                        }
-                    }
-                    else
-                    {
-                        var sqlStorageDescriptors = services
-                            .Where(d => d.ImplementationType?.FullName?.StartsWith("Cratis.Chronicle.Storage.Sql.") == true)
-                            .ToList();
-                        foreach (var descriptor in sqlStorageDescriptors)
-                        {
-                            services.Remove(descriptor);
-                        }
-                    }
                 });
             })
             .UseConsoleLifetime();
