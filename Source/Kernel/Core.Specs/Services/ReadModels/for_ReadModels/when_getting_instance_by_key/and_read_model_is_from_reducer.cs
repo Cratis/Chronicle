@@ -47,7 +47,7 @@ public class and_read_model_is_from_reducer : given.all_dependencies
         cursor.Current.Returns([
             new AppendedEvent(EventContext.EmptyWithEventSourceId("read-model-key") with { SequenceNumber = 42 }, new ExpandoObject())
         ]);
-        eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, "read-model-key", eventTypes: Arg.Any<IEnumerable<EventType>>())
+        eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: "read-model-key", eventTypes: Arg.Any<IEnumerable<EventType>>())
             .Returns(cursor);
         _namespaceStorage.GetEventSequence("event-log").Returns(eventSequenceStorage);
 

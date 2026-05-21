@@ -297,18 +297,18 @@ internal sealed class ReadModels(
             var readModelSchema = reducerReadModelDefinition.GetSchemaForLatestGeneration();
             var reducedReadModels = new List<string>();
 
-            foreach (var eventsForPartition in reducerEvents
-                         .OrderBy(@event => @event.Context.SequenceNumber)
+            var orderedReducerEvents = reducerEvents.OrderBy(@event => @event.Context.SequenceNumber).ToList();
+            foreach (var eventsForPartition in orderedReducerEvents
                          .GroupBy(@event => @event.Context.EventSourceId)
                          .Select(group => group.ToList()))
             {
-                var partition = eventsForPartition[0].Context.EventSourceId;
+                var eventSourceId = eventsForPartition[0].Context.EventSourceId;
                 var reduceResult = await ReduceWithConnectedClient(
                     reducerContext.ReducerId,
                     reducerContext.ConnectionId,
                     request.EventStore,
                     request.Namespace,
-                    partition,
+                    eventSourceId,
                     eventsForPartition,
                     initialState: null);
 
@@ -603,7 +603,12 @@ internal sealed class ReadModels(
         }
         else
         {
-            var limit = eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value;
+            if (eventCount.Value > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(eventCount), $"Event count '{eventCount.Value}' exceeds maximum supported value '{int.MaxValue}' for reducer retrieval.");
+            }
+
+            var limit = (int)eventCount.Value;
             using var cursor = await eventSequenceStorage.GetEventsWithLimit(EventSequenceNumber.First, limit, eventSourceId: eventSourceId, eventTypes: eventTypes);
             while (await cursor.MoveNext())
             {
