@@ -34,7 +34,10 @@ public class and_last_handled_sequence_number_is_unavailable : given.all_depende
             [],
             0,
             false,
-            false));
+            false)
+        {
+            NextEventSequenceNumber = MaxSafeInteger + 1
+        });
 
         observer.IsSubscribed().Returns(true);
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>()).Returns(observer);
@@ -49,4 +52,5 @@ public class and_last_handled_sequence_number_is_unavailable : given.all_depende
     });
 
     [Fact] void should_sanitize_last_handled_sequence_number() => _result.LastHandledEventSequenceNumber.ShouldEqual(MaxSafeInteger);
+    [Fact] void should_sanitize_next_sequence_number() => _result.NextEventSequenceNumber.ShouldEqual(MaxSafeInteger);
 }
