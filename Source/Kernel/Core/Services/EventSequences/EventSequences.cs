@@ -19,6 +19,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using ProtoBuf.Grpc;
 using static Cratis.Chronicle.EventSequences.EventSequencesGrainFactoryExtensions;
+using static Cratis.Chronicle.Services.TypeScriptSequenceNumberCompatibility;
 
 namespace Cratis.Chronicle.Services.EventSequences;
 
@@ -87,7 +88,7 @@ internal sealed class EventSequences(
             request.EventStreamId is null ? null : (EventStreamId)request.EventStreamId,
             request.EventStreamType is null ? null : (EventStreamType)request.EventStreamType);
 
-        return new() { SequenceNumber = tail };
+        return new() { SequenceNumber = SanitizeForWire(tail) };
     }
 
     /// <inheritdoc/>
