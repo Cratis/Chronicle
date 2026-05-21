@@ -8,7 +8,6 @@ using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
 using ProtoBuf.Grpc;
-using static Cratis.Chronicle.Services.TypeScriptSequenceNumberCompatibility;
 
 namespace Cratis.Chronicle.Services.Observation;
 
@@ -98,8 +97,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             Type = definition.Type.ToContract(),
             Owner = definition.Owner.ToContract(),
             EventTypes = definition.EventTypes.ToContract(),
-            NextEventSequenceNumber = SanitizeForWire(state.NextEventSequenceNumber),
-            LastHandledEventSequenceNumber = SanitizeForWire(state.LastHandledEventSequenceNumber),
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
