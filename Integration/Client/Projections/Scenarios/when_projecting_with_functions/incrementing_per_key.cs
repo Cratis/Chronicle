@@ -33,6 +33,18 @@ public class incrementing_per_key(context context) : Given<context>(context)
         {
             SecondResult = await GetReadModel(SecondEventSourceId);
             Result = await GetReadModel(EventSourceId);
+
+            if (Result is not null)
+            {
+                return;
+            }
+
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+            while (Result is null && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+                Result = await GetReadModel(EventSourceId);
+            }
         }
     }
 
