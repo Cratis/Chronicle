@@ -126,7 +126,7 @@ public static class WellKnownTableNames
     /// <summary>
     /// The table that holds read model definitions.
     /// </summary>
-    public const string ReadModelDefinitions = "ReadModels";
+    public const string ReadModelDefinitions = "ReadModelDefinitions";
 
     /// <summary>
     /// The table that holds users.
@@ -197,4 +197,19 @@ public static class WellKnownTableNames
     /// The table that holds encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeys = "EncryptionKeys";
+
+    /// <summary>
+    /// The table that holds OAuth tokens.
+    /// </summary>
+    public const string Tokens = "Tokens";
+
+    /// <summary>
+    /// The table that holds OAuth authorizations.
+    /// </summary>
+    public const string Authorizations = "Authorizations";
+
+    /// <summary>
+    /// The table that holds OAuth scopes.
+    /// </summary>
+    public const string Scopes = "Scopes";
 }

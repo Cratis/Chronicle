@@ -12,9 +12,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <summary>
 /// Wipes the SQL backing store between integration test specs without restarting the container.
 /// SQLite is reset by deleting the database files; PostgreSQL and Microsoft SQL Server are reset
-/// by truncating every user table in the database. Pooled connections are cleared in all cases
-/// because the kernel keeps long-lived connections that would otherwise hold open handles or
-/// reference dropped data.
+/// by truncating every user table in the database.
+/// For SQLite, connection pools are cleared before file deletion to release OS file handles.
+/// For PostgreSQL and MsSql, pool clearing is intentionally skipped — table truncation leaves
+/// connections valid, and forcibly closing all kernel connections causes the OAuth endpoint to
+/// return 500 during the reconnection window.
 /// </summary>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
 public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : ICanPerformKernelStateReset
@@ -33,6 +35,9 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
         WellKnownTableNames.Patches,
         WellKnownTableNames.SystemInformation,
         WellKnownTableNames.EncryptionKeys,
+        WellKnownTableNames.Tokens,
+        WellKnownTableNames.Authorizations,
+        WellKnownTableNames.Scopes,
         "__EFMigrationsHistory",
     };
 
@@ -82,12 +87,10 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
         else if (string.Equals(storageType, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
         {
             await TruncateAllPostgreSqlTables(connectionDetails);
-            NpgsqlConnection.ClearAllPools();
         }
         else if (string.Equals(storageType, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
         {
             await TruncateAllMsSqlTables(connectionDetails);
-            SqlConnection.ClearAllPools();
         }
     }
 

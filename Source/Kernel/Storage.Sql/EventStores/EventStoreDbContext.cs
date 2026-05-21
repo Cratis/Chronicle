@@ -91,6 +91,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // Observers table when both contexts share the same PostgreSQL/MSSQL database.
         modelBuilder.Entity<ObserverDefinition>().ToTable(WellKnownTableNames.ObserverDefinitions);
 
+        // ReadModelDefinition is stored in ReadModelDefinitions. The DbSet is named "ReadModels"
+        // which would default to table "ReadModels" and collide with user projection sink tables
+        // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
+        modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
+
         base.OnModelCreating(modelBuilder);
     }
 }

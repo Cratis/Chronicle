@@ -248,6 +248,22 @@ public class Sink(
     {
         var schema = readModel.GetSchemaForLatestGeneration();
         var jsonObject = expandoObjectConverter.ToJsonObject(state, schema);
+
+        // __lastHandledEventSequenceNumber is a system property not present in the user-defined schema.
+        // Preserve it explicitly so it survives the JSON round-trip.
+        var stateDict = (IDictionary<string, object?>)state;
+        if (stateDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
+        {
+            try
+            {
+                jsonObject[WellKnownProperties.LasHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj));
+            }
+            catch
+            {
+                // Ignore conversion errors — the property will be absent from the stored document.
+            }
+        }
+
         return jsonObject.ToJsonString();
     }
 
@@ -266,7 +282,24 @@ public class Sink(
     {
         var schema = readModel.GetSchemaForLatestGeneration();
         var jsonObject = JsonNode.Parse(document) as JsonObject ?? new JsonObject();
-        return expandoObjectConverter.ToExpandoObject(jsonObject, schema);
+        var result = expandoObjectConverter.ToExpandoObject(jsonObject, schema);
+
+        // __lastHandledEventSequenceNumber is not in the user schema so ToExpandoObject drops it.
+        // Restore it from the raw JSON so callers can read it back as a ulong.
+        if (jsonObject.TryGetPropertyValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqNode) && seqNode is not null)
+        {
+            try
+            {
+                var resultDict = (IDictionary<string, object?>)result;
+                resultDict[WellKnownProperties.LasHandledEventSequenceNumber] = seqNode.GetValue<ulong>();
+            }
+            catch
+            {
+                // Ignore — leave the property absent rather than crashing.
+            }
+        }
+
+        return result;
     }
 
     bool TryFindValueInDocument(ExpandoObject document, IPropertyPathSegment[] pathSegments, int segmentIndex, object targetValue)
