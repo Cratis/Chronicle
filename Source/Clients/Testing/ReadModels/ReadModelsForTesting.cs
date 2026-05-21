@@ -59,6 +59,10 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.Watch<TReadModel>();
 
     /// <inheritdoc/>
+    public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>() =>
+        inner.GetWatcherFor<TReadModel>();
+
+    /// <inheritdoc/>
     public Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey) =>
         inner.DehydrateSession(sessionId, readModelType, readModelKey);
 

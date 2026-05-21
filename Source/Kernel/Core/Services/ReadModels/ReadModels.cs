@@ -409,6 +409,10 @@ internal sealed class ReadModels(
                     });
                 });
 
+                // Notify the client that the underlying stream subscription is now active so it
+                // can safely append events without racing the subscription handshake.
+                observer.OnNext(new ReadModelChangeset { Subscribed = true });
+
                 context.CancellationToken.Register(() => _ = subscription.UnsubscribeAsync());
                 await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }

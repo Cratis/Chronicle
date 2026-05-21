@@ -25,11 +25,11 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// </summary>
 /// <remarks>
 /// Marked with <see cref="IgnoreConventionAttribute"/> so convention binding does not register it
-/// automatically. The SQL database depends on services that are only wired up by <c>WithSql</c>
-/// (e.g. <see cref="IEventSequenceMigrator"/>); leaving it discoverable causes any
-/// <c>GetService&lt;IDatabase&gt;</c> call to fail in non-SQL modes with "Unable to resolve
-/// ITableMigrator&lt;&gt;" — even when the caller used <c>?.</c> expecting null for a missing
-/// registration.
+/// automatically. The SQL database has hard constructor dependencies on services that are only
+/// wired up by <c>WithSql</c> (e.g. <see cref="IEventSequenceMigrator"/>), so allowing the
+/// convention scanner to register it causes any <c>GetService&lt;IDatabase&gt;</c> call in non-SQL
+/// modes to fail on construction with "Unable to resolve ITableMigrator&lt;&gt;" — even when the
+/// caller used <c>?.</c> expecting <see langword="null"/> for a missing registration.
 /// </remarks>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/>.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>

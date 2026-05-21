@@ -343,6 +343,17 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
+    public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>()
+    {
+        if (!projections.HasFor<TReadModel>())
+        {
+            throw new UnknownReadModel(typeof(TReadModel));
+        }
+
+        return readModelWatcherManager.GetWatcher<TReadModel>();
+    }
+
+    /// <inheritdoc/>
     public async Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey)
     {
         var readModelIdentifier = readModelType.GetReadModelIdentifier();

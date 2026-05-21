@@ -29,7 +29,8 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-            _observable = EventStore.ReadModels.Watch<ReadModel>().Subscribe(result =>
+            var watcher = EventStore.ReadModels.GetWatcherFor<ReadModel>();
+            _observable = watcher.Observable.Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.TrySetResult();
@@ -37,14 +38,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
 
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
             await Projection.WaitTillSubscribed();
-
-            // Allow the Watch's Orleans stream subscription to be established before appending.
-            // WaitTillSubscribed ensures the projection event stream is ready, but the Watch
-            // observable stream subscription (Watch<ReadModel>) is a separate Orleans stream
-            // consumer that activates asynchronously. The delay gives the Watch grain time to
-            // activate and register its change stream cursor before the event is appended so
-            // the notification is not missed.
-            await Task.Delay(TimeSpanFactory.FromSeconds(30));
+            await watcher.Subscribed.WaitAsync(TimeSpanFactory.DefaultTimeout());
         }
 
         async Task Because()
