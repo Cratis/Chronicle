@@ -4,8 +4,8 @@
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.MongoDB.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.Cluster.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -35,9 +35,22 @@ public static class ServiceCollectionExtensions
             || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 
         if (isSqlStorage)
+        {
             services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Users);
+            services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Applications);
+
+            // OpenIddict token/authorization/scope stores have MongoDB-only implementations that are
+            // removed in SQL mode by the MongoDB cleanup in Program.cs. Register SQL alternatives
+            // first; they survive the MongoDB cleanup (different namespace) and become the effective
+            // registrations once the MongoDB overrides are stripped.
+            services.AddSingleton<ITokenStorage, SqlTokenStorage>();
+            services.AddSingleton<IAuthorizationStorage, SqlAuthorizationStorage>();
+            services.AddSingleton<IScopeStorage, SqlScopeStorage>();
+        }
         else
-            services.AddSingleton<IUserStorage, UserStorage>();
+        {
+            services.AddSingleton<IUserStorage, Storage.MongoDB.Security.UserStorage>();
+        }
         services.AddSingleton<IUserStore<User>, UserStore>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 

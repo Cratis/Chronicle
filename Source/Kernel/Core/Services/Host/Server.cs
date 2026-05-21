@@ -83,7 +83,7 @@ internal sealed class Server(
         // as null entries in the enumeration; skip them.
         foreach (var handler in resetHandlers)
         {
-            if (handler is null || !handler.CanReset())
+            if (handler?.CanReset() != true)
             {
                 continue;
             }

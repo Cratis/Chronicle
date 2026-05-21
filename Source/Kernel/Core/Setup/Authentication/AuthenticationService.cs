@@ -178,13 +178,25 @@ internal sealed class AuthenticationService(
 
         // Hash the secret to match how other application secrets are stored
         var hashedSecret = _passwordHasher.HashPassword(null!, defaultClientSecret);
-        var applicationId = Guid.NewGuid().ToString();
-        var @event = new Security.ApplicationAdded(
-            defaultClientId,
-            hashedSecret);
 
-        var eventSequence = grainFactory.GetEventLog();
-        await eventSequence.Append(applicationId, @event);
+        // Write directly to storage for immediate availability. The event-driven path
+        // (ApplicationsReactor) is asynchronous, which causes token endpoint failures
+        // during integration test resets before the reactor has processed the event.
+        await applicationStorage.Create(new Application
+        {
+            Id = Guid.NewGuid(),
+            ClientId = (ClientId)defaultClientId,
+            ClientSecret = (ClientSecret)hashedSecret,
+            Type = (ApplicationType)"confidential",
+            ConsentType = (ConsentType)"implicit",
+            Permissions =
+            [
+                (Permission)"ept:token",
+                (Permission)"gt:client_credentials",
+                (Permission)"gt:password",
+                (Permission)"gt:refresh_token"
+            ]
+        });
 
         logger.DefaultClientCredentialsCreated(defaultClientId);
     }
