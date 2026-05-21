@@ -38,7 +38,16 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
 
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
             await Projection.WaitTillSubscribed();
+
+            // watcher.Subscribed only guarantees that the Watch handler's own subscription to the
+            // ProjectionChangesets stream is registered. It does not guarantee that the projection's
+            // observer subscriber grain has activated and loaded its definition; until both the
+            // subscriber's pipeline is ready and Orleans pub-sub has propagated the new subscription,
+            // an event appended immediately can be processed before any changeset reaches the watcher.
+            // The short delay covers that window deterministically without depending on the full
+            // multi-grain warmup path.
             await watcher.Subscribed.WaitAsync(TimeSpanFactory.DefaultTimeout());
+            await Task.Delay(TimeSpanFactory.FromSeconds(2));
         }
 
         async Task Because()
