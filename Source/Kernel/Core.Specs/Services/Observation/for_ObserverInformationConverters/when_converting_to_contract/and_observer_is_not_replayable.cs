@@ -35,11 +35,13 @@ public class and_observer_is_not_replayable : Specification
             false,
             false)
         {
-            NextEventSequenceNumber = 42
+            NextEventSequenceNumber = 42,
+            TailEventSequenceNumber = 99
         };
     }
 
     void Because() => _result = _definition.ToContract(_state);
 
     [Fact] void should_set_is_replayable_to_false() => _result.IsReplayable.ShouldBeFalse();
+    [Fact] void should_have_correct_tail_event_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(99ul);
 }

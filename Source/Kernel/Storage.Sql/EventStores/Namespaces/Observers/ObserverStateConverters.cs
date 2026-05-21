@@ -20,6 +20,7 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
+            TailEventSequenceNumber = definition.TailEventSequenceNumber,
             RunningState = definition.RunningState,
             ReplayingPartitions = definition.ReplayingPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
             CatchingUpPartitions = definition.CatchingUpPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
@@ -66,5 +67,8 @@ public static class ObserverStateConverters
             }).ToList(),
             state.FailedPartitionCount,
             state.IsReplaying,
-            state.SubscribesToAllEvents);
+            state.SubscribesToAllEvents)
+        {
+            TailEventSequenceNumber = state.TailEventSequenceNumber
+        };
 }
