@@ -55,10 +55,73 @@ public class MongoDBKernelStateResetHandler(
         var client = clientManager.GetClientFor(settings);
 
         using var cursor = await client.ListDatabaseNamesAsync();
-        var names = await cursor.ToListAsync();
-        foreach (var name in names.Where(n => !_preservedDatabases.Contains(n)))
+        var droppedNames = (await cursor.ToListAsync()).Where(n => !_preservedDatabases.Contains(n)).ToList();
+        foreach (var name in droppedNames)
         {
-            await client.DropDatabaseAsync(name);
+            await DropDatabaseWithRetry(client, name);
+        }
+
+        // DropDatabaseAsync acknowledges the command before MongoDB finishes the physical removal.
+        // During this window any write to the dropped database name returns error 215:
+        // "database is in the process of being dropped". Poll with a canary write against each
+        // dropped name until the window closes so the next test class can safely write to MongoDB.
+        foreach (var name in droppedNames)
+        {
+            await WaitForDatabaseReady(client, name);
+        }
+    }
+
+    /// <summary>
+    /// MongoDB's dropDatabase is acknowledged before the physical removal completes. A subsequent
+    /// drop of the same name (re-created between resets) can hit "database is currently being
+    /// dropped" (error code 10055). Retry until the deadline to ride out that window.
+    /// </summary>
+    /// <param name="client">The <see cref="IMongoClient"/> to use.</param>
+    /// <param name="name">Name of the database to drop.</param>
+    static async Task DropDatabaseWithRetry(IMongoClient client, string name)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (true)
+        {
+            try
+            {
+                await client.DropDatabaseAsync(name);
+                return;
+            }
+            catch (MongoCommandException ex) when (ex.Code == 10055 || ex.Message.Contains("currently being dropped"))
+            {
+                if (DateTime.UtcNow >= deadline)
+                {
+                    throw;
+                }
+
+                await Task.Delay(100);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Waits until MongoDB accepts writes to the given database name without error 215
+    /// ("database is in the process of being dropped"). Probes by inserting a document
+    /// into a sentinel collection and leaves the database in place so the next reset
+    /// picks it up normally — re-dropping here would only restart the drop window.
+    /// </summary>
+    /// <param name="client">The <see cref="IMongoClient"/> to use.</param>
+    /// <param name="name">Name of the database that was just dropped.</param>
+    static async Task WaitForDatabaseReady(IMongoClient client, string name)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                await client.GetDatabase(name).CreateCollectionAsync("_ready_probe");
+                return;
+            }
+            catch (MongoException ex) when (ex.Message.Contains("in the process of being dropped"))
+            {
+                await Task.Delay(100);
+            }
         }
     }
 }
