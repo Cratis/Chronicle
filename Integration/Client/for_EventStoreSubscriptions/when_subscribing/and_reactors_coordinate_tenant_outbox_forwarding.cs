@@ -73,14 +73,21 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 SourceEventStoreName,
                 builder => builder.WithEventType<AdminUserInvited>());
 
-            // Wait for the subscriptions reactor to process the subscription event.
-            var subscriptionsReactor = await targetTenantA.Reactors.WaitForHandlerById(
+            // Wait for the subscriptions reactor to process the subscription event. The
+            // EventStoreSubscriptionAdded event is appended to the default-namespace system event
+            // sequence on the target event store, not to the tenant-a namespace — so check the
+            // tail on the default-namespace system log and wait for that reactor instance to
+            // catch up. The kernel reactor is registered per (event store, namespace), so the
+            // default-namespace handler is the one that processes the subscription event.
+            var defaultSystemLog = targetEventStore.GetEventSequence(EventSequenceId.System);
+            var defaultSystemTail = await defaultSystemLog.GetTailSequenceNumber();
+            var subscriptionsReactor = await targetEventStore.Reactors.WaitForHandlerById(
                 "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
                 TimeSpanFactory.DefaultTimeout());
-
-            var systemLog = targetTenantA.GetEventSequence(EventSequenceId.System);
-            var systemTail = (await systemLog.GetTailSequenceNumber()).Value;
-            await subscriptionsReactor.WaitTillReachesEventSequenceNumber(systemTail);
+            if (defaultSystemTail.IsActualValue)
+            {
+                await subscriptionsReactor.WaitTillReachesEventSequenceNumber(defaultSystemTail);
+            }
 
             await targetReactorA.WaitTillSubscribed();
             await targetReactorB.WaitTillSubscribed();
