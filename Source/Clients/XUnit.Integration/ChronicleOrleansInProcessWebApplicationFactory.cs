@@ -64,7 +64,12 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
         var builder = Host.CreateDefaultBuilder();
         var chronicleOptions = new Configuration.ChronicleOptions();
 
-        var mongoServer = $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
+        // Only resolve the MongoDB port when running in MongoDB mode (storageHostConfiguration is
+        // null). SQL OOP modes pass a storageHostConfiguration dict and override Chronicle storage
+        // via configureStorage — they never use mongoServer for Chronicle grain persistence.
+        var mongoServer = storageHostConfiguration is null
+            ? $"mongodb://localhost:{_fixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true"
+            : "mongodb://localhost:27017/?directConnection=true";
 
         // When a non-MongoDB backend is configured, inject its storage settings into IConfiguration
         // so that IOptions<ChronicleOptions> binds the correct Type and ConnectionDetails.
@@ -120,6 +125,17 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // event store with its own failing OnConnected registration.
                 services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
                 services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+
+                // For SQL OOP modes the in-process silo has its own separate database and
+                // therefore its own empty auth tables. The OOP Chronicle container owns the
+                // canonical chronicle-dev-client registration and exposes its management
+                // endpoint on host port 8081. Point the in-process ChronicleClient at that
+                // port so it authenticates against the OOP container rather than against
+                // the in-process silo's empty auth tables.
+                if (storageHostConfiguration is not null)
+                {
+                    services.PostConfigure<ChronicleClientOptions>(options => options.ManagementPort = 8081);
+                }
                 if (defaultSinkTypeId is not null)
                 {
                     // ChronicleClientOptions is what host-level Chronicle client setup binds, but the

@@ -196,10 +196,14 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var configureServices = ConfigureServices;
         var configureMongoDB = ConfigureMongoDB;
         var configureWebHostBuilder = ConfigureWebHostBuilder;
-        var mongoServer = $"mongodb://localhost:{ChronicleFixture.MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true";
-        var storageConfigurator = GetStorageConfigurator(mongoServer);
+
+        // Determine storage configuration without reading the MongoDB port. No current override
+        // of GetStorageConfigurator or GetStorageHostConfiguration uses the mongoServer parameter
+        // for SQL modes, so passing an empty string is safe. The real port is only needed for the
+        // MongoDB (default) path inside ChronicleOrleansInProcessWebApplicationFactory.
+        var storageConfigurator = GetStorageConfigurator(string.Empty);
         var defaultSinkTypeId = GetDefaultSinkTypeId();
-        var storageHostConfiguration = GetStorageHostConfiguration(mongoServer);
+        var storageHostConfiguration = GetStorageHostConfiguration(string.Empty);
         return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, storageConfigurator, defaultSinkTypeId, storageHostConfiguration, ContentRoot]) as IAsyncDisposable)!;
     }
 

@@ -31,7 +31,7 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit
             Storage = new Configuration.Storage { Type = storageType, ConnectionDetails = connectionString }
         };
 
-        return chronicleBuilder => Cratis.Chronicle.Setup.SqlChronicleBuilderExtensions.WithSql(chronicleBuilder, options);
+        return chronicleBuilder => Setup.SqlChronicleBuilderExtensions.WithSql(chronicleBuilder, options);
     }
 
     /// <inheritdoc/>

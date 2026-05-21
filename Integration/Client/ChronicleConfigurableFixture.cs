@@ -24,6 +24,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     const string PostgreSqlPassword = "Chronicle_P@ss1";
     const string MsSqlPassword = "Chronicle_P@ss1";
 
+    // Extend the global wait-strategy timeout so MSSQL (which runs heavy EF Core migrations on
+    // first startup) doesn't time out before the Chronicle server's health endpoint responds.
+    static ChronicleConfigurableFixture() =>
+        TestcontainersSettings.WaitStrategyTimeout = TimeSpan.FromMinutes(5);
+
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
@@ -108,12 +113,10 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         {
             case ChronicleStorageProvider.PostgreSql:
                 await TruncateInProcessPostgreSqlTables(connectionString);
-                NpgsqlConnection.ClearAllPools();
                 break;
 
             case ChronicleStorageProvider.MsSql:
                 await TruncateInProcessMsSqlTables(connectionString);
-                SqlConnection.ClearAllPools();
                 break;
 
             case ChronicleStorageProvider.Sqlite:
@@ -152,15 +155,20 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return;
         }
 
+        // Use SET session_replication_role = replica to disable FK/trigger enforcement
+        // (equivalent to MSSQL's NOCHECK CONSTRAINT), then DELETE (not TRUNCATE) to avoid
+        // cascade side-effects or sequence resets.
         const string sql =
+            "SET session_replication_role = replica; " +
             "DO $$ DECLARE r RECORD; " +
             "BEGIN " +
             "    FOR r IN (SELECT tablename FROM pg_tables " +
             "              WHERE schemaname = 'public' " +
             "              AND tablename NOT IN ('Users', 'Applications', 'DataProtectionKeys', 'Patches', 'SystemInformation', 'EncryptionKeys', '__EFMigrationsHistory')) LOOP " +
-            "        EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE'; " +
+            "        EXECUTE 'DELETE FROM \"' || r.tablename || '\"'; " +
             "    END LOOP; " +
-            "END $$;";
+            "END $$; " +
+            "SET session_replication_role = DEFAULT;";
         await using var cmd = new NpgsqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -218,7 +226,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(MongoDBPort, 27017)
-            .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleInProcessFixture.HostName)
+            .WithHostname(ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
             .WithWaitStrategy(Wait.ForUnixContainer()
@@ -261,7 +269,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithImage(_imageName)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
-            .WithHostname(Cratis.Chronicle.XUnit.Integration.ChronicleOutOfProcessFixture.HostName)
+            .WithHostname(ChronicleOutOfProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
             .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
@@ -269,12 +277,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("Cratis__Chronicle__Storage__Type", storageType)
             .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails);
 
+        // SQL backends (especially MSSQL) run EF Core migrations against a freshly-started
+        // database container on startup. Give the health endpoint 5 minutes to respond.
         var waitStrategy = Options.StorageProvider == ChronicleStorageProvider.MongoDB
             ? Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(27017)
                 .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"))
             : Wait.ForUnixContainer()
-                .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
+                .UntilHttpRequestIsSucceeded(
+                    req => req.ForPort(8080).ForPath("/health"),
+                    s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
 
         builder = builder.WithWaitStrategy(waitStrategy);
 
@@ -368,10 +380,22 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             ManagementPort = 8081
         };
 
-        using var resetClient = new ChronicleClient(options);
-        var eventStore = await resetClient.GetEventStore("Testing");
-        var services = ((Contracts.IChronicleServicesAccessor)eventStore.Connection).Services;
-        await services.Server.ResetKernelState();
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (true)
+        {
+            try
+            {
+                using var resetClient = new ChronicleClient(options);
+                var eventStore = await resetClient.GetEventStore("Testing");
+                var services = ((Contracts.IChronicleServicesAccessor)eventStore.Connection).Services;
+                await services.Server.ResetKernelState();
+                return;
+            }
+            catch (Exception) when (DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(500);
+            }
+        }
     }
 
     static async Task WaitForOutOfProcessMongoDbPrimary(IContainer container)
