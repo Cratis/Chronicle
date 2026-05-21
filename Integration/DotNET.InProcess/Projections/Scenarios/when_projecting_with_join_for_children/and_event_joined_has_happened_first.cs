@@ -38,8 +38,8 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
         protected override async Task<User> GetReadModelResult()
         {
-            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(ReadModelAvailabilityTimeoutSeconds);
-            while (DateTimeOffset.UtcNow < timeoutAt)
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(ReadModelAvailabilityTimeoutSeconds));
+            while (!timeout.IsCancellationRequested)
             {
                 var result = await base.GetReadModelResult();
                 if (result is not null)
@@ -47,10 +47,17 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
                     return result;
                 }
 
-                await Task.Delay(ReadModelPollingIntervalMilliseconds);
+                try
+                {
+                    await Task.Delay(ReadModelPollingIntervalMilliseconds, timeout.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
 
-            return await base.GetReadModelResult();
+            throw new TimeoutException($"Read model was not available within {ReadModelAvailabilityTimeoutSeconds} seconds.");
         }
     }
 
