@@ -17,6 +17,9 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
     public class context(ChronicleInProcessFixture chronicleInProcessFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleInProcessFixture)
     {
+        const int ReadModelAvailabilityTimeoutSeconds = 5;
+        const int ReadModelPollingIntervalMilliseconds = 50;
+
         public UserId UserId;
         public EventSourceId GroupId;
         public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(GroupCreated), typeof(UserAddedToGroup)];
@@ -35,7 +38,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
         protected override async Task<User> GetReadModelResult()
         {
-            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
+            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(ReadModelAvailabilityTimeoutSeconds);
             while (DateTimeOffset.UtcNow < timeoutAt)
             {
                 var result = await base.GetReadModelResult();
@@ -44,7 +47,7 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
                     return result;
                 }
 
-                await Task.Delay(50);
+                await Task.Delay(ReadModelPollingIntervalMilliseconds);
             }
 
             return await base.GetReadModelResult();
