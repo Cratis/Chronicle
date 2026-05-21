@@ -26,6 +26,8 @@ public class v15_0_0 : Migration
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 Tombstone = table.BoolColumn(migrationBuilder),
                 Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
+                MigrationsJson = table.StringColumn(migrationBuilder, defaultValue: "[]"),
+                Source = table.NumberColumn<int>(migrationBuilder, nullable: true),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.EventTypes}", x => x.Id));
     }
