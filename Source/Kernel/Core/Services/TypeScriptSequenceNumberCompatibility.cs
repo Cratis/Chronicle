@@ -19,5 +19,5 @@ internal static class TypeScriptSequenceNumberCompatibility
     /// <param name="value">Value to sanitize.</param>
     /// <returns>Sanitized value.</returns>
     public static ulong SanitizeForWire(ulong value) =>
-        value == ulong.MaxValue ? MaxSafeInteger : value;
+        value > MaxSafeInteger ? MaxSafeInteger : value;
 }
