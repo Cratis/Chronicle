@@ -32,6 +32,23 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
             EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserCreated(UserName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new UserAddedToGroup(UserId)));
         }
+
+        protected override async Task<User> GetReadModelResult()
+        {
+            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
+            while (DateTimeOffset.UtcNow < timeoutAt)
+            {
+                var result = await base.GetReadModelResult();
+                if (result is not null)
+                {
+                    return result;
+                }
+
+                await Task.Delay(50);
+            }
+
+            return await base.GetReadModelResult();
+        }
     }
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
