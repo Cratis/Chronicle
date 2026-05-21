@@ -41,6 +41,11 @@ public sealed class VaultFixture : IAsyncLifetime
             .WithPortBinding(VaultPort, assignRandomHostPort: true)
             .WithEnvironment("VAULT_DEV_ROOT_TOKEN_ID", RootToken)
             .WithEnvironment("SKIP_SETCAP", "true")
+            .WithCreateParameterModifier(p =>
+            {
+                p.HostConfig ??= new Docker.DotNet.Models.HostConfig();
+                p.HostConfig.CapAdd = ["IPC_LOCK"];
+            })
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilHttpRequestIsSucceeded(req => req.ForPort(VaultPort).ForPath("/v1/sys/health")))
             .Build();
