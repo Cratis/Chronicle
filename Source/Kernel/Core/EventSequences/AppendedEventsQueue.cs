@@ -236,13 +236,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
         {
-            return IsOriginalEventTypeInSubscription(@event, subscription.EventTypeIds);
+            return IsRedactionForSubscribedEventType(@event, subscription.EventTypeIds);
         }
 
         return true;
     }
 
-    static bool IsOriginalEventTypeInSubscription(AppendedEvent @event, IEnumerable<EventTypeId> subscribedEventTypeIds)
+    static bool IsRedactionForSubscribedEventType(AppendedEvent @event, IEnumerable<EventTypeId> subscribedEventTypeIds)
     {
         if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
         {
