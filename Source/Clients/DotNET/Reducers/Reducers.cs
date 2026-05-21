@@ -284,15 +284,15 @@ public class Reducers : IReducers
             .GetEventSequence(handler.EventSequenceId)
             .GetFromSequenceNumber(EventSequenceNumber.First, filterEventTypes: handler.EventTypes);
 
+        var orderedEvents = events.OrderBy(_ => _.Context.SequenceNumber);
         IEnumerable<AppendedEvent> eventsToReduce = eventCount is { Value: not ulong.MaxValue }
-            ? events.OrderBy(_ => _.Context.SequenceNumber).Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
-            : events;
+            ? orderedEvents.Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
+            : orderedEvents;
 
         var result = new List<object>();
         foreach (var eventsForEventSource in eventsToReduce
                      .GroupBy(_ => _.Context.EventSourceId)
-                     .Select(group => group.OrderBy(_ => _.Context.SequenceNumber).ToList())
-                     .Where(group => group.Count != 0))
+                     .Select(group => group.ToList()))
         {
             var reduceResult = await handler.Invoker.Invoke(
                 _serviceProvider,
