@@ -1,0 +1,37 @@
+{
+  "skill_name": "cratis-specs-csharp",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write C# specs for a class called EmployeeService that has a Register(EmployeeName name) method. The method appends an EmployeeRegistered event via IEventLog. Write specs for two scenarios: (1) when the name is valid - it should append the event, (2) when the employee name already exists - it should throw EmployeeAlreadyRegistered. Follow Cratis BDD spec conventions.",
+      "expected_output": "Folder structure: for_EmployeeService/given/all_dependencies.cs + given/an_employee_service.cs + when_registering/and_name_is_valid.cs + when_registering/and_name_already_exists.cs. Uses Specification base class, Establish/Because/should_ pattern, NSubstitute for IEventLog, ShouldXxx assertions, Catch.Exception.",
+      "files": [],
+      "assertions": [
+        "Uses Specification base class (not xUnit test class directly)",
+        "States are separated: Establish (setup), Because (single action), [Fact] should_* (assertions)",
+        "Folder structure follows for_<Type>/when_<behavior>/and_<condition> naming",
+        "Uses NSubstitute: Substitute.For<IEventLog>()",
+        "Uses ShouldXxx assertion methods (not Assert.Equal or similar)",
+        "Exception test uses Catch.Exception pattern",
+        "Reusable context in given/ folder with protected fields",
+        "No [Fact] attribute on Establish or Because methods"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write a Chronicle integration spec for a command RegisterAuthor(AuthorName name) at route /api/authors/register. Write two scenarios: one where registration succeeds (no prior authors), and one where it fails because the author name already exists.",
+      "expected_output": "Two spec files under Authors/Registration/when_registering/ using [Collection(ChronicleCollection.Name)], Given<context>, context inner class inheriting given.an_http_client(fixture), async Task Because() using Client.ExecuteCommand. Assertions use ShouldHaveTailSequenceNumber and ShouldHaveAppendedEvent.",
+      "files": [],
+      "assertions": [
+        "Uses [Collection(ChronicleCollection.Name)] attribute",
+        "context is an inner public class",
+        "Uses Given<context> as base class for outer spec class",
+        "Has 'using context = ...' alias at the top of each file",
+        "Because() is async Task and calls Client.ExecuteCommand",
+        "Uses ShouldHaveTailSequenceNumber for event count verification",
+        "Precondition spec uses async Task Establish() to seed events",
+        "Uses ShouldHaveAppendedEvent for verifying event contents"
+      ]
+    }
+  ]
+}

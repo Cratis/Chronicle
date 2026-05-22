@@ -1,0 +1,1 @@
+../../.ai/rules/components.md
