@@ -41,12 +41,6 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 {
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
-    // Per-database / per-table caches share a process-wide ConcurrentDictionary so that any
-    // grain activation can reach the same prepared DbContextOptions without re-running schema
-    // migrations or re-binding the EF model. Each storage call still constructs a fresh
-    // DbContext from the cached options — DbContext is single-threaded, but DbContextOptions
-    // are thread-safe and meant to be shared. _migratedKeys records the keys that have
-    // already had their migrations executed so subsequent requests skip the lock entirely.
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
@@ -60,8 +54,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var connectionString = options.Value.Storage.ConnectionDetails;
         var key = $"cluster:{connectionString}";
-        var dbContextOptions = _clusterOptions.GetOrAdd(key, _ => BuildOptions<ClusterDbContext>(connectionString));
+        var dbContextOptions = _clusterOptions.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<ClusterDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
+
+        // DbContext ownership transfers to DbContextScope, which disposes it.
+#pragma warning disable CA2000
         var dbContext = new ClusterDbContext(dbContextOptions);
+#pragma warning restore CA2000
         await EnsureMigratedOnce(key, connectionString, dbContext);
         return new DbContextScope<ClusterDbContext>(dbContext, static () => { });
     }
@@ -71,8 +72,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var connectionString = GetConnectionStringForEventStore(eventStore);
         var key = $"event-store:{eventStore.Value}:{connectionString}";
-        var dbContextOptions = _eventStoreOptions.GetOrAdd(key, _ => BuildOptions<EventStoreDbContext>(connectionString));
+        var dbContextOptions = _eventStoreOptions.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<EventStoreDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
+
+#pragma warning disable CA2000
         var dbContext = new EventStoreDbContext(dbContextOptions);
+#pragma warning restore CA2000
         await EnsureMigratedOnce(key, connectionString, dbContext);
         return new DbContextScope<EventStoreDbContext>(dbContext, static () => { });
     }
@@ -82,8 +89,14 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
         var key = $"namespace:{eventStore.Value}:{@namespace.Value}:{connectionString}";
-        var dbContextOptions = _namespaceOptions.GetOrAdd(key, _ => BuildOptions<NamespaceDbContext>(connectionString));
+        var dbContextOptions = _namespaceOptions.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<NamespaceDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
+
+#pragma warning disable CA2000
         var dbContext = new NamespaceDbContext(dbContextOptions);
+#pragma warning restore CA2000
         await EnsureMigratedOnce(key, connectionString, dbContext);
         return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
     }
@@ -114,28 +127,6 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             containerName,
             _readModelOptions,
             (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
-
-    DbContextOptions<TDbContext> BuildOptions<TDbContext>(string connectionString)
-        where TDbContext : DbContext
-    {
-        var builder = new DbContextOptionsBuilder<TDbContext>();
-        builder.UseDatabaseFromConnectionString(connectionString);
-        builder
-            .UseApplicationServiceProvider(serviceProvider)
-            .AddConceptAsSupport();
-        return builder.Options;
-    }
-
-    async Task EnsureMigratedOnce(string key, string connectionString, DbContext context)
-    {
-        if (_migratedKeys.ContainsKey(key))
-        {
-            return;
-        }
-
-        await MigrateWithLock(context, connectionString);
-        _migratedKeys.TryAdd(key, true);
-    }
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
@@ -191,6 +182,28 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         return false;
     }
 
+    static DbContextOptions<TDbContext> BuildOptions<TDbContext>(IServiceProvider serviceProvider, string connectionString)
+        where TDbContext : DbContext
+    {
+        var builder = new DbContextOptionsBuilder<TDbContext>();
+        builder.UseDatabaseFromConnectionString(connectionString);
+        builder
+            .UseApplicationServiceProvider(serviceProvider)
+            .AddConceptAsSupport();
+        return builder.Options;
+    }
+
+    async Task EnsureMigratedOnce(string key, string connectionString, DbContext context)
+    {
+        if (_migratedKeys.ContainsKey(key))
+        {
+            return;
+        }
+
+        await MigrateWithLock(context, connectionString);
+        _migratedKeys.TryAdd(key, true);
+    }
+
     async Task<DbContextScope<TDbContext>> GetOrCreateTableDbContext<TDbContext>(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
@@ -201,8 +214,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
     {
         var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
         var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
-        var dbContextOptions = optionsCache.GetOrAdd(key, _ => BuildOptions<TDbContext>(connectionString));
+        var dbContextOptions = optionsCache.GetOrAdd(
+            key,
+            static (_, args) => BuildOptions<TDbContext>(args.serviceProvider, args.connectionString),
+            (serviceProvider, connectionString));
+
+        // DbContext ownership transfers to DbContextScope, which disposes it.
+#pragma warning disable CA2000
         var dbContext = createDbContext(dbContextOptions, tableName);
+#pragma warning restore CA2000
 
         // Per-table migration is handled by the table-specific migrator (EnsureTableExists)
         // which already caches "already migrated" inside the migrator implementation, so we

@@ -47,7 +47,12 @@ public abstract class ChronicleFixture : IChronicleFixture
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
 
+        // MongoDBContainer is virtual so derived fixtures can swap the container source.
+        // The override is the documented extension point; the base ctor must call it to
+        // trigger the lazy build-and-start cycle that every fixture relies on.
+#pragma warning disable MA0056
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
+#pragma warning restore MA0056
     }
 
     /// <summary>

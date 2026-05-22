@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Jobs;
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
-/// <param name="hostJsonSerializerOptions">The host-provided <see cref="JsonSerializerOptions"/>. SQL storage derives <see cref="jsonSerializerOptions"/> by adding <see cref="JobStateConverter"/> so the polymorphic <c>JobState.Request</c> deserializes regardless of which options the host registered.</param>
+/// <param name="hostJsonSerializerOptions">The host-provided <see cref="JsonSerializerOptions"/>. SQL storage derives its own options by adding <see cref="JobStateConverter"/> so the polymorphic <c>JobState.Request</c> deserializes regardless of which options the host registered.</param>
 public class JobStorage(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
@@ -29,24 +29,7 @@ public class JobStorage(
     IJobTypes jobTypes,
     JsonSerializerOptions hostJsonSerializerOptions) : IJobStorage
 {
-    readonly JsonSerializerOptions jsonSerializerOptions = WithJobStateConverter(hostJsonSerializerOptions, jobTypes);
-
-    static JsonSerializerOptions WithJobStateConverter(JsonSerializerOptions source, IJobTypes jobTypes)
-    {
-        // The host's JsonSerializerOptions may not include JobStateConverter (e.g. when the
-        // test client opts to share its Globals.JsonSerializerOptions with the in-process silo).
-        // JobState.Request is an IJobRequest interface and cannot be deserialized by the
-        // default object converter, so register JobStateConverter explicitly here. Clone the
-        // options to avoid mutating a shared singleton.
-        if (source.Converters.Any(c => c is JobStateConverter))
-        {
-            return source;
-        }
-
-        var derived = new JsonSerializerOptions(source);
-        derived.Converters.Add(new JobStateConverter(jobTypes));
-        return derived;
-    }
+    readonly JsonSerializerOptions _jsonSerializerOptions = WithJobStateConverter(hostJsonSerializerOptions, jobTypes);
 
     /// <inheritdoc/>
     public async Task<Catch<JobState, JobError>> GetJob(JobId jobId)
@@ -55,7 +38,7 @@ public class JobStorage(
         {
             await using var scope = await database.Namespace(eventStore, @namespace);
             var job = await scope.DbContext.Jobs.FirstOrDefaultAsync(j => j.Id == jobId.Value);
-            return job is not null ? job.ToJobState(jsonSerializerOptions) : JobError.NotFound;
+            return job is not null ? job.ToJobState(_jsonSerializerOptions) : JobError.NotFound;
         }
         catch (Exception ex)
         {
@@ -77,7 +60,7 @@ public class JobStorage(
             }
 
             var jobs = await query.ToListAsync();
-            return jobs.Select(j => j.ToJobState(jsonSerializerOptions)).ToImmutableList();
+            return jobs.Select(j => j.ToJobState(_jsonSerializerOptions)).ToImmutableList();
         }
         catch (Exception ex)
         {
@@ -154,7 +137,7 @@ public class JobStorage(
                 return JobError.NotFound;
             }
 
-            var jobState = JsonSerializer.Deserialize<TJobState>(job.StateJson, jsonSerializerOptions);
+            var jobState = JsonSerializer.Deserialize<TJobState>(job.StateJson, _jsonSerializerOptions);
             return jobState is not null ? jobState : JobError.NotFound;
         }
         catch (Exception ex)
@@ -178,7 +161,7 @@ public class JobStorage(
             var job = new Job
             {
                 Id = jobId.Value,
-                StateJson = JsonSerializer.Serialize(state, jsonSerializerOptions)
+                StateJson = JsonSerializer.Serialize(state, _jsonSerializerOptions)
             };
 
             // Try to extract common properties from the job state if it inherits from JobState
@@ -230,7 +213,7 @@ public class JobStorage(
             {
                 if (!string.IsNullOrEmpty(job.StateJson))
                 {
-                    var jobState = JsonSerializer.Deserialize<TJobState>(job.StateJson, jsonSerializerOptions);
+                    var jobState = JsonSerializer.Deserialize<TJobState>(job.StateJson, _jsonSerializerOptions);
                     if (jobState is not null)
                     {
                         jobStates.Add(jobState);
@@ -244,5 +227,22 @@ public class JobStorage(
         {
             return ex;
         }
+    }
+
+    static JsonSerializerOptions WithJobStateConverter(JsonSerializerOptions source, IJobTypes jobTypes)
+    {
+        // The host's JsonSerializerOptions may not include JobStateConverter (e.g. when the
+        // test client opts to share its Globals.JsonSerializerOptions with the in-process silo).
+        // JobState.Request is an IJobRequest interface and cannot be deserialized by the
+        // default object converter, so register JobStateConverter explicitly here. Clone the
+        // options to avoid mutating a shared singleton.
+        if (source.Converters.Any(c => c is JobStateConverter))
+        {
+            return source;
+        }
+
+        var derived = new JsonSerializerOptions(source);
+        derived.Converters.Add(new JobStateConverter(jobTypes));
+        return derived;
     }
 }

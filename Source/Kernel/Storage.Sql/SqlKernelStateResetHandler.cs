@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// return 500 during the reconnection window.
 /// </summary>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
+/// <param name="database">The <see cref="IDatabase"/> whose per-context migration cache must be cleared on reset so the next request re-runs EF Core migrations.</param>
 public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options, IDatabase database) : ICanPerformKernelStateReset
 {
     /// <summary>
