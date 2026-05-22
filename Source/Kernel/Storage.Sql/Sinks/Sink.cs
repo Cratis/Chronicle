@@ -207,8 +207,8 @@ public class Sink(
         {
             switch (change)
             {
-                case PropertiesChanged<ExpandoObject>:
-                    state = state.MergeWith((change.State as ExpandoObject)!);
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    state = ApplyPropertiesChanged(state, propertiesChanged, key.ArrayIndexers);
                     break;
 
                 case ChildAdded childAdded:
@@ -229,6 +229,22 @@ public class Sink(
                     state = ApplyActualChanges(key, resolvedJoin.Changes, state);
                     break;
             }
+        }
+
+        return state;
+    }
+
+    static ExpandoObject ApplyPropertiesChanged(ExpandoObject state, PropertiesChanged<ExpandoObject> propertiesChanged, ArrayIndexers keyArrayIndexers)
+    {
+        // The Changeset emits PropertiesChanged with State populated (projections) or with
+        // State left null and Differences populated (reducers). Treat Differences as the
+        // canonical source so the sink does not depend on which producer built the change —
+        // applying each diff at its PropertyPath produces an equivalent merged document
+        // and matches the contract that MongoDB sinks already follow.
+        foreach (var difference in propertiesChanged.Differences)
+        {
+            var arrayIndexers = difference.ArrayIndexers ?? keyArrayIndexers;
+            difference.PropertyPath.SetValue(state, difference.Changed!, arrayIndexers);
         }
 
         return state;
