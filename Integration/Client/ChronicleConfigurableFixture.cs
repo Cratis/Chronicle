@@ -122,7 +122,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             // out-of-process mode this is a no-op because the first reset already wiped
             // everything. Calling ResetOutOfProcessKernelState twice per test boundary would
             // double the overhead and interrupt the re-bootstrapped state written between calls.
-            if (excludePrefixes is null || !excludePrefixes.Any())
+            if (excludePrefixes?.Any() != true)
             {
                 await ResetOutOfProcessKernelState();
             }
@@ -331,11 +331,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
         // discovery from any container other than the one that owns the mongod process.
-        var replicaSetCommand =
-            $"mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & " +
-            "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; " +
-            $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || true; " +
-            "tail -f /dev/null";
+        const string mongodStart = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & ";
+        const string waitForPing = "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; ";
+        var initiateReplicaSet = $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || true; ";
+        const string tailLoop = "tail -f /dev/null";
+        var replicaSetCommand = mongodStart + waitForPing + initiateReplicaSet + tailLoop;
 
         // Random host port avoids 'port already allocated' races when one test session
         // hands over to the next before Docker has released the previous binding, and
@@ -406,10 +406,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilCommandIsCompleted(
                     "/opt/mssql-tools18/bin/sqlcmd",
-                    "-S", "localhost",
-                    "-U", "sa",
-                    "-P", MsSqlPassword,
-                    "-Q", "SELECT 1",
+                    "-S",
+                    "localhost",
+                    "-U",
+                    "sa",
+                    "-P",
+                    MsSqlPassword,
+                    "-Q",
+                    "SELECT 1",
                     "-C"));
 
         if (ShouldForceAmd64ForMsSql)

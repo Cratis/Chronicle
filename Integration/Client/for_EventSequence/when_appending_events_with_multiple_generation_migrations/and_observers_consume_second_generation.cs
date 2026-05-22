@@ -17,7 +17,7 @@ public class and_observers_consume_second_generation(context context) : Given<co
         public UserRegisteredV1 Event { get; private set; }
         public UserRegisteredReactor Reactor { get; private set; }
         public UserRegisteredReducer Reducer { get; private set; }
-        public UserReadModel ProjectionResult { get; private set; }
+        public UserReadModel? ProjectionResult { get; }
 
         public override IEnumerable<Type> EventTypes =>
         [

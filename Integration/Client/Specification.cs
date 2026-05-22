@@ -3,7 +3,6 @@
 
 #pragma warning disable SA1402
 
-using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 
 namespace Cratis.Chronicle.Integration;

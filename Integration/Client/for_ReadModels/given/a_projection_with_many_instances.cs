@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.XUnit.Integration;
 
 namespace Cratis.Chronicle.Integration.for_ReadModels.given;
 
