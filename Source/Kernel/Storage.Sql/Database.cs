@@ -41,81 +41,51 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
 {
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
-    readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
-    readonly AsyncLocal<Dictionary<string, EventStoreDbContext>> _eventStoreDbContexts = new();
-    readonly AsyncLocal<Dictionary<string, Dictionary<string, NamespaceDbContext>>> _namespaceDbContexts = new();
-    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, UniqueConstraintDbContext>>>> _uniqueConstraintDbContexts = new();
-    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, EventSequenceDbContext>>>> _eventSequenceDbContexts = new();
-    readonly AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, ReadModelDbContext>>>> _readModelDbContexts = new();
+    // Per-database / per-table caches share a process-wide ConcurrentDictionary so that any
+    // grain activation can reach the same prepared DbContextOptions without re-running schema
+    // migrations or re-binding the EF model. Each storage call still constructs a fresh
+    // DbContext from the cached options — DbContext is single-threaded, but DbContextOptions
+    // are thread-safe and meant to be shared. _migratedKeys records the keys that have
+    // already had their migrations executed so subsequent requests skip the lock entirely.
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ClusterDbContext>> _clusterOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventStoreDbContext>> _eventStoreOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<NamespaceDbContext>> _namespaceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<UniqueConstraintDbContext>> _uniqueConstraintOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<EventSequenceDbContext>> _eventSequenceOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<ReadModelDbContext>> _readModelOptions = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _migratedKeys = new();
 
     /// <inheritdoc/>
     public async Task<DbContextScope<ClusterDbContext>> Cluster()
     {
-        if (_clusterDbContext.Value == null)
-        {
-            var builder = new DbContextOptionsBuilder<ClusterDbContext>();
-            var connectionString = options.Value.Storage.ConnectionDetails;
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .AddConceptAsSupport();
-            var dbContext = new ClusterDbContext(builder.Options);
-            await MigrateWithLock(dbContext, connectionString);
-            _clusterDbContext.Value = dbContext;
-        }
-
-        return new DbContextScope<ClusterDbContext>(_clusterDbContext.Value, () => _clusterDbContext.Value = null!);
+        var connectionString = options.Value.Storage.ConnectionDetails;
+        var key = $"cluster:{connectionString}";
+        var dbContextOptions = _clusterOptions.GetOrAdd(key, _ => BuildOptions<ClusterDbContext>(connectionString));
+        var dbContext = new ClusterDbContext(dbContextOptions);
+        await EnsureMigratedOnce(key, connectionString, dbContext);
+        return new DbContextScope<ClusterDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<EventStoreDbContext>> EventStore(EventStoreName eventStore)
     {
-        _eventStoreDbContexts.Value ??= new Dictionary<string, EventStoreDbContext>();
-
-        if (!_eventStoreDbContexts.Value.TryGetValue(eventStore.Value, out var dbContext))
-        {
-            var builder = new DbContextOptionsBuilder<EventStoreDbContext>();
-            var connectionString = GetConnectionStringForEventStore(eventStore);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .AddConceptAsSupport();
-
-            dbContext = new EventStoreDbContext(builder.Options);
-            await MigrateWithLock(dbContext, connectionString);
-            _eventStoreDbContexts.Value[eventStore.Value] = dbContext;
-        }
-
-        return new DbContextScope<EventStoreDbContext>(dbContext, () => _eventStoreDbContexts.Value?.Remove(eventStore.Value));
+        var connectionString = GetConnectionStringForEventStore(eventStore);
+        var key = $"event-store:{eventStore.Value}:{connectionString}";
+        var dbContextOptions = _eventStoreOptions.GetOrAdd(key, _ => BuildOptions<EventStoreDbContext>(connectionString));
+        var dbContext = new EventStoreDbContext(dbContextOptions);
+        await EnsureMigratedOnce(key, connectionString, dbContext);
+        return new DbContextScope<EventStoreDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
     public async Task<DbContextScope<NamespaceDbContext>> Namespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        var key = $"{eventStore.Value}:{@namespace.Value}";
-
-        _namespaceDbContexts.Value ??= new Dictionary<string, Dictionary<string, NamespaceDbContext>>();
-        if (!_namespaceDbContexts.Value.TryGetValue(eventStore.Value, out var namespaces))
-        {
-            namespaces = new Dictionary<string, NamespaceDbContext>();
-            _namespaceDbContexts.Value[eventStore.Value] = namespaces;
-        }
-
-        if (!namespaces.TryGetValue(key, out var dbContext))
-        {
-            var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-            var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .AddConceptAsSupport();
-
-            dbContext = new NamespaceDbContext(builder.Options);
-            await MigrateWithLock(dbContext, connectionString);
-            namespaces[@namespace.Value] = dbContext;
-        }
-
-        return new DbContextScope<NamespaceDbContext>(dbContext, () => namespaces.Remove(key));
+        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var key = $"namespace:{eventStore.Value}:{@namespace.Value}:{connectionString}";
+        var dbContextOptions = _namespaceOptions.GetOrAdd(key, _ => BuildOptions<NamespaceDbContext>(connectionString));
+        var dbContext = new NamespaceDbContext(dbContextOptions);
+        await EnsureMigratedOnce(key, connectionString, dbContext);
+        return new DbContextScope<NamespaceDbContext>(dbContext, static () => { });
     }
 
     /// <inheritdoc/>
@@ -124,7 +94,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             eventStore,
             @namespace,
             constraintName,
-            _uniqueConstraintDbContexts,
+            _uniqueConstraintOptions,
             (options, name) => new UniqueConstraintDbContext(options, name, uniqueConstraintMigrator));
 
     /// <inheritdoc/>
@@ -133,7 +103,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             eventStore,
             @namespace,
             eventSequenceName,
-            _eventSequenceDbContexts,
+            _eventSequenceOptions,
             (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
 
     /// <inheritdoc/>
@@ -142,8 +112,30 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             eventStore,
             @namespace,
             containerName,
-            _readModelDbContexts,
+            _readModelOptions,
             (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+
+    DbContextOptions<TDbContext> BuildOptions<TDbContext>(string connectionString)
+        where TDbContext : DbContext
+    {
+        var builder = new DbContextOptionsBuilder<TDbContext>();
+        builder.UseDatabaseFromConnectionString(connectionString);
+        builder
+            .UseApplicationServiceProvider(serviceProvider)
+            .AddConceptAsSupport();
+        return builder.Options;
+    }
+
+    async Task EnsureMigratedOnce(string key, string connectionString, DbContext context)
+    {
+        if (_migratedKeys.ContainsKey(key))
+        {
+            return;
+        }
+
+        await MigrateWithLock(context, connectionString);
+        _migratedKeys.TryAdd(key, true);
+    }
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
@@ -151,6 +143,11 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         eventSequenceMigrator.ClearMigrationCache(connectionStringPrefix);
         uniqueConstraintMigrator.ClearMigrationCache(connectionStringPrefix);
         readModelMigrator.ClearMigrationCache(connectionStringPrefix);
+
+        // Also clear the per-context migration cache so the next request re-runs EF Core
+        // migrations. SQLite tests delete the database file between test classes; without
+        // this the in-process silo would skip migration and then query non-existent tables.
+        _migratedKeys.Clear();
     }
 
     /// <summary>
@@ -198,40 +195,21 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         string tableName,
-        AsyncLocal<Dictionary<string, Dictionary<string, Dictionary<string, TDbContext>>>> storage,
+        System.Collections.Concurrent.ConcurrentDictionary<string, DbContextOptions<TDbContext>> optionsCache,
         Func<DbContextOptions<TDbContext>, string, TDbContext> createDbContext)
         where TDbContext : DbContext, ITableDbContext
     {
-        var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}";
+        var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
+        var key = $"{eventStore.Value}:{@namespace.Value}:{tableName}:{connectionString}";
+        var dbContextOptions = optionsCache.GetOrAdd(key, _ => BuildOptions<TDbContext>(connectionString));
+        var dbContext = createDbContext(dbContextOptions, tableName);
 
-        storage.Value ??= new Dictionary<string, Dictionary<string, Dictionary<string, TDbContext>>>();
-        if (!storage.Value.TryGetValue(eventStore.Value, out var namespaces))
-        {
-            namespaces = new Dictionary<string, Dictionary<string, TDbContext>>();
-            storage.Value[eventStore.Value] = namespaces;
-        }
-
-        if (!namespaces.TryGetValue(@namespace.Value, out var tables))
-        {
-            tables = new Dictionary<string, TDbContext>();
-            namespaces[@namespace.Value] = tables;
-        }
-
-        if (!tables.TryGetValue(tableName, out var dbContext))
-        {
-            var builder = new DbContextOptionsBuilder<TDbContext>();
-            var connectionString = GetConnectionStringForEventStoreAndNamespace(eventStore, @namespace);
-            builder.UseDatabaseFromConnectionString(connectionString);
-            builder
-                .UseApplicationServiceProvider(serviceProvider)
-                .AddConceptAsSupport();
-
-            dbContext = createDbContext(builder.Options, tableName);
-            await dbContext.EnsureTableExists();
-            tables[tableName] = dbContext;
-        }
-
-        return new DbContextScope<TDbContext>(dbContext, () => tables.Remove(tableName));
+        // Per-table migration is handled by the table-specific migrator (EnsureTableExists)
+        // which already caches "already migrated" inside the migrator implementation, so we
+        // only need to call it once per request — the migrator itself will fast-path on
+        // subsequent calls without a DB roundtrip.
+        await dbContext.EnsureTableExists();
+        return new DbContextScope<TDbContext>(dbContext, static () => { });
     }
 
     string GetConnectionStringForEventStore(EventStoreName eventStore)

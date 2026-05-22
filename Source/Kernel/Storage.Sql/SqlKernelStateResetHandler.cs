@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// return 500 during the reconnection window.
 /// </summary>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> describing the active storage backend.</param>
-public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : ICanPerformKernelStateReset
+public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options, IDatabase database) : ICanPerformKernelStateReset
 {
     /// <summary>
     /// Tables that survive a reset. These carry identity and Data Protection key material;
@@ -55,6 +55,11 @@ public class SqlKernelStateResetHandler(IOptions<ChronicleOptions> options) : IC
     {
         var storageType = options.Value.Storage.Type;
         var connectionDetails = options.Value.Storage.ConnectionDetails;
+
+        // Drop the per-context migration cache so EF Core re-runs migrations on the next
+        // request. Required for SQLite (we delete the file outright), and harmless on
+        // PostgreSQL / MS SQL where MigrateAsync becomes a no-op when nothing is pending.
+        database.ClearTableMigrationCache(string.Empty);
 
         if (string.Equals(storageType, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase))
         {
