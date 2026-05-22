@@ -20,7 +20,7 @@ public class ProjectionSideEffectAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Projections are pure state builders that derive read models from events. They must not inject ICommandPipeline or IEventLog.");
+        description: "Projections are replayed by Chronicle to rebuild read models from scratch. Injecting ICommandPipeline or IEventLog would cause commands to be re-issued or events to be re-appended on every replay, corrupting state and causing runaway side effects. Remove the offending constructor parameter. If you need to react to an event, implement a separate IReactor instead.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

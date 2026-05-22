@@ -22,7 +22,7 @@ public class ProjectionImperativeCodeAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "The Define() method of a projection only declares the projection shape. Imperative statements such as if/else, loops, or assignments will not be executed at runtime.");
+        description: "Chronicle analyses the projection's Define() method at startup to build a static mapping definition; the method body is never executed at runtime. Imperative statements—conditionals, loops, or assignments—will be silently ignored and will not affect the read model. Remove all imperative code from Define() and express the mapping using only the fluent builder methods provided by the IProjectionBuilderFor<T> parameter (e.g., .From<TEvent>(), .Set(), .Join<TEvent>()).");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

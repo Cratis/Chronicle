@@ -22,7 +22,7 @@ public class ConstraintImperativeCodeAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "The Define() method of a constraint only declares the constraint rules. Imperative statements such as if/else, loops, or assignments will not be executed at runtime.");
+        description: "Chronicle analyses the constraint's Define() method at startup to register constraint rules; the method body is never executed at runtime. Imperative statements—conditionals, loops, or assignments—will be silently ignored and will not affect constraint evaluation. Remove all imperative code from Define() and express the constraint using only the fluent builder methods provided by the IConstraintBuilder parameter.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

@@ -20,7 +20,7 @@ public class ReactorInjectionAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Reactors observe events and should react by issuing commands, not by appending events directly via IEventLog.");
+        description: "Reactors observe events and respond by issuing commands through ICommandPipeline. Injecting IEventLog couples the reactor to the event store infrastructure and creates circular event chains where a reaction appends more events, potentially triggering more reactions. Remove the IEventLog constructor parameter and inject ICommandPipeline instead, then call ICommandPipeline.Handle<TCommand>() to trigger business logic in response to the observed event.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

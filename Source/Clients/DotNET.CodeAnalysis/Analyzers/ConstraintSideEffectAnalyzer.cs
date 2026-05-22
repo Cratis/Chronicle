@@ -20,7 +20,7 @@ public class ConstraintSideEffectAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Constraints are pure rule builders. They must not inject ICommandPipeline or IEventLog.");
+        description: "Constraints are evaluated by Chronicle before each command is allowed to proceed. Injecting ICommandPipeline or IEventLog would cause commands to be issued or events to be appended as a side effect of constraint evaluation, creating unpredictable behavior and potential infinite loops. Remove the offending constructor parameter. If you need to react to events, implement a separate IReactor instead.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
