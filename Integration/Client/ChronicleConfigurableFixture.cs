@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.InteropServices;
 using Cratis.Chronicle.Connections;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
@@ -25,10 +26,24 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     const string PostgreSqlPassword = "Chronicle_P@ss1";
     const string MsSqlPassword = "Chronicle_P@ss1";
 
-    // Extend the global wait-strategy timeout so MSSQL (which runs heavy EF Core migrations on
-    // first startup) doesn't time out before the Chronicle server's health endpoint responds.
+    /// <summary>
+    /// Extends the global wait-strategy timeout so MSSQL (which runs heavy EF Core migrations
+    /// on first startup) doesn't time out before the Chronicle server's health endpoint
+    /// responds.
+    /// </summary>
     static ChronicleConfigurableFixture() =>
         TestcontainersSettings.WaitStrategyTimeout = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Gets a value indicating whether the SQL Server container must be forced to run as
+    /// linux/amd64 instead of the host architecture. SQL Server ships no native linux/arm64
+    /// image — only linux/amd64 — so on Apple Silicon and Linux ARM64 hosts the container
+    /// must run via emulation (Rosetta on macOS, qemu on Linux). The kernel-side
+    /// <c>Microsoft.Data.SqlClient</c> ARM64 issue is separate and tracked in Cratis/Arc#2235.
+    /// </summary>
+    bool ShouldForceAmd64ForMsSql =>
+        Options.StorageProvider == ChronicleStorageProvider.MsSql
+        && RuntimeInformation.OSArchitecture == Architecture.Arm64;
 
     readonly string _imageName = Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:latest-development";
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
@@ -375,18 +390,19 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             return envConnectionString;
         }
 
-        _databaseContainer = new ContainerBuilder("mcr.microsoft.com/mssql/server:2022-latest")
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+        var builder = new ContainerBuilder("mcr.microsoft.com/mssql/server:2025-latest")
+            .WithImage("mcr.microsoft.com/mssql/server:2025-latest")
             .WithHostname(MsSqlHostName)
             .WithPortBinding(1433, assignRandomHostPort: true)
             .WithNetwork(network)
             .WithEnvironment("ACCEPT_EULA", "Y")
             .WithEnvironment("MSSQL_SA_PASSWORD", MsSqlPassword)
             .WithEnvironment("MSSQL_PID", "Developer")
-            // Wait for MSSQL to accept actual queries, not just TCP connections.
-            // MSSQL 2022 takes 20-60 seconds to fully initialize after the port opens;
-            // only checking the TCP port causes the Chronicle server to fail its EF Core
-            // migrations and crash before the health endpoint ever responds.
+
+            // Wait for MSSQL to accept actual queries, not just TCP connections. SQL Server
+            // takes 20-60 seconds to fully initialize after the port opens; only checking the
+            // TCP port causes the Chronicle server to fail its EF Core migrations and crash
+            // before the health endpoint ever responds.
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilCommandIsCompleted(
                     "/opt/mssql-tools18/bin/sqlcmd",
@@ -394,8 +410,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                     "-U", "sa",
                     "-P", MsSqlPassword,
                     "-Q", "SELECT 1",
-                    "-C"))
-            .Build();
+                    "-C"));
+
+        if (ShouldForceAmd64ForMsSql)
+        {
+            builder = builder.WithCreateParameterModifier(parameters => parameters.Platform = "linux/amd64");
+        }
+
+        _databaseContainer = builder.Build();
 
         _databaseContainer.StartAsync().GetAwaiter().GetResult();
 
