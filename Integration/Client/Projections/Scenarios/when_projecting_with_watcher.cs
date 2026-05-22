@@ -22,6 +22,7 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
 
         TaskCompletionSource _tcs;
 #pragma warning disable CA2213 // Disposable fields should be disposed
+        IReadModelWatcher<ReadModel> _watcher;
         IDisposable _observable;
 #pragma warning restore CA2213 // Disposable fields should be disposed
 
@@ -29,7 +30,8 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
         {
             _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
             EventAppended = EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues();
-            _observable = EventStore.ReadModels.Watch<ReadModel>().Subscribe(result =>
+            _watcher = EventStore.ReadModels.GetWatcherFor<ReadModel>();
+            _observable = _watcher.Observable.Subscribe(result =>
             {
                 WatchResult = result;
                 _tcs.TrySetResult();
@@ -38,13 +40,11 @@ public class when_projecting_with_watcher(context context) : Given<context>(cont
             Projection = EventStore.Projections.GetHandlerFor<AutoMappedPropertiesProjection>();
             await Projection.WaitTillSubscribed();
 
-            // Allow the Watch's Orleans stream subscription to be established before appending.
-            // WaitTillSubscribed ensures the projection event stream is ready, but the Watch
-            // observable stream subscription (Watch<ReadModel>) is a separate Orleans stream
-            // consumer that activates asynchronously. The delay gives the Watch grain time to
-            // activate and register its change stream cursor before the event is appended so
-            // the notification is not missed.
-            await Task.Delay(TimeSpanFactory.FromSeconds(30));
+            // The kernel side of Watch signals Subscribed after registering the observer with
+            // the IProjectionChangesetNotifier grain — dispatch is direct from that point on,
+            // so any event appended after this is guaranteed to produce a changeset that
+            // reaches this watcher.
+            await _watcher.Subscribed.WaitAsync(TimeSpanFactory.DefaultTimeout());
         }
 
         async Task Because()
