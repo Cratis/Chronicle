@@ -71,7 +71,7 @@ public class ConstraintImperativeCodeAnalyzer : DiagnosticAnalyzer
     {
         foreach (var statement in statements)
         {
-            if (IsImperativeStatement(statement))
+            if (WellKnownTypes.IsImperativeStatement(statement))
             {
                 var diagnostic = Diagnostic.Create(
                     Rule,
@@ -82,16 +82,4 @@ public class ConstraintImperativeCodeAnalyzer : DiagnosticAnalyzer
             }
         }
     }
-
-    static bool IsImperativeStatement(StatementSyntax statement) =>
-        statement is IfStatementSyntax or
-        ForStatementSyntax or
-        ForEachStatementSyntax or
-        WhileStatementSyntax or
-        DoStatementSyntax or
-        SwitchStatementSyntax or
-        ReturnStatementSyntax or
-        ThrowStatementSyntax or
-        LocalDeclarationStatementSyntax or
-        ExpressionStatementSyntax { Expression: AssignmentExpressionSyntax };
 }

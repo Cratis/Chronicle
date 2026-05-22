@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cratis.Chronicle.CodeAnalysis;
 
@@ -206,7 +207,13 @@ public static class WellKnownTypes
     public static bool ImplementsIConstraint(ITypeSymbol typeSymbol, Compilation compilation)
     {
         var constraintInterface = compilation.GetTypeByMetadataName(IConstraintName);
-        return constraintInterface != null && typeSymbol.AllInterfaces.Contains(constraintInterface, SymbolEqualityComparer.Default);
+        if (constraintInterface is null)
+        {
+            return false;
+        }
+
+        return typeSymbol.AllInterfaces.Any(i =>
+            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, constraintInterface));
     }
 
     /// <summary>
@@ -227,4 +234,21 @@ public static class WellKnownTypes
     /// <returns>True if the type is IEventLog, false otherwise.</returns>
     public static bool IsIEventLog(ITypeSymbol parameterType) =>
         parameterType.ToDisplayString() == IEventLogName;
+
+    /// <summary>
+    /// Determines whether a statement is considered imperative (not a pure builder call).
+    /// </summary>
+    /// <param name="statement">The statement to check.</param>
+    /// <returns>True if the statement is imperative, false otherwise.</returns>
+    public static bool IsImperativeStatement(StatementSyntax statement) =>
+        statement is IfStatementSyntax or
+        ForStatementSyntax or
+        ForEachStatementSyntax or
+        WhileStatementSyntax or
+        DoStatementSyntax or
+        SwitchStatementSyntax or
+        ReturnStatementSyntax or
+        ThrowStatementSyntax or
+        LocalDeclarationStatementSyntax or
+        ExpressionStatementSyntax { Expression: AssignmentExpressionSyntax };
 }
