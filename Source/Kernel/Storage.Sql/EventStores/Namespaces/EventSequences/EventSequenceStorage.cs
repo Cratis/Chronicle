@@ -280,8 +280,13 @@ public class EventSequenceStorage(
         var seqNumRedact = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumRedact);
 
-        var originalEventTypeId = eventEntry.Type.Value;
-        var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
+        // Capture the original event type BEFORE we overwrite it. The kernel uses the
+        // returned AppendedEvent's event type to find which observers must replay the
+        // affected partition (RewindPartitionForAffectedObservers), so it must be the
+        // pre-redaction type — observers subscribe to the original type, not the synthetic
+        // Redaction marker that replaces it in storage. This matches the MongoDB behavior.
+        var originalEventType = EventEntryConverter.GetEventType(eventEntry);
+        var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventType.Id.Value, reason, correlationId, causation, causedByChain, occurred);
 
         eventEntry.Type = GlobalEventTypes.Redaction;
         eventEntry.Occurred = occurred;
@@ -293,14 +298,15 @@ public class EventSequenceStorage(
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
 
-        // Return the redacted event
-        var eventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, EventTypeGeneration.First);
+        // Return the AppendedEvent with the ORIGINAL event type so the kernel can route
+        // the replay to the right observers. Content is the now-stored redaction marker,
+        // but metadata carries the original type for routing.
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
         var eventMetadata = new EventContext(
-            eventType,
+            originalEventType,
             eventEntry.EventSourceType,
             eventEntry.EventSourceId,
             eventEntry.EventStreamType,
@@ -313,7 +319,7 @@ public class EventSequenceStorage(
             eventCausation,
             await identityStorage.GetFor(eventCausedBy),
             [],
-            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
+            EventEntryConverter.GetHashForGeneration(eventEntry, originalEventType.Generation),
             Subject: EventEntryConverter.ResolveSubject(eventEntry));
 
         return new AppendedEvent(eventMetadata, content);
@@ -701,11 +707,17 @@ public class EventSequenceStorage(
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
         var startValue = start.Value;
-        var endValue = end.Value;
-        var query = scope.DbContext.Events
-            .Where(e =>
-                e.SequenceNumber >= startValue
-                && e.SequenceNumber <= endValue);
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
+
+        // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
+        // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
+        // and the original Where clause matched zero rows. Skip the upper-bound predicate
+        // entirely when the caller signals "unbounded" by passing Max.
+        if (end != EventSequenceNumber.Max)
+        {
+            var endValue = end.Value;
+            query = query.Where(e => e.SequenceNumber <= endValue);
+        }
 
         if (eventSourceId?.IsSpecified == true)
         {
