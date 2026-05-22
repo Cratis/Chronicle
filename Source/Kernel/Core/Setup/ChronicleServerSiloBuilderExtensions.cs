@@ -67,8 +67,6 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
-            .AddStreaming()
-            .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
             .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
