@@ -1,1 +1,0 @@
-../../.ai/rules/web-fetching.md
