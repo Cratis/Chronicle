@@ -248,6 +248,71 @@ public class Reducers : IReducers
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
+    {
+        var handler = GetHandlerForReadModelType(readModelType);
+        var events = await _eventStore
+            .GetEventSequence(handler.EventSequenceId)
+            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes);
+
+        if (events.Count == 0)
+        {
+            return null;
+        }
+
+        var reduceResult = await handler.Invoker.Invoke(
+            _serviceProvider,
+            events
+                .OrderBy(@event => @event.Context.SequenceNumber)
+                .Select(@event => new EventAndContext(@event.Content, @event.Context)),
+            null);
+
+        if (!reduceResult.IsSuccess)
+        {
+            throw new InvalidOperationException($"Failed to reduce read model '{readModelType.Name}'. {string.Join(Environment.NewLine, reduceResult.ErrorMessages)}");
+        }
+
+        return reduceResult.ReadModelState;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<object>> GetInstances(Type readModelType, EventCount? eventCount = null)
+    {
+        var handler = GetHandlerForReadModelType(readModelType);
+        var events = await _eventStore
+            .GetEventSequence(handler.EventSequenceId)
+            .GetFromSequenceNumber(EventSequenceNumber.First, filterEventTypes: handler.EventTypes);
+
+        var orderedEvents = events.OrderBy(_ => _.Context.SequenceNumber);
+        IEnumerable<AppendedEvent> eventsToReduce = eventCount is { Value: not ulong.MaxValue }
+            ? orderedEvents.Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
+            : orderedEvents;
+
+        var result = new List<object>();
+        foreach (var eventsForEventSource in eventsToReduce
+                     .GroupBy(_ => _.Context.EventSourceId)
+                     .Select(group => group.ToList()))
+        {
+            var reduceResult = await handler.Invoker.Invoke(
+                _serviceProvider,
+                eventsForEventSource.Select(@event => new EventAndContext(@event.Content, @event.Context)),
+                null);
+
+            if (!reduceResult.IsSuccess)
+            {
+                throw new InvalidOperationException($"Failed to reduce read model '{readModelType.Name}'. {string.Join(Environment.NewLine, reduceResult.ErrorMessages)}");
+            }
+
+            if (reduceResult.ReadModelState is not null)
+            {
+                result.Add(reduceResult.ReadModelState);
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// Get snapshots for a reduced read model by its key.
     /// </summary>

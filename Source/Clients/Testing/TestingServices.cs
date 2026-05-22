@@ -163,6 +163,7 @@ internal sealed class TestingServices(
             grainFactory,
             storage,
             new ExpandoObjectConverter(new TypeFormats()),
+            new KernelReducerMediator(),
             new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
             jsonSerializerOptions));
 

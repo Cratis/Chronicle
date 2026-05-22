@@ -6,13 +6,18 @@ using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
@@ -31,12 +36,14 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
+/// <param name="reducerMediator">The reducer mediator.</param>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
+    IReducerMediator reducerMediator,
     IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
@@ -277,7 +284,48 @@ internal sealed class ReadModels(
             };
         }
 
-        throw new NotSupportedException("Server-side reducer instance retrieval is not yet supported. Reducers typically run client-side.");
+        var reducerContext = await GetConnectedReducerContext(definition, request.EventStore, request.Namespace, request.EventSequenceId);
+        var reducerEvents = await GetEventsForReducer(
+            request.EventStore,
+            request.Namespace,
+            request.EventSequenceId,
+            eventSourceId: request.ReadModelKey,
+            eventTypes: reducerContext.EventTypes);
+
+        var reduceResult = await ReduceWithConnectedClient(
+            reducerContext.ReducerId,
+            reducerContext.ConnectionId,
+            request.EventStore,
+            request.Namespace,
+            request.ReadModelKey,
+            reducerEvents,
+            initialState: null);
+
+        if (reduceResult.ReadModelState is null)
+        {
+            return new GetInstanceByKeyResponse
+            {
+                ReadModel = "{}",
+                ProjectedEventsCount = (ulong)reducerEvents.Count,
+                LastHandledEventSequenceNumber = reduceResult.ObserverResult.LastSuccessfulObservation
+            };
+        }
+
+        var readModelSchema = (await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier)).GetSchemaForLatestGeneration();
+        var decrypted = await ReadModelComplianceHelper.Release(
+            complianceManager,
+            request.EventStore,
+            request.Namespace,
+            readModelSchema,
+            reduceResult.ReadModelState,
+            expandoObjectConverter);
+
+        return new GetInstanceByKeyResponse
+        {
+            ReadModel = expandoObjectConverter.ToJsonObject(decrypted, readModelSchema).ToJsonString(jsonSerializerOptions),
+            ProjectedEventsCount = (ulong)reducerEvents.Count,
+            LastHandledEventSequenceNumber = reduceResult.ObserverResult.LastSuccessfulObservation
+        };
     }
 
     /// <inheritdoc/>
@@ -288,7 +336,61 @@ internal sealed class ReadModels(
 
         if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection)
         {
-            throw new NotSupportedException("GetAllInstances is only supported for projections (immediate projections).");
+            var reducerContext = await GetConnectedReducerContext(definition, request.EventStore, request.Namespace, request.EventSequenceId);
+            var reducerEvents = await GetEventsForReducer(
+                request.EventStore,
+                request.Namespace,
+                request.EventSequenceId,
+                eventTypes: reducerContext.EventTypes,
+                eventCount: request.EventCount);
+
+            var reducerReadModelDefinition = await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier);
+            var readModelSchema = reducerReadModelDefinition.GetSchemaForLatestGeneration();
+            var reducedReadModels = new List<string>();
+
+            var orderedReducerEvents = reducerEvents.OrderBy(@event => @event.Context.SequenceNumber).ToList();
+            foreach (var eventsForPartition in orderedReducerEvents
+                         .GroupBy(@event => @event.Context.EventSourceId)
+                         .Select(group => group.ToList()))
+            {
+                var eventSourceId = eventsForPartition[0].Context.EventSourceId;
+                var reduceResult = await ReduceWithConnectedClient(
+                    reducerContext.ReducerId,
+                    reducerContext.ConnectionId,
+                    request.EventStore,
+                    request.Namespace,
+                    eventSourceId,
+                    eventsForPartition,
+                    initialState: null);
+
+                if (reduceResult.ReadModelState is null)
+                {
+                    continue;
+                }
+
+                var dictionary = (IDictionary<string, object?>)reduceResult.ReadModelState;
+                var subject = GetOrInferSubject(dictionary);
+                if (!string.IsNullOrWhiteSpace(subject))
+                {
+                    dictionary[WellKnownProperties.Subject] = subject;
+                }
+
+                var decrypted = await ReadModelComplianceHelper.Release(
+                    complianceManager,
+                    request.EventStore,
+                    request.Namespace,
+                    readModelSchema,
+                    reduceResult.ReadModelState,
+                    expandoObjectConverter);
+
+                reducedReadModels.Add(expandoObjectConverter.ToJsonObject(decrypted, readModelSchema).ToJsonString(jsonSerializerOptions));
+            }
+
+            return new GetAllInstancesResponse
+            {
+                Instances = reducedReadModels,
+                ProcessedEventsCount = (ulong)reducerEvents.Count
+            };
         }
 
         var eventSequenceStorage = storage
@@ -526,6 +628,92 @@ internal sealed class ReadModels(
         return snapshots;
     }
 
+    async Task<ConnectedReducerContext> GetConnectedReducerContext(
+        Concepts.ReadModels.ReadModelDefinition definition,
+        string eventStoreName,
+        string namespaceName,
+        string eventSequenceId)
+    {
+        var reducerId = (ReducerId)definition.ObserverIdentifier.Value;
+        var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(reducerId, eventStoreName, namespaceName, eventSequenceId));
+        var subscription = await observer.GetSubscription();
+        if (!subscription.IsSubscribed || subscription.Arguments is not ConnectedClient connectedClient)
+        {
+            throw new NotSupportedException($"Reducer '{reducerId}' is not connected. Reducer read model retrieval requires an active connected client.");
+        }
+
+        var eventTypes = await observer.GetEventTypes();
+        return new ConnectedReducerContext(reducerId, connectedClient.ConnectionId, eventTypes);
+    }
+
+    async Task<List<AppendedEvent>> GetEventsForReducer(
+        string eventStoreName,
+        string namespaceName,
+        string eventSequenceId,
+        EventSourceId? eventSourceId = default,
+        IEnumerable<Concepts.Events.EventType>? eventTypes = default,
+        ulong? eventCount = default)
+    {
+        var eventSequenceStorage = storage
+            .GetEventStore(eventStoreName)
+            .GetNamespace(namespaceName)
+            .GetEventSequence(eventSequenceId);
+
+        var events = new List<AppendedEvent>();
+        if (eventCount is null or ulong.MaxValue)
+        {
+            using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventSourceId: eventSourceId, eventTypes: eventTypes);
+            while (await cursor.MoveNext())
+            {
+                events.AddRange(cursor.Current);
+            }
+        }
+        else
+        {
+            if (eventCount.Value > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(eventCount), $"Event count '{eventCount.Value}' exceeds maximum supported value '{int.MaxValue}' for reducer retrieval.");
+            }
+
+            var limit = (int)eventCount.Value;
+            using var cursor = await eventSequenceStorage.GetEventsWithLimit(EventSequenceNumber.First, limit, eventSourceId: eventSourceId, eventTypes: eventTypes);
+            while (await cursor.MoveNext())
+            {
+                events.AddRange(cursor.Current);
+            }
+        }
+
+        return events;
+    }
+
+    async Task<ReducerSubscriberResult> ReduceWithConnectedClient(
+        ReducerId reducerId,
+        ConnectionId connectionId,
+        string eventStoreName,
+        string namespaceName,
+        Key partition,
+        IEnumerable<AppendedEvent> events,
+        ExpandoObject? initialState)
+    {
+        var tcs = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        reducerMediator.OnNext(
+            reducerId,
+            connectionId,
+            eventStoreName,
+            namespaceName,
+            new ReduceOperation(partition, events, initialState),
+            tcs);
+
+        var reduceResult = await tcs.Task;
+        if (reduceResult.ObserverResult.State != ObserverSubscriberState.Ok)
+        {
+            var exceptionMessage = string.Join(Environment.NewLine, reduceResult.ObserverResult.ExceptionMessages);
+            throw new InvalidOperationException($"Failed to reduce read model. {exceptionMessage}".TrimEnd());
+        }
+
+        return reduceResult;
+    }
+
     string? GetOrInferSubject(IDictionary<string, object?> instance)
     {
         if (instance.TryGetValue(WellKnownProperties.Subject, out var subject) && subject is not null)
@@ -571,4 +759,6 @@ internal sealed class ReadModels(
             });
         }
     }
+
+    record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<Concepts.Events.EventType> EventTypes);
 }

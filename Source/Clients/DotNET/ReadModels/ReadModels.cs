@@ -176,6 +176,12 @@ public class ReadModels(
             throw new UnknownReadModel(readModelType);
         }
 
+        if (reducers.HasFor(readModelType))
+        {
+            var reducedInstance = await reducers.GetInstanceById(readModelType, key);
+            return reducedInstance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+        }
+
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
 
         var request = new GetInstanceByKeyRequest
@@ -219,10 +225,16 @@ public class ReadModels(
     {
         var readModelType = typeof(TReadModel);
 
-        // Validate that the read model is known by projections (immediate projections only)
-        if (!projections.HasFor(readModelType))
+        // Validate that the read model is known by projections or reducers
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
             throw new UnknownReadModel(readModelType);
+        }
+
+        if (reducers.HasFor(readModelType))
+        {
+            var reducerInstances = await reducers.GetInstances(readModelType, eventCount);
+            return reducerInstances.Cast<TReadModel>();
         }
 
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
