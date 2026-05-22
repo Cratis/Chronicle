@@ -236,6 +236,28 @@ public static class WellKnownTypes
         parameterType.ToDisplayString() == IEventLogName;
 
     /// <summary>
+    /// Check whether a type is <see cref="System.Linq.Expressions.Expression{TDelegate}"/>.
+    /// </summary>
+    /// <param name="type">The type symbol to check.</param>
+    /// <returns>True if the type is Expression&lt;TDelegate&gt;, false otherwise.</returns>
+    public static bool IsExpressionType(ITypeSymbol? type) =>
+        type is INamedTypeSymbol { IsGenericType: true } named &&
+        named.OriginalDefinition.ToDisplayString() == "System.Linq.Expressions.Expression<TDelegate>";
+
+    /// <summary>
+    /// Determines whether an expression is a pure member-access chain (identifiers and member accesses only).
+    /// </summary>
+    /// <param name="expression">The expression to check.</param>
+    /// <returns>True if the expression is a pure member-access chain, false otherwise.</returns>
+    public static bool IsPureMemberAccessChain(ExpressionSyntax expression) =>
+        expression switch
+        {
+            IdentifierNameSyntax => true,
+            MemberAccessExpressionSyntax memberAccess => IsPureMemberAccessChain(memberAccess.Expression),
+            _ => false
+        };
+
+    /// <summary>
     /// Determines whether a statement is considered imperative (not a pure builder call).
     /// </summary>
     /// <param name="statement">The statement to check.</param>

@@ -28,3 +28,9 @@
   href: CHR0017.md
 - name: CHR0018 - Constraint Define() must not contain imperative code
   href: CHR0018.md
+- name: CHR0019 - Projection expression lambda must only access members
+  href: CHR0019.md
+- name: CHR0020 - Constraint expression lambda must only access members
+  href: CHR0020.md
+- name: CHR0021 - Event types should be record types
+  href: CHR0021.md
