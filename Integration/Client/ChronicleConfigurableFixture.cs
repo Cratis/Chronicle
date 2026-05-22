@@ -19,6 +19,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 {
     const string MongoReplicaSetCommand = "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null";
 
+    const string MongoDbHostName = "chronicle-mongodb";
     const string PostgreSqlHostName = "chronicle-postgres";
     const string MsSqlHostName = "chronicle-mssql";
     const string PostgreSqlPassword = "Chronicle_P@ss1";
@@ -33,7 +34,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     readonly string _outOfProcessSqlDatabaseName = $"chronicle_{Guid.NewGuid():N}";
 
     IContainer? _databaseContainer;
-    IContainer? _outOfProcessContainer;
+    IContainer? _outOfProcessMongoContainer;
 
     /// <summary>
     /// Gets the selected runtime options.
@@ -84,8 +85,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <inheritdoc/>
     public override async ValueTask DisposeAsync()
     {
+        // The kernel container is owned by the base class (assigned during BuildContainer)
+        // and is disposed by base.DisposeAsync — only the auxiliary containers we built
+        // ourselves need disposing here.
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
-        await (_outOfProcessContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+        await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
     }
 
@@ -226,14 +230,39 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         if (Options.Mode == ChronicleRuntimeMode.InProcess)
         {
-            return BuildInProcessContainer(network);
+            return BuildInProcessMongoContainer(network);
         }
 
-        _outOfProcessContainer = BuildOutOfProcessContainer(network);
-        return _outOfProcessContainer;
+        // Out-of-process always runs the kernel and its backing database in separate
+        // containers — even for MongoDB. The kernel image carries no embedded database,
+        // matching the production runtime layout.
+        var backingDatabase = Options.StorageProvider switch
+        {
+            ChronicleStorageProvider.MongoDB => BuildAndStartMongoDB(network),
+            ChronicleStorageProvider.PostgreSql => BuildAndStartPostgreSql(network),
+            ChronicleStorageProvider.MsSql => BuildAndStartMsSql(network),
+            ChronicleStorageProvider.Sqlite => Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db",
+            _ => throw new InvalidOperationException($"Unsupported storage provider '{Options.StorageProvider}'."),
+        };
+
+        // The base class only knows how to start one container; returning the kernel here
+        // means the base auto-starts the kernel. Auxiliary containers (MongoDB for OOP mode,
+        // PostgreSQL/MSSQL for SQL modes) have already been built and started by the helpers
+        // above and assigned to _outOfProcessMongoContainer / _databaseContainer so the rest
+        // of the fixture can reach them via the overridden MongoDBContainer property and the
+        // GetInProcessConnectionString helper.
+        return BuildOutOfProcessKernelContainer(network, backingDatabase);
     }
 
-    IContainer BuildInProcessContainer(INetwork network) =>
+    /// <summary>
+    /// Gets the MongoDB container the test client should connect to.
+    /// In OOP mode the kernel image has no embedded MongoDB, so the dedicated MongoDB
+    /// container started alongside the kernel is exposed here. In every other case the
+    /// base implementation returns the (single) container built by <see cref="BuildContainer"/>.
+    /// </summary>
+    public override IContainer MongoDBContainer => _outOfProcessMongoContainer ?? base.MongoDBContainer;
+
+    IContainer BuildInProcessMongoContainer(INetwork network) =>
         new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
@@ -246,38 +275,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
 
-    IContainer BuildOutOfProcessContainer(INetwork network)
+    IContainer BuildOutOfProcessKernelContainer(INetwork network, string connectionDetails)
     {
-        // Connection details are interpreted by the Chronicle kernel *inside* the container.
-        // For MongoDB the kernel and mongod live in the same container, so it must connect
-        // to localhost:27017 (internal mongod port), NOT the mapped host port.
-        var connectionDetails = Options.StorageProvider switch
-        {
-            ChronicleStorageProvider.MongoDB => "mongodb://localhost:27017",
-            ChronicleStorageProvider.PostgreSql => BuildAndStartPostgreSql(network),
-            ChronicleStorageProvider.MsSql => BuildAndStartMsSql(network),
-            ChronicleStorageProvider.Sqlite => Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle.db",
-            _ => "mongodb://localhost:27017",
-        };
-
         var storageType = Options.StorageProvider switch
         {
             ChronicleStorageProvider.MongoDB => "MongoDB",
             ChronicleStorageProvider.PostgreSql => "PostgreSql",
             ChronicleStorageProvider.MsSql => "MsSql",
             ChronicleStorageProvider.Sqlite => "Sqlite",
-            _ => "MongoDB",
+            _ => throw new InvalidOperationException($"Unsupported storage provider '{Options.StorageProvider}'."),
         };
 
-        // MongoDB mode uses fixed port 27018→27017 so the test client can reach MongoDB directly.
-        // SQL modes don't need a fixed MongoDB port — the Chronicle server has no MongoDB —
-        // so we use a random host port to allow multiple SQL outofprocess test processes to
-        // run concurrently without conflicting on port 27018.
-        var mongoPortBinding = Options.StorageProvider == ChronicleStorageProvider.MongoDB
-            ? new ContainerBuilder(_imageName).WithPortBinding(MongoDBPort, 27017)
-            : new ContainerBuilder(_imageName).WithPortBinding(27017, assignRandomHostPort: true);
-
-        var builder = mongoPortBinding
+        var builder = new ContainerBuilder(_imageName)
             .WithImage(_imageName)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
@@ -287,22 +296,51 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             .WithEnvironment("DOTNET_ENVIRONMENT", "Development")
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
             .WithEnvironment("Cratis__Chronicle__Storage__Type", storageType)
-            .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails);
+            .WithEnvironment("Cratis__Chronicle__Storage__ConnectionDetails", connectionDetails)
+            .WithEnvironment("Logging__LogLevel__Default", "Information")
+            .WithEnvironment("Logging__LogLevel__Cratis", "Debug");
 
         // SQL backends (especially MSSQL) run EF Core migrations against a freshly-started
         // database container on startup. Give the health endpoint 5 minutes to respond.
-        var waitStrategy = Options.StorageProvider == ChronicleStorageProvider.MongoDB
-            ? Wait.ForUnixContainer()
+        var waitStrategy = Wait.ForUnixContainer()
+            .UntilHttpRequestIsSucceeded(
+                req => req.ForPort(8080).ForPath("/health"),
+                s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
+
+        return builder.WithWaitStrategy(waitStrategy).Build();
+    }
+
+    string BuildAndStartMongoDB(INetwork network)
+    {
+        // Initiate the replica set using the docker-network hostname as the member name so
+        // that drivers connecting from another container (the kernel) follow the SRV record
+        // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
+        // discovery from any container other than the one that owns the mongod process.
+        var replicaSetCommand =
+            $"mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & " +
+            "until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; " +
+            $"mongosh --eval 'rs.initiate({{_id:\"rs0\",members:[{{_id:0,host:\"{MongoDbHostName}:27017\"}}]}})' || true; " +
+            "tail -f /dev/null";
+
+        // Random host port avoids 'port already allocated' races when one test session
+        // hands over to the next before Docker has released the previous binding, and
+        // lets multiple test processes run side-by-side. The host port is discovered
+        // dynamically through MongoDBContainer.GetMappedPublicPort by every caller.
+        _outOfProcessMongoContainer = new ContainerBuilder("mongo")
+            .WithImage("mongo")
+            .WithCommand("/bin/sh", "-c", replicaSetCommand)
+            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
+            .WithPortBinding(27017, assignRandomHostPort: true)
+            .WithHostname(MongoDbHostName)
+            .WithNetwork(network)
+            .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilInternalTcpPortIsAvailable(27017)
-                .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"))
-            : Wait.ForUnixContainer()
-                .UntilHttpRequestIsSucceeded(
-                    req => req.ForPort(8080).ForPath("/health"),
-                    s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
+                .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
+            .Build();
 
-        builder = builder.WithWaitStrategy(waitStrategy);
+        _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
 
-        return builder.Build();
+        return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
     }
 
     string BuildAndStartPostgreSql(INetwork network)

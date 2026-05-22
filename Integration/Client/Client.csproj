@@ -38,7 +38,13 @@
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../" />
+        <!--
+        The integration tests use the slim image: kernel only, no embedded database.
+        Every backing store runs in its own container so the local layout matches
+        the production runtime model (and `cratis/chronicle:*-development-slim`).
+        Docker/Local is kept untouched for the standalone "everything-in-one" dev use case.
+        -->
+        <Exec Command="docker build -t $(LocalImageName) -f Docker/LocalSlim/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../" />
     </Target>
 
 </Project>

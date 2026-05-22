@@ -53,7 +53,7 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    public IContainer MongoDBContainer
+    public virtual IContainer MongoDBContainer
     {
         get
         {
