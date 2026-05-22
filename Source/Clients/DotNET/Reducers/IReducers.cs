@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -31,6 +33,22 @@ public interface IReducers
     Task<IReducerHandler> Register<TReducer, TReadModel>()
         where TReducer : IReducerFor<TReadModel>
         where TReadModel : class;
+
+    /// <summary>
+    /// Get a reduced read model instance by key by replaying events in-process.
+    /// </summary>
+    /// <param name="readModelType">The read model type to get an instance for.</param>
+    /// <param name="readModelKey">The read model key to get.</param>
+    /// <returns>The reduced read model instance, or null if no events exist for the key.</returns>
+    Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey);
+
+    /// <summary>
+    /// Get reduced read model instances by replaying events in-process.
+    /// </summary>
+    /// <param name="readModelType">The read model type to get instances for.</param>
+    /// <param name="eventCount">Optional limit for number of events to replay from the beginning.</param>
+    /// <returns>Collection of reduced read model instances.</returns>
+    Task<IEnumerable<object>> GetInstances(Type readModelType, EventCount? eventCount = null);
 
     /// <summary>
     /// Check if there is a reducer for a specific model type.
