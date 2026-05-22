@@ -19,10 +19,8 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using ProjectionChangeset = Cratis.Chronicle.Projections.ProjectionChangeset;
 using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -30,14 +28,12 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <summary>
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
-/// <param name="clusterClient">The cluster client.</param>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
-    IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
@@ -385,36 +381,37 @@ internal sealed class ReadModels(
 
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
-                var streamProvider = clusterClient.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
-                var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
-
-                var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
-
                 var schema = definition.GetSchemaForLatestGeneration();
-                var subscription = await stream.SubscribeAsync(async (changeset, _) =>
+
+                // Direct grain-to-observer notification — replaces Orleans MemoryStreams pub-sub
+                // whose subscriber propagation lagged the first publish under load and silently
+                // dropped early changesets. The notifier grain dispatches synchronously the moment
+                // Subscribe returns, so no warmup or wait is needed between Subscribed and the
+                // first appended event.
+                var forwardingObserver = new ChangesetForwardingObserver(
+                    observer,
+                    request.EventStore,
+                    schema,
+                    complianceManager,
+                    jsonSerializerOptions);
+                var observerReference = grainFactory.CreateObjectReference<IProjectionChangesetObserver>(forwardingObserver);
+                var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
+                await notifier.Subscribe(observerReference);
+
+                try
                 {
-                    var decrypted = await ReadModelComplianceHelper.ReleaseJson(
-                        complianceManager,
-                        request.EventStore,
-                        changeset.Namespace,
-                        schema,
-                        changeset.ReadModel);
+                    // Notify the client that the changeset notifier subscription is now active.
+                    // Direct grain dispatch means any changeset produced from this point on will
+                    // reach the forwarding observer below.
+                    observer.OnNext(new ReadModelChangeset { Subscribed = true });
 
-                    observer.OnNext(new ReadModelChangeset
-                    {
-                        Namespace = changeset.Namespace,
-                        ModelKey = changeset.ReadModelKey,
-                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
-                        Removed = false
-                    });
-                });
-
-                // Notify the client that the underlying stream subscription is now active so it
-                // can safely append events without racing the subscription handshake.
-                observer.OnNext(new ReadModelChangeset { Subscribed = true });
-
-                context.CancellationToken.Register(() => _ = subscription.UnsubscribeAsync());
-                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                }
+                finally
+                {
+                    await notifier.Unsubscribe(observerReference).ConfigureAwait(false);
+                    grainFactory.DeleteObjectReference<IProjectionChangesetObserver>(observerReference);
+                }
             }
             else
             {
@@ -547,5 +544,31 @@ internal sealed class ReadModels(
         }
 
         return null;
+    }
+
+    sealed class ChangesetForwardingObserver(
+        IObserver<ReadModelChangeset> observer,
+        string eventStore,
+        JsonSchema schema,
+        IJsonComplianceManager complianceManager,
+        JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
+    {
+        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, Concepts.ReadModels.ReadModelKey readModelKey, JsonObject readModel)
+        {
+            var decrypted = await ReadModelComplianceHelper.ReleaseJson(
+                complianceManager,
+                eventStore,
+                namespaceName,
+                schema,
+                readModel);
+
+            observer.OnNext(new ReadModelChangeset
+            {
+                Namespace = namespaceName,
+                ModelKey = readModelKey,
+                ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
+                Removed = false
+            });
+        }
     }
 }

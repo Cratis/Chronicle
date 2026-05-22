@@ -160,7 +160,6 @@ internal sealed class TestingServices(
 
     readonly Lazy<IReadModels> _readModels = new(() =>
         new KernelReadModelsService(
-            null!,
             grainFactory,
             storage,
             new ExpandoObjectConverter(new TypeFormats()),

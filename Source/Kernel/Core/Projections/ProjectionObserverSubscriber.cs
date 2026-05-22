@@ -18,7 +18,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
-using Orleans.Streams;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -43,17 +42,18 @@ public class ProjectionObserverSubscriber(
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
     IProjectionPipeline? _pipeline;
-    IAsyncStream<ProjectionChangeset>? _changeStream;
+    IProjectionChangesetNotifier? _changesetNotifier;
     JsonSchema? _schema;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        var streamProvider = this.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
         (_, _key) = this.GetKeys();
 
-        var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, _key.ObserverId));
-        _changeStream = streamProvider.GetStream<ProjectionChangeset>(streamId);
+        // Direct grain-to-observer notification — the previous Orleans MemoryStreams pub-sub
+        // propagated subscribers to the producer's PullingAgent on a periodic refresh that
+        // could lag the first publish and silently drop it under load.
+        _changesetNotifier = GrainFactory.GetGrain<IProjectionChangesetNotifier>(_key.ObserverId);
 
         var projection = GrainFactory.GetGrain<IProjection>(new ProjectionKey(_key.ObserverId, _key.EventStore));
         await projection.SubscribeDefinitionsChanged(this.AsReference<INotifyProjectionDefinitionsChanged>());
@@ -161,7 +161,7 @@ public class ProjectionObserverSubscriber(
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);
                 }
 
-                await _changeStream!.OnNextAsync(new ProjectionChangeset(_key.Namespace, partition.ToString(), model));
+                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model);
             }
 
             logger.SuccessfullyHandledAllEvents(_key);
