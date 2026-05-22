@@ -49,8 +49,8 @@ public class with_reactor_subscribed_to_event_redacted(context context) : Given<
             SomeEventSequenceNumber = someEventResult.SequenceNumber;
             AnotherEventSequenceNumber = anotherEventResult.SequenceNumber;
 
-            // Wait for the reactor to process all events
-            await reactorHandler.WaitTillReachesEventSequenceNumber(AnotherEventSequenceNumber, startupTimeout);
+            // Wait for the reactor to process SomeEvent (it does not subscribe to AnotherEvent)
+            await reactorHandler.WaitTillReachesEventSequenceNumber(SomeEventSequenceNumber, startupTimeout);
 
             // Reset counters before redactions
             Reactor.HandledSomeEvents = 0;
