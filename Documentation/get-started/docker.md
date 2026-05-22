@@ -124,7 +124,7 @@ services:
       - 35000:35000
 
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=Your_strong_password123!
