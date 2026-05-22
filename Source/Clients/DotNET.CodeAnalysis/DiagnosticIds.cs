@@ -79,27 +79,22 @@ public static class DiagnosticIds
     public const string ReducerCannotCombineEventStoreWithExplicitEventSequence = "CHR0014";
 
     /// <summary>
-    /// Reactor must not inject IEventLog.
-    /// </summary>
-    public const string ReactorMustNotInjectIEventLog = "CHR0015";
-
-    /// <summary>
     /// Projection must not have side effects (inject ICommandPipeline or IEventLog).
     /// </summary>
-    public const string ProjectionMustNotHaveSideEffects = "CHR0016";
+    public const string ProjectionMustNotHaveSideEffects = "CHR0015";
 
     /// <summary>
     /// Projection Define() method must not contain imperative code.
     /// </summary>
-    public const string ProjectionDefineMustNotContainImperativeCode = "CHR0017";
+    public const string ProjectionDefineMustNotContainImperativeCode = "CHR0016";
 
     /// <summary>
     /// Constraint must not have side effects (inject ICommandPipeline or IEventLog).
     /// </summary>
-    public const string ConstraintMustNotHaveSideEffects = "CHR0018";
+    public const string ConstraintMustNotHaveSideEffects = "CHR0017";
 
     /// <summary>
     /// Constraint Define() method must not contain imperative code.
     /// </summary>
-    public const string ConstraintDefineMustNotContainImperativeCode = "CHR0019";
+    public const string ConstraintDefineMustNotContainImperativeCode = "CHR0018";
 }
