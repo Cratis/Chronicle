@@ -71,6 +71,26 @@ public static class WellKnownTypes
     public const string EventContextName = "Cratis.Chronicle.Events.EventContext";
 
     /// <summary>
+    /// The full name of IEventLog interface.
+    /// </summary>
+    public const string IEventLogName = "Cratis.Chronicle.EventSequences.IEventLog";
+
+    /// <summary>
+    /// The full name of ICommandPipeline interface.
+    /// </summary>
+    public const string ICommandPipelineName = "Cratis.Chronicle.Commands.ICommandPipeline";
+
+    /// <summary>
+    /// The full name of IProjectionFor generic interface (open generic).
+    /// </summary>
+    public const string IProjectionForName = "Cratis.Chronicle.Projections.IProjectionFor`1";
+
+    /// <summary>
+    /// The full name of IConstraint interface.
+    /// </summary>
+    public const string IConstraintName = "Cratis.Chronicle.Events.Constraints.IConstraint";
+
+    /// <summary>
     /// Check if a type has the EventType attribute.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to check.</param>
@@ -158,4 +178,53 @@ public static class WellKnownTypes
     /// <returns>A diagnostic-friendly event store display value.</returns>
     public static string FormatEventStoreName(string eventStoreName) =>
         eventStoreName.Length == 0 ? "<default>" : eventStoreName;
+
+    /// <summary>
+    /// Check if a type implements IProjectionFor&lt;T&gt;.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <param name="compilation">The compilation.</param>
+    /// <returns>True if the type implements IProjectionFor&lt;T&gt;, false otherwise.</returns>
+    public static bool ImplementsIProjectionFor(ITypeSymbol typeSymbol, Compilation compilation)
+    {
+        var projectionForInterface = compilation.GetTypeByMetadataName(IProjectionForName);
+        if (projectionForInterface is null)
+        {
+            return false;
+        }
+
+        return typeSymbol.AllInterfaces.Any(i =>
+            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, projectionForInterface));
+    }
+
+    /// <summary>
+    /// Check if a type implements IConstraint.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <param name="compilation">The compilation.</param>
+    /// <returns>True if the type implements IConstraint, false otherwise.</returns>
+    public static bool ImplementsIConstraint(ITypeSymbol typeSymbol, Compilation compilation)
+    {
+        var constraintInterface = compilation.GetTypeByMetadataName(IConstraintName);
+        return constraintInterface != null && typeSymbol.AllInterfaces.Contains(constraintInterface, SymbolEqualityComparer.Default);
+    }
+
+    /// <summary>
+    /// Check if a constructor parameter type is IEventLog or ICommandPipeline (by full name).
+    /// </summary>
+    /// <param name="parameterType">The parameter type symbol to check.</param>
+    /// <returns>True if the type is IEventLog or ICommandPipeline, false otherwise.</returns>
+    public static bool IsEventLogOrCommandPipeline(ITypeSymbol parameterType)
+    {
+        var fullName = parameterType.ToDisplayString();
+        return fullName == IEventLogName || fullName == ICommandPipelineName;
+    }
+
+    /// <summary>
+    /// Check if a constructor parameter type is IEventLog (by full name).
+    /// </summary>
+    /// <param name="parameterType">The parameter type symbol to check.</param>
+    /// <returns>True if the type is IEventLog, false otherwise.</returns>
+    public static bool IsIEventLog(ITypeSymbol parameterType) =>
+        parameterType.ToDisplayString() == IEventLogName;
 }

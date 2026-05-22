@@ -18,6 +18,11 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0012](CHR0012.md) | Event types should avoid nullable properties | Warning | Nullable properties are supported on events but are often better modeled as separate event types |
 | [CHR0013](CHR0013.md) | Reactor cannot combine EventStore with explicit event sequence | Error | Reactors with [EventStore] must not also configure an explicit event sequence |
 | [CHR0014](CHR0014.md) | Reducer cannot combine EventStore with explicit event sequence | Error | Reducers with [EventStore] must not also configure an explicit event sequence |
+| [CHR0015](CHR0015.md) | Reactor must not inject IEventLog | Error | Reactors must not inject IEventLog; use ICommandPipeline instead |
+| [CHR0016](CHR0016.md) | Projection must not have side effects | Error | Projections must not inject ICommandPipeline or IEventLog |
+| [CHR0017](CHR0017.md) | Projection Define() must not contain imperative code | Error | Projection Define() must only contain builder calls, not imperative statements |
+| [CHR0018](CHR0018.md) | Constraint must not have side effects | Error | Constraints must not inject ICommandPipeline or IEventLog |
+| [CHR0019](CHR0019.md) | Constraint Define() must not contain imperative code | Error | Constraint Define() must only contain builder calls, not imperative statements |
 
 ## Quick Fixes
 

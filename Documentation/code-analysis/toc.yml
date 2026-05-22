@@ -20,3 +20,13 @@
   href: CHR0013.md
 - name: CHR0014 - Reducer cannot combine EventStore with explicit event sequence
   href: CHR0014.md
+- name: CHR0015 - Reactor must not inject IEventLog
+  href: CHR0015.md
+- name: CHR0016 - Projection must not have side effects
+  href: CHR0016.md
+- name: CHR0017 - Projection Define() must not contain imperative code
+  href: CHR0017.md
+- name: CHR0018 - Constraint must not have side effects
+  href: CHR0018.md
+- name: CHR0019 - Constraint Define() must not contain imperative code
+  href: CHR0019.md
