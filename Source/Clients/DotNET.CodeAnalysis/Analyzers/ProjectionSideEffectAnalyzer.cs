@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -49,17 +50,14 @@ public class ProjectionSideEffectAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            foreach (var parameter in constructor.Parameters)
+            foreach (var parameter in constructor.Parameters.Where(parameter => WellKnownTypes.IsEventLogOrCommandPipeline(parameter.Type)))
             {
-                if (WellKnownTypes.IsEventLogOrCommandPipeline(parameter.Type))
-                {
-                    var diagnostic = Diagnostic.Create(
-                        Rule,
-                        parameter.Locations.FirstOrDefault(),
-                        namedTypeSymbol.Name,
-                        parameter.Type.Name);
-                    context.ReportDiagnostic(diagnostic);
-                }
+                var diagnostic = Diagnostic.Create(
+                    Rule,
+                    parameter.Locations.FirstOrDefault(),
+                    namedTypeSymbol.Name,
+                    parameter.Type.Name);
+                context.ReportDiagnostic(diagnostic);
             }
         }
     }
