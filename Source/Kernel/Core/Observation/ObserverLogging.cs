@@ -54,6 +54,15 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery because observer is quarantined")]
     internal static partial void SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
+    internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping partition catch-up because observer is replaying")]
+    internal static partial void SkippingPartitionCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping partition replay because observer is already performing a full replay")]
+    internal static partial void SkippingPartitionReplayBecauseObserverIsReplaying(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
     internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
 
