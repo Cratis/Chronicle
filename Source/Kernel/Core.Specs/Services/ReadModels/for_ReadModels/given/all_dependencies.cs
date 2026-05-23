@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -28,7 +29,9 @@ public class all_dependencies : Specification
     protected ISink _sink;
     protected IReadModel _readModel;
     protected ReadModelDefinition _readModelDefinition;
+    protected IExpandoObjectConverter _expandoObjectConverter;
     protected IJsonComplianceManager _complianceManager;
+    protected IReducerMediator _reducerMediator;
     protected Contracts.ReadModels.IReadModels _service;
 
     protected IClusterClient _clusterClient;
@@ -65,14 +68,16 @@ public class all_dependencies : Specification
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
 
-        var expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
+        _reducerMediator = Substitute.For<IReducerMediator>();
 
         _service = new ReadModels(
             _clusterClient,
             _grainFactory,
             _storage,
-            expandoObjectConverter,
+            _expandoObjectConverter,
+            _reducerMediator,
             _complianceManager,
             new JsonSerializerOptions());
     }
