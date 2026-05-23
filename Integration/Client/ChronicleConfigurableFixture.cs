@@ -7,9 +7,6 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
-using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
-using Npgsql;
 
 namespace Cratis.Chronicle.Integration;
 
@@ -29,10 +26,24 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <summary>
     /// Extends the global wait-strategy timeout so MSSQL (which runs heavy EF Core migrations
     /// on first startup) doesn't time out before the Chronicle server's health endpoint
-    /// responds.
+    /// responds. Also raises the default in-test polling timeout to 20 seconds for SQL
+    /// backends: SQLite (and to a lesser extent PostgreSQL/MSSQL) processes subscription /
+    /// reactor events markedly slower than MongoDB. The default 5-second polling deadline in
+    /// <see cref="TimeSpanFactory.DefaultTimeout"/> hits before the in-process silo's
+    /// subscription reactor has finished its commit-to-projection cycle on SQLite, which
+    /// turns into spurious "Because() was cancelled before completing" failures even though
+    /// the underlying behavior is correct.
     /// </summary>
-    static ChronicleConfigurableFixture() =>
+    static ChronicleConfigurableFixture()
+    {
         TestcontainersSettings.WaitStrategyTimeout = TimeSpan.FromMinutes(5);
+
+        if (Environment.GetEnvironmentVariable("CHRONICLE_TEST_TIMEOUT_SECONDS") is null
+            && ChronicleRuntimeOptions.Parse().StorageProvider != ChronicleStorageProvider.MongoDB)
+        {
+            Environment.SetEnvironmentVariable("CHRONICLE_TEST_TIMEOUT_SECONDS", "20");
+        }
+    }
 
     /// <summary>
     /// Gets a value indicating whether the SQL Server container must be forced to run as
@@ -115,6 +126,10 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // development-only gRPC operation wipes the backing store (per storage type, via
         // ICanPerformKernelStateReset) and re-bootstraps identity + the system event store —
         // all without restarting any container or process.
+        //
+        // The in-process silo's SQL storage is wiped from the per-test fixture by calling
+        // IDatabase.Wipe() directly; that path lives where the silo's Services are accessible
+        // and where the migration cache must be invalidated atomically with the wipe.
         if (Options.Mode == ChronicleRuntimeMode.OutOfProcess)
         {
             // Only reset the OOP container on the first (unconditional) call. The second call
@@ -127,104 +142,11 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 await ResetOutOfProcessKernelState();
             }
 
-            // SQL backends keep a separate per-silo database (chronicle-inprocess) so the
-            // test silo's grains keep accumulating events across test classes if we stop
-            // here. Truncate the in-process database too so both sides start clean.
-            await WipeInProcessSqlStorageIfApplicable();
             return;
         }
 
         // In-process mode: defer to the base MongoDB-drop behavior.
         await base.RemoveAllDatabases(excludePrefixes);
-    }
-
-    async Task WipeInProcessSqlStorageIfApplicable()
-    {
-        var connectionString = GetInProcessConnectionString();
-        switch (Options.StorageProvider)
-        {
-            case ChronicleStorageProvider.PostgreSql:
-                await TruncateInProcessPostgreSqlTables(connectionString);
-                break;
-
-            case ChronicleStorageProvider.MsSql:
-                await TruncateInProcessMsSqlTables(connectionString);
-                break;
-
-            case ChronicleStorageProvider.Sqlite:
-                SqliteConnection.ClearAllPools();
-                var path = ExtractSqliteDataSource(connectionString);
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-
-                var directory = Path.GetDirectoryName(path);
-                if (!string.IsNullOrEmpty(directory))
-                {
-                    var baseName = Path.GetFileNameWithoutExtension(path);
-                    var extension = Path.GetExtension(path);
-                    foreach (var file in Directory.GetFiles(directory, $"{baseName}_*{extension}"))
-                    {
-                        File.Delete(file);
-                    }
-                }
-
-                break;
-        }
-    }
-
-    static async Task TruncateInProcessPostgreSqlTables(string connectionString)
-    {
-        await using var conn = new NpgsqlConnection(connectionString);
-        try
-        {
-            await conn.OpenAsync();
-        }
-        catch (NpgsqlException)
-        {
-            // Database may not exist yet on the first test-class boundary.
-            return;
-        }
-
-        // Use SET session_replication_role = replica to disable FK/trigger enforcement
-        // (equivalent to MSSQL's NOCHECK CONSTRAINT), then DELETE (not TRUNCATE) to avoid
-        // cascade side-effects or sequence resets.
-        const string sql =
-            "SET session_replication_role = replica; " +
-            "DO $$ DECLARE r RECORD; " +
-            "BEGIN " +
-            "    FOR r IN (SELECT tablename FROM pg_tables " +
-            "              WHERE schemaname = 'public' " +
-            "              AND tablename NOT IN ('Users', 'Applications', 'DataProtectionKeys', 'Patches', 'SystemInformation', 'EncryptionKeys', '__EFMigrationsHistory')) LOOP " +
-            "        EXECUTE 'DELETE FROM \"' || r.tablename || '\"'; " +
-            "    END LOOP; " +
-            "END $$; " +
-            "SET session_replication_role = DEFAULT;";
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    static async Task TruncateInProcessMsSqlTables(string connectionString)
-    {
-        await using var conn = new SqlConnection(connectionString);
-        try
-        {
-            await conn.OpenAsync();
-        }
-        catch (SqlException)
-        {
-            return;
-        }
-
-        const string sql =
-            "DECLARE @sql NVARCHAR(MAX) = N''; " +
-            "SELECT @sql += N'DELETE FROM [' + s.name + N'].[' + t.name + N'];' + CHAR(13) " +
-            "    FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-            "    WHERE t.name NOT IN ('Users', 'Applications', 'DataProtectionKeys', 'Patches', 'SystemInformation', 'EncryptionKeys', '__EFMigrationsHistory'); " +
-            "EXEC sp_executesql @sql;";
-        await using var cmd = new SqlCommand(sql, conn);
-        await cmd.ExecuteNonQueryAsync();
     }
 
     /// <inheritdoc/>
@@ -435,17 +357,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             _ => throw new InvalidOperationException($"Missing required environment variable '{name}' for selected storage provider."),
         };
 
-    static string ExtractSqliteDataSource(string connectionString)
-    {
-        var builder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };
-        if (builder.TryGetValue("Data Source", out var value) || builder.TryGetValue("Filename", out value))
-        {
-            return value?.ToString() ?? "/tmp/chronicle.db";
-        }
-
-        return "/tmp/chronicle.db";
-    }
-
     /// <summary>
     /// Reset the outofprocess Chronicle server's in-memory state via the development-only
     /// gRPC operation on <see cref="Contracts.Host.IServer"/>. The container
@@ -460,10 +371,18 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             ConnectionString = connectionString,
             EventStore = "Testing",
             AutoDiscoverAndRegister = false,
-            ManagementPort = 8081
+            ManagementPort = 8081,
+
+            // Reset is a one-shot operation that can take longer than the 5-second keep-alive
+            // watchdog window (especially on SQL backends, where wiping enumerates and truncates
+            // every per-event-store database). If the watchdog tripped mid-call it would dispose
+            // the underlying gRPC channel and the in-flight ResetKernelState RPC would surface as
+            // ObjectDisposedException on Grpc.Net.Client.GrpcChannel. We don't need a watchdog
+            // here because the client lives only for the duration of this single RPC.
+            SkipKeepAlive = true
         };
 
-        var deadline = DateTime.UtcNow.AddSeconds(15);
+        var deadline = DateTime.UtcNow.AddMinutes(2);
         while (true)
         {
             try

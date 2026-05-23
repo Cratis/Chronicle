@@ -3,7 +3,9 @@
 
 #pragma warning disable SA1402
 
+#if DEVELOPMENT
 using Cratis.Chronicle.Storage.Sql;
+#endif
 
 namespace Cratis.Chronicle.Integration;
 
@@ -80,10 +82,17 @@ public class Specification<TChronicleFixture>(TChronicleFixture fixture) : XUnit
     }
 
     /// <inheritdoc/>
-    protected override Task ClearStorageMigrationCaches()
+    protected override async Task WipeInProcessStorage()
     {
-        Services.GetService<IDatabase>()?.ClearTableMigrationCache(string.Empty);
-        return Task.CompletedTask;
+#if DEVELOPMENT
+        var database = Services.GetService<IDatabase>();
+        if (database is not null)
+        {
+            await database.Wipe();
+        }
+#else
+        await Task.CompletedTask;
+#endif
     }
 }
 
