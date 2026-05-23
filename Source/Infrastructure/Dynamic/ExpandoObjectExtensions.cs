@@ -315,6 +315,7 @@ public static class ExpandoObjectExtensions
     {
         var valueType = value.GetType();
         if (!valueType.IsPrimitive &&
+            !valueType.IsEnum &&
             valueType != typeof(string) &&
             valueType != typeof(Guid) &&
             valueType != typeof(DateOnly) &&
