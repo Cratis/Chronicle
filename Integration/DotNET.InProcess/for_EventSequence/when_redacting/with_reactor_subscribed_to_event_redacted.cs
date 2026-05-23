@@ -21,7 +21,7 @@ public class with_reactor_subscribed_to_event_redacted(context context) : Given<
         public EventSequenceNumber SomeEventSequenceNumber { get; private set; }
         public EventSequenceNumber AnotherEventSequenceNumber { get; private set; }
 
-        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent)];
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent), typeof(EventRedacted)];
         public override IEnumerable<Type> Reactors => [typeof(ReactorSubscribedToEventRedacted)];
 
         protected override void ConfigureServices(IServiceCollection services)
