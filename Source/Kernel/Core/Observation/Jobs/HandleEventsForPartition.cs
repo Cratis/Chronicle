@@ -54,7 +54,7 @@ public class HandleEventsForPartition(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = this.AsReference<IHandleEventsForPartition>();
+        _selfGrainReference = GetSelfGrainReference();
 
         if (State.IsPrepared)
         {
@@ -78,6 +78,12 @@ public class HandleEventsForPartition(
             writeStateResult.RethrowError();
         }
     }
+
+    /// <summary>
+    /// Gets the self grain reference for this grain instance.
+    /// </summary>
+    /// <returns>The <see cref="IHandleEventsForPartition"/> grain reference.</returns>
+    protected virtual IHandleEventsForPartition GetSelfGrainReference() => this.AsReference<IHandleEventsForPartition>();
 
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
@@ -182,7 +188,7 @@ public class HandleEventsForPartition(
                     failed = true;
                     exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                     exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
-                    lastEventSequenceNumberAttempted = lastSuccessfullyHandledEventSequenceNumber.Next();
+                    lastEventSequenceNumberAttempted = events.Current.First().Context.SequenceNumber;
                 }
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
                 {
@@ -222,7 +228,7 @@ public class HandleEventsForPartition(
                         case ObserverSubscriberState.Disconnected:
                             failed = true;
                             exceptionMessages = [SubscriberDisconnected];
-                            lastEventSequenceNumberAttempted = lastSuccessfullyHandledEventSequenceNumber.Next();
+                            lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             logger.EventHandlerDisconnected(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
                             break;
                     }
