@@ -50,13 +50,16 @@ public class ConstraintSideEffectAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            foreach (var parameter in constructor.Parameters.Where(parameter => WellKnownTypes.IsEventLogOrCommandPipeline(parameter.Type)))
-            {
-                var diagnostic = Diagnostic.Create(
+            var diagnostics = constructor.Parameters
+                .Where(parameter => WellKnownTypes.IsEventLogOrCommandPipeline(parameter.Type))
+                .Select(parameter => Diagnostic.Create(
                     Rule,
                     parameter.Locations.FirstOrDefault(),
                     namedTypeSymbol.Name,
-                    parameter.Type.Name);
+                    parameter.Type.Name));
+
+            foreach (var diagnostic in diagnostics)
+            {
                 context.ReportDiagnostic(diagnostic);
             }
         }
