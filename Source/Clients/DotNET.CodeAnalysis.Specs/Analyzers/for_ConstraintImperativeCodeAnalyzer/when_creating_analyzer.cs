@@ -10,5 +10,5 @@ public class when_creating_analyzer : Specification
     void Establish() => _analyzer = new CodeAnalysis.Analyzers.ConstraintImperativeCodeAnalyzer();
 
     [Fact] void should_have_supported_diagnostics() => _analyzer.SupportedDiagnostics.ShouldNotBeEmpty();
-    [Fact] void should_support_chr0019_diagnostic() => _analyzer.SupportedDiagnostics.Any(d => d.Id == DiagnosticIds.ConstraintDefineMustNotContainImperativeCode).ShouldBeTrue();
+    [Fact] void should_support_chr0018_diagnostic() => _analyzer.SupportedDiagnostics.Any(d => d.Id == DiagnosticIds.ConstraintDefineMustNotContainImperativeCode).ShouldBeTrue();
 }
