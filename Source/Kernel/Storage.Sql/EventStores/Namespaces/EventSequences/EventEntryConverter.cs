@@ -246,7 +246,16 @@ public static class EventEntryConverter
     /// </summary>
     /// <param name="entry">The event entry.</param>
     /// <param name="generation">The generation to get content for.</param>
-    /// <returns>The content as ExpandoObject.</returns>
+    /// <returns>The content as <see cref="ExpandoObject"/>.</returns>
+    /// <remarks>
+    /// The stored content is a JSON object keyed by generation. The deserialized
+    /// <see cref="ExpandoObject"/> must contain CLR-typed values (strings, primitives,
+    /// nested <see cref="ExpandoObject"/>, <c>object[]</c>) — not <see cref="JsonElement"/> —
+    /// because downstream consumers (e.g. <c>ExpandoObjectConverter.ToJsonObject</c>) only
+    /// know how to project CLR types back to JSON. The default <c>JsonSerializer.Deserialize&lt;ExpandoObject&gt;</c>
+    /// path leaves nested arrays as <see cref="JsonElement"/>, which silently strips them when
+    /// the content is re-projected to JSON.
+    /// </remarks>
     public static ExpandoObject GetContentForGeneration(EventEntry entry, EventTypeGeneration generation)
     {
         if (string.IsNullOrEmpty(entry.Content))
@@ -255,10 +264,9 @@ public static class EventEntryConverter
         }
 
         var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
-        if (contentDict?.TryGetValue(generation.ToString(), out var contentElement) == true)
+        if (contentDict?.TryGetValue(generation.ToString(), out var contentElement) == true && contentElement.ValueKind == JsonValueKind.Object)
         {
-            var contentAsObject = JsonSerializer.Deserialize<ExpandoObject>(contentElement.GetRawText(), _jsonSerializerOptions);
-            return contentAsObject ?? new ExpandoObject();
+            return ConvertJsonObjectToExpando(contentElement);
         }
 
         return new ExpandoObject();
@@ -392,4 +400,47 @@ public static class EventEntryConverter
     /// <returns>Serialized JSON string.</returns>
     public static string SerializeCausedBy(IEnumerable<IdentityId> causedByChain) =>
         JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions);
+
+    static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)
+    {
+        var expando = new ExpandoObject();
+        var dictionary = (IDictionary<string, object?>)expando;
+        foreach (var property in element.EnumerateObject())
+        {
+            dictionary[property.Name] = ConvertJsonElementToClrValue(property.Value);
+        }
+        return expando;
+    }
+
+    static object? ConvertJsonElementToClrValue(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                return ConvertJsonObjectToExpando(element);
+            case JsonValueKind.Array:
+                var items = new List<object?>();
+                foreach (var item in element.EnumerateArray())
+                {
+                    items.Add(ConvertJsonElementToClrValue(item));
+                }
+
+                return items.ToArray();
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                if (element.TryGetInt64(out var l))
+                {
+                    return l;
+                }
+
+                return element.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            default:
+                return null;
+        }
+    }
 }
