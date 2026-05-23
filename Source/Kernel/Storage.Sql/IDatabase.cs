@@ -74,4 +74,26 @@ public interface IDatabase
     /// Pass an empty string to evict every entry.
     /// </param>
     void ClearTableMigrationCache(string connectionStringPrefix);
+
+#if DEVELOPMENT
+    /// <summary>
+    /// Atomically wipes every database owned by this <see cref="IDatabase"/> instance and
+    /// invalidates the per-context migration cache. This member is only compiled when the
+    /// <c>DEVELOPMENT</c> preprocessor symbol is defined — production builds of
+    /// <c>Storage.Sql</c> do not expose it.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// For SQLite, this closes the pooled connections and drops every table in every database
+    /// file whose name shares the cluster file's basename — relying on SQLite's own RESERVED /
+    /// EXCLUSIVE lock to serialize against concurrent grain activations rather than racing on
+    /// <c>File.Delete</c>. For PostgreSQL and Microsoft SQL Server, this truncates every user
+    /// table that is not part of the preserved identity set across the cluster database and
+    /// every sibling event-store / namespace / read-model database. The wipe and the
+    /// migration-cache invalidation are performed together so that no subsequent caller can
+    /// observe a state where the cache says a table is migrated but the underlying file or
+    /// row does not exist.
+    /// </remarks>
+    Task Wipe();
+#endif
 }
