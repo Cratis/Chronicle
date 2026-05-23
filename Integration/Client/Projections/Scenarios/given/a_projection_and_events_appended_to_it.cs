@@ -74,19 +74,6 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     {
         await Projection.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
         Result = await GetReadModelResult();
-
-        // The projection head position and the sink write are async; under load the sink
-        // write may lag slightly behind the position update. Retry briefly to avoid a
-        // spurious NullReferenceException in assertions when Result is unexpectedly null.
-        if (Result is null)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(10);
-            while (Result is null && DateTime.UtcNow < deadline)
-            {
-                await Task.Delay(100);
-                Result = await GetReadModelResult();
-            }
-        }
     }
 
     protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId) =>

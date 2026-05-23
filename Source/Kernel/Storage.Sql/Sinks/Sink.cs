@@ -96,7 +96,16 @@ public class Sink(
             stateDict[GetIdentifierPropertyName()] = key.Value;
         }
 
-        stateDict[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)eventSequenceNumber;
+        // __lastHandledEventSequenceNumber must only ever move forward. When events for the
+        // same read-model key are processed out of order — as can happen when catch-up
+        // dispatches per-partition steps for a constant-key or join projection — keeping the
+        // initial state's value avoids letting an earlier sequence number overwrite a later
+        // one, which would leave the read model pointing at a sequence it has already passed.
+        var newSequenceNumber = (ulong)eventSequenceNumber;
+        var existingSequenceNumber = stateDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var existingValue) && existingValue is not null
+            ? Convert.ToUInt64(existingValue)
+            : 0UL;
+        stateDict[WellKnownProperties.LasHandledEventSequenceNumber] = Math.Max(newSequenceNumber, existingSequenceNumber);
 
         var document = SerializeDocument(state);
 

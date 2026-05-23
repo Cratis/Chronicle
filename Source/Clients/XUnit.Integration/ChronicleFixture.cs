@@ -204,12 +204,16 @@ public abstract class ChronicleFixture : IChronicleFixture
 
         if (failure is not null)
         {
-            Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
+            // Surfacing the underlying failure prevents downstream code from operating on an
+            // unstarted container. Without throwing, the fixture would silently continue and
+            // every subsequent GetMappedPublicPort call would surface as a confusing
+            // ArgumentOutOfRangeException far away from the real cause.
+            throw new InvalidOperationException(
+                $"Failed to start container '{container.Image.FullName}' after {retryCount} attempts.",
+                failure);
         }
-        else
-        {
-            _started = true;
-            Console.WriteLine("We have started the container successfully.");
-        }
+
+        _started = true;
+        Console.WriteLine("We have started the container successfully.");
     }
 }

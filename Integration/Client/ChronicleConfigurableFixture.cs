@@ -199,11 +199,23 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// </summary>
     public override IContainer MongoDBContainer => _outOfProcessMongoContainer ?? base.MongoDBContainer;
 
+    /// <summary>
+    /// Builds the in-process MongoDB container.
+    /// </summary>
+    /// <remarks>
+    /// Random host port avoids 'port already allocated' races when one test session hands over
+    /// to the next before Docker has released the previous binding. With a fixed host port,
+    /// back-to-back dotnet test invocations could fail with the new container unable to bind,
+    /// and the fixture would silently continue with an unstarted container — surfacing later
+    /// as ArgumentOutOfRangeException from GetMappedPublicPort.
+    /// </remarks>
+    /// <param name="network">The network to attach the container to.</param>
+    /// <returns>The built container.</returns>
     IContainer BuildInProcessMongoContainer(INetwork network) =>
         new ContainerBuilder("mongo")
             .WithCommand("/bin/sh", "-c", MongoReplicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-            .WithPortBinding(MongoDBPort, 27017)
+            .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(ChronicleInProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)

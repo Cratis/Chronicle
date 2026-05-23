@@ -157,13 +157,18 @@ public class ChangesetConverter(
     {
         var value = converter.ToBsonValue(eventSequenceNumber);
 
+        // Use $max so this value can only ever move forward in MongoDB. When events for the
+        // same read-model key are processed out of order — which happens when catch-up
+        // dispatches per-partition steps for a constant-key or join projection — a plain $set
+        // would let an earlier sequence number overwrite a later one, leaving the read model
+        // pointing at a sequence number it has already moved past.
         if (updateBuilder != default)
         {
-            updateBuilder = updateBuilder.Set(WellKnownProperties.LasHandledEventSequenceNumber, value);
+            updateBuilder = updateBuilder.Max(WellKnownProperties.LasHandledEventSequenceNumber, value);
         }
         else
         {
-            updateBuilder = updateDefinitionBuilder.Set(WellKnownProperties.LasHandledEventSequenceNumber, value);
+            updateBuilder = updateDefinitionBuilder.Max(WellKnownProperties.LasHandledEventSequenceNumber, value);
         }
     }
 
