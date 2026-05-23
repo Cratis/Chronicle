@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.for_Observer;
 
 public class when_replaying_partition_and_observer_is_replaying : given.an_observer
 {
-    static Key _partition;
+    Key _partition;
 
     void Establish()
     {
