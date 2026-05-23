@@ -3,17 +3,17 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation;
 
 /// <summary>
-/// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for reducers.
+/// Represents an implementation of <see cref="ICanHandleReplayForObserver"/> for reactors.
 /// </summary>
-/// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying connected clients.</param>
-public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandleReplayForObserver
+/// <param name="reactorMediator"><see cref="IReactorMediator"/> for notifying connected clients.</param>
+public class ReactorReplayHandler(IReactorMediator reactorMediator) : ICanHandleReplayForObserver
 {
     /// <inheritdoc/>
     public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayFor(ObserverDetails observerDetails)
@@ -23,8 +23,8 @@ public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandle
             return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
         }
 
-        reducerMediator.OnBeginReplay(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
+        reactorMediator.OnBeginReplay(
+            new ReactorId(observerDetails.Key.ObserverId.Value),
             observerDetails.Key.EventStore,
             observerDetails.Key.Namespace);
 
@@ -45,8 +45,8 @@ public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandle
             return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
         }
 
-        reducerMediator.OnEndReplay(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
+        reactorMediator.OnEndReplay(
+            new ReactorId(observerDetails.Key.ObserverId.Value),
             observerDetails.Key.EventStore,
             observerDetails.Key.Namespace);
 
@@ -61,8 +61,8 @@ public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandle
             return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
         }
 
-        reducerMediator.OnBeginReplayPartition(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
+        reactorMediator.OnBeginReplayPartition(
+            new ReactorId(observerDetails.Key.ObserverId.Value),
             observerDetails.Key.EventStore,
             observerDetails.Key.Namespace,
             partition);
@@ -78,8 +78,8 @@ public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandle
             return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
         }
 
-        reducerMediator.OnEndReplayPartition(
-            new ReducerId(observerDetails.Key.ObserverId.Value),
+        reactorMediator.OnEndReplayPartition(
+            new ReactorId(observerDetails.Key.ObserverId.Value),
             observerDetails.Key.EventStore,
             observerDetails.Key.Namespace,
             partition);
@@ -87,5 +87,5 @@ public class ReducerReplayHandler(IReducerMediator reducerMediator) : ICanHandle
         return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
     }
 
-    static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Reducer;
+    static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Reactor;
 }

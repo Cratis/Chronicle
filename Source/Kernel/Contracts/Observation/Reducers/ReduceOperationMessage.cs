@@ -28,4 +28,10 @@ public class ReduceOperationMessage
     /// </summary>
     [ProtoMember(3)]
     public IList<AppendedEvent> Events { get; set; }
+
+    /// <summary>
+    /// Gets or sets the replay state for this message.
+    /// </summary>
+    [ProtoMember(4)]
+    public ReplayState ReplayState { get; set; }
 }
