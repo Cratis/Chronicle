@@ -70,13 +70,14 @@ public class ConstraintImperativeCodeAnalyzer : DiagnosticAnalyzer
 
     static void CheckBodyStatements(SyntaxNodeAnalysisContext context, SyntaxList<StatementSyntax> statements, string typeName)
     {
-        foreach (var statement in statements.Where(WellKnownTypes.IsImperativeStatement))
-        {
-            var diagnostic = Diagnostic.Create(
+        foreach (var diagnostic in statements
+            .Where(WellKnownTypes.IsImperativeStatement)
+            .Select(statement => Diagnostic.Create(
                 Rule,
                 statement.GetLocation(),
                 typeName,
-                statement.Kind().ToString());
+                statement.Kind().ToString())))
+        {
             context.ReportDiagnostic(diagnostic);
         }
     }
