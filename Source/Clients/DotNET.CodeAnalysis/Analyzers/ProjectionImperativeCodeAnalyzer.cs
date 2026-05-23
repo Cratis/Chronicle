@@ -70,13 +70,16 @@ public class ProjectionImperativeCodeAnalyzer : DiagnosticAnalyzer
 
     static void CheckBodyStatements(SyntaxNodeAnalysisContext context, SyntaxList<StatementSyntax> statements, string typeName)
     {
-        foreach (var statement in statements.Where(WellKnownTypes.IsImperativeStatement))
-        {
-            var diagnostic = Diagnostic.Create(
+        var diagnostics = statements
+            .Where(WellKnownTypes.IsImperativeStatement)
+            .Select(statement => Diagnostic.Create(
                 Rule,
                 statement.GetLocation(),
                 typeName,
-                statement.Kind().ToString());
+                statement.Kind().ToString()));
+
+        foreach (var diagnostic in diagnostics)
+        {
             context.ReportDiagnostic(diagnostic);
         }
     }
