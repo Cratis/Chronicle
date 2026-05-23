@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -69,17 +70,14 @@ public class ProjectionImperativeCodeAnalyzer : DiagnosticAnalyzer
 
     static void CheckBodyStatements(SyntaxNodeAnalysisContext context, SyntaxList<StatementSyntax> statements, string typeName)
     {
-        foreach (var statement in statements)
+        foreach (var statement in statements.Where(WellKnownTypes.IsImperativeStatement))
         {
-            if (WellKnownTypes.IsImperativeStatement(statement))
-            {
-                var diagnostic = Diagnostic.Create(
-                    Rule,
-                    statement.GetLocation(),
-                    typeName,
-                    statement.Kind().ToString());
-                context.ReportDiagnostic(diagnostic);
-            }
+            var diagnostic = Diagnostic.Create(
+                Rule,
+                statement.GetLocation(),
+                typeName,
+                statement.Kind().ToString());
+            context.ReportDiagnostic(diagnostic);
         }
     }
 }
