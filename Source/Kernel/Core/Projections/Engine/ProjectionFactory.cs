@@ -617,12 +617,18 @@ public class ProjectionFactory(
         // Collect event types from all nested definitions (nested objects use the same key resolver as the parent)
         var nestedEventTypes = CollectNestedEventTypes(projection, projectionDefinition.Nested, actualIdentifiedByProperty, hasParent);
 
-        var operationTypes = fromEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.From)
-            .Concat(joinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join))
-            .Concat(removedWithEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Remove))
-            .Concat(removedWithJoinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join | ProjectionOperationType.Remove))
-            .Concat(nestedEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.From))
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        // Combine all operation-type contributions per event type. The same event type can be registered
+        // through multiple mechanisms simultaneously — e.g. class-level [FromEvent<T>] on the parent +
+        // a nested definition that also projects T via [SetFrom<T>] on its properties. We OR the
+        // ProjectionOperationType flags together so a single event type can carry multiple operation
+        // semantics (From + Remove, From + Join, etc.) without colliding on dictionary insert.
+        var operationTypes = fromEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.From))
+            .Concat(joinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join)))
+            .Concat(removedWithEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Remove)))
+            .Concat(removedWithJoinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join | ProjectionOperationType.Remove)))
+            .Concat(nestedEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.From)))
+            .GroupBy(t => t.EventType)
+            .ToDictionary(g => g.Key, g => g.Aggregate(ProjectionOperationType.None, (acc, x) => acc | x.Op));
 
         List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, .. joinEventTypes, .. removedWithEventTypes, .. removedWithJoinEventTypes, .. nestedEventTypes];
         if (projectionDefinition.FromDerivatives is not null)

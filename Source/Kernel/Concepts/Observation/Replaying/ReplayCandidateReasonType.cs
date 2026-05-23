@@ -30,6 +30,16 @@ public record ReplayCandidateReasonType(string Value) : ConceptAs<string>(Value)
     public static readonly ReplayCandidateReasonType ProjectionDefinitionChanged = "ProjectionDefinitionChanged";
 
     /// <summary>
+    /// Gets the <see cref="ReplayCandidateReasonType"/> for when projection can be updated without replay.
+    /// </summary>
+    public static readonly ReplayCandidateReasonType ProjectionUpdateAvailable = "ProjectionUpdateAvailable";
+
+    /// <summary>
+    /// Gets the <see cref="ReplayCandidateReasonType"/> for when projection can be selectively replayed.
+    /// </summary>
+    public static readonly ReplayCandidateReasonType ProjectionSelectiveReplayAvailable = "ProjectionSelectiveReplayAvailable";
+
+    /// <summary>
     /// Gets the <see cref="ReplayCandidateReasonType"/> for when webhook definition has changed.
     /// </summary>
     public static readonly ReplayCandidateReasonType WebhookDefinitionChanged = "WebhookDefinitionChanged";

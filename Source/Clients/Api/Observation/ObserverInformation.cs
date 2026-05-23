@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Api.Observation;
 /// <param name="EventTypes">The types of events the observer is observing.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number the observer will observe.</param>
 /// <param name="LastHandledEventSequenceNumber">The event sequence number the observer last handled.</param>
+/// <param name="TailEventSequenceNumber">The tail event sequence number for the observed event sequence.</param>
 /// <param name="RunningState">The running state of the observer.</param>
 /// <param name="IsSubscribed">A value indicating whether the observer is subscribed to its handler.</param>
 /// <param name="IsReplayable">A value indicating whether the observer supports replay scenarios.</param>
@@ -30,6 +31,7 @@ public record ObserverInformation(
     IEnumerable<EventType> EventTypes,
     ulong NextEventSequenceNumber,
     ulong LastHandledEventSequenceNumber,
+    ulong TailEventSequenceNumber,
     ObserverRunningState RunningState,
     bool IsSubscribed,
     bool IsReplayable = true)

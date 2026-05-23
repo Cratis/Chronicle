@@ -108,8 +108,22 @@ public partial class Observer
         }
 
         var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
-        if (!tailSequenceNumber.IsActualValue || State.NextEventSequenceNumber > tailSequenceNumber)
+        if (!tailSequenceNumber.IsActualValue)
         {
+            return;
+        }
+
+        var shouldUpdateTailEventSequenceNumber =
+            !State.TailEventSequenceNumber.IsActualValue ||
+            State.TailEventSequenceNumber < tailSequenceNumber;
+
+        if (State.NextEventSequenceNumber > tailSequenceNumber)
+        {
+            if (shouldUpdateTailEventSequenceNumber)
+            {
+                State = State with { TailEventSequenceNumber = tailSequenceNumber };
+                await WriteStateAsync();
+            }
             return;
         }
 
@@ -121,7 +135,16 @@ public partial class Observer
         if (!hasRelevantEvent)
         {
             logger.WatchdogFastForwardingNextEventSequenceNumber(State.NextEventSequenceNumber, tailSequenceNumber);
-            State = State with { NextEventSequenceNumber = tailSequenceNumber.Next() };
+            State = State with
+            {
+                NextEventSequenceNumber = tailSequenceNumber.Next(),
+                TailEventSequenceNumber = tailSequenceNumber
+            };
+            await WriteStateAsync();
+        }
+        else if (shouldUpdateTailEventSequenceNumber)
+        {
+            State = State with { TailEventSequenceNumber = tailSequenceNumber };
             await WriteStateAsync();
         }
     }

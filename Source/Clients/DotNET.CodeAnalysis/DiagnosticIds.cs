@@ -77,4 +77,39 @@ public static class DiagnosticIds
     /// Reducer cannot combine EventStore attribute with an explicit event sequence.
     /// </summary>
     public const string ReducerCannotCombineEventStoreWithExplicitEventSequence = "CHR0014";
+
+    /// <summary>
+    /// Projection must not have side effects (inject ICommandPipeline or IEventLog).
+    /// </summary>
+    public const string ProjectionMustNotHaveSideEffects = "CHR0015";
+
+    /// <summary>
+    /// Projection Define() method must not contain imperative code.
+    /// </summary>
+    public const string ProjectionDefineMustNotContainImperativeCode = "CHR0016";
+
+    /// <summary>
+    /// Constraint must not have side effects (inject ICommandPipeline or IEventLog).
+    /// </summary>
+    public const string ConstraintMustNotHaveSideEffects = "CHR0017";
+
+    /// <summary>
+    /// Constraint Define() method must not contain imperative code.
+    /// </summary>
+    public const string ConstraintDefineMustNotContainImperativeCode = "CHR0018";
+
+    /// <summary>
+    /// Projection expression lambdas must only access members (no method calls, computations, or conditionals).
+    /// </summary>
+    public const string ProjectionExpressionLambdaMustOnlyAccessMembers = "CHR0019";
+
+    /// <summary>
+    /// Constraint expression lambdas must only access members (no method calls, computations, or conditionals).
+    /// </summary>
+    public const string ConstraintExpressionLambdaMustOnlyAccessMembers = "CHR0020";
+
+    /// <summary>
+    /// Event types should be declared as record types for immutability.
+    /// </summary>
+    public const string EventTypeShouldBeRecordType = "CHR0021";
 }

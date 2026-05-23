@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Microsoft.Extensions.Logging;
@@ -23,4 +24,7 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Information, "Reconnecting Reducer '{ReducerId}' after stream failure")]
     internal static partial void ReconnectingReducer(this ILogger<Reducers> logger, ReducerId reducerId);
+
+    [LoggerMessage(LogLevel.Error, "Failed to activate Reducer '{ReducerId}' for replay notification '{ReplayState}'")]
+    internal static partial void FailedActivatingReducerForReplayNotification(this ILogger<Reducers> logger, Exception ex, ReducerId reducerId, ReplayState replayState);
 }

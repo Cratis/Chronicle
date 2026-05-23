@@ -62,4 +62,14 @@ public record ObserverState(
         get => _nextEventSequenceNumber;
         init => _nextEventSequenceNumber = !value.IsActualValue ? EventSequenceNumber.First : value;
     }
+
+    /// <summary>
+    /// Gets or inits the tail <see cref="EventSequenceNumber"/> for the observed event sequence.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber
+    {
+        get;
+        init;
+    }
+        = EventSequenceNumber.Unavailable;
 }

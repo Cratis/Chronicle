@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Orleans.Runtime.Services;
 
 namespace Cratis.Chronicle.Observation;
@@ -25,6 +26,12 @@ public class ObserverServiceClient(IGrainFactory grainFactory, IServiceProvider 
 
     /// <inheritdoc/>
     public async Task EndReplayFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.EndReplayFor(observerDetails));
+
+    /// <inheritdoc/>
+    public async Task BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachGrainService(service => service.BeginReplayPartitionFor(observerDetails, partition));
+
+    /// <inheritdoc/>
+    public async Task EndReplayPartitionFor(ObserverDetails observerDetails, Key partition) => await ForEachGrainService(service => service.EndReplayPartitionFor(observerDetails, partition));
 
     /// <inheritdoc/>
     public async Task BeginCatchupFor(ObserverDetails observerDetails) => await ForEachGrainService(service => service.BeginCatchupFor(observerDetails));

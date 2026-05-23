@@ -62,7 +62,74 @@ The replacement stores an `EventRedacted` content record inside the event docume
 
 The event's own context fields are then updated to reflect the time and identity of the redaction action, giving a complete two-sided audit record.
 
-## Redacting from the Workbench
+## Observing redacted events in Reactors and Reducers
+
+When an event is redacted, the `EventRedacted` event is dispatched to any observer that was subscribed to the original event type and also includes `EventRedacted` in its subscription. This lets Reactors and Reducers react to the removal of data — for example, to clean up read models or trigger downstream notifications.
+
+### Why subscribe to `EventRedacted`?
+
+- **Read model cleanup**: If a Reducer builds state from an event that is later redacted, subscribing to `EventRedacted` lets you remove or anonymise that state in reaction.
+- **Audit and notifications**: A Reactor can notify external systems or write a compliance log entry whenever sensitive data is erased.
+- **Cross-aggregate side effects**: If redacting one event should trigger cancellations or clean-up in other parts of the system, a Reactor can coordinate that work.
+
+### Subscribing in a Reactor
+
+Add a handler method that accepts `EventRedacted` alongside the event type(s) you already handle. The Kernel will only dispatch `EventRedacted` to your Reactor when the redacted event belongs to a type that your Reactor is also subscribed to.
+
+```csharp
+public class PersonReactor : IReactor
+{
+    public Task OnPersonRegistered(PersonRegistered evt, EventContext ctx)
+    {
+        // Handle the original event
+        return Task.CompletedTask;
+    }
+
+    public Task OnEventRedacted(EventRedacted evt, EventContext ctx)
+    {
+        // Called only when a PersonRegistered event (a type this reactor handles) is redacted.
+        // evt.OriginalEventType is typeof(PersonRegistered).
+        // Use this to undo any side effects produced by the original event.
+        return Task.CompletedTask;
+    }
+}
+```
+
+The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
+
+| Property | Description |
+|---|---|
+| `Reason` | The `RedactionReason` provided at the time of redaction. |
+| `OriginalEventType` | The CLR `Type` of the event that was redacted. |
+| `Occurred` | When the original event occurred. |
+| `CorrelationId` | The correlation identifier of the original event. |
+| `Causation` | The full causation chain of the original event. |
+| `CausedBy` | The identity chain that caused the original event. |
+
+### Subscribing in a Reducer
+
+The same approach applies to Reducers. Include `EventRedacted` handling inside the `IReducerFor<TReadModel>` implementation to update the read model when a source event is erased.
+
+```csharp
+public class PersonReadModelReducer : IReducerFor<PersonReadModel>
+{
+    public PersonReadModel OnPersonRegistered(PersonRegistered evt, PersonReadModel? current, EventContext ctx) =>
+        (current ?? new PersonReadModel()) with
+        {
+            Name = evt.Name
+        };
+
+    public PersonReadModel? OnEventRedacted(EventRedacted evt, PersonReadModel? current, EventContext ctx) =>
+        // Return null to remove the read model, or return a sanitised version
+        null;
+}
+```
+
+### Filtering guarantee
+
+The `EventRedacted` event is delivered to an observer **only if** the observer was already subscribed to the original event type. An observer that subscribes to `[PersonRegistered, EventRedacted]` will **not** receive an `EventRedacted` notification when an unrelated event type (e.g. `OrderPlaced`) is redacted.
+
+
 
 The Workbench lets you redact events without writing any code:
 

@@ -35,7 +35,8 @@ public class and_observer_is_replayable : Specification
             false,
             false)
         {
-            NextEventSequenceNumber = 42
+            NextEventSequenceNumber = 42,
+            TailEventSequenceNumber = 99
         };
     }
 
@@ -44,4 +45,5 @@ public class and_observer_is_replayable : Specification
     [Fact] void should_set_is_replayable_to_true() => _result.IsReplayable.ShouldBeTrue();
     [Fact] void should_have_correct_id() => _result.Id.ShouldEqual(_definition.Identifier.Value);
     [Fact] void should_have_correct_running_state() => _result.RunningState.ShouldEqual(ObserverRunningState.Active);
+    [Fact] void should_have_correct_tail_event_sequence_number() => _result.TailEventSequenceNumber.ShouldEqual(99ul);
 }

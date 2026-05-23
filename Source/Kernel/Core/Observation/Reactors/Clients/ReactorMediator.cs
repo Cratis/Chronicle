@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 public class ReactorMediator : IReactorMediator
 {
     readonly ConcurrentDictionary<ReactorMediatorKey, ReactorEventsObserver> _observers = new();
+    readonly ConcurrentDictionary<ReactorMediatorKey, ReactorReplayObserver> _replayObservers = new();
 
     /// <inheritdoc/>
     public void Subscribe(
@@ -28,6 +30,17 @@ public class ReactorMediator : IReactorMediator
         ReactorEventsObserver target)
     {
         _observers[new(reactorId, connectionId, eventStore, @namespace)] = target;
+    }
+
+    /// <inheritdoc/>
+    public void SubscribeReplayNotifications(
+        ReactorId reactorId,
+        ConnectionId connectionId,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        ReactorReplayObserver target)
+    {
+        _replayObservers[new(reactorId, connectionId, eventStore, @namespace)] = target;
     }
 
     /// <inheritdoc/>
@@ -51,12 +64,41 @@ public class ReactorMediator : IReactorMediator
     }
 
     /// <inheritdoc/>
+    public void OnBeginReplay(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        NotifyReplayObservers(reactorId, eventStore, @namespace, ReplayState.BeginReplay, string.Empty);
+
+    /// <inheritdoc/>
+    public void OnEndReplay(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        NotifyReplayObservers(reactorId, eventStore, @namespace, ReplayState.EndReplay, string.Empty);
+
+    /// <inheritdoc/>
+    public void OnBeginReplayPartition(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition) =>
+        NotifyReplayObservers(reactorId, eventStore, @namespace, ReplayState.BeginReplayPartition, partition.Value.ToString()!);
+
+    /// <inheritdoc/>
+    public void OnEndReplayPartition(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, Key partition) =>
+        NotifyReplayObservers(reactorId, eventStore, @namespace, ReplayState.EndReplayPartition, partition.Value.ToString()!);
+
+    /// <inheritdoc/>
     public void Disconnected(
         ReactorId reactorId,
         ConnectionId connectionId,
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace)
     {
-        _observers.TryRemove(new(reactorId, connectionId, eventStore, @namespace), out var _);
+        var key = new ReactorMediatorKey(reactorId, connectionId, eventStore, @namespace);
+        _observers.TryRemove(key, out _);
+        _replayObservers.TryRemove(key, out _);
+    }
+
+    void NotifyReplayObservers(ReactorId reactorId, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReplayState replayState, string partition)
+    {
+        foreach (var (key, observer) in _replayObservers)
+        {
+            if (key.ReactorId == reactorId && key.EventStore == eventStore && key.Namespace == @namespace)
+            {
+                observer(replayState, partition);
+            }
+        }
     }
 }

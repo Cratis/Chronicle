@@ -62,6 +62,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         {
             Id = newId,
             LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,
+            TailEventSequenceNumber = existing.TailEventSequenceNumber,
             RunningState = existing.RunningState,
             ReplayingPartitions = existing.ReplayingPartitions,
             CatchingUpPartitions = existing.CatchingUpPartitions,

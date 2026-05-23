@@ -31,5 +31,8 @@ public class and_next_sequence_number_is_behind_with_no_relevant_events : given.
     [Fact] void should_fast_forward_next_event_sequence_number() =>
         _stateStorage.State.NextEventSequenceNumber.ShouldEqual(_tailSequenceNumber.Next());
 
+    [Fact] void should_set_tail_event_sequence_number() =>
+        _stateStorage.State.TailEventSequenceNumber.ShouldEqual(_tailSequenceNumber);
+
     [Fact] void should_write_state() => _storageStats.Writes.ShouldBeGreaterThan(0);
 }

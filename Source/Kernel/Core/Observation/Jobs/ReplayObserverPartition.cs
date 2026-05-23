@@ -13,12 +13,20 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <summary>
 /// Represents a job for retrying a failed partition.
 /// </summary>
+/// <param name="replayStateServiceClient"><see cref="IObserverServiceClient"/>.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
 public class ReplayObserverPartition(
+    IObserverServiceClient replayStateServiceClient,
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<ReplayObserverPartition> logger) : Job<ReplayObserverPartitionRequest, JobStateWithLastHandledEvent>, IReplayObserverPartition
 {
+    /// <inheritdoc/>
+    protected override async Task OnBeforeStartingJobSteps()
+    {
+        await replayStateServiceClient.BeginReplayPartitionFor(State.ObserverDetails, Request.Key);
+    }
+
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
@@ -28,6 +36,8 @@ public class ReplayObserverPartition(
         {
             logger.NotAllEventsWereHandled(nameof(ReplayObserverPartition), State.LastHandledEventSequenceNumber);
         }
+
+        await replayStateServiceClient.EndReplayPartitionFor(State.ObserverDetails, Request.Key);
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {

@@ -16,7 +16,9 @@ internal class EventRedactedConverters(IEventTypes eventTypes) : JsonConverter<E
     public override EventRedacted? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var content = JsonSerializer.Deserialize<RedactionEventContent>(ref reader, options)!;
-        var eventType = eventTypes.GetClrTypeFor(content.OriginalEventType);
+        var eventType = eventTypes.HasFor(content.OriginalEventType)
+            ? eventTypes.GetClrTypeFor(content.OriginalEventType)
+            : typeof(object);
 
         return new EventRedacted(
             content.Reason,
