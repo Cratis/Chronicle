@@ -36,6 +36,7 @@ internal static class ObserverInformationConverters
             EventTypes = definition.EventTypes.ToContract(),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
             RunningState = state.RunningState.ToContract(),
             IsReplayable = definition.IsReplayable
         };

@@ -35,11 +35,14 @@ public partial class Observer
             return;
         }
 
+        var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
+
         if (!events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
         {
             State = State with
             {
-                NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                TailEventSequenceNumber = observedTailEventSequenceNumber
             };
             await WriteStateAsync();
             return;
@@ -53,7 +56,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteStateAsync();
                 return;
@@ -65,7 +69,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteStateAsync();
                 return;
@@ -76,7 +81,8 @@ public partial class Observer
             {
                 State = State with
                 {
-                    NextEventSequenceNumber = events.Last().Context.SequenceNumber.Next()
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteStateAsync();
                 return;
@@ -135,7 +141,8 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next()
+                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
+                            TailEventSequenceNumber = observedTailEventSequenceNumber
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
                         var shouldSetLastHandled =

@@ -19,6 +19,7 @@ public static class ObserverStateConverters
             Id = state.Identifier,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = state.NextEventSequenceNumber,
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
             RunningState = state.RunningState,
             ReplayingPartitions = state.ReplayingPartitions,
             CatchingUpPartitions = state.CatchingUpPartitions,
@@ -44,7 +45,8 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
-            NextEventSequenceNumber = state.NextEventSequenceNumber
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            TailEventSequenceNumber = state.TailEventSequenceNumber
         };
 
     /// <summary>
@@ -64,7 +66,8 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
-            NextEventSequenceNumber = state.NextEventSequenceNumber
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            TailEventSequenceNumber = state.TailEventSequenceNumber
         };
 
     /// <summary>

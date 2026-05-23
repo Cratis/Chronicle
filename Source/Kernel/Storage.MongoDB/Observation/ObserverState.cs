@@ -29,6 +29,11 @@ public class ObserverState
     public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
+    /// Gets or sets the current tail event sequence number.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
     /// Gets or sets the current running state of the observer.
     /// </summary>
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
