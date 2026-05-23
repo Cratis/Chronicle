@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_partition_caught_up;
 
 public class and_observer_is_replaying : given.an_observer_with_one_partition_being_caught_up
 {
-    static EventSequenceNumber _newSequenceNumber;
+    EventSequenceNumber _newSequenceNumber;
 
     void Establish()
     {
