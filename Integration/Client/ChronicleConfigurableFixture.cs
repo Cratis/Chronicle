@@ -61,6 +61,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     IContainer? _databaseContainer;
     IContainer? _outOfProcessMongoContainer;
+#pragma warning disable CA2213 // _outOfProcessKernelContainer is a reference to the container the base class owns and disposes via base.DisposeAsync.
+    IContainer? _outOfProcessKernelContainer;
+#pragma warning restore CA2213
 
     /// <summary>
     /// Gets the selected runtime options.
@@ -235,10 +238,14 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             _ => throw new InvalidOperationException($"Unsupported storage provider '{Options.StorageProvider}'."),
         };
 
+        // Random host ports avoid back-to-back test sessions colliding on the previous
+        // container's still-bound ports while Docker tears it down. The actual mapped
+        // ports are exposed through KernelGrpcHostPort and KernelManagementHostPort and
+        // forwarded to the in-process silo + the reset client.
         var builder = new ContainerBuilder(_imageName)
             .WithImage(_imageName)
-            .WithPortBinding(8081, 8080)
-            .WithPortBinding(35001, 35000)
+            .WithPortBinding(8080, assignRandomHostPort: true)
+            .WithPortBinding(35000, assignRandomHostPort: true)
             .WithHostname(ChronicleOutOfProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
@@ -256,8 +263,36 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 req => req.ForPort(8080).ForPath("/health"),
                 s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
 
-        return builder.WithWaitStrategy(waitStrategy).Build();
+        var kernelContainer = builder.WithWaitStrategy(waitStrategy).Build();
+        _outOfProcessKernelContainer = kernelContainer;
+        return kernelContainer;
     }
+
+    /// <summary>
+    /// Gets the host port the OOP kernel container's gRPC endpoint (internal port 35000)
+    /// is mapped to. Valid only in <see cref="ChronicleRuntimeMode.OutOfProcess"/> mode after
+    /// the container has been started.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when invoked before the OOP kernel container has been built (e.g. when running
+    /// in <see cref="ChronicleRuntimeMode.InProcess"/> mode).
+    /// </exception>
+    public int KernelGrpcHostPort => _outOfProcessKernelContainer is not null
+        ? _outOfProcessKernelContainer.GetMappedPublicPort(35000)
+        : throw new InvalidOperationException("KernelGrpcHostPort is only valid in OutOfProcess mode after the kernel container has been built.");
+
+    /// <summary>
+    /// Gets the host port the OOP kernel container's management endpoint (internal port 8080)
+    /// is mapped to. Valid only in <see cref="ChronicleRuntimeMode.OutOfProcess"/> mode after
+    /// the container has been started.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when invoked before the OOP kernel container has been built (e.g. when running
+    /// in <see cref="ChronicleRuntimeMode.InProcess"/> mode).
+    /// </exception>
+    public int KernelManagementHostPort => _outOfProcessKernelContainer is not null
+        ? _outOfProcessKernelContainer.GetMappedPublicPort(8080)
+        : throw new InvalidOperationException("KernelManagementHostPort is only valid in OutOfProcess mode after the kernel container has been built.");
 
     string BuildAndStartMongoDB(INetwork network)
     {
@@ -377,13 +412,13 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
-        var connectionString = new ChronicleConnectionString("chronicle://localhost:35001/?disableTls=true");
+        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?disableTls=true");
         var options = new ChronicleClientOptions
         {
             ConnectionString = connectionString,
             EventStore = "Testing",
             AutoDiscoverAndRegister = false,
-            ManagementPort = 8081,
+            ManagementPort = KernelManagementHostPort,
 
             // Reset is a one-shot operation that can take longer than the 5-second keep-alive
             // watchdog window (especially on SQL backends, where wiping enumerates and truncates
