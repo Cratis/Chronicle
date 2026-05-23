@@ -222,8 +222,36 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return true;
     }
 
-    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event) =>
-        subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event);
+    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
+    {
+        if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+        {
+            return false;
+        }
+
+        if (!MatchesFilters(subscription, @event))
+        {
+            return false;
+        }
+
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return IsRedactionForSubscribedEventType(@event, subscription.EventTypeIds);
+        }
+
+        return true;
+    }
+
+    static bool IsRedactionForSubscribedEventType(AppendedEvent @event, IEnumerable<EventTypeId> subscribedEventTypeIds)
+    {
+        if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+        {
+            return false;
+        }
+
+        var originalEventTypeId = originalEventTypeObj?.ToString();
+        return originalEventTypeId is not null && subscribedEventTypeIds.Contains(new EventTypeId(originalEventTypeId));
+    }
 
     /// <summary>
     /// Gets the filtered events for a subscription.
