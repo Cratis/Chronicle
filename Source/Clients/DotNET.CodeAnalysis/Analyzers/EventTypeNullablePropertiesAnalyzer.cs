@@ -21,7 +21,7 @@ public class EventTypeNullablePropertiesAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Nullable properties are supported on events but are often an anti-pattern in event sourcing. Prefer dedicated event types when expressing optional facts.");
+        description: "In event sourcing, each event should capture a complete, unambiguous fact. Nullable properties introduce uncertainty about whether the fact was present. Instead of a nullable property, create a dedicated event type for the scenario where the data is absent or optional—this makes the intent explicit and keeps each event self-describing.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

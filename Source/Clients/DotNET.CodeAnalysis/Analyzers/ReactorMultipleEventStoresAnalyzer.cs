@@ -20,7 +20,7 @@ public class ReactorMultipleEventStoresAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A reactor may only handle event types from a single event store.");
+        description: "A reactor subscribes to one event store's event stream. Handling events from multiple event stores would require multiple subscriptions, which Chronicle does not support for a single reactor. Ensure all event types in this reactor are from the same event store, or split it into separate reactors—one per event store.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

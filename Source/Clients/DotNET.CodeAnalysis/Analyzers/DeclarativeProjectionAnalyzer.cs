@@ -22,7 +22,7 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Event types referenced in declarative projections must be marked with the [EventType] attribute.");
+        description: "Chronicle uses the [EventType] attribute to identify and route events to the correct projection handler during replay. Add [EventType(\"<guid>\")] to the type referenced in this projection, or replace it with a type that is already marked with [EventType].");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
