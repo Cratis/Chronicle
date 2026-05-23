@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,6 +15,8 @@ namespace Cratis.Chronicle.Projections;
 /// </summary>
 internal static class ProjectionReplayRecommendationEvaluator
 {
+    static readonly ITypeFormats _typeFormats = new TypeFormats();
+
     /// <summary>
     /// Gets added event types if those are the only relevant changes in a projection definition.
     /// </summary>
@@ -46,6 +51,52 @@ internal static class ProjectionReplayRecommendationEvaluator
             ? addedEventTypes
             : [];
     }
+
+    /// <summary>
+    /// Evaluates whether a read model schema change can be handled without full replay.
+    /// </summary>
+    /// <param name="readModelDefinition">The read model definition to evaluate.</param>
+    /// <returns>The recommended migration approach.</returns>
+    public static ProjectionReadModelMigrationRecommendation GetReadModelMigrationRecommendation(ReadModelDefinition readModelDefinition)
+    {
+        // No previous schema generation means there is no migration shape to evaluate, so we keep
+        // replay-required semantics for definition changes as the safe default.
+        if (readModelDefinition.Schemas.Count < 2)
+        {
+            return ProjectionReadModelMigrationRecommendation.ReplayRequired;
+        }
+
+        var schemasByGeneration = readModelDefinition.Schemas.OrderBy(_ => _.Key.Value).ToArray();
+        var previousSchema = schemasByGeneration[^2].Value;
+        var latestSchema = schemasByGeneration[^1].Value;
+
+        var previousPropertyNames = previousSchema
+            .GetFlattenedProperties()
+            .Select(_ => _.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var addedProperties = latestSchema
+            .GetFlattenedProperties()
+            .Where(_ => !previousPropertyNames.Contains(_.Name))
+            .ToArray();
+
+        // If no properties were added between generations, this migration path does not apply and we
+        // keep the default replay recommendation for other potential change types.
+        if (addedProperties.Length == 0)
+        {
+            return ProjectionReadModelMigrationRecommendation.ReplayRequired;
+        }
+
+        return addedProperties.All(HasDefaultValueForMigration)
+            ? ProjectionReadModelMigrationRecommendation.UpdateAvailable
+            : ProjectionReadModelMigrationRecommendation.SelectiveReplayAvailable;
+    }
+
+    static bool HasDefaultValueForMigration(JsonSchemaProperty property) =>
+        HasExplicitSchemaDefault(property) || property.IsNullable() || property.GetDefaultValue(_typeFormats) is not null;
+
+    static bool HasExplicitSchemaDefault(JsonSchemaProperty property) =>
+        JsonNode.Parse(property.ToJson()) is JsonObject propertyNode && propertyNode["default"] is not null;
 
     static HashSet<EventType> GetEventTypes(ProjectionDefinition definition)
     {
