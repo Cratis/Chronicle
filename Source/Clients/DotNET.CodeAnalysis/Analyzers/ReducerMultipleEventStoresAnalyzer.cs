@@ -20,7 +20,7 @@ public class ReducerMultipleEventStoresAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A reducer may only reduce event types from a single event store.");
+        description: "A reducer subscribes to one event store's event stream. Reducing events from multiple event stores would require multiple subscriptions, which Chronicle does not support for a single reducer. Ensure all event types in this reducer are from the same event store, or split it into separate reducers—one per event store.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

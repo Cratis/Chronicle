@@ -5,15 +5,18 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using System.Dynamic;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Json;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
@@ -158,11 +161,21 @@ internal static class ProjectionReadModelProcessor
             ? initialState.AsExpandoObject(false)
             : CreateInitialStateFromSchema(schema);
 
+        // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
+        // upserts each read model document with `_id` = this key value, and the BSON deserializer maps
+        // `_id` back onto the read model's identifier property (the property marked [Key] / [Subject]
+        // or conventionally named "Id"). The in-memory test harness skips the MongoDB round-trip, so
+        // we mirror that mapping ourselves before serializing the state — otherwise identifier
+        // properties whose only source is the event-source ID surface as null in _scenario.Instance.
+        KernelKey? rootKey = null;
+
         // Process events, retrying any that return DeferredKey once all other events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            state = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, @event, state, deferredEvents);
+            var (newState, eventKey) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, @event, state, deferredEvents);
+            state = newState;
+            rootKey ??= eventKey;
         }
 
         // Retry deferred events once; if still deferred, throw a descriptive exception.
@@ -180,6 +193,7 @@ internal static class ProjectionReadModelProcessor
             }
 
             var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
+            rootKey ??= key;
             var context = new KernelProjectionEngine::ProjectionEventContext(
                 key,
                 @event,
@@ -191,8 +205,75 @@ internal static class ProjectionReadModelProcessor
             state = ApplyActualChanges(key, changeset.Changes, state);
         }
 
+        InjectIdentifierFromKey<TReadModel>(state, rootKey);
+
         var json = JsonSerializer.Serialize(state);
         return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Mirrors MongoDB's `_id` → identifier property mapping for the in-memory test harness.
+    /// Finds the read model's identifier property (preferring <c>[Key]</c>, then <c>[Subject]</c>,
+    /// then a property named "Id" by convention) and writes the resolved projection key value into
+    /// the state under that property's camel-cased name — unless an event mapping has already
+    /// populated that property.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
+    /// <param name="state">The projection state ExpandoObject to inject into.</param>
+    /// <param name="key">The resolved projection key, or <see langword="null"/> if no event resolved one.</param>
+    static void InjectIdentifierFromKey<TReadModel>(ExpandoObject state, KernelKey? key)
+        where TReadModel : class
+    {
+        if (key is null || key.Value is null) return;
+
+        var identifierProperty = FindIdentifierProperty(typeof(TReadModel));
+        if (identifierProperty is null) return;
+
+        var propertyName = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifierProperty.Name);
+        var stateDict = (IDictionary<string, object?>)state;
+
+        // Don't overwrite an explicit projection mapping (e.g. [SetFrom<T>] or [SetFromContext<T>]
+        // that wrote to the identifier property). The MongoDB analogue is: if the projection
+        // updates `_id`, that update wins; we only fill in `_id` when no update touched it.
+        if (stateDict.TryGetValue(propertyName, out var existing) && existing is not null)
+        {
+            return;
+        }
+
+        stateDict[propertyName] = key.Value;
+    }
+
+    /// <summary>
+    /// Locates the property a read model uses as its document identifier, following the same
+    /// precedence MongoDB uses to map to `_id`:
+    /// <list type="number">
+    /// <item><description><see cref="KeyAttribute"/> on a property or record positional parameter</description></item>
+    /// <item><description><see cref="SubjectAttribute"/> on a property or record positional parameter</description></item>
+    /// <item><description>A property literally named <c>Id</c> (MongoDB default-id convention)</description></item>
+    /// </list>
+    /// </summary>
+    /// <param name="readModelType">The read model CLR type to inspect.</param>
+    static PropertyInfo? FindIdentifierProperty(Type readModelType)
+    {
+        var properties = readModelType.GetProperties();
+        var primaryCtor = readModelType.GetConstructors().FirstOrDefault();
+        var parameters = primaryCtor?.GetParameters() ?? [];
+
+        return FindByAttribute<KeyAttribute>(properties, parameters)
+            ?? FindByAttribute<SubjectAttribute>(properties, parameters)
+            ?? properties.FirstOrDefault(p => string.Equals(p.Name, "Id", StringComparison.Ordinal));
+    }
+
+    static PropertyInfo? FindByAttribute<TAttribute>(PropertyInfo[] properties, ParameterInfo[] parameters)
+        where TAttribute : Attribute
+    {
+        var taggedProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
+        if (taggedProperty is not null) return taggedProperty;
+
+        var taggedParameter = parameters.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
+        return taggedParameter is null
+            ? null
+            : properties.FirstOrDefault(p => string.Equals(p.Name, taggedParameter.Name, StringComparison.Ordinal));
     }
 
     static ExpandoObject CreateInitialStateFromSchema(JsonSchema schema)
@@ -246,7 +327,7 @@ internal static class ProjectionReadModelProcessor
         return schemas;
     }
 
-    static async Task<ExpandoObject> ProcessSingleEvent(
+    static async Task<(ExpandoObject State, KernelKey? Key)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         InMemoryEventSequenceStorage eventSequenceStorage,
         KernelAppendedEvent @event,
@@ -259,7 +340,7 @@ internal static class ProjectionReadModelProcessor
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
             deferredEvents.Enqueue(@event);
-            return state;
+            return (state, null);
         }
 
         var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
@@ -271,7 +352,7 @@ internal static class ProjectionReadModelProcessor
             false);
 
         HandleEventFor(projection, context);
-        return ApplyActualChanges(key, changeset.Changes, state);
+        return (ApplyActualChanges(key, changeset.Changes, state), key);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)

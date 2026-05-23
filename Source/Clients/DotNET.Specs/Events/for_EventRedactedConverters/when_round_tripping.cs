@@ -18,6 +18,7 @@ public class when_round_tripping : Specification
     {
         _eventTypes = Substitute.For<IEventTypes>();
         var eventType = typeof(string); // Use string as a dummy type
+        _eventTypes.HasFor(new EventTypeId(EventTypeId)).Returns(true);
         _eventTypes.GetClrTypeFor(EventTypeId).Returns(eventType);
         _eventTypes.GetEventTypeFor(eventType).Returns(new EventType(EventTypeId, EventTypeGeneration.First));
         _options = new JsonSerializerOptions { Converters = { new EventRedactedConverters(_eventTypes) } };

@@ -20,7 +20,7 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Model bound projection attributes must reference types marked with the [EventType] attribute.");
+        description: "Chronicle model-bound projection attributes (e.g., [FromEvent<T>], [Join<T>]) require the referenced type to carry [EventType] so Chronicle can correlate events during replay. Add [EventType(\"<guid>\")] to the referenced type, or use a type that is already marked with [EventType].");
 
     static readonly string[] ModelBoundProjectionAttributeNames =
     [

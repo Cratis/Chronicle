@@ -50,7 +50,8 @@ public static class TestProject
             MetadataReference.CreateFromFile(typeof(System.Collections.Immutable.ImmutableArray).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(CancellationToken).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(CSharpCompilation).Assembly.Location)
+            MetadataReference.CreateFromFile(typeof(CSharpCompilation).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(System.Linq.Expressions.Expression).Assembly.Location)
         ];
     }
 }

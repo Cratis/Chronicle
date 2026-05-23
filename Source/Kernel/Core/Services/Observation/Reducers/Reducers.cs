@@ -185,6 +185,13 @@ internal sealed class Reducers(
                             observer.OnNext(message);
                         });
 
+                    reducerMediator.SubscribeReplayNotifications(
+                        registration.Reducer.ReducerId,
+                        registration.ConnectionId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = replayState }));
+
                     using (Tracing.RegisterObserver(key, ObserverType.Reducer))
                     {
                         var reducerDefinition = registration.Reducer.ToChronicle();

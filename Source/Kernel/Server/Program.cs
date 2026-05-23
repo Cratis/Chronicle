@@ -164,6 +164,7 @@ hostBuilder
                 chronicleBuilder.WithMongoDB(chronicleOptions);
 
             chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
+            chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
         }))
    .ConfigureServices((context, services) =>
    {

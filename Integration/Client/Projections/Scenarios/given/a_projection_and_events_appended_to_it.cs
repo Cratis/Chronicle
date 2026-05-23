@@ -38,6 +38,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     {
         Projection = EventStore.Projections.GetHandlerFor<TProjection>();
         await Projection.WaitTillSubscribed();
+        await Projection.WaitTillActive();
 
         IAppendResult appendResult = null;
         foreach (var @event in EventsToAppend)

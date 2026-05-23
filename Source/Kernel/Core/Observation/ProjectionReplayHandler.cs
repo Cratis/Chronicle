@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
@@ -76,6 +77,28 @@ public class ProjectionReplayHandler(
             await replayManager.Replayed(observerDetails.Key.ObserverId, context);
             await namespaceStorage.ReplayContexts.Evict(projection.ReadModel.Identifier);
         });
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> BeginReplayPartitionFor(ObserverDetails observerDetails, Key partition)
+    {
+        if (!CanHandle(observerDetails))
+        {
+            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
+        }
+
+        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
+    }
+
+    /// <inheritdoc/>
+    public Task<Result<ICanHandleReplayForObserver.Error>> EndReplayPartitionFor(ObserverDetails observerDetails, Key partition)
+    {
+        if (!CanHandle(observerDetails))
+        {
+            return Task.FromResult(Result.Failed(ICanHandleReplayForObserver.Error.CannotHandle));
+        }
+
+        return Task.FromResult(Result<ICanHandleReplayForObserver.Error>.Success());
+    }
 
     static bool CanHandle(ObserverDetails observerDetails) => observerDetails.Type == ObserverType.Projection;
 

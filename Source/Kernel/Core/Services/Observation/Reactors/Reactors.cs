@@ -130,6 +130,13 @@ internal sealed class Reactors(
                         observer.OnNext(new EventsToObserve { Partition = partition.Value.ToString()!, Events = eventsToObserve });
                     });
 
+                reactorMediator.SubscribeReplayNotifications(
+                    registration.Reactor.ReactorId,
+                    registration.ConnectionId,
+                    registration.EventStore,
+                    registration.Namespace,
+                    (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = replayState }));
+
                 using (Tracing.RegisterObserver(key, ObserverType.Reactor))
                 {
                     clientObserver = grainFactory.GetGrain<IReactor>(key);

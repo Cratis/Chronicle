@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cratis.Chronicle.CodeAnalysis;
 
@@ -69,6 +70,26 @@ public static class WellKnownTypes
     /// The full name of EventContext class.
     /// </summary>
     public const string EventContextName = "Cratis.Chronicle.Events.EventContext";
+
+    /// <summary>
+    /// The full name of IEventLog interface.
+    /// </summary>
+    public const string IEventLogName = "Cratis.Chronicle.EventSequences.IEventLog";
+
+    /// <summary>
+    /// The full name of ICommandPipeline interface.
+    /// </summary>
+    public const string ICommandPipelineName = "Cratis.Chronicle.Commands.ICommandPipeline";
+
+    /// <summary>
+    /// The full name of IProjectionFor generic interface (open generic).
+    /// </summary>
+    public const string IProjectionForName = "Cratis.Chronicle.Projections.IProjectionFor`1";
+
+    /// <summary>
+    /// The full name of IConstraint interface.
+    /// </summary>
+    public const string IConstraintName = "Cratis.Chronicle.Events.Constraints.IConstraint";
 
     /// <summary>
     /// Check if a type has the EventType attribute.
@@ -158,4 +179,98 @@ public static class WellKnownTypes
     /// <returns>A diagnostic-friendly event store display value.</returns>
     public static string FormatEventStoreName(string eventStoreName) =>
         eventStoreName.Length == 0 ? "<default>" : eventStoreName;
+
+    /// <summary>
+    /// Check if a type implements IProjectionFor&lt;T&gt;.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <param name="compilation">The compilation.</param>
+    /// <returns>True if the type implements IProjectionFor&lt;T&gt;, false otherwise.</returns>
+    public static bool ImplementsIProjectionFor(ITypeSymbol typeSymbol, Compilation compilation)
+    {
+        var projectionForInterface = compilation.GetTypeByMetadataName(IProjectionForName);
+        if (projectionForInterface is null)
+        {
+            return false;
+        }
+
+        return typeSymbol.AllInterfaces.Any(i =>
+            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, projectionForInterface));
+    }
+
+    /// <summary>
+    /// Check if a type implements IConstraint.
+    /// </summary>
+    /// <param name="typeSymbol">The type symbol to check.</param>
+    /// <param name="compilation">The compilation.</param>
+    /// <returns>True if the type implements IConstraint, false otherwise.</returns>
+    public static bool ImplementsIConstraint(ITypeSymbol typeSymbol, Compilation compilation)
+    {
+        var constraintInterface = compilation.GetTypeByMetadataName(IConstraintName);
+        if (constraintInterface is null)
+        {
+            return false;
+        }
+
+        return typeSymbol.AllInterfaces.Any(i =>
+            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, constraintInterface));
+    }
+
+    /// <summary>
+    /// Check if a constructor parameter type is IEventLog or ICommandPipeline (by full name).
+    /// </summary>
+    /// <param name="parameterType">The parameter type symbol to check.</param>
+    /// <returns>True if the type is IEventLog or ICommandPipeline, false otherwise.</returns>
+    public static bool IsEventLogOrCommandPipeline(ITypeSymbol parameterType)
+    {
+        var fullName = parameterType.ToDisplayString();
+        return fullName == IEventLogName || fullName == ICommandPipelineName;
+    }
+
+    /// <summary>
+    /// Check if a constructor parameter type is IEventLog (by full name).
+    /// </summary>
+    /// <param name="parameterType">The parameter type symbol to check.</param>
+    /// <returns>True if the type is IEventLog, false otherwise.</returns>
+    public static bool IsIEventLog(ITypeSymbol parameterType) =>
+        parameterType.ToDisplayString() == IEventLogName;
+
+    /// <summary>
+    /// Check whether a type is <see cref="System.Linq.Expressions.Expression{TDelegate}"/>.
+    /// </summary>
+    /// <param name="type">The type symbol to check.</param>
+    /// <returns>True if the type is Expression&lt;TDelegate&gt;, false otherwise.</returns>
+    public static bool IsExpressionType(ITypeSymbol? type) =>
+        type is INamedTypeSymbol { IsGenericType: true } named &&
+        named.OriginalDefinition.ToDisplayString() == "System.Linq.Expressions.Expression<TDelegate>";
+
+    /// <summary>
+    /// Determines whether an expression is a pure member-access chain (identifiers and member accesses only).
+    /// </summary>
+    /// <param name="expression">The expression to check.</param>
+    /// <returns>True if the expression is a pure member-access chain, false otherwise.</returns>
+    public static bool IsPureMemberAccessChain(ExpressionSyntax expression) =>
+        expression switch
+        {
+            IdentifierNameSyntax => true,
+            MemberAccessExpressionSyntax memberAccess => IsPureMemberAccessChain(memberAccess.Expression),
+            _ => false
+        };
+
+    /// <summary>
+    /// Determines whether a statement is considered imperative (not a pure builder call).
+    /// </summary>
+    /// <param name="statement">The statement to check.</param>
+    /// <returns>True if the statement is imperative, false otherwise.</returns>
+    public static bool IsImperativeStatement(StatementSyntax statement) =>
+        statement is IfStatementSyntax or
+        ForStatementSyntax or
+        ForEachStatementSyntax or
+        WhileStatementSyntax or
+        DoStatementSyntax or
+        SwitchStatementSyntax or
+        ReturnStatementSyntax or
+        ThrowStatementSyntax or
+        LocalDeclarationStatementSyntax or
+        ExpressionStatementSyntax { Expression: AssignmentExpressionSyntax };
 }

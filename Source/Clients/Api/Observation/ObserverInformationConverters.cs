@@ -24,6 +24,7 @@ internal static class ObserverInformationConverters
             observerInformation.EventTypes.ToApi(),
             observerInformation.NextEventSequenceNumber,
             observerInformation.LastHandledEventSequenceNumber,
+            observerInformation.TailEventSequenceNumber,
             (ObserverRunningState)(int)observerInformation.RunningState,
             observerInformation.IsSubscribed,
             observerInformation.IsReplayable);

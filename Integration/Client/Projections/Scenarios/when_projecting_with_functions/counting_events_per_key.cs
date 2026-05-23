@@ -37,7 +37,7 @@ public class counting_events_per_key(context context) : Given<context>(context)
 
         async Task<ReadModel> WaitForReadModel(EventSourceId eventSourceId)
         {
-            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.FromSeconds(60));
             while (DateTime.UtcNow < timeout)
             {
                 var model = await GetReadModel(eventSourceId);

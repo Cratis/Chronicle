@@ -24,6 +24,11 @@ public class ObserverState
     public ulong LastHandledEventSequenceNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the tail sequence number for the observer.
+    /// </summary>
+    public ulong TailEventSequenceNumber { get; set; } = ulong.MaxValue;
+
+    /// <summary>
     /// Gets or sets the running state of the observer.
     /// </summary>
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;

@@ -22,7 +22,7 @@ public class DeclarativeProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyz
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A declarative projection may only reference event types from a single event store.");
+        description: "A declarative projection subscribes to one event store's event stream. Referencing event types from multiple event stores would require multiple subscriptions, which Chronicle does not support for a single projection. Ensure all event types referenced in the Define() method belong to the same event store, or split into separate projections—one per event store.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

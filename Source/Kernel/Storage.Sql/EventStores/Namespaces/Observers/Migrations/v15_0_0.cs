@@ -24,6 +24,7 @@ public class v15_0_0 : Migration
             {
                 Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 LastHandledEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
+                TailEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder, nullable: false, defaultValue: ulong.MaxValue),
                 RunningState = table.NumberColumn<int>(migrationBuilder),
                 ReplayingPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),
                 CatchingUpPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),

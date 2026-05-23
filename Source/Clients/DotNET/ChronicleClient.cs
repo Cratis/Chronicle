@@ -47,7 +47,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly ILoggerFactory _loggerFactory;
     readonly IEventTypeMigrators _eventTypeMigrators;
     readonly INamingPolicy _namingPolicy;
+    readonly CancellationTokenSource? _ownedConnectionCancellation;
     readonly ConcurrentDictionary<EventStoreKey, IEventStore> _eventStores = new();
+    int _isDisposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -124,6 +126,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var disableTls = string.IsNullOrEmpty(certificatePath) && (options.ConnectionString.DisableTls || options.Tls.IsDisabled);
 
         var tokenProvider = CreateTokenProvider(options, disableTls);
+        _ownedConnectionCancellation = new();
 
         _connection = new ChronicleConnection(
             options.ConnectionString,
@@ -134,7 +137,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             new Tasks.TaskFactory(),
             _correlationIdAccessor,
             _loggerFactory,
-            CancellationToken.None,
+            _ownedConnectionCancellation.Token,
             _loggerFactory.CreateLogger<ChronicleConnection>(),
             disableTls,
             certificatePath,
@@ -192,9 +195,27 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public ICausationManager CausationManager { get; }
 
+    /// <summary>
+    /// Gets the cancellation token used for the owned connection lifetime.
+    /// </summary>
+    internal CancellationToken OwnedConnectionCancellationToken => _ownedConnectionCancellation?.Token ?? CancellationToken.None;
+
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            _ownedConnectionCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        _ownedConnectionCancellation?.Dispose();
         _connection.Dispose();
     }
 
