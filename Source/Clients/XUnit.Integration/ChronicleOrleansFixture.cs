@@ -81,7 +81,15 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     ConnectionId. Subsequent events would route to the now-disconnected client and
         //     the observer would transition to Disconnected when the subscriber returns
         //     ObserverSubscriberState.Disconnected.
+        //
+        //     The `-=` before `+=` is critical: EvictEventStores removes the constructor's
+        //     attachment, but on subsequent boundaries the cache is already empty so it removes
+        //     nothing. Each previous boundary already appended via this code path; without the
+        //     prior subtraction the count grows by one per test and RegisterAll runs once per
+        //     prior boundary on every reconnect — re-running EventTypes.Register,
+        //     Constraints.Register and Seeding.Register N times and corrupting test state.
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
+        connection.Lifecycle.OnConnected -= sharedEventStore.RegisterAll;
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
