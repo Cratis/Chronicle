@@ -49,8 +49,9 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// Gets a value indicating whether the SQL Server container must be forced to run as
     /// linux/amd64 instead of the host architecture. SQL Server ships no native linux/arm64
     /// image — only linux/amd64 — so on Apple Silicon and Linux ARM64 hosts the container
-    /// must run via emulation (Rosetta on macOS, qemu on Linux). The kernel-side
-    /// <c>Microsoft.Data.SqlClient</c> ARM64 issue is separate and tracked in Cratis/Arc#2235.
+    /// must run via emulation (Rosetta on macOS, qemu on Linux). The kernel container's
+    /// <c>Microsoft.Data.SqlClient</c> runs natively on ARM64 from 7.0.1 onward, so no
+    /// architecture override is required for the kernel itself.
     /// </summary>
     bool ShouldForceAmd64ForMsSql =>
         Options.StorageProvider == ChronicleStorageProvider.MsSql
