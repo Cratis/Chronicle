@@ -81,6 +81,13 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        using var activity = Tracing.Append(
+            eventStoreName,
+            @namespace,
+            eventSequenceId,
+            eventSourceType ?? EventSourceType.Default,
+            eventSourceId);
+
         var eventClrType = @event.GetType();
         var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
         var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
@@ -173,6 +180,8 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default)
     {
+        using var activity = Tracing.AppendMany(eventStoreName, @namespace, eventSequenceId);
+
         var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
         var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
         var resolvedEventSourceType = eventSourceType ?? EventSourceType.Default;
@@ -239,6 +248,8 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
+        using var activity = Tracing.AppendMany(eventStoreName, @namespace, eventSequenceId);
+
         var eventsList = events.ToList();
         var eventsToAppend = new List<Contracts.Events.EventToAppend>(eventsList.Count);
         IImmutableList<Causation>? causation = null;
