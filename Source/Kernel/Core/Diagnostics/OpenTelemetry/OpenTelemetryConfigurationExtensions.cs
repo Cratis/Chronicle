@@ -49,6 +49,19 @@ public static class OpenTelemetryConfigurationExtensions
     }
 
     /// <summary>
+    /// Adds the Chronicle <see cref="System.Diagnostics.ActivitySource"/>.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
+    public static IServiceCollection AddChronicleActivitySource(this IServiceCollection services)
+    {
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        services.AddKeyedSingleton(WellKnown.MeterName, new System.Diagnostics.ActivitySource(ChronicleActivity.SourceName));
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        return services;
+    }
+
+    /// <summary>
     /// Add Chronicle instrumentation to the <see cref="TracerProviderBuilder"/>.
     /// </summary>
     /// <param name="builder">The <see cref="TracerProviderBuilder"/> to add to.</param>

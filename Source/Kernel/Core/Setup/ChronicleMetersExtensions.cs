@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Services.Observation.Reactors;
@@ -34,6 +34,7 @@ public static class ChronicleMetersExtensions
         services.AddMeter<Observer>();
         services.AddMeter<ConnectedClients>();
 
+        services.AddChronicleActivitySource();
         services.AddActivitySource<EventSequence>();
         services.AddActivitySource<AppendedEventsQueue>();
         services.AddActivitySource<Observer>();
@@ -56,8 +57,11 @@ public static class ChronicleMetersExtensions
 
     static IServiceCollection AddActivitySource<TTarget>(this IServiceCollection services)
     {
-        services.AddKeyedSingleton<IActivitySource<TTarget>>(WellKnown.MeterName, (_, _) =>
-            new ActivitySource<TTarget>(ChronicleActivity.Source));
+        services.AddKeyedSingleton<IActivitySource<TTarget>>(WellKnown.MeterName, (sp, key) =>
+        {
+            var activitySource = sp.GetRequiredKeyedService<ActivitySource>(key);
+            return new ActivitySource<TTarget>(activitySource);
+        });
 
         return services;
     }
