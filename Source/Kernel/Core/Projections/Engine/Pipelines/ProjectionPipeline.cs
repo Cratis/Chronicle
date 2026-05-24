@@ -23,30 +23,34 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="changesetStorage"><see cref="IChangesetStorage"/> for storing changesets as they occur.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="steps">Collection of <see cref="ICanPerformProjectionPipelineStep"/> to perform.</param>
+/// <param name="handleLock">Per-projection lock that serializes <see cref="Handle"/> calls across all pipeline instances that share the same projection identifier.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
-#pragma warning disable CA1001 // _handleLock is owned by a long-lived cached pipeline; the manager evicts and replaces the entire pipeline instance when the projection definition changes.
 public class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
     IChangesetStorage changesetStorage,
     IObjectComparer objectComparer,
     IEnumerable<ICanPerformProjectionPipelineStep> steps,
+    SemaphoreSlim handleLock,
     ILogger<ProjectionPipeline> logger) : IProjectionPipeline
 {
     /// <summary>
-    /// Serializes <see cref="Handle"/> calls per pipeline.
+    /// Serializes <see cref="Handle"/> calls per projection.
     /// </summary>
     /// <remarks>
     /// The pipeline performs a read-modify-write cycle against the sink for each event:
     /// SetInitialState reads the current state, HandleEvent computes the changeset, and
     /// SaveChanges writes the new state back. Multiple concurrent Handle() calls — which
-    /// happen when catch-up runs per-partition steps in parallel for a projection whose
-    /// key collapses all partitions into a single read-model document (e.g. UsingConstantKey,
-    /// or a Join that resolves to the same root) — would race on this cycle and produce
-    /// lost updates. Serializing Handle() per pipeline (one pipeline per projection) keeps
-    /// the read-modify-write atomic without coupling the sink to the projection model.
+    /// happen when catch-up or replay runs per-partition steps in parallel for a projection
+    /// whose key collapses all partitions into a single read-model document (e.g. constant
+    /// key, joins, or hierarchical parent/child resolution) — would race on this cycle and
+    /// produce lost updates or missing parent/child links. The lock is owned by
+    /// <see cref="IProjectionPipelineManager"/> so it survives pipeline eviction: a replay
+    /// evicts the cached pipeline and creates a new one, but already-activated subscribers
+    /// still hold the old pipeline reference; both pipelines must share the same lock so the
+    /// concurrent paths still serialize.
     /// </remarks>
-    readonly SemaphoreSlim _handleLock = new(1, 1);
+    readonly SemaphoreSlim _handleLock = handleLock;
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
