@@ -104,7 +104,7 @@ public class EventStore : IEventStore
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
         _activitySource = serviceProvider.GetService<IActivitySource<EventSequence>>()
-            ?? new ActivitySource<EventSequence>();
+            ?? EventSequence.DefaultActivitySource;
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;

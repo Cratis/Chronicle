@@ -55,9 +55,14 @@ public class EventSequence(
     JsonSerializerOptions jsonSerializerOptions,
     IActivitySource<EventSequence>? activitySource = null) : IEventSequence
 {
+    /// <summary>
+    /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
+    /// </summary>
+    internal static readonly IActivitySource<EventSequence> DefaultActivitySource =
+        new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
-    readonly IActivitySource<EventSequence> _activitySource = activitySource
-        ?? new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+    readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
 
     IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
     event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
