@@ -7,6 +7,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration;
 
@@ -146,11 +147,34 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 await ResetOutOfProcessKernelState();
             }
 
+            // For out-of-process MongoDB mode the in-process silo writes its grain state to a
+            // dedicated database on the same shared MongoDB instance. That database is NOT
+            // touched by ResetOutOfProcessKernelState (which only wipes the OOP container's
+            // own databases via gRPC), so without an explicit drop here the in-process silo
+            // would carry every previous test's grain state — observer NextEventSequenceNumber,
+            // reminder rows, projection sinks — into the next test.
+            if (Options.StorageProvider == ChronicleStorageProvider.MongoDB &&
+                _outOfProcessMongoContainer is not null)
+            {
+                await DropInProcessMongoDatabase();
+            }
+
             return;
         }
 
         // In-process mode: defer to the base MongoDB-drop behavior.
         await base.RemoveAllDatabases(excludePrefixes);
+    }
+
+    async Task DropInProcessMongoDatabase()
+    {
+        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_outOfProcessMongoContainer!.GetMappedPublicPort(27017)}")
+        {
+            DirectConnection = true
+        };
+        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
+        using var client = new MongoClient(settings);
+        await client.DropDatabaseAsync(InProcessMongoDatabaseName);
     }
 
     /// <inheritdoc/>
