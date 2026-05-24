@@ -91,7 +91,7 @@ public class ChangesetConverter(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    foreach (var difference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()))
+                    foreach (var difference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey() && !_.PropertyPath.IsSinkOwnedSystemProperty()))
                     {
                         difference.PropertyPath.SetValue(child, difference.Changed!, ArrayIndexers.NoIndexers);
                     }
@@ -176,7 +176,15 @@ public class ChangesetConverter(
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
-        foreach (var propertyDifference in propertiesChanged.Differences.Where(_ => !_.PropertyPath.IsMongoDBKey()).ToArray())
+        // Sink-owned system properties (e.g. __lastHandledEventSequenceNumber) are written via a
+        // dedicated $max operator in BuildLastHandledEventSequenceNumber. Including them in the
+        // generic $set path here produces two operators targeting the same field, which MongoDB
+        // rejects with "Updating the path 'X' would create a conflict at 'X'".
+        var applicableDifferences = propertiesChanged.Differences
+            .Where(_ => !_.PropertyPath.IsMongoDBKey() && !_.PropertyPath.IsSinkOwnedSystemProperty())
+            .ToArray();
+
+        foreach (var propertyDifference in applicableDifferences)
         {
             var (property, arrayFilters) = converter.ToMongoDBProperty(propertyDifference.PropertyPath, propertyDifference.ArrayIndexers);
             allArrayFilters.AddRange(arrayFilters);
@@ -194,6 +202,11 @@ public class ChangesetConverter(
         }
 
         arrayFiltersForDocument.AddRange(allArrayFilters);
+
+        // Report hasChanges based on the original diff set, not the filtered one: a diff that
+        // contained only filtered properties (e.g. _id or __lastHandledEventSequenceNumber) is
+        // still semantically a change as far as the read-modify-write cycle is concerned, and
+        // BuildLastHandledEventSequenceNumber needs to fire to advance the sequence number.
         return propertiesChanged.Differences.Any();
     }
 

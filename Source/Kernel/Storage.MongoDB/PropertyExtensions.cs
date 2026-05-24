@@ -26,6 +26,18 @@ public static class PropertyExtensions
     public static bool IsMongoDBKey(this PropertyPath propertyPath) => propertyPath.Path == "_id" || string.Equals(propertyPath.Path, "id", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Checks whether or not a <see cref="PropertyPath"/> targets a sink-owned system property.
+    /// Sink-owned properties (such as <c>__lastHandledEventSequenceNumber</c>) are managed by the
+    /// sink itself and must never be written through projection / reducer diffs: doing so combines
+    /// a $set on the same path the sink writes via $max, which MongoDB rejects with a path
+    /// conflict error.
+    /// </summary>
+    /// <param name="propertyPath"><see cref="PropertyPath"/> to check.</param>
+    /// <returns>True if the property is sink-owned, false otherwise.</returns>
+    public static bool IsSinkOwnedSystemProperty(this PropertyPath propertyPath) =>
+        propertyPath.Path == WellKnownProperties.LasHandledEventSequenceNumber;
+
+    /// <summary>
     /// Convert a <see cref="PropertyPath"/> to a MongoDB-compatible path string.
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to convert.</param>
