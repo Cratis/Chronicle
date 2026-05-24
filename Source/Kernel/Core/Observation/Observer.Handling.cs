@@ -23,6 +23,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
+        using var activity = Tracing.Handle(_observerKey);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         if (!events.Any())

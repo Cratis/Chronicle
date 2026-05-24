@@ -255,6 +255,7 @@ public class EventSequence(
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes)
     {
+        using var activity = Tracing.AppendMany(_eventSequenceKey);
         try
         {
             var tasks = events.Select(async e =>
@@ -466,6 +467,7 @@ public class EventSequence(
         DateTimeOffset? occurred = null,
         Subject? subject = null)
     {
+        using var activity = Tracing.Append(_eventSequenceKey, eventType, eventSourceType, eventSourceId);
         try
         {
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;

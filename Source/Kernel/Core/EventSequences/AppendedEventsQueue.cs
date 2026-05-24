@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
@@ -34,6 +35,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
     IMeterScope<AppendedEventsQueue>? _metrics;
+    EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
@@ -77,6 +79,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
+        _eventSequenceKey = EventSequenceKey.Parse(key!);
         _metrics = _meter.BeginScope(key!, queueId);
         return base.OnActivateAsync(cancellationToken);
     }
@@ -92,6 +95,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
+        using var activity = Tracing.Enqueue(_eventSequenceKey);
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
         await _channel.Writer.WriteAsync(batch);
@@ -357,6 +361,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 continue;
             }
 
+            using var activity = Tracing.Dispatch(subscription.ObserverKey);
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
             await observer.Handle(@event.Context.EventSourceId, events);
         }
@@ -392,8 +397,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     continue;
                 }
 
+                var activity = Tracing.Dispatch(subscription.ObserverKey);
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                tasks.Add(observer.Handle(partition, actualEvents));
+                tasks.Add(observer.Handle(partition, actualEvents).ContinueWith(_ => activity?.Dispose(), TaskScheduler.Default));
             }
 
             await Task.WhenAll(tasks);
