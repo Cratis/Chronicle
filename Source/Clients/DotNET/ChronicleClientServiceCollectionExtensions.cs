@@ -8,6 +8,8 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
@@ -111,6 +113,10 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
         services.AddSingleton<IActivitySource<EventSequence>>(
             _ => new ActivitySource<EventSequence>(new ActivitySource(ClientActivity.SourceName)));
+        services.AddSingleton<IActivitySource<Reactors>>(
+            _ => new ActivitySource<Reactors>(new ActivitySource(ClientActivity.SourceName)));
+        services.AddSingleton<IActivitySource<Reducers>>(
+            _ => new ActivitySource<Reducers>(new ActivitySource(ClientActivity.SourceName)));
 
         return services;
     }

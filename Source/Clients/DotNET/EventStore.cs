@@ -103,8 +103,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        _activitySource = serviceProvider.GetService<IActivitySource<EventSequence>>()
-            ?? EventSequence.DefaultActivitySource;
+        _activitySource = ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<EventSequence>>(serviceProvider);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -150,6 +149,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider,
+            ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<Reactors.Reactors>>(serviceProvider),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
@@ -167,6 +167,7 @@ public class EventStore : IEventStore
             options,
             identityProvider,
             reducerObservers,
+            ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<Reducers.Reducers>>(serviceProvider),
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
