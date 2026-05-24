@@ -103,6 +103,17 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    truncated in step 3, no reminder can re-activate a grain we are trying to deactivate.
         await DeactivateAllGrains();
 
+        // 4a. Re-wipe storage. Grain deactivation runs OnDeactivateAsync which writes any dirty
+        //     in-memory state back to storage — so a [KeepAlive] grain that was active when the
+        //     previous test finished (e.g. an Observer grain at NextEventSequenceNumber=2) will
+        //     re-populate its row in the freshly-wiped database during deactivation. The next
+        //     test then reads that stale row in Observer.Subscribe -> ReadStateAsync and
+        //     silently filters out every appended event whose sequence number is below the
+        //     stored NextEventSequenceNumber. Wiping again here catches anything written
+        //     between the first wipe and the deactivation cycle.
+        await ChronicleFixture.RemoveAllDatabases();
+        await WipeInProcessStorage();
+
         // 4b. Evict the per-event-store storage cache so the next access reconstructs the
         //     namespace storage and its sinks from scratch. Sinks retain in-memory bookkeeping
         //     (bulk-mode flag, in-replay flag on the underlying collection helper, per-key
