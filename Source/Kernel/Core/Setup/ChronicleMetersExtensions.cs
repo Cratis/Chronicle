@@ -5,9 +5,13 @@ using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Services.Observation.Reactors;
+using Cratis.Chronicle.Services.Observation.Reducers;
 using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Orleans.Hosting;
@@ -30,6 +34,12 @@ public static class ChronicleMetersExtensions
         services.AddMeter<Observer>();
         services.AddMeter<ConnectedClients>();
 
+        services.AddActivitySource<EventSequence>();
+        services.AddActivitySource<AppendedEventsQueue>();
+        services.AddActivitySource<Observer>();
+        services.AddActivitySource<Reducers>();
+        services.AddActivitySource<Reactors>();
+
         return services;
     }
 
@@ -40,6 +50,14 @@ public static class ChronicleMetersExtensions
             var meter = sp.GetRequiredKeyedService<Meter>(key);
             return new Meter<TTarget>(meter);
         });
+
+        return services;
+    }
+
+    static IServiceCollection AddActivitySource<TTarget>(this IServiceCollection services)
+    {
+        services.AddKeyedSingleton<IActivitySource<TTarget>>(WellKnown.MeterName, (_, _) =>
+            new ActivitySource<TTarget>(ChronicleActivity.Source));
 
         return services;
     }
