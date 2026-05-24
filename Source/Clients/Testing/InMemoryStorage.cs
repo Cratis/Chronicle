@@ -51,4 +51,10 @@ internal sealed class InMemoryStorage(
             constraintsStorage,
             identityStorage,
             eventTypesStorage);
+
+    /// <inheritdoc/>
+    public void Clear()
+    {
+        // In-memory storage holds no per-event-store cache to evict.
+    }
 }

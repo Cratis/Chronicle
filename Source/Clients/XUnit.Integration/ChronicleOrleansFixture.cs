@@ -103,6 +103,19 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    truncated in step 3, no reminder can re-activate a grain we are trying to deactivate.
         await DeactivateAllGrains();
 
+        // 4b. Evict the per-event-store storage cache so the next access reconstructs the
+        //     namespace storage and its sinks from scratch. Sinks retain in-memory bookkeeping
+        //     (bulk-mode flag, in-replay flag on the underlying collection helper, per-key
+        //     state caches used during bulk writes) that the database wipe does not clear; a
+        //     sink left mid-replay by a previous test would silently route the next test's
+        //     writes into the temporary replay collection while the test reads from the real
+        //     one. Doing this *after* DeactivateAllGrains is critical: while a subscriber grain
+        //     is still active it holds a reference to its cached pipeline, which holds a
+        //     reference to the old sink instance, and continues to write through the stale
+        //     reference — evict before deactivation and the writes go to an orphaned sink that
+        //     the new reader never sees.
+        Services.GetRequiredService<IStorage>().Clear();
+
         // 3b. Re-bootstrap kernel reactors for the system event store and the test event store.
         //     The ChronicleServerStartupTask that normally does this has been removed from the
         //     test silo (it deadlocks during silo startup), and the previous test's DiscoverAll

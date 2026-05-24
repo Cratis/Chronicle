@@ -67,4 +67,7 @@ public class Storage(
                     (eventStoreNamespaceName) =>
                         new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
     }
+
+    /// <inheritdoc/>
+    public void Clear() => _eventStores.Clear();
 }
