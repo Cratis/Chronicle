@@ -2,10 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -105,6 +109,8 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
+        services.AddSingleton<IActivitySource<EventSequence>>(
+            _ => new ActivitySource<EventSequence>(new ActivitySource(ClientActivity.SourceName)));
 
         return services;
     }
