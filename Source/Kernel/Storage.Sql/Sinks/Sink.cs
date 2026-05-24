@@ -109,18 +109,7 @@ public class Sink(
 
         var document = SerializeDocument(state);
 
-        var existing = await scope.DbContext.Entries.FirstOrDefaultAsync(e => e.Id == id);
-        if (existing is null)
-        {
-            scope.DbContext.Entries.Add(new ReadModelEntry { Id = id, Document = document });
-        }
-        else
-        {
-            existing.Document = document;
-            scope.DbContext.Entries.Update(existing);
-        }
-
-        await scope.DbContext.SaveChangesAsync();
+        await UpsertEntry(scope, id, document);
         return _noFailedPartitions;
     }
 
@@ -195,6 +184,52 @@ public class Sink(
             .Select(e => DeserializeDocument(e.Document));
 
         return new ReadModelInstances(instances, totalCount);
+    }
+
+    static async Task UpsertEntry(DbContextScope<ReadModelDbContext> scope, string id, string document)
+    {
+        // The Find-then-Add-or-Update path is a check-then-act race: when a projection and a
+        // reducer write to the same read-model key concurrently (different observer grains,
+        // both holding their own DbContext scope), both can see Find return null and both can
+        // Add. The second SaveChanges then hits "UNIQUE constraint failed" / primary-key
+        // violation, the partition fails, and any spec that waits on that partition times out.
+        //
+        // The fix is to absorb the duplicate-key error and reattempt as an Update. The retry
+        // uses a fresh DbContext-attached entity so the second writer's content wins — which is
+        // the desired last-writer-wins semantic for projection / reducer sinks.
+        var existing = await scope.DbContext.Entries.FirstOrDefaultAsync(e => e.Id == id);
+        if (existing is not null)
+        {
+            existing.Document = document;
+            scope.DbContext.Entries.Update(existing);
+            await scope.DbContext.SaveChangesAsync();
+            return;
+        }
+
+        scope.DbContext.Entries.Add(new ReadModelEntry { Id = id, Document = document });
+        try
+        {
+            await scope.DbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Another writer inserted the row between our Find and our SaveChanges. Detach the
+            // failed-add tracker so the subsequent Update doesn't see two tracked entities for
+            // the same key, then re-fetch and overwrite. If the row really doesn't exist (i.e.
+            // the exception was something else entirely), re-throw so the caller sees it.
+            var failedEntry = scope.DbContext.ChangeTracker.Entries<ReadModelEntry>().FirstOrDefault(e => e.Entity.Id == id);
+            failedEntry?.State = EntityState.Detached;
+
+            var winning = await scope.DbContext.Entries.FirstOrDefaultAsync(e => e.Id == id);
+            if (winning is null)
+            {
+                throw;
+            }
+
+            winning.Document = document;
+            scope.DbContext.Entries.Update(winning);
+            await scope.DbContext.SaveChangesAsync();
+        }
     }
 
     static string GetIdString(Key key)
