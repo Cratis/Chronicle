@@ -72,6 +72,18 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var chronicleClient = Services.GetRequiredService<IChronicleClient>();
         chronicleClient.EvictEventStores();
 
+        // 1c. EvictEventStores detached the RegisterAll OnConnected handler from the cached
+        //     IEventStore singleton (the one DI returns and the test specs use). The Chronicle
+        //     client cache is cleared but the singleton instance is reused — without re-attaching
+        //     the handler, future client-initiated reconnects (e.g. the test body calling
+        //     Disconnected()/Connect() to exercise reconnect behavior) would not re-register
+        //     reactors and reducers, leaving the kernel observer subscribed to a stale
+        //     ConnectionId. Subsequent events would route to the now-disconnected client and
+        //     the observer would transition to Disconnected when the subscriber returns
+        //     ObserverSubscriberState.Disconnected.
+        var sharedEventStore = Services.GetRequiredService<IEventStore>();
+        connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
+
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
         //    ProjectionX can leave a stale pipeline in the cache that is then reused — with the
