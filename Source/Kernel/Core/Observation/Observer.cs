@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -297,6 +298,22 @@ public partial class Observer(
         await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
+    }
+
+    /// <inheritdoc/>
+    public Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
+    {
+        // Single-threaded grain — the check and Unsubscribe form an atomic action.
+        // If a new client has already replaced the subscription, the old client's
+        // disconnect cleanup must not tear down the new client's subscription.
+        if (_subscription.IsSubscribed &&
+            _subscription.Arguments is ConnectedClient connectedClient &&
+            connectedClient.ConnectionId != connectionId)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Unsubscribe();
     }
 
     /// <inheritdoc/>
