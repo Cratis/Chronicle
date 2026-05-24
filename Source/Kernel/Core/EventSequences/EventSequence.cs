@@ -421,6 +421,19 @@ public class EventSequence(
             causation,
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
+
+        // Storage returns the event with EventType.Id == Redaction (i.e. "EventRedacted") when
+        // it short-circuits the mutation because the event was already redacted. Rewinding for
+        // that synthetic type would replay observers subscribed to EventRedacted for a redaction
+        // that already triggered its own rewind — causing duplicate EventRedacted notifications
+        // when the same redaction is dispatched through more than one path (for example the
+        // production Service.Redact + EventSequencesReactor path racing with an integration
+        // fixture that calls EventSequence.Redact directly).
+        if (affectedEvent.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return;
+        }
+
         await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 

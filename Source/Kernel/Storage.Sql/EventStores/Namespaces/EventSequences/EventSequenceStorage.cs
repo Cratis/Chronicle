@@ -280,6 +280,18 @@ public class EventSequenceStorage(
         var seqNumRedact = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumRedact);
 
+        // If the event has already been redacted (either by an earlier call or by a racing
+        // caller — e.g. the kernel's EventSequencesReactor reacting to the same
+        // EventRedactionRequested system event), return the AppendedEvent with EventType ==
+        // Redaction so the upstream caller in EventSequence.Redact can skip the duplicate
+        // RewindPartitionForAffectedObservers. Doing the duplicate rewind would replay any
+        // observer subscribed to EventRedacted for a redaction that was already applied and
+        // already triggered its own rewind, producing duplicate EventRedacted notifications.
+        if (eventEntry.Type == GlobalEventTypes.Redaction)
+        {
+            return await BuildAppendedEventFromRedactionEntry(eventEntry);
+        }
+
         // Capture the original event type BEFORE we overwrite it. The kernel uses the
         // returned AppendedEvent's event type to find which observers must replay the
         // affected partition (RewindPartitionForAffectedObservers), so it must be the
@@ -772,5 +784,32 @@ public class EventSequenceStorage(
         query = query.Take(limit);
 
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+    }
+
+    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
+    {
+        var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
+        var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
+        var eventCausation = EventEntryConverter.GetCausation(redactionEntry);
+        var eventCausedBy = EventEntryConverter.GetCausedBy(redactionEntry);
+
+        var eventMetadata = new EventContext(
+            redactionEventType,
+            redactionEntry.EventSourceType,
+            redactionEntry.EventSourceId,
+            redactionEntry.EventStreamType,
+            redactionEntry.EventStreamId,
+            new EventSequenceNumber(redactionEntry.SequenceNumber),
+            redactionEntry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(redactionEntry.CorrelationId)),
+            eventCausation,
+            await identityStorage.GetFor(eventCausedBy),
+            [],
+            EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
+            Subject: EventEntryConverter.ResolveSubject(redactionEntry));
+
+        return new AppendedEvent(eventMetadata, content);
     }
 }
