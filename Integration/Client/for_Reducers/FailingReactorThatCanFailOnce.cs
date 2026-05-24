@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_Reducers;
+namespace Cratis.Chronicle.Integration.for_Reducers;
 
 [DependencyInjection.IgnoreConvention]
 public class FailingReactorThatCanFailOnce : IReactor

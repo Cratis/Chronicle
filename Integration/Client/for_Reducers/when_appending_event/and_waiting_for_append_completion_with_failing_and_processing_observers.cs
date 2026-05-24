@@ -5,14 +5,14 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
-using context = Cratis.Chronicle.InProcess.Integration.for_Reducers.when_appending_event.and_waiting_for_append_completion_with_failing_and_processing_observers.context;
+using context = Cratis.Chronicle.Integration.for_Reducers.when_appending_event.and_waiting_for_append_completion_with_failing_and_processing_observers.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.when_appending_event;
+namespace Cratis.Chronicle.Integration.for_Reducers.when_appending_event;
 
 [Collection(ChronicleCollection.Name)]
 public class and_waiting_for_append_completion_with_failing_and_processing_observers(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification(chronicleFixture)
     {
         public EventSourceId EventSourceId;
         public SomeEvent Event;

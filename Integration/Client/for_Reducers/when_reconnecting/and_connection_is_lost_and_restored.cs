@@ -4,14 +4,14 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers;
-using context = Cratis.Chronicle.InProcess.Integration.for_Reducers.when_reconnecting.and_connection_is_lost_and_restored.context;
+using context = Cratis.Chronicle.Integration.for_Reducers.when_reconnecting.and_connection_is_lost_and_restored.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_Reducers.when_reconnecting;
+namespace Cratis.Chronicle.Integration.for_Reducers.when_reconnecting;
 
 [Collection(ChronicleCollection.Name)]
 public class and_connection_is_lost_and_restored(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification(chronicleFixture)
     {
         public EventSourceId EventSourceId;
         public ReducerWithoutDelay Reducer;

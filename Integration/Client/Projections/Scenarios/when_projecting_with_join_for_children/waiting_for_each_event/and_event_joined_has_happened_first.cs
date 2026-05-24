@@ -17,6 +17,9 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
 
     public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<UserProjection, User>(chronicleFixture)
     {
+        const int ReadModelAvailabilityTimeoutSeconds = 5;
+        const int ReadModelPollingIntervalMilliseconds = 50;
+
         public UserId UserId;
         public EventSourceId GroupId;
         public override IEnumerable<Type> EventTypes => [typeof(UserCreated), typeof(GroupCreated), typeof(UserAddedToGroup)];
@@ -32,6 +35,30 @@ public class and_event_joined_has_happened_first(context context) : Given<contex
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new GroupCreated(GroupName)));
             EventsWithEventSourceIdToAppend.Add(new(UserId.ToString(), new UserCreated(UserName)));
             EventsWithEventSourceIdToAppend.Add(new(GroupId, new UserAddedToGroup(UserId)));
+        }
+
+        protected override async Task<User> GetReadModelResult()
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(ReadModelAvailabilityTimeoutSeconds));
+            while (!timeout.IsCancellationRequested)
+            {
+                var result = await base.GetReadModelResult();
+                if (result is not null)
+                {
+                    return result;
+                }
+
+                try
+                {
+                    await Task.Delay(ReadModelPollingIntervalMilliseconds, timeout.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+
+            throw new TimeoutException($"Read model was not available within {ReadModelAvailabilityTimeoutSeconds} seconds.");
         }
     }
 
