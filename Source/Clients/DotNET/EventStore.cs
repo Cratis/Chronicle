@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -103,7 +104,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
-        _activitySource = ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<EventSequence>>(serviceProvider);
+        _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -149,7 +150,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider,
-            ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<Reactors.Reactors>>(serviceProvider),
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
@@ -167,7 +168,7 @@ public class EventStore : IEventStore
             options,
             identityProvider,
             reducerObservers,
-            ActivatorUtilities.GetServiceOrCreateInstance<IActivitySource<Reducers.Reducers>>(serviceProvider),
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
