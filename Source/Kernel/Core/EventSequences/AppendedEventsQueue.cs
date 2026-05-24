@@ -397,12 +397,17 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     continue;
                 }
 
-                var activity = Tracing.Dispatch(subscription.ObserverKey);
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                tasks.Add(observer.Handle(partition, actualEvents).ContinueWith(_ => activity?.Dispose(), TaskScheduler.Default));
+                tasks.Add(DispatchWithTracing(observer, partition, actualEvents, subscription.ObserverKey));
             }
 
             await Task.WhenAll(tasks);
         }
+    }
+
+    async Task DispatchWithTracing(IObserver observer, EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
+    {
+        using var activity = Tracing.Dispatch(observerKey);
+        await observer.Handle(partition, events);
     }
 }
