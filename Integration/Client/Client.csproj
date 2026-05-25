@@ -37,6 +37,13 @@
     </PropertyGroup>
 
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
+        <!-- Wipe the publish output before each build. `dotnet publish` merges into the target
+             directory rather than replacing it, so a previous publish with different args
+             (e.g. without -r, leaving a RID-specific subfolder) can shadow the RID-targeted
+             assemblies the current publish produces. That manifested as Microsoft.Data.SqlClient
+             throwing PlatformNotSupportedException on linux-arm64 because the leftover root
+             AnyCPU reference was being picked up instead of the unix runtime implementation. -->
+        <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <Exec Command="dotnet publish $(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj -c Debug -p:DefineConstants=DEVELOPMENT --no-restore $(_DockerRidArg) -o $(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <!--
         The integration tests use the slim image: kernel only, no embedded database.
