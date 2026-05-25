@@ -5,39 +5,35 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts.EventSequences;
 using IEventSequencesService = Cratis.Chronicle.Contracts.EventSequences.IEventSequences;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.Api.SequenceQueries.Listing;
 
 /// <summary>
-/// Represents the API for querying sequence queries stored in the workbench.
+/// Represents the definition of a saved sequence query.
 /// </summary>
-[Route("/api/event-store/{eventStore}/{namespace}/sequence-queries")]
-public class SequenceQueryQueries : ControllerBase
+/// <param name="Id">The unique identifier of the query.</param>
+/// <param name="Name">The display name of the query.</param>
+/// <param name="Filter">The filter definition for the query.</param>
+[ReadModel]
+public record SequenceQueryDefinition(
+    string Id,
+    string Name,
+    SequenceQueryFilter Filter)
 {
     static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    readonly IEventSequencesService _eventSequences;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SequenceQueryQueries"/> class.
-    /// </summary>
-    /// <param name="eventSequences"><see cref="IEventSequencesService"/> gRPC service for reading events.</param>
-    internal SequenceQueryQueries(IEventSequencesService eventSequences)
-    {
-        _eventSequences = eventSequences;
-    }
 
     /// <summary>
     /// Gets all sequence queries for the given event store and namespace, reconstructed via server-side reduction.
     /// </summary>
     /// <param name="eventStore">The event store to get queries for.</param>
     /// <param name="namespace">The namespace to get queries for.</param>
+    /// <param name="eventSequences">The <see cref="IEventSequencesService"/> gRPC service for reading events.</param>
     /// <returns>A collection of <see cref="SequenceQueryDefinition"/>.</returns>
-    [HttpGet]
-    public async Task<IEnumerable<SequenceQueryDefinition>> AllSequenceQueries(
-        [FromRoute] string eventStore,
-        [FromRoute] string @namespace)
+    public static async Task<IEnumerable<SequenceQueryDefinition>> AllSequenceQueries(
+        string eventStore,
+        string @namespace,
+        IEventSequencesService eventSequences)
     {
-        var response = await _eventSequences.GetEventsFromEventSequenceNumber(new GetFromEventSequenceNumberRequest
+        var response = await eventSequences.GetEventsFromEventSequenceNumber(new GetFromEventSequenceNumberRequest
         {
             EventStore = eventStore,
             Namespace = @namespace,
@@ -54,7 +50,7 @@ public class SequenceQueryQueries : ControllerBase
         return Reduce(response.Events);
     }
 
-    Dictionary<string, SequenceQueryDefinition>.ValueCollection Reduce(IEnumerable<Contracts.Events.AppendedEvent> events)
+    static Dictionary<string, SequenceQueryDefinition>.ValueCollection Reduce(IEnumerable<Contracts.Events.AppendedEvent> events)
     {
         var queries = new Dictionary<string, SequenceQueryDefinition>();
 

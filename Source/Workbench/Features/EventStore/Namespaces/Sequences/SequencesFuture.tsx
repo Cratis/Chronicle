@@ -8,7 +8,7 @@ import { Bookmark } from './Bookmark/Bookmark';
 import { Query } from './Query';
 import { Allotment } from 'allotment';
 import { TabPanel, TabView } from 'primereact/tabview';
-import { AllSequenceQueries } from 'Api/SequenceQueries';
+import { AllSequenceQueries } from 'Api/SequenceQueries/Listing';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { Button } from 'primereact/button';

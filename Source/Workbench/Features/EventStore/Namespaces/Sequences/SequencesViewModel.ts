@@ -4,8 +4,8 @@
 import { observable } from 'mobx';
 import { injectable } from 'tsyringe';
 import { QueryDefinition } from './QueryDefinition';
-import { CreateSequenceQuery } from 'Api/SequenceQueries';
-import { SequenceQueryDefinition } from 'Api/SequenceQueries/SequenceQueryDefinition';
+import { CreateSequenceQuery } from 'Api/SequenceQueries/Creating';
+import { SequenceQueryDefinition } from 'Api/SequenceQueries/Listing/SequenceQueryDefinition';
 
 @injectable()
 export class SequencesViewModel {

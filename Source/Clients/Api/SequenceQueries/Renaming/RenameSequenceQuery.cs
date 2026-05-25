@@ -7,33 +7,29 @@ using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 using IEventSequencesService = Cratis.Chronicle.Contracts.EventSequences.IEventSequences;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.Api.SequenceQueries.Renaming;
 
 /// <summary>
-/// Represents the command for updating the filter of an existing sequence query.
+/// Represents the command for renaming an existing sequence query.
 /// </summary>
 /// <param name="EventStore">The event store context for the query.</param>
 /// <param name="Namespace">The namespace context for the query.</param>
-/// <param name="QueryId">The unique identifier of the query to update.</param>
-/// <param name="Filter">The new filter definition to apply to the query.</param>
+/// <param name="QueryId">The unique identifier of the query to rename.</param>
+/// <param name="Name">The new display name for the query.</param>
 [Command]
-public record UpdateSequenceQueryFilter(
-    string EventStore,
-    string Namespace,
-    string QueryId,
-    SequenceQueryFilter Filter)
+public record RenameSequenceQuery(string EventStore, string Namespace, string QueryId, string Name)
 {
     /// <summary>
-    /// Handles the update sequence query filter command by appending a filter update event to Chronicle.
+    /// Handles the rename sequence query command by appending a rename event to Chronicle.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> gRPC service.</param>
+    /// <param name="eventSequences">The <see cref="IEventSequencesService"/> gRPC service.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for tracking causation.</param>
     /// <returns>Awaitable task.</returns>
     internal async Task Handle(
         IEventSequencesService eventSequences,
         ICausationManager causationManager)
     {
-        var content = JsonSerializer.Serialize(Filter);
+        var content = JsonSerializer.Serialize(new { name = Name });
 
         await eventSequences.Append(new AppendRequest
         {
@@ -45,7 +41,7 @@ public record UpdateSequenceQueryFilter(
             EventSourceType = string.Empty,
             EventStreamType = string.Empty,
             EventStreamId = string.Empty,
-            EventType = new Contracts.Events.EventType { Id = SequenceQueryEventTypeIds.FilterUpdated, Generation = 1 },
+            EventType = new Contracts.Events.EventType { Id = SequenceQueryEventTypeIds.Renamed, Generation = 1 },
             Content = content,
             ConcurrencyScope = new ConcurrencyScope { SequenceNumber = ulong.MaxValue, EventSourceId = false },
             Causation = causationManager.GetCurrentChain().ToContract(),

@@ -7,29 +7,33 @@ using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.EventSequences.Concurrency;
 using IEventSequencesService = Cratis.Chronicle.Contracts.EventSequences.IEventSequences;
 
-namespace Cratis.Chronicle.Api.SequenceQueries;
+namespace Cratis.Chronicle.Api.SequenceQueries.UpdatingFilter;
 
 /// <summary>
-/// Represents the command for creating a new sequence query in the workbench.
+/// Represents the command for updating the filter of an existing sequence query.
 /// </summary>
-/// <param name="EventStore">The event store context for storing the query event.</param>
-/// <param name="Namespace">The namespace context for storing the query event.</param>
-/// <param name="Name">The display name of the query to create.</param>
+/// <param name="EventStore">The event store context for the query.</param>
+/// <param name="Namespace">The namespace context for the query.</param>
+/// <param name="QueryId">The unique identifier of the query to update.</param>
+/// <param name="Filter">The new filter definition to apply to the query.</param>
 [Command]
-public record CreateSequenceQuery(string EventStore, string Namespace, string Name)
+public record UpdateSequenceQueryFilter(
+    string EventStore,
+    string Namespace,
+    string QueryId,
+    SequenceQueryFilter Filter)
 {
     /// <summary>
-    /// Handles the create sequence query command by appending a creation event to Chronicle.
+    /// Handles the update sequence query filter command by appending a filter update event to Chronicle.
     /// </summary>
-    /// <param name="eventSequences">The <see cref="IEventSequences"/> gRPC service.</param>
+    /// <param name="eventSequences">The <see cref="IEventSequencesService"/> gRPC service.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for tracking causation.</param>
-    /// <returns>The created <see cref="SequenceQueryDefinition"/>.</returns>
-    internal async Task<SequenceQueryDefinition> Handle(
+    /// <returns>Awaitable task.</returns>
+    internal async Task Handle(
         IEventSequencesService eventSequences,
         ICausationManager causationManager)
     {
-        var queryId = SequenceQueryId.New();
-        var content = JsonSerializer.Serialize(new { name = Name });
+        var content = JsonSerializer.Serialize(Filter);
 
         await eventSequences.Append(new AppendRequest
         {
@@ -37,18 +41,16 @@ public record CreateSequenceQuery(string EventStore, string Namespace, string Na
             Namespace = Namespace,
             EventSequenceId = "event-log",
             CorrelationId = Guid.NewGuid(),
-            EventSourceId = queryId.Value.ToString(),
+            EventSourceId = QueryId,
             EventSourceType = string.Empty,
             EventStreamType = string.Empty,
             EventStreamId = string.Empty,
-            EventType = new Contracts.Events.EventType { Id = SequenceQueryEventTypeIds.Created, Generation = 1 },
+            EventType = new Contracts.Events.EventType { Id = SequenceQueryEventTypeIds.FilterUpdated, Generation = 1 },
             Content = content,
             ConcurrencyScope = new ConcurrencyScope { SequenceNumber = ulong.MaxValue, EventSourceId = false },
             Causation = causationManager.GetCurrentChain().ToContract(),
             CausedBy = new Contracts.Identities.Identity { Subject = "workbench", Name = "Workbench", UserName = "workbench" },
             Tags = []
         });
-
-        return new SequenceQueryDefinition(queryId.Value.ToString(), Name, new SequenceQueryFilter());
     }
 }
