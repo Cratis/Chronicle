@@ -1,0 +1,375 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Text;
+using Cratis.Monads;
+
+namespace Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
+
+/// <summary>
+/// Tokenizer for the indentation-based capture declaration language.
+/// </summary>
+public class Tokenizer
+{
+    readonly string _input;
+    readonly Stack<int> _indentStack = new();
+    readonly Queue<Token> _pendingDedents = new();
+    readonly ParsingErrors _errors = new([]);
+    int _position;
+    int _line = 1;
+    int _column = 1;
+    bool _atLineStart = true;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Tokenizer"/> class.
+    /// </summary>
+    /// <param name="input">The input string to tokenize.</param>
+    public Tokenizer(string input)
+    {
+        _input = input;
+        _indentStack.Push(0);
+    }
+
+    /// <summary>
+    /// Tokenizes the input string into a list of tokens.
+    /// </summary>
+    /// <returns>A result containing either the list of tokens or parsing errors.</returns>
+    public Result<IEnumerable<Token>, ParsingErrors> Tokenize()
+    {
+        var tokens = new List<Token>();
+
+        while (_position < _input.Length)
+        {
+            var token = NextToken();
+            if (token.Type != TokenType.Invalid)
+            {
+                tokens.Add(token);
+            }
+        }
+
+        while (_indentStack.Count > 1)
+        {
+            _indentStack.Pop();
+            tokens.Add(new Token(TokenType.Dedent, string.Empty, _line, _column));
+        }
+
+        tokens.Add(new Token(TokenType.EndOfInput, string.Empty, _line, _column));
+
+        return _errors.HasErrors
+            ? _errors
+            : tokens;
+    }
+
+    Token NextToken()
+    {
+        if (_pendingDedents.Count > 0)
+        {
+            return _pendingDedents.Dequeue();
+        }
+
+        if (_atLineStart)
+        {
+            return HandleIndentation();
+        }
+
+        while (_position < _input.Length && char.IsWhiteSpace(_input[_position]) && _input[_position] != '\n')
+        {
+            Advance();
+        }
+
+        if (_position >= _input.Length)
+        {
+            return new Token(TokenType.EndOfInput, string.Empty, _line, _column);
+        }
+
+        var currentChar = _input[_position];
+        var line = _line;
+        var column = _column;
+
+        if (currentChar == '#')
+        {
+            SkipComment();
+            return NextToken();
+        }
+
+        if (currentChar == '\n')
+        {
+            Advance();
+            _atLineStart = true;
+            return new Token(TokenType.NewLine, "\n", line, column);
+        }
+
+        if (currentChar == '`')
+        {
+            return ScanTemplateString();
+        }
+
+        if (currentChar == '"' || currentChar == '\'')
+        {
+            return ScanString(currentChar);
+        }
+
+        if (currentChar == '/' || currentChar == '-')
+        {
+            return ScanStringReference();
+        }
+
+        if (char.IsDigit(currentChar))
+        {
+            return ScanNumber();
+        }
+
+        if (char.IsLetter(currentChar) || currentChar == '_')
+        {
+            return ScanIdentifierOrKeyword();
+        }
+
+        switch (currentChar)
+        {
+            case '=':
+                Advance();
+                if (_position < _input.Length && _input[_position] == '>')
+                {
+                    Advance();
+                    return new Token(TokenType.Arrow, "=>", line, column);
+                }
+
+                return new Token(TokenType.Equals, "=", line, column);
+
+            case '.':
+                Advance();
+                return new Token(TokenType.Dot, ".", line, column);
+
+            case '$':
+                Advance();
+                return new Token(TokenType.Dollar, "$", line, column);
+
+            case '*':
+                Advance();
+                return new Token(TokenType.Star, "*", line, column);
+        }
+
+        Advance();
+        _errors.Add($"Unexpected character '{currentChar}'", line, column);
+        return new Token(TokenType.Invalid, currentChar.ToString(), line, column);
+    }
+
+    Token HandleIndentation()
+    {
+        var indentLevel = 0;
+        var line = _line;
+        var column = _column;
+
+        while (_position < _input.Length && _input[_position] == ' ')
+        {
+            indentLevel++;
+            Advance();
+        }
+
+        if (_position >= _input.Length || _input[_position] == '\n' || _input[_position] == '#')
+        {
+            _atLineStart = false;
+            return NextToken();
+        }
+
+        _atLineStart = false;
+        var currentIndent = _indentStack.Peek();
+
+        if (indentLevel > currentIndent)
+        {
+            _indentStack.Push(indentLevel);
+            return new Token(TokenType.Indent, string.Empty, line, column);
+        }
+
+        if (indentLevel < currentIndent)
+        {
+            var dedentsNeeded = 0;
+            while (_indentStack.Count > 1 && _indentStack.Peek() > indentLevel)
+            {
+                _indentStack.Pop();
+                dedentsNeeded++;
+            }
+
+            if (_indentStack.Peek() != indentLevel)
+            {
+                _errors.Add($"Indentation error: {indentLevel} spaces does not match any outer indentation level", line, column);
+            }
+
+            for (var i = 1; i < dedentsNeeded; i++)
+            {
+                _pendingDedents.Enqueue(new Token(TokenType.Dedent, string.Empty, line, column));
+            }
+
+            return new Token(TokenType.Dedent, string.Empty, line, column);
+        }
+
+        return NextToken();
+    }
+
+    Token ScanIdentifierOrKeyword()
+    {
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+
+        while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
+        {
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        if (_position + 2 < _input.Length && _input[_position] == ':' && _input[_position + 1] == '/' && _input[_position + 2] == '/')
+        {
+            while (_position < _input.Length && !char.IsWhiteSpace(_input[_position]))
+            {
+                sb.Append(_input[_position]);
+                Advance();
+            }
+
+            return new Token(TokenType.StringRef, sb.ToString(), line, column);
+        }
+
+        var value = sb.ToString();
+        var lowerValue = value.ToLowerInvariant();
+        if (Keywords.TokenMapping.TryGetValue(lowerValue, out var tokenType))
+        {
+            if (value != lowerValue)
+            {
+                _errors.Add($"Keyword '{lowerValue}' must be lowercase, not '{value}'", line, column);
+            }
+
+            return new Token(tokenType, lowerValue, line, column);
+        }
+
+        return new Token(TokenType.Identifier, value, line, column);
+    }
+
+    Token ScanString(char quote)
+    {
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+        Advance();
+
+        while (_position < _input.Length && _input[_position] != quote)
+        {
+            if (_input[_position] == '\\' && _position + 1 < _input.Length)
+            {
+                Advance();
+                var escapeChar = _input[_position];
+                sb.Append(escapeChar switch
+                {
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    '\\' => '\\',
+                    '"' => '"',
+                    '\'' => '\'',
+                    _ => escapeChar
+                });
+                Advance();
+            }
+            else
+            {
+                sb.Append(_input[_position]);
+                Advance();
+            }
+        }
+
+        if (_position >= _input.Length)
+        {
+            _errors.Add("Unterminated string literal", line, column);
+            return new Token(TokenType.StringLiteral, sb.ToString(), line, column);
+        }
+
+        Advance();
+        return new Token(TokenType.StringLiteral, sb.ToString(), line, column);
+    }
+
+    Token ScanTemplateString()
+    {
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+        Advance();
+
+        while (_position < _input.Length && _input[_position] != '`')
+        {
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        if (_position >= _input.Length)
+        {
+            _errors.Add("Unterminated template string", line, column);
+            return new Token(TokenType.TemplateLiteral, sb.ToString(), line, column);
+        }
+
+        Advance();
+        return new Token(TokenType.TemplateLiteral, sb.ToString(), line, column);
+    }
+
+    Token ScanNumber()
+    {
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+        var hasSuffix = false;
+
+        while (_position < _input.Length && (char.IsDigit(_input[_position]) || _input[_position] == '.'))
+        {
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        while (_position < _input.Length && char.IsLetter(_input[_position]))
+        {
+            hasSuffix = true;
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        return new Token(hasSuffix ? TokenType.NumberRef : TokenType.NumberLiteral, sb.ToString(), line, column);
+    }
+
+    Token ScanStringReference()
+    {
+        var line = _line;
+        var column = _column;
+        var sb = new StringBuilder();
+
+        while (_position < _input.Length && !char.IsWhiteSpace(_input[_position]))
+        {
+            sb.Append(_input[_position]);
+            Advance();
+        }
+
+        return new Token(TokenType.StringRef, sb.ToString(), line, column);
+    }
+
+    void SkipComment()
+    {
+        while (_position < _input.Length && _input[_position] != '\n')
+        {
+            Advance();
+        }
+    }
+
+    void Advance()
+    {
+        if (_position < _input.Length)
+        {
+            if (_input[_position] == '\n')
+            {
+                _line++;
+                _column = 1;
+            }
+            else
+            {
+                _column++;
+            }
+
+            _position++;
+        }
+    }
+}
