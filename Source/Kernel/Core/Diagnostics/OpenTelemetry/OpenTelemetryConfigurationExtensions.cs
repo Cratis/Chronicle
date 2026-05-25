@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
-using Cratis.Metrics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Exporter;
@@ -33,19 +31,6 @@ public static class OpenTelemetryConfigurationExtensions
             .AddMeter("Grpc.AspNetCore.Server");
 
         return builder;
-    }
-
-    /// <summary>
-    /// Adds the Chronicle <see cref="Meter{T}"/> and System Diagnostics <see cref="Meter"/>.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/>.</param>
-    /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
-    public static IServiceCollection AddChronicleMeter(this IServiceCollection services)
-    {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        services.AddKeyedSingleton(WellKnown.MeterName, new Meter(WellKnown.MeterName));
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        return services;
     }
 
     /// <summary>
