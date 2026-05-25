@@ -36,13 +36,15 @@ public class EventSequenceQueries : ControllerBase
     /// <param name="namespace">Namespace to get for.</param>
     /// <param name="eventSequenceId">Event sequence to get for.</param>
     /// <param name="eventSourceId">Optional event source id to get for.</param>
+    /// <param name="eventTypes">Optional event type ids to filter by.</param>
     /// <returns>A collection of <see cref="AppendedEvent"/>.</returns>
     [HttpGet]
     public async Task<IEnumerable<AppendedEvent>> AppendedEvents(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,
-        [FromQuery] string? eventSourceId = default)
+        [FromQuery] string? eventSourceId = default,
+        [FromQuery] string[]? eventTypes = default)
     {
         var queryContext = _queryContextManager.Current;
 
@@ -62,7 +64,8 @@ public class EventSequenceQueries : ControllerBase
             EventSequenceId = eventSequenceId,
             FromEventSequenceNumber = from,
             ToEventSequenceNumber = queryContext.Paging.IsPaged ? from + (ulong)(queryContext.Paging.Size - 1) : null,
-            EventSourceId = eventSourceId
+            EventSourceId = eventSourceId,
+            EventTypes = eventTypes?.Select(id => new Contracts.Events.EventType { Id = id, Generation = 1 }).ToList() ?? []
         });
 
         return response.Events.ToApi();

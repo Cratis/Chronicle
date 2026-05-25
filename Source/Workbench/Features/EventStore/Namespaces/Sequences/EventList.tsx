@@ -9,20 +9,32 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
 import { useParams } from 'react-router-dom';
 
+export interface EventListFilter {
+    eventSourceId?: string;
+    eventTypes?: string[];
+    startTime?: Date;
+    endTime?: Date;
+}
+
 export interface EventListProps {
-    events: object[];
+    filter?: EventListFilter;
+    eventSequenceId?: string;
 }
 
 const occurred = (event: AppendedEvent) => {
     return event.context.occurred.toLocaleString();
 };
 
-export const EventList = () => {
+export const EventList = (props: EventListProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const queryArgs: AppendedEventsParameters = {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
-        eventSequenceId: 'event-log'
+        eventSequenceId: props.eventSequenceId ?? 'event-log',
+        eventSourceId: props.filter?.eventSourceId || undefined,
+        eventTypes: props.filter?.eventTypes && props.filter.eventTypes.length > 0
+            ? props.filter.eventTypes
+            : undefined,
     };
 
     return (
