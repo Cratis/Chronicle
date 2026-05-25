@@ -10,7 +10,7 @@ Chronicle uses the **Fundamentals Traces** pattern from `Cratis.Traces`. Never c
 ## Overview
 
 1. Create a `*Traces.cs` companion file with `[Span]` methods.
-2. Register `IActivitySource<T>` as a keyed singleton in `ChronicleMetersExtensions` (backed by the shared well-known `System.Diagnostics.ActivitySource`).
+2. Register `IActivitySource<T>` via `services.AddNamedActivitySource(WellKnown.MeterName)` in `ChronicleMetersExtensions` (one call covers all types via open-generic keyed DI).
 3. Inject `[FromKeyedServices(WellKnown.MeterName)] IActivitySource<TTarget>` into the class.
 4. Call the generated extension methods and apply tags via `TagExtensions`.
 5. Update specs to pass `new ActivitySource<T>()` (not a substitute).
@@ -25,9 +25,9 @@ Chronicle's `ActivitySource` follows the same keyed DI pattern as `Meter`:
 |---|---|---|
 | Shared well-known instance (keyed by `WellKnown.MeterName`) | `Meter("Cratis.Chronicle")` | `System.Diagnostics.ActivitySource("Cratis.Chronicle")` |
 | Per-type wrapper (keyed by `WellKnown.MeterName`) | `IMeter<T>` / `Meter<T>` | `IActivitySource<T>` / `ActivitySource<T>` |
-| Registered in | `OpenTelemetryConfigurationExtensions.AddChronicleMeter()` + `ChronicleMetersExtensions.AddMeter<T>()` | `OpenTelemetryConfigurationExtensions.AddChronicleActivitySource()` + `ChronicleMetersExtensions.AddActivitySource<T>()` |
+| Registered by | `services.AddNamedMeter(WellKnown.MeterName)` | `services.AddNamedActivitySource(WellKnown.MeterName)` |
 
-The `AddActivitySource<T>()` factory in `ChronicleMetersExtensions` resolves the shared `System.Diagnostics.ActivitySource` registered by `AddChronicleActivitySource()` and wraps it in `ActivitySource<T>`.
+Both calls are made from `ChronicleMetersExtensions.AddChronicleMeters()`. They use open-generic keyed DI (`TryAddKeyedSingleton(typeof(IMeter<>), name, typeof(Meter<>))`), so any new type added to a keyed-injected class is automatically covered — **no per-type registration step is needed**.
 
 ---
 
@@ -68,51 +68,22 @@ internal static partial class <ClassName>Traces
 
 ## Step 2 — Register `IActivitySource<T>` in DI
 
-### 2a — Ensure the shared `ActivitySource` is registered
+### 2a — Open-generic registration (no per-type step needed)
 
-In `OpenTelemetryConfigurationExtensions.cs`, `AddChronicleActivitySource()` must have been called. This is invoked by `AddChronicleMeters()` already — no action needed if the class is already listed there.
-
-If you are adding a brand-new type, open `Source/Kernel/Core/Setup/ChronicleMetersExtensions.cs` and add one line inside `AddChronicleMeters()`:
+`ChronicleMetersExtensions.AddChronicleMeters()` calls:
 
 ```csharp
-services.AddActivitySource<MyClass>();
+services.AddNamedActivitySource(WellKnown.MeterName);
 ```
 
-### 2b — How the factory works
+This uses `TryAddKeyedSingleton(typeof(IActivitySource<>), name, typeof(ActivitySource<>))`, so any class
+that injects `[FromKeyedServices(WellKnown.MeterName)] IActivitySource<T>` is automatically resolved — no
+extra registration line is required.
 
-`AddActivitySource<T>()` in `ChronicleMetersExtensions` resolves the keyed `System.Diagnostics.ActivitySource` (registered by `AddChronicleActivitySource()`) and wraps it:
-
-```csharp
-static IServiceCollection AddActivitySource<TTarget>(this IServiceCollection services)
-{
-    services.AddKeyedSingleton<IActivitySource<TTarget>>(WellKnown.MeterName, (sp, key) =>
-    {
-        var activitySource = sp.GetRequiredKeyedService<ActivitySource>(key);
-        return new ActivitySource<TTarget>(activitySource);
-    });
-    return services;
-}
-```
-
-### 2c — Ensure `AddChronicleActivitySource()` is in `OpenTelemetryConfigurationExtensions`
-
-```csharp
-public static IServiceCollection AddChronicleActivitySource(this IServiceCollection services)
-{
-#pragma warning disable CA2000 // Dispose objects before losing scope
-    services.AddKeyedSingleton(WellKnown.MeterName,
-        new System.Diagnostics.ActivitySource(ChronicleActivity.SourceName));
-#pragma warning restore CA2000 // Dispose objects before losing scope
-    return services;
-}
-```
-
-And `AddChronicleMeters()` must call it:
-
-```csharp
-services.AddChronicleActivitySource();
-services.AddActivitySource<MyClass>();
-```
+> **Note:** `AddNamedMeter` and `AddNamedActivitySource` are currently provided by a local compatibility shim
+> (`NamedDiagnosticsServiceCollectionExtensions.cs`) that mirrors the Fundamentals upstream API. When
+> `Cratis.Fundamentals` is upgraded to a version that includes `DiagnosticsServiceCollectionExtensions`,
+> delete that shim file and bump the version in `Directory.Packages.props`.
 
 ---
 
@@ -218,9 +189,7 @@ new MyClass(
 ## Checklist
 
 - [ ] `<ClassName>Traces.cs` created with `[Span]` methods
-- [ ] `AddChronicleActivitySource()` exists in `OpenTelemetryConfigurationExtensions.cs`
-- [ ] `ChronicleMetersExtensions.AddChronicleMeters` calls `services.AddChronicleActivitySource()` then `services.AddActivitySource<T>()`
-- [ ] `AddActivitySource<T>()` factory resolves the keyed `ActivitySource` via `sp.GetRequiredKeyedService<ActivitySource>(key)`
+- [ ] No per-type DI registration needed — open-generic `AddNamedActivitySource` covers all types automatically
 - [ ] Class constructor injects `IActivitySource<T>` (keyed with `[FromKeyedServices(WellKnown.MeterName)]` or non-keyed for non-grain DI)
 - [ ] Span methods called with `span?.Activity?.Tag(...)` null-safe pattern
 - [ ] `using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;` added for `TagExtensions`
