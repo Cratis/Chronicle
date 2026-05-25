@@ -2,13 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
-using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using DiagnosticsActivitySource = System.Diagnostics.ActivitySource;
 
 namespace Orleans.Hosting;
 
@@ -24,23 +23,25 @@ public static class ChronicleMetersExtensions
     /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddChronicleMeters(this IServiceCollection services)
     {
-        services.AddChronicleMeter();
-        services.AddMeter<EventSequence>();
-        services.AddMeter<AppendedEventsQueue>();
-        services.AddMeter<Observer>();
-        services.AddMeter<ConnectedClients>();
-
-        return services;
-    }
-
-    static IServiceCollection AddMeter<TTarget>(this IServiceCollection services)
-    {
-        services.AddKeyedSingleton<IMeter<TTarget>>(WellKnown.MeterName, (sp, key) =>
-        {
-            var meter = sp.GetRequiredKeyedService<Meter>(key);
-            return new Meter<TTarget>(meter);
-        });
-
+        // Use open-generic keyed singleton registration so every IMeter<T> / IActivitySource<T>
+        // injected with [FromKeyedServices(WellKnown.MeterName)] is resolved automatically.
+        // Meter<T> and ActivitySource<T> carry [FromKeyedServices] on their constructors (Fundamentals
+        // 7.10.3), so .NET 10 key-forwarding bridges the keyed Meter / ActivitySource into the wrapper.
+        //
+        // TODO: replace with services.AddNamedMeter(WellKnown.MeterName) / AddNamedActivitySource(...)
+        //       once Cratis.Fundamentals ships DiagnosticsServiceCollectionExtensions.
+        //       Tracked: https://github.com/Cratis/Fundamentals/issues — open an issue requesting
+        //       a release that includes the named-registration convenience methods.
+        services.TryAddKeyedSingleton(
+            typeof(Meter),
+            WellKnown.MeterName,
+            static (_, key) => new Meter((string)key));
+        services.TryAddKeyedSingleton(typeof(IMeter<>), WellKnown.MeterName, typeof(Meter<>));
+        services.TryAddKeyedSingleton(
+            typeof(DiagnosticsActivitySource),
+            WellKnown.MeterName,
+            static (_, key) => new DiagnosticsActivitySource((string)key));
+        services.TryAddKeyedSingleton(typeof(IActivitySource<>), WellKnown.MeterName, typeof(ActivitySource<>));
         return services;
     }
 }
