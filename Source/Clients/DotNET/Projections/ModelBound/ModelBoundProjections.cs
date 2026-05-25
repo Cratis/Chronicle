@@ -50,7 +50,13 @@ internal class ModelBoundProjections(
 
         foreach (var type in candidateTypes)
         {
-            CollectChildTypesFromType(type, referencedTypes);
+            var referencedByType = new HashSet<Type>();
+            CollectChildTypesFromType(type, referencedByType);
+            referencedByType.Remove(type);
+            foreach (var referenced in referencedByType)
+            {
+                referencedTypes.Add(referenced);
+            }
         }
 
         return referencedTypes;
@@ -89,15 +95,13 @@ internal class ModelBoundProjections(
         if (hasChildrenFromAttribute)
         {
             var childType = GetChildType(parameter.ParameterType);
-            if (childType is not null)
+            if (childType is not null && referencedTypes.Add(childType))
             {
-                referencedTypes.Add(childType);
                 CollectChildTypesFromType(childType, referencedTypes);
             }
         }
-        else if (IsComplexType(parameter.ParameterType))
+        else if (IsComplexType(parameter.ParameterType) && referencedTypes.Add(parameter.ParameterType))
         {
-            referencedTypes.Add(parameter.ParameterType);
             CollectChildTypesFromType(parameter.ParameterType, referencedTypes);
         }
     }
@@ -111,15 +115,13 @@ internal class ModelBoundProjections(
         if (hasChildrenFromAttribute)
         {
             var childType = GetChildType(property.PropertyType);
-            if (childType is not null)
+            if (childType is not null && referencedTypes.Add(childType))
             {
-                referencedTypes.Add(childType);
                 CollectChildTypesFromType(childType, referencedTypes);
             }
         }
-        else if (IsComplexType(property.PropertyType))
+        else if (IsComplexType(property.PropertyType) && referencedTypes.Add(property.PropertyType))
         {
-            referencedTypes.Add(property.PropertyType);
             CollectChildTypesFromType(property.PropertyType, referencedTypes);
         }
     }

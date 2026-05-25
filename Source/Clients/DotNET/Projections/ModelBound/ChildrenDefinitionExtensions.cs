@@ -51,11 +51,13 @@ static class ChildrenDefinitionExtensions
             definition,
             parentModelType);
 
+        var visited = parentModelType is null ? new HashSet<Type>() : new HashSet<Type> { parentModelType };
+
         // Recursively process nested children on the child type
         var childType = GetChildType(memberType);
         if (childType is not null)
         {
-            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef, visited);
         }
     }
 
@@ -72,6 +74,7 @@ static class ChildrenDefinitionExtensions
     /// <param name="processMember">The action to process child members recursively.</param>
     /// <param name="definition">The root projection definition for processing member attributes.</param>
     /// <param name="parentModelType">The type of the parent model that contains this children collection.</param>
+    /// <param name="visitedChildTypes">Set of child types already visited in the current recursion chain, used to break cycles for self-referential or mutually recursive types.</param>
     internal static void ProcessChildrenFromAttributeForNestedChildren(
         this ChildrenDefinition parentChildrenDef,
         Func<Type, EventType> getOrCreateEventType,
@@ -82,7 +85,8 @@ static class ChildrenDefinitionExtensions
         Type eventType,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
-        Type? parentModelType = null)
+        Type? parentModelType = null,
+        HashSet<Type>? visitedChildTypes = null)
     {
         var childrenDef = ProcessChildrenFromAttributeCore(
             parentChildrenDef.Children,
@@ -100,7 +104,7 @@ static class ChildrenDefinitionExtensions
         var childType = GetChildType(memberType);
         if (childType is not null)
         {
-            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef, visitedChildTypes ?? []);
         }
     }
 
@@ -359,8 +363,14 @@ static class ChildrenDefinitionExtensions
         INamingPolicy namingPolicy,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
-        ChildrenDefinition parentChildrenDef)
+        ChildrenDefinition parentChildrenDef,
+        HashSet<Type> visitedChildTypes)
     {
+        if (!visitedChildTypes.Add(childType))
+        {
+            return;
+        }
+
         // Process constructor parameters for ChildrenFrom and Nested attributes
         var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
             .OrderByDescending(c => c.GetParameters().Length)
@@ -385,7 +395,8 @@ static class ChildrenDefinitionExtensions
                         eventType,
                         processMember,
                         definition,
-                        childType);
+                        childType,
+                        visitedChildTypes);
                 }
 
                 if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
@@ -422,7 +433,8 @@ static class ChildrenDefinitionExtensions
                     eventType,
                     processMember,
                     definition,
-                    childType);
+                    childType,
+                    visitedChildTypes);
             }
 
             if (Attribute.IsDefined(property, typeof(NestedAttribute)))
