@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Events;
-
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
@@ -13,15 +11,15 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public class ReactorSideEffectHandlers(IEnumerable<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers
 {
     /// <inheritdoc/>
-    public bool CanHandle(EventContext eventContext, object value) =>
-        handlers.Any(h => h.CanHandle(eventContext, value));
+    public bool CanHandle(ReactorContext reactorContext, object value) =>
+        handlers.Any(h => h.CanHandle(reactorContext, value));
 
     /// <inheritdoc/>
-    public async Task Handle(EventContext eventContext, IEventStore eventStore, object value)
+    public async Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
-        foreach (var handler in handlers.Where(h => h.CanHandle(eventContext, value)))
+        foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, value)))
         {
-            await handler.Handle(eventContext, eventStore, value);
+            await handler.Handle(reactorContext, eventStore, value);
         }
     }
 }

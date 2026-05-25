@@ -139,9 +139,9 @@ public class ReactorInvoker(
             return;
         }
 
-        if (sideEffectHandlers.CanHandle(eventContext, result))
+        if (sideEffectHandlers.CanHandle(new ReactorContext(eventContext, activatedReactor.Instance), result))
         {
-            await sideEffectHandlers.Handle(eventContext, eventStore, result);
+            await sideEffectHandlers.Handle(new ReactorContext(eventContext, activatedReactor.Instance), eventStore, result);
         }
     }
 

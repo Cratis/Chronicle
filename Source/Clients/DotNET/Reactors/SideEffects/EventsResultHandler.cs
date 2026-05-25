@@ -7,22 +7,28 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
 /// Handles a collection of event objects returned from a reactor handler method.
-/// Each event is appended to the event log using the <see cref="EventSourceId"/> from the triggering <see cref="EventContext"/>.
+/// Each event is appended to the event log using metadata resolved from the <see cref="ReactorContext"/>.
 /// </summary>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for checking whether the values are known event types.</param>
 public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler
 {
     /// <inheritdoc/>
-    public bool CanHandle(EventContext eventContext, object value) =>
+    public bool CanHandle(ReactorContext reactorContext, object value) =>
         value is IEnumerable<object> events &&
         events.All(e => eventTypes.HasFor(e.GetType()));
 
     /// <inheritdoc/>
-    public async Task Handle(EventContext eventContext, IEventStore eventStore, object value)
+    public async Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         foreach (var @event in (IEnumerable<object>)value)
         {
-            await eventStore.EventLog.Append(eventContext.EventSourceId, @event);
+            await eventStore.EventLog.Append(
+                reactorContext.GetEventSourceId(),
+                @event,
+                reactorContext.GetEventStreamType(),
+                reactorContext.GetEventStreamId(),
+                reactorContext.GetEventSourceType(),
+                subject: reactorContext.GetSubject());
         }
     }
 }
