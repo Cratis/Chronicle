@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,6 +106,12 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
+
+        services.AddSingleton<IReactorSideEffectHandler, ReactorSideEffectResultHandler>();
+        services.AddSingleton<IReactorSideEffectHandler, ReactorSideEffectsResultHandler>();
+        services.AddSingleton<IReactorSideEffectHandler, EventResultHandler>();
+        services.AddSingleton<IReactorSideEffectHandler, EventsResultHandler>();
+        services.AddSingleton<IReactorSideEffectHandlers, ReactorSideEffectHandlers>();
 
         return services;
     }

@@ -25,6 +25,7 @@ using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -145,6 +146,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider,
+            serviceProvider.GetRequiredService<Reactors.SideEffects.IReactorSideEffectHandlers>(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 

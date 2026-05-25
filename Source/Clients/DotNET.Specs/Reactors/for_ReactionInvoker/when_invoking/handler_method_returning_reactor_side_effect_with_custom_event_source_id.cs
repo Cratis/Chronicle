@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
 using CatchResult = Cratis.Monads.Catch;
 
@@ -30,6 +31,7 @@ public class handler_method_returning_reactor_side_effect_with_custom_event_sour
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
 
+        var sideEffectHandlers = new ReactorSideEffectHandlers([new ReactorSideEffectResultHandler()]);
         var reactor = new ReactorWithSideEffectReturnType(_outboundEvent, _customEventSourceId);
 
         _invoker = new ReactorInvoker(
@@ -38,6 +40,7 @@ public class handler_method_returning_reactor_side_effect_with_custom_event_sour
             typeof(ReactorWithSideEffectReturnType),
             new ActivatedArtifact(reactor, typeof(ReactorWithSideEffectReturnType), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
+            sideEffectHandlers,
             _eventStore);
 
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());

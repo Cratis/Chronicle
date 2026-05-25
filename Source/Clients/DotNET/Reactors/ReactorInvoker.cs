@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -21,9 +22,13 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="targetType">Type of Reactor.</param>
 /// <param name="activatedReactor">The <see cref="ActivatedArtifact"/> activated reactor.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="sideEffectHandlers">
+/// Optional <see cref="IReactorSideEffectHandlers"/> used to process events returned by handler methods.
+/// When <see langword="null"/>, any return values are silently discarded.
+/// </param>
 /// <param name="eventStore">
-/// Optional <see cref="IEventStore"/> used to append side effects returned by handler methods.
-/// When <see langword="null"/>, any events returned by the handler are silently discarded.
+/// Optional <see cref="IEventStore"/> supplied to side effect handlers when appending events.
+/// When <see langword="null"/>, any return values are silently discarded even if handlers are registered.
 /// </param>
 public class ReactorInvoker(
     IEventTypes eventTypes,
@@ -31,6 +36,7 @@ public class ReactorInvoker(
     Type targetType,
     ActivatedArtifact activatedReactor,
     ILogger<ReactorInvoker> logger,
+    IReactorSideEffectHandlers? sideEffectHandlers = null,
     IEventStore? eventStore = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
@@ -102,37 +108,6 @@ public class ReactorInvoker(
         }
     }
 
-    static IEnumerable<ReactorSideEffect> ToSideEffects(object result)
-    {
-        if (result is ReactorSideEffect single)
-        {
-            yield return single;
-            yield break;
-        }
-
-        if (result is IEnumerable<ReactorSideEffect> many)
-        {
-            foreach (var sideEffect in many)
-            {
-                yield return sideEffect;
-            }
-
-            yield break;
-        }
-
-        if (result is IEnumerable<object> events)
-        {
-            foreach (var @event in events)
-            {
-                yield return ReactorSideEffect.For(@event);
-            }
-
-            yield break;
-        }
-
-        yield return ReactorSideEffect.For(result);
-    }
-
     async Task HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
     {
         if (method.ReturnType == typeof(void))
@@ -152,26 +127,21 @@ public class ReactorInvoker(
             return;
         }
 
-        var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
-        var result = resultProperty?.GetValue(task);
-        if (result is null || eventStore is null)
+        if (sideEffectHandlers is null || eventStore is null)
         {
             return;
         }
 
-        foreach (var sideEffect in ToSideEffects(result))
+        var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
+        var result = resultProperty?.GetValue(task);
+        if (result is null)
         {
-            var sequence = sideEffect.EventSequenceId is not null
-                ? eventStore.GetEventSequence(sideEffect.EventSequenceId)
-                : eventStore.EventLog;
+            return;
+        }
 
-            await sequence.Append(
-                sideEffect.EventSourceId ?? eventContext.EventSourceId,
-                sideEffect.Event,
-                sideEffect.EventStreamType,
-                sideEffect.EventStreamId,
-                sideEffect.EventSourceType,
-                subject: sideEffect.Subject);
+        if (sideEffectHandlers.CanHandle(eventContext, result))
+        {
+            await sideEffectHandlers.Handle(eventContext, eventStore, result);
         }
     }
 
@@ -205,3 +175,4 @@ public class ReactorInvoker(
         }
     }
 }
+
