@@ -19,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 
+#pragma warning disable SA1204 // Mix of public instance + private helpers; suppressing avoids reshuffling the public API surface to satisfy the analyzer.
+
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
@@ -81,8 +83,36 @@ public class Sink(
             return _noFailedPartitions;
         }
 
+        // Apply Joined changes (from `.Join<TEvent>` projection definitions) to every existing
+        // read model whose join target matches — never upsert. Join semantics say "for any
+        // already-projected document matching this property, also apply these changes"; an
+        // upsert would manufacture a phantom document keyed on the join value (e.g. a User
+        // keyed on a GroupId) and route the join's Set() calls to that document instead of
+        // the real targets. MongoDB's sink expresses the same intent with UpdateManyAsync +
+        // IsUpsert=false; this iterates the entries in C# because the document JSON is opaque
+        // to EF's SQL translator.
+        foreach (var joined in changeset.Changes.OfType<Joined>())
+        {
+            await ApplyJoinedChange(scope, joined, eventSequenceNumber);
+        }
+
+        // RemovedWithJoin yields ChildRemovedFromAll: pull a child with this identifier from
+        // every parent document that contains it. MongoDB does this with UpdateMany + $pull.
+        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
+        {
+            await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+        }
+
+        var nonJoinedChanges = changeset.Changes
+            .Where(c => c is not Joined and not ChildRemovedFromAll)
+            .ToArray();
+        if (nonJoinedChanges.Length == 0)
+        {
+            return _noFailedPartitions;
+        }
+
         var state = changeset.InitialState.Clone();
-        state = ApplyActualChanges(key, changeset.Changes, state);
+        state = ApplyActualChanges(key, nonJoinedChanges, state);
 
         // Ensure the document carries an identifier field, but match the case the projection
         // already uses (or the schema declares). Blindly writing a lowercase `id` causes
@@ -152,6 +182,11 @@ public class Sink(
     /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
+        if (childValue is null)
+        {
+            return Option<Key>.None();
+        }
+
         var pathSegments = childPropertyPath.Segments.ToArray();
 
         await using var scope = await database.ReadModelTable(eventStoreName, @namespace, _tableName);
@@ -184,6 +219,114 @@ public class Sink(
             .Select(e => DeserializeDocument(e.Document));
 
         return new ReadModelInstances(instances, totalCount);
+    }
+
+    async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber)
+    {
+        // For a root-level join we match all entries whose `OnProperty` equals the join key —
+        // e.g. all Users whose `GroupId` field equals the GroupId emitted by the join's event.
+        // For a child-level join (key.ArrayIndexers populated) the join lives inside a parent
+        // document's array; the array indexer's identifier carries the value to match against,
+        // so we use it instead of the joined.Key (which holds the parent's root key, not the
+        // child's identifier).
+        var (onPropertySegments, joinValue) = !joined.ArrayIndexers.IsEmpty
+            ? GetChildJoinFilter(joined)
+            : (joined.OnProperty.Segments.ToArray(), joined.Key);
+
+        if (joinValue is null)
+        {
+            return;
+        }
+
+        var entries = await scope.DbContext.Entries.ToListAsync();
+        var modified = false;
+
+        foreach (var entry in entries)
+        {
+            var document = DeserializeDocument(entry.Document);
+            if (!TryFindValueInDocument(document, onPropertySegments, 0, joinValue))
+            {
+                continue;
+            }
+
+            var entryKey = new Key(entry.Id, ArrayIndexers.NoIndexers);
+            var updated = ApplyActualChanges(entryKey, joined.Changes, document);
+            var entryDict = (IDictionary<string, object?>)updated;
+
+            // Move __lastHandledEventSequenceNumber forward on the joined target too — the sink
+            // tracks per-document progress and the joined update extended the document's state.
+            var newSequenceNumber = (ulong)eventSequenceNumber;
+            var existingSequenceNumber = entryDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var existingValue) && existingValue is not null
+                ? Convert.ToUInt64(existingValue)
+                : 0UL;
+            entryDict[WellKnownProperties.LasHandledEventSequenceNumber] = Math.Max(newSequenceNumber, existingSequenceNumber);
+
+            entry.Document = SerializeDocument(updated);
+            scope.DbContext.Entries.Update(entry);
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await scope.DbContext.SaveChangesAsync();
+        }
+    }
+
+    async Task RemoveChildFromAllEntries(DbContextScope<ReadModelDbContext> scope, ChildRemovedFromAll childRemoved, EventSequenceNumber eventSequenceNumber)
+    {
+        // Pull the matching child out of every entry that carries one. The childRemoved
+        // describes the children-collection path and the identifier property on each child;
+        // we deserialize each entry, drop matching items, and re-serialize if it changed.
+        var entries = await scope.DbContext.Entries.ToListAsync();
+        var modified = false;
+
+        foreach (var entry in entries)
+        {
+            var document = DeserializeDocument(entry.Document);
+            var collection = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
+            var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
+            var keyAsString = childRemoved.Key?.ToString();
+            var matches = collection
+                .OfType<IDictionary<string, object?>>()
+                .Where(item => item.TryGetValue(identifierSegment, out var value)
+                    && (Equals(value, childRemoved.Key)
+                        || (value is not null && value.ToString() == keyAsString)))
+                .Cast<object>()
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (var match in matches)
+            {
+                collection.Remove(match);
+            }
+
+            var docDict = (IDictionary<string, object?>)document;
+            var newSequenceNumber = (ulong)eventSequenceNumber;
+            var existingSequenceNumber = docDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var existingValue) && existingValue is not null
+                ? Convert.ToUInt64(existingValue)
+                : 0UL;
+            docDict[WellKnownProperties.LasHandledEventSequenceNumber] = Math.Max(newSequenceNumber, existingSequenceNumber);
+
+            entry.Document = SerializeDocument(document);
+            scope.DbContext.Entries.Update(entry);
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await scope.DbContext.SaveChangesAsync();
+        }
+    }
+
+    static (IPropertyPathSegment[] Segments, object? Value) GetChildJoinFilter(Joined joined)
+    {
+        var lastIndexer = joined.ArrayIndexers.All.Last();
+        var combined = lastIndexer.ArrayProperty + lastIndexer.IdentifierProperty;
+        return (combined.Segments.ToArray(), lastIndexer.Identifier);
     }
 
     static async Task UpsertEntry(DbContextScope<ReadModelDbContext> scope, string id, string document)
@@ -260,9 +403,12 @@ public class Sink(
                     collection.Add(childAdded.State);
                     break;
 
+                case ChildRemoved childRemoved:
+                    RemoveChild(state, childRemoved, key.ArrayIndexers);
+                    break;
+
                 case NestedCleared nestedCleared:
-                    var stateDict = (IDictionary<string, object?>)state;
-                    stateDict[nestedCleared.NestedProperty.LastSegment.Value] = null;
+                    nestedCleared.NestedProperty.SetValue(state, null!, nestedCleared.ArrayIndexers);
                     break;
 
                 case Joined joined:
@@ -276,6 +422,28 @@ public class Sink(
         }
 
         return state;
+    }
+
+    static void RemoveChild(ExpandoObject state, ChildRemoved childRemoved, ArrayIndexers parentArrayIndexers)
+    {
+        // ChildRemoved excludes its own ChildrenProperty from the indexers used to navigate the
+        // parent document — we only need indexers for any ENCLOSING arrays (e.g. parent-of-parent).
+        var arrayIndexers = new ArrayIndexers(parentArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
+        var collection = state.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, arrayIndexers);
+        var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
+        var keyAsString = childRemoved.Key?.ToString();
+        var matches = collection
+            .OfType<IDictionary<string, object?>>()
+            .Where(item => item.TryGetValue(identifierSegment, out var value)
+                && (Equals(value, childRemoved.Key)
+                    || (value is not null && value.ToString() == keyAsString)))
+            .Cast<object>()
+            .ToList();
+
+        foreach (var match in matches)
+        {
+            collection.Remove(match);
+        }
     }
 
     static ExpandoObject ApplyPropertiesChanged(ExpandoObject state, PropertiesChanged<ExpandoObject> propertiesChanged, ArrayIndexers keyArrayIndexers)
