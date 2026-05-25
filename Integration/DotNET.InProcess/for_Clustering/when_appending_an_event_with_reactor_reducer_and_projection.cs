@@ -110,11 +110,12 @@ public class when_appending_an_event_with_reactor_reducer_and_projection(context
 
     public class ClusteredReactor(TaskCompletionSource handled) : IReactor
     {
-        public int HandledEvents;
+        int _handledEvents;
+        public int HandledEvents => _handledEvents;
 
         public Task OnClusteredEvent(ClusteredEvent @event, EventContext context)
         {
-            Interlocked.Increment(ref HandledEvents);
+            Interlocked.Increment(ref _handledEvents);
             handled.TrySetResult();
             return Task.CompletedTask;
         }
@@ -124,11 +125,12 @@ public class when_appending_an_event_with_reactor_reducer_and_projection(context
 
     public class ClusteredReducer(TaskCompletionSource handled) : IReducerFor<ClusteredReducerReadModel>
     {
-        public int HandledEvents;
+        int _handledEvents;
+        public int HandledEvents => _handledEvents;
 
         public Task<ClusteredReducerReadModel?> OnClusteredEvent(ClusteredEvent @event, ClusteredReducerReadModel? current, EventContext context)
         {
-            Interlocked.Increment(ref HandledEvents);
+            Interlocked.Increment(ref _handledEvents);
             handled.TrySetResult();
             return Task.FromResult<ClusteredReducerReadModel?>(new(@event.Number));
         }
