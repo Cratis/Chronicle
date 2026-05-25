@@ -80,6 +80,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public string InProcessMongoDatabaseName { get; } = $"chronicle_inprocess_{Guid.NewGuid():N}";
 
     /// <summary>
+    /// Gets a unique SQLite file path for the in-process Orleans silo. The first test class of a
+    /// session does not run the wipe sequence (the factory is built lazily on first access, no
+    /// prior state to wipe), so reusing a process-wide file path would carry data from earlier
+    /// <c>dotnet test</c> invocations into the next session's first test. A fixture-scoped GUID
+    /// guarantees every test session opens a fresh file regardless of what previous sessions
+    /// left in <c>/tmp</c>.
+    /// </summary>
+    public string InProcessSqliteFilePath { get; } = Path.Combine(Path.GetTempPath(), $"chronicle-inprocess-{Guid.NewGuid():N}.db");
+
+    /// <summary>
     /// Gets the storage type string for the in-process silo (matches Chronicle server StorageType constants).
     /// Returns null for MongoDB (uses the default MongoDB path).
     /// </summary>
@@ -101,7 +111,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         Options.StorageProvider switch
         {
             ChronicleStorageProvider.Sqlite =>
-                Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? "Data Source=/tmp/chronicle-inprocess-test.db",
+                Environment.GetEnvironmentVariable("CHRONICLE_SQLITE_CONNECTION_DETAILS") ?? $"Data Source={InProcessSqliteFilePath}",
             ChronicleStorageProvider.PostgreSql when _databaseContainer is not null =>
                 $"Host=localhost;Port={_databaseContainer.GetMappedPublicPort(5432)};Database=chronicle-inprocess;Username=postgres;Password={PostgreSqlPassword}",
             ChronicleStorageProvider.PostgreSql =>
@@ -122,6 +132,29 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         await (_databaseContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await (_outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
         await base.DisposeAsync();
+
+        // Best-effort cleanup of the in-process silo's SQLite files. Pattern matches the
+        // cluster file and every per-event-store / per-namespace sibling created at runtime.
+        if (Options.StorageProvider == ChronicleStorageProvider.Sqlite)
+        {
+            var directory = Path.GetDirectoryName(InProcessSqliteFilePath);
+            var baseName = Path.GetFileNameWithoutExtension(InProcessSqliteFilePath);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                foreach (var file in Directory.GetFiles(directory, $"{baseName}*"))
+                {
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch
+                    {
+                        // The file may be held open by a still-shutting-down silo connection;
+                        // the unique GUID in the path means future sessions are unaffected.
+                    }
+                }
+            }
+        }
     }
 
     /// <inheritdoc/>
