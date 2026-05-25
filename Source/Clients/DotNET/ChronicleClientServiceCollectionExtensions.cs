@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
@@ -108,10 +109,7 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
-        services.AddChronicleActivitySource();
-        services.AddActivitySource<EventSequence>();
-        services.AddActivitySource<Reactors>();
-        services.AddActivitySource<Reducers>();
+        services.AddNamedActivitySource(ClientActivity.SourceName);
 
         return services;
     }
