@@ -191,4 +191,11 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
         return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequenceIds()
+    {
+        var ids = await _eventStoreNamespaceDatabase.GetEventSequenceIds();
+        return ids.Select(id => (EventSequenceId)id);
+    }
 }

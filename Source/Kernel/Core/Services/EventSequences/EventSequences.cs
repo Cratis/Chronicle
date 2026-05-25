@@ -221,6 +221,21 @@ internal sealed class EventSequences(
             causedBy: request.CausedBy.ToChronicle());
     }
 
+    /// <inheritdoc/>
+    public async Task<GetAllEventSequencesResponse> GetAllEventSequences(GetAllEventSequencesRequest request, CallContext context = default)
+    {
+        var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
+        var ids = await namespaceStorage.GetEventSequenceIds();
+
+        var sequences = ids.Select(id => new EventSequenceInformation
+        {
+            Id = id.Value,
+            Name = GetDisplayNameForEventSequence(id.Value)
+        }).ToList();
+
+        return new GetAllEventSequencesResponse { EventSequences = sequences };
+    }
+
     async Task<IList<Contracts.Events.AppendedEvent>> ToContracts(
         IEnumerable<AppendedEvent> events,
         Dictionary<EventType, EventTypeSchema> schemasByEventType)
@@ -251,4 +266,14 @@ internal sealed class EventSequences(
 
     Chronicle.EventSequences.IEventSequence GetEventSequenceGrain(IEventSequenceRequest request) =>
         grainFactory.GetGrain<Chronicle.EventSequences.IEventSequence>(new EventSequenceKey(request.EventSequenceId, request.EventStore, request.Namespace));
+
+    static string GetDisplayNameForEventSequence(string id) => id switch
+    {
+        WellKnownEventSequences.EventLog => "Event Log",
+        WellKnownEventSequences.System => "System",
+        WellKnownEventSequences.Outbox => "Outbox",
+        WellKnownEventSequences.Inbox => "Inbox",
+        _ when id.StartsWith(EventSequenceId.InboxPrefix, StringComparison.OrdinalIgnoreCase) => $"Inbox ({id[EventSequenceId.InboxPrefix.Length..]})",
+        _ => id
+    };
 }

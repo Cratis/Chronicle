@@ -89,4 +89,13 @@ public interface IEventSequences
     /// <returns>An awaitable task.</returns>
     [Operation]
     Task RedactForEventSource(RedactForEventSourceRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all event sequences for an event store and namespace.
+    /// </summary>
+    /// <param name="request">The <see cref="GetAllEventSequencesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetAllEventSequencesResponse"/> with all event sequences.</returns>
+    [Operation]
+    Task<GetAllEventSequencesResponse> GetAllEventSequences(GetAllEventSequencesRequest request, CallContext context = default);
 }

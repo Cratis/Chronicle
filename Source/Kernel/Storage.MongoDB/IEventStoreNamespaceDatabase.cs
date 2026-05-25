@@ -45,4 +45,10 @@ public interface IEventStoreNamespaceDatabase
     /// </summary>
     /// <returns>The collection instance.</returns>
     IMongoCollection<ObserverState> GetObserverStateCollection();
+
+    /// <summary>
+    /// Get the identifiers of all event sequences that exist in this namespace database.
+    /// </summary>
+    /// <returns>Collection of event-sequence id strings.</returns>
+    Task<IEnumerable<string>> GetEventSequenceIds();
 }
