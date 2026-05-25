@@ -31,7 +31,7 @@ export const EventList = (props: EventListProps) => {
         eventStore: params.eventStore!,
         namespace: params.namespace!,
         eventSequenceId: props.eventSequenceId ?? 'event-log',
-        eventSourceId: props.filter?.eventSourceId || undefined,
+        eventSourceId: props.filter?.eventSourceId,
         eventTypes: props.filter?.eventTypes && props.filter.eventTypes.length > 0
             ? props.filter.eventTypes
             : undefined,

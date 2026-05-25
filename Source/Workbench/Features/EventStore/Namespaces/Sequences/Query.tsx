@@ -99,7 +99,7 @@ export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, o
                             <label className="text-xs text-gray-500">Event Types</label>
                             <MultiSelect
                                 value={viewModel.eventTypes}
-                                options={eventTypes.data}
+                                options={eventTypes.data ?? []}
                                 onChange={(e) => { viewModel.eventTypes = e.value; }}
                                 optionLabel="id"
                                 optionValue="id"

@@ -27,7 +27,7 @@ export const SequencesFuture = withViewModel(SequencesViewModel, observer(({ vie
         if (savedQueries.hasData) {
             viewModel.setQueriesFromApi(savedQueries.data);
         }
-    }, [savedQueries.hasData, savedQueries.data]);
+    }, [savedQueries.hasData, savedQueries.data, viewModel]);
 
     const handleAddQuery = async () => {
         await viewModel.addQuery(params.eventStore!, params.namespace!);

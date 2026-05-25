@@ -65,17 +65,19 @@ public class SequenceQueryQueries : ControllerBase
             switch (@event.Context.EventType.Id)
             {
                 case SequenceQueryEventTypeIds.Created:
-                    var created = JsonSerializer.Deserialize<JsonElement>(@event.Content, _jsonOptions);
-                    var name = created.GetProperty("name").GetString() ?? string.Empty;
-                    queries[queryId] = new SequenceQueryDefinition(queryId, name, new SequenceQueryFilter());
+                    if (JsonSerializer.Deserialize<JsonElement>(@event.Content, _jsonOptions) is JsonElement created &&
+                        created.TryGetProperty("name", out var nameEl))
+                    {
+                        queries[queryId] = new SequenceQueryDefinition(queryId, nameEl.GetString() ?? string.Empty, new SequenceQueryFilter());
+                    }
                     break;
 
                 case SequenceQueryEventTypeIds.Renamed:
-                    if (queries.TryGetValue(queryId, out var toRename))
+                    if (queries.TryGetValue(queryId, out var toRename) &&
+                        JsonSerializer.Deserialize<JsonElement>(@event.Content, _jsonOptions) is JsonElement renamed &&
+                        renamed.TryGetProperty("name", out var newNameEl))
                     {
-                        var renamed = JsonSerializer.Deserialize<JsonElement>(@event.Content, _jsonOptions);
-                        var newName = renamed.GetProperty("name").GetString() ?? string.Empty;
-                        queries[queryId] = toRename with { Name = newName };
+                        queries[queryId] = toRename with { Name = newNameEl.GetString() ?? string.Empty };
                     }
                     break;
 

@@ -46,8 +46,10 @@ export class SequencesViewModel {
             endTime: q.filter?.endTime ? new Date(q.filter.endTime as unknown as string) : undefined,
         }) as QueryDefinition);
         this._queries = observable.array(loaded);
-        this._currentQuery = this._queries[0];
-        this._activeTabIndex = 0;
+        if (loaded.length > 0) {
+            this._currentQuery = this._queries[0];
+            this._activeTabIndex = 0;
+        }
     }
 
     async addQuery(eventStore: string, namespace: string) {
@@ -62,7 +64,7 @@ export class SequencesViewModel {
                 name: result.response.name,
                 eventSequenceId: 'event-log',
             };
-            (this._queries as QueryDefinition[]).push(newQuery);
+            this._queries.push(newQuery);
             this._activeTabIndex = this._queries.length - 1;
             this._currentQuery = newQuery;
         }
