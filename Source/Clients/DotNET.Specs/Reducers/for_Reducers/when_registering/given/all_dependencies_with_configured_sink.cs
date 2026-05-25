@@ -11,6 +11,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +27,7 @@ public class all_dependencies_with_configured_sink : Specification
     protected IEventTypes _eventTypes;
     protected INamingPolicy _namingPolicy;
     protected JsonSerializerOptions _jsonSerializerOptions;
+    protected IActivitySource<Reducers> _activitySource;
     protected ILogger<Reducers> _logger;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
@@ -54,6 +56,7 @@ public class all_dependencies_with_configured_sink : Specification
         _eventTypes = Substitute.For<IEventTypes>();
         _namingPolicy = new DefaultNamingPolicy();
         _jsonSerializerOptions = new();
+        _activitySource = Substitute.For<IActivitySource<Reducers>>();
         _logger = Substitute.For<ILogger<Reducers>>();
 
         _reducersService = Substitute.For<Contracts.Observation.Reducers.IReducers>();
@@ -86,6 +89,7 @@ public class all_dependencies_with_configured_sink : Specification
             Options.Create(new ChronicleOptions { DefaultSinkTypeId = DefaultSinkTypeId }),
             _identityProvider,
             _reducerObservers,
+            _activitySource,
             _logger);
     }
 }
