@@ -47,6 +47,6 @@ public static class ReminderEntryConverters
             ReminderName = entry.ReminderName,
             ETag = string.IsNullOrEmpty(entry.ETag) ? Guid.NewGuid().ToString("N") : entry.ETag,
             StartAt = entry.StartAt.ToBinary(),
-            Period = entry.Period.Milliseconds
+            Period = (long)entry.Period.TotalMilliseconds
         };
 }
