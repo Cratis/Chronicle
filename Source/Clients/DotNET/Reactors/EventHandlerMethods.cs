@@ -24,7 +24,7 @@ public static class EventHandlerMethods
             return false;
         }
 
-        var isEventHandlerMethod = (methodInfo.ReturnType.IsAssignableTo(typeof(Task)) && !methodInfo.ReturnType.IsGenericType) ||
+        var isEventHandlerMethod = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
                                     methodInfo.ReturnType == typeof(void);
 
         if (!isEventHandlerMethod) return false;

@@ -402,7 +402,8 @@ public class Reactors : IReactors
             middlewares,
             handler.ReactorType,
             activatedReactor,
-            _loggerFactory.CreateLogger<ReactorInvoker>());
+            _loggerFactory.CreateLogger<ReactorInvoker>(),
+            _eventStore);
 
         foreach (var @event in events.Events)
         {

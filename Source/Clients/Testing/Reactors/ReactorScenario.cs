@@ -31,7 +31,11 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// When <see langword="null"/>, a <see cref="DefaultServiceProvider"/> is used which instantiates
 /// the reactor via its default constructor.
 /// </param>
-public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null)
+/// <param name="eventStore">
+/// Optional <see cref="IEventStore"/> used to append any events returned as side effects by handler methods.
+/// When <see langword="null"/>, returned events are silently discarded.
+/// </param>
+public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null, IEventStore? eventStore = null)
     where TReactor : class, IReactor
 {
     readonly IServiceProvider _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
@@ -81,7 +85,8 @@ public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null)
 #pragma warning restore CA2000
             typeof(TReactor),
             activatedReactor,
-            NullLogger<ReactorInvoker>.Instance);
+            NullLogger<ReactorInvoker>.Instance,
+            eventStore);
 
         foreach (var @event in events)
         {
