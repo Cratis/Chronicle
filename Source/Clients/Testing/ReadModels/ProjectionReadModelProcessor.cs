@@ -13,7 +13,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sinks.InMemory;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Json;
 using Cratis.Serialization;
@@ -169,11 +169,13 @@ internal static class ProjectionReadModelProcessor
         // properties whose only source is the event-source ID surface as null in _scenario.Instance.
         KernelKey? rootKey = null;
 
+        using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
+
         // Process events, retrying any that return DeferredKey once all other events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            var (newState, eventKey) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, @event, state, deferredEvents);
+            var (newState, eventKey) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents);
             state = newState;
             rootKey ??= eventKey;
         }
@@ -183,7 +185,7 @@ internal static class ProjectionReadModelProcessor
         {
             var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = engineProjection.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(inMemoryEventSequenceStorage, NullSink.Instance, @event);
+            var keyResult = await keyResolver(inMemoryEventSequenceStorage, inMemorySink, @event);
 
             if (keyResult is KernelProjectionEngine::DeferredKey)
             {
@@ -203,6 +205,7 @@ internal static class ProjectionReadModelProcessor
 
             HandleEventFor(engineProjection, context);
             state = ApplyActualChanges(key, changeset.Changes, state);
+            await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
 
         InjectIdentifierFromKey<TReadModel>(state, rootKey);
@@ -330,12 +333,13 @@ internal static class ProjectionReadModelProcessor
     static async Task<(ExpandoObject State, KernelKey? Key)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         InMemoryEventSequenceStorage eventSequenceStorage,
+        InMemorySink sink,
         KernelAppendedEvent @event,
         ExpandoObject state,
         Queue<KernelAppendedEvent> deferredEvents)
     {
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
-        var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, NullSink.Instance, @event);
+        var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
 
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
@@ -352,7 +356,9 @@ internal static class ProjectionReadModelProcessor
             false);
 
         HandleEventFor(projection, context);
-        return (ApplyActualChanges(key, changeset.Changes, state), key);
+        var updatedState = ApplyActualChanges(key, changeset.Changes, state);
+        await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+        return (updatedState, key);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
