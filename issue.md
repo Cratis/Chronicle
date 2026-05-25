@@ -8,16 +8,20 @@ This PR and branch contains a restructuring of integration specs compared to mai
 - mssql - out-of-process
 - sqlite - out-of-process
 
-We've made some progress, but things are still failing. There shouldn't be any If(this context) then do.. type of scenarios in the specs at all. They should all go through the Client APIs and be able to spec things through that.
+We've made some progress, but things are still failing.
+
+There shouldn't be any If(this context) then do.. type of scenarios in the specs at all. They should all go through the Client APIs and be able to spec things through that.
 We also do not want extra additional waiting mechanisms, we know when things are ready and not - or at least should know, but might miss exposure to the client for doing so.
 
-Iterate locally, run specs and iterate.
-
+Never ever remove #IF DEVELOPMENT from anywhere.
 Dig deep on root causes - always prioritize root causes and not putting in workarounds.
 
 Keep in mind that we have multiple databases for segregation, and even namespace databases as well. So keep that in mind, we do not want to merge databases. Look at MongoDB Storage implementation for more details.
 
 Focus on the job, don't change things that is unrelated to the job - don't fix things that is outside of the scope of this job.
+
+Iterate locally, run specs and iterate.
+
 
 Lets get mongodb - out-of-process working first, across the board.
 Go through systematically and make everything pass. You can do this namespace by namespace, as we have in the build workflow.
