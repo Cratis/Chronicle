@@ -118,7 +118,8 @@ jobs:
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
             --configuration Release \
-            -p:DisableDockerBuild=true
+            -p:DisableDockerBuild=true \
+            -p:EnableDevelopmentSymbol=true
 
   kernel-integration-specs:
     needs: [discover]
@@ -155,4 +156,5 @@ jobs:
             --no-restore \
             --filter "FullyQualifiedName~${{ matrix.namespace }}" \
             --logger "console;verbosity=normal" \
-            --configuration Release
+            --configuration Release \
+            -p:EnableDevelopmentSymbol=true
