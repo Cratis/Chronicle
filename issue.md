@@ -15,6 +15,10 @@ Iterate locally, run specs and iterate.
 
 Dig deep on root causes - always prioritize root causes and not putting in workarounds.
 
+Keep in mind that we have multiple databases for segregation, and even namespace databases as well. So keep that in mind, we do not want to merge databases. Look at MongoDB Storage implementation for more details.
+
+Focus on the job, don't change things that is unrelated to the job - don't fix things that is outside of the scope of this job.
+
 Lets get mongodb - out-of-process working first, across the board.
 Go through systematically and make everything pass. You can do this namespace by namespace, as we have in the build workflow.
 
