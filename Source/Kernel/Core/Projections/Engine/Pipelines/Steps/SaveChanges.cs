@@ -37,6 +37,25 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
         {
             logger.SavingResult(context.Event.Context.SequenceNumber);
 
+            // Sinks that serialize a whole document per ApplyChanges call (the SQL sink does;
+            // MongoDB instead uses field-level $set operators that compose naturally) cannot
+            // safely process the main changeset plus several pendingSaves for the same key as
+            // separate operations — each pendingSave starts from its own InitialState clone,
+            // so later pendingSaves serialize on top of the unmutated initial document and
+            // overwrite earlier pendingSaves' mutations. When pendingSaves target the same
+            // key as the main changeset, fold their Changes into the main changeset so the
+            // sink sees one composite write per key.
+            var samePendingSaves = context.PendingFutureSaves
+                .Where(p => Equals(p.Key.Value, context.Key.Value))
+                .ToArray();
+            foreach (var pendingSave in samePendingSaves)
+            {
+                foreach (var change in pendingSave.Changeset.Changes)
+                {
+                    context.Changeset.Add(change);
+                }
+            }
+
             // TODO: Return the number of affected records and pass this along to the changeset storage
             var failedPartitions = await sink.ApplyChanges(context.Key, context.Changeset, context.Event.Context.SequenceNumber);
 
@@ -59,7 +78,10 @@ public class SaveChanges(ISink sink, IChangesetStorage changesetStorage, ILogger
                 context.Changeset);
         }
 
-        foreach (var pendingSave in context.PendingFutureSaves)
+        var remainingPendingSaves = context.Changeset.HasChanges
+            ? context.PendingFutureSaves.Where(p => !Equals(p.Key.Value, context.Key.Value))
+            : context.PendingFutureSaves;
+        foreach (var pendingSave in remainingPendingSaves)
         {
             await sink.ApplyChanges(pendingSave.Key, pendingSave.Changeset, context.Event.Context.SequenceNumber);
         }
