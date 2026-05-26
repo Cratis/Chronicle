@@ -43,15 +43,35 @@ public class SinkCollections(
         var rewindName = ReplayCollectionName;
 
         var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
+
+        // Only perform the rename swap when the replay collection contains documents. If the
+        // replay produced zero writes (e.g. the job's PrepareSteps observed no keys yet because
+        // the event index hadn't caught up), renaming main → revert without a populated
+        // replacement would wipe the existing read model — turning a transient race into
+        // permanent data loss. Leaving main untouched in that case correctly treats the empty
+        // replay as a no-op.
+        var replayCollectionExists = collectionNames.Contains(rewindName);
+        var replayHasDocuments = replayCollectionExists
+            && await database.GetCollection<BsonDocument>(rewindName)
+                .Find(FilterDefinition<BsonDocument>.Empty)
+                .Limit(1)
+                .AnyAsync();
+        if (!replayHasDocuments)
+        {
+            if (replayCollectionExists)
+            {
+                await database.DropCollectionAsync(rewindName);
+            }
+            _isReplaying = false;
+            return;
+        }
+
         if (collectionNames.Contains(readModel.ContainerName))
         {
             await database.RenameCollectionAsync(readModel.ContainerName, context.RevertContainerName);
         }
 
-        if (collectionNames.Contains(rewindName))
-        {
-            await database.RenameCollectionAsync(rewindName, readModel.ContainerName);
-        }
+        await database.RenameCollectionAsync(rewindName, readModel.ContainerName);
 
         _isReplaying = false;
     }
