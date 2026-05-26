@@ -73,6 +73,13 @@ public static class ProjectionEventContextExtensions
         // after projection.OnNext() returns, so the join resolution must complete synchronously.
         // A proper async refactor would require restructuring the entire projection pipeline.
         // See: https://github.com/Cratis/Chronicle/issues/50
+        //
+        // The Task.Run wrapper hops to a thread-pool thread before blocking on GetResult().
+        // Without it, EF Core continuations targeting a captured SynchronizationContext (which on
+        // Orleans is the grain's task scheduler the current thread is already blocked on) would
+        // deadlock — SQLite's in-process I/O completes synchronously enough to hide this, but
+        // PostgreSQL / SQL Server reliably hang every join-event subscriber the first time the
+        // continuation tries to schedule itself back onto the blocked scheduler.
         return Observable.Create<ProjectionEventContext>(observer =>
             observable.Subscribe(
                 context =>
@@ -81,10 +88,10 @@ public static class ProjectionEventContextExtensions
                     if (onValue is null) return;
 
 #pragma warning disable CA2007
-                    var tryGetLastEvent = eventSequenceStorage.TryGetLastEventBefore(
+                    var tryGetLastEvent = Task.Run(() => eventSequenceStorage.TryGetLastEventBefore(
                         joinEventType.Id,
                         onValue.ToString()!,
-                        context.EventSequenceNumber).GetAwaiter().GetResult();
+                        context.EventSequenceNumber)).GetAwaiter().GetResult();
 #pragma warning restore CA2007
 
                     tryGetLastEvent.Switch(
