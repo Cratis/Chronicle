@@ -97,5 +97,16 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
 
         base.OnModelCreating(modelBuilder);
+
+        // Match the column mappings to the provider-native JSON type the migrations create
+        // (jsonb on Npgsql). PostgreSQL is the only provider that requires this because its
+        // jsonb type rejects implicit casts from text; SQLite and MSSQL accept the string as-is.
+        // Mirrors NamespaceDbContext for entity columns whose values are pre-serialized JSON
+        // strings stored in a provider-native JSON column rather than via [Json] conversion.
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.Entity<EventSeedsEntity>().Property(e => e.ByEventTypeJson).HasColumnType("jsonb");
+            modelBuilder.Entity<EventSeedsEntity>().Property(e => e.ByEventSourceJson).HasColumnType("jsonb");
+        }
     }
 }
