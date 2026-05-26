@@ -25,6 +25,10 @@ public class v15_0_0 : Migration
                 Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Name = table.StringColumn(migrationBuilder),
                 Owner = table.NumberColumn<int>(migrationBuilder),
+                Source = table.NumberColumn<int>(migrationBuilder, nullable: false, defaultValue: 0),
+                ObserverType = table.NumberColumn<int>(migrationBuilder, nullable: false, defaultValue: 0),
+                ObserverIdentifier = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false, defaultValue: string.Empty),
+                DisplayName = table.StringColumn(migrationBuilder, nullable: false, defaultValue: string.Empty),
                 Schemas = table.JsonColumn<IDictionary<string, string>>(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReadModelDefinitions}", x => x.Id));
