@@ -276,33 +276,43 @@ public class Sink(
     {
         // Pull the matching child out of every entry that carries one. The childRemoved
         // describes the children-collection path and the identifier property on each child;
-        // we deserialize each entry, drop matching items, and re-serialize if it changed.
+        // we deserialize each entry, drop matching items, and write a fresh List back to the
+        // children property. Re-using the deserialized collection in place would NRE on a
+        // child that came in as a JSON array (System.Text.Json materializes those as a fixed-
+        // size object[], which throws on Remove); going through the property setter always
+        // produces a mutable List so subsequent runs can keep editing it.
         var entries = await scope.DbContext.Entries.ToListAsync();
         var modified = false;
+        var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
+        var keyAsString = childRemoved.Key?.ToString();
 
         foreach (var entry in entries)
         {
             var document = DeserializeDocument(entry.Document);
             var collection = document.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, childRemoved.ArrayIndexers);
-            var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
-            var keyAsString = childRemoved.Key?.ToString();
-            var matches = collection
-                .OfType<IDictionary<string, object?>>()
-                .Where(item => item.TryGetValue(identifierSegment, out var value)
+            var matched = false;
+            var retained = new List<object>(collection.Count);
+            foreach (var item in collection)
+            {
+                if (item is IDictionary<string, object?> itemDict
+                    && itemDict.TryGetValue(identifierSegment, out var value)
                     && (Equals(value, childRemoved.Key)
                         || (value is not null && value.ToString() == keyAsString)))
-                .Cast<object>()
-                .ToList();
+                {
+                    matched = true;
+                    continue;
+                }
 
-            if (matches.Count == 0)
+                retained.Add(item);
+            }
+
+            if (!matched)
             {
                 continue;
             }
 
-            foreach (var match in matches)
-            {
-                collection.Remove(match);
-            }
+            var childrenProperty = childRemoved.ChildrenProperty.LastSegment.Value;
+            ((IDictionary<string, object?>)document)[childrenProperty] = retained;
 
             var docDict = (IDictionary<string, object?>)document;
             var newSequenceNumber = (ulong)eventSequenceNumber;
@@ -428,22 +438,29 @@ public class Sink(
     {
         // ChildRemoved excludes its own ChildrenProperty from the indexers used to navigate the
         // parent document — we only need indexers for any ENCLOSING arrays (e.g. parent-of-parent).
+        // Write a fresh List back to the children property: a children array deserialized from
+        // JSON is a fixed-size object[], so calling Remove on it directly throws
+        // NotSupportedException and the partition stalls.
         var arrayIndexers = new ArrayIndexers(parentArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
         var collection = state.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, arrayIndexers);
         var identifierSegment = childRemoved.IdentifiedByProperty.LastSegment.Value;
         var keyAsString = childRemoved.Key?.ToString();
-        var matches = collection
-            .OfType<IDictionary<string, object?>>()
-            .Where(item => item.TryGetValue(identifierSegment, out var value)
+        var retained = new List<object>(collection.Count);
+        foreach (var item in collection)
+        {
+            if (item is IDictionary<string, object?> itemDict
+                && itemDict.TryGetValue(identifierSegment, out var value)
                 && (Equals(value, childRemoved.Key)
                     || (value is not null && value.ToString() == keyAsString)))
-            .Cast<object>()
-            .ToList();
+            {
+                continue;
+            }
 
-        foreach (var match in matches)
-        {
-            collection.Remove(match);
+            retained.Add(item);
         }
+
+        var childrenProperty = childRemoved.ChildrenProperty.LastSegment.Value;
+        ((IDictionary<string, object?>)state)[childrenProperty] = retained;
     }
 
     static ExpandoObject ApplyPropertiesChanged(ExpandoObject state, PropertiesChanged<ExpandoObject> propertiesChanged, ArrayIndexers keyArrayIndexers)
