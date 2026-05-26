@@ -33,6 +33,21 @@ public class EventSequenceStorage(
     IIdentityStorage identityStorage,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
+    /// <summary>
+    /// Truncate a <see cref="DateTimeOffset"/> to microsecond precision (10 .NET ticks).
+    /// </summary>
+    /// <param name="value">The value to truncate.</param>
+    /// <returns>The truncated <see cref="DateTimeOffset"/> with the same offset.</returns>
+    /// <remarks>
+    /// PostgreSQL's <c>timestamp</c> stores microsecond precision and drops the lower .NET
+    /// tick digit on write. Applying it on append keeps the value the projection observes
+    /// equal to what GetForEventSourceIdAndEventTypes returns later, so specs that compare
+    /// event.Occurred.Ticks to a projected value do not flake when DateTime.UtcNow happens
+    /// to land off a microsecond boundary.
+    /// </remarks>
+    public static DateTimeOffset TruncateToMicrosecond(DateTimeOffset value) =>
+        new(value.Ticks - (value.Ticks % (TimeSpan.TicksPerMillisecond / 1000)), value.Offset);
+
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
 
@@ -100,6 +115,19 @@ public class EventSequenceStorage(
         try
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+            // Truncate to the precision the database will actually preserve so the value the
+            // projection observes (via the returned AppendedEvent) round-trips byte-identical
+            // with what GetForEventSourceIdAndEventTypes returns later. PostgreSQL truncates
+            // .NET 100ns ticks to microseconds; without this, the read-back drops the lower
+            // tick digit while the projection's read-model JSON retains it, and any spec that
+            // compares event.Occurred.Ticks to the projected value (e.g. FromEvery setting
+            // LastUpdated from the EventContext) flakes whenever DateTime.UtcNow happens to
+            // sit off a microsecond boundary. The cap is microsecond because that is the
+            // narrowest precision a Chronicle-supported relational provider preserves; SQLite
+            // (TEXT) and MSSQL (datetime2) keep more precision but stay correct under the
+            // tighter cap.
+            occurred = TruncateToMicrosecond(occurred);
 
             var seqNumValue = sequenceNumber.Value;
             var existingEvent = await scope.DbContext.Events
@@ -213,6 +241,11 @@ public class EventSequenceStorage(
 
             foreach (var eventToAppend in eventsArray)
             {
+                // Same precision-cap rationale as the single Append path: keep the value the
+                // projection observes equal to what GetForEventSourceIdAndEventTypes returns
+                // later. See the comment in Append for details.
+                var truncatedOccurred = TruncateToMicrosecond(eventToAppend.Occurred);
+
                 // Check if sequence number already exists
                 var appendManySeqNum = eventToAppend.SequenceNumber.Value;
                 var existingEvent = await scope.DbContext.Events
@@ -233,7 +266,7 @@ public class EventSequenceStorage(
                     eventToAppend.CorrelationId,
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
-                    eventToAppend.Occurred,
+                    truncatedOccurred,
                     eventToAppend.Content,
                     eventToAppend.Hash);
 
@@ -249,7 +282,7 @@ public class EventSequenceStorage(
                     eventToAppend.EventStreamType,
                     eventToAppend.EventStreamId,
                     eventToAppend.SequenceNumber,
-                    eventToAppend.Occurred,
+                    truncatedOccurred,
                     eventStore,
                     @namespace,
                     eventToAppend.CorrelationId,
