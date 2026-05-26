@@ -111,6 +111,26 @@ public class Sink(
             return _noFailedPartitions;
         }
 
+        // When the event was consumed by a Join (Children Join<TEvent>) AND the only remaining
+        // changes are FromEvery-style PropertiesChanged that don't construct anything (no
+        // ChildAdded, no ChildRemoved), the keyed document at this level should only be
+        // *updated* — never created. The classic case: a Group projection with
+        // FromEvery.Set(LastUpdated) + Children.Join<UserCreated>. When UserCreated arrives
+        // for a UserId that no Group has, the FromEvery PropertiesChanged would otherwise
+        // upsert a phantom Group keyed on UserId. Defer to an update-only path: if the row
+        // exists, modify it; if not, this event genuinely doesn't belong to any document at
+        // this level.
+        var hasJoined = changeset.Changes.OfType<Joined>().Any();
+        var onlyPropertyUpdates = nonJoinedChanges.All(c => c is PropertiesChanged<ExpandoObject>);
+        if (hasJoined && onlyPropertyUpdates)
+        {
+            var exists = await scope.DbContext.Entries.AnyAsync(e => e.Id == id);
+            if (!exists)
+            {
+                return _noFailedPartitions;
+            }
+        }
+
         var state = changeset.InitialState.Clone();
         state = ApplyActualChanges(key, nonJoinedChanges, state);
 
