@@ -25,5 +25,5 @@ public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
     /// Builds the <see cref="SourceDefinition"/>.
     /// </summary>
     /// <returns>A new <see cref="SourceDefinition"/>.</returns>
-    public SourceDefinition Build() => new(SourceType.Webhook, Path: path, Auth: _auth);
+    public SourceDefinition Build() => new(SourceType.Webhook, Auth: _auth, Path: path);
 }
