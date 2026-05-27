@@ -184,6 +184,10 @@ public class Compiler
             case ChildrenBlock childrenBlock:
                 ProcessChildrenBlock(childrenBlock, children);
                 break;
+            case NestedBlock:
+                // Nested object blocks are parsed but not yet emitted to ProjectionDefinition.Nested.
+                // Code generation lands in Phase 4.
+                break;
             case JoinBlock joinBlock:
                 ProcessJoinBlock(joinBlock, join);
                 break;
@@ -316,6 +320,14 @@ public class Compiler
                 break;
             case ChildEveryBlock everyBlock:
                 ProcessChildEveryBlock(everyBlock, fromEvery);
+                break;
+            case NestedChildBlock:
+                // Nested-in-children blocks are parsed but not yet emitted to ChildrenDefinition.Nested.
+                // Code generation lands in Phase 4.
+                break;
+            case ClearWithDirective:
+                // Clear-with directives are parsed but not yet emitted to the nested object's RemovedWith.
+                // Code generation lands in Phase 4.
                 break;
             default:
                 throw new NotSupportedException($"Child block type {childBlock.GetType().Name} is not yet supported");
