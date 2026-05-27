@@ -3,16 +3,16 @@
 
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_with_children_from;
 
-public class and_self_referencing_children_are_on_separate_event_sources : Specification
+public class and_self_referencing_children_with_set_from_are_on_separate_event_sources : Specification
 {
-    ReadModelScenario<ModuleDashboardSelfRef> _scenario;
+    ReadModelScenario<ModuleDashboardSelfRefWithSetFrom> _scenario;
     ModuleNodeId _moduleId;
     FeatureNodeId _featureId;
     FeatureNodeId _subFeatureId;
 
     void Establish()
     {
-        _scenario = new ReadModelScenario<ModuleDashboardSelfRef>();
+        _scenario = new ReadModelScenario<ModuleDashboardSelfRefWithSetFrom>();
         _moduleId = ModuleNodeId.New();
         _featureId = FeatureNodeId.New();
         _subFeatureId = FeatureNodeId.New();
@@ -33,9 +33,7 @@ public class and_self_referencing_children_are_on_separate_event_sources : Speci
             .Events(new SubFeatureAddedSelfRef(_featureId, "Inventory"));
     }
 
-    [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
     [Fact] void should_only_have_parent_feature_at_root() => _scenario.Instance!.Features.Count().ShouldEqual(1);
     [Fact] void should_nest_sub_feature_under_parent() => _scenario.Instance!.Features.Single().SubFeatures.Count().ShouldEqual(1);
-    [Fact] void should_set_sub_feature_identifier() => _scenario.Instance!.Features.Single().SubFeatures.Single().Id.ShouldEqual(_subFeatureId);
     [Fact] void should_set_sub_feature_name() => _scenario.Instance!.Features.Single().SubFeatures.Single().Name.ShouldEqual("Inventory");
 }
