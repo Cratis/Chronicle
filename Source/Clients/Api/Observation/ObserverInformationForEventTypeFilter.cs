@@ -51,6 +51,6 @@ internal static class ObserverInformationForEventTypeFilter
                 .ObserveObservers(new() { EventStore = eventStore, Namespace = @namespace })
                 .Select(observersInNamespace => FilterByEventType(@namespace, observersInNamespace, eventTypeId)));
 
-        return Observable.CombineLatest(perNamespaceStreams).Select(perNamespace => perNamespace.SelectMany(_ => _));
+        return perNamespaceStreams.CombineLatest().Select(perNamespace => perNamespace.SelectMany(_ => _));
     }
 }
