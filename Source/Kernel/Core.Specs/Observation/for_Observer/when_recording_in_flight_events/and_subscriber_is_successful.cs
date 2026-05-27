@@ -19,9 +19,9 @@ public class and_subscriber_is_successful : given.an_observer_with_subscription_
 
     [Fact] void should_record_the_event_as_in_flight_before_dispatch() => _inFlightEventsStorage
         .Received(1)
-        .Add(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => _.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
+        .Add(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => (string)_.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
 
     [Fact] void should_clear_the_in_flight_entry_after_success() => _inFlightEventsStorage
         .Received(1)
-        .RemoveUpTo(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => _.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
+        .RemoveUpTo(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => (string)_.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
 }

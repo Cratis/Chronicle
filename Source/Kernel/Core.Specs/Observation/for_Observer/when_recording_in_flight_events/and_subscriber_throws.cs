@@ -20,5 +20,5 @@ public class and_subscriber_throws : given.an_observer_with_subscription_for_spe
 
     [Fact] void should_still_record_the_event_as_in_flight_before_dispatch() => _inFlightEventsStorage
         .Received(1)
-        .Add(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => _.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
+        .Add(Arg.Any<ObserverId>(), Arg.Is<Key>(_ => (string)_.Value == "Something"), Arg.Is<EventSequenceNumber>(_ => _ == 42UL));
 }
