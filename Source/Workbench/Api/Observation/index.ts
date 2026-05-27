@@ -6,6 +6,7 @@ export * from './FailedPartitionAttempt';
 export * from './GetObservers';
 export * from './GetObserversForEventType';
 export * from './GetReplayableObserversForEventTypes';
+export * from './ObserveObserversForEventType';
 export * from './ObserverInformation';
 export * from './ObserverInformationForEventType';
 export * from './ObserverOwner';

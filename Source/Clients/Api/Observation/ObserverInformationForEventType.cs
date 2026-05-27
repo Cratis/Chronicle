@@ -1,8 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Reactive;
 
 namespace Cratis.Chronicle.Api.Observation;
 
@@ -41,11 +44,29 @@ public record ObserverInformationForEventType(
                 Namespace = @namespace
             });
 
-            results.AddRange(observersInNamespace
-                .Where(observer => observer.EventTypes.Any(eventType => string.Equals(eventType.Id, eventTypeId, StringComparison.Ordinal)))
-                .Select(observer => new ObserverInformationForEventType(@namespace, observer.ToApi())));
+            results.AddRange(ObserverInformationForEventTypeFilter.FilterByEventType(@namespace, observersInNamespace, eventTypeId));
         }
 
         return results;
     }
+
+    /// <summary>
+    /// Observe all observers that consume a specific event type across all namespaces in an event store.
+    /// </summary>
+    /// <param name="eventStore">The event store to observe.</param>
+    /// <param name="eventTypeId">The identifier of the event type to observe consuming observers for.</param>
+    /// <param name="observers">The <see cref="IObservers"/> service used to observe observers.</param>
+    /// <param name="namespaces">The <see cref="INamespaces"/> service used to observe namespaces.</param>
+    /// <returns>An observable of a collection of <see cref="ObserverInformationForEventType"/> that updates whenever observers or namespaces change.</returns>
+    public static ISubject<IEnumerable<ObserverInformationForEventType>> ObserveObserversForEventType(
+        string eventStore,
+        string eventTypeId,
+        IObservers observers,
+        INamespaces namespaces) =>
+        namespaces.InvokeAndWrapWithTransformSubject(
+            token => namespaces
+                .ObserveNamespaces(new() { EventStore = eventStore }, token)
+                .Select(namespaceNames => ObserverInformationForEventTypeFilter.ObserveForAllNamespaces(eventStore, eventTypeId, observers, namespaceNames))
+                .Switch(),
+            results => results);
 }

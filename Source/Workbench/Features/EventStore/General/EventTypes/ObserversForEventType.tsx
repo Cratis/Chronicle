@@ -1,11 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
-import { GetObserversForEventType, ObserverInformationForEventType, ObserverType } from 'Api/Observation';
+import { ObserveObserversForEventType, ObserverInformationForEventType, ObserverType } from 'Api/Observation';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { getObserverRunningStateAsText } from '../../Namespaces/Observers/getObserverRunningStateAsText';
 import strings from 'Strings';
@@ -44,17 +43,10 @@ const renderRunningState = (row: ObserverInformationForEventType) =>
  */
 export const ObserversForEventType = ({ eventTypeId }: ObserversForEventTypeProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [observersQuery, performObserversQuery] = GetObserversForEventType.use({
+    const [observersQuery] = ObserveObserversForEventType.use({
         eventStore: params.eventStore!,
         eventTypeId
     });
-
-    useEffect(() => {
-        performObserversQuery({
-            eventStore: params.eventStore!,
-            eventTypeId
-        });
-    }, [eventTypeId, params.eventStore]);
 
     return (
         <DataTable
