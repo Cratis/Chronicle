@@ -19,14 +19,14 @@ public class CompleteStreamResponse
     /// Gets or sets the tail sequence number captured at the time of completion.
     /// </summary>
     /// <remarks>
-    /// Only meaningful when <see cref="IsSuccess"/> is <c>true</c>. When completion failed because the stream had
+    /// Only meaningful when <see cref="IsSuccess"/> is <see langword="true"/>. When completion failed because the stream had
     /// already been completed, the previously captured tail sequence number is not returned through this response.
     /// </remarks>
     [ProtoMember(2)]
     public ulong SequenceNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the error encountered when <see cref="IsSuccess"/> is <c>false</c>.
+    /// Gets or sets the error encountered when <see cref="IsSuccess"/> is <see langword="false"/>.
     /// </summary>
     [ProtoMember(3)]
     public CompleteStreamError? Error { get; set; }
