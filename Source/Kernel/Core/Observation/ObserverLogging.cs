@@ -143,7 +143,6 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
-
 }
 
 internal static class ObserverScopes

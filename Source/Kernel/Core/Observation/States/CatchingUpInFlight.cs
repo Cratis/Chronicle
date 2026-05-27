@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
@@ -77,9 +76,10 @@ public class CatchingUpInFlight(
         var partitions = entries
             .Select(_ => _.Partition)
             .Distinct()
-            .Where(p => !state.CatchingUpPartitions.Contains(p))
-            .Where(p => !state.ReplayingPartitions.Contains(p))
-            .Where(p => !failuresState.State.IsFailed(p))
+            .Where(p =>
+                !state.CatchingUpPartitions.Contains(p) &&
+                !state.ReplayingPartitions.Contains(p) &&
+                !failuresState.State.IsFailed(p))
             .ToArray();
 
         var startFrom = state.LastHandledEventSequenceNumber.IsActualValue
