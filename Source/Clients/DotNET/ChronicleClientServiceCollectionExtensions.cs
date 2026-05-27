@@ -7,11 +7,8 @@ using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
-using Cratis.Traces;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using DiagnosticsActivitySource = System.Diagnostics.ActivitySource;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -109,11 +106,7 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
-        services.TryAddKeyedSingleton(
-            typeof(DiagnosticsActivitySource),
-            ClientActivity.SourceName,
-            static (_, key) => new DiagnosticsActivitySource(key as string ?? throw new InvalidOperationException("ActivitySource key must be a string.")));
-        services.TryAddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(ActivitySource<>));
+        services.AddNamedActivitySource(ClientActivity.SourceName);
 
         return services;
     }

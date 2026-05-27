@@ -88,7 +88,9 @@ jobs:
           key: ${{ env.KERNEL_CACHE }}
 
       - name: Add GitHub Package Registry to NuGet
-        run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Build
         working-directory: ./Source/Kernel/Server
@@ -168,7 +170,9 @@ jobs:
           key: ${{ env.KERNEL_CACHE }}-development
 
       - name: Add GitHub Package Registry to NuGet
-        run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Build development variant (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
@@ -211,7 +215,9 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Add GitHub Package Registry to NuGet
-        run: dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text ${{ env.NUGET_SOURCE }}
 
       - name: Build root
         run: dotnet build --configuration Debug
