@@ -135,7 +135,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             {
                 // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
                 var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-                var handledEventCounts = await GetHandledEventCounts(request.EventStore, request.Namespace);
+                var handledEventCounts = await GetFreshHandledEventCounts(request.EventStore, request.Namespace);
                 var observers =
                     from definition in observerDefinitions
                     join state in observerStates on definition.Identifier equals state.Identifier
@@ -175,6 +175,33 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         catch
         {
             return new Dictionary<ObserverHandledEventCountKey, EventCount>();
+        }
+    }
+
+    /// <summary>
+    /// Refresh and look up the handled event counts maintained by the <see cref="IObserverHandledEventCounts"/> grain.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="Concepts.EventStoreName"/> to look up for.</param>
+    /// <param name="namespace">The <see cref="Concepts.EventStoreNamespaceName"/> to look up for.</param>
+    /// <returns>The dictionary of handled event counts, or an empty dictionary when the lookup fails.</returns>
+    /// <remarks>
+    /// Used by the observable observers query so that every push to the workbench reflects the
+    /// counts at the moment observer state changed — without waiting for the grain's periodic refresh.
+    /// Falls back to the cached counts on transient grain failures.
+    /// </remarks>
+    async Task<IReadOnlyDictionary<ObserverHandledEventCountKey, EventCount>> GetFreshHandledEventCounts(
+        Concepts.EventStoreName eventStore,
+        Concepts.EventStoreNamespaceName @namespace)
+    {
+        try
+        {
+            var grain = grainFactory.GetGrain<IObserverHandledEventCounts>(new ObserversKey(eventStore, @namespace));
+            await grain.Refresh();
+            return await grain.GetAll();
+        }
+        catch
+        {
+            return await GetHandledEventCounts(eventStore, @namespace);
         }
     }
 }
