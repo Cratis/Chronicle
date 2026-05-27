@@ -11,8 +11,10 @@ import { EventTypeRegistration, EventTypeSource } from 'Api/Events';
 import { Register } from 'Api/Events';
 import { AllEventTypeGenerations } from 'Api/EventTypes/AllEventTypeGenerations';
 import { Dropdown } from 'primereact/dropdown';
+import { TabView, TabPanel } from 'primereact/tabview';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { ObserversForEventType } from './ObserversForEventType';
 import strings from 'Strings';
 
 interface GenerationOption {
@@ -51,7 +53,7 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
 
     const handleGenerationChange = (generation: number) => {
         setSelectedGeneration(generation);
-        const selected = generationOptions.find(opt => opt.value === generation);
+        const selected = generationOptions.find(option => option.value === generation);
         if (selected) {
             setCurrentRegistration(selected.registration);
             setSchema(JSON.parse(selected.registration.schema));
@@ -89,20 +91,32 @@ export const TypeDetails = (props: IDetailsComponentProps<EventTypeRegistration>
                     <Dropdown
                         value={selectedGeneration}
                         options={generationOptions}
-                        onChange={(e) => handleGenerationChange(e.value)}
+                        onChange={(event) => handleGenerationChange(event.value)}
                         style={{ minWidth: '160px' }}
                     />
                 </div>
             )}
-            <SchemaEditor
-                schema={schema}
-                eventTypeName={currentRegistration.type.id}
-                canEdit={canEdit}
-                canNotEditReason={canEditReason}
-                onChange={handleSchemaChange}
-                onSave={handleSave}
-                typeFormats={typeFormatsQuery.data}
-            />
+            <TabView style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+                panelContainerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
+                <TabPanel header={strings.eventStore.general.eventTypes.tabs.schema}
+                    contentStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                    <SchemaEditor
+                        schema={schema}
+                        eventTypeName={currentRegistration.type.id}
+                        canEdit={canEdit}
+                        canNotEditReason={canEditReason}
+                        onChange={handleSchemaChange}
+                        onSave={handleSave}
+                        typeFormats={typeFormatsQuery.data}
+                    />
+                </TabPanel>
+                <TabPanel header={strings.eventStore.general.eventTypes.tabs.observers}
+                    contentStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: 0 }}>
+                    <div style={{ flex: 1, minHeight: 0, padding: '0 16px 16px 16px' }}>
+                        <ObserversForEventType eventTypeId={currentRegistration.type.id} />
+                    </div>
+                </TabPanel>
+            </TabView>
         </div>
     );
 };
