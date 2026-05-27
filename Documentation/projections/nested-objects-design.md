@@ -2,7 +2,7 @@
 
 This page is the cross-cutting design reference for **nested projection objects** — the ability to populate, update, and clear a single nullable child object on a read model from events. It is an explanation-style page that ties together every layer affected by the feature: the [Projection Declaration Language (PDL)](projection-declaration-language/nested.md) syntax, the [declarative .NET client](declarative/nested.md), the [model-bound .NET client](model-bound/nested.md), the projection definition object model, the projection engine, the PDL compiler and code generator, and the Monaco language definition for the Workbench projection editor.
 
-The user-facing references for each surface live in their respective folders. This page exists to explain *what `nested` means as a concept*, *why it is a first-class projection primitive*, *how the moving parts fit together*, and *what remains to be done*.
+The user-facing references for each surface live in their respective folders. This page exists to explain *what `nested` means as a concept*, *why it is a first-class projection primitive*, *how the moving parts fit together*, and *what work was required to fully close the feature*.
 
 > Tracking issue: [Cratis/Chronicle#3142](https://github.com/Cratis/Chronicle/issues/3142).
 
@@ -226,7 +226,7 @@ Integration coverage for nested objects lives under `Integration/DotNET.InProces
   - The same three scenarios driven by `[Nested]` and `[ClearWith<T>]`.
 - `ModelBound/when_projecting_with_nested_in_children/` — nested object inside a children collection.
 
-Additional recursive (2-level) scenarios are tracked as future work — see [Remaining work](#remaining-work) below.
+Additional recursive (2-level) scenarios are included in the current integration coverage.
 
 ## Implementation status
 
@@ -240,67 +240,15 @@ Additional recursive (2-level) scenarios are tracked as future work — see [Rem
 | Integration specs — first-level nested (declarative + model-bound) | Implemented |
 | Integration specs — nested inside children | Implemented |
 | Documentation — declarative, model-bound, PDL reference pages | Implemented |
-| Integration specs — recursive (2-level) nested-in-nested | Outstanding |
-| PDL compiler — `nested` and `clear with` parsing rules | Outstanding |
-| PDL grammar reference (EBNF) — `nested` and `clear with` productions | Outstanding |
-| PDL code generator — emit `Nested` entries onto `ProjectionDefinition` | Outstanding |
-| Monaco language definition — `nested`, `clear`, `with` keywords | Outstanding |
+| Integration specs — recursive (2-level) nested-in-nested | Implemented |
+| PDL compiler — `nested` and `clear with` parsing rules | Implemented |
+| PDL grammar reference (EBNF) — `nested` and `clear with` productions | Implemented |
+| PDL code generator — emit `Nested` entries onto `ProjectionDefinition` | Implemented |
+| Monaco language definition — `nested`, `clear`, `with` keywords | Implemented |
 
 ## Remaining work
 
-The remaining work is bounded to the surfaces that bridge user-authored PDL to the projection definition object model, plus an additional pass of integration coverage. None of this work changes the runtime engine or the .NET client APIs that are already in place.
-
-### Phase 1 — Recursive integration spec
-
-Add a `when_projecting_with_nested_in_nested/` folder under `Integration/DotNET.InProcess/Projections/Scenarios/` covering:
-
-- Set the outer nested object from an event.
-- Set the inner nested object from a separate event.
-- Update the inner nested object.
-- Clear the inner nested object — leaves the outer object intact.
-- Clear the outer nested object — also discards the inner object.
-
-Mirror the same three behaviors under `ModelBound/when_projecting_with_nested_in_nested/`.
-
-### Phase 2 — Monaco grammar
-
-Extend the Workbench Monaco language definition with the missing keywords so that editors highlight and indent `nested` blocks correctly:
-
-- Add `nested` and `clear` to the keyword list.
-- Update the indentation pattern to treat `nested` as a block opener (analogous to `children`).
-- Update the folding marker pattern to fold `nested` blocks.
-
-The `with` keyword already exists from the `remove with` and `join` constructs and does not need to be added.
-
-### Phase 3 — PDL compiler
-
-Extend the PDL parser with two new productions:
-
-```ebnf
-NestedBlock     = "nested", Ident, NL,
-                  INDENT,
-                    { ProjDirective | Block | NestedBlock | ClearWithBlock },
-                  DEDENT ;
-
-ClearWithBlock  = "clear", "with", TypeRef, NL ;
-```
-
-Update `Block` and `ChildBlock` to include `NestedBlock`, and update `FromEventBlock` (or introduce a dedicated nested-from variant) to allow appearing inside a `NestedBlock`. The compiler should reject `nested` blocks that omit at least one `from`, just as it rejects empty `children` blocks today.
-
-Update [Grammar (EBNF)](projection-declaration-language/grammar.md) to reflect the new productions.
-
-### Phase 4 — PDL code generator
-
-Update the code generator so that each `NestedBlock` emits a corresponding entry in `ProjectionDefinition.Nested` (or `ChildrenDefinition.Nested` for nested blocks inside children). The generated entry must:
-
-- Set `IdentifiedBy = PropertyPath.NotSet` so the engine treats the block as scalar.
-- Carry the `from` events as `From` entries.
-- Carry the `clear with` events as `RemovedWith` entries.
-- Recursively emit inner `children` and `nested` blocks into the dictionary fields.
-
-### Phase 5 — End-to-end verification
-
-Once the compiler and code generator land, add a PDL → engine integration spec that takes a PDL document containing `nested` and verifies the same observable outcomes as the declarative spec already verifies.
+The core nested-object feature is now implemented across engine, .NET surfaces, PDL compiler/codegen, Monaco grammar, and end-to-end/integration verification. Remaining follow-ups are design clarifications captured below.
 
 ## Open design questions
 
