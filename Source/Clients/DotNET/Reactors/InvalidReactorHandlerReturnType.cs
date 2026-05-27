@@ -14,4 +14,5 @@ public class InvalidReactorHandlerReturnType(Type reactorType, string methodName
         $"Reactor '{reactorType.FullName}' handler method '{methodName}' has unsupported return type '{actualReturnType.FullName}'. " +
         $"Expected 'void', '{typeof(Task).FullName}', '{typeof(Task<>).FullName}' returning an event, " +
         $"'{typeof(Task<>).FullName}' returning '{typeof(ReactorSideEffect).FullName}', or " +
-        $"'{typeof(Task<>).FullName}' returning '{typeof(IEnumerable<>).FullName}' of events or '{typeof(ReactorSideEffect).FullName}'.");
+        $"'{typeof(Task<>).FullName}' returning '{typeof(IEnumerable<>).FullName}' of events or '{typeof(ReactorSideEffect).FullName}'. " +
+        $"Synchronous equivalents are also supported: an event type, '{typeof(ReactorSideEffect).FullName}', or '{typeof(IEnumerable<>).FullName}' of events or '{typeof(ReactorSideEffect).FullName}'.");

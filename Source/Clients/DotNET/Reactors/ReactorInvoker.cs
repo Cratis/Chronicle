@@ -115,33 +115,46 @@ public class ReactorInvoker(
             return;
         }
 
-        if (returnValue is not Task task)
+        if (returnValue is Task task)
         {
-            throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
+            await task;
+
+            if (!method.ReturnType.IsGenericType)
+            {
+                return;
+            }
+
+            if (sideEffectHandlers is null || eventStore is null)
+            {
+                return;
+            }
+
+            var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
+            var result = resultProperty?.GetValue(task);
+            if (result is null)
+            {
+                return;
+            }
+
+            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance);
+            if (sideEffectHandlers.CanHandle(reactorContext, result))
+            {
+                await sideEffectHandlers.Handle(reactorContext, eventStore, result);
+            }
+
+            return;
         }
 
-        await task;
-
-        if (!method.ReturnType.IsGenericType)
+        // Synchronous side-effect return value (e.g. TEvent, ReactorSideEffect, IEnumerable<T>)
+        if (sideEffectHandlers is null || eventStore is null || returnValue is null)
         {
             return;
         }
 
-        if (sideEffectHandlers is null || eventStore is null)
+        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance);
+        if (sideEffectHandlers.CanHandle(syncReactorContext, returnValue))
         {
-            return;
-        }
-
-        var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
-        var result = resultProperty?.GetValue(task);
-        if (result is null)
-        {
-            return;
-        }
-
-        if (sideEffectHandlers.CanHandle(new ReactorContext(eventContext, activatedReactor.Instance), result))
-        {
-            await sideEffectHandlers.Handle(new ReactorContext(eventContext, activatedReactor.Instance), eventStore, result);
+            await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
         }
     }
 
