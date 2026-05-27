@@ -143,6 +143,12 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
     internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Information, "Recovering {Count} in-flight partition(s) after detecting persisted in-flight event markers")]
+    internal static partial void RecoveringInFlightPartitions(this ILogger<Observer> logger, int count);
+
+    [LoggerMessage(LogLevel.Information, "Starting in-flight catch-up for partition {Partition} from event sequence number {FromSequenceNumber}")]
+    internal static partial void StartingInFlightCatchUpForPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber fromSequenceNumber);
 }
 
 internal static class ObserverScopes
