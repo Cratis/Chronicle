@@ -19,7 +19,15 @@ namespace Cratis.Chronicle.Observation;
 /// The grain is keyed by <c>EventStoreName + EventStoreNamespaceName</c> via <see cref="ObserversKey"/>.
 /// It maintains an in-memory cache of handled event counts so that the workbench can show the number
 /// without paying the per-request cost of counting events in storage. The cache refreshes on a timer
-/// (default 30 seconds) and lazily computes on first access.
+/// (default 30 seconds) and lazily computes on first access; callers that need a fresh view can also
+/// invoke <see cref="Refresh"/> directly.
+/// <para>
+/// Counts are derived from <c>GetCount</c> on the event sequence storage and span every event in the
+/// sequence from the first sequence number through the observer's <c>LastHandledEventSequenceNumber</c>.
+/// Redacted events are still present in the sequence at their original sequence number (redaction
+/// rewrites the document content in place) and therefore continue to be included in the count —
+/// the observer did process those events before they were redacted.
+/// </para>
 /// </remarks>
 public class ObserverHandledEventCounts(
     IStorage storage,
