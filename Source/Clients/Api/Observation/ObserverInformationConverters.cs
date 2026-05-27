@@ -25,6 +25,7 @@ internal static class ObserverInformationConverters
             observerInformation.NextEventSequenceNumber,
             observerInformation.LastHandledEventSequenceNumber,
             observerInformation.TailEventSequenceNumber,
+            observerInformation.HandledEventCount,
             (ObserverRunningState)(int)observerInformation.RunningState,
             observerInformation.IsSubscribed,
             observerInformation.IsReplayable);

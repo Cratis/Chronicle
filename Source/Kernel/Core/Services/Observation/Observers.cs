@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Reactive;
@@ -90,6 +91,9 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var definition = await observer.GetDefinition();
         var state = await observer.GetState();
         var subscribed = await observer.IsSubscribed();
+        var handledEventCounts = await GetHandledEventCounts(request.EventStore, request.Namespace);
+        var key = new ObserverHandledEventCountKey(definition.Identifier, definition.EventSequenceId);
+        var handledEventCount = handledEventCounts.TryGetValue(key, out var cached) ? cached.Value : 0UL;
         return new ObserverInformation
         {
             Id = request.ObserverId,
@@ -100,6 +104,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = handledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable
@@ -111,11 +116,12 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     {
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var handledEventCounts = await GetHandledEventCounts(request.EventStore, request.Namespace);
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
-        return observers.ToContract();
+        return observers.ToContract(handledEventCounts);
     }
 
     /// <inheritdoc/>
@@ -129,11 +135,12 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             {
                 // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
                 var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+                var handledEventCounts = await GetHandledEventCounts(request.EventStore, request.Namespace);
                 var observers =
                     from definition in observerDefinitions
                     join state in observerStates on definition.Identifier equals state.Identifier
                     select (definition, state);
-                return observers.ToContract();
+                return observers.ToContract(handledEventCounts);
             });
 
     /// <inheritdoc/>
@@ -142,10 +149,32 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var handledEventCounts = await GetHandledEventCounts(request.EventStore, request.Namespace);
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
-        return observers.ToContract();
+        return observers.ToContract(handledEventCounts);
+    }
+
+    /// <summary>
+    /// Looks up the cached handled event counts maintained by the <see cref="IObserverHandledEventCounts"/> grain.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="Concepts.EventStoreName"/> to look up for.</param>
+    /// <param name="namespace">The <see cref="Concepts.EventStoreNamespaceName"/> to look up for.</param>
+    /// <returns>The dictionary of handled event counts, or an empty dictionary when the lookup fails.</returns>
+    async Task<IReadOnlyDictionary<ObserverHandledEventCountKey, EventCount>> GetHandledEventCounts(
+        Concepts.EventStoreName eventStore,
+        Concepts.EventStoreNamespaceName @namespace)
+    {
+        try
+        {
+            var grain = grainFactory.GetGrain<IObserverHandledEventCounts>(new ObserversKey(eventStore, @namespace));
+            return await grain.GetAll();
+        }
+        catch
+        {
+            return new Dictionary<ObserverHandledEventCountKey, EventCount>();
+        }
     }
 }
