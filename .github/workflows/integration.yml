@@ -106,12 +106,35 @@ jobs:
       - name: Restore Client project
         run: dotnet restore Integration/Client/Client.csproj
 
+      # Pre-pull Docker Hub images once per job so the per-fixture image
+      # existence checks in Testcontainers do not race against anonymous
+      # Docker Hub rate limits or transient registry timeouts. MCR-hosted
+      # images (mssql) and locally built images (cratis/chronicle) do not
+      # need pre-pulling.
+      - name: Pre-pull Docker Hub images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: |
+            docker pull mongo
+            if [ "${{ matrix.database }}" = "postgresql" ]; then
+              docker pull postgres:16
+            fi
+
       - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
           CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '600' }}
+          # Ryuk is the Testcontainers reaper sidecar. It exists to clean
+          # up containers when the host process dies unexpectedly. GitHub-
+          # hosted runners are destroyed after the job, so Ryuk has nothing
+          # to do and its anonymous Docker Hub manifest call at session
+          # init is a frequent source of flakiness. Disable it on CI.
+          TESTCONTAINERS_RYUK_DISABLED: true
         run: |
           dotnet test Integration/Client/Client.csproj \
             --no-restore \
@@ -149,7 +172,19 @@ jobs:
       - name: Restore Kernel project
         run: dotnet restore Integration/Kernel/Kernel.csproj
 
+      # See the equivalent step in client-integration-specs for the rationale.
+      - name: Pre-pull Docker Hub images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: docker pull mongo
+
       - name: Run Kernel integration tests (${{ matrix.namespace }})
+        env:
+          # See client-integration-specs for the rationale.
+          TESTCONTAINERS_RYUK_DISABLED: true
         run: |
           # Kernel project does not have Client's Docker build target.
           dotnet test Integration/Kernel/Kernel.csproj \
