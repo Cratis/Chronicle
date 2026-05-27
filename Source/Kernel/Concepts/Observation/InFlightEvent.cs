@@ -11,9 +11,10 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </summary>
 /// <remarks>
 /// In-flight events are recorded before a partition handler is invoked and removed once the handler
-/// reports successful processing. Persisting them in a separate storage (outside of <see cref="ObserverState"/>)
-/// allows the observer to recover after a crash that interrupted multi-partition handling — without the
-/// risk of silently skipping events whose progress was never written back to the main observer state.
+/// reports successful processing. Persisting them in a separate storage (outside of the main observer
+/// state) allows the observer to recover after a crash that interrupted multi-partition handling —
+/// without the risk of silently skipping events whose progress was never written back to the main
+/// observer state.
 /// </remarks>
 public class InFlightEvent
 {
