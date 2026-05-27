@@ -51,7 +51,7 @@ public class CatchingUpInFlight(
     /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
-        using var scope = logger.BeginCatchingUpInFlightScope(state.Identifier, observerKey);
+        using var scope = logger.BeginCatchingUpInFlightScope(observerKey.ObserverId, observerKey);
 
         if (state.RunningState == ObserverRunningState.Quarantined)
         {
@@ -64,7 +64,7 @@ public class CatchingUpInFlight(
             .GetNamespace(observerKey.Namespace)
             .InFlightEvents;
 
-        var entries = (await inFlightStorage.GetFor(state.Identifier)).ToArray();
+        var entries = (await inFlightStorage.GetFor(observerKey.ObserverId)).ToArray();
         if (entries.Length == 0)
         {
             await StateMachine.TransitionTo<Routing>();
