@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -183,4 +184,18 @@ public interface IEventSequence
     /// <param name="clrEventTypes">Optionally any specific event types.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
+
+    /// <summary>
+    /// Complete a stream so that no further events can be appended to it.
+    /// </summary>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> identifying the stream within the type.</param>
+    /// <returns>A <see cref="Result{TSuccess, TError}"/> containing the tail <see cref="EventSequenceNumber"/> at the moment of completion on success, or a <see cref="CompleteStreamError"/> describing why the operation was rejected.</returns>
+    /// <remarks>
+    /// The default stream — <see cref="EventStreamType.All"/> paired with the default <see cref="EventStreamId"/> — can never be completed and will return
+    /// <see cref="CompleteStreamError.DefaultStreamCannotBeCompleted"/>. Completing an already-completed stream returns
+    /// <see cref="CompleteStreamError.AlreadyCompleted"/> and leaves the stream in its completed state. After a successful completion any subsequent
+    /// append targeting the same stream returns <see cref="AppendError.StreamCompleted"/>.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
 }
