@@ -19,4 +19,12 @@ public class EventSequenceState
     /// Gets or sets the last event sequence number for the last event that was appended.
     /// </summary>
     public IDictionary<EventTypeId, EventSequenceNumber> TailSequenceNumberPerEventType { get; set; } = new Dictionary<EventTypeId, EventSequenceNumber>();
+
+    /// <summary>
+    /// Gets or sets the set of streams that have been marked as completed. No further events may be appended to a completed stream.
+    /// </summary>
+    /// <remarks>
+    /// The default stream (<see cref="EventStreamType.All"/> paired with the default <see cref="EventStreamId"/>) must never be added here.
+    /// </remarks>
+    public ISet<CompletedStream> CompletedStreams { get; set; } = new HashSet<CompletedStream>();
 }

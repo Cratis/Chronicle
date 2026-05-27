@@ -213,6 +213,11 @@ public class EventSequence(
     {
         try
         {
+            if (IsStreamCompletedInternal(eventStreamType, eventStreamId))
+            {
+                return AppendResult.Failed(correlationId, [AppendError.StreamCompleted]);
+            }
+
             var getValidAndCompliantEvent = await GetValidAndCompliantEvent(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, subject);
             if (getValidAndCompliantEvent.TryGetError(out var error))
             {
@@ -257,6 +262,17 @@ public class EventSequence(
     {
         try
         {
+            var materializedEvents = events as IList<EventToAppend> ?? events.ToList();
+            if (materializedEvents.Any(e => IsStreamCompletedInternal(e.eventStreamType, e.eventStreamId)))
+            {
+                return new AppendManyResult
+                {
+                    CorrelationId = correlationId,
+                    Errors = [AppendError.StreamCompleted]
+                };
+            }
+            events = materializedEvents;
+
             var tasks = events.Select(async e =>
             {
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
@@ -450,6 +466,32 @@ public class EventSequence(
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
+
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        var stream = new CompletedStream(eventStreamType, eventStreamId);
+        if (stream.IsDefault)
+        {
+            return CompleteStreamError.DefaultStreamCannotBeCompleted;
+        }
+
+        if (State.CompletedStreams.Contains(stream))
+        {
+            return CompleteStreamError.AlreadyCompleted;
+        }
+
+        State.CompletedStreams.Add(stream);
+        await WriteStateAsync();
+        return State.SequenceNumber - 1;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        Task.FromResult(IsStreamCompletedInternal(eventStreamType, eventStreamId));
+
+    bool IsStreamCompletedInternal(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        State.CompletedStreams.Contains(new CompletedStream(eventStreamType, eventStreamId));
 
     async Task<AppendResult> AppendValidAndCompliantEvent(
         EventSourceType eventSourceType,
