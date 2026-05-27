@@ -175,13 +175,6 @@ static class ChildrenDefinitionExtensions
             Properties = new Dictionary<string, string>()
         };
 
-        if (!string.IsNullOrEmpty(identifiedByWithNaming) &&
-            keyExpression != WellKnownExpressions.EventSourceId &&
-            !childrenDef.From[eventTypeId].Properties.ContainsKey(identifiedByWithNaming))
-        {
-            childrenDef.From[eventTypeId].Properties[identifiedByWithNaming] = keyExpression;
-        }
-
         if (childType is not null)
         {
             // For records, process constructor parameters to pick up attributes
