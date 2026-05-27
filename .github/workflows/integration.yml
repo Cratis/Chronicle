@@ -122,6 +122,9 @@ jobs:
             if [ "${{ matrix.database }}" = "postgresql" ]; then
               docker pull postgres:16
             fi
+            if [ "${{ matrix.database }}" = "mssql" ]; then
+              docker pull mcr.microsoft.com/mssql/server:2025-latest
+            fi
 
       - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
         env:
