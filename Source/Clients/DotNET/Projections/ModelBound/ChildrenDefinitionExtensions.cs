@@ -331,7 +331,8 @@ static class ChildrenDefinitionExtensions
             // Collect class-level FromEvent attributes on the child type
             var childClassLevelFromEvents = childType.GetCustomAttributes()
                 .Where(attr => attr.GetType().IsGenericType &&
-                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
+                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>) &&
+                              ShouldPropagateChildClassLevelFromEvent(attr, childType))
                 .ToList();
 
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
@@ -453,6 +454,39 @@ static class ChildrenDefinitionExtensions
             childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, attr, eventType);
         }
     }
+
+    static bool ShouldPropagateChildClassLevelFromEvent(Attribute fromEventAttribute, Type childType)
+    {
+        var hasExplicitKey = fromEventAttribute is IKeyedAttribute keyedAttribute &&
+                             !string.IsNullOrEmpty(keyedAttribute.Key);
+        if (hasExplicitKey)
+        {
+            return true;
+        }
+
+        var eventType = fromEventAttribute.GetType().GetGenericArguments()[0];
+        return !HasChildrenFromForEventType(childType, eventType);
+    }
+
+    static bool HasChildrenFromForEventType(Type childType, Type eventType)
+    {
+        var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        if (primaryConstructor?.GetParameters().Any(parameter => parameter.GetCustomAttributes().Any(attr => IsChildrenFromAttributeForEventType(attr, eventType))) == true)
+        {
+            return true;
+        }
+
+        return childType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Any(property => property.GetCustomAttributes().Any(attr => IsChildrenFromAttributeForEventType(attr, eventType)));
+    }
+
+    static bool IsChildrenFromAttributeForEventType(Attribute attribute, Type eventType) =>
+        attribute.GetType().IsGenericType &&
+        attribute.GetType().GetGenericTypeDefinition() == typeof(ChildrenFromAttribute<>) &&
+        attribute.GetType().GetGenericArguments()[0] == eventType;
 
     static Type? GetChildType(Type propertyType)
     {

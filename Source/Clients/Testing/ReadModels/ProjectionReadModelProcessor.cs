@@ -415,6 +415,7 @@ internal static class ProjectionReadModelProcessor
                     break;
 
                 case ChildAdded childAdded:
+                    InjectChildIdentifierFromKey(childAdded);
                     var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
                     items.Add(childAdded.Child);
                     break;
@@ -430,5 +431,20 @@ internal static class ProjectionReadModelProcessor
         }
 
         return state;
+    }
+
+    static void InjectChildIdentifierFromKey(ChildAdded childAdded)
+    {
+        if (childAdded.Child is not ExpandoObject childState ||
+            !childAdded.IdentifiedByProperty.IsSet ||
+            childAdded.IdentifiedByProperty.IsRoot)
+        {
+            return;
+        }
+
+        var propertyName = childAdded.IdentifiedByProperty.LastSegment.Value;
+        var childStateDict = (IDictionary<string, object?>)childState;
+
+        childStateDict[propertyName] = childAdded.Key;
     }
 }
