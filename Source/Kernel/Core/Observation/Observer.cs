@@ -207,6 +207,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
+        await CatchUpInFlightPartitions();
         await TransitionTo<Routing>();
     }
 
@@ -257,6 +258,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
+        await CatchUpInFlightPartitions();
         await TransitionTo<Routing>();
     }
 

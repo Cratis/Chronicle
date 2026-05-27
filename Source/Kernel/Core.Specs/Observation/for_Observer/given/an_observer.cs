@@ -24,6 +24,7 @@ using Orleans.TestKit.Storage;
 using IChronicleEventStoreStorage = Cratis.Chronicle.Storage.IEventStoreStorage;
 using IChronicleStorage = Cratis.Chronicle.Storage.IStorage;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
+using IEventStoreNamespaceStorage = Cratis.Chronicle.Storage.IEventStoreNamespaceStorage;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
@@ -48,6 +49,8 @@ public class an_observer : Specification
     protected IConfigurationForObserverProvider _configurationProvider;
     protected IChronicleStorage _storage;
     protected IChronicleEventStoreStorage _eventStoreStorage;
+    protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
+    protected IInFlightEventsStorage _inFlightEventsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IJsonComplianceManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
@@ -64,13 +67,18 @@ public class an_observer : Specification
         _eventSequence = Substitute.For<IEventSequence>();
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
 
-        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage
+        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
+        _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
+        _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
 
         // By default, no schemas are known — events pass through unchanged.
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
