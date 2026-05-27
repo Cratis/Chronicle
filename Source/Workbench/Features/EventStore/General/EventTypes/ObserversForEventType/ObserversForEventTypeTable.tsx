@@ -3,8 +3,9 @@
 
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
-import { ObserverInformationForEventType, ObserverType } from 'Api/Observation';
+import { ObserverInformationForEventType } from 'Api/Observation';
 import { getObserverRunningStateAsText } from '../../../Namespaces/Observers/getObserverRunningStateAsText';
+import { renderObserverType } from '../../../Namespaces/Observers/ObserverDetails';
 import strings from 'Strings';
 import './ObserversForEventTypeTable.css';
 
@@ -18,21 +19,10 @@ export interface ObserversForEventTypeTableProps {
     observers: readonly ObserverInformationForEventType[];
 }
 
-const renderObserverType = (row: ObserverInformationForEventType): string => {
-    switch (row.observer.type) {
-        case ObserverType.reactor:
-            return strings.eventStore.namespaces.observers.types.reactor;
-        case ObserverType.projection:
-            return strings.eventStore.namespaces.observers.types.projection;
-        case ObserverType.reducer:
-            return strings.eventStore.namespaces.observers.types.reducer;
-        case ObserverType.external:
-            return strings.eventStore.namespaces.observers.types.external;
-    }
-    return strings.eventStore.namespaces.observers.types.unknown;
-};
+const renderRowObserverType = (row: ObserverInformationForEventType): string =>
+    renderObserverType(row.observer);
 
-const renderRunningState = (row: ObserverInformationForEventType): string =>
+const renderRowRunningState = (row: ObserverInformationForEventType): string =>
     getObserverRunningStateAsText(row.observer.runningState);
 
 /**
@@ -56,12 +46,12 @@ export const ObserversForEventTypeTable = ({ observers }: ObserversForEventTypeT
             <Column
                 field='observer.type'
                 header={columnStrings.observerType}
-                body={renderObserverType}
+                body={renderRowObserverType}
                 sortable />
             <Column
                 field='observer.runningState'
                 header={columnStrings.state}
-                body={renderRunningState}
+                body={renderRowRunningState}
                 sortable />
         </DataTable>
     );

@@ -4,3 +4,7 @@
 export * from './ObserverDetails';
 export * from './ObserverSummary';
 export * from './ObserverEventTypes';
+export * from './ObserverSummaryRow';
+export * from './buildObserverSummaryRows';
+export * from './renderObserverOwner';
+export * from './renderObserverType';
