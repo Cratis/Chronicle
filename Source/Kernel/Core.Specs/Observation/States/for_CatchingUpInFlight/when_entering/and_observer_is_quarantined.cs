@@ -16,10 +16,10 @@ public class and_observer_is_quarantined : given.a_catching_up_in_flight_state
     {
         _storedState = _storedState with { RunningState = ObserverRunningState.Quarantined };
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>())
-            .Returns(new[]
-            {
+            .Returns(
+            [
                 new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _partition, EventSequenceNumber = (EventSequenceNumber)1UL }
-            });
+            ]);
     }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);

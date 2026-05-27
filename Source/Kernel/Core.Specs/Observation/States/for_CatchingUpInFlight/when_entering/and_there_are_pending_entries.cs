@@ -17,11 +17,11 @@ public class and_there_are_pending_entries : given.a_catching_up_in_flight_state
     {
         _storedState = _storedState with { LastHandledEventSequenceNumber = (EventSequenceNumber)9UL };
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>())
-            .Returns(new[]
-            {
+            .Returns(
+            [
                 new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _firstPartition, EventSequenceNumber = (EventSequenceNumber)10UL },
                 new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _secondPartition, EventSequenceNumber = (EventSequenceNumber)11UL }
-            });
+            ]);
     }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);

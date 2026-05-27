@@ -16,11 +16,11 @@ public class and_multiple_entries_for_same_partition : given.a_catching_up_in_fl
     {
         _storedState = _storedState with { LastHandledEventSequenceNumber = (EventSequenceNumber)4UL };
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>())
-            .Returns(new[]
-            {
+            .Returns(
+            [
                 new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _partition, EventSequenceNumber = (EventSequenceNumber)5UL },
                 new InFlightEvent { ObserverId = _observerKey.ObserverId, Partition = _partition, EventSequenceNumber = (EventSequenceNumber)6UL }
-            });
+            ]);
     }
 
     async Task Because() => _resultingStoredState = await _state.OnEnter(_storedState);
