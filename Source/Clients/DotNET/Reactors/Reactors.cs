@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -208,7 +209,7 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task Replay<TReactor>()
+    public Task<JobId> Replay<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
@@ -217,15 +218,16 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task Replay(ReactorId reactorId)
+    public async Task<JobId> Replay(ReactorId reactorId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Replay
+        var response = await _servicesAccessor.Services.Observers.Replay(new Replay
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ObserverId = reactorId,
             EventSequenceId = string.Empty
         });
+        return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)

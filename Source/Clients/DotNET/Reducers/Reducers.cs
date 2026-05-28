@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
@@ -228,7 +229,7 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task Replay<TReducer>()
+    public Task<JobId> Replay<TReducer>()
         where TReducer : IReducer
     {
         var reducerType = typeof(TReducer);
@@ -237,15 +238,16 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task Replay(ReducerId reducerId)
+    public async Task<JobId> Replay(ReducerId reducerId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new()
+        var response = await _servicesAccessor.Services.Observers.Replay(new()
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ObserverId = reducerId,
             EventSequenceId = string.Empty
         });
+        return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
     /// <inheritdoc/>

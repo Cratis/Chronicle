@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Projections;
@@ -95,16 +96,16 @@ public interface IProjections
     /// Replay a specific projection.
     /// </summary>
     /// <typeparam name="TProjection">Type of projection to replay.</typeparam>
-    /// <returns>Awaitable task.</returns>
-    Task Replay<TProjection>()
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the projection is not replayable.</returns>
+    Task<JobId> Replay<TProjection>()
         where TProjection : IProjection;
 
     /// <summary>
     /// Replay a specific projection by its identifier.
     /// </summary>
     /// <param name="projectionId"><see cref="ProjectionId"/> to replay.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Replay(ProjectionId projectionId);
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the projection is not replayable.</returns>
+    Task<JobId> Replay(ProjectionId projectionId);
 
     /// <summary>
     /// Get the external event store subscription requirements derived from all discovered projection definitions.
