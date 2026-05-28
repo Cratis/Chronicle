@@ -24,9 +24,9 @@ public partial class Observer
             await TransitionTo<Replay>();
         }
 
-        var jobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
-        var job = jobs.FirstOrDefault(_ => _.Request is ReplayObserverRequest request && request.ObserverKey == _observerKey);
-        return job?.Id ?? JobId.NotSet;
+        var states = await GetStates();
+        var replayState = states.OfType<Replay>().FirstOrDefault();
+        return replayState?.LastStartedJobId ?? JobId.NotSet;
     }
 
     /// <inheritdoc/>

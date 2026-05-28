@@ -25,8 +25,8 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public static async Task StartOrResumeObserverJobFor<TJob, TRequest>(
+    /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
+    public static async Task<JobId> StartOrResumeObserverJobFor<TJob, TRequest>(
         this IJobsManager jobsManager,
         ILogger logger,
         TRequest request,
@@ -49,7 +49,7 @@ public static partial class JobsManagerExtensions
         {
             logger.FoundRunningJob(alreadyRunningJob.Id);
             await onAlreadyRunningJob.Invoke();
-            return;
+            return alreadyRunningJob.Id;
         }
 
         var pausedJobs = jobs.Where(job => job.Status == JobStatus.Stopped).ToList();
@@ -59,13 +59,13 @@ public static partial class JobsManagerExtensions
             logger.FoundStoppedJob(pausedJob.Id);
             await onResume.Invoke();
             await jobsManager.Resume(pausedJob.Id);
+            return pausedJob.Id;
         }
-        else
-        {
-            logger.NeedToStartJob();
-            await onStartNew.Invoke();
-            await jobsManager.Start<TJob, TRequest>(request);
-        }
+
+        logger.NeedToStartJob();
+        await onStartNew.Invoke();
+        var startResult = await jobsManager.Start<TJob, TRequest>(request);
+        return startResult is not null ? startResult.AsT0 : JobId.NotSet;
     }
     [LoggerMessage(LogLevel.Debug, "Found already running job {JobId}")]
     static partial void FoundRunningJob(this ILogger logger, JobId jobId);
