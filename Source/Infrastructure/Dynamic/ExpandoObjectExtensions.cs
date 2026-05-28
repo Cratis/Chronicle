@@ -214,8 +214,8 @@ public static class ExpandoObjectExtensions
                                 element = collection
                                     .Cast<IDictionary<string, object>>()
                                     .SingleOrDefault(item =>
-                                        item.ContainsKey(indexer.IdentifierProperty.Path) &&
-                                        item[indexer.IdentifierProperty.Path].IsEqualTo(indexer.Identifier));
+                                        item.TryGetValue(indexer.IdentifierProperty.Path, out var identifierValue) &&
+                                        identifierValue.IsEqualTo(indexer.Identifier));
                             }
 
                             if (element == default)
