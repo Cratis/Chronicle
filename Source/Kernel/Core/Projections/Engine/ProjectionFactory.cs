@@ -586,6 +586,18 @@ public class ProjectionFactory(
                 Format = projection.TargetReadModelSchema.Format
             };
         }
+        else
+        {
+            if (schemaProperty is null && propertyPath.LastSegment is not ThisAccessor)
+            {
+                schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(propertyPath.LastSegment.Value));
+            }
+
+            schemaProperty ??= new JsonSchemaProperty
+            {
+                Type = JsonObjectType.None
+            };
+        }
 
         // Check if this is a dynamic property path (dictionary with runtime-determined keys)
         // Pattern: propertyName.$eventContext... or propertyName.$causedBy...
@@ -601,7 +613,7 @@ public class ProjectionFactory(
             baseSchema?.ActualTypeSchema.MarkAsDynamic();
         }
 
-        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
+        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty, expression);
     }
 
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)

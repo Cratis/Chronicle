@@ -150,9 +150,9 @@ public static class JsonSchemaExtensions
     /// <returns>The actual type or null if its not a known property path within the schema.</returns>
     public static Type? GetTargetTypeForJsonSchemaProperty(this JsonSchemaProperty schemaProperty, ITypeFormats typeFormats)
     {
-        if (typeFormats.IsKnown(schemaProperty.Format!))
+        if (!string.IsNullOrEmpty(schemaProperty.Format) && typeFormats.IsKnown(schemaProperty.Format))
         {
-            return typeFormats.GetTypeForFormat(schemaProperty.Format!);
+            return typeFormats.GetTypeForFormat(schemaProperty.Format);
         }
 
         var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?

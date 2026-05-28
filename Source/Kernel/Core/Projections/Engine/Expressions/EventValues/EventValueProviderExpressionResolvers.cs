@@ -61,6 +61,12 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         if (input is ExpandoObject)
         {
             var expandoObject = (input as IDictionary<string, object>)!;
+            if (expandoObject.Count == 1 &&
+                expandoObject.TryGetValue("value", out var conceptValue))
+            {
+                return Convert(schemaProperty, conceptValue!);
+            }
+
             var properties = schemaProperty.IsArray ?
                 schemaProperty.Item!.GetFlattenedProperties() :
                 schemaProperty.GetFlattenedProperties();

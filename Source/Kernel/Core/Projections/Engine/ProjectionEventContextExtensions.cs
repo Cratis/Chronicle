@@ -167,6 +167,7 @@ public static class ProjectionEventContextExtensions
                         propertyMappers,
                         context.Key.ArrayIndexers,
                         childInitialState);
+                    context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
                     return;
                 }
 
