@@ -88,6 +88,9 @@ static class ChildrenDefinitionExtensions
         Type? parentModelType = null,
         HashSet<Type>? visitedChildTypes = null)
     {
+        var childType = GetChildType(memberType);
+        var includeSelfReferencingEvents = childType is not null && visitedChildTypes?.Contains(childType) == true;
+
         var childrenDef = ProcessChildrenFromAttributeCore(
             parentChildrenDef.Children,
             getOrCreateEventType,
@@ -99,10 +102,9 @@ static class ChildrenDefinitionExtensions
             processMember,
             definition,
             parentModelType,
-            includeSelfReferencingEvents: true);
+            includeSelfReferencingEvents);
 
         // Recursively process nested children on the child type
-        var childType = GetChildType(memberType);
         if (childType is not null)
         {
             ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef, visitedChildTypes ?? []);
