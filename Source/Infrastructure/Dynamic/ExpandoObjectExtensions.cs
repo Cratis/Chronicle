@@ -186,6 +186,11 @@ public static class ExpandoObjectExtensions
 
                         foreach (var indexer in matchingIndexers)
                         {
+                            if (currentTarget is null)
+                            {
+                                throw new InvalidOperationException("Current target cannot be null while processing array properties.");
+                            }
+
                             IEnumerable<ExpandoObject> collection;
                             if (!currentTarget.ContainsKey(arrayProperty.Value))
                             {
