@@ -207,7 +207,7 @@ public static class ExpandoObjectExtensions
                                 collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
                             }
 
-                            IDictionary<string, object>? element =
+                            var element =
                                 !indexer.IdentifierProperty.IsSet &&
                                 indexer.Identifier is int index &&
                                 collection.Count() > index
