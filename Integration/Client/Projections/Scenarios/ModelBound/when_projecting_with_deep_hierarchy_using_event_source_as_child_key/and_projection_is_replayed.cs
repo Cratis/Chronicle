@@ -51,6 +51,7 @@ public class and_projection_is_replayed(context context) : Given<context>(contex
 
             var replayJobId = await EventStore.Projections.Replay(projectionId);
             await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(replayJobId);
+            await handler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber);
 
             Result = await EventStore.ReadModels.GetInstanceById<DeepHierarchyModule>(ModuleId.ToString());
         }

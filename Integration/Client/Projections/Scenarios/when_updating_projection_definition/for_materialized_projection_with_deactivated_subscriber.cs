@@ -44,6 +44,10 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             // Wait for the replay job to reach a terminal state, which guarantees the sink has been flushed.
             await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(replayJobId);
 
+            // Wait for the projection to reach the sequence number of the appended events,
+            // which proves the replay completed with the new definition applied.
+            await Projection.WaitTillReachesEventSequenceNumber(LastEventSequenceNumber);
+
             // Then confirm active state
             await Projection.WaitTillSubscribed();
 
