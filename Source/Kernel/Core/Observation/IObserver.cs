@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.StateMachines;
@@ -125,8 +126,8 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     /// <summary>
     /// Rewind the observer.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Replay();
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable.</returns>
+    Task<JobId> Replay();
 
     /// <summary>
     /// Rewind the observer for a specific partition.

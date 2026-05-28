@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
@@ -11,17 +12,21 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task Replay()
+    public async Task<JobId> Replay()
     {
         if (!Definition.IsReplayable)
         {
-            return;
+            return JobId.NotSet;
         }
 
         if (State.RunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
         }
+
+        var jobs = await _jobsManager.GetJobsOfType<IReplayObserver, ReplayObserverRequest>();
+        var job = jobs.FirstOrDefault(_ => _.Request is ReplayObserverRequest request && request.ObserverKey == _observerKey);
+        return job?.Id ?? JobId.NotSet;
     }
 
     /// <inheritdoc/>
