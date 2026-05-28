@@ -454,25 +454,18 @@ internal static class ProjectionReadModelProcessor
                 ? existingEnumerable.Cast<object>().ToList()
                 : [];
 
-            ExpandoObject? element = null;
-
-            if (!indexer.IdentifierProperty.IsSet &&
+            ExpandoObject? element = !indexer.IdentifierProperty.IsSet &&
                 indexer.Identifier is int index &&
-                collection.Count > index)
-            {
-                element = collection[index] as ExpandoObject;
-            }
-            else
-            {
-                element = collection
-                    .OfType<ExpandoObject>()
-                    .SingleOrDefault(item =>
-                    {
-                        var itemDictionary = (IDictionary<string, object?>)item;
-                        return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
-                               Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
-                    });
-            }
+                collection.Count > index
+                    ? collection[index] as ExpandoObject
+                    : collection
+                        .OfType<ExpandoObject>()
+                        .SingleOrDefault(item =>
+                        {
+                            var itemDictionary = (IDictionary<string, object?>)item;
+                            return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
+                                   Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
+                        });
 
             if (element is null)
             {
