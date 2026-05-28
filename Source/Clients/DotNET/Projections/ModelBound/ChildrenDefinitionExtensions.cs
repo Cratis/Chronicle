@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using System.Linq;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
@@ -344,12 +345,12 @@ static class ChildrenDefinitionExtensions
 
                     if (includeSelfReferencingEvents && shouldAutoMap && !hasExplicitMapping)
                     {
-                        foreach (var fromEventType in childType.GetAttributesOfGenericType<FromEventAttribute<object>>().Select(_ => _.EventType))
+                        foreach (var fromEventType in childType
+                            .GetAttributesOfGenericType<FromEventAttribute<object>>()
+                            .Select(_ => _.EventType)
+                            .Where(fromEventType => fromEventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null))
                         {
-                            if (fromEventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null)
-                            {
-                                childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, fromEventType, paramPropertyName, parameter.Name!);
-                            }
+                            childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, fromEventType, paramPropertyName, parameter.Name!);
                         }
                     }
 
