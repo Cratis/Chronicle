@@ -454,7 +454,7 @@ internal static class ProjectionReadModelProcessor
                 ? existingEnumerable.Cast<object>().ToList()
                 : [];
 
-            ExpandoObject? element = !indexer.IdentifierProperty.IsSet &&
+            var element = !indexer.IdentifierProperty.IsSet &&
                 indexer.Identifier is int index &&
                 collection.Count > index
                     ? collection[index] as ExpandoObject

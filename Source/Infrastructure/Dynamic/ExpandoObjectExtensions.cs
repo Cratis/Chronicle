@@ -145,6 +145,7 @@ public static class ExpandoObjectExtensions
     /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns><see cref="ExpandoObject"/> at property.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the current target unexpectedly becomes null while traversing array properties.</exception>
     /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
     public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
     {
