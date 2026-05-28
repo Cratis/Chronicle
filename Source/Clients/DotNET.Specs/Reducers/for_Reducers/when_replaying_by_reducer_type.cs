@@ -17,7 +17,7 @@ public class when_replaying_by_reducer_type : given.all_dependencies
 
         _handlersByType[typeof(MyReducer)] = _handler;
 
-        _observers.Replay(Arg.Any<Replay>()).Returns(Task.CompletedTask);
+        _observers.Replay(Arg.Any<Replay>()).Returns(new ReplayResponse { JobId = Guid.NewGuid().ToString() });
     }
 
     async Task Because() => await _reducers.Replay<MyReducer>();
