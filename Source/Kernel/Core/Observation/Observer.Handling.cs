@@ -154,6 +154,22 @@ public partial class Observer
                                 ? result.LastSuccessfulObservation
                                 : previousLastHandled,
                         };
+
+                        var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
+                        var perEventType = new Dictionary<EventTypeId, EventCount>(State.HandledEventCountPerEventType);
+                        foreach (var @event in handledEvents)
+                        {
+                            var eventTypeId = @event.Context.EventType.Id;
+                            perEventType[eventTypeId] = perEventType.TryGetValue(eventTypeId, out var existing)
+                                ? existing + 1UL
+                                : EventCount.Zero.Increase();
+                        }
+
+                        State = State with
+                        {
+                            HandledEventCount = State.HandledEventCount + numEventsSuccessfullyHandled,
+                            HandledEventCountPerEventType = perEventType
+                        };
                     }
                 }
                 catch (Exception ex)

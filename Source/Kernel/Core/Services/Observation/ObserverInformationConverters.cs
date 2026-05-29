@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -17,33 +16,21 @@ internal static class ObserverInformationConverters
     /// Convert to contract.
     /// </summary>
     /// <param name="information"><see cref="IEnumerable{ObserverInformation}"/> to convert from.</param>
-    /// <param name="handledEventCounts">A read-only dictionary of handled event counts keyed by <see cref="ObserverHandledEventCountKey"/>.</param>
     /// <returns>Converted <see cref="IEnumerable{ObserverInformation}"/>.</returns>
     public static IEnumerable<ObserverInformation> ToContract(
-        this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information,
-        IReadOnlyDictionary<ObserverHandledEventCountKey, EventCount>? handledEventCounts = null) =>
-        information.Select(_ => _.Definition.ToContract(_.State, handledEventCounts));
+        this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information) =>
+        information.Select(_ => _.Definition.ToContract(_.State));
 
     /// <summary>
     /// Convert to contract.
     /// </summary>
     /// <param name="definition"><see cref="ObserverDefinition"/> to convert from.</param>
     /// <param name="state"><see cref="ObserverState"/> to convert from.</param>
-    /// <param name="handledEventCounts">A read-only dictionary of handled event counts keyed by <see cref="ObserverHandledEventCountKey"/>.</param>
     /// <returns>Converted <see cref="ObserverInformation"/>.</returns>
     public static ObserverInformation ToContract(
         this ObserverDefinition definition,
-        ObserverState state,
-        IReadOnlyDictionary<ObserverHandledEventCountKey, EventCount>? handledEventCounts = null)
-    {
-        var handledEventCount = EventCount.Zero;
-        if (handledEventCounts is not null &&
-            handledEventCounts.TryGetValue(new ObserverHandledEventCountKey(definition.Identifier, definition.EventSequenceId), out var cached))
-        {
-            handledEventCount = cached;
-        }
-
-        return new()
+        ObserverState state) =>
+        new()
         {
             Id = definition.Identifier,
             EventSequenceId = definition.EventSequenceId,
@@ -53,11 +40,10 @@ internal static class ObserverInformationConverters
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
-            HandledEventCount = handledEventCount,
+            HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsReplayable = definition.IsReplayable
         };
-    }
 
     /// <summary>
     /// Convert to contract.

@@ -25,7 +25,11 @@ public static class ObserverStateConverters
             CatchingUpPartitions = state.CatchingUpPartitions,
             FailedPartitionCount = state.FailedPartitionCount,
             IsReplaying = state.IsReplaying,
-            SubscribesToAllEvents = state.SubscribesToAllEvents
+            SubscribesToAllEvents = state.SubscribesToAllEvents,
+            HandledEventCount = state.HandledEventCount,
+            HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
+                kvp => kvp.Key.Value,
+                kvp => kvp.Value.Value)
         };
 
     /// <summary>
@@ -46,7 +50,11 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
-            TailEventSequenceNumber = state.TailEventSequenceNumber
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
+            HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
+                kvp => (Concepts.Events.EventTypeId)kvp.Key,
+                kvp => (Concepts.Events.EventCount)kvp.Value)
         };
 
     /// <summary>
@@ -67,7 +75,11 @@ public static class ObserverStateConverters
             state.SubscribesToAllEvents)
         {
             NextEventSequenceNumber = state.NextEventSequenceNumber,
-            TailEventSequenceNumber = state.TailEventSequenceNumber
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
+            HandledEventCountPerEventType = state.HandledEventCountPerEventType.ToDictionary(
+                kvp => (Concepts.Events.EventTypeId)kvp.Key,
+                kvp => (Concepts.Events.EventCount)kvp.Value)
         };
 
     /// <summary>

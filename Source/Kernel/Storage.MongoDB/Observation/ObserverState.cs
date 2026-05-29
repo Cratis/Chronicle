@@ -62,4 +62,14 @@ public class ObserverState
     /// Gets or sets a value indicating whether the observer subscribes to all event types.
     /// </summary>
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of events the observer has successfully handled.
+    /// </summary>
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled, broken down by event type identifier.
+    /// </summary>
+    public IDictionary<string, ulong> HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
 }

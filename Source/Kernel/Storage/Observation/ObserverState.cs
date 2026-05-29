@@ -72,4 +72,14 @@ public record ObserverState(
         init;
     }
         = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or inits the total number of events the observer has successfully handled.
+    /// </summary>
+    public EventCount HandledEventCount { get; init; } = EventCount.Zero;
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled, broken down by event type identifier.
+    /// </summary>
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = new Dictionary<EventTypeId, EventCount>();
 }
