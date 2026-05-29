@@ -83,4 +83,10 @@ public record ObserverState(
     /// Gets or inits the number of events successfully handled, broken down by event type identifier.
     /// </summary>
     public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled per partition, broken down by event type identifier.
+    /// Used to compute the contribution of a specific partition so it can be subtracted when that partition is replayed.
+    /// </summary>
+    public IReadOnlyDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>> HandledEventCountPerPartition { get; init; } = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty;
 }

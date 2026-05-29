@@ -10,7 +10,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Jobs;
@@ -207,6 +206,8 @@ public class HandleEventsForPartition(
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                            var okHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
+                            await _observer.ReportHandledEvents(currentState.Partition, okHandledEvents);
                             break;
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -221,6 +222,8 @@ public class HandleEventsForPartition(
 
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                                var failedHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
+                                await _observer.ReportHandledEvents(currentState.Partition, failedHandledEvents);
                             }
                             else
                             {
@@ -379,25 +382,6 @@ public class HandleEventsForPartition(
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
-    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
-    {
-        var releasedEvents = new List<AppendedEvent>();
-        foreach (var @event in events)
-        {
-            if (!_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) || !schema.Schema.HasComplianceMetadata())
-            {
-                releasedEvents.Add(@event);
-                continue;
-            }
-
-            var released = await EventComplianceHelper.ReleaseEventContent(
-                complianceManager,
-                expandoObjectConverter,
-                @event,
-                schema.Schema);
-            releasedEvents.Add(released);
-        }
-
-        return releasedEvents.ToArray();
-    }
+    Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
+        EventComplianceHelper.DecryptEvents(complianceManager, expandoObjectConverter, events, _eventTypeSchemas);
 }

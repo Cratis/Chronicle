@@ -72,4 +72,9 @@ public class ObserverState
     /// Gets or sets the number of events successfully handled, broken down by event type identifier.
     /// </summary>
     public IDictionary<string, ulong> HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled per partition, broken down by event type identifier.
+    /// </summary>
+    public IDictionary<string, IDictionary<string, ulong>> HandledEventCountPerPartition { get; set; } = new Dictionary<string, IDictionary<string, ulong>>();
 }

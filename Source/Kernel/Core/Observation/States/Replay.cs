@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
@@ -62,6 +63,6 @@ public class Replay(
                 logger.StartReplayJob();
                 return Task.CompletedTask;
             });
-        return state with { IsReplaying = true, HandledEventCount = EventCount.Zero, HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty };
+        return state with { IsReplaying = true, HandledEventCount = EventCount.Zero, HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty, HandledEventCountPerPartition = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty };
     }
 }
