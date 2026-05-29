@@ -280,7 +280,7 @@ public static class ExpandoObjectExtensions
         items!.Any((IDictionary<string, object> _) =>
         {
             if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
-            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
+            var convertedKey = ConvertToMatchingType(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
 
@@ -296,7 +296,7 @@ public static class ExpandoObjectExtensions
         var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
         {
             if (!_.TryGetValue(identityProperty.Path, out var itemValue)) return false;
-            var convertedKey = TypeConversion.Convert(itemValue.GetType(), key);
+            var convertedKey = ConvertToMatchingType(itemValue.GetType(), key);
             return itemValue.Equals(convertedKey);
         });
         return item is not null ? item as ExpandoObject : null;
@@ -319,6 +319,51 @@ public static class ExpandoObjectExtensions
             {
                 nested.RemoveNulls();
             }
+        }
+    }
+
+    /// <summary>
+    /// Converts <paramref name="value"/> to <paramref name="targetType"/> for identity comparison.
+    /// Routes through <see cref="ConceptFactory.CreateConceptInstance"/> when the target is a
+    /// <see cref="ConceptAs{T}"/> — <see cref="TypeConversion.Convert"/> on its own throws for
+    /// concept targets because it has no path for wrapping a primitive value back into a concept.
+    /// Falls back to the original value when no conversion is possible; the caller's
+    /// <see cref="object.Equals(object)"/> check then naturally returns false for a type mismatch.
+    /// </summary>
+    /// <param name="targetType">The target <see cref="Type"/> to convert to.</param>
+    /// <param name="value">The source value.</param>
+    /// <returns>The converted value, or the original <paramref name="value"/> when conversion fails.</returns>
+    static object ConvertToMatchingType(Type targetType, object value)
+    {
+        if (value is null)
+        {
+            return value!;
+        }
+
+        if (targetType.IsAssignableFrom(value.GetType()))
+        {
+            return value;
+        }
+
+        if (targetType.IsConcept())
+        {
+            try
+            {
+                return ConceptFactory.CreateConceptInstance(targetType, value);
+            }
+            catch
+            {
+                return value;
+            }
+        }
+
+        try
+        {
+            return TypeConversion.Convert(targetType, value);
+        }
+        catch
+        {
+            return value;
         }
     }
 
