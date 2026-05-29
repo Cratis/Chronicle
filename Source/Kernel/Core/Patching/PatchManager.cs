@@ -35,30 +35,41 @@ public class PatchManager(
         logger.CurrentSystemVersion(currentVersion);
 
         var allPatches = patches.ToList();
-        var patchesToApply = allPatches
+        var candidatePatches = allPatches
             .Where(p => p.Version > currentVersion)
             .OrderBy(p => p.Version)
             .ToList();
 
-        if (patchesToApply.Count == 0)
+        if (candidatePatches.Count == 0)
         {
-            logger.NoPatchesToApply();
+            logger.PatchApplicationCompleted(0, 0);
             return;
         }
 
-        logger.FoundPatchesToApply(patchesToApply.Count);
+        var skippedCount = 0;
+        var patchesToApply = new List<ICanApplyPatch>();
+        foreach (var patch in candidatePatches)
+        {
+            if (await storage.System.Patches.Has(patch.Name))
+            {
+                skippedCount++;
+                continue;
+            }
+
+            patchesToApply.Add(patch);
+        }
+
+        if (patchesToApply.Count > 0)
+        {
+            logger.FoundPatchesToApply(patchesToApply.Count);
+        }
 
         SemanticVersion? latestVersion = null;
+        var appliedCount = 0;
 
         foreach (var patch in patchesToApply)
         {
             var patchName = patch.Name;
-
-            if (await storage.System.Patches.Has(patchName))
-            {
-                logger.PatchAlreadyApplied(patchName);
-                continue;
-            }
 
             try
             {
@@ -76,6 +87,7 @@ public class PatchManager(
                 await WriteStateAsync();
 
                 latestVersion = patch.Version;
+                appliedCount++;
                 logger.PatchAppliedSuccessfully(patchName);
             }
             catch (Exception ex)
@@ -91,7 +103,7 @@ public class PatchManager(
             logger.UpdatedSystemVersion(latestVersion);
         }
 
-        logger.PatchApplicationCompleted();
+        logger.PatchApplicationCompleted(appliedCount, skippedCount);
     }
 
     /// <inheritdoc/>
