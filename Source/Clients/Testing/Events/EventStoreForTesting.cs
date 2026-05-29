@@ -300,15 +300,15 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
-        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
+        var eventComplianceHelper = new KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper(
+            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()));
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            complianceManager,
-            expandoObjectConverter,
+            eventComplianceHelper,
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

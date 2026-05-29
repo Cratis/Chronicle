@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -291,7 +290,7 @@ public partial class Observer
     }
 
     Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
-        EventComplianceHelper.DecryptEvents(complianceManager, expandoObjectConverter, events, _eventTypeSchemas);
+        eventComplianceHelper.DecryptEvents(events, _eventTypeSchemas);
 
     bool ShouldHandleEvent(Key partition)
     {

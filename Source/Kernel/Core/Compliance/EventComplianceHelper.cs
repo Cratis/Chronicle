@@ -9,23 +9,16 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Helper methods for applying compliance release to event content.
+/// Represents an implementation of <see cref="IEventComplianceHelper"/> for applying compliance release to event content.
 /// </summary>
-public static class EventComplianceHelper
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
+/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting event content.</param>
+public class EventComplianceHelper(
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter) : IEventComplianceHelper
 {
-    /// <summary>
-    /// Decrypts PII fields in an appended event content payload for a given schema.
-    /// </summary>
-    /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
-    /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting event content.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/> to decrypt.</param>
-    /// <param name="schema">The <see cref="JsonSchema"/> describing the event payload.</param>
-    /// <returns>The event with decrypted content.</returns>
-    public static async Task<AppendedEvent> ReleaseEventContent(
-        IJsonComplianceManager complianceManager,
-        IExpandoObjectConverter expandoObjectConverter,
-        AppendedEvent @event,
-        JsonSchema schema)
+    /// <inheritdoc/>
+    public async Task<AppendedEvent> ReleaseEventContent(AppendedEvent @event, JsonSchema schema)
     {
         var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema);
         var released = await complianceManager.Release(
@@ -39,18 +32,8 @@ public static class EventComplianceHelper
         return @event with { Content = releasedContent };
     }
 
-    /// <summary>
-    /// Decrypts PII fields for a collection of events, skipping events whose type is not in the schema map
-    /// or whose subject is null.
-    /// </summary>
-    /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
-    /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting event content.</param>
-    /// <param name="events">The events to decrypt.</param>
-    /// <param name="eventTypeSchemas">Lookup of <see cref="EventTypeSchema"/> keyed by <see cref="EventType"/>.</param>
-    /// <returns>Array of events with PII content decrypted where applicable.</returns>
-    public static async Task<AppendedEvent[]> DecryptEvents(
-        IJsonComplianceManager complianceManager,
-        IExpandoObjectConverter expandoObjectConverter,
+    /// <inheritdoc/>
+    public async Task<AppendedEvent[]> DecryptEvents(
         IEnumerable<AppendedEvent> events,
         IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
@@ -64,7 +47,7 @@ public static class EventComplianceHelper
                 continue;
             }
 
-            var released = await ReleaseEventContent(complianceManager, expandoObjectConverter, @event, schema.Schema);
+            var released = await ReleaseEventContent(@event, schema.Schema);
             releasedEvents.Add(released);
         }
 
