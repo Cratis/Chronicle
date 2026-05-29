@@ -12,7 +12,7 @@
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting" Version="13.3.5" />
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.10.4" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.10.5" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.10.3" />
     <PackageVersion Include="Cratis.Arc" Version="20.33.1" />
     <PackageVersion Include="Cratis.Arc.Core" Version="20.33.1" />
