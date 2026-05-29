@@ -160,9 +160,7 @@ public partial class Observer
                         foreach (var @event in handledEvents)
                         {
                             var eventTypeId = @event.Context.EventType.Id;
-                            perEventType[eventTypeId] = perEventType.TryGetValue(eventTypeId, out var existing)
-                                ? existing + 1UL
-                                : EventCount.Zero.Increase();
+                            perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
                         }
 
                         State = State with

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -81,5 +82,5 @@ public record ObserverState(
     /// <summary>
     /// Gets or inits the number of events successfully handled, broken down by event type identifier.
     /// </summary>
-    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = new Dictionary<EventTypeId, EventCount>();
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
 }

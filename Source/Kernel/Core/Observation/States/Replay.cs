@@ -62,6 +62,6 @@ public class Replay(
                 logger.StartReplayJob();
                 return Task.CompletedTask;
             });
-        return state with { IsReplaying = true, HandledEventCount = EventCount.Zero, HandledEventCountPerEventType = new Dictionary<EventTypeId, EventCount>() };
+        return state with { IsReplaying = true, HandledEventCount = EventCount.Zero, HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty };
     }
 }
