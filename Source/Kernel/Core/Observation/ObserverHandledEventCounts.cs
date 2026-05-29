@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -119,12 +120,9 @@ public class ObserverHandledEventCounts(
         }
 
         // Remove cached entries that no longer correspond to any current observer.
-        foreach (var existing in _counts.Keys.ToArray())
+        foreach (var existing in _counts.Keys.Where(existing => !seenKeys.Contains(existing)).ToArray())
         {
-            if (!seenKeys.Contains(existing))
-            {
-                _counts.TryRemove(existing, out _);
-            }
+            _counts.TryRemove(existing, out _);
         }
     }
 
