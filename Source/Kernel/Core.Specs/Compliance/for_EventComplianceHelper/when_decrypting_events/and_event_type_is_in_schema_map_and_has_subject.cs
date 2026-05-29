@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Compliance.for_EventComplianceHelper.when_decrypting_
 
 public class and_event_type_is_in_schema_map_and_has_subject : given.all_dependencies
 {
-    static AppendedEvent _event;
+    AppendedEvent _event;
     AppendedEvent[] _result;
 
     void Establish()
