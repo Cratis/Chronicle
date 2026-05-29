@@ -11,7 +11,7 @@ public class and_stream_is_not_closed : given.a_closed_stream_constraint_validat
     ConstraintValidationResult _result;
 
     EventStreamType _streamType = new("invoices");
-    EventStreamId _streamId = new("invoices-001");
+    readonly EventStreamId _streamId = new("invoices-001");
     ConstraintValidationContext _context;
 
     void Establish()
