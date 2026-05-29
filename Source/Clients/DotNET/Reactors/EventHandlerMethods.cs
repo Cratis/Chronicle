@@ -51,20 +51,16 @@ public static class EventHandlerMethods
 
     /// <summary>
     /// Check whether a <see cref="Type"/> is a valid synchronous side-effect return type for a reactor handler method.
-    /// Valid types are: a registered event type, <see cref="ReactorSideEffect"/>,
-    /// <see cref="IEnumerable{T}"/> of <see cref="ReactorSideEffect"/>, or <see cref="IEnumerable{T}"/> of a registered event type.
+    /// Valid types are: a registered event type, or <see cref="IEnumerable{T}"/> of a registered event type.
     /// </summary>
     /// <param name="returnType">The return <see cref="Type"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a valid sync side-effect return type, false if not.</returns>
     public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes)
     {
-        if (returnType == typeof(ReactorSideEffect)) return true;
-
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
             var elementType = returnType.GetGenericArguments()[0];
-            if (elementType == typeof(ReactorSideEffect)) return true;
             if (elementType == typeof(object)) return true;
             if (eventTypes.Contains(elementType)) return true;
         }

@@ -145,7 +145,7 @@ public class ReactorInvoker(
             return;
         }
 
-        // Synchronous side-effect return value (e.g. TEvent, ReactorSideEffect, IEnumerable<T>)
+        // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
         if (sideEffectHandlers is null || eventStore is null || returnValue is null)
         {
             return;

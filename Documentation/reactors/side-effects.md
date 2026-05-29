@@ -29,34 +29,11 @@ public class WarehouseReactor : IReactor
 
 The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
 
-## Controlling Where Events Are Appended
-
-Return a `ReactorSideEffect` to override any of the append metadata per event:
-
-```csharp
-public ReactorSideEffect BookReserved(BookReserved @event, EventContext context) =>
-    new ReactorSideEffect
-    {
-        Event = new StockDecreased(@event.Isbn, 1),
-        EventSourceId = @event.WarehouseId,           // override the event source
-        EventSequenceId = EventSequenceId.Log,        // target a specific sequence
-    };
-```
-
-All fields on `ReactorSideEffect` are optional. Any that are left `null` fall back to reactor-level resolution (see below).
-
 ## Multiple Side Effects
 
-Return `IEnumerable<ReactorSideEffect>` or `IEnumerable<TEvent>` to append several events in one handler call:
+Return `IEnumerable<TEvent>` to append several events in one handler call:
 
 ```csharp
-public IEnumerable<ReactorSideEffect> BookReserved(BookReserved @event, EventContext context) =>
-[
-    ReactorSideEffect.For(new StockDecreased(@event.Isbn, 1)),
-    new ReactorSideEffect { Event = new StockLow(@event.Isbn), EventSourceId = @event.WarehouseId },
-];
-
-// Or, if all events share the same metadata:
 public IEnumerable<object> BookReserved(BookReserved @event, EventContext context) =>
 [
     new StockDecreased(@event.Isbn, 1),
@@ -132,15 +109,13 @@ public class WarehouseReactor : IReactor
 
 ### Priority Order
 
-When both per-event fields and reactor-level values are present, explicit values on `ReactorSideEffect` take highest priority:
-
 | Metadata | Priority |
 |---|---|
-| `EventSourceId` | `ReactorSideEffect.EventSourceId` → `ICanProvideEventSourceId` → `eventContext.EventSourceId` |
-| `EventStreamId` | `ReactorSideEffect.EventStreamId` → `ICanProvideEventStreamId` → `[EventStreamId]` attribute → `null` |
-| `EventStreamType` | `ReactorSideEffect.EventStreamType` → `[EventStreamType]` attribute → `null` |
-| `EventSourceType` | `ReactorSideEffect.EventSourceType` → `[EventSourceType]` attribute → `null` |
-| `Subject` | `ReactorSideEffect.Subject` → `ICanProvideSubject` → `null` |
+| `EventSourceId` | `ICanProvideEventSourceId` → `eventContext.EventSourceId` |
+| `EventStreamId` | `ICanProvideEventStreamId` → `[EventStreamId]` attribute → `null` |
+| `EventStreamType` | `[EventStreamType]` attribute → `null` |
+| `EventSourceType` | `[EventSourceType]` attribute → `null` |
+| `Subject` | `ICanProvideSubject` → `null` |
 
 ## Custom Return Type Handlers
 
@@ -168,10 +143,7 @@ services.AddSingleton<IReactorSideEffectHandler, MyHandler>();
 |---|---|
 | `TEvent` | `EventResultHandler` — appends single event |
 | `Task<TEvent>` | `EventResultHandler` — appends single event |
-| `ReactorSideEffect` | `ReactorSideEffectResultHandler` — appends with full metadata control |
-| `Task<ReactorSideEffect>` | `ReactorSideEffectResultHandler` |
 | `IEnumerable<TEvent>` | `EventsResultHandler` — appends each event |
 | `Task<IEnumerable<TEvent>>` | `EventsResultHandler` |
-| `IEnumerable<ReactorSideEffect>` | `ReactorSideEffectsResultHandler` — appends each with metadata |
-| `Task<IEnumerable<ReactorSideEffect>>` | `ReactorSideEffectsResultHandler` |
 | `void` / `Task` | No side effects appended |
+

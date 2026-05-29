@@ -107,8 +107,6 @@ internal static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
 
-        services.AddSingleton<IReactorSideEffectHandler, ReactorSideEffectResultHandler>();
-        services.AddSingleton<IReactorSideEffectHandler, ReactorSideEffectsResultHandler>();
         services.AddSingleton<IReactorSideEffectHandler, EventResultHandler>();
         services.AddSingleton<IReactorSideEffectHandler, EventsResultHandler>();
         services.AddSingleton<IReactorSideEffectHandlers, ReactorSideEffectHandlers>();

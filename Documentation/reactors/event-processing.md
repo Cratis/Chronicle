@@ -27,16 +27,16 @@ Task MethodName(TEvent @event);
 // Async with event and context
 Task MethodName(TEvent @event, EventContext context);
 
-// Async returning a side-effect event or ReactorSideEffect
+// Async returning a side-effect event
 Task<TResult> MethodName(TEvent @event);
 Task<TResult> MethodName(TEvent @event, EventContext context);
 
-// Synchronous returning a side-effect event or ReactorSideEffect (no Task overhead)
+// Synchronous returning a side-effect event (no Task overhead)
 TResult MethodName(TEvent @event);
 TResult MethodName(TEvent @event, EventContext context);
 ```
 
-`TResult` can be an event type, `ReactorSideEffect`, `IEnumerable<TEvent>`, or `IEnumerable<ReactorSideEffect>`.
+`TResult` can be an event type or `IEnumerable<TEvent>`.
 See [Returning Side Effects](side-effects.md) for the full list of supported return types and metadata resolution.
 
 ## Event Context

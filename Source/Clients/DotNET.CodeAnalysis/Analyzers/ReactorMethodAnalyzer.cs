@@ -20,7 +20,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle dispatches events to reactor methods by matching event types. Methods with unsupported signatures are silently skipped. Change the method to one of the allowed forms: 'void MethodName(TEvent event)', 'void MethodName(TEvent event, EventContext context)', 'Task MethodName(TEvent event)', 'Task MethodName(TEvent event, EventContext context)', 'Task<TResult> MethodName(TEvent event)', or 'Task<TResult> MethodName(TEvent event, EventContext context)', or the synchronous side-effect forms 'TResult MethodName(TEvent event)' / 'TResult MethodName(TEvent event, EventContext context)'. TResult can be an event type, ReactorSideEffect, or IEnumerable of those.");
+        description: "Chronicle dispatches events to reactor methods by matching event types. Methods with unsupported signatures are silently skipped. Change the method to one of the allowed forms: 'void MethodName(TEvent event)', 'void MethodName(TEvent event, EventContext context)', 'Task MethodName(TEvent event)', 'Task MethodName(TEvent event, EventContext context)', 'Task<TResult> MethodName(TEvent event)', or 'Task<TResult> MethodName(TEvent event, EventContext context)', or the synchronous side-effect forms 'TResult MethodName(TEvent event)' / 'TResult MethodName(TEvent event, EventContext context)'. TResult must be an event type or IEnumerable of event types.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -76,7 +76,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 
         // Check if this could be an event handler method based on return type.
         // Valid return types: void, Task, Task<T>, or any reference type (sync side-effect returns such as
-        // event types, ReactorSideEffect, IEnumerable<ReactorSideEffect>, etc.).
+        // event types or IEnumerable of event types).
         // Value types (int, bool, struct, etc.) are not valid reactor return types.
         var taskType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
         var taskOfTType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
