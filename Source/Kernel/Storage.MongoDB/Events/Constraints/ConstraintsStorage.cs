@@ -43,6 +43,4 @@ public class ConstraintsStorage(IEventStoreDatabase eventStoreDatabase) : IConst
         var stored = new StoredConstraintDefinition($"{definition.Name}-v{nextVersion}", definition.Name.Value, nextVersion, definition);
         await _collection.InsertOneAsync(stored);
     }
-
-    record StoredConstraintDefinition(string Id, string Name, ulong Version, IConstraintDefinition Definition);
 }
