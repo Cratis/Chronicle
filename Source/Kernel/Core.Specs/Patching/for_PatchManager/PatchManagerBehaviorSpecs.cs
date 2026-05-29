@@ -158,8 +158,7 @@ public class PatchManagerBehaviorSpecs : Specification
             .Where(_ => _.Version > currentVersion)
             .OrderBy(_ => _.Version)
             .ToList();
-        var patchesToApply = candidatePatches.Where(_ => !alreadyApplied.Contains(_.Name)).ToList();
-        var skippedCount = candidatePatches.Count - patchesToApply.Count;
+        var (patchesToApply, skippedCount) = PatchManager.FilterPatchesToApply(candidatePatches, alreadyApplied);
 
         patchesToApply.Count.ShouldEqual(1);
         patchesToApply[0].Name.ShouldEqual("Patch1");
