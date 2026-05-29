@@ -64,7 +64,14 @@ public class ResolveFutures(
                     var parentKey = future.ParentKey.Value;
                     if (type is not null)
                     {
-                        parentKey = ConvertToTargetType(type, parentKey);
+                        try
+                        {
+                            parentKey = TypeConversion.Convert(type, parentKey);
+                        }
+                        catch (InvalidCastException)
+                        {
+                            // Keep original value — Contains() normalizes types during comparison
+                        }
                     }
 
                     // Find the child projection that this future belongs to by navigating the property path
@@ -120,7 +127,14 @@ public class ResolveFutures(
 
                     if (childType is not null && childKey is not null)
                     {
-                        childKey = ConvertToTargetType(childType, childKey);
+                        try
+                        {
+                            childKey = TypeConversion.Convert(childType, childKey);
+                        }
+                        catch
+                        {
+                            // Keep original value — Contains() normalizes types during comparison
+                        }
                     }
 
                     // Build the key using the full parent indexer chain plus the child indexer.
@@ -170,51 +184,6 @@ public class ResolveFutures(
         }
 
         return context with { Event = latestResolvedEvent };
-    }
-
-    /// <summary>
-    /// Converts <paramref name="value"/> to <paramref name="targetType"/>, handling the
-    /// concept-to-concept case that <see cref="TypeConversion.Convert"/> does not. When the
-    /// target is a <see cref="ConceptAs{T}"/>, route through <see cref="ConceptFactory.CreateConceptInstance"/>
-    /// — which first converts the source value to the concept's underlying primitive type and
-    /// then wraps it. Falls back to the original value when no conversion is possible; the
-    /// caller is responsible for handling the type mismatch (e.g. via a tolerant comparison).
-    /// </summary>
-    /// <param name="targetType">The target <see cref="Type"/> to convert to.</param>
-    /// <param name="value">The source value.</param>
-    /// <returns>The converted value, or the original <paramref name="value"/> when conversion fails.</returns>
-    static object ConvertToTargetType(Type targetType, object value)
-    {
-        if (value is null)
-        {
-            return value!;
-        }
-
-        if (targetType.IsAssignableFrom(value.GetType()))
-        {
-            return value;
-        }
-
-        if (targetType.IsConcept())
-        {
-            try
-            {
-                return ConceptFactory.CreateConceptInstance(targetType, value);
-            }
-            catch
-            {
-                return value;
-            }
-        }
-
-        try
-        {
-            return TypeConversion.Convert(targetType, value);
-        }
-        catch
-        {
-            return value;
-        }
     }
 
     static IProjection? FindChildProjectionByPath(IProjection projection, PropertyPath childPath)
