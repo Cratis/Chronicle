@@ -10,7 +10,7 @@ public class a_simple_api_capture : for_LanguageService.given.a_language_service
     const string Declaration = """
         capture Customers
           source api
-            url https://example.com/customers
+            api CustomersApi
             poll 5m
             auth bearer $env.CustomersApiToken
           key customerId
@@ -24,7 +24,7 @@ public class a_simple_api_capture : for_LanguageService.given.a_language_service
     void Because() => _result = Compile(Declaration);
 
     [Fact] void should_have_api_source() => _result.Source.Type.ShouldEqual(SourceType.Api);
-    [Fact] void should_have_url() => _result.Source.Url.ShouldEqual("https://example.com/customers");
+    [Fact] void should_have_api() => _result.Source.Api.ShouldEqual("CustomersApi");
     [Fact] void should_have_poll() => _result.Source.Poll.ShouldEqual("5m");
     [Fact] void should_have_auth() => _result.Source.Auth.ShouldEqual("bearer $env.CustomersApiToken");
     [Fact] void should_have_key_property() => _result.KeyProperty.ShouldEqual("customerId");

@@ -88,5 +88,5 @@ public class SourceBlockParser
         return false;
     }
 
-    static bool IsPropertyToken(TokenType type) => type is TokenType.Url or TokenType.Poll or TokenType.Auth or TokenType.Path or TokenType.Topic;
+    static bool IsPropertyToken(TokenType type) => type is TokenType.Api or TokenType.Poll or TokenType.Auth or TokenType.Route or TokenType.Path or TokenType.Topic;
 }

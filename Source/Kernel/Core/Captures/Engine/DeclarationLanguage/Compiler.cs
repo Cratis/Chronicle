@@ -74,9 +74,10 @@ public class Compiler
 
     static SourceDefinition CompileSource(SourceBlock sourceBlock) => new(
         sourceBlock.SourceType,
-        Url: GetValue(sourceBlock.Properties, "url"),
+        Api: GetValue(sourceBlock.Properties, "api"),
         Poll: GetValue(sourceBlock.Properties, "poll"),
         Auth: GetValue(sourceBlock.Properties, "auth"),
+        Route: GetValue(sourceBlock.Properties, "route"),
         Path: GetValue(sourceBlock.Properties, "path"),
         Topic: GetValue(sourceBlock.Properties, "topic"));
 

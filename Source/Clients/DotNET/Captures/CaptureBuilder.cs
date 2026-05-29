@@ -18,9 +18,9 @@ public class CaptureBuilder : ICaptureBuilder
     SourceDefinition? _source;
 
     /// <inheritdoc/>
-    public ICaptureBuilder FromApi(string url, Action<IApiSourceBuilder>? configure = null)
+    public ICaptureBuilder FromApi(string api, Action<IApiSourceBuilder>? configure = null)
     {
-        var builder = new ApiSourceBuilder(url);
+        var builder = new ApiSourceBuilder(api);
         configure?.Invoke(builder);
         _source = builder.Build();
 

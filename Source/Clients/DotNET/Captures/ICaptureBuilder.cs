@@ -11,10 +11,10 @@ public interface ICaptureBuilder
     /// <summary>
     /// Configures the capture to observe an API source.
     /// </summary>
-    /// <param name="url">The URL to observe.</param>
+    /// <param name="api">The API name to observe.</param>
     /// <param name="configure">Optional callback for further source configuration.</param>
     /// <returns>The builder continuation.</returns>
-    ICaptureBuilder FromApi(string url, Action<IApiSourceBuilder>? configure = null);
+    ICaptureBuilder FromApi(string api, Action<IApiSourceBuilder>? configure = null);
 
     /// <summary>
     /// Configures the capture to observe a webhook source.

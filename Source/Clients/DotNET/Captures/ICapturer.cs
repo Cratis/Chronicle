@@ -6,4 +6,11 @@ namespace Cratis.Chronicle.Captures;
 /// <summary>
 /// Defines a type that can declaratively define a capture.
 /// </summary>
-public interface ICaptureFor : ICapturer;
+public interface ICapturer : ICapture
+{
+    /// <summary>
+    /// Defines the capture.
+    /// </summary>
+    /// <param name="builder">The <see cref="ICaptureBuilder"/> used to build the capture definition.</param>
+    void Define(ICaptureBuilder builder);
+}

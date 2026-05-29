@@ -8,16 +8,25 @@ namespace Cratis.Chronicle.Captures;
 /// <summary>
 /// Represents an implementation of <see cref="IApiSourceBuilder"/>.
 /// </summary>
-/// <param name="url">The URL to observe.</param>
-public class ApiSourceBuilder(string url) : IApiSourceBuilder
+/// <param name="api">The API name to observe.</param>
+public class ApiSourceBuilder(string api) : IApiSourceBuilder
 {
     string? _auth;
     string? _poll;
+    string? _route;
 
     /// <inheritdoc/>
     public IApiSourceBuilder PollEvery(string interval)
     {
         _poll = interval;
+
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IApiSourceBuilder OnRoute(string route)
+    {
+        _route = route;
 
         return this;
     }
@@ -42,5 +51,5 @@ public class ApiSourceBuilder(string url) : IApiSourceBuilder
     /// Builds the <see cref="SourceDefinition"/>.
     /// </summary>
     /// <returns>A new <see cref="SourceDefinition"/>.</returns>
-    public SourceDefinition Build() => new(SourceType.Api, Url: url, Poll: _poll, Auth: _auth);
+    public SourceDefinition Build() => new(SourceType.Api, Api: api, Poll: _poll, Auth: _auth, Route: _route);
 }

@@ -4,14 +4,15 @@ Declarative captures use fluent C# builder APIs to define CDC behavior in code.
 
 ## Entry points
 
-- Implement `ICaptureFor`
+- Implement `ICapturer`
 - Configure the capture in `Define(ICaptureBuilder builder)`
 
 ```csharp
-public class InvoiceCapture : ICaptureFor
+public class InvoiceCapture : ICapturer
 {
     public void Define(ICaptureBuilder builder) => builder
-        .FromApi("https://api.example.com/invoices", _ => _
+        .FromApi("InvoicingApi", _ => _
+            .OnRoute("/invoices")
             .PollEvery("10m")
             .WithBearerToken("$env.API_TOKEN"))
         .Key("id")
@@ -24,15 +25,18 @@ public class InvoiceCapture : ICaptureFor
 
 ## Source configuration
 
-- `FromApi(url, configure?)`
+- `FromApi(api, configure?)`
 - `FromWebhook(path, configure?)`
 - `FromMessageTopic(topic)`
 
 API source options:
 
+- `OnRoute(route)`
 - `PollEvery(interval)`
 - `WithBearerToken(token)`
 - `WithAuth(auth)`
+
+`FromApi(api, ...)` references a separately configured API source. If no route is configured, the API base URL is used directly.
 
 Webhook source option:
 
@@ -78,4 +82,4 @@ Both support local `Map(...)` and `Append<TEvent>(...)` blocks.
 
 ## Optional capture metadata
 
-You can set an explicit capture ID using `[Capture("guid")]` on the `ICaptureFor` type.
+You can set an explicit capture ID using `[Capture("guid")]` on the `ICapturer` type.
