@@ -3,7 +3,6 @@
 
 using System.Dynamic;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
@@ -271,36 +270,6 @@ public static class EventEntryConverter
         }
 
         return new ExpandoObject();
-    }
-
-    /// <summary>
-    /// Get the raw <see cref="JsonObject"/> content for a specific generation. Returns null when the
-    /// entry has no content for the requested generation. Used by callers that need the JSON
-    /// representation so they can apply schema-aware deserialization via <see cref="Cratis.Chronicle.Json.IExpandoObjectConverter"/>
-    /// rather than the schema-agnostic <see cref="GetContentForGeneration(EventEntry, EventTypeGeneration)"/>
-    /// — schema-aware conversion is required so that, for example, properties typed as a
-    /// <c>ConceptAs&lt;Guid&gt;</c> deserialize to <see cref="System.Guid"/> rather than the raw
-    /// JSON string. Without it, downstream identity comparisons (key resolvers, deferred-future
-    /// resolution, array indexer matching) silently mismatch when one side is a string and the
-    /// other is a Guid.
-    /// </summary>
-    /// <param name="entry">The event entry.</param>
-    /// <param name="generation">The generation to read.</param>
-    /// <returns>The raw <see cref="JsonObject"/> for the generation, or <see langword="null"/> when absent.</returns>
-    public static JsonObject? GetContentJsonForGeneration(EventEntry entry, EventTypeGeneration generation)
-    {
-        if (string.IsNullOrEmpty(entry.Content))
-        {
-            return null;
-        }
-
-        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
-        if (contentDict?.TryGetValue(generation.ToString(), out var contentElement) == true && contentElement.ValueKind == JsonValueKind.Object)
-        {
-            return JsonNode.Parse(contentElement.GetRawText()) as JsonObject;
-        }
-
-        return null;
     }
 
     /// <summary>
