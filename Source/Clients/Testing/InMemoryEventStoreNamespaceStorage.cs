@@ -27,11 +27,13 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="eventSequenceStorage">The <see cref="InMemoryEventSequenceStorage"/> for the event sequence under test.</param>
 /// <param name="uniqueConstraintsStorage">Optional <see cref="InMemoryUniqueConstraintsStorage"/> for unique constraints.</param>
 /// <param name="uniqueEventTypesStorage">Optional <see cref="InMemoryUniqueEventTypesConstraintsStorage"/> for unique event type constraints.</param>
+/// <param name="closedStreamsStorage">Optional <see cref="InMemoryClosedStreamsConstraintStorage"/> for closed streams.</param>
 /// <param name="identityStorage">Optional <see cref="InMemoryIdentityStorage"/>.</param>
 internal sealed class InMemoryEventStoreNamespaceStorage(
     InMemoryEventSequenceStorage eventSequenceStorage,
     InMemoryUniqueConstraintsStorage? uniqueConstraintsStorage = null,
     InMemoryUniqueEventTypesConstraintsStorage? uniqueEventTypesStorage = null,
+    InMemoryClosedStreamsConstraintStorage? closedStreamsStorage = null,
     InMemoryIdentityStorage? identityStorage = null) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
@@ -83,4 +85,8 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     /// <inheritdoc/>
     public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(KernelEventSequences::EventSequenceId eventSequenceId) =>
         uniqueEventTypesStorage ?? throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(KernelEventSequences::EventSequenceId eventSequenceId) =>
+        closedStreamsStorage ?? throw new NotSupportedException();
 }

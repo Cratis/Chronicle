@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using IAppendResult = Cratis.Chronicle.EventSequences.IAppendResult;
+using Cratis.Chronicle.Events.Constraints;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_completing_a_stream.and_stream_is_not_default.context;
+using IAppendResult = Cratis.Chronicle.EventSequences.IAppendResult;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_completing_a_stream;
 
@@ -32,5 +33,5 @@ public class and_stream_is_not_default(context context) : Given<context>(context
 
     [Fact] void should_complete_successfully() => Context.CompletedSuccessfully.ShouldBeTrue();
     [Fact] void should_reject_subsequent_append() => Context.AppendAfterCompletionResult.IsSuccess.ShouldBeFalse();
-    [Fact] void should_report_stream_completed_error_on_append() => Context.AppendAfterCompletionResult.Errors.Any(e => e.Value == "Cannot append to a stream that has been completed.").ShouldBeTrue();
+    [Fact] void should_report_stream_completed_constraint_violation() => Context.AppendAfterCompletionResult.ConstraintViolations.Any(v => v.ConstraintType == ConstraintType.StreamClosed).ShouldBeTrue();
 }

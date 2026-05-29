@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using IAppendResult = Cratis.Chronicle.EventSequences.IAppendResult;
 using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_completing_a_stream.and_appending_to_other_streams_after_completion.context;
+using IAppendResult = Cratis.Chronicle.EventSequences.IAppendResult;
 
 namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_completing_a_stream;
 

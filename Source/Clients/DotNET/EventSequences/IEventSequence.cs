@@ -195,7 +195,7 @@ public interface IEventSequence
     /// The default stream — <see cref="EventStreamType.All"/> paired with the default <see cref="EventStreamId"/> — can never be completed and will return
     /// <see cref="CompleteStreamError.DefaultStreamCannotBeCompleted"/>. Completing an already-completed stream returns
     /// <see cref="CompleteStreamError.AlreadyCompleted"/> and leaves the stream in its completed state. After a successful completion any subsequent
-    /// append targeting the same stream returns <see cref="AppendError.StreamCompleted"/>.
+    /// append targeting the same stream results in a constraint violation of type <c>StreamClosed</c>.
     /// </remarks>
     Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
 }

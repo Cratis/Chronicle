@@ -15,11 +15,6 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError Unknown = string.Empty;
 
     /// <summary>
-    /// Represents the error returned when an append is rejected because the target stream has been completed.
-    /// </summary>
-    public static readonly AppendError StreamCompleted = "Cannot append to a stream that has been completed.";
-
-    /// <summary>
     /// Implicitly convert from string to <see cref="AppendError"/>.
     /// </summary>
     /// <param name="id">String to convert from.</param>
