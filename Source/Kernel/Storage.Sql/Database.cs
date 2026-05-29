@@ -151,12 +151,12 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName) =>
+    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) =>
         GetOrCreateReadModelDbContext(
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()));
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)
