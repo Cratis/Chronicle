@@ -47,17 +47,16 @@ public class PatchManager(
         }
 
         var skippedCount = 0;
-        var patchesToApply = new List<ICanApplyPatch>();
+        var alreadyAppliedPatchNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var patch in candidatePatches)
         {
             if (await storage.System.Patches.Has(patch.Name))
             {
-                skippedCount++;
-                continue;
+                alreadyAppliedPatchNames.Add(patch.Name);
             }
-
-            patchesToApply.Add(patch);
         }
+        var (patchesToApply, computedSkippedCount) = FilterPatchesToApply(candidatePatches, alreadyAppliedPatchNames);
+        skippedCount = computedSkippedCount;
 
         if (patchesToApply.Count > 0)
         {
@@ -116,5 +115,23 @@ public class PatchManager(
             await WriteStateAsync();
         }
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Filters candidate patches into patches to apply and skipped patches.
+    /// </summary>
+    /// <param name="candidatePatches">The candidate patches to evaluate.</param>
+    /// <param name="alreadyAppliedPatchNames">The names of patches that have already been applied.</param>
+    /// <returns>The patches to apply and the skipped count.</returns>
+    internal static (IReadOnlyList<ICanApplyPatch> PatchesToApply, int SkippedCount) FilterPatchesToApply(
+        IReadOnlyList<ICanApplyPatch> candidatePatches,
+        ISet<string> alreadyAppliedPatchNames)
+    {
+        var patchesToApply = candidatePatches
+            .Where(_ => !alreadyAppliedPatchNames.Contains(_.Name))
+            .ToList();
+        var skippedCount = candidatePatches.Count - patchesToApply.Count;
+
+        return (patchesToApply, skippedCount);
     }
 }
