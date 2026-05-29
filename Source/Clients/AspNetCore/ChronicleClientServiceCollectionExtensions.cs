@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Cratis.Chronicle;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Execution;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -109,7 +112,28 @@ public static class ChronicleClientServiceCollectionExtensions
         services.AddSingleton(_ => chronicleBuilder?.ClientArtifactsProvider ?? DefaultClientArtifactsProvider.Default);
         services.AddSingleton(_ => chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy());
         services.AddSingleton(_ => chronicleBuilder?.CorrelationIdAccessor ?? new CorrelationIdAccessor());
+        services.AddNamedActivitySource(ClientActivity.SourceName);
+
+        for (var index = services.Count - 1; index >= 0; index--)
+        {
+            var descriptor = services[index];
+            if (descriptor.ServiceType == typeof(IActivitySource<>) &&
+                Equals(descriptor.ServiceKey, ClientActivity.SourceName))
+            {
+                services.RemoveAt(index);
+                break;
+            }
+        }
+
+        services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
         return services;
+    }
+
+    sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>
+    {
+        public ActivitySource ActualSource { get; } = key is null
+            ? new(typeof(T).FullName ?? typeof(T).Name)
+            : serviceProvider.GetRequiredKeyedService<ActivitySource>(key);
     }
 }
