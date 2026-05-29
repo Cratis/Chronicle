@@ -35,7 +35,7 @@ public static class PropertyExtensions
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check.</param>
     /// <returns>True if the property is sink-owned, false otherwise.</returns>
     public static bool IsSinkOwnedSystemProperty(this PropertyPath propertyPath) =>
-        propertyPath.Path == WellKnownProperties.LasHandledEventSequenceNumber;
+        propertyPath.Path == WellKnownProperties.LastHandledEventSequenceNumber;
 
     /// <summary>
     /// Convert a <see cref="PropertyPath"/> to a MongoDB-compatible path string.

@@ -152,7 +152,7 @@ public class ProjectionObserverSubscriber(
 
                 // Mirror the metadata fields that the storage sink writes so that watched models
                 // match what a direct read from the underlying store returns.
-                model[WellKnownProperties.LasHandledEventSequenceNumber] =
+                model[WellKnownProperties.LastHandledEventSequenceNumber] =
                     JsonValue.Create((ulong)lastSuccessfullyObservedEvent!.Context.SequenceNumber);
 
                 var stateDict = (IDictionary<string, object?>)changeset.CurrentState;

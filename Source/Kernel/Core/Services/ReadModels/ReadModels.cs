@@ -232,7 +232,7 @@ internal sealed class ReadModels(
 
                         var lastSeq = EventSequenceNumber.Unavailable;
                         var stateDict = (IDictionary<string, object?>)storedState;
-                        if (stateDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) &&
+                        if (stateDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) &&
                             seqObj is not null)
                         {
                             try { lastSeq = (EventSequenceNumber)Convert.ToUInt64(seqObj); }
@@ -456,9 +456,9 @@ internal sealed class ReadModels(
             // Ensure __lastHandledEventSequenceNumber is included in the JSON output since
             // ToJsonObject may drop it if it is not mapped by the schema converter.
             var decryptedDict = (IDictionary<string, object?>)decrypted;
-            if (decryptedDict.TryGetValue(WellKnownProperties.LasHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
+            if (decryptedDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
             {
-                try { jsonObject[WellKnownProperties.LasHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
+                try { jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
                 catch { /* leave sequence number absent if conversion fails */ }
             }
 

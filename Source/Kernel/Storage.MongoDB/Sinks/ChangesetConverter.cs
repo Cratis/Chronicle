@@ -164,11 +164,11 @@ public class ChangesetConverter(
         // pointing at a sequence number it has already moved past.
         if (updateBuilder != default)
         {
-            updateBuilder = updateBuilder.Max(WellKnownProperties.LasHandledEventSequenceNumber, value);
+            updateBuilder = updateBuilder.Max(WellKnownProperties.LastHandledEventSequenceNumber, value);
         }
         else
         {
-            updateBuilder = updateDefinitionBuilder.Max(WellKnownProperties.LasHandledEventSequenceNumber, value);
+            updateBuilder = updateDefinitionBuilder.Max(WellKnownProperties.LastHandledEventSequenceNumber, value);
         }
     }
 

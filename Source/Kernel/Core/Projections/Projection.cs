@@ -261,7 +261,7 @@ public class Projection(
             // Set the last handled event sequence number to mirror what the sink writes
             if (lastSequenceByKeyValue.TryGetValue(keyValue, out var lastSeq))
             {
-                readModelDict[WellKnownProperties.LasHandledEventSequenceNumber] = (ulong)lastSeq;
+                readModelDict[WellKnownProperties.LastHandledEventSequenceNumber] = (ulong)lastSeq;
             }
 
             results.Add(readModel);
