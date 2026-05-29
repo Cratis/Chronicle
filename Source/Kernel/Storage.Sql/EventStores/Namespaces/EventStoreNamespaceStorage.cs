@@ -5,9 +5,11 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Keys;
@@ -34,7 +36,18 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
 /// <param name="observerDefinitionsStorage">The <see cref="IObserverDefinitionsStorage"/> for working with observer definitions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, IObserverDefinitionsStorage observerDefinitionsStorage, JsonSerializerOptions jsonSerializerOptions) : IEventStoreNamespaceStorage
+/// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for resolving event type schemas.</param>
+/// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/> for deserializing event content.</param>
+public class EventStoreNamespaceStorage(
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    IJobTypes jobTypes,
+    IObserverDefinitionsStorage observerDefinitionsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    IEventTypesStorage eventTypesStorage,
+    IExpandoObjectConverter expandoObjectConverter) : IEventStoreNamespaceStorage
 {
     /// <inheritdoc/>
     public IChangesetStorage Changesets { get; } = new Changesets.ChangesetStorage(eventStore, @namespace, database);
@@ -83,6 +96,8 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
             eventSequenceId,
             database,
             Identities, // Use existing Identities property
+            eventTypesStorage,
+            expandoObjectConverter,
             NullLogger<EventSequences.EventSequenceStorage>.Instance); // Null logger for now
 
     /// <inheritdoc/>

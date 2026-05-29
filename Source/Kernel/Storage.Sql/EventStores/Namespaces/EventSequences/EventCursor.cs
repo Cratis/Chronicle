@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +20,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="eventStore">The event store name.</param>
 /// <param name="namespace">The namespace name.</param>
 /// <param name="identityStorage">Identity storage for resolving identities.</param>
+/// <param name="eventTypesStorage">Storage used to look up event type schemas for schema-aware content deserialization.</param>
+/// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/>.</param>
 /// <param name="batchSize">Number of events to fetch per batch.</param>
 /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
 public class EventCursor(
@@ -25,6 +30,8 @@ public class EventCursor(
     EventStoreName eventStore,
     EventStoreNamespaceName @namespace,
     IIdentityStorage identityStorage,
+    IEventTypesStorage eventTypesStorage,
+    IExpandoObjectConverter expandoObjectConverter,
     int batchSize = 100,
     CancellationToken cancellationToken = default) : IEventCursor
 {
@@ -33,6 +40,8 @@ public class EventCursor(
     readonly EventStoreName _eventStore = eventStore;
     readonly EventStoreNamespaceName _namespace = @namespace;
     readonly IIdentityStorage _identityStorage = identityStorage;
+    readonly IEventTypesStorage _eventTypesStorage = eventTypesStorage;
+    readonly IExpandoObjectConverter _expandoObjectConverter = expandoObjectConverter;
     readonly CancellationToken _cancellationToken = cancellationToken;
     readonly int _batchSize = batchSize;
     int _currentOffset;
@@ -66,7 +75,7 @@ public class EventCursor(
         foreach (var eventEntry in eventEntries)
         {
             var eventType = EventEntryConverter.GetEventType(eventEntry);
-            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+            var content = await ResolveContent(eventEntry, eventType);
             var causation = EventEntryConverter.GetCausation(eventEntry);
             var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -100,4 +109,26 @@ public class EventCursor(
 
     /// <inheritdoc/>
     public void Dispose() => _scope.DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+    async Task<ExpandoObject> ResolveContent(EventEntry entry, EventType eventType)
+    {
+        if (eventType.Id == Cratis.Chronicle.Concepts.Events.GlobalEventTypes.Redaction)
+        {
+            return EventEntryConverter.GetContentForGeneration(entry, eventType.Generation);
+        }
+
+        if (!await _eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+        {
+            return EventEntryConverter.GetContentForGeneration(entry, eventType.Generation);
+        }
+
+        var jsonObject = EventEntryConverter.GetContentJsonForGeneration(entry, eventType.Generation);
+        if (jsonObject is null)
+        {
+            return new ExpandoObject();
+        }
+
+        var schema = await _eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        return _expandoObjectConverter.ToExpandoObject(jsonObject, schema.Schema);
+    }
 }

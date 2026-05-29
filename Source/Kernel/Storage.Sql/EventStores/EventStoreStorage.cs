@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Namespaces;
@@ -28,7 +29,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
-public class EventStoreStorage(EventStoreName eventStore, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IEventStoreStorage
+/// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/> for deserializing event content.</param>
+public class EventStoreStorage(
+    EventStoreName eventStore,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    IJobTypes jobTypes,
+    JsonSerializerOptions jsonSerializerOptions,
+    IExpandoObjectConverter expandoObjectConverter) : IEventStoreStorage
 {
     /// <inheritdoc/>
     public EventStoreName EventStore { get; } = eventStore.Value;
@@ -68,5 +76,5 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
-        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobTypes, Observers, jsonSerializerOptions);
+        => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobTypes, Observers, jsonSerializerOptions, EventTypes, expandoObjectConverter);
 }

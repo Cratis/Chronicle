@@ -8,7 +8,9 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +26,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="eventSequenceId">The identifier for the event sequence.</param>
 /// <param name="database">The <see cref="IDatabase"/> for storage operations.</param>
 /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for managing identities.</param>
+/// <param name="eventTypesStorage">The <see cref="IEventTypesStorage"/> for resolving event type schemas.</param>
+/// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/>.</param>
 /// <param name="logger">The <see cref="ILogger{EventSequenceStorage}"/> for logging.</param>
 public class EventSequenceStorage(
     EventStoreName eventStore,
@@ -31,6 +35,8 @@ public class EventSequenceStorage(
     EventSequenceId eventSequenceId,
     IDatabase database,
     IIdentityStorage identityStorage,
+    IEventTypesStorage eventTypesStorage,
+    IExpandoObjectConverter expandoObjectConverter,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
     /// <summary>
@@ -346,7 +352,7 @@ public class EventSequenceStorage(
         // Return the AppendedEvent with the ORIGINAL event type so the kernel can route
         // the replay to the right observers. Content is the now-stored redaction marker,
         // but metadata carries the original type for routing.
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
+        var content = await ResolveContent(eventEntry, originalEventType);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -602,7 +608,7 @@ public class EventSequenceStorage(
             }
 
             var eventType = EventEntryConverter.GetEventType(eventEntry);
-            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+            var content = await ResolveContent(eventEntry, eventType);
             var causation = EventEntryConverter.GetCausation(eventEntry);
             var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -644,7 +650,7 @@ public class EventSequenceStorage(
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
         var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+        var content = await ResolveContent(eventEntry, eventType);
         var causation = EventEntryConverter.GetCausation(eventEntry);
         var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -689,7 +695,7 @@ public class EventSequenceStorage(
         }
 
         var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
+        var content = await ResolveContent(eventEntry, eventType);
         var causation = EventEntryConverter.GetCausation(eventEntry);
         var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
 
@@ -743,7 +749,7 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, eventTypesStorage, expandoObjectConverter, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -775,7 +781,7 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, eventTypesStorage, expandoObjectConverter, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -816,13 +822,45 @@ public class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, eventTypesStorage, expandoObjectConverter, 100, cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves the content of an event using schema-aware deserialization when an event type schema is registered.
+    /// This is required so that schema-typed values such as <c>ConceptAs&lt;Guid&gt;</c> read back as <see cref="Guid"/>
+    /// rather than the raw JSON string — without it, identity comparisons in the projection engine (key resolvers,
+    /// deferred-future resolution, array-indexer matching) silently mismatch when one side is a string and the
+    /// other is a Guid. Redaction events and event types without a registered schema fall back to raw deserialization.
+    /// </summary>
+    /// <param name="entry">The <see cref="EventEntry"/> to read content from.</param>
+    /// <param name="eventType">The <see cref="EventType"/> identifying the schema to apply.</param>
+    /// <returns>The deserialized content as an <see cref="ExpandoObject"/>.</returns>
+    async Task<ExpandoObject> ResolveContent(EventEntry entry, EventType eventType)
+    {
+        if (eventType.Id == GlobalEventTypes.Redaction)
+        {
+            return EventEntryConverter.GetContentForGeneration(entry, eventType.Generation);
+        }
+
+        if (!await eventTypesStorage.HasFor(eventType.Id, eventType.Generation))
+        {
+            return EventEntryConverter.GetContentForGeneration(entry, eventType.Generation);
+        }
+
+        var jsonObject = EventEntryConverter.GetContentJsonForGeneration(entry, eventType.Generation);
+        if (jsonObject is null)
+        {
+            return new ExpandoObject();
+        }
+
+        var schema = await eventTypesStorage.GetFor(eventType.Id, eventType.Generation);
+        return expandoObjectConverter.ToExpandoObject(jsonObject, schema.Schema);
     }
 
     async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
     {
         var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
-        var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
+        var content = await ResolveContent(redactionEntry, redactionEventType);
         var eventCausation = EventEntryConverter.GetCausation(redactionEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(redactionEntry);
 
