@@ -23,10 +23,8 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// read model definition that the active backend would process.
 /// </remarks>
 /// <param name="serviceProvider">The <see cref="IServiceProvider"/> used to resolve <see cref="IDatabase"/> on demand.</param>
-/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between documents and objects.</param>
-public class SinkFactory(
-    IServiceProvider serviceProvider,
-    IExpandoObjectConverter expandoObjectConverter) : ISinkFactory
+/// <param name="expandoObjectConverter">The schema-aware <see cref="IExpandoObjectConverter"/> used by created sinks.</param>
+public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConverter expandoObjectConverter) : ISinkFactory
 {
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
