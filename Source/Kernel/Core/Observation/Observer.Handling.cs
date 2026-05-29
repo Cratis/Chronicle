@@ -157,9 +157,8 @@ public partial class Observer
 
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
                         var perEventType = new Dictionary<EventTypeId, EventCount>(State.HandledEventCountPerEventType);
-                        foreach (var @event in handledEvents)
+                        foreach (var eventTypeId in handledEvents.Select(_ => _.Context.EventType.Id))
                         {
-                            var eventTypeId = @event.Context.EventType.Id;
                             perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
                         }
 
