@@ -112,4 +112,12 @@ public class KeyJsonConverter : JsonConverter<Key>
         writer.WriteEndArray();
         writer.WriteEndObject();
     }
+
+    /// <inheritdoc/>
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, Key value, JsonSerializerOptions options) =>
+        writer.WritePropertyName(value.ToString());
+
+    /// <inheritdoc/>
+    public override Key ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.GetString()!, ArrayIndexers.NoIndexers);
 }
