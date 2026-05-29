@@ -18,7 +18,8 @@ CDL definitions compile to `CaptureDefinition` and support:
 ```cdl
 capture InvoiceCapture
   source api
-    url https://api.example.com/invoices
+    api InvoicingApi
+    route /invoices
     poll 10m
     auth bearer $env.API_TOKEN
   key id
@@ -58,9 +59,11 @@ source api|webhook|message
 
 Source properties:
 
-- API: `url`, `poll`, `auth`
+- API: `api`, `route`, `poll`, `auth`
 - Webhook: `path`, `auth`
 - Message: `topic`
+
+For API sources, `api` identifies the configured API definition. `route` is optional; if omitted, the base API URL is used as-is.
 
 ### Key directive
 

@@ -96,19 +96,19 @@ public enum TokenType
     Message = 16,
 
     /// <summary>
-    /// The keyword <c>url</c>.
-    /// </summary>
-    Url = 17,
-
-    /// <summary>
     /// The keyword <c>poll</c>.
     /// </summary>
-    Poll = 18,
+    Poll = 17,
 
     /// <summary>
     /// The keyword <c>auth</c>.
     /// </summary>
-    Auth = 19,
+    Auth = 18,
+
+    /// <summary>
+    /// The keyword <c>route</c>.
+    /// </summary>
+    Route = 19,
 
     /// <summary>
     /// The keyword <c>path</c>.

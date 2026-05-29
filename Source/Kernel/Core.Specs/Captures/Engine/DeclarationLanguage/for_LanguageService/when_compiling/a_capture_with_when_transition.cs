@@ -10,7 +10,7 @@ public class a_capture_with_when_transition : for_LanguageService.given.a_langua
     const string Declaration = """
         capture Customers
           source api
-            url https://example.com/customers
+            api CustomersApi
             poll 5m
           key customerId
           append CustomerActivated

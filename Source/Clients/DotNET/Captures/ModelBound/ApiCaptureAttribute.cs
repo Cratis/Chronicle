@@ -9,14 +9,14 @@ namespace Cratis.Chronicle.Captures.ModelBound;
 /// <remarks>
 /// Initializes a new instance of <see cref="ApiCaptureAttribute"/>.
 /// </remarks>
-/// <param name="url">The URL to observe.</param>
+/// <param name="api">The API name to observe.</param>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public sealed class ApiCaptureAttribute(string url) : Attribute
+public sealed class ApiCaptureAttribute(string api) : Attribute
 {
     /// <summary>
-    /// Gets the URL to observe.
+    /// Gets the API name to observe.
     /// </summary>
-    public string Url { get; } = url;
+    public string Api { get; } = api;
 
     /// <summary>
     /// Gets or sets the poll interval.
@@ -27,4 +27,9 @@ public sealed class ApiCaptureAttribute(string url) : Attribute
     /// Gets or sets the authentication configuration.
     /// </summary>
     public string? Auth { get; init; }
+
+    /// <summary>
+    /// Gets or sets the route for the configured API.
+    /// </summary>
+    public string? Route { get; init; }
 }

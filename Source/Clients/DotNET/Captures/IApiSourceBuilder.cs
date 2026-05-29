@@ -16,6 +16,13 @@ public interface IApiSourceBuilder
     IApiSourceBuilder PollEvery(string interval);
 
     /// <summary>
+    /// Sets the route to poll on the configured API source.
+    /// </summary>
+    /// <param name="route">The route to use.</param>
+    /// <returns>The builder continuation.</returns>
+    IApiSourceBuilder OnRoute(string route);
+
+    /// <summary>
     /// Sets a bearer token authentication configuration.
     /// </summary>
     /// <param name="token">The bearer token expression.</param>

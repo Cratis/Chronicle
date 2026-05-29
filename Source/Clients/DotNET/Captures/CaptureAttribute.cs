@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Captures;
 
 /// <summary>
 /// Optional attribute used to adorn classes to configure a capture.
-/// The capture will have to implement <see cref="ICaptureFor"/>.
+/// The capture will have to implement <see cref="ICapturer"/>.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance of <see cref="CaptureAttribute"/>.

@@ -23,5 +23,5 @@ Chronicle supports three authoring approaches:
 | Topic | Description |
 | ----- | ----------- |
 | [Capture Declaration Language](capture-declaration-language/index.md) | CDL syntax, semantics, and formal language specification |
-| [Declarative Captures](declarative/index.md) | Fluent C# API (`ICaptureFor` + `ICaptureBuilder`) |
+| [Declarative Captures](declarative/index.md) | Fluent C# API (`ICapturer` + `ICaptureBuilder`) |
 | [Model-Bound Captures](model-bound/index.md) | Attribute-based capture declarations |

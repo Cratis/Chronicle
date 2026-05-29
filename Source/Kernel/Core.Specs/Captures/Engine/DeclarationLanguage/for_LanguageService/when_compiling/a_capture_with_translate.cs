@@ -10,7 +10,7 @@ public class a_capture_with_translate : for_LanguageService.given.a_language_ser
     const string Declaration = """
         capture Customers
           source api
-            url https://example.com/customers
+            api CustomersApi
             poll 5m
           key customerId
           map
