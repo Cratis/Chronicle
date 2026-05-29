@@ -12,4 +12,11 @@ public interface IConstraintDefinition : IEquatable<IConstraintDefinition>
     /// Gets the name of the constraint.
     /// </summary>
     ConstraintName Name { get; }
+
+    /// <summary>
+    /// Compare this definition to an existing definition and decide whether reindexing is required.
+    /// </summary>
+    /// <param name="existing">The existing definition.</param>
+    /// <returns>The <see cref="ConstraintChange"/>.</returns>
+    ConstraintChange CompareWith(IConstraintDefinition existing) => ConstraintChange.None;
 }

@@ -18,6 +18,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
@@ -716,6 +717,16 @@ public class EventSequence(
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+
+        var changedConstraintsRequiringReindex = payload.Changes
+            .Where(_ => _.RequiresReindex)
+            .ToArray();
+
+        if (changedConstraintsRequiringReindex.Length > 0)
+        {
+            var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+            await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changedConstraintsRequiringReindex));
+        }
     }
 
     Task OnConstraintsChangedError(Exception exception)
