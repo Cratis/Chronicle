@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Compliance.for_EventComplianceHelper.when_releasing_e
 
 public class and_event_has_a_subject : given.all_dependencies
 {
-    static AppendedEvent _event;
+    AppendedEvent _event;
     AppendedEvent _result;
 
     void Establish()
