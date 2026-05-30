@@ -1,17 +1,13 @@
 ---
 title: "2. Building a read model"
-description: Project a stream of events into a queryable read model — declaratively, with no update code.
+description: Turn the library's stream of events into a queryable Books read model — declaratively, with no update code.
 ---
 
-**What you'll do:** turn `BookAdded` (and a couple of new events) into a `Books` read model that always reflects the current state of every book — without writing a single "update this row" statement.
+We can record that a book arrived, but the librarian can't *see* the catalog yet — the books live only as history in the log. In this chapter we'll fix that: we'll build a `Books` read model that always reflects the current state of every book, and — here's the part that surprises people coming from CRUD — we'll do it **without writing a single line that updates anything**.
 
-## The idea
+## First, a couple more facts
 
-An event log is the source of truth, but it's not convenient to query ("is this book on loan?" shouldn't replay every event each time). A **read model** is a purpose-built view derived from events. You don't update it by hand — you *declare* how events map onto it, and Chronicle keeps it current as events arrive. This is a [projection](/chronicle/concepts/projection/).
-
-## Add the events that change a book's state
-
-A book can be borrowed and returned. Those are facts too:
+A book doesn't just arrive; it gets borrowed and brought back. Those are facts too, so they're events:
 
 ```csharp
 [EventType]
@@ -21,9 +17,11 @@ public record BookBorrowed(string MemberName);
 public record BookReturned;
 ```
 
-## Declare the read model
+Notice `BookReturned` has no data at all — and that's fine. The fact that it *happened*, on a particular book's stream, at a particular time, is the whole story. Not every event needs a payload.
 
-Define the shape you want to query, mark it `[ReadModel]`, and tell it which events feed each property. AutoMap matches event properties to read-model properties by name, so `BookAdded.Title` flows into `Title` with no extra code:
+## Declare what you want to read
+
+Here's the shift. In a database you'd write code to keep a `Books` table in sync — insert on add, update a flag on borrow, update it back on return. In Chronicle you instead **declare the shape you want** and tell it which events feed it. Chronicle does the keeping-in-sync for you. That declaration is a [projection](/chronicle/concepts/projection/):
 
 ```csharp
 [ReadModel]
@@ -34,34 +32,39 @@ public record Book(
     bool OnLoan,
     string? BorrowedBy)
 {
-    static Book On(BookAdded @event) => /* mapped from BookAdded */ default!;
-    static Book On(BookBorrowed @event) => /* sets OnLoan = true, BorrowedBy = MemberName */ default!;
-    static Book On(BookReturned @event) => /* sets OnLoan = false, BorrowedBy = null */ default!;
+    static Book On(BookAdded e) => /* a new book; OnLoan = false */ default!;
+    static Book On(BookBorrowed e) => /* OnLoan = true, BorrowedBy = e.MemberName */ default!;
+    static Book On(BookReturned e) => /* OnLoan = false, BorrowedBy = null */ default!;
 }
 ```
 
-:::tip
-Prefer the model-bound attributes (`[ReadModel]`, `[FromEvent<T>]`, `[Key]`) over writing imperative update code. When a mapping is genuinely too complex to express declaratively, reach for a [reducer](/chronicle/reducers/) instead — but try the projection first.
+Read those three `On` methods as a sentence: *when a book is added, it's a new, available book; when it's borrowed, mark it on loan to that member; when it's returned, it's available again.* You're describing how each fact changes the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+
+:::tip[Reach for the declarative path first]
+For mappings like this — "events map onto fields" — the model-bound attributes (`[ReadModel]`, `[FromEvent<T>]`, AutoMap) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
 :::
 
 ## Query it
 
-The projection writes to a store (MongoDB by default), so you query it like any collection:
+The projection writes the `Book` read model to a store (MongoDB by default), so reading it is just a query — exactly what you're used to:
 
 ```csharp
 public class Books(IMongoCollection<Book> collection)
 {
-    public IEnumerable<Book> OnLoan() =>
-        collection.Find(b => b.OnLoan).ToList();
+    public IEnumerable<Book> OnLoan() => collection.Find(b => b.OnLoan).ToList();
 }
 ```
 
-Append a `BookBorrowed` for a book and query again — `OnLoan` is now `true`, with no update code anywhere. That's the projection doing its job.
+Now exercise it. Append a `BookBorrowed` for your book and query again — `OnLoan` is `true`, and `BorrowedBy` has the member's name. Append a `BookReturned` and it flips back. You never wrote an `UPDATE`. The projection did it, by re-deriving the book from its events.
+
+:::note[A heartbeat of delay]
+The read model updates *just after* the event is appended, not in the same instant — it's [eventually consistent](/chronicle/read-models/). For a UI that's usually imperceptible (and you can subscribe to live updates). It only matters when you need to make a decision based on current state — which is what constraints and the next chapter's tools are for.
+:::
 
 ## What you did
 
-- Added the events that represent a book's lifecycle (`BookBorrowed`, `BookReturned`).
-- **Declared** a `Books` read model and how events map onto it — no hand-written updates.
-- **Queried** the read model as ordinary data.
+- Added the events that make up a book's life (`BookBorrowed`, `BookReturned`).
+- **Declared** a `Books` read model and how events map onto it — no update code anywhere.
+- **Queried** it like ordinary data, and watched it stay correct on its own.
 
-The read side is now live. In the [final chapter](./reacting.md) you'll *do something* when a book is returned — send a notification — using a reactor.
+You can now see the catalog. The last piece is to make the library *do* something when the world changes — when a book comes back, tell the next person waiting for it. That's a job for a reactor, and it's the [final chapter](./reacting.md). [Let's finish the tour →](./reacting.md)

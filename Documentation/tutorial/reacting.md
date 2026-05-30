@@ -1,50 +1,48 @@
 ---
 title: "3. Reacting to events"
-description: Run a side effect when something happens, using a reactor — and learn why reactors must be idempotent.
+description: Notify the next member on the waitlist when a book comes back — and learn why reactors must be idempotent.
 ---
 
-**What you'll do:** when a book is returned, notify the next member waiting for it. Projections build state; **reactors** *do things* — send mail, call an API, kick off another process.
+Our library can record what happens and show the catalog. One thing's missing: when a popular book comes back, the next person waiting for it should hear about it. Projections build *state*; for *doing something* — sending a notification, calling another system, kicking off a process — we reach for a **reactor**. Let's write one, and meet the rules that keep it well-behaved.
 
-## A reactor is just a class that observes events
+## A reactor is just a class that watches for an event
 
-`IReactor` is a marker interface. You don't implement a method from it — you write a method whose **first parameter is the event type** you care about, and Chronicle routes matching events to it:
+`IReactor` is a marker — there's no method to override. Instead you write a method whose **first parameter is the event you care about**, and Chronicle routes matching events to it. So "when a book is returned, notify the next person" reads almost exactly like that in code:
 
 ```csharp
 public class WaitlistNotifier(INotificationService notifications) : IReactor
 {
     public async Task BookReturned(BookReturned @event, EventContext context)
     {
-        // context.EventSourceId is the BookId the event happened to
+        // context.EventSourceId is the BookId this happened to
         await notifications.NotifyNextInLine(context.EventSourceId);
     }
 }
 ```
 
-Chronicle discovers the reactor by convention — no registration ceremony.
+Chronicle discovers this by convention — no registration, no wiring. Drop the class in, and every `BookReturned` now flows to it.
 
-## Why idempotency matters
+## Why your reactor must be safe to repeat
 
-A reactor may run **more than once** for the same event — during replay, recovery, or redeployment. So a reactor must be safe to repeat: notifying the same member twice is a bug. Design the side effect to be idempotent (for example, record that a notification was sent and skip if it already was).
+Here's the rule that catches everyone once: **a reactor may run more than once for the same event.** During a replay, a recovery, or a redeploy, Chronicle might hand it `BookReturned` again. If your reactor naively emails the next member every time it runs, that member gets emailed twice. So design the side effect to be *idempotent* — for example, record that a notification was sent and skip it if it already was. Repeatable by design.
 
-:::caution
-A reactor must never write to the event log directly. If reacting should produce new events, execute a command through the command pipeline instead. Reactors observe and cause side effects; they don't author history.
+:::caution[Two things a reactor must never do]
+**Don't read the read model to make a decision** — it may not have caught up yet ([eventual consistency](/chronicle/read-models/)). Everything you need is already in the event and its `EventContext`; use that.
+
+**Don't write to the event log directly.** If reacting should produce *new* facts, execute a command through the command pipeline — reactors cause effects, they don't author history.
 :::
 
-## Use the event, don't query back
+## Use the event, not a lookup
 
-Everything the reactor needs is in the event and its `EventContext`. Resist the urge to query a read model from inside a reactor — the event already tells you what happened, and the read model may not have caught up yet (it's [eventually consistent](/chronicle/read-models/)).
-
-## What you did
-
-- Wrote a **reactor** that runs a side effect when `BookReturned` occurs.
-- Learned the rules that keep reactors safe: **idempotent**, **no direct writes to the log**, **use the event data**.
+Notice we didn't query anything to find out *which* book was returned — `context.EventSourceId` told us. That's deliberate. The event carries the truth of what happened; leaning on it (instead of querying back) is what makes reactors fast, order-independent, and safe to replay.
 
 ## You've built a library
 
-You now have the full loop: facts go in as **events**, a **projection** turns them into a queryable **read model**, and a **reactor** acts when something happens. That's event sourcing with Chronicle.
+Step back and look at what you have. Facts go in as **events**. A **projection** folds them into a `Books` read model you can query. And a **reactor** acts when something happens. That loop — *append → project → react* — is the entire shape of a Chronicle application. You just built it end to end.
 
-From here:
+Where to go from here:
 
-- Go deeper on each piece in [Concepts](/chronicle/concepts/) and the feature guides ([Projections](/chronicle/projections/), [Reactors](/chronicle/reactors/), [Reducers](/chronicle/reducers/)).
-- Put a UI and commands on top with [Arc](/arc/) and [Components](/components/).
-- Hit a wall? See [Troubleshooting](/chronicle/troubleshooting/).
+- **Go deeper on each piece** — [Concepts](/chronicle/concepts/), and the guides for [Projections](/chronicle/projections/), [Reactors](/chronicle/reactors/), and [Reducers](/chronicle/reducers/).
+- **Put a UI and commands on top** — take the same model full-stack with [Arc](/arc/) and [Components](/components/) in [Build a full-stack feature](/build-a-full-app/).
+- **Model your own domain** — you now know enough to leave the library behind. When you do, start by asking the only question that matters: *what happened?*
+- **Hit a snag?** — [Troubleshooting](/chronicle/troubleshooting/) has the common ones.

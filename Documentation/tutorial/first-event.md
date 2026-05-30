@@ -1,15 +1,15 @@
 ---
 title: "1. Your first event"
-description: Define an event as an immutable fact and append it to the event log.
+description: Record the fact that a book arrived at the library, and meet Chronicle's event log.
 ---
 
-**What you'll do:** model "a book was added to the library" as an event, and append it. By the end you'll have written your first fact to Chronicle.
+Every library starts the same way: a book shows up. So that's where we'll start too — by recording that fact. By the end of this chapter you'll have written your first event to Chronicle and understood why we reach for an *event* instead of a database row.
 
-## Think in facts, not state
+## Think in facts, not rows
 
-In a CRUD system you'd insert a `Book` row. In event sourcing you record what *happened*: a book was added. That fact is an **event** — immutable, named in the past tense, carrying only what was true at the moment it occurred.
+Your instinct, coming from most databases, is probably to create a `Book` row and `INSERT` it. Hold that thought — because it throws away the most interesting thing: *that the book arrived, and when*. In event sourcing we record what **happened**. The book arriving is a fact, and facts have a few properties: they're immutable (it happened; you can't un-happen it), and they're named in the past tense.
 
-Define it as a `record` marked with `[EventType]`:
+So let's name it. A `BookAdded` event, as a `record` marked with `[EventType]`:
 
 ```csharp
 using Cratis.Chronicle.Events;
@@ -18,13 +18,14 @@ using Cratis.Chronicle.Events;
 public record BookAdded(string Title, string Isbn);
 ```
 
-:::note
-`[EventType]` takes no arguments — Chronicle uses the type name as the identity. The properties are never nullable: an event states what *is* true. If something is optional, that's a sign you need a *second* event, not a nullable field.
-:::
+A couple of things worth noticing here:
 
-## Identify the thing it happened to
+- `[EventType]` carries **no name** — Chronicle uses the type's name (`BookAdded`) as the event's identity. That's a small thing now, but it's why you'll never hand-maintain a string registry of event names.
+- The properties aren't nullable. An event states what *was* true the moment it happened. If you ever find yourself reaching for a nullable property, that's Chronicle nudging you: you probably have a *second* fact hiding in there, and it deserves its own event.
 
-Every event is about an **event source** — here, a specific book. The event source id is the key Chronicle uses to group a book's events into its own stream. Use a strongly-typed id rather than a raw `Guid`:
+## Give the book an identity
+
+Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. We'll identify a book with a strongly-typed id rather than a bare `Guid`, so the compiler stops us from ever mixing a book's id up with, say, a member's:
 
 ```csharp
 public record BookId(Guid Value) : ConceptAs<Guid>(Value)
@@ -34,21 +35,27 @@ public record BookId(Guid Value) : ConceptAs<Guid>(Value)
 }
 ```
 
+That last line — the conversion to `EventSourceId` — is what lets you hand a `BookId` straight to Chronicle as the stream key. No ceremony.
+
 ## Append it
 
-With a `ChronicleClient` connected to your event store, append the event to the event log against the book's id:
+Now the moment itself. With a `ChronicleClient` connected to your event store, append the event against the book's id:
 
 ```csharp
 var book = BookId.New();
 await eventStore.EventLog.Append(book, new BookAdded("The Pragmatic Programmer", "978-0135957059"));
 ```
 
-That's it — the fact is stored, permanently and in order. Run your app; the event is now in the log.
+Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
+
+:::note[Where did it go?]
+The event log is the source of truth — an append-only sequence of everything that has happened. You just wrote position `0`. Every projection, reducer, and reactor you build from here on is, in the end, just a different way of *reading* this log.
+:::
 
 ## What you did
 
-- Modeled a change as an **immutable event** (`BookAdded`) instead of a row update.
-- Gave the book a **strongly-typed event source id**.
-- **Appended** the event to its stream in the event log.
+- Modeled a real-world moment as an **immutable event** (`BookAdded`) instead of a row to be updated later.
+- Gave the book a **strongly-typed event source id** so its events form one stream.
+- **Appended** that event to the log — your first permanent fact.
 
-Right now the event just sits there. In the [next chapter](./read-model.md) you'll turn a stream of these events into a `Books` read model you can actually query.
+A fact you can't query, though, isn't much use yet — right now the book exists only as history. In the [next chapter](./read-model.md) we'll fix that: we'll teach Chronicle to fold this stream of events into a `Books` read model you can actually query, and watch it update itself as more events arrive. [Onward →](./read-model.md)
