@@ -2,6 +2,13 @@
 
 Constraints define server-side rules that must be satisfied before events are committed. They run inside the Chronicle Kernel and protect data integrity across event streams and event sources.
 
+```mermaid
+flowchart LR
+    A[Append event] --> C{Constraint<br/>checked in the kernel}
+    C -->|satisfied| K[(Committed to the log)]
+    C -->|violated| R[Append rejected]
+```
+
 Use constraints to enforce rules like uniqueness across event types and event sources. Because constraints are evaluated in the kernel, they are consistent and apply to every client.
 
 ## Why constraints matter

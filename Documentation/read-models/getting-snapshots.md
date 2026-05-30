@@ -261,4 +261,3 @@ public async Task<OrderAnalysis> AnalyzeOrder(Guid orderId)
 - [Getting a Single Instance](getting-single-instance.md) - Retrieve the current state of a specific instance
 - [Getting a Collection of Instances](getting-collection-instances.md) - Retrieve all instances of a read model
 - [Watching Read Models](watching-read-models.md) - Real-time notifications for read model changes
-- [Snapshots concept](snapshots.md) - Conceptual overview of read model snapshots

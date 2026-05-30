@@ -2,6 +2,15 @@
 
 Projections in Cratis allow you to create read models from events stored in the event log. They provide different levels of complexity from simple auto-mapping to sophisticated hierarchical models with joins.
 
+```mermaid
+flowchart LR
+    E1[Event] --> P[Projection]
+    E2[Event] --> P
+    E3[Event] --> P
+    P -->|maps & merges| RM[(Read model)]
+    RM --> Q[Query]
+```
+
 ## Topics
 
 | Recipe | Description |

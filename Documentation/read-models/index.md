@@ -12,6 +12,12 @@ Read models in Chronicle represent the current state of your application derived
 
 A read model is a projection of events into a structured format that's optimized for querying. Unlike traditional databases where you store current state directly, Chronicle builds read models by applying events from the event log, ensuring your data is always in sync with what actually happened in your system.
 
+```mermaid
+flowchart LR
+    EV[Events in the log] -->|projection| RM[(Read model)]
+    RM --> UI[Query / UI]
+```
+
 Read models serve several purposes:
 
 - **Query optimization**: Denormalized views designed for specific read patterns

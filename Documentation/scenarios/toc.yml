@@ -1,0 +1,14 @@
+- name: Overview
+  href: index.md
+- name: Rebuild a read model
+  href: rebuild-a-read-model.md
+- name: Enforce a unique value
+  href: enforce-a-unique-value.md
+- name: React to an event
+  href: react-to-an-event.md
+- name: Show data that updates live
+  href: real-time-query.md
+- name: Test a slice end to end
+  href: test-a-slice.md
+- name: Evolve an event's shape
+  href: evolve-an-event.md

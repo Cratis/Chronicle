@@ -57,6 +57,6 @@ If a reactor method throws an exception, the failing event source partition is m
 
 ## Related Rules
 
-- [CHR0004](../clients/dotnet/code-analysis/CHR0004.md) - Reactor method signatures
-- [CHR0005](../clients/dotnet/code-analysis/CHR0005.md) - Event parameters require `[EventType]`
+- [CHR0004](../code-analysis/CHR0004.md) - Reactor method signatures
+- [CHR0005](../code-analysis/CHR0005.md) - Event parameters require `[EventType]`
 
