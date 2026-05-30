@@ -1,0 +1,65 @@
+---
+title: Chronicle
+description: The event sourcing platform for .NET — store every change as an immutable event, and turn those events into read models, reactions, and projections.
+---
+
+import { CardGrid } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
+Store **every change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. [Get started →](/chronicle/get-started/) · [Why event sourcing? →](/chronicle/why-event-sourcing/)
+</TopicHero>
+
+## Start here
+
+<CardGrid>
+  <SimpleCard title="Why event sourcing" icon="approve-check" link="/chronicle/why-event-sourcing/">
+    What keeping the full history buys you — audit, time-travel, many read models from one source of truth — and when *not* to reach for it.
+  </SimpleCard>
+  <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
+    Scaffold a project from a template and watch one event flow through a projection and a reactor — in minutes.
+  </SimpleCard>
+  <SimpleCard title="Build the library tutorial" icon="open-book" link="/chronicle/tutorial/">
+    Learn the model by building a small event-sourced system one concept at a time.
+  </SimpleCard>
+</CardGrid>
+
+## Understand the model
+
+<CardGrid>
+  <SimpleCard title="Architecture" icon="puzzle" link="/chronicle/architecture/">
+    How the kernel, client, storage, and read models fit together.
+  </SimpleCard>
+  <SimpleCard title="Concepts & glossary" icon="open-book" link="/chronicle/concepts/">
+    Events, event sources, projections, and the rest of the vocabulary — defined once.
+  </SimpleCard>
+  <SimpleCard title="Coming from CRUD / EF Core" icon="right-arrow" link="/chronicle/coming-from-crud/">
+    Maps tables, rows, and `SaveChanges` onto events so the shift makes sense.
+  </SimpleCard>
+</CardGrid>
+
+## Build with the core pieces
+
+<CardGrid>
+  <SimpleCard title="Events" icon="approve-check" link="/chronicle/events/">
+    The immutable facts at the heart of everything — how to model and append them.
+  </SimpleCard>
+  <SimpleCard title="Projections" icon="seti:db" link="/chronicle/projections/">
+    Declare read models that stay in sync as events arrive — no update code.
+  </SimpleCard>
+  <SimpleCard title="Reactors" icon="rocket" link="/chronicle/reactors/">
+    Do something when an event happens — notify, integrate, or trigger a command.
+  </SimpleCard>
+  <SimpleCard title="Read models" icon="laptop" link="/chronicle/read-models/">
+    The queryable state your application reads, derived from the event log.
+  </SimpleCard>
+  <SimpleCard title="Reducers" icon="seti:folder" link="/chronicle/reducers/">
+    Fold events into state imperatively when a projection isn't enough.
+  </SimpleCard>
+  <SimpleCard title="Scenarios" icon="heart" link="/chronicle/scenarios/">
+    Task-oriented recipes — rebuild a read model, enforce uniqueness, react to an event.
+  </SimpleCard>
+</CardGrid>
+
+Chronicle pairs with [Arc](/arc/) and [Components](/components/) for a full-stack, type-safe application — see [Why Cratis](/why-cratis/).
