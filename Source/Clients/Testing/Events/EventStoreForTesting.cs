@@ -23,6 +23,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -162,6 +163,7 @@ public class EventStoreForTesting : IEventStore
             EventSerializer,
             new CausationManager(),
             new BaseIdentityProvider(),
+            new ReactorSideEffectHandlers([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)]),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
