@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -23,6 +24,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 
+#pragma warning disable SA1202 // Private helpers grouped next to the public methods they back.
 #pragma warning disable SA1204 // Static helpers grouped at the bottom for readability.
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -48,6 +50,8 @@ public class Sink : ISink
     readonly JsonSchema _schema;
     readonly string _tableName;
     readonly IReadOnlyList<ProjectedColumn> _columns;
+
+    volatile bool _isReplaying;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class.
@@ -79,11 +83,18 @@ public class Sink : ISink
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
+    /// <summary>
+    /// Gets the table name the sink is currently writing to. Resolves to <c>replay-{tableName}</c>
+    /// while a replay is in progress, and to the primary table name otherwise. EndReplay swaps the
+    /// two so the running system observes the rebuilt state atomically.
+    /// </summary>
+    string ActiveTableName => _isReplaying ? ReplayTableNameFor(_tableName) : _tableName;
+
     /// <inheritdoc/>
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         var id = GetIdString(key);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenActiveScope();
         var entity = await scope.DbContext.Entries.AsNoTracking().FirstOrDefaultAsync(BuildIdPredicate(id));
         return entity is null ? null : MaterializeExpando(entity);
     }
@@ -95,7 +106,7 @@ public class Sink : ISink
         EventSequenceNumber eventSequenceNumber)
     {
         var id = GetIdString(key);
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenActiveScope();
 
         if (changeset.HasBeenRemoved())
         {
@@ -172,19 +183,54 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Bulk mode is a no-op for the SQL sink: every <see cref="ApplyChanges"/> call commits
+    /// independently through its own <see cref="DbContext"/>. The MongoDB sink batches inside
+    /// a single bulk write because the engine may dispatch <see cref="ApplyChanges"/>
+    /// concurrently for one sink, and a shared <see cref="DbContext"/> would corrupt EF's
+    /// non-thread-safe change tracker and deadlock under load. The operational guarantee bulk
+    /// existed to provide — queries keep observing the previous state until the rebuild is
+    /// finished — is delivered by the replay shadow-table swap in <see cref="EndReplay"/>.
+    /// </remarks>
     public Task BeginBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
     public Task EndBulk() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public Task BeginReplay(ReplayContext context) => PrepareInitialRun();
+    public async Task BeginReplay(ReplayContext context)
+    {
+        // Replay writes go to a shadow table (replay-{tableName}); the primary table is left
+        // untouched so reads from the running system keep observing the previous state until
+        // the swap in EndReplay. PrepareInitialRun routes through ActiveTableName, which now
+        // resolves to the replay name.
+        _isReplaying = true;
+        await PrepareInitialRun();
+        await BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context) => Task.CompletedTask;
+    public async Task ResumeReplay(ReplayContext context)
+    {
+        // Re-enter replay mode after an interruption without wiping the replay table — it
+        // already contains the work the previous run produced before it was paused.
+        _isReplaying = true;
+        await BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task EndReplay(ReplayContext context) => Task.CompletedTask;
+    public async Task EndReplay(ReplayContext context)
+    {
+        await EndBulk();
+        try
+        {
+            await PerformRenameSwap(context);
+        }
+        finally
+        {
+            _isReplaying = false;
+        }
+    }
 
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName containerName)
@@ -200,9 +246,79 @@ public class Sink : ISink
     /// <inheritdoc/>
     public async Task PrepareInitialRun()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
         scope.DbContext.Entries.RemoveRange(scope.DbContext.Entries);
         await scope.DbContext.SaveChangesAsync();
+    }
+
+    static string ReplayTableNameFor(string baseName) => $"replay-{baseName}";
+
+    /// <summary>
+    /// Opens a fresh scope routed at <see cref="ActiveTableName"/>. Caller owns the scope and
+    /// is responsible for saving and disposing it.
+    /// </summary>
+    Task<DbContextScope<ReadModelDbContext>> OpenActiveScope() =>
+        _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns);
+
+    async Task PerformRenameSwap(ReplayContext context)
+    {
+        var replayName = ReplayTableNameFor(_tableName);
+
+        // Open the scope on the replay table so the DbContext we use for DDL is bound to a
+        // connection that definitely exists post-replay. Any access through the standard
+        // ReadModelTable path goes through EnsureTableExists, which would recreate the
+        // primary table if it had already been renamed away — using the replay table avoids
+        // that race.
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, replayName, _columns);
+
+        var replayHasRows = await scope.DbContext.Entries.AsNoTracking().AnyAsync();
+        if (!replayHasRows)
+        {
+            // Replay produced no writes (e.g. there were no events for this projection yet).
+            // Drop the empty replay table and keep the primary untouched — turning a transient
+            // race into permanent data loss is the very thing the shadow-table dance exists
+            // to prevent.
+            await ExecuteDdl(scope, BuildDropSql(scope, replayName));
+            return;
+        }
+
+        var databaseType = scope.DbContext.Database.GetDatabaseType();
+        var revertName = context.RevertContainerName.Value;
+
+        // Drop any stale backup with the same revert name first (a previous EndReplay may have
+        // left one behind), then rename primary -> revert (preserved for downgrade) and
+        // replay -> primary.
+        await ExecuteDdl(scope, BuildDropSql(scope, revertName));
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, _tableName, revertName));
+        await ExecuteDdl(scope, BuildRenameSql(scope, databaseType, replayName, _tableName));
+    }
+
+    static async Task ExecuteDdl(DbContextScope<ReadModelDbContext> scope, string sql)
+    {
+#pragma warning disable EF1002 // sql is built from delimited identifiers via ISqlGenerationHelper.
+        await scope.DbContext.Database.ExecuteSqlRawAsync(sql);
+#pragma warning restore EF1002
+    }
+
+    static string BuildDropSql(DbContextScope<ReadModelDbContext> scope, string tableName)
+    {
+        var sqlHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
+        return $"DROP TABLE IF EXISTS {sqlHelper.DelimitIdentifier(tableName)}";
+    }
+
+    static string BuildRenameSql(DbContextScope<ReadModelDbContext> scope, DatabaseType databaseType, string oldName, string newName)
+    {
+        if (databaseType == DatabaseType.SqlServer)
+        {
+            // sp_rename takes name strings, not identifiers. The new name must be the unqualified
+            // table name — Microsoft's docs are explicit on this.
+            var oldEscaped = oldName.Replace("'", "''", StringComparison.Ordinal);
+            var newEscaped = newName.Replace("'", "''", StringComparison.Ordinal);
+            return $"EXEC sp_rename N'{oldEscaped}', N'{newEscaped}'";
+        }
+
+        var sqlHelper = scope.DbContext.GetService<ISqlGenerationHelper>();
+        return $"ALTER TABLE {sqlHelper.DelimitIdentifier(oldName)} RENAME TO {sqlHelper.DelimitIdentifier(newName)}";
     }
 
     /// <inheritdoc/>
@@ -235,7 +351,7 @@ public class Sink : ISink
             return Option<Key>.None();
         }
 
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await OpenActiveScope();
         var entries = await scope.DbContext.Entries.AsNoTracking().ToListAsync();
         foreach (var entry in entries)
         {
@@ -268,7 +384,10 @@ public class Sink : ISink
     /// <inheritdoc/>
     public async Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
     {
-        var containerName = occurrence?.Value ?? _tableName;
+        // An explicit occurrence reads that specific table (e.g. the revert backup). Otherwise
+        // default to ActiveTableName so that during replay, queries observe the in-progress
+        // shadow table — matching MongoDB's Collection routing.
+        var containerName = occurrence?.Value ?? ActiveTableName;
         await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
         var totalCount = await scope.DbContext.Entries.CountAsync();
         var entries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
