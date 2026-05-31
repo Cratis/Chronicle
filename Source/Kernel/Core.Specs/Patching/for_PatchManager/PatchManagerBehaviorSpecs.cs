@@ -142,4 +142,26 @@ public class PatchManagerBehaviorSpecs : Specification
 
         latestVersion.ShouldEqual(new SemanticVersion(1, 3, 0));
     }
+
+    [Fact]
+    public void should_filter_out_already_applied_patches_from_candidates()
+    {
+        var currentVersion = new SemanticVersion(1, 0, 0);
+        var patches = new List<ICanApplyPatch>
+        {
+            new TestPatch(new SemanticVersion(1, 1, 0), "Patch1"),
+            new TestPatch(new SemanticVersion(1, 2, 0), "Patch2")
+        };
+        var alreadyApplied = new HashSet<string>(StringComparer.Ordinal) { "Patch2" };
+
+        var candidatePatches = patches
+            .Where(_ => _.Version > currentVersion)
+            .OrderBy(_ => _.Version)
+            .ToList();
+        var (patchesToApply, skippedCount) = PatchManager.FilterPatchesToApply(candidatePatches, alreadyApplied);
+
+        patchesToApply.Count.ShouldEqual(1);
+        patchesToApply[0].Name.ShouldEqual("Patch1");
+        skippedCount.ShouldEqual(1);
+    }
 }

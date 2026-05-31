@@ -1,0 +1,17 @@
+name: Auto-Approve Publish Deployments
+
+on:
+  workflow_run:
+    workflows: ["Publish"]
+    types: [requested]
+
+permissions:
+  actions: read
+  deployments: write
+
+jobs:
+  approve:
+    uses: Cratis/Workflows/.github/workflows/auto-approve-publish-deployments.yml@main
+    with:
+      workflow_run_id: ${{ github.event.workflow_run.id }}
+    secrets: inherit

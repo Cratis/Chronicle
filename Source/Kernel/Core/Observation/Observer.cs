@@ -21,6 +21,7 @@ using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -38,6 +39,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
@@ -52,6 +54,7 @@ public partial class Observer(
     IExpandoObjectConverter expandoObjectConverter,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
     ObserverId _observerId = ObserverId.Unspecified;

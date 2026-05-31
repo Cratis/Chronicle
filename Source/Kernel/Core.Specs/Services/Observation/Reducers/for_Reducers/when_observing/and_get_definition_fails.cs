@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.Observation.Reducers.for_Reducers.when_observing;
@@ -33,6 +34,7 @@ public class and_get_definition_fails : Specification
             Substitute.For<IReducerMediator>(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
+            new ActivitySource<Reducers>(),
             NullLogger<Reducers>.Instance);
 
         _messages = new Subject<ReducerMessage>();

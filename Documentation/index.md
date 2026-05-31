@@ -82,6 +82,7 @@ Explore Chronicle's comprehensive documentation organized by topic:
 
 | Section | Description |
 | ------- | ----------- |
+| **[Why Event Sourcing](./why-event-sourcing.md)** | Why event sourcing emphasizes meaningful change, history, and decision-making over CRUD-style end state |
 | **[Get Started](./get-started/toc.yml)** | Quick start guides for console and ASP.NET Core applications |
 | **[Concepts](./concepts/toc.yml)** | Core concepts including events, projections, observers, and constraints |
 | **[Dynamic Consistency Boundary](./dynamic-consistency-boundary/toc.yml)** | Decision-scoped consistency and how Chronicle supports it |
