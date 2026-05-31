@@ -73,10 +73,10 @@ Appending events is typically something you would be doing directly, or indirect
 API or a Controller.
 
 ```csharp
-        app.MapPost("/api/books/{bookId}/borrow/{userId}", async (
-            [FromServices] IEventLog eventLog,
-            [FromRoute] Guid bookId,
-            [FromRoute] Guid userId) => await eventLog.Append(bookId, new BookBorrowed(userId)));
+app.MapPost("/api/books/{bookId}/borrow/{userId}", async (
+    [FromServices] IEventLog eventLog,
+    [FromRoute] Guid bookId,
+    [FromRoute] Guid userId) => await eventLog.Append(bookId, new BookBorrowed(userId)));
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/Api.cs#L19-L22)
@@ -93,11 +93,11 @@ In order for this to work, the artifacts needs to be registered as services. In 
 service registrations for the artifacts you have:
 
 ```csharp
-        builder.Services.AddTransient<UsersReactor>();
-        builder.Services.AddTransient<BooksReducer>();
-        builder.Services.AddTransient<BorrowedBooksProjection>();
-        builder.Services.AddTransient<OverdueBooksProjection>();
-        builder.Services.AddTransient<ReservedBooksProjection>();
+builder.Services.AddTransient<UsersReactor>();
+builder.Services.AddTransient<BooksReducer>();
+builder.Services.AddTransient<BorrowedBooksProjection>();
+builder.Services.AddTransient<OverdueBooksProjection>();
+builder.Services.AddTransient<ReservedBooksProjection>();
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/CommonServices.cs#L14-L18)
@@ -126,9 +126,9 @@ what you need; access to the specific database or specific collections.
 The following code shows how to set this up for your `WebApplicationBuilder` to enable that scenario.
 
 ```csharp
-        builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
-        builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
-        builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
+builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
+builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
+builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/MongoDBServices.cs#L15-L17)

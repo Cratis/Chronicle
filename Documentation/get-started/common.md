@@ -39,8 +39,8 @@ In this example, we will use the method for appending a single event.
 The following code appends a couple of `UserOnboarded` events to indicate that users have been onboarded to the system.
 
 ```csharp
-        await eventLog.Append(Guid.NewGuid(), new UserOnboarded("Jane Doe", "jane@interwebs.net"));
-        await eventLog.Append(Guid.NewGuid(), new UserOnboarded("John Doe", "john@interwebs.net"));
+await eventLog.Append(Guid.NewGuid(), new UserOnboarded("Jane Doe", "jane@interwebs.net"));
+await eventLog.Append(Guid.NewGuid(), new UserOnboarded("John Doe", "john@interwebs.net"));
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/DemoData.cs#L13-L14)
@@ -48,8 +48,8 @@ The following code appends a couple of `UserOnboarded` events to indicate that u
 Next, we want to append a couple of events to represent books being added to our inventory:
 
 ```csharp
-        await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Metaprogramming in C#: Automate your .NET development and simplify overcomplicated code", "Einar Ingebrigtsen", "978-1837635429"));
-        await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Understanding Eventsourcing: Planning and Implementing scalable Systems with Eventmodeling and Eventsourcing", "Martin Dilger", "979-8300933043"));
+await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Metaprogramming in C#: Automate your .NET development and simplify overcomplicated code", "Einar Ingebrigtsen", "978-1837635429"));
+await eventLog.Append(Guid.NewGuid(), new BookAddedToInventory("Understanding Eventsourcing: Planning and Implementing scalable Systems with Eventmodeling and Eventsourcing", "Martin Dilger", "979-8300933043"));
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/DemoData.cs#L18-L19)
