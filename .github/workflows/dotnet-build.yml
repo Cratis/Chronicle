@@ -11,11 +11,6 @@ env:
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
   DOTNET_OBJ_CACHE: "dotnet-obj-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
-  # NuGet.config references the github-packages source with %GITHUB_TOKEN%.
-  # NuGet expands that placeholder against the shell environment, not against
-  # GitHub Actions secrets, so the value must be exported here so every
-  # dotnet restore in this workflow can authenticate against the feed.
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   workflow_dispatch:
