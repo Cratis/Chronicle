@@ -24,6 +24,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
 using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -47,7 +48,7 @@ internal sealed class Reducers(
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
-    IActivitySource<Reducers> activitySource,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger) : IReducers
 {
     /// <inheritdoc/>
