@@ -77,15 +77,6 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
 
-    # NuGet.config registers the github-packages source with a %GITHUB_TOKEN%
-    # credential placeholder. The placeholder is resolved against the shell
-    # environment, not against GitHub Actions secrets, so the value must be
-    # exported as an env var here. Without it dotnet restore hits 401 against
-    # nuget.pkg.github.com and retries six times per package before failing
-    # the entire matrix.
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -162,11 +153,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
-
-    # See client-integration-specs for the rationale; the NuGet.config token
-    # placeholder must be exported as a shell env var or restore fails 401.
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout code
