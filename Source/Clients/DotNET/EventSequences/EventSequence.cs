@@ -19,7 +19,6 @@ using Cratis.Monads;
 using Cratis.Traces;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.EventSequences.CompleteStreamError;
 
-
 namespace Cratis.Chronicle.EventSequences;
 
 /// <summary>
