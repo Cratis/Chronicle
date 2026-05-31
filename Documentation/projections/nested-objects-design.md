@@ -222,11 +222,22 @@ Integration coverage for nested objects lives under `Integration/DotNET.InProces
   - `setting_the_nested_object` — populates the nested object from a `from` event
   - `updating_the_nested_object` — multiple `from` events merge into the same nested instance
   - `clearing_the_nested_object` — the `clear with` event nulls the property
+- `when_projecting_with_nested_in_children/` — declarative nested object inside a children collection.
 - `ModelBound/when_projecting_with_nested_object/` — model-bound first-level nested
   - The same three scenarios driven by `[Nested]` and `[ClearWith<T>]`.
 - `ModelBound/when_projecting_with_nested_in_children/` — nested object inside a children collection.
 
 Additional recursive (2-level) scenarios are included in the current integration coverage.
+
+## Client API specs
+
+Client API contract coverage for nested objects lives under `Source/Clients/DotNET.Specs/Projections/`:
+
+- `for_ProjectionBuilderFor/when_building/with_nested_object.cs` — declarative single nested object.
+- `for_ProjectionBuilderFor/when_building/with_nested_object_in_nested_object.cs` — declarative recursive nested-in-nested.
+- `for_ProjectionBuilderFor/when_building/with_nested_object_in_children_collection.cs` — declarative nested inside children.
+- `ModelBound/for_ModelBoundProjectionBuilder/when_building_model/with_nested/*` — model-bound nested attributes and recursive behavior.
+- `ModelBound/for_ModelBoundProjectionBuilder/when_building_model/with_children_having/*` — model-bound nested behavior inside children.
 
 ## Implementation status
 
@@ -238,7 +249,7 @@ Additional recursive (2-level) scenarios are included in the current integration
 | Model-bound .NET client — `[Nested]`, `[ClearWith<TEvent>]` | Implemented |
 | Storage sinks — `NestedCleared` change handling for MongoDB and SQL | Implemented |
 | Integration specs — first-level nested (declarative + model-bound) | Implemented |
-| Integration specs — nested inside children | Implemented |
+| Integration specs — nested inside children (declarative + model-bound) | Implemented |
 | Documentation — declarative, model-bound, PDL reference pages | Implemented |
 | Integration specs — recursive (2-level) nested-in-nested | Implemented |
 | PDL compiler — `nested` and `clear with` parsing rules | Implemented |
