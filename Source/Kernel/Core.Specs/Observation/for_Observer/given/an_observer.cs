@@ -15,6 +15,7 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Core;
@@ -87,6 +88,8 @@ public class an_observer : Specification
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
         _silo.AddService(_observerServiceClient);
+
+        _silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
 
         var logger = _silo.AddService(NullLogger<Observer>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

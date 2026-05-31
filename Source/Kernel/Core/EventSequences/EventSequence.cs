@@ -15,6 +15,7 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
@@ -28,6 +29,7 @@ using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Monads;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -43,6 +45,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="meter">The meter to use for metrics.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
@@ -54,6 +57,7 @@ public class EventSequence(
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
@@ -258,6 +262,10 @@ public class EventSequence(
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes)
     {
+        using var span = activitySource.AppendMany();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
             events = events as IList<EventToAppend> ?? events.ToList();
@@ -492,6 +500,12 @@ public class EventSequence(
         DateTimeOffset? occurred = null,
         Subject? subject = null)
     {
+        using var span = activitySource.Append();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
+        span?.Activity?.Tag(eventType);
+        span?.Activity?.Tag(eventSourceType, eventSourceId);
         try
         {
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;

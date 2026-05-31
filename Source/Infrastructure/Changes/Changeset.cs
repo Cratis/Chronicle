@@ -184,7 +184,11 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         if (item is not null)
         {
             items.Add(item);
-            SetProperties(workingState, propertyMappers, arrayIndexers);
+            foreach (var difference in SetProperties(workingState, propertyMappers, arrayIndexers))
+            {
+                var propertyPath = PropertyPath.CreateFrom([difference.PropertyPath.LastSegment]);
+                propertyPath.SetValue(item, difference.Changed!, ArrayIndexers.NoIndexers);
+            }
             Add(new ChildAdded(item, childrenProperty, identifiedByProperty, key!, arrayIndexers));
         }
 

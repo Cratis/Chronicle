@@ -8,6 +8,7 @@ using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
@@ -15,7 +16,9 @@ using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
+using Cratis.Traces;
 using ContractCompleteStreamError = Cratis.Chronicle.Contracts.EventSequences.CompleteStreamError;
+
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -38,6 +41,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="unitOfWorkManager"><see cref="IUnitOfWorkManager"/> for working with the unit of work.</param>
 /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
 /// <param name="jsonSerializerOptions">JSON serializer options to use.</param>
+/// <param name="activitySource">Optional <see cref="IActivitySource{T}"/> for tracing. Defaults to a source named <see cref="ClientActivity.SourceName"/> when not provided.</param>
 public class EventSequence(
     EventStoreName eventStoreName,
     EventStoreNamespaceName @namespace,
@@ -51,9 +55,17 @@ public class EventSequence(
     ICausationManager causationManager,
     IUnitOfWorkManager unitOfWorkManager,
     IIdentityProvider identityProvider,
-    JsonSerializerOptions jsonSerializerOptions) : IEventSequence
+    JsonSerializerOptions jsonSerializerOptions,
+    IActivitySource<EventSequence>? activitySource = null) : IEventSequence
 {
+    /// <summary>
+    /// Gets the default <see cref="IActivitySource{T}"/> for Chronicle client event sequence traces.
+    /// </summary>
+    internal static readonly IActivitySource<EventSequence> DefaultActivitySource =
+        new ActivitySource<EventSequence>(new System.Diagnostics.ActivitySource(ClientActivity.SourceName));
+
     readonly IChronicleServicesAccessor _servicesAccessor = (connection as IChronicleServicesAccessor)!;
+    readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
 
     IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
     event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
@@ -83,6 +95,13 @@ public class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
+        using var span = _activitySource.Append(
+            eventStoreName.Value,
+            @namespace.Value,
+            eventSequenceId.Value,
+            (eventSourceType ?? EventSourceType.Default).Value,
+            eventSourceId.Value);
+
         var eventClrType = @event.GetType();
         var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
         var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
@@ -175,6 +194,8 @@ public class EventSequence(
         ConcurrencyScope? concurrencyScope = default,
         DateTimeOffset? occurred = default)
     {
+        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+
         var resolvedEventStreamType = eventStreamType ?? EventStreamType.All;
         var resolvedEventStreamId = eventStreamId ?? EventStreamId.Default;
         var resolvedEventSourceType = eventSourceType ?? EventSourceType.Default;
@@ -241,6 +262,8 @@ public class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
+        using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
+
         var eventsList = events.ToList();
         var eventsToAppend = new List<Contracts.Events.EventToAppend>(eventsList.Count);
         IImmutableList<Causation>? causation = null;

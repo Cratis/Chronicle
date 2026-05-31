@@ -14,6 +14,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -22,6 +23,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Collections;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -38,12 +40,14 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
+    IActivitySource<Reducers> activitySource,
     ILogger<Reducers> logger) : IReducers
 {
     /// <inheritdoc/>
@@ -192,8 +196,9 @@ internal sealed class Reducers(
                         registration.Namespace,
                         (replayState, partition) => observer.OnNext(new ReduceOperationMessage { Partition = partition, ReplayState = replayState }));
 
-                    using (Tracing.RegisterObserver(key, ObserverType.Reducer))
+                    using (var span = activitySource.Register())
                     {
+                        span?.Activity?.Tag(key, ObserverType.Reducer);
                         var reducerDefinition = registration.Reducer.ToChronicle();
 
                         clientObserver = grainFactory.GetGrain<IReducer>(key);
