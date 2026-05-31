@@ -12,6 +12,7 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks.InMemory;
 using Cratis.Chronicle.Testing.EventSequences;
@@ -411,11 +412,12 @@ internal static class ProjectionReadModelProcessor
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject>:
-                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    ApplyPropertyDifferences((change as PropertiesChanged<ExpandoObject>)!.Differences, state);
                     break;
 
                 case ChildAdded childAdded:
-                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    InjectChildIdentifierFromKey(childAdded);
+                    var items = EnsureChildCollection(state, childAdded);
                     items.Add(childAdded.Child);
                     break;
 
@@ -430,5 +432,106 @@ internal static class ProjectionReadModelProcessor
         }
 
         return state;
+    }
+
+    static void ApplyPropertyDifferences(IEnumerable<PropertyDifference> differences, ExpandoObject state)
+    {
+        foreach (var difference in differences)
+        {
+            difference.PropertyPath.SetValue(state, NormalizeStateValue(difference.Changed)!, NormalizeArrayIndexers(difference.ArrayIndexers));
+        }
+    }
+
+    static List<object> EnsureChildCollection(ExpandoObject state, ChildAdded childAdded)
+    {
+        var normalizedIndexers = NormalizeArrayIndexers(childAdded.ArrayIndexers).All.ToArray();
+        var current = (IDictionary<string, object?>)state;
+
+        foreach (var indexer in normalizedIndexers.Take(Math.Max(0, normalizedIndexers.Length - 1)))
+        {
+            var collectionName = indexer.ArrayProperty.LastSegment.Value;
+            var collection = current.TryGetValue(collectionName, out var existingCollection) && existingCollection is System.Collections.IEnumerable existingEnumerable
+                ? existingEnumerable.Cast<object>().ToList()
+                : [];
+
+            var element = !indexer.IdentifierProperty.IsSet &&
+                indexer.Identifier is int index &&
+                collection.Count > index
+                    ? collection[index] as ExpandoObject
+                    : collection
+                        .OfType<ExpandoObject>()
+                        .SingleOrDefault(item =>
+                        {
+                            var itemDictionary = (IDictionary<string, object?>)item;
+                            return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
+                                   Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
+                        });
+
+            if (element is null)
+            {
+                element = new ExpandoObject();
+                if (indexer.IdentifierProperty.IsSet)
+                {
+                    ((IDictionary<string, object?>)element)[indexer.IdentifierProperty.Path] = NormalizeStateValue(indexer.Identifier);
+                }
+
+                collection.Add(element);
+                current[collectionName] = collection;
+            }
+
+            current = element;
+        }
+
+        var targetCollectionName = childAdded.ChildrenProperty.LastSegment.Value;
+        if (current.TryGetValue(targetCollectionName, out var targetCollection) &&
+            targetCollection is System.Collections.IEnumerable targetEnumerable)
+        {
+            var items = targetEnumerable.Cast<object>().ToList();
+            current[targetCollectionName] = items;
+            return items;
+        }
+
+        var newItems = new List<object>();
+        current[targetCollectionName] = newItems;
+        return newItems;
+    }
+
+    static ArrayIndexers NormalizeArrayIndexers(ArrayIndexers arrayIndexers) =>
+        arrayIndexers.IsEmpty
+            ? ArrayIndexers.NoIndexers
+            : new ArrayIndexers(arrayIndexers.All.Select(indexer => indexer with { Identifier = NormalizeStateValue(indexer.Identifier)! }));
+
+    static object? NormalizeStateValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var type = value.GetType();
+        var isSpecified = type.GetProperty("IsSpecified");
+        var wrappedValue = type.GetProperty("Value");
+
+        if (isSpecified?.PropertyType == typeof(bool) && wrappedValue is not null)
+        {
+            return wrappedValue.GetValue(value);
+        }
+
+        return value;
+    }
+
+    static void InjectChildIdentifierFromKey(ChildAdded childAdded)
+    {
+        if (childAdded.Child is not ExpandoObject childState ||
+            !childAdded.IdentifiedByProperty.IsSet ||
+            childAdded.IdentifiedByProperty.IsRoot)
+        {
+            return;
+        }
+
+        var propertyName = childAdded.IdentifiedByProperty.LastSegment.Value;
+        var childStateDict = (IDictionary<string, object?>)childState;
+
+        childStateDict[propertyName] = NormalizeStateValue(childAdded.Key);
     }
 }

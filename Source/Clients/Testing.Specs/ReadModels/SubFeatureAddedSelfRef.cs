@@ -6,4 +6,4 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels;
 
 [EventType]
-public record SubFeatureAddedSelfRef(FeatureNodeId ParentFeatureId, FeatureNodeId FeatureId, string Name);
+public record SubFeatureAddedSelfRef(FeatureNodeId ParentFeatureId, string Name);

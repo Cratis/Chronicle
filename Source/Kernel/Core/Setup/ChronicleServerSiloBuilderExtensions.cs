@@ -43,6 +43,7 @@ public static class ChronicleServerSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
+        builder.AddActivityPropagation();
         builder.AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
@@ -124,8 +125,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<IReactorMediator>(),
                     sp.GetRequiredService<IStorage>(),
                     jsonSerializerOptions,
+                    sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(Cratis.Chronicle.Concepts.WellKnown.MeterName),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>()),
                 projections,
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage),

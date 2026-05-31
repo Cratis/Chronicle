@@ -12,6 +12,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,7 @@ public class Reactors : IReactors
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly IActivitySource<Reactors> _activitySource;
     readonly IReactorSideEffectHandlers _sideEffectHandlers;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
@@ -57,6 +59,7 @@ public class Reactors : IReactors
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
+    /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
     /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
@@ -70,6 +73,7 @@ public class Reactors : IReactors
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
+        IActivitySource<Reactors> activitySource,
         IReactorSideEffectHandlers sideEffectHandlers,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
@@ -84,6 +88,7 @@ public class Reactors : IReactors
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _activitySource = activitySource;
         _sideEffectHandlers = sideEffectHandlers;
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -385,6 +390,12 @@ public class Reactors : IReactors
             await HandleReplayNotification(handler, events.ReplayState, events.Partition);
             return;
         }
+
+        using var span = _activitySource.Handle(
+            _eventStore.Name,
+            _eventStore.Namespace,
+            handler.EventSequenceId,
+            handler.Id);
 
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();

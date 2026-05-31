@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Testing.ReadModels;
 public record FeatureNodeSelfRef(
     [Key] FeatureNodeId Id,
     string Name,
-    [ChildrenFrom<SubFeatureAddedSelfRef>(key: nameof(SubFeatureAddedSelfRef.FeatureId), identifiedBy: nameof(FeatureNodeSelfRef.Id), parentKey: nameof(SubFeatureAddedSelfRef.ParentFeatureId))]
+    [ChildrenFrom<SubFeatureAddedSelfRef>(identifiedBy: nameof(FeatureNodeSelfRef.Id), parentKey: nameof(SubFeatureAddedSelfRef.ParentFeatureId))]
     IEnumerable<FeatureNodeSelfRef> SubFeatures);

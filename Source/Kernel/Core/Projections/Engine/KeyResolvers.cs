@@ -306,9 +306,11 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         // and can resolve the full parent hierarchy correctly.
         var childCreationResult = await TryResolveViaChildCreationEvent(
             @event,
+            parentKey,
             childKey,
             parentProjection,
             projection,
+            identifiedByProperty,
             eventSequenceStorage,
             sink);
         if (childCreationResult is not null)
@@ -413,75 +415,149 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
     async Task<ParentEventResult?> TryResolveViaChildCreationEvent(
         AppendedEvent @event,
+        Key parentKey,
         Key childKey,
         IProjection parentProjection,
         IProjection projection,
+        PropertyPath identifiedByProperty,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
         Storage.Sinks.ISink sink)
     {
-        var childCreationEventTypes = projection.OwnEventTypes
-            .Where(et => et.Id != @event.Context.EventType.Id)
-            .Select(et => new EventType(et.Id, EventTypeGeneration.First))
-            .ToArray();
+        var childCreationResult = await TryResolveViaCreationEventSource(
+            @event,
+            childKey.Value?.ToString()!,
+            projection.OwnEventTypes.Where(et => et.Id != @event.Context.EventType.Id),
+            parentProjection,
+            eventSequenceStorage,
+            sink,
+            returnParentEvent: false);
 
-        if (childCreationEventTypes.Length == 0)
+        if (childCreationResult is not null)
+        {
+            return childCreationResult;
+        }
+
+        if (Equals(parentKey.Value, childKey.Value))
         {
             return null;
         }
 
-        var childEventSource = childKey.Value?.ToString()!;
-        logger.FromParentHierarchyAttemptingViaChildCreationEvent(childEventSource);
-
-        var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(childCreationEventTypes, childEventSource);
-        if (headSequenceNumber == EventSequenceNumber.Unavailable)
+        var parentCreationEvent = await TryGetCreationEventSource(
+            @event,
+            parentKey.Value?.ToString()!,
+            projection.OwnEventTypes,
+            eventSequenceStorage);
+        if (parentCreationEvent is null)
         {
             return null;
         }
 
-        var cursor = await eventSequenceStorage.GetRange(headSequenceNumber, headSequenceNumber, childEventSource, childCreationEventTypes);
-        AppendedEvent? childCreationEvent = null;
-        while (await cursor.MoveNext())
-        {
-            childCreationEvent = cursor.Current.FirstOrDefault();
-            if (childCreationEvent is not null)
-            {
-                break;
-            }
-        }
-
-        if (childCreationEvent is null)
+        var projectionEventType = projection.EventTypes.FirstOrDefault(et => et.Id == parentCreationEvent.Context.EventType.Id);
+        if (projectionEventType == default)
         {
             return null;
         }
 
-        // A creation event must precede the event being resolved in sequence order.
-        // If the found event is at a later (or equal) sequence number, it is NOT a creation event —
-        // it is a modification event that came after. Accepting it would cause an infinite cycle
-        // (e.g. StateChangeSliceAdded_42 → CommandSetForSlice_43 → StateChangeSliceAdded_42 → ∞).
-        if (childCreationEvent.Context.SequenceNumber >= @event.Context.SequenceNumber)
-        {
-            logger.FromParentHierarchyChildCreationEventNotEarlier(childCreationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
-            return null;
-        }
-
-        var parentEventType = parentProjection.EventTypes.FirstOrDefault(et => et.Id == childCreationEvent.Context.EventType.Id);
-        if (parentEventType == default)
+        var projectionResolver = projection.GetKeyResolverFor(projectionEventType);
+        var resolvedProjectionResult = await projectionResolver(eventSequenceStorage, sink, parentCreationEvent);
+        if (resolvedProjectionResult is not ResolvedKey resolvedProjectionKey)
         {
             return null;
         }
 
-        var parentResolver = parentProjection.GetKeyResolverFor(parentEventType);
-        var resolvedResult = await parentResolver(eventSequenceStorage, sink, childCreationEvent);
+        var arrayIndexers = BuildArrayIndexers(resolvedProjectionKey.Key, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value);
+        return new ParentEventResult(
+            null,
+            KeyResolverResult.Resolved(resolvedProjectionKey.Key with { ArrayIndexers = new ArrayIndexers(arrayIndexers) }));
+    }
+
+    async Task<ParentEventResult?> TryResolveViaCreationEventSource(
+        AppendedEvent @event,
+        string eventSourceId,
+        IEnumerable<EventType> candidateEventTypes,
+        IProjection resolverProjection,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
+        Storage.Sinks.ISink sink,
+        bool returnParentEvent)
+    {
+        var creationEvent = await TryGetCreationEventSource(@event, eventSourceId, candidateEventTypes, eventSequenceStorage);
+        if (creationEvent is null)
+        {
+            return null;
+        }
+
+        if (creationEvent.Context.SequenceNumber >= @event.Context.SequenceNumber)
+        {
+            logger.FromParentHierarchyChildCreationEventNotEarlier(creationEvent.Context.SequenceNumber.Value, @event.Context.SequenceNumber.Value);
+            return null;
+        }
+
+        var resolverEventType = resolverProjection.EventTypes.FirstOrDefault(et => et.Id == creationEvent.Context.EventType.Id);
+        if (resolverEventType == default)
+        {
+            return null;
+        }
+
+        if (returnParentEvent)
+        {
+            return new ParentEventResult(creationEvent, null);
+        }
+
+        var resolver = resolverProjection.GetKeyResolverFor(resolverEventType);
+        var resolvedResult = await resolver(eventSequenceStorage, sink, creationEvent);
         if (resolvedResult is not ResolvedKey resolvedKey)
         {
             return null;
         }
 
         logger.FromParentHierarchyResolvedViaChildCreationEvent(
-            childCreationEvent.Context.EventType.Id.ToString(),
+            creationEvent.Context.EventType.Id.ToString(),
             resolvedKey.Key.Value?.ToString() ?? "null");
 
         return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey.Key));
+    }
+
+    async Task<AppendedEvent?> TryGetCreationEventSource(
+        AppendedEvent @event,
+        string eventSourceId,
+        IEnumerable<EventType> candidateEventTypes,
+        Storage.EventSequences.IEventSequenceStorage eventSequenceStorage)
+    {
+        var creationEventTypes = candidateEventTypes
+            .Select(et => new EventType(et.Id, EventTypeGeneration.First))
+            .Distinct()
+            .ToArray();
+
+        if (creationEventTypes.Length == 0)
+        {
+            return null;
+        }
+
+        logger.FromParentHierarchyAttemptingViaChildCreationEvent(eventSourceId);
+
+        var headSequenceNumber = await eventSequenceStorage.GetHeadSequenceNumber(creationEventTypes, eventSourceId);
+        if (headSequenceNumber == EventSequenceNumber.Unavailable ||
+            headSequenceNumber >= @event.Context.SequenceNumber)
+        {
+            if (headSequenceNumber != EventSequenceNumber.Unavailable)
+            {
+                logger.FromParentHierarchyChildCreationEventNotEarlier(headSequenceNumber.Value, @event.Context.SequenceNumber.Value);
+            }
+
+            return null;
+        }
+
+        var cursor = await eventSequenceStorage.GetRange(headSequenceNumber, @event.Context.SequenceNumber - 1, eventSourceId, creationEventTypes);
+        while (await cursor.MoveNext())
+        {
+            var creationEvent = cursor.Current.FirstOrDefault();
+            if (creationEvent is not null)
+            {
+                return creationEvent;
+            }
+        }
+
+        return null;
     }
 
     async Task<ParentEventResult> TryFindParentByFallback(

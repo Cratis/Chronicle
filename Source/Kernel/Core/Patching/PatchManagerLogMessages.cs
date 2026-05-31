@@ -17,14 +17,8 @@ internal static partial class PatchManagerLogMessages
     [LoggerMessage(LogLevel.Trace, "Current system version: {Version}")]
     internal static partial void CurrentSystemVersion(this ILogger<PatchManager> logger, SemanticVersion version);
 
-    [LoggerMessage(LogLevel.Debug, "No patches to apply")]
-    internal static partial void NoPatchesToApply(this ILogger<PatchManager> logger);
-
     [LoggerMessage(LogLevel.Debug, "Found {Count} patches to apply")]
     internal static partial void FoundPatchesToApply(this ILogger<PatchManager> logger, int count);
-
-    [LoggerMessage(LogLevel.Debug, "Patch {PatchName} already applied, skipping")]
-    internal static partial void PatchAlreadyApplied(this ILogger<PatchManager> logger, string patchName);
 
     [LoggerMessage(LogLevel.Information, "Applying patch {PatchName} for version {Version}")]
     internal static partial void ApplyingPatch(this ILogger<PatchManager> logger, string patchName, SemanticVersion version);
@@ -38,6 +32,6 @@ internal static partial class PatchManagerLogMessages
     [LoggerMessage(LogLevel.Trace, "Updated system version to {Version}")]
     internal static partial void UpdatedSystemVersion(this ILogger<PatchManager> logger, SemanticVersion version);
 
-    [LoggerMessage(LogLevel.Debug, "Patch application process completed")]
-    internal static partial void PatchApplicationCompleted(this ILogger<PatchManager> logger);
+    [LoggerMessage(LogLevel.Debug, "Patch application process completed. Applied {AppliedCount} patches and skipped {SkippedCount} patches")]
+    internal static partial void PatchApplicationCompleted(this ILogger<PatchManager> logger, int appliedCount, int skippedCount);
 }

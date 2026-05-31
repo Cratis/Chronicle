@@ -35,6 +35,7 @@ using Cratis.Chronicle.Webhooks;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
@@ -129,6 +130,7 @@ public class EventStoreForTesting : IEventStore
             Options.Create(new ChronicleOptions()),
             new BaseIdentityProvider(),
             reducerObservers,
+            new ActivitySource<Reducers.Reducers>(),
             NullLogger<Reducers.Reducers>.Instance);
         _reducers.Discover().GetAwaiter().GetResult();
 
@@ -163,6 +165,7 @@ public class EventStoreForTesting : IEventStore
             EventSerializer,
             new CausationManager(),
             new BaseIdentityProvider(),
+            new ActivitySource<ReactorsImpl>(),
             new ReactorSideEffectHandlers([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)]),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
