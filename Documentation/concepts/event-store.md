@@ -10,6 +10,22 @@ The Chronicle event store is built on top of [MongoDB](https://mongodb.com). In 
 you have to bring your own MongoDB environment and configure Chronicle to work with it. For local development,
 Chronicle provides a development Docker image that comes with MongoDB bundled inside it.
 
+```mermaid
+flowchart TB
+    App["Your application"] -->|append · read| ES
+    subgraph ES["Event store"]
+        direction LR
+        subgraph NS1["Default namespace"]
+            S1["event sequences<br/>(the event log)"]
+        end
+        subgraph NS2["tenant-a namespace"]
+            S2["event sequences"]
+        end
+        Meta["also tracks: event types ·<br/>observers · projections · …"]
+    end
+    ES --> Mongo[("MongoDB")]
+```
+
 ## Namespaces
 
 Every event store can have [namespaces](./namespaces.md). The namespaces provides a way to segregate data that is specific for

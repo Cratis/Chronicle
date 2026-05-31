@@ -14,4 +14,11 @@ The concept of generations is important when working with systems that evolve ov
 Each generation registers its own JSON schema, which Chronicle uses to validate and store
 events correctly for that generation.
 
+```mermaid
+flowchart LR
+    ET["Event type:<br/>PersonRegistered"] --> G1["Generation 1<br/>+ JSON schema"]
+    G1 -->|migration| G2["Generation 2<br/>+ JSON schema"]
+    G2 -->|migration| G3["Generation 3<br/>+ JSON schema"]
+```
+
 For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations.md).

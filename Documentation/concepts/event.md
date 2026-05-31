@@ -6,6 +6,17 @@ This page walks through some general guidance on how to do so. Recommend also re
 
 > Note: Read more about the relationship to [event source](./event-source.md)
 
+A well-designed event is a single, immutable, past-tense fact. Captured well, the lifecycle
+of one thing in your domain reads as a sequence of these facts in the order they happened:
+
+```mermaid
+flowchart LR
+    subgraph Stream["one person · facts in order, never changed"]
+        direction LR
+        R["PersonRegistered"] --> N["NameChangedForPerson"] --> A["AddressChangedForPerson"]
+    end
+```
+
 ## Past tense
 
 All events should be named as past tense, something that has happened:

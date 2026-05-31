@@ -14,6 +14,15 @@ the address is about. PII encryption keys are held per-subject, not per-event-so
 every event that touches the same person can be decrypted with the same key regardless of
 which aggregate produced it.
 
+```mermaid
+flowchart TB
+    subgraph Order["Order stream — EventSourceId = orderId"]
+        SAC["ShippingAddressChanged"]
+    end
+    SAC -->|subject| Cust["Subject = customerId"]
+    Cust --> Key["per-subject<br/>PII encryption key"]
+```
+
 ## Default — the `EventSourceId`
 
 When you don't specify a subject, Chronicle uses the `EventSourceId` as the subject. This is

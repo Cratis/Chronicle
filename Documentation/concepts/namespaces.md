@@ -18,3 +18,16 @@ With Chronicle, all namespace specific data sits in its own database in the unde
 data storage. This helps us avoid data leakage between namespaces, or tenants. With this
 you also get a better utilization of resources with mechanisms like indexing that happens
 on a database level.
+
+```mermaid
+flowchart TB
+    subgraph ES["One event store"]
+        direction LR
+        D["Default"]
+        A["tenant-a"]
+        B["tenant-b"]
+    end
+    D --> DBd[("database:<br/>Default")]
+    A --> DBa[("database:<br/>tenant-a")]
+    B --> DBb[("database:<br/>tenant-b")]
+```
