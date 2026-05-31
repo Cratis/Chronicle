@@ -24,24 +24,33 @@ Notice `BookReturned` has no data at all — and that's fine. The fact that it *
 Here's the shift. In a database you'd write code to keep a `Books` table in sync — insert on add, update a flag on borrow, update it back on return. In Chronicle you instead **declare the shape you want** and tell it which events feed it. Chronicle does the keeping-in-sync for you. That declaration is a [projection](/chronicle/concepts/projection/):
 
 ```csharp
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Projections.ModelBound;
+
 [ReadModel]
 public record Book(
-    [property: Key] BookId Id,
+    [Key]
+    BookId Id,
+
+    [SetFrom<BookAdded>(nameof(BookAdded.Title))]
     string Title,
+
+    [SetFrom<BookAdded>(nameof(BookAdded.Isbn))]
     string Isbn,
+
+    [SetValue<BookAdded>(false)]
+    [SetValue<BookBorrowed>(true)]
+    [SetValue<BookReturned>(false)]
     bool OnLoan,
-    string? BorrowedBy)
-{
-    static Book On(BookAdded e) => /* a new book; OnLoan = false */ default!;
-    static Book On(BookBorrowed e) => /* OnLoan = true, BorrowedBy = e.MemberName */ default!;
-    static Book On(BookReturned e) => /* OnLoan = false, BorrowedBy = null */ default!;
-}
+
+    [SetFrom<BookBorrowed>(nameof(BookBorrowed.MemberName))]
+    string? BorrowedBy);
 ```
 
-Read those three `On` methods as a sentence: *when a book is added, it's a new, available book; when it's borrowed, mark it on loan to that member; when it's returned, it's available again.* You're describing how each fact changes the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+Read the attributes as a sentence: a book's `Title` and `Isbn` are taken from `BookAdded`; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
 
 :::tip[Reach for the declarative path first]
-For mappings like this — "events map onto fields" — the model-bound attributes (`[ReadModel]`, `[FromEvent<T>]`, AutoMap) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
+For mappings like this — "events map onto fields" — the model-bound attributes (`[SetFrom<T>]`, `[SetValue<T>]`, and `[FromEvent<T>]` for whole-event AutoMap) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
 :::
 
 ## Query it

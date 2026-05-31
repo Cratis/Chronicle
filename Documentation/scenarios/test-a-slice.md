@@ -23,12 +23,13 @@ public class and_the_name_is_new(context context) : Given<context>(context)
 {
     public class context(ChronicleOutOfProcessFixture fixture) : given.an_http_client(fixture)
     {
+        public readonly AuthorId AuthorId = AuthorId.New();
         public CommandResult<object>? Result;
 
         async Task Because() =>
             Result = await Client.ExecuteCommand<RegisterAuthor>(
                 "/api/authors/register",
-                new RegisterAuthor("Jane Austen"));
+                new RegisterAuthor(AuthorId, "Jane Austen"));
     }
 
     [Fact] void should_succeed() => Context.Result!.IsSuccess.ShouldBeTrue();
@@ -36,7 +37,7 @@ public class and_the_name_is_new(context context) : Given<context>(context)
         Context.ShouldHaveTailSequenceNumber(EventSequenceNumber.First);
     [Fact] void should_append_author_registered() =>
         Context.ShouldHaveAppendedEvent<AuthorRegistered>(
-            EventSequenceNumber.First, e => e.Name.ShouldEqual("Jane Austen"));
+            EventSequenceNumber.First, Context.AuthorId, e => e.Name.ShouldEqual("Jane Austen"));
 }
 ```
 
