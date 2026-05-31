@@ -6,6 +6,7 @@ extern alias KernelCore;
 using System.Reflection;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
+using Cratis.Traces;
 using Cratis.Types;
 using KernelCompliance = KernelCore::Cratis.Chronicle.Compliance;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -98,6 +99,7 @@ internal static class InProcessEventSequence
                 new KernelConstraints::ConstraintValidationFactory(storage),
                 eventTypeMigrations,
                 null!,
+                new ActivitySource<KernelEventSequences::EventSequence>(),
                 jsonComplianceManager,
                 expandoObjectConverter,
                 eventSerializer,

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.for_Reactors.given;
@@ -22,6 +23,7 @@ public class all_dependencies : Specification
     protected IReactorMiddlewares _middlewares;
     protected IEventSerializer _eventSerializer;
     protected ICausationManager _causationManager;
+    protected IActivitySource<Reactors> _activitySource;
     protected ILogger<Reactors> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -47,6 +49,7 @@ public class all_dependencies : Specification
         _middlewaresActivator.Activate(Arg.Any<IServiceProvider>()).Returns(_middlewares);
         _eventSerializer = Substitute.For<IEventSerializer>();
         _causationManager = Substitute.For<ICausationManager>();
+        _activitySource = Substitute.For<IActivitySource<Reactors>>();
         _logger = Substitute.For<ILogger<Reactors>>();
         _loggerFactory = Substitute.For<ILoggerFactory>();
 
@@ -78,6 +81,7 @@ public class all_dependencies : Specification
             _eventSerializer,
             _causationManager,
             _identityProvider,
+            _activitySource,
             _logger,
             _loggerFactory);
 
