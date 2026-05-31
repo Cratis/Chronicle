@@ -15,6 +15,8 @@ using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Collections;
+using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -37,6 +39,7 @@ internal sealed class Reactors(
     IReactorMediator reactorMediator,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     ILogger<Reactors> logger) : IReactors
 {
     /// <inheritdoc/>
