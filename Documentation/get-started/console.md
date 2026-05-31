@@ -1,20 +1,22 @@
-# Quickstart Console
+---
+title: Add Chronicle to a console app
+description: Wire Chronicle into a plain .NET console app by hand — no DI container, no web host — and watch a small library domain take shape through events, a reactor, a reducer, and a projection.
+---
+
+A console app is the smallest place to run Chronicle: no web host, no dependency-injection container, nothing between you and the client. That's exactly why it's the clearest place to start — every moving part is something you write explicitly, so nothing is hidden by convention. (The [Worker Service](./worker.md) and [ASP.NET Core](./aspnetcore.md) guides let the host's DI container wire the same pieces up for you; start here if you want to see what that wiring actually does.)
+
+We'll build a small, familiar domain — a library — and by the end you'll have appended events and projected them into read models you can query in MongoDB.
 
 [!INCLUDE [pre-requisites](./prereq.md)]
-
-## Objective
-
-In this quickstart, you will create a simple solution that covers the most important aspects of getting started with Chronicle.
-The sample will focus on a straightforward and well-understood domain: a library.
 
 You can find the [complete Console quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Console) on GitHub,
 which also uses the [shared code in the Common project](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
 [!INCLUDE [docker](./docker.md)]
 
-## Setup project
+## Set up the project
 
-Start by creating a folder for your project and then create a .NET console project inside this folder:
+Create a folder for your project, then a .NET console project inside it:
 
 ```shell
 dotnet new console
@@ -26,15 +28,9 @@ Add a reference to the [Chronicle client package](https://www.nuget.org/packages
 dotnet add package Cratis.Chronicle
 ```
 
-## Client
+## Connect the client
 
-Chronicle is accessed through its client called `ChronicleClient`.
-From this instance, you can get the event store you want to work with.
-
-The simplest approach is to rely on the automatic discovery of artifacts by instructing the event store to
-discover and register everything automatically.
-
-The following snippet configures the minimum and discovers everything for you:
+Everything in Chronicle is reached through a `ChronicleClient`. From a client you ask for the **event store** you want to work with — here, one named `Quickstart`. Because there's no DI container to do it for you, you create the client yourself and tell it to discover and register your artifacts automatically:
 
 ```csharp
 using Cratis.Chronicle;
@@ -45,6 +41,15 @@ var eventStore = await client.GetEventStore("Quickstart");
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Console/Program.cs#L11-L15)
+
+That single `eventStore` is your handle to everything that follows:
+
+```mermaid
+flowchart LR
+    Code["Your console code"] --> Client["ChronicleClient"]
+    Client --> ES["event store 'Quickstart'"]
+    ES --> Kernel[("Chronicle kernel<br/>(Docker)")]
+```
 
 [!INCLUDE [common](./common.md)]
 
@@ -60,3 +65,13 @@ public class Books(IMongoCollection<Book> collection)
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Books.cs#L9-L12)
+
+## Recap
+
+You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, and turned them into read models three different ways — a reactor, a reducer, and a projection. Because there was no DI container, every connection was explicit and in plain sight.
+
+## Where to go next
+
+- **[Build the same domain step by step](/chronicle/tutorial/)** — the tutorial walks the library model one concept at a time, explaining each as you go.
+- **Let a host wire it up** — move the same code into a [Worker Service](./worker.md) or an [ASP.NET Core](./aspnetcore.md) app and let its DI container register the artifacts for you.
+- **Understand the pieces** — the [Concepts](/chronicle/concepts/) section defines events, projections, reducers, and reactors in depth.

@@ -1,11 +1,13 @@
-# Quickstart Worker Service
+---
+title: Add Chronicle to a worker service
+description: Set up Chronicle in a .NET worker service (generic host) — the home for background processing that reacts to events, runs scheduled jobs, or maintains derived data, with the DI container wiring it up for you.
+---
+
+A worker service is the natural home for the *reacting* side of an event-sourced system: no web front end, just a long-running host that processes events, runs scheduled jobs, or keeps derived data up to date. Setting Chronicle up here is mostly a matter of letting the generic host's DI container do the wiring — register Chronicle once, then inject what you need wherever you need it.
+
+This guide gets Chronicle running in a fresh worker service. If you're building a web API instead, the [ASP.NET Core guide](./aspnetcore.md) covers that host; for the bare-bones, no-container version, see the [console guide](./console.md).
 
 [!INCLUDE [pre-requisites](./prereq.md)]
-
-## Objective
-
-In this quickstart, you will set up Chronicle in a .NET worker service (generic host) application — without ASP.NET Core.
-Worker services are ideal for background processing: reacting to events, running scheduled jobs, or maintaining derived data in message-processing pipelines.
 
 [!INCLUDE [docker](./docker.md)]
 
@@ -48,6 +50,16 @@ The `AddCratisChronicle` call:
 - Registers `IChronicleClient`, `IEventStore`, and all the event store components (`IEventLog`, `IReactors`, `IReducers`, `IProjections`, `IReadModels`) in the DI container.
 - Automatically discovers and registers all artifacts (Reactors, Reducers, Projections) from the loaded assemblies.
 - Reads configuration from the `Cratis:Chronicle` section of `appsettings.json` (connection string, timeouts, etc.).
+
+That one call is the whole integration — from here on, Chronicle is just another set of services in the container:
+
+```mermaid
+flowchart LR
+    Host["Host.CreateApplicationBuilder"] -->|AddCratisChronicle| DI["DI container"]
+    DI --> Svcs["IEventStore · IEventLog ·<br/>IReactors · IReducers · IProjections"]
+    DI -.->|discovers| Artifacts["your Reactors ·<br/>Reducers · Projections"]
+    Svcs --> Worker["your BackgroundService"]
+```
 
 ## Configuration
 
@@ -136,3 +148,14 @@ builder.Services
     .AddBindingsByConvention()
     .AddSelfBindings();
 ```
+
+## Recap
+
+You added Chronicle to a worker service with a single `AddCratisChronicle` call, pointed it at an event store through `appsettings.json`, and injected `IEventStore` into a `BackgroundService` to start processing. The generic host's DI container did the wiring — discovering your reactors, reducers, and projections and handing you the services to use them.
+
+## Where to go next
+
+- **[Build a domain step by step](/chronicle/tutorial/)** — the tutorial walks a small library model one concept at a time, defining the events and read models your worker will process.
+- **Reacting to events** — a worker's main job; see [Reactors](/chronicle/reactors/) for the patterns.
+- **A different host** — the same artifacts run unchanged behind a web API ([ASP.NET Core](./aspnetcore.md)) or with no container at all ([console](./console.md)).
+

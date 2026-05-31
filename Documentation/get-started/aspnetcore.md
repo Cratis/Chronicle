@@ -1,18 +1,16 @@
-# Quickstart ASP.NET Core
+---
+title: Add Chronicle to an ASP.NET Core app
+description: Wire Chronicle into an ASP.NET Core web application — the DI container registers and discovers everything, and a minimal API endpoint appends events directly.
+---
 
-[!INCLUDE [pre-requisites](./prereq.md)]
+When your app is a web API, Chronicle fits the way you already build: it plugs into the `WebApplicationBuilder`, registers itself in the dependency-injection container, and lets your endpoints append events by taking `IEventLog` as a dependency. There's almost no glue — a couple of calls in `Program.cs` and your routes can start recording facts.
 
-## Objective
-
-In this quickstart, you will create a simple solution that covers the most important aspects of getting started with Chronicle
-in an ASP.NET Core application.
-
-The sample will focus on a straightforward and well-understood domain: a library.
+We'll build a small library domain and expose an endpoint that borrows a book. If you're not building a web app — a background processor or scheduled host — the [Worker Service guide](./worker.md) covers that host instead, and the [console guide](./console.md) shows the bare-bones version with no container at all.
 
 You can find the [complete ASP.NET Core quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore) on GitHub,
 which also uses the [shared code in the Common project](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
 
-> **Not building a web app?** If you are creating a worker service or a background processing host without ASP.NET Core, see the [Worker Service Quickstart](./worker.md) instead.
+[!INCLUDE [pre-requisites](./prereq.md)]
 
 [!INCLUDE [docker](./docker.md)]
 
@@ -56,6 +54,16 @@ app.UseCratisChronicle();
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/AspNetCore/Program.cs#L30-L31)
+
+Those two lines are the entire host integration — `AddCratisChronicle` registers and discovers everything in the container, and `UseCratisChronicle` hooks Chronicle into the request pipeline:
+
+```mermaid
+flowchart LR
+    Builder["WebApplicationBuilder"] -->|AddCratisChronicle| DI["DI container<br/>(auto-discovers artifacts)"]
+    App["app"] -->|UseCratisChronicle| Pipeline["request pipeline"]
+    DI --> Endpoint["minimal API / controller"]
+    Endpoint -->|IEventLog.Append| ES["event store"]
+```
 
 [!INCLUDE [common](./common.md)]
 
@@ -137,3 +145,14 @@ public class Books(IMongoCollection<Book> collection)
 ```
 
 [Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Books.cs#L9-L12)
+
+## Recap
+
+You added Chronicle to an ASP.NET Core app with two lines in `Program.cs` — `AddCratisChronicle` to register and discover everything, `UseCratisChronicle` to hook into the pipeline — then appended events straight from a minimal API endpoint and read them back through MongoDB collections injected by the container. Because you're in a DI world, your reactors, reducers, projections, and collections are all just registered services.
+
+## Where to go next
+
+- **Put a typed UI on top** — [Arc](/arc/) adds commands, queries, and generated TypeScript proxies so React stays in lockstep with your C#. See [Build a full-stack feature](/build-a-full-app/).
+- **Build the domain step by step** — the [tutorial](/chronicle/tutorial/) walks the library model one concept at a time.
+- **A different host** — the same artifacts run unchanged in a [Worker Service](./worker.md) or a bare [console](./console.md) app.
+
