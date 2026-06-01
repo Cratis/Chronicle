@@ -395,7 +395,7 @@ internal sealed class InMemoryEventSequenceStorage(
             KernelIdentities::Identity.System,
             tags,
             KernelEvents::EventHash.NotSet,
-            Subject: subject?.IsSet == true ? subject : new KernelEvents::Subject(eventSourceId.Value));
+            Subject: subject?.IsSet is true ? subject : new KernelEvents::Subject(eventSourceId.Value));
 
         var eventContent = content.TryGetValue(KernelEvents::EventTypeGeneration.First, out var firstGenContent)
             ? firstGenContent
