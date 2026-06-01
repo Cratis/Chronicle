@@ -20,7 +20,7 @@
         "@cratis/arc.react": "^20.33.1",
         "@cratis/arc.react.mvvm": "^20.33.1",
         "@cratis/arc.vite": "^20.33.1",
-        "@cratis/components": "^2.0.0",
+        "@cratis/components": "^2.0.1",
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",
         "chart.js": "^4.5.1",
