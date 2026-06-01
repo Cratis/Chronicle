@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.when_enteri
 
 public class and_partition_is_already_failed : given.a_catching_up_in_flight_state
 {
-    Key _partition = "failing-partition";
+    readonly Key _partition = "failing-partition";
 
     void Establish()
     {
