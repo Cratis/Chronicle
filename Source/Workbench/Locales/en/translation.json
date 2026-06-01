@@ -352,7 +352,8 @@
                     "observerType": "Observer type",
                     "owner": "Owner",
                     "state": "State",
-                    "nextEventSequenceNumber": "Next event sequence number"
+                    "nextEventSequenceNumber": "Next event sequence number",
+                    "handledEventCount": "Handled events"
                 },
                 "types": {
                     "unknown": "Unknown",

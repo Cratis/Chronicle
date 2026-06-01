@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Auditing;
 using Cratis.Chronicle.Services.Events;
@@ -30,14 +29,12 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing events.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII event content.</param>
-/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between expando objects and JSON.</param>
+/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII event content.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class EventSequences(
     IGrainFactory grainFactory,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IEventComplianceHelper eventComplianceHelper,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
@@ -246,9 +243,7 @@ internal sealed class EventSequences(
                 continue;
             }
 
-            var releasedEvent = await EventComplianceHelper.ReleaseEventContent(
-                complianceManager,
-                expandoObjectConverter,
+            var releasedEvent = await eventComplianceHelper.ReleaseEventContent(
                 @event,
                 schema.Schema);
             contracts.Add(releasedEvent.ToContract(jsonSerializerOptions));

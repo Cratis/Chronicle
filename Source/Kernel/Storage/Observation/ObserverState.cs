@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -72,4 +73,20 @@ public record ObserverState(
         init;
     }
         = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or inits the total number of events the observer has successfully handled.
+    /// </summary>
+    public EventCount HandledEventCount { get; init; } = EventCount.Zero;
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled, broken down by event type identifier.
+    /// </summary>
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled per partition, broken down by event type identifier.
+    /// Used to compute the contribution of a specific partition so it can be subtracted when that partition is replayed.
+    /// </summary>
+    public IReadOnlyDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>> HandledEventCountPerPartition { get; init; } = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty;
 }
