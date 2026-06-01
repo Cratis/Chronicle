@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Observation.States.for_CatchingUpInFlight.when_enteri
 
 public class and_multiple_entries_for_same_partition : given.a_catching_up_in_flight_state
 {
-    Key _partition = "shared-partition";
+    readonly Key _partition = "shared-partition";
 
     void Establish()
     {
