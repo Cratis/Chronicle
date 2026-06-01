@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,7 @@ public class Reactors : IReactors
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
     readonly IActivitySource<Reactors> _activitySource;
+    readonly IReactorSideEffectHandlers _sideEffectHandlers;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -58,6 +60,7 @@ public class Reactors : IReactors
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
+    /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -71,6 +74,7 @@ public class Reactors : IReactors
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
         IActivitySource<Reactors> activitySource,
+        IReactorSideEffectHandlers sideEffectHandlers,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -85,6 +89,7 @@ public class Reactors : IReactors
         _causationManager = causationManager;
         _identityProvider = identityProvider;
         _activitySource = activitySource;
+        _sideEffectHandlers = sideEffectHandlers;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -413,7 +418,9 @@ public class Reactors : IReactors
             middlewares,
             handler.ReactorType,
             activatedReactor,
-            _loggerFactory.CreateLogger<ReactorInvoker>());
+            _loggerFactory.CreateLogger<ReactorInvoker>(),
+            _sideEffectHandlers,
+            _eventStore);
 
         foreach (var @event in events.Events)
         {
