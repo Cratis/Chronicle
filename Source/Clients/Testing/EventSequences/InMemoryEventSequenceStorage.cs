@@ -83,7 +83,7 @@ internal sealed class InMemoryEventSequenceStorage(
             return Task.FromResult(Result<KernelAppendedEvent, DuplicateEventSequenceNumber>.Failed(new DuplicateEventSequenceNumber(nextAvailable)));
         }
 
-        var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, tags, occurred, content);
+        var appended = BuildAppendedEvent(sequenceNumber, eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, correlationId, causation, tags, occurred, content, subject);
         _events.Add(appended);
 
         return Task.FromResult(Result<KernelAppendedEvent, DuplicateEventSequenceNumber>.Success(appended));
@@ -119,7 +119,8 @@ internal sealed class InMemoryEventSequenceStorage(
                 e.Causation,
                 e.Tags,
                 e.Occurred,
-                content);
+                content,
+                e.Subject);
 
             _events.Add(appendedEvent);
             appended.Add(appendedEvent);
@@ -376,7 +377,8 @@ internal sealed class InMemoryEventSequenceStorage(
         IEnumerable<KernelAuditing::Causation> causation,
         IEnumerable<KernelEvents::Tag> tags,
         DateTimeOffset occurred,
-        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content)
+        IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content,
+        KernelEvents::Subject? subject = null)
     {
         var eventContext = new KernelEvents::EventContext(
             eventType,
@@ -392,7 +394,8 @@ internal sealed class InMemoryEventSequenceStorage(
             causation,
             KernelIdentities::Identity.System,
             tags,
-            KernelEvents::EventHash.NotSet);
+            KernelEvents::EventHash.NotSet,
+            Subject: subject?.IsSet == true ? subject : new KernelEvents::Subject(eventSourceId.Value));
 
         var eventContent = content.TryGetValue(KernelEvents::EventTypeGeneration.First, out var firstGenContent)
             ? firstGenContent

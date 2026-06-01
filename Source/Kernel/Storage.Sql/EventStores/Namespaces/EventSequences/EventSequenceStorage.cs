@@ -228,7 +228,8 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
                     eventToAppend.Occurred,
-                    eventToAppend.Content);
+                    eventToAppend.Content,
+                    eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
 

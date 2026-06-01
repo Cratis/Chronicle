@@ -104,7 +104,8 @@ public class EventSequenceCommands(
                 EventStreamId = string.Empty,
                 EventType = e.EventType.ToContract(),
                 Content = JsonSerializer.Serialize(e.Content),
-                Tags = []
+                Tags = [],
+                Subject = e.Subject
             }).ToList(),
             Causation = causationManager.GetCurrentChain().ToContract(),
             CausedBy = User.ToContract(),
