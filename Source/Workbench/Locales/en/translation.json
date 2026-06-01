@@ -88,7 +88,20 @@
                     "user": "User"
                 },
                 "generation": "Generation {n}",
-                "latestGeneration": "Latest"
+                "latestGeneration": "Latest",
+                "tabs": {
+                    "schema": "Schema",
+                    "observers": "Observers"
+                },
+                "observers": {
+                    "empty": "No observers consume this event type",
+                    "columns": {
+                        "namespace": "Namespace",
+                        "id": "Observer",
+                        "observerType": "Type",
+                        "state": "State"
+                    }
+                }
             },
             "namespaces": {
                 "title": "Namespaces",
@@ -380,6 +393,32 @@
                     "replaying": "Replaying",
                     "disconnected": "Disconnected",
                     "quarantined": "Quarantined"
+                },
+                "details": {
+                    "title": "Details",
+                    "tabs": {
+                        "summary": "Summary",
+                        "eventTypes": "Event Types"
+                    },
+                    "summary": {
+                        "id": "Identifier",
+                        "type": "Type",
+                        "owner": "Owner",
+                        "state": "State",
+                        "sequence": "Sequence",
+                        "nextEventSequenceNumber": "Next event sequence number",
+                        "lastHandledEventSequenceNumber": "Last handled sequence number",
+                        "tailEventSequenceNumber": "Tail sequence number",
+                        "isSubscribed": "Subscribed",
+                        "isReplayable": "Replayable"
+                    },
+                    "eventTypes": {
+                        "empty": "This observer does not consume any event types",
+                        "columns": {
+                            "id": "Identifier",
+                            "generation": "Generation"
+                        }
+                    }
                 }
             },
             "failedPartitions": {
