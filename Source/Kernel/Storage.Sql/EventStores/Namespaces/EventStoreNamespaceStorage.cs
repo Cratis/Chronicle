@@ -55,6 +55,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
+    public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace);
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>

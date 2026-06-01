@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -102,6 +103,14 @@ public partial class Observer
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
         {
+            // Record the highest sequence number we're about to attempt for this partition. If the silo
+            // dies between this point and the post-handling state write, the entry survives to drive
+            // partition catch-up on the next activation. Recording the tail of the batch is enough: the
+            // in-flight entry is conceptually a marker that work *may have started* for this partition.
+            var inFlightStorage = await GetInFlightEventsStorage();
+            var inFlightTail = eventsToHandle[^1].Context.SequenceNumber;
+            await inFlightStorage.Add(_observerId, partition, inFlightTail);
+
             using (new WriteSuspension(this))
             {
                 try
@@ -182,6 +191,14 @@ public partial class Observer
                 {
                     await WriteStateAsync();
                 }
+
+                // Clear in-flight markers for everything we processed (successfully or otherwise). Failures
+                // are tracked through FailedPartitions storage; keeping the in-flight marker would force a
+                // double recovery for events we already know about.
+                var clearUpTo = numEventsSuccessfullyHandled > 0
+                    ? eventsToHandle.Take((int)numEventsSuccessfullyHandled.Value).Last().Context.SequenceNumber
+                    : tailEventSequenceNumber;
+                await inFlightStorage.RemoveUpTo(_observerId, partition, clearUpTo);
             }
             catch (Exception ex)
             {
@@ -189,6 +206,16 @@ public partial class Observer
             }
         }
     }
+
+    /// <summary>
+    /// Get the <see cref="IInFlightEventsStorage"/> for the observer's event store namespace.
+    /// </summary>
+    /// <returns>The <see cref="IInFlightEventsStorage"/> instance.</returns>
+    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
+        Task.FromResult(storage
+            .GetEventStore(_observerKey.EventStore)
+            .GetNamespace(_observerKey.Namespace)
+            .InFlightEvents);
 
     async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
