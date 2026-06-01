@@ -1,0 +1,1 @@
+../../.ai/rules/documentation-rendering-and-qa.md

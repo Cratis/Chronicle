@@ -1,0 +1,1 @@
+../../.ai/rules/astro-starlight-site.md
