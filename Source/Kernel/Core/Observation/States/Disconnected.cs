@@ -18,7 +18,8 @@ public class Disconnected : BaseObserverState
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
-        typeof(Routing)
+        typeof(Routing),
+        typeof(CatchingUpInFlight)
     }.ToImmutableList();
 
     /// <inheritdoc/>

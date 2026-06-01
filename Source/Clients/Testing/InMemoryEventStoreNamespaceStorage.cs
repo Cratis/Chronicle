@@ -55,6 +55,9 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     public IFailedPartitionsStorage FailedPartitions => throw new NotSupportedException();
 
     /// <inheritdoc/>
+    public IInFlightEventsStorage InFlightEvents => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public IRecommendationStorage Recommendations => throw new NotSupportedException();
 
     /// <inheritdoc/>

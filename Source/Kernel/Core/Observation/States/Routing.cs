@@ -35,7 +35,8 @@ public class Routing(
     {
         typeof(Disconnected),
         typeof(Replay),
-        typeof(Observing)
+        typeof(Observing),
+        typeof(CatchingUpInFlight)
     }.ToImmutableList();
 
     /// <inheritdoc/>

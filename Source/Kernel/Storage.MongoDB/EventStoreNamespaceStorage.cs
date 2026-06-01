@@ -95,6 +95,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
+        InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = sinks;
@@ -128,6 +129,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; }
+
+    /// <inheritdoc/>
+    public IInFlightEventsStorage InFlightEvents { get; }
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; }

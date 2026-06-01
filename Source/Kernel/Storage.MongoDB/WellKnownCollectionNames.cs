@@ -59,6 +59,11 @@ public static class WellKnownCollectionNames
     public const string FailedPartitions = "failed-partitions";
 
     /// <summary>
+    /// The collection that holds in-flight events being handled by observers.
+    /// </summary>
+    public const string InFlightEvents = "in-flight-events";
+
+    /// <summary>
     /// The collection that holds identities.
     /// </summary>
     public const string Identities = "identities";
