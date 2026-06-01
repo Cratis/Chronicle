@@ -20,5 +20,6 @@
     <ItemGroup>
         <PackageReference Include="FluentValidation" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry" />
     </ItemGroup>
 </Project>

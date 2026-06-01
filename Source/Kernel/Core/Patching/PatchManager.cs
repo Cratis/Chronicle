@@ -35,30 +35,40 @@ public class PatchManager(
         logger.CurrentSystemVersion(currentVersion);
 
         var allPatches = patches.ToList();
-        var patchesToApply = allPatches
+        var candidatePatches = allPatches
             .Where(p => p.Version > currentVersion)
             .OrderBy(p => p.Version)
             .ToList();
 
-        if (patchesToApply.Count == 0)
+        if (candidatePatches.Count == 0)
         {
-            logger.NoPatchesToApply();
+            logger.PatchApplicationCompleted(0, 0);
             return;
         }
 
-        logger.FoundPatchesToApply(patchesToApply.Count);
+        var skippedCount = 0;
+        var alreadyAppliedPatchNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var patch in candidatePatches)
+        {
+            if (await storage.System.Patches.Has(patch.Name))
+            {
+                alreadyAppliedPatchNames.Add(patch.Name);
+            }
+        }
+        var (patchesToApply, computedSkippedCount) = FilterPatchesToApply(candidatePatches, alreadyAppliedPatchNames);
+        skippedCount = computedSkippedCount;
+
+        if (patchesToApply.Count > 0)
+        {
+            logger.FoundPatchesToApply(patchesToApply.Count);
+        }
 
         SemanticVersion? latestVersion = null;
+        var appliedCount = 0;
 
         foreach (var patch in patchesToApply)
         {
             var patchName = patch.Name;
-
-            if (await storage.System.Patches.Has(patchName))
-            {
-                logger.PatchAlreadyApplied(patchName);
-                continue;
-            }
 
             try
             {
@@ -76,6 +86,7 @@ public class PatchManager(
                 await WriteStateAsync();
 
                 latestVersion = patch.Version;
+                appliedCount++;
                 logger.PatchAppliedSuccessfully(patchName);
             }
             catch (Exception ex)
@@ -91,7 +102,7 @@ public class PatchManager(
             logger.UpdatedSystemVersion(latestVersion);
         }
 
-        logger.PatchApplicationCompleted();
+        logger.PatchApplicationCompleted(appliedCount, skippedCount);
     }
 
     /// <inheritdoc/>
@@ -104,5 +115,23 @@ public class PatchManager(
             await WriteStateAsync();
         }
         await base.OnActivateAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Filters candidate patches into patches to apply and skipped patches.
+    /// </summary>
+    /// <param name="candidatePatches">The candidate patches to evaluate.</param>
+    /// <param name="alreadyAppliedPatchNames">The names of patches that have already been applied.</param>
+    /// <returns>The patches to apply and the skipped count.</returns>
+    internal static (IReadOnlyList<ICanApplyPatch> PatchesToApply, int SkippedCount) FilterPatchesToApply(
+        IReadOnlyList<ICanApplyPatch> candidatePatches,
+        ISet<string> alreadyAppliedPatchNames)
+    {
+        var patchesToApply = candidatePatches
+            .Where(_ => !alreadyAppliedPatchNames.Contains(_.Name))
+            .ToList();
+        var skippedCount = candidatePatches.Count - patchesToApply.Count;
+
+        return (patchesToApply, skippedCount);
     }
 }

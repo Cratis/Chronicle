@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -25,6 +26,8 @@ using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
+using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -45,6 +48,7 @@ public class EventStore : IEventStore
     readonly IEventSerializer _eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
+    readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
 
     /// <summary>
@@ -100,6 +104,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
+        _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -145,6 +150,7 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider,
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
@@ -162,6 +168,7 @@ public class EventStore : IEventStore
             options,
             identityProvider,
             reducerObservers,
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
@@ -318,7 +325,8 @@ public class EventStore : IEventStore
                 state._causationManager,
                 state.UnitOfWorkManager,
                 state._identityProvider,
-                state._jsonSerializerOptions),
+                state._jsonSerializerOptions,
+                state._activitySource),
             this);
 
     /// <inheritdoc/>

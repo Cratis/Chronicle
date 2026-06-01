@@ -29,6 +29,7 @@ internal static class ChildrenDefinitionConverters
             FromEventProperty = definition.FromEventProperty?.ToContract(),
             RemovedWith = definition.RemovedWith.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
             RemovedWithJoin = definition.RemovedWithJoin.ToDictionary(_ => _.Key.ToContract(), _ => _.Value.ToContract()),
+            AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap,
             Nested = (definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>()).ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract())
         };
     }
@@ -49,6 +50,7 @@ internal static class ChildrenDefinitionConverters
             contract.RemovedWith.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.RemovedWithJoin.ToDictionary(_ => _.Key.ToChronicle(), _ => _.Value.ToChronicle()),
             contract.FromEventProperty?.ToChronicle(),
+            AutoMap: (AutoMap)contract.AutoMap,
             Nested: contract.Nested.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle())
         );
     }

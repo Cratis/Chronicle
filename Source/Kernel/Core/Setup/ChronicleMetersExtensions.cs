@@ -1,13 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics.Metrics;
-using Cratis.Chronicle.Clients;
+using System.Diagnostics;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Diagnostics.OpenTelemetry;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Observation;
-using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Orleans.Hosting;
@@ -24,23 +20,28 @@ public static class ChronicleMetersExtensions
     /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddChronicleMeters(this IServiceCollection services)
     {
-        services.AddChronicleMeter();
-        services.AddMeter<EventSequence>();
-        services.AddMeter<AppendedEventsQueue>();
-        services.AddMeter<Observer>();
-        services.AddMeter<ConnectedClients>();
+        services.AddNamedMeter(WellKnown.MeterName);
+        services.AddNamedActivitySource(WellKnown.MeterName);
 
+        for (var index = services.Count - 1; index >= 0; index--)
+        {
+            var descriptor = services[index];
+            if (descriptor.ServiceType == typeof(IActivitySource<>) &&
+                Equals(descriptor.ServiceKey, WellKnown.MeterName))
+            {
+                services.RemoveAt(index);
+                break;
+            }
+        }
+
+        services.AddKeyedSingleton(typeof(IActivitySource<>), WellKnown.MeterName, typeof(KeyedActivitySource<>));
         return services;
     }
 
-    static IServiceCollection AddMeter<TTarget>(this IServiceCollection services)
+    sealed class KeyedActivitySource<T>(IServiceProvider serviceProvider, [ServiceKey] string? key = null) : IActivitySource<T>
     {
-        services.AddKeyedSingleton<IMeter<TTarget>>(WellKnown.MeterName, (sp, key) =>
-        {
-            var meter = sp.GetRequiredKeyedService<Meter>(key);
-            return new Meter<TTarget>(meter);
-        });
-
-        return services;
+        public ActivitySource ActualSource { get; } = key is null
+            ? new(typeof(T).FullName ?? typeof(T).Name)
+            : serviceProvider.GetRequiredKeyedService<ActivitySource>(key);
     }
 }
