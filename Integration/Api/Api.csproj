@@ -31,16 +31,12 @@
     <Target Name="BuildDocker" AfterTargets="Build" Condition="'$(DisableDockerBuild)' != 'true'">
         <RemoveDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
         <MakeDir Directories="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out" />
-        <Exec Command="docker version --format '{{.Server.Arch}}' > &quot;$(IntermediateOutputPath)docker-arch.txt&quot;" />
-        <ReadLinesFromFile File="$(IntermediateOutputPath)docker-arch.txt">
-            <Output TaskParameter="Lines" PropertyName="DockerArchitecture" />
-        </ReadLinesFromFile>
-        <PropertyGroup>
-            <DockerRuntimeIdentifier Condition="'$(DockerArchitecture)' == 'amd64'">linux-x64</DockerRuntimeIdentifier>
-            <DockerRuntimeIdentifier Condition="'$(DockerArchitecture)' == 'arm64'">linux-arm64</DockerRuntimeIdentifier>
-        </PropertyGroup>
-        <Error Condition="'$(DockerRuntimeIdentifier)' == ''" Text="Unsupported Docker architecture '$(DockerArchitecture)'." />
-        <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)../../Source/Kernel/Server/Server.csproj&quot; -c $(Configuration) -f net10.0 -r $(DockerRuntimeIdentifier) --self-contained false -o &quot;$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out&quot;" />
+        <ItemGroup>
+            <_ServerFiles Include="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/**/*"
+                          Exclude="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/bin/$(Configuration)/net10.0/out/**" />
+        </ItemGroup>
+        <Copy SourceFiles="@(_ServerFiles)"
+              DestinationFolder="$(MSBuildThisFileDirectory)../../Source/Kernel/Server/out/%(RecursiveDir)" />
         <Exec Command="docker build -t $(LocalImageName) -f Docker/Local/Dockerfile ." WorkingDirectory="$(MSBuildThisFileDirectory)../../"/>
     </Target>
 
