@@ -15,4 +15,51 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
 {
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => base.Equals(other);
+
+    /// <inheritdoc/>
+    public ConstraintChange CompareWith(IConstraintDefinition existing)
+    {
+        if (existing is not UniqueConstraintDefinition existingDefinition)
+        {
+            return new(true, [ConstraintChangeType.EventAdded, ConstraintChangeType.EventRemoved, ConstraintChangeType.IndexedPropertiesChanged]);
+        }
+
+        var changes = new HashSet<ConstraintChangeType>();
+        var existingEventDefinitions = existingDefinition.EventDefinitions.ToArray();
+        var newEventDefinitions = EventDefinitions.ToArray();
+
+        var existingEventTypes = existingEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
+        var newEventTypes = newEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
+
+        if (newEventTypes.Except(existingEventTypes).Any())
+        {
+            changes.Add(ConstraintChangeType.EventAdded);
+        }
+
+        if (existingEventTypes.Except(newEventTypes).Any())
+        {
+            changes.Add(ConstraintChangeType.EventRemoved);
+        }
+
+        foreach (var eventType in existingEventTypes.Intersect(newEventTypes).ToArray())
+        {
+            var existingForType = existingEventDefinitions.Where(_ => _.EventTypeId == eventType).ToArray();
+            var newForType = newEventDefinitions.Where(_ => _.EventTypeId == eventType).ToArray();
+
+            if (!existingForType.SequenceEqual(newForType))
+            {
+                changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
+                break;
+            }
+        }
+
+        if (RemovedWith != existingDefinition.RemovedWith || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
+        {
+            changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
+        }
+
+        return changes.Count == 0
+            ? ConstraintChange.None
+            : new ConstraintChange(true, changes.ToArray());
+    }
 }
