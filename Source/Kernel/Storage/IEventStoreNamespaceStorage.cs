@@ -53,6 +53,11 @@ public interface IEventStoreNamespaceStorage
     IFailedPartitionsStorage FailedPartitions { get; }
 
     /// <summary>
+    /// Gets the <see cref="IInFlightEventsStorage"/> for the event store namespace.
+    /// </summary>
+    IInFlightEventsStorage InFlightEvents { get; }
+
+    /// <summary>
     /// Gets the <see cref="IRecommendationStorage"/> for the event store namespace.
     /// </summary>
     IRecommendationStorage Recommendations { get; }

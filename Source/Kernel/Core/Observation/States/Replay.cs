@@ -31,7 +31,8 @@ public class Replay(
     {
         typeof(Routing),
         typeof(QuarantinedObserver),
-        typeof(Disconnected)
+        typeof(Disconnected),
+        typeof(CatchingUpInFlight)
     }.ToImmutableList();
 
     /// <inheritdoc/>

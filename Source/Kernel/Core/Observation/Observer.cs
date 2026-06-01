@@ -210,7 +210,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -260,7 +260,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -283,6 +283,14 @@ public partial class Observer(
         new QuarantinedObserver(
             _observerKey,
             loggerFactory.CreateLogger<QuarantinedObserver>()),
+
+        new CatchingUpInFlight(
+            _observerKey,
+            observerDefinition,
+            failures,
+            storage,
+            _jobsManager,
+            loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
             _appendedEventsQueues,
