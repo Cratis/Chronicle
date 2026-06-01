@@ -217,12 +217,6 @@ public partial class Observer
         }
     }
 
-    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
-        Task.FromResult(storage
-            .GetEventStore(_observerKey.EventStore)
-            .GetNamespace(_observerKey.Namespace)
-            .InFlightEvents);
-
     /// <summary>
     /// Returns a new <see cref="Storage.Observation.ObserverState"/> with handled event counts incremented
     /// for the given partition and the provided successfully handled events.
@@ -314,6 +308,12 @@ public partial class Observer
             HandledEventCountPerPartition = perPartition
         };
     }
+
+    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
+        Task.FromResult(storage
+            .GetEventStore(_observerKey.EventStore)
+            .GetNamespace(_observerKey.Namespace)
+            .InFlightEvents);
 
     Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
         eventComplianceHelper.DecryptEvents(events, _eventTypeSchemas);
