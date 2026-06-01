@@ -429,6 +429,11 @@ public class EventSequence(
             causation,
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
+        if (affectedEvent.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return;
+        }
+
         await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 

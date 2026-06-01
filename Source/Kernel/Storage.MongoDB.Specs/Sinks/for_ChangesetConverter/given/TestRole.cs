@@ -3,10 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_ChangesetConverter.given;
 
-public class TestReadModel
+public class TestRole
 {
-    public string? Id { get; set; }
-    public string? Name { get; set; }
-    public int Value { get; set; }
-    public IEnumerable<TestRole>? Roles { get; set; }
+    public string? Role { get; set; }
 }

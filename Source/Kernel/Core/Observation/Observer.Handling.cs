@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -192,36 +194,48 @@ public partial class Observer
 
     async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
     {
-        var releasedEvents = new List<AppendedEvent>();
-        foreach (var @event in events)
-        {
-            if (_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
-            {
-                var subject = @event.Context.Subject;
-                if (subject is null)
-                {
-                    releasedEvents.Add(@event);
-                    continue;
-                }
+        var eventsToRelease = events.ToArray();
+        await EnsureEventTypeSchemasFor(eventsToRelease);
 
-                var identifier = subject.Value;
-                var contentAsJson = expandoObjectConverter.ToJsonObject(@event.Content, schema.Schema);
-                var released = await complianceManager.Release(
-                    @event.Context.EventStore,
-                    @event.Context.Namespace,
-                    schema.Schema,
-                    identifier,
-                    contentAsJson);
-                var releasedContent = expandoObjectConverter.ToExpandoObject(released, schema.Schema);
-                releasedEvents.Add(@event with { Content = releasedContent });
-            }
-            else
+        var releasedEvents = new List<AppendedEvent>();
+        foreach (var @event in eventsToRelease)
+        {
+            if (!_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
+                !schema.Schema.HasComplianceMetadata())
             {
                 releasedEvents.Add(@event);
+                continue;
             }
+
+            var released = await EventComplianceHelper.ReleaseEventContent(
+                complianceManager,
+                expandoObjectConverter,
+                @event,
+                schema.Schema);
+            releasedEvents.Add(released);
         }
 
         return releasedEvents;
+    }
+
+    async Task EnsureEventTypeSchemasFor(IEnumerable<AppendedEvent> events)
+    {
+        var missingEventTypes = events
+            .Select(_ => _.Context.EventType)
+            .Distinct()
+            .Where(_ => !_eventTypeSchemas.ContainsKey(_))
+            .ToArray();
+
+        if (missingEventTypes.Length == 0)
+        {
+            return;
+        }
+
+        var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(missingEventTypes);
+        foreach (var schema in schemas)
+        {
+            _eventTypeSchemas[schema.Type] = schema;
+        }
     }
 
     bool ShouldHandleEvent(Key partition)
