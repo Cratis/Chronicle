@@ -248,5 +248,15 @@ public enum TokenType
     /// <summary>
     /// The keyword 'all'.
     /// </summary>
-    All = 49
+    All = 49,
+
+    /// <summary>
+    /// The keyword 'nested'.
+    /// </summary>
+    Nested = 50,
+
+    /// <summary>
+    /// The keyword 'clear'.
+    /// </summary>
+    Clear = 51
 }
