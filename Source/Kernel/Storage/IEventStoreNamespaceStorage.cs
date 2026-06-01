@@ -107,4 +107,11 @@ public interface IEventStoreNamespaceStorage
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
     /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
     IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Gets the storage for closed streams.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
+    /// <returns>The <see cref="IClosedStreamsConstraintStorage"/> instance.</returns>
+    IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId);
 }

@@ -50,6 +50,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
+    readonly ConcurrentDictionary<EventSequenceId, IClosedStreamsConstraintStorage> _closedStreamsConstraints = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
@@ -190,5 +191,16 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         }
 
         return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
+    }
+
+    /// <inheritdoc/>
+    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId)
+    {
+        if (_closedStreamsConstraints.TryGetValue(eventSequenceId, out var closedStreamsStorage))
+        {
+            return closedStreamsStorage;
+        }
+
+        return _closedStreamsConstraints[eventSequenceId] = new ClosedStreamsConstraintStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
 }

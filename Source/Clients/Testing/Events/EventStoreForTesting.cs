@@ -286,6 +286,7 @@ public class EventStoreForTesting : IEventStore
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
+        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
@@ -295,6 +296,7 @@ public class EventStoreForTesting : IEventStore
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
             constraintsStorage,
+            closedStreamsStorage,
             identityStorage,
             eventTypesStorage);
 

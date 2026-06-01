@@ -221,6 +221,17 @@ internal sealed class EventSequences(
             causedBy: request.CausedBy.ToChronicle());
     }
 
+    /// <inheritdoc/>
+    public async Task<CompleteStreamResponse> CompleteStream(CompleteStreamRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        var result = await eventSequence.CompleteStream(
+            (EventStreamType)request.EventStreamType,
+            (EventStreamId)request.EventStreamId);
+
+        return result.ToContract();
+    }
+
     async Task<IList<Contracts.Events.AppendedEvent>> ToContracts(
         IEnumerable<AppendedEvent> events,
         Dictionary<EventType, EventTypeSchema> schemasByEventType)

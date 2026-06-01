@@ -197,4 +197,9 @@ public static class WellKnownTableNames
     /// The table that holds encryption keys for compliance handling.
     /// </summary>
     public const string EncryptionKeys = "EncryptionKeys";
+
+    /// <summary>
+    /// The table that holds closed event streams per event sequence.
+    /// </summary>
+    public const string ClosedStreams = "ClosedStreams";
 }

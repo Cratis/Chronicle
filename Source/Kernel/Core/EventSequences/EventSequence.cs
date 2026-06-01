@@ -22,6 +22,7 @@ using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
@@ -67,6 +68,7 @@ public class EventSequence(
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
     IObserverDefinitionsStorage? _observerDefinitionsStorage;
+    IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
@@ -76,6 +78,7 @@ public class EventSequence(
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
+    IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage);
 
     /// <inheritdoc/>
@@ -265,6 +268,8 @@ public class EventSequence(
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            events = events as IList<EventToAppend> ?? events.ToList();
+
             var tasks = events.Select(async e =>
             {
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
@@ -458,6 +463,27 @@ public class EventSequence(
             DateTimeOffset.UtcNow);
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
+
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        if (eventStreamType == EventStreamType.All && eventStreamId.Value == EventStreamId.Default)
+        {
+            return CompleteStreamError.DefaultStreamCannotBeCompleted;
+        }
+
+        if (await ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId))
+        {
+            return CompleteStreamError.AlreadyCompleted;
+        }
+
+        await ClosedStreamsStorage.CloseStream(eventStreamType, eventStreamId);
+        return State.SequenceNumber - 1;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId);
 
     async Task<AppendResult> AppendValidAndCompliantEvent(
         EventSourceType eventSourceType,
