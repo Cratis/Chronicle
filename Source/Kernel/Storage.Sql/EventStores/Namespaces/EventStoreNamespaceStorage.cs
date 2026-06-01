@@ -18,6 +18,7 @@ using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReadModelsReplayContexts = Cratis.Chronicle.Storage.ReadModels.ReplayContexts;
 using SinksSinks = Cratis.Chronicle.Storage.Sinks.Sinks;
@@ -84,6 +85,14 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
             database,
             Identities, // Use existing Identities property
             NullLogger<EventSequences.EventSequenceStorage>.Instance); // Null logger for now
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequenceIds()
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var ids = await scope.DbContext.EventSequences.Select(s => s.EventSequenceId).ToListAsync();
+        return ids.Select(id => (EventSequenceId)id).ToArray();
+    }
 
     /// <inheritdoc/>
     public IUniqueConstraintsStorage GetUniqueConstraintsStorage(EventSequenceId eventSequenceId) => new UniqueConstraints.UniqueConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
