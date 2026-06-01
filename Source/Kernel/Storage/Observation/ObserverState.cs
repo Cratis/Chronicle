@@ -79,10 +79,26 @@ public record ObserverState(
     /// </summary>
     public EventCount HandledEventCount { get; init; } = EventCount.Zero;
 
+    IReadOnlyDictionary<EventTypeId, EventCount> _handledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
+
     /// <summary>
     /// Gets or inits the number of events successfully handled, broken down by event type identifier.
     /// </summary>
-    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; init; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType
+    {
+        get => _handledEventCountPerEventType;
+        init => _handledEventCountPerEventType = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled, broken down by event type identifier.
+    /// Kept for backwards compatibility with integration tests and benchmarks using the previous property name.
+    /// </summary>
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventTypesCount
+    {
+        get => _handledEventCountPerEventType;
+        set => _handledEventCountPerEventType = value;
+    }
 
     /// <summary>
     /// Gets or inits the number of events successfully handled per partition, broken down by event type identifier.
