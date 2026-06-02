@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Events;
 
-namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.Events;
+namespace Cratis.Chronicle.Integration.for_EventSequence.when_completing_a_stream;
 
 [EventType]
-public record RecursiveSliceItemCreated(string Name);
+public record SomeStreamEvent(string Content);
