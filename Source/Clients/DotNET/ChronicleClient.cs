@@ -12,6 +12,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Serialization;
@@ -231,6 +232,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return eventStore;
         }
 
+        var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
+            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
+
         eventStore = new EventStore(
             name,
             @namespace,
@@ -244,6 +248,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _jsonSchemaGenerator,
             _namingPolicy,
             _serviceProvider,
+            reactorSideEffectHandlers,
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
