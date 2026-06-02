@@ -288,6 +288,11 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
                         sortable />
                     <Column
+                        field='handledEventCount'
+                        dataType='numeric'
+                        header={strings.eventStore.namespaces.observers.columns.handledEventCount}
+                        sortable />
+                    <Column
                         field='runningState'
                         dataType='numeric'
                         header={strings.eventStore.namespaces.observers.columns.state}

@@ -19,6 +19,7 @@ const KEYWORDS = [
     'automap',
     'no',
     'children',
+    'nested',
     'identified',
     'by',
     'add',
@@ -32,6 +33,7 @@ const KEYWORDS = [
     'count',
     'set',
     'unset',
+    'clear',
     'events',
     'id',
     'exclude',
@@ -75,13 +77,13 @@ export const configuration: languages.LanguageConfiguration = {
         { open: '`', close: '`' },
     ],
     indentationRules: {
-        increaseIndentPattern: /^.*(:|\bon\b|\ball\b|\bevery\b|\bchildren\b|\bparent\b)\s*$/,
+        increaseIndentPattern: /^.*(:|\bon\b|\ball\b|\bevery\b|\bchildren\b|\bnested\b|\bparent\b)\s*$/,
         decreaseIndentPattern: /^.*\}.*$/,
     },
     folding: {
         offSide: true,
         markers: {
-            start: /^\s*(projection|all|every|on|children|parent)/,
+            start: /^\s*(projection|all|every|on|children|nested|parent)/,
             end: /^\s*$/,
         },
     },

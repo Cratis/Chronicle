@@ -53,6 +53,11 @@ public interface IEventStoreNamespaceStorage
     IFailedPartitionsStorage FailedPartitions { get; }
 
     /// <summary>
+    /// Gets the <see cref="IInFlightEventsStorage"/> for the event store namespace.
+    /// </summary>
+    IInFlightEventsStorage InFlightEvents { get; }
+
+    /// <summary>
     /// Gets the <see cref="IRecommendationStorage"/> for the event store namespace.
     /// </summary>
     IRecommendationStorage Recommendations { get; }
@@ -107,4 +112,11 @@ public interface IEventStoreNamespaceStorage
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
     /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
     IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Gets the storage for closed streams.
+    /// </summary>
+    /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
+    /// <returns>The <see cref="IClosedStreamsConstraintStorage"/> instance.</returns>
+    IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId);
 }

@@ -89,4 +89,13 @@ public interface IEventSequences
     /// <returns>An awaitable task.</returns>
     [Operation]
     Task RedactForEventSource(RedactForEventSourceRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Complete a stream within an event sequence so that no further events can be appended to it.
+    /// </summary>
+    /// <param name="request">The <see cref="CompleteStreamRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="CompleteStreamResponse"/> describing the outcome.</returns>
+    [Operation]
+    Task<CompleteStreamResponse> CompleteStream(CompleteStreamRequest request, CallContext context = default);
 }

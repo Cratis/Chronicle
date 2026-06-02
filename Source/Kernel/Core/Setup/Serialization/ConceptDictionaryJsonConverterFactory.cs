@@ -20,7 +20,8 @@ public class ConceptDictionaryJsonConverterFactory : JsonConverterFactory
         }
 
         var genericDefinition = typeToConvert.GetGenericTypeDefinition();
-        if (genericDefinition != typeof(IDictionary<,>) && genericDefinition != typeof(Dictionary<,>))
+        var isReadOnly = genericDefinition == typeof(IReadOnlyDictionary<,>);
+        if (!isReadOnly && genericDefinition != typeof(IDictionary<,>) && genericDefinition != typeof(Dictionary<,>))
         {
             return false;
         }
@@ -33,7 +34,10 @@ public class ConceptDictionaryJsonConverterFactory : JsonConverterFactory
     {
         var keyType = typeToConvert.GetGenericArguments()[0];
         var valueType = typeToConvert.GetGenericArguments()[1];
-        var converterType = typeof(ConceptDictionaryJsonConverter<,>).MakeGenericType(keyType, valueType);
+        var isReadOnly = typeToConvert.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>);
+        var converterType = isReadOnly
+            ? typeof(ConceptReadOnlyDictionaryJsonConverter<,>).MakeGenericType(keyType, valueType)
+            : typeof(ConceptDictionaryJsonConverter<,>).MakeGenericType(keyType, valueType);
         return (Activator.CreateInstance(converterType) as JsonConverter)!;
     }
 }

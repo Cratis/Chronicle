@@ -23,6 +23,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -165,6 +166,7 @@ public class EventStoreForTesting : IEventStore
             new CausationManager(),
             new BaseIdentityProvider(),
             new ActivitySource<ReactorsImpl>(),
+            new ReactorSideEffectHandlers([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)]),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
@@ -284,6 +286,7 @@ public class EventStoreForTesting : IEventStore
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
+        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
@@ -293,6 +296,7 @@ public class EventStoreForTesting : IEventStore
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
             constraintsStorage,
+            closedStreamsStorage,
             identityStorage,
             eventTypesStorage);
 
@@ -303,15 +307,15 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
-        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
+        var eventComplianceHelper = new KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper(
+            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()));
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            complianceManager,
-            expandoObjectConverter,
+            eventComplianceHelper,
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

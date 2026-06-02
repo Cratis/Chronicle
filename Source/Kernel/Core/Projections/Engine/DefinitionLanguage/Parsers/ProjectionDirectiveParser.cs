@@ -22,6 +22,7 @@ public class ProjectionDirectiveParser
         new FromEventBlockVisitor(),
         new JoinBlockVisitor(),
         new ChildrenBlockVisitor(),
+        new NestedBlockVisitor(),
         new RemoveWithDirectiveVisitor()
     ];
 

@@ -151,6 +151,7 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
+            serviceProvider.GetRequiredService<Reactors.SideEffects.IReactorSideEffectHandlers>(),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 

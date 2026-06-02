@@ -15,8 +15,9 @@ public static class ConstraintDefinitionConverters
     /// Convert to a <see cref="ConstraintDefinition">SQL</see> representation.
     /// </summary>
     /// <param name="definition"><see cref="IConstraintDefinition"/> to convert.</param>
+    /// <param name="version">The version to persist for the definition.</param>
     /// <returns>Converted <see cref="ConstraintDefinition"/>.</returns>
-    public static ConstraintDefinition ToSql(this IConstraintDefinition definition)
+    public static ConstraintDefinition ToSql(this IConstraintDefinition definition, ulong version)
     {
         var type = definition.GetType();
         var typeName = type.Name;
@@ -24,7 +25,9 @@ public static class ConstraintDefinitionConverters
 
         return new ConstraintDefinition
         {
+            Id = $"{definition.Name}-v{version}",
             Name = definition.Name.Value,
+            Version = version,
             Type = typeName,
             Definition = serialized
         };
