@@ -105,18 +105,7 @@ public partial class Observer
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        // Filter out events that don't pass the structural event-type subscription or the
-        // dynamic ObserverFilters BEFORE handing the batch to the subscriber. The batch-level
-        // skip checks above only catch the "every event misses" case; without this per-event
-        // filter, a mixed batch (e.g. one matching and one non-matching EventSourceType) would
-        // still flow every event into the subscriber and through to the reactor handler,
-        // producing the symptom we fixed in observability: a reactor with [EventSourceType] sees
-        // events from the wrong source. State bookkeeping below uses result.LastSuccessfulObservation
-        // unchanged — non-matching trailing events get re-fetched once and filtered again,
-        // which is a one-roundtrip cost we accept to keep the rest of the machinery identical.
-        var eventsToHandle = events
-            .Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber && EventMatchesSubscription(_))
-            .ToArray();
+        var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
@@ -410,48 +399,5 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
-    }
-
-    /// <summary>
-    /// Returns true when the event matches the structural event-type subscription and all
-    /// dynamic <see cref="ObserverFilters"/> the subscription declared. Used to drop non-matching
-    /// events from a batch before dispatching to the subscriber so partial-match batches no longer
-    /// leak the non-matching tail to the handler.
-    /// </summary>
-    /// <param name="event">The <see cref="AppendedEvent"/> to evaluate.</param>
-    /// <returns>True when the event should reach the subscriber; false when it should be skipped.</returns>
-    bool EventMatchesSubscription(AppendedEvent @event)
-    {
-        if (!_subscription.EventTypes.Any(et => et.Id == @event.Context.EventType.Id))
-        {
-            return false;
-        }
-
-        if (_subscription.Filters is not { } filters)
-        {
-            return true;
-        }
-
-        if (filters.EventSourceType is { } eventSourceType
-            && eventSourceType != EventSourceType.Unspecified
-            && @event.Context.EventSourceType != eventSourceType)
-        {
-            return false;
-        }
-
-        if (filters.EventStreamType is { } eventStreamType
-            && !eventStreamType.IsAll
-            && @event.Context.EventStreamType != eventStreamType)
-        {
-            return false;
-        }
-
-        if (filters.Tags.Any()
-            && !@event.Context.Tags.Any(t => filters.Tags.Contains(t.Value)))
-        {
-            return false;
-        }
-
-        return true;
     }
 }
