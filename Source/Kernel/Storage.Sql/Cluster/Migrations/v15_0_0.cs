@@ -44,7 +44,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Users,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 Username = table.StringColumn(migrationBuilder),
                 Email = table.StringColumn(migrationBuilder, nullable: true),
                 PasswordHash = table.StringColumn(migrationBuilder, nullable: true),
@@ -61,7 +61,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Applications,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
                 ClientId = table.StringColumn(migrationBuilder),
                 ClientSecret = table.StringColumn(migrationBuilder, nullable: true),
                 DisplayName = table.StringColumn(migrationBuilder, nullable: true),
@@ -100,20 +100,70 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.SystemInformation,
             columns: table => new
             {
-                Id = table.NumberColumn<int>(migrationBuilder),
+                Id = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 Version = table.StringColumn(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.SystemInformation}", x => x.Id));
+
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.Tokens,
+            columns: table => new
+            {
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                ApplicationId = table.StringColumn(migrationBuilder, nullable: true),
+                AuthorizationId = table.StringColumn(migrationBuilder, nullable: true),
+                Subject = table.StringColumn(migrationBuilder, nullable: true),
+                Type = table.StringColumn(migrationBuilder, nullable: true),
+                Status = table.StringColumn(migrationBuilder, nullable: true),
+                Payload = table.StringColumn(migrationBuilder, nullable: true),
+                ReferenceId = table.StringColumn(migrationBuilder, nullable: true),
+                CreationDate = table.DateTimeOffsetColumn(migrationBuilder, nullable: true),
+                ExpirationDate = table.DateTimeOffsetColumn(migrationBuilder, nullable: true),
+                RedemptionDate = table.DateTimeOffsetColumn(migrationBuilder, nullable: true),
+                Properties = table.StringColumn(migrationBuilder, nullable: true),
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Tokens}", x => x.Id));
+
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.Authorizations,
+            columns: table => new
+            {
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
+                ApplicationId = table.GuidColumn(migrationBuilder, nullable: true),
+                Subject = table.StringColumn(migrationBuilder, nullable: true),
+                Type = table.StringColumn(migrationBuilder, nullable: true),
+                Status = table.StringColumn(migrationBuilder, nullable: true),
+                Scopes = table.StringColumn(migrationBuilder, nullable: true),
+                CreationDate = table.DateTimeOffsetColumn(migrationBuilder, nullable: true),
+                Properties = table.StringColumn(migrationBuilder, nullable: true),
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Authorizations}", x => x.Id));
+
+        migrationBuilder.CreateTable(
+            name: WellKnownTableNames.Scopes,
+            columns: table => new
+            {
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Name = table.StringColumn(migrationBuilder, nullable: true),
+                DisplayName = table.StringColumn(migrationBuilder, nullable: true),
+                Description = table.StringColumn(migrationBuilder, nullable: true),
+                Resources = table.StringColumn(migrationBuilder, nullable: true),
+                Properties = table.StringColumn(migrationBuilder, nullable: true),
+            },
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Scopes}", x => x.Id));
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(name: WellKnownTableNames.SystemInformation);
-        migrationBuilder.DropTable(name: WellKnownTableNames.Patches);
-        migrationBuilder.DropTable(name: WellKnownTableNames.DataProtectionKeys);
-        migrationBuilder.DropTable(name: WellKnownTableNames.Applications);
-        migrationBuilder.DropTable(name: WellKnownTableNames.Users);
-        migrationBuilder.DropTable(name: WellKnownTableNames.Reminders);
         migrationBuilder.DropTable(name: WellKnownTableNames.EventStores);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Reminders);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Users);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Applications);
+        migrationBuilder.DropTable(name: WellKnownTableNames.DataProtectionKeys);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Patches);
+        migrationBuilder.DropTable(name: WellKnownTableNames.SystemInformation);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Tokens);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Authorizations);
+        migrationBuilder.DropTable(name: WellKnownTableNames.Scopes);
     }
 }
