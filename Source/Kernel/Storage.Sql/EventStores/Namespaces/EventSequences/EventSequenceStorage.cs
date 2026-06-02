@@ -268,7 +268,8 @@ public class EventSequenceStorage(
                     eventToAppend.CausedByChain,
                     truncatedOccurred,
                     eventToAppend.Content,
-                    eventToAppend.Hash);
+                    eventToAppend.Hash,
+                    eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
 
@@ -345,7 +346,9 @@ public class EventSequenceStorage(
 
         // Return the AppendedEvent with the ORIGINAL event type so the kernel can route
         // the replay to the right observers. Content is the now-stored redaction marker,
-        // but metadata carries the original type for routing.
+        // but metadata carries the original type for routing — main's ToAppendedEvent
+        // helper would read the synthetic Redaction marker that just replaced it and
+        // route to the wrong observer set.
         var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
         var eventCausation = EventEntryConverter.GetCausation(eventEntry);
         var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
@@ -365,7 +368,7 @@ public class EventSequenceStorage(
             await identityStorage.GetFor(eventCausedBy),
             [],
             EventEntryConverter.GetHashForGeneration(eventEntry, originalEventType.Generation),
-            Subject: EventEntryConverter.ResolveSubject(eventEntry));
+            Subject: EventEntryConverter.GetSubject(eventEntry));
 
         return new AppendedEvent(eventMetadata, content);
     }
@@ -601,30 +604,7 @@ public class EventSequenceStorage(
                 return Option<AppendedEvent>.None();
             }
 
-            var eventType = EventEntryConverter.GetEventType(eventEntry);
-            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-            var causation = EventEntryConverter.GetCausation(eventEntry);
-            var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-            var eventMetadata = new EventContext(
-                eventType,
-                eventEntry.EventSourceType,
-                eventEntry.EventSourceId,
-                eventEntry.EventStreamType,
-                eventEntry.EventStreamId,
-                new EventSequenceNumber(eventEntry.SequenceNumber),
-                eventEntry.Occurred,
-                eventStore,
-                @namespace,
-                new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-                causation,
-                await identityStorage.GetFor(causedBy),
-                [],
-                EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
-                Subject: EventEntryConverter.ResolveSubject(eventEntry));
-
-            var generationalContent = EventEntryConverter.GetAllGenerationalContent(eventEntry);
-            var appendedEvent = new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContent };
+            var appendedEvent = await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
             return (Option<AppendedEvent>)appendedEvent;
         }
         catch (Exception ex)
@@ -643,30 +623,7 @@ public class EventSequenceStorage(
             .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumAt)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-        var causation = EventEntryConverter.GetCausation(eventEntry);
-        var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-        var eventMetadata = new EventContext(
-            eventType,
-            eventEntry.EventSourceType,
-            eventEntry.EventSourceId,
-            eventEntry.EventStreamType,
-            eventEntry.EventStreamId,
-            new EventSequenceNumber(eventEntry.SequenceNumber),
-            eventEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-            causation,
-            await identityStorage.GetFor(causedBy),
-            [],
-            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
-            Subject: EventEntryConverter.ResolveSubject(eventEntry));
-
-        var generationalContentAt = EventEntryConverter.GetAllGenerationalContent(eventEntry);
-        return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentAt };
+        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
     }
 
     /// <inheritdoc/>
@@ -688,30 +645,7 @@ public class EventSequenceStorage(
             return Option<AppendedEvent>.None();
         }
 
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-        var causation = EventEntryConverter.GetCausation(eventEntry);
-        var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-        var eventMetadata = new EventContext(
-            eventType,
-            eventEntry.EventSourceType,
-            eventEntry.EventSourceId,
-            eventEntry.EventStreamType,
-            eventEntry.EventStreamId,
-            new EventSequenceNumber(eventEntry.SequenceNumber),
-            eventEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-            causation,
-            await identityStorage.GetFor(causedBy),
-            [],
-            EventEntryConverter.GetHashForGeneration(eventEntry, eventType.Generation),
-            Subject: EventEntryConverter.ResolveSubject(eventEntry));
-
-        var generationalContentLast = EventEntryConverter.GetAllGenerationalContent(eventEntry);
-        return new AppendedEvent(eventMetadata, content) { GenerationalContent = generationalContentLast };
+        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
     }
 
     /// <inheritdoc/>
@@ -841,7 +775,7 @@ public class EventSequenceStorage(
             await identityStorage.GetFor(eventCausedBy),
             [],
             EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
-            Subject: EventEntryConverter.ResolveSubject(redactionEntry));
+            Subject: EventEntryConverter.GetSubject(redactionEntry));
 
         return new AppendedEvent(eventMetadata, content);
     }

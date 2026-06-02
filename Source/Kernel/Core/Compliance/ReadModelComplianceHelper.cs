@@ -101,7 +101,13 @@ public static class ReadModelComplianceHelper
         }
 
         var dict = (IDictionary<string, object?>)instance;
-        if (!dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj) || subjectObj is not string identifier)
+        if (!dict.TryGetValue(WellKnownProperties.Subject, out var subjectObj) || subjectObj is null)
+        {
+            return instance;
+        }
+
+        var identifier = subjectObj.ToString();
+        if (string.IsNullOrEmpty(identifier))
         {
             return instance;
         }

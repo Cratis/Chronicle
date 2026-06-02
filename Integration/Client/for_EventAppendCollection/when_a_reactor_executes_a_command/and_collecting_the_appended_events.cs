@@ -19,7 +19,19 @@ public class and_collecting_the_appended_events(context context) : Given<context
 
             AppendedEventsCollector = StartCollectingAppends();
             await EventStore.EventLog.Append(EventSourceId, new AnEventHappened(42));
-            await AppendedEventsCollector.WaitForCount(2);
+            try
+            {
+                await AppendedEventsCollector.WaitForCount(2);
+            }
+            catch (TimeoutException ex)
+            {
+                var failedPartitions = await reactor.GetFailedPartitions();
+                var messages = failedPartitions
+                    .SelectMany(_ => _.Attempts)
+                    .SelectMany(_ => _.Messages)
+                    .ToArray();
+                throw new TimeoutException($"{ex.Message}\nFailed partitions:\n{string.Join('\n', messages)}", ex);
+            }
         }
     }
 

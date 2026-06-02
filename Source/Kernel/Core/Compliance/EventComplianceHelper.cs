@@ -41,7 +41,8 @@ public class EventComplianceHelper(
         foreach (var @event in events)
         {
             if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
-                @event.Context.Subject is null)
+                @event.Context.Subject is null ||
+                !schema.Schema.HasComplianceMetadata())
             {
                 releasedEvents.Add(@event);
                 continue;

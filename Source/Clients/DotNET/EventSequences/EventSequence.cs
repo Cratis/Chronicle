@@ -217,7 +217,8 @@ public class EventSequence(
                 EventType = eventType.ToContract(),
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString(),
                 Tags = allTags,
-                Occurred = occurred
+                Occurred = occurred,
+                Subject = SubjectResolver.ResolveFrom(@event)?.Value
             };
         });
 
@@ -290,7 +291,8 @@ public class EventSequence(
                 EventType = eventType.ToContract(),
                 Content = (await eventSerializer.Serialize(@event.Event)).ToString(),
                 Tags = allTags,
-                Occurred = @event.Occurred
+                Occurred = @event.Occurred,
+                Subject = (@event.Subject ?? SubjectResolver.ResolveFrom(@event.Event))?.Value
             });
         }
 

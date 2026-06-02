@@ -30,7 +30,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result, async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result, "apply", async (h, id, token) => await h.Apply(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
@@ -43,29 +43,43 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
         }
 
         var result = (json.DeepClone() as JsonObject)!;
-        await HandleActionFor(schema, identifier, result!, async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
+        await HandleActionFor(schema, identifier, result!, "release", async (h, id, token) => await h.Release(eventStore, eventStoreNamespace, id, token));
         return result;
     }
 
-    async Task HandleActionFor(JsonSchema schema, string identifier, JsonObject json, Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action)
+    async Task HandleActionFor(
+        JsonSchema schema,
+        string identifier,
+        JsonObject json,
+        string actionName,
+        Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action,
+        string path = "")
     {
         var complianceMetadataForContainer = schema.GetComplianceMetadata();
         foreach (var (property, value) in json.ToArray())
         {
             if (schema.Properties is not null && value is not null)
             {
+                var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
                 var propertySchema = schema.GetFlattenedProperties().Single(_ => _.Name == property);
                 foreach (var metadata in propertySchema.GetComplianceMetadata().Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                 {
                     if (_propertyValueHandlers.TryGetValue(metadata.metadataType, out var handler))
                     {
-                        json[property] = await action(handler, identifier, value);
+                        try
+                        {
+                            json[property] = await action(handler, identifier, value);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{propertyPath}'.", ex);
+                        }
                     }
                 }
 
                 if (value is JsonObject jsonObjectValue)
                 {
-                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, action);
+                    await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
                 }
             }
         }

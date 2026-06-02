@@ -315,8 +315,32 @@ public partial class Observer
             .GetNamespace(_observerKey.Namespace)
             .InFlightEvents);
 
-    Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
-        eventComplianceHelper.DecryptEvents(events, _eventTypeSchemas);
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    {
+        var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
+        await EnsureEventTypeSchemasFor(eventsToDecrypt);
+        return await eventComplianceHelper.DecryptEvents(eventsToDecrypt, _eventTypeSchemas);
+    }
+
+    async Task EnsureEventTypeSchemasFor(IEnumerable<AppendedEvent> events)
+    {
+        var missingEventTypes = events
+            .Select(_ => _.Context.EventType)
+            .Distinct()
+            .Where(_ => !_eventTypeSchemas.ContainsKey(_))
+            .ToArray();
+
+        if (missingEventTypes.Length == 0)
+        {
+            return;
+        }
+
+        var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(missingEventTypes);
+        foreach (var schema in schemas)
+        {
+            _eventTypeSchemas[schema.Type] = schema;
+        }
+    }
 
     bool ShouldHandleEvent(Key partition)
     {

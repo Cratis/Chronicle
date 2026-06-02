@@ -15,6 +15,12 @@ namespace Cratis.Chronicle.EventSequences;
 public record EventForEventSourceId(EventSourceId EventSourceId, object Event, Causation? Causation = default)
 {
     /// <summary>
+    /// Gets or inits the optional <see cref="Subject"/> for the event. When omitted, Chronicle derives it from
+    /// a <see cref="SubjectAttribute"/> on the event, or falls back to <see cref="EventSourceId"/>.
+    /// </summary>
+    public Subject? Subject { get; init; }
+
+    /// <summary>
     /// Gets or inits the <see cref="EventStreamType"/> for the event. Defaults to <see cref="EventStreamType.All"/>.
     /// </summary>
     public EventStreamType EventStreamType { get; init; } = EventStreamType.All;

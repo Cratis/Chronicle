@@ -10,7 +10,7 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.8" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.4.0" />
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.10.6" />
     <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.10.6" />
@@ -37,7 +37,7 @@
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.6.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.18.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
@@ -115,7 +115,7 @@
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.1" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />

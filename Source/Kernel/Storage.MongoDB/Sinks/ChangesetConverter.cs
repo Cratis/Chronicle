@@ -115,17 +115,19 @@ public class ChangesetConverter(
         EventSequenceNumber eventSequenceNumber)
     {
         var joinTasks = new List<Task>();
+        var changesToApply = changes.ToList();
+        var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
 
-        foreach (var change in changes)
+        foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, propertiesChanged);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, propertiesChanged);
                     break;
 
                 case ChildAdded childAdded:
-                    BuildChildAdded(key, updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded);
+                    BuildChildAdded(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, childAdded);
                     hasChanges = true;
                     break;
 
@@ -172,7 +174,7 @@ public class ChangesetConverter(
         }
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, PropertiesChanged<ExpandoObject> propertiesChanged)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
@@ -181,7 +183,9 @@ public class ChangesetConverter(
         // generic $set path here produces two operators targeting the same field, which MongoDB
         // rejects with "Updating the path 'X' would create a conflict at 'X'".
         var applicableDifferences = propertiesChanged.Differences
-            .Where(_ => !_.PropertyPath.IsMongoDBKey() && !_.PropertyPath.IsSinkOwnedSystemProperty())
+            .Where(_ => !_.PropertyPath.IsMongoDBKey()
+                && !_.PropertyPath.IsSinkOwnedSystemProperty()
+                && !_.ConflictsWithChildOperation(collectionPathsWithChildOperations))
             .ToArray();
 
         foreach (var propertyDifference in applicableDifferences)
@@ -210,7 +214,7 @@ public class ChangesetConverter(
         return propertiesChanged.Differences.Any();
     }
 
-    void BuildChildAdded(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
+    void BuildChildAdded(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildAdded childAdded)
     {
         BsonValue bsonValue;
 
@@ -226,7 +230,7 @@ public class ChangesetConverter(
         }
 
         var childrenProperty = childAdded.ChildrenProperty.GetChildrenProperty();
-        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
+        var arrayIndexers = new ArrayIndexers(childAdded.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
 

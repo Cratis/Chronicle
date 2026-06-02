@@ -402,21 +402,8 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
 
     void ConsolidateConflictingOperations()
     {
-        // Find all arrays that have ChildAdded or ChildRemoved operations
-        var arraysWithChildOperations = new HashSet<PropertyPath>();
-        foreach (var change in _changes)
-        {
-            if (change is ChildAdded childAdded)
-            {
-                arraysWithChildOperations.Add(childAdded.ChildrenProperty);
-            }
-            else if (change is ChildRemoved childRemoved)
-            {
-                arraysWithChildOperations.Add(childRemoved.ChildrenProperty);
-            }
-        }
+        var arraysWithChildOperations = _changes.GetCollectionPathsWithChildOperations();
 
-        // If there are arrays with child operations, filter out PropertiesChanged that set those arrays to empty
         if (arraysWithChildOperations.Count > 0)
         {
             var changesToUpdate = new List<(int Index, Change Change)>();
@@ -428,7 +415,7 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 {
                     // Filter out property differences that conflict with child operations
                     var nonConflictingDifferences = propertiesChanged.Differences
-                        .Where(diff => !ShouldFilterPropertyDifference(diff, arraysWithChildOperations))
+                        .Where(diff => !diff.ConflictsWithChildOperation(arraysWithChildOperations))
                         .ToList();
 
                     // Only keep the PropertiesChanged if there are non-conflicting differences
@@ -461,24 +448,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
                 }
             }
         }
-    }
-
-    bool ShouldFilterPropertyDifference(PropertyDifference diff, HashSet<PropertyPath> arraysWithChildOperations)
-    {
-        // Check if this property difference is setting an array to empty
-        if (diff.Changed is System.Collections.IEnumerable enumerable && enumerable.CountElements() == 0)
-        {
-            // Check if this array path matches any of the arrays with child operations
-            foreach (var arrayPath in arraysWithChildOperations)
-            {
-                if (diff.PropertyPath.Equals(arrayPath))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     List<PropertyDifference> SetProperties(TTarget state, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers)
