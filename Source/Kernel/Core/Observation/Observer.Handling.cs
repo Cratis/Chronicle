@@ -64,19 +64,26 @@ public partial class Observer
         // The sequence-number filter is applied at the same time so we never end up holding a
         // non-empty matchingEvents whose elements are all already past — that combination would
         // skip the state-advance below and leave the cursor stuck on the same batch on the next
-        // pass. Whether the batch has zero matching events or only matching events that are
-        // already accounted for, the bookkeeping has to advance past observedTailEventSequenceNumber.
+        // pass when the batch carries forward-of-cursor non-matching events.
         var eventsToHandle = events
             .Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber && EventMatchesSubscription(_))
             .ToArray();
         if (eventsToHandle.Length == 0)
         {
-            State = State with
+            // Only advance when the batch actually carried events forward of our cursor — a batch
+            // that lies entirely before NextEventSequenceNumber (re-delivery of already-handled
+            // events) must leave the cursor and LastHandled untouched and must not emit a state
+            // write. Advancing in that case would move the cursor backward and round-trip the same
+            // partition's already-handled work back through the pipeline.
+            if (observedTailEventSequenceNumber >= tailEventSequenceNumber)
             {
-                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                TailEventSequenceNumber = observedTailEventSequenceNumber
-            };
-            await WriteStateAsync();
+                State = State with
+                {
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                };
+                await WriteStateAsync();
+            }
             return;
         }
         var numEventsSuccessfullyHandled = EventCount.Zero;
