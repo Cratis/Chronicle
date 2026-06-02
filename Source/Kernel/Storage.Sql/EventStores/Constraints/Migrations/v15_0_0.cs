@@ -22,11 +22,19 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Constraints,
             columns: table => new
             {
+                Id = table.StringColumn(migrationBuilder, maxLength: 255, nullable: false),
                 Name = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Version = table.NumberColumn<ulong>(migrationBuilder, nullable: false),
                 Type = table.StringColumn(migrationBuilder),
                 Definition = table.JsonColumn<string>(migrationBuilder)
             },
-            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Constraints}", x => x.Name));
+            constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Constraints}", x => x.Id));
+
+        migrationBuilder.CreateIndex(
+            name: $"IX_{WellKnownTableNames.Constraints}_Name_Version",
+            table: WellKnownTableNames.Constraints,
+            columns: ["Name", "Version"],
+            unique: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

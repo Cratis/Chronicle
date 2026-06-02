@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Sinks;
@@ -18,8 +17,7 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
-/// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes) : IClusterStorage
 {
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
@@ -35,7 +33,7 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
-        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes, jsonSerializerOptions);
+        return new EventStoreStorage(eventStore, database, sinkFactories, jobTypes, new System.Text.Json.JsonSerializerOptions());
     }
 
     /// <inheritdoc/>

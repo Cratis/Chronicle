@@ -48,19 +48,4 @@ public class ClusterDbContext(DbContextOptions<ClusterDbContext> options) : Base
     /// Gets or sets the DbSet for system information.
     /// </summary>
     public DbSet<SystemInformationEntity> SystemInformation { get; set; }
-
-    /// <summary>
-    /// Gets or sets the DbSet for OAuth tokens.
-    /// </summary>
-    public DbSet<TokenEntity> Tokens { get; set; }
-
-    /// <summary>
-    /// Gets or sets the DbSet for OAuth authorizations.
-    /// </summary>
-    public DbSet<AuthorizationEntity> Authorizations { get; set; }
-
-    /// <summary>
-    /// Gets or sets the DbSet for OAuth scopes.
-    /// </summary>
-    public DbSet<ScopeEntity> Scopes { get; set; }
 }
