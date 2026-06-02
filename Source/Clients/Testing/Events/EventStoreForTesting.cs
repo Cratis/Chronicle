@@ -166,7 +166,7 @@ public class EventStoreForTesting : IEventStore
             new CausationManager(),
             new BaseIdentityProvider(),
             new ActivitySource<ReactorsImpl>(),
-            new ReactorSideEffectHandlers([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)]),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)])),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));

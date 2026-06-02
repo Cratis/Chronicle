@@ -31,7 +31,7 @@ public class handler_method_returning_event_from_reactor_implementing_ICanProvid
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers([new EventResultHandler(eventTypes)]);
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithCustomEventSourceId(_outboundEvent, _reactorEventSourceId);
 
         _invoker = new ReactorInvoker(
