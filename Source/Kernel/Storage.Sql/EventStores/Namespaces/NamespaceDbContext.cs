@@ -82,6 +82,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// Gets or sets the closed streams DbSet.
     /// </summary>
     public DbSet<ClosedStreamEntry> ClosedStreams { get; set; } = null!;
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
