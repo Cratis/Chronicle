@@ -103,6 +103,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable

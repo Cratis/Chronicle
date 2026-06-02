@@ -57,6 +57,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
+        builder.Services.TryAddSingleton<IEventComplianceHelper, EventComplianceHelper>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder
             .AddChronicleServicesAsInMemory()
@@ -112,8 +113,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new EventSequences(
                     grainFactory,
                     storage,
-                    sp.GetRequiredService<IJsonComplianceManager>(),
-                    expandoObjectConverter,
+                    sp.GetRequiredService<IEventComplianceHelper>(),
                     jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Events.EventTypes(storage, grainFactory),
                 new Constraints(grainFactory),

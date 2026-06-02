@@ -212,4 +212,9 @@ public static class WellKnownTableNames
     /// The table that holds OAuth scopes.
     /// </summary>
     public const string Scopes = "Scopes";
+
+    /// <summary>
+    /// The table that holds closed event streams per event sequence.
+    /// </summary>
+    public const string ClosedStreams = "ClosedStreams";
 }

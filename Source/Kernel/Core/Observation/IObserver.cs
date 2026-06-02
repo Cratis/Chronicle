@@ -45,6 +45,16 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Report a batch of events that have been successfully handled for a partition.
+    /// Increments both the aggregate and per-event-type handled event counts, as well as
+    /// the per-partition breakdown used to subtract counts when a partition is replayed.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition that handled the events.</param>
+    /// <param name="handledEvents">The events that were successfully handled.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents);
+
+    /// <summary>
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>

@@ -189,4 +189,25 @@ public interface IEventSequence : IGrainWithStringKey
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
         Identity causedBy);
+
+    /// <summary>
+    /// Complete a stream so that no further events can be appended to it.
+    /// </summary>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> identifying the stream within the type.</param>
+    /// <returns>A <see cref="Result{TSuccess, TError}"/> containing the tail <see cref="EventSequenceNumber"/> at the moment of completion on success, or a <see cref="CompleteStreamError"/> describing why the operation was rejected.</returns>
+    /// <remarks>
+    /// The default stream — <see cref="EventStreamType.All"/> paired with the default <see cref="EventStreamId"/> — can never be completed and will return
+    /// <see cref="CompleteStreamError.DefaultStreamCannotBeCompleted"/>. Completing an already-completed stream returns
+    /// <see cref="CompleteStreamError.AlreadyCompleted"/> and leaves the stream in its completed state.
+    /// </remarks>
+    Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId);
+
+    /// <summary>
+    /// Check whether or not the supplied stream has been completed.
+    /// </summary>
+    /// <param name="eventStreamType">The <see cref="EventStreamType"/> identifying the stream's type.</param>
+    /// <param name="eventStreamId">The <see cref="EventStreamId"/> identifying the stream within the type.</param>
+    /// <returns>True if the stream has been completed; false otherwise.</returns>
+    Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId);
 }

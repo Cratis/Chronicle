@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Execution;
 
 namespace Cratis.Chronicle.Testing.Reactors;
@@ -31,7 +32,18 @@ namespace Cratis.Chronicle.Testing.Reactors;
 /// When <see langword="null"/>, a <see cref="DefaultServiceProvider"/> is used which instantiates
 /// the reactor via its default constructor.
 /// </param>
-public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null)
+/// <param name="sideEffectHandlers">
+/// Optional <see cref="IReactorSideEffectHandlers"/> for processing any events returned as side effects by handler methods.
+/// When <see langword="null"/>, returned events are silently discarded.
+/// </param>
+/// <param name="eventStore">
+/// Optional <see cref="IEventStore"/> passed to side effect handlers when they append events.
+/// When <see langword="null"/>, returned events are silently discarded even if <paramref name="sideEffectHandlers"/> is provided.
+/// </param>
+public class ReactorScenario<TReactor>(
+    IServiceProvider? serviceProvider = null,
+    IReactorSideEffectHandlers? sideEffectHandlers = null,
+    IEventStore? eventStore = null)
     where TReactor : class, IReactor
 {
     readonly IServiceProvider _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
@@ -81,7 +93,9 @@ public class ReactorScenario<TReactor>(IServiceProvider? serviceProvider = null)
 #pragma warning restore CA2000
             typeof(TReactor),
             activatedReactor,
-            NullLogger<ReactorInvoker>.Instance);
+            NullLogger<ReactorInvoker>.Instance,
+            sideEffectHandlers,
+            eventStore);
 
         foreach (var @event in events)
         {

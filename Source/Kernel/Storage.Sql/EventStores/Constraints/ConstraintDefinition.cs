@@ -12,10 +12,20 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
 public class ConstraintDefinition
 {
     /// <summary>
-    /// Gets or sets the unique identifier for the constraint (constraint name).
+    /// Gets or sets the unique identifier for the persisted constraint version.
     /// </summary>
     [Key]
+    public required string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the constraint.
+    /// </summary>
     public required string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version of the constraint definition.
+    /// </summary>
+    public ulong Version { get; set; }
 
     /// <summary>
     /// Gets or sets the CLR type name of the constraint definition.

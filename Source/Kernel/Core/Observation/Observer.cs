@@ -14,7 +14,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
@@ -35,8 +34,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
+/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII fields in event content.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
@@ -50,8 +48,7 @@ public partial class Observer(
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IEventComplianceHelper eventComplianceHelper,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
@@ -211,7 +208,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -261,7 +258,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -284,6 +281,14 @@ public partial class Observer(
         new QuarantinedObserver(
             _observerKey,
             loggerFactory.CreateLogger<QuarantinedObserver>()),
+
+        new CatchingUpInFlight(
+            _observerKey,
+            observerDefinition,
+            failures,
+            storage,
+            _jobsManager,
+            loggerFactory.CreateLogger<CatchingUpInFlight>()),
 
         new Observing(
             _appendedEventsQueues,

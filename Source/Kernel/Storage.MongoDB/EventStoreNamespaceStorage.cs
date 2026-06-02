@@ -50,6 +50,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     readonly ConcurrentDictionary<EventSequenceId, IEventSequenceStorage> _eventSequences = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueConstraintsStorage> _uniqueConstraints = new();
     readonly ConcurrentDictionary<EventSequenceId, IUniqueEventTypesConstraintsStorage> _uniqueEventTypesConstraints = new();
+    readonly ConcurrentDictionary<EventSequenceId, IClosedStreamsConstraintStorage> _closedStreamsConstraints = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreNamespaceStorage"/> class.
@@ -94,6 +95,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         JobSteps = new JobStepStorage(eventStoreNamespaceDatabase);
         Observers = new ObserverStateStorage(eventStoreNamespaceDatabase);
         FailedPartitions = new FailedPartitionStorage(eventStoreNamespaceDatabase);
+        InFlightEvents = new InFlightEventsStorage(eventStoreNamespaceDatabase);
         Recommendations = new RecommendationStorage(eventStoreNamespaceDatabase);
         ObserverKeyIndexes = new ObserverKeyIndexes(eventStoreNamespaceDatabase, observerDefinitionsStorage);
         Sinks = sinks;
@@ -127,6 +129,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; }
+
+    /// <inheritdoc/>
+    public IInFlightEventsStorage InFlightEvents { get; }
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; }
@@ -190,5 +195,16 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         }
 
         return _uniqueEventTypesConstraints[eventSequenceId] = new UniqueEventTypesConstraintsStorage(_eventStoreNamespaceDatabase, eventSequenceId);
+    }
+
+    /// <inheritdoc/>
+    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId)
+    {
+        if (_closedStreamsConstraints.TryGetValue(eventSequenceId, out var closedStreamsStorage))
+        {
+            return closedStreamsStorage;
+        }
+
+        return _closedStreamsConstraints[eventSequenceId] = new ClosedStreamsConstraintStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
 }

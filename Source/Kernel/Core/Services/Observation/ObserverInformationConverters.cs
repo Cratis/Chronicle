@@ -17,7 +17,8 @@ internal static class ObserverInformationConverters
     /// </summary>
     /// <param name="information"><see cref="IEnumerable{ObserverInformation}"/> to convert from.</param>
     /// <returns>Converted <see cref="IEnumerable{ObserverInformation}"/>.</returns>
-    public static IEnumerable<ObserverInformation> ToContract(this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information) =>
+    public static IEnumerable<ObserverInformation> ToContract(
+        this IEnumerable<(ObserverDefinition Definition, ObserverState State)> information) =>
         information.Select(_ => _.Definition.ToContract(_.State));
 
     /// <summary>
@@ -26,7 +27,9 @@ internal static class ObserverInformationConverters
     /// <param name="definition"><see cref="ObserverDefinition"/> to convert from.</param>
     /// <param name="state"><see cref="ObserverState"/> to convert from.</param>
     /// <returns>Converted <see cref="ObserverInformation"/>.</returns>
-    public static ObserverInformation ToContract(this ObserverDefinition definition, ObserverState state) =>
+    public static ObserverInformation ToContract(
+        this ObserverDefinition definition,
+        ObserverState state) =>
         new()
         {
             Id = definition.Identifier,
@@ -37,6 +40,7 @@ internal static class ObserverInformationConverters
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsReplayable = definition.IsReplayable
         };
