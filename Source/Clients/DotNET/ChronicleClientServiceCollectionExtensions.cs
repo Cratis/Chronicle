@@ -124,10 +124,6 @@ internal static class ChronicleClientServiceCollectionExtensions
 
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
 
-        services.AddSingleton<IReactorSideEffectHandler, EventResultHandler>();
-        services.AddSingleton<IReactorSideEffectHandler, EventsResultHandler>();
-        services.AddSingleton<IReactorSideEffectHandlers, ReactorSideEffectHandlers>();
-
         return services;
     }
 
