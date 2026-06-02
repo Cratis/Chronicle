@@ -196,16 +196,19 @@ public class InMemorySink(
 
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
     {
-        foreach (var change in changes)
+        var changesToApply = changes.ToList();
+        var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
+
+        foreach (var change in changesToApply)
         {
             switch (change)
             {
-                case PropertiesChanged<ExpandoObject>:
-                    state = state.MergeWith((change.State as ExpandoObject)!);
+                case PropertiesChanged<ExpandoObject> propertiesChanged:
+                    state = state.MergeWith(propertiesChanged.ToStateWithoutChildOperationConflicts(collectionPathsWithChildOperations));
                     break;
 
                 case ChildAdded childAdded:
-                    var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
                     collection.Add(childAdded.State);
                     break;
 

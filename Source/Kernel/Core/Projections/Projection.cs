@@ -365,16 +365,19 @@ public class Projection(
 
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)
     {
-        foreach (var change in changes)
+        var changesToApply = changes.ToList();
+        var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
+
+        foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    state = state.MergeWith(propertiesChanged.ToStateWithoutChildOperationConflicts(collectionPathsWithChildOperations));
                     break;
 
                 case ChildAdded childAdded:
-                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
                     items.Add(childAdded.Child);
                     break;
 

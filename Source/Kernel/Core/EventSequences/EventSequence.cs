@@ -273,7 +273,7 @@ public class EventSequence(
 
             var tasks = events.Select(async e =>
             {
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
+                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject);
                 return (Event: e, Result: result);
             });
 
@@ -319,7 +319,8 @@ public class EventSequence(
                     eventToAppend.Tags,
                     eventToAppend.Occurred ?? DateTimeOffset.UtcNow,
                     compliantEvent,
-                    eventHash));
+                    eventHash,
+                    eventToAppend.Subject));
 
                 State.SequenceNumber = State.SequenceNumber.Next();
             }
@@ -435,6 +436,11 @@ public class EventSequence(
             causation,
             await IdentityStorage.GetFor(causedBy.WithoutDuplicates()),
             DateTimeOffset.UtcNow);
+        if (affectedEvent.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return;
+        }
+
         await RewindPartitionForAffectedObservers(affectedEvent.Context.EventSourceId, [affectedEvent.Context.EventType]);
     }
 

@@ -352,7 +352,7 @@ public class EventSequenceStorage(
                                        .ConfigureAwait(false);
         var @event = await converter.ToAppendedEvent(rawEvent);
 
-        if (@event.Context.EventType == GlobalEventTypes.Redaction)
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
         {
             logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
             return @event;

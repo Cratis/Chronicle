@@ -62,28 +62,7 @@ public class EventCursor(
         var appendedEvents = new List<AppendedEvent>();
         foreach (var eventEntry in eventEntries)
         {
-            var eventType = EventEntryConverter.GetEventType(eventEntry);
-            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-            var causation = EventEntryConverter.GetCausation(eventEntry);
-            var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-            var eventMetadata = new EventContext(
-                eventType,
-                eventEntry.EventSourceType,
-                eventEntry.EventSourceId,
-                eventEntry.EventStreamType,
-                eventEntry.EventStreamId,
-                new EventSequenceNumber(eventEntry.SequenceNumber),
-                eventEntry.Occurred,
-                _eventStore,
-                _namespace,
-                new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-                causation,
-                await _identityStorage.GetFor(causedBy),
-                [],
-                EventHash.NotSet);
-
-            appendedEvents.Add(new AppendedEvent(eventMetadata, content));
+            appendedEvents.Add(await EventEntryConverter.ToAppendedEvent(eventEntry, _eventStore, _namespace, _identityStorage));
         }
 
         Current = appendedEvents;

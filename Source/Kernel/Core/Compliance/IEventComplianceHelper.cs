@@ -21,8 +21,8 @@ public interface IEventComplianceHelper
     Task<AppendedEvent> ReleaseEventContent(AppendedEvent @event, JsonSchema schema);
 
     /// <summary>
-    /// Decrypts PII fields for a collection of events, skipping events whose type is not in the schema map
-    /// or whose subject is null.
+    /// Decrypts PII fields for a collection of events, skipping events whose type is not in the schema map,
+    /// whose subject is null, or whose schema has no compliance metadata.
     /// </summary>
     /// <param name="events">The events to decrypt.</param>
     /// <param name="eventTypeSchemas">Lookup of <see cref="EventTypeSchema"/> keyed by <see cref="EventType"/>.</param>

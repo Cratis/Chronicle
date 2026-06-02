@@ -228,7 +228,8 @@ public class EventSequenceStorage(
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
                     eventToAppend.Occurred,
-                    eventToAppend.Content);
+                    eventToAppend.Content,
+                    eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
 
@@ -283,28 +284,7 @@ public class EventSequenceStorage(
         await scope.DbContext.SaveChangesAsync();
 
         // Return the redacted event
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-        var eventCausation = EventEntryConverter.GetCausation(eventEntry);
-        var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-        var eventMetadata = new EventContext(
-            eventType,
-            eventEntry.EventSourceType,
-            eventEntry.EventSourceId,
-            eventEntry.EventStreamType,
-            eventEntry.EventStreamId,
-            new EventSequenceNumber(eventEntry.SequenceNumber),
-            eventEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-            eventCausation,
-            await identityStorage.GetFor(eventCausedBy),
-            [],
-            EventHash.NotSet);
-
-        return new AppendedEvent(eventMetadata, content);
+        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
     }
 
     /// <inheritdoc/>
@@ -529,28 +509,7 @@ public class EventSequenceStorage(
                 return Option<AppendedEvent>.None();
             }
 
-            var eventType = EventEntryConverter.GetEventType(eventEntry);
-            var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-            var causation = EventEntryConverter.GetCausation(eventEntry);
-            var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-            var eventMetadata = new EventContext(
-                eventType,
-                eventEntry.EventSourceType,
-                eventEntry.EventSourceId,
-                eventEntry.EventStreamType,
-                eventEntry.EventStreamId,
-                new EventSequenceNumber(eventEntry.SequenceNumber),
-                eventEntry.Occurred,
-                eventStore,
-                @namespace,
-                new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-                causation,
-                await identityStorage.GetFor(causedBy),
-                [],
-                EventHash.NotSet);
-
-            var appendedEvent = new AppendedEvent(eventMetadata, content);
+            var appendedEvent = await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
             return (Option<AppendedEvent>)appendedEvent;
         }
         catch (Exception ex)
@@ -568,28 +527,7 @@ public class EventSequenceStorage(
             .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-        var causation = EventEntryConverter.GetCausation(eventEntry);
-        var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-        var eventMetadata = new EventContext(
-            eventType,
-            eventEntry.EventSourceType,
-            eventEntry.EventSourceId,
-            eventEntry.EventStreamType,
-            eventEntry.EventStreamId,
-            new EventSequenceNumber(eventEntry.SequenceNumber),
-            eventEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-            causation,
-            await identityStorage.GetFor(causedBy),
-            [],
-            EventHash.NotSet);
-
-        return new AppendedEvent(eventMetadata, content);
+        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
     }
 
     /// <inheritdoc/>
@@ -611,28 +549,7 @@ public class EventSequenceStorage(
             return Option<AppendedEvent>.None();
         }
 
-        var eventType = EventEntryConverter.GetEventType(eventEntry);
-        var content = EventEntryConverter.GetContentForGeneration(eventEntry, eventType.Generation);
-        var causation = EventEntryConverter.GetCausation(eventEntry);
-        var causedBy = EventEntryConverter.GetCausedBy(eventEntry);
-
-        var eventMetadata = new EventContext(
-            eventType,
-            eventEntry.EventSourceType,
-            eventEntry.EventSourceId,
-            eventEntry.EventStreamType,
-            eventEntry.EventStreamId,
-            new EventSequenceNumber(eventEntry.SequenceNumber),
-            eventEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
-            causation,
-            await identityStorage.GetFor(causedBy),
-            [],
-            EventHash.NotSet);
-
-        return new AppendedEvent(eventMetadata, content);
+        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
     }
 
     /// <inheritdoc/>
