@@ -98,4 +98,13 @@ public interface IEventSequences
     /// <returns>The <see cref="GetAllEventSequencesResponse"/> with all event sequences.</returns>
     [Operation]
     Task<GetAllEventSequencesResponse> GetAllEventSequences(GetAllEventSequencesRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get a histogram of events in an event sequence, grouped by time bucket.
+    /// </summary>
+    /// <param name="request">The <see cref="GetHistogramRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="GetHistogramResponse"/> with the histogram buckets.</returns>
+    [Operation]
+    Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default);
 }

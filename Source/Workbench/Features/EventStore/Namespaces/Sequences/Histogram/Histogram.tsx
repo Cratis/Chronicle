@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { useMockData } from './useMockData';
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
+import { ForSequence } from 'Api/EventSequences/ForSequence';
 
 type EChartsOption = echarts.EChartsOption;
 
@@ -55,35 +55,38 @@ function getChartOption(dates: any, counts: any): EChartsOption {
 }
 
 export interface EventHistogramProps {
-    eventLog: string;
+    eventStore: string;
+    namespace: string;
+    eventSequenceId: string;
+    resolution?: string;
 }
 
 export const EventHistogram = (props: EventHistogramProps) => {
     const chartContainer = useRef<HTMLDivElement>(null);
     const getChart = () => echarts.getInstanceByDom(chartContainer.current!);
-    const entries = useMockData(props.eventLog);
 
-    const dates = entries?.data?.map((_: any) => {
-        return _.date;
+    const [histogram] = ForSequence.use({
+        eventStore: props.eventStore,
+        namespace: props.namespace,
+        eventSequenceId: props.eventSequenceId,
+        resolution: props.resolution ?? 'Hour',
     });
 
-    const counts = entries?.data?.map((_: any) => {
-        return _.count;
-    });
+    const dates = histogram.data?.map(_ => _.occurred?.toISOString?.() ?? String(_.occurred)) ?? [];
+    const counts = histogram.data?.map(_ => _.count) ?? [];
 
     if (chartContainer.current) {
         const chart = getChart();
-        chart!.setOption(getChartOption(dates, counts));
+        chart?.setOption(getChartOption(dates, counts));
     }
 
     useEffect(() => {
         if (chartContainer.current) {
             const chart = echarts.init(chartContainer.current);
-
             chart.resize();
         }
 
-        const listener = () => getChart()!.resize();
+        const listener = () => getChart()?.resize();
         window.addEventListener('resize', listener);
         return () => window.removeEventListener('resize', listener);
     }, []);

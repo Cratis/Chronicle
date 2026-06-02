@@ -21,7 +21,7 @@ export class QueryViewModel {
         this._eventTypes = observable.array(query.eventTypes ?? []);
         this._startTime = query.startTime ?? null;
         this._endTime = query.endTime ?? null;
-        this._hasChanges = false;
+        this._hasChanges = query.isUnsaved === true;
     }
 
     get hasChanges(): boolean {

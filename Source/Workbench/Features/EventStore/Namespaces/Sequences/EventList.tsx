@@ -19,6 +19,8 @@ export interface EventListFilter {
 export interface EventListProps {
     filter?: EventListFilter;
     eventSequenceId?: string;
+    selection?: AppendedEvent | null;
+    onSelectionChange?: (event: AppendedEvent | null) => void;
 }
 
 const occurred = (event: AppendedEvent) => {
@@ -42,9 +44,11 @@ export const EventList = (props: EventListProps) => {
             query={AppendedEvents}
             queryArguments={queryArgs}
             emptyMessage={strings.eventStore.namespaces.sequences.empty}
-            dataKey='metadata.sequenceNumber'>
-            <Column field='metadata.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
-            <Column field='metadata.type.id' header={strings.eventStore.namespaces.sequences.columns.eventType} />
+            dataKey='context.sequenceNumber'
+            selection={(props.selection ?? null) as unknown as AppendedEvent[] | null}
+            onSelectionChange={(event) => props.onSelectionChange?.((event.value as unknown as AppendedEvent | null) ?? null)}>
+            <Column field='context.sequenceNumber' header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
+            <Column field='context.eventType.id' header={strings.eventStore.namespaces.sequences.columns.eventType} />
             <Column field='context.occurred' header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred} />
         </DataTableForQuery>
     );

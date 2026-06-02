@@ -584,7 +584,7 @@ internal sealed class ReadModels(
         string namespaceName,
         string eventSequenceId,
         EventSourceId? eventSourceId = default,
-        IEnumerable<Concepts.Events.EventType>? eventTypes = default,
+        IEnumerable<EventType>? eventTypes = default,
         ulong? eventCount = default)
     {
         var eventSequenceStorage = storage
@@ -667,5 +667,5 @@ internal sealed class ReadModels(
         return null;
     }
 
-    record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<Concepts.Events.EventType> EventTypes);
+    record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<EventType> EventTypes);
 }

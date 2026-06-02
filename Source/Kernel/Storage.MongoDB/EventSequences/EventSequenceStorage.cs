@@ -859,6 +859,75 @@ public class EventSequenceStorage(
                 new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<HistogramBucket>> GetHistogram(
+        HistogramResolution resolution,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        IEnumerable<EventType>? eventTypes = null)
+    {
+        var filters = new List<FilterDefinition<Event>>();
+        if (from is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Gte(e => e.Occurred, from.Value));
+        }
+        if (to is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Lte(e => e.Occurred, to.Value));
+        }
+        if (eventTypes?.Any() ?? false)
+        {
+            filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+
+        var combinedFilter = filters.Count > 0
+            ? Builders<Event>.Filter.And(filters)
+            : FilterDefinition<Event>.Empty;
+
+        var unit = resolution switch
+        {
+            HistogramResolution.Minute => "minute",
+            HistogramResolution.Hour => "hour",
+            HistogramResolution.Day => "day",
+            HistogramResolution.Week => "week",
+            HistogramResolution.Month => "month",
+            _ => "hour"
+        };
+
+        var groupStage = new BsonDocument("$group", new BsonDocument
+        {
+            { "_id", new BsonDocument("$dateTrunc", new BsonDocument
+                {
+                    { "date", "$occurred" },
+                    { "unit", unit }
+                })
+            },
+            { "sequenceNumber", new BsonDocument("$min", "$_id") },
+            { "occurred", new BsonDocument("$min", "$occurred") },
+            { "count", new BsonDocument("$sum", 1) }
+        });
+        var sortStage = new BsonDocument("$sort", new BsonDocument("occurred", 1));
+
+        var pipeline = PipelineDefinition<Event, BsonDocument>.Create(
+        [
+            PipelineStageDefinitionBuilder.Match(combinedFilter),
+            new BsonDocumentPipelineStageDefinition<Event, BsonDocument>(groupStage),
+            new BsonDocumentPipelineStageDefinition<BsonDocument, BsonDocument>(sortStage)
+        ]);
+
+        var cursor = await _collection.AggregateAsync(pipeline).ConfigureAwait(false);
+        var buckets = new List<HistogramBucket>();
+        await cursor.ForEachAsync(doc =>
+        {
+            var sequenceNumber = ToEventSequenceNumber(doc["sequenceNumber"]);
+            var occurred = new DateTimeOffset(doc["occurred"].ToUniversalTime(), TimeSpan.Zero);
+            var count = doc["count"].ToInt64();
+            buckets.Add(new HistogramBucket(sequenceNumber, occurred, count));
+        }).ConfigureAwait(false);
+
+        return buckets;
+    }
+
     static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
     {
         var sequenceNumber = Convert.ToUInt64(value.ToDecimal());

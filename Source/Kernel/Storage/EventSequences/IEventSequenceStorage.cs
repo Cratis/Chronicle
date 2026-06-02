@@ -248,6 +248,20 @@ public interface IEventSequenceStorage
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get a histogram of events grouped by time bucket.
+    /// </summary>
+    /// <param name="resolution">The <see cref="HistogramResolution"/> used to compute bucket size.</param>
+    /// <param name="from">Optional inclusive lower-bound timestamp filter.</param>
+    /// <param name="to">Optional inclusive upper-bound timestamp filter.</param>
+    /// <param name="eventTypes">Optional collection of event types to filter for.</param>
+    /// <returns>Ordered collection of <see cref="HistogramBucket"/>.</returns>
+    Task<IEnumerable<HistogramBucket>> GetHistogram(
+        HistogramResolution resolution,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        IEnumerable<EventType>? eventTypes = null);
+
+    /// <summary>
     /// Replace the generational content for an event at a specific sequence number.
     /// Used during event type migration when new generations are added and existing events
     /// need their content updated with the migrated content for all generations.

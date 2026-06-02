@@ -77,6 +77,10 @@ internal sealed class InMemoryEventStoreNamespaceStorage(
     public IEventSequenceStorage GetEventSequence(KernelEventSequences::EventSequenceId eventSequenceId) => eventSequenceStorage;
 
     /// <inheritdoc/>
+    public Task<IEnumerable<KernelEventSequences::EventSequenceId>> GetEventSequenceIds() =>
+        Task.FromResult<IEnumerable<KernelEventSequences::EventSequenceId>>([]);
+
+    /// <inheritdoc/>
     public IUniqueConstraintsStorage GetUniqueConstraintsStorage(KernelEventSequences::EventSequenceId eventSequenceId) =>
         uniqueConstraintsStorage ?? throw new NotSupportedException();
 

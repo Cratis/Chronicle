@@ -328,6 +328,45 @@ internal sealed class InMemoryEventSequenceStorage(
         KernelEvents::EventSequenceNumber sequenceNumber,
         IDictionary<KernelEvents::EventTypeGeneration, ExpandoObject> content) => Task.CompletedTask;
 
+    /// <inheritdoc/>
+    public Task<IEnumerable<HistogramBucket>> GetHistogram(
+        HistogramResolution resolution,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        IEnumerable<KernelEvents::EventType>? eventTypes = null)
+    {
+        var filtered = Filter(_events, null, null, null, null, eventTypes).AsEnumerable();
+        if (from is not null)
+        {
+            filtered = filtered.Where(e => e.Context.Occurred >= from.Value);
+        }
+        if (to is not null)
+        {
+            filtered = filtered.Where(e => e.Context.Occurred <= to.Value);
+        }
+
+        var buckets = filtered
+            .GroupBy(e => Truncate(e.Context.Occurred, resolution))
+            .Select(g => new HistogramBucket(
+                new KernelEvents::EventSequenceNumber(g.Min(e => e.Context.SequenceNumber.Value)),
+                g.Min(e => e.Context.Occurred),
+                g.LongCount()))
+            .OrderBy(b => b.Occurred)
+            .ToList();
+
+        return Task.FromResult<IEnumerable<HistogramBucket>>(buckets);
+    }
+
+    static DateTimeOffset Truncate(DateTimeOffset value, HistogramResolution resolution) => resolution switch
+    {
+        HistogramResolution.Minute => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Offset),
+        HistogramResolution.Hour => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, 0, 0, value.Offset),
+        HistogramResolution.Day => new DateTimeOffset(value.Year, value.Month, value.Day, 0, 0, 0, value.Offset),
+        HistogramResolution.Week => new DateTimeOffset(value.Date.AddDays(-((7 + value.DayOfWeek - DayOfWeek.Monday) % 7)), value.Offset),
+        HistogramResolution.Month => new DateTimeOffset(value.Year, value.Month, 1, 0, 0, 0, value.Offset),
+        _ => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, 0, 0, value.Offset)
+    };
+
     static IEnumerable<KernelAppendedEvent> Filter(
         IEnumerable<KernelAppendedEvent> events,
         KernelEvents::EventSourceId? eventSourceId,

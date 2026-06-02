@@ -3,6 +3,8 @@ export * from './Append';
 export * from './AppendedEvents';
 export * from './AppendMany';
 export * from './EventSequence';
+export * from './EventSequenceHistogram';
+export * from './ForSequence';
 export * from './Revise';
 export * from './EventToAppend';
 export * from './Redact';

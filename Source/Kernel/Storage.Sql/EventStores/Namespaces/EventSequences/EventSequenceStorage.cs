@@ -729,4 +729,60 @@ public class EventSequenceStorage(
 
         return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<HistogramBucket>> GetHistogram(
+        HistogramResolution resolution,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        IEnumerable<EventType>? eventTypes = null)
+    {
+        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+
+        var query = scope.DbContext.Events.AsQueryable();
+        if (from is not null)
+        {
+            query = query.Where(e => e.Occurred >= from.Value);
+        }
+        if (to is not null)
+        {
+            query = query.Where(e => e.Occurred <= to.Value);
+        }
+        if (eventTypes?.Any() == true)
+        {
+            var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+            query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        var rows = await query
+            .OrderBy(e => e.Occurred)
+            .Select(e => new { e.SequenceNumber, e.Occurred })
+            .ToListAsync();
+
+        return rows
+            .GroupBy(r => Truncate(r.Occurred, resolution))
+            .Select(g => new HistogramBucket(
+                new EventSequenceNumber(g.Min(r => r.SequenceNumber)),
+                g.Min(r => r.Occurred),
+                g.LongCount()))
+            .OrderBy(b => b.Occurred)
+            .ToList();
+    }
+
+    static DateTimeOffset Truncate(DateTimeOffset value, HistogramResolution resolution) => resolution switch
+    {
+        HistogramResolution.Minute => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Offset),
+        HistogramResolution.Hour => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, 0, 0, value.Offset),
+        HistogramResolution.Day => new DateTimeOffset(value.Year, value.Month, value.Day, 0, 0, 0, value.Offset),
+        HistogramResolution.Week => TruncateToWeek(value),
+        HistogramResolution.Month => new DateTimeOffset(value.Year, value.Month, 1, 0, 0, 0, value.Offset),
+        _ => new DateTimeOffset(value.Year, value.Month, value.Day, value.Hour, 0, 0, value.Offset)
+    };
+
+    static DateTimeOffset TruncateToWeek(DateTimeOffset value)
+    {
+        var diff = (7 + (int)value.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+        var monday = value.Date.AddDays(-diff);
+        return new DateTimeOffset(monday, value.Offset);
+    }
 }

@@ -8,4 +8,6 @@ export type QueryDefinition = {
     eventTypes?: string[];
     startTime?: Date;
     endTime?: Date;
+    folderId?: string;
+    isUnsaved?: boolean;
 };

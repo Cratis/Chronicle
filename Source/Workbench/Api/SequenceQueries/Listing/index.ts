@@ -1,3 +1,4 @@
-export * from './AllSequenceQueries';
+export * from './AllEventSequenceQueryFolders';
+export * from './EventSequenceQuery';
+export * from './EventSequenceQueryFolder';
 export * from './Reduce';
-export * from './SequenceQueryDefinition';

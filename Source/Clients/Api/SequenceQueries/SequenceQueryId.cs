@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.Api.SequenceQueries;
 
 /// <summary>
@@ -25,6 +27,12 @@ public record SequenceQueryId(Guid Value) : ConceptAs<Guid>(Value)
     /// </summary>
     /// <param name="value"><see cref="Guid"/> to convert from.</param>
     public static implicit operator SequenceQueryId(Guid value) => new(value);
+
+    /// <summary>
+    /// Implicitly convert from a <see cref="SequenceQueryId"/> to an <see cref="EventSourceId"/>.
+    /// </summary>
+    /// <param name="id">The <see cref="SequenceQueryId"/> to convert from.</param>
+    public static implicit operator EventSourceId(SequenceQueryId id) => new(id.Value.ToString());
 
     /// <summary>
     /// Creates a new <see cref="SequenceQueryId"/> with a new unique value.

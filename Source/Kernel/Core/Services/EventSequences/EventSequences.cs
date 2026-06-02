@@ -236,6 +236,48 @@ internal sealed class EventSequences(
         return new GetAllEventSequencesResponse { EventSequences = sequences };
     }
 
+    /// <inheritdoc/>
+    public async Task<GetHistogramResponse> GetHistogram(GetHistogramRequest request, CallContext context = default)
+    {
+        var sequenceStorage = GetEventSequenceStorage(request);
+
+        var resolution = request.Resolution switch
+        {
+            Contracts.EventSequences.HistogramResolution.Minute => Storage.EventSequences.HistogramResolution.Minute,
+            Contracts.EventSequences.HistogramResolution.Hour => Storage.EventSequences.HistogramResolution.Hour,
+            Contracts.EventSequences.HistogramResolution.Day => Storage.EventSequences.HistogramResolution.Day,
+            Contracts.EventSequences.HistogramResolution.Week => Storage.EventSequences.HistogramResolution.Week,
+            Contracts.EventSequences.HistogramResolution.Month => Storage.EventSequences.HistogramResolution.Month,
+            _ => Storage.EventSequences.HistogramResolution.Hour
+        };
+
+        var from = request.From is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(request.From.Value, System.Globalization.CultureInfo.InvariantCulture);
+        var to = request.To is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(request.To.Value, System.Globalization.CultureInfo.InvariantCulture);
+        var eventTypes = request.EventTypes?.Select(et => new EventType(et.Id, et.Generation)) ?? [];
+
+        var buckets = await sequenceStorage.GetHistogram(resolution, from, to, eventTypes);
+
+        return new GetHistogramResponse
+        {
+            Buckets = buckets.Select(b => new Contracts.EventSequences.HistogramBucket
+            {
+                EventSequenceNumber = b.EventSequenceNumber,
+                Occurred = new Contracts.Primitives.SerializableDateTimeOffset { Value = b.Occurred.ToString("O", System.Globalization.CultureInfo.InvariantCulture) },
+                Count = b.Count
+            }).ToList()
+        };
+    }
+
+    static string GetDisplayNameForEventSequence(string id) => id switch
+    {
+        WellKnownEventSequences.EventLog => "Event Log",
+        WellKnownEventSequences.System => "System",
+        WellKnownEventSequences.Outbox => "Outbox",
+        WellKnownEventSequences.Inbox => "Inbox",
+        _ when id.StartsWith(EventSequenceId.InboxPrefix, StringComparison.OrdinalIgnoreCase) => $"Inbox ({id[EventSequenceId.InboxPrefix.Length..]})",
+        _ => id
+    };
+
     async Task<IList<Contracts.Events.AppendedEvent>> ToContracts(
         IEnumerable<AppendedEvent> events,
         Dictionary<EventType, EventTypeSchema> schemasByEventType)
@@ -266,14 +308,4 @@ internal sealed class EventSequences(
 
     Chronicle.EventSequences.IEventSequence GetEventSequenceGrain(IEventSequenceRequest request) =>
         grainFactory.GetGrain<Chronicle.EventSequences.IEventSequence>(new EventSequenceKey(request.EventSequenceId, request.EventStore, request.Namespace));
-
-    static string GetDisplayNameForEventSequence(string id) => id switch
-    {
-        WellKnownEventSequences.EventLog => "Event Log",
-        WellKnownEventSequences.System => "System",
-        WellKnownEventSequences.Outbox => "Outbox",
-        WellKnownEventSequences.Inbox => "Inbox",
-        _ when id.StartsWith(EventSequenceId.InboxPrefix, StringComparison.OrdinalIgnoreCase) => $"Inbox ({id[EventSequenceId.InboxPrefix.Length..]})",
-        _ => id
-    };
 }
