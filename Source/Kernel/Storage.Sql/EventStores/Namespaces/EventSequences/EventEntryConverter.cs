@@ -3,9 +3,11 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Storage.Identities;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -217,5 +219,56 @@ public static class EventEntryConverter
 
         var identityStrings = JsonSerializer.Deserialize<IEnumerable<string>>(entry.CausedBy, _jsonSerializerOptions) ?? [];
         return identityStrings.Select(id => new IdentityId(Guid.Parse(id)));
+    }
+
+    /// <summary>
+    /// Get the <see cref="Subject"/> from an event entry, falling back to the event source id when no explicit subject was stored.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The <see cref="Subject"/> identifying the compliance target.</returns>
+    /// <remarks>
+    /// Mirrors the invariant upheld by the MongoDB converter — <see cref="EventContext.Subject"/> is always set, defaulting
+    /// to the event source id when no explicit subject was stored. Events appended before subjects existed have no stored value.
+    /// </remarks>
+    public static Subject GetSubject(EventEntry entry) =>
+        string.IsNullOrEmpty(entry.Subject) ? new Subject(entry.EventSourceId.Value) : new Subject(entry.Subject);
+
+    /// <summary>
+    /// Convert an <see cref="EventEntry"/> to an <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="entry">The <see cref="EventEntry"/> to convert.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
+    /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the caused by chain.</param>
+    /// <returns>The converted <see cref="AppendedEvent"/>.</returns>
+    public static async Task<AppendedEvent> ToAppendedEvent(
+        EventEntry entry,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IIdentityStorage identityStorage)
+    {
+        var eventType = GetEventType(entry);
+        var content = GetContentForGeneration(entry, eventType.Generation);
+        var causation = GetCausation(entry);
+        var causedBy = GetCausedBy(entry);
+
+        var eventContext = new EventContext(
+            eventType,
+            entry.EventSourceType,
+            entry.EventSourceId,
+            entry.EventStreamType,
+            entry.EventStreamId,
+            new EventSequenceNumber(entry.SequenceNumber),
+            entry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(entry.CorrelationId)),
+            causation,
+            await identityStorage.GetFor(causedBy),
+            [],
+            EventHash.NotSet,
+            Subject: GetSubject(entry));
+
+        return new AppendedEvent(eventContext, content);
     }
 }
