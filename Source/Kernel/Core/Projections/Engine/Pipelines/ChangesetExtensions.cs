@@ -34,12 +34,7 @@ public static class ChangesetExtensions
     /// </summary>
     /// <param name="changeset">Changeset to add to.</param>
     /// <param name="source">Source to add from.</param>
-    /// <param name="childrenPropertyPaths">Optional collection of property paths that the projection treats as children collections.
-    /// These are filtered out so the root projection's PropertiesChanged never $sets them to the empty initial value —
-    /// children are owned exclusively by ChildAdded / ChildRemoved across the lifetime of the read model, and replay
-    /// processes partitions independently so a sibling event may have already written a populated children array
-    /// before this event's PropertiesChanged would otherwise wipe it.</param>
-    public static void AddPropertiesFrom(this IChangeset<AppendedEvent, ExpandoObject> changeset, ExpandoObject source, IEnumerable<PropertyPath>? childrenPropertyPaths = null)
+    public static void AddPropertiesFrom(this IChangeset<AppendedEvent, ExpandoObject> changeset, ExpandoObject source)
     {
         var initialModelStateAsDictionary = source as IDictionary<string, object>;
         var existingProperties = new List<PropertyPath>();
@@ -67,23 +62,6 @@ public static class ChangesetExtensions
         existingProperties.AddRange(changeset.Changes
             .OfType<ChildAdded>()
             .Select(_ => (PropertyPath)_.ChildrenProperty.Segments.First().Value));
-
-        // Children collection paths are owned exclusively by ChildAdded / ChildRemoved across the read
-        // model's lifetime — never set them from the initial-model state. Doing so makes replay
-        // non-deterministic the moment partitions are replayed in parallel: a parent's
-        // PropertiesChanged for "Features=[]" can race ahead of a sibling event's ChildAdded and
-        // wipe the children that were already added.
-        if (childrenPropertyPaths is not null)
-        {
-            foreach (var childrenPath in childrenPropertyPaths)
-            {
-                if (childrenPath.IsRoot)
-                {
-                    continue;
-                }
-                existingProperties.Add((PropertyPath)childrenPath.Segments.First().Value);
-            }
-        }
 
         var newProperties = safeCopy
             .Where(_ => !existingProperties.Exists(property => property == _.Key))
