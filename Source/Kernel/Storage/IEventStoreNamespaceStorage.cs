@@ -107,4 +107,10 @@ public interface IEventStoreNamespaceStorage
     /// <param name="eventSequenceId"><see cref="EventSequenceId"/> to get for.</param>
     /// <returns>The <see cref="IUniqueEventTypesConstraintsStorage"/> instance.</returns>
     IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId);
+
+    /// <summary>
+    /// Get the identifiers of all event sequences that exist in this namespace.
+    /// </summary>
+    /// <returns>Collection of <see cref="EventSequenceId"/>.</returns>
+    Task<IEnumerable<EventSequenceId>> GetEventSequenceIds();
 }

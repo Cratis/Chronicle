@@ -75,6 +75,30 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <inheritdoc/>
     public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<string>> GetEventSequenceIds()
+    {
+        var allCollections = await (await _database.ListCollectionNamesAsync()).ToListAsync();
+
+        var nonSequenceCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            WellKnownCollectionNames.Observers,
+            WellKnownCollectionNames.FailedPartitions,
+            WellKnownCollectionNames.Jobs,
+            WellKnownCollectionNames.JobSteps,
+            WellKnownCollectionNames.FailedJobSteps,
+            WellKnownCollectionNames.Recommendations,
+            WellKnownCollectionNames.Identities,
+            WellKnownCollectionNames.ReplayContexts,
+            WellKnownCollectionNames.ReplayedReadModels,
+            WellKnownCollectionNames.EventSeeds,
+            WellKnownCollectionNames.ProjectionFutures,
+            WellKnownCollectionNames.Constraints,
+        };
+
+        return allCollections.Where(name => !nonSequenceCollections.Contains(name));
+    }
+
     void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
     {
         if (!_indexedEventSequences.ContainsKey(eventSequenceId))
