@@ -48,16 +48,28 @@ public partial class Observer
 
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
+        var failed = false;
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
+        var tailEventSequenceNumber = State.NextEventSequenceNumber;
+
         // Apply the structural event-type subscription and the dynamic ObserverFilters per-event,
         // not at batch granularity. The previous batch-level checks ("skip if NO event in the
         // batch passes the filter") let non-matching events leak through whenever the same batch
         // also carried at least one matching event — a reactor with an EventSourceType filter
         // would then have its handler invoked for every event in such a mixed batch. With the
         // matching set computed up front, the subscriber sees only the events the observer
-        // actually subscribed to and the cursor still advances cleanly past everything that was
-        // filtered out.
-        var matchingEvents = events.Where(EventMatchesSubscription).ToArray();
-        if (matchingEvents.Length == 0)
+        // actually subscribed to.
+        //
+        // The sequence-number filter is applied at the same time so we never end up holding a
+        // non-empty matchingEvents whose elements are all already past — that combination would
+        // skip the state-advance below and leave the cursor stuck on the same batch on the next
+        // pass. Whether the batch has zero matching events or only matching events that are
+        // already accounted for, the bookkeeping has to advance past observedTailEventSequenceNumber.
+        var eventsToHandle = events
+            .Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber && EventMatchesSubscription(_))
+            .ToArray();
+        if (eventsToHandle.Length == 0)
         {
             State = State with
             {
@@ -67,13 +79,6 @@ public partial class Observer
             await WriteStateAsync();
             return;
         }
-
-        var failed = false;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var tailEventSequenceNumber = State.NextEventSequenceNumber;
-
-        var eventsToHandle = matchingEvents.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
