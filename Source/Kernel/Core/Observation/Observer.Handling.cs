@@ -48,7 +48,16 @@ public partial class Observer
 
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
-        if (!events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
+        // Apply the structural event-type subscription and the dynamic ObserverFilters per-event,
+        // not at batch granularity. The previous batch-level checks ("skip if NO event in the
+        // batch passes the filter") let non-matching events leak through whenever the same batch
+        // also carried at least one matching event — a reactor with an EventSourceType filter
+        // would then have its handler invoked for every event in such a mixed batch. With the
+        // matching set computed up front, the subscriber sees only the events the observer
+        // actually subscribed to and the cursor still advances cleanly past everything that was
+        // filtered out.
+        var matchingEvents = events.Where(EventMatchesSubscription).ToArray();
+        if (matchingEvents.Length == 0)
         {
             State = State with
             {
@@ -59,53 +68,12 @@ public partial class Observer
             return;
         }
 
-        if (_subscription.Filters is { } filters)
-        {
-            if (filters.EventSourceType is { } eventSourceType &&
-                eventSourceType != EventSourceType.Unspecified &&
-                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
-                };
-                await WriteStateAsync();
-                return;
-            }
-
-            if (filters.EventStreamType is { } eventStreamType &&
-                !eventStreamType.IsAll &&
-                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
-                };
-                await WriteStateAsync();
-                return;
-            }
-
-            if (filters.Tags.Any() &&
-                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
-            {
-                State = State with
-                {
-                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
-                    TailEventSequenceNumber = observedTailEventSequenceNumber
-                };
-                await WriteStateAsync();
-                return;
-            }
-        }
-
         var failed = false;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = State.NextEventSequenceNumber;
 
-        var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
+        var eventsToHandle = matchingEvents.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
@@ -158,9 +126,22 @@ public partial class Observer
                     if (numEventsSuccessfullyHandled > 0)
                     {
                         stateChanged = true;
+
+                        // When every matching event in the batch was successfully handled we can
+                        // advance past the batch tail rather than past the last matching event —
+                        // any non-matching events between LastSuccessfulObservation and the batch
+                        // tail were already filtered, re-fetching them would just cost a round
+                        // trip to filter them again. Partial success keeps the conservative
+                        // LastSuccessfulObservation.Next() so the next attempt retries from the
+                        // first unhandled matching event.
+                        var allMatchingHandled = numEventsSuccessfullyHandled.Value == (ulong)eventsToHandle.Length;
+                        var nextSequence = allMatchingHandled
+                            ? observedTailEventSequenceNumber.Next()
+                            : result.LastSuccessfulObservation.Next();
+
                         State = State with
                         {
-                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
+                            NextEventSequenceNumber = nextSequence,
                             TailEventSequenceNumber = observedTailEventSequenceNumber
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -399,5 +380,48 @@ public partial class Observer
             LastHandledEventSequenceNumber = newLastHandledEvent,
             NextEventSequenceNumber = nextEventSequenceNumber
         };
+    }
+
+    /// <summary>
+    /// Returns true when the event matches the structural event-type subscription and all dynamic
+    /// <see cref="ObserverFilters"/> the subscription declared. Used to drop non-matching events
+    /// from a batch before dispatching to the subscriber so partial-match batches no longer leak
+    /// the non-matching tail to the handler.
+    /// </summary>
+    /// <param name="event">The <see cref="AppendedEvent"/> to evaluate.</param>
+    /// <returns>True when the event should reach the subscriber; false when it should be skipped.</returns>
+    bool EventMatchesSubscription(AppendedEvent @event)
+    {
+        if (!_subscription.EventTypes.Any(et => et.Id == @event.Context.EventType.Id))
+        {
+            return false;
+        }
+
+        if (_subscription.Filters is not { } filters)
+        {
+            return true;
+        }
+
+        if (filters.EventSourceType is { } eventSourceType
+            && eventSourceType != EventSourceType.Unspecified
+            && @event.Context.EventSourceType != eventSourceType)
+        {
+            return false;
+        }
+
+        if (filters.EventStreamType is { } eventStreamType
+            && !eventStreamType.IsAll
+            && @event.Context.EventStreamType != eventStreamType)
+        {
+            return false;
+        }
+
+        if (filters.Tags.Any()
+            && !@event.Context.Tags.Any(t => filters.Tags.Contains(t.Value)))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
