@@ -48,34 +48,22 @@ public partial class Observer
 
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
 
-        var failed = false;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
-        var tailEventSequenceNumber = State.NextEventSequenceNumber;
-
-        // Apply the structural event-type subscription and the dynamic ObserverFilters per-event,
-        // not at batch granularity. The previous batch-level checks ("skip if NO event in the
-        // batch passes the filter") let non-matching events leak through whenever the same batch
-        // also carried at least one matching event — a reactor with an EventSourceType filter
-        // would then have its handler invoked for every event in such a mixed batch. With the
-        // matching set computed up front, the subscriber sees only the events the observer
-        // actually subscribed to.
-        //
-        // The sequence-number filter is applied at the same time so we never end up holding a
-        // non-empty matchingEvents whose elements are all already past — that combination would
-        // skip the state-advance below and leave the cursor stuck on the same batch on the next
-        // pass when the batch carries forward-of-cursor non-matching events.
-        var eventsToHandle = events
-            .Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber && EventMatchesSubscription(_))
-            .ToArray();
-        if (eventsToHandle.Length == 0)
+        if (!events.Any(_ => _subscription.EventTypes.Any(et => et.Id == _.Context.EventType.Id)))
         {
-            // Only advance when the batch actually carried events forward of our cursor — a batch
-            // that lies entirely before NextEventSequenceNumber (re-delivery of already-handled
-            // events) must leave the cursor and LastHandled untouched and must not emit a state
-            // write. Advancing in that case would move the cursor backward and round-trip the same
-            // partition's already-handled work back through the pipeline.
-            if (observedTailEventSequenceNumber >= tailEventSequenceNumber)
+            State = State with
+            {
+                NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                TailEventSequenceNumber = observedTailEventSequenceNumber
+            };
+            await WriteStateAsync();
+            return;
+        }
+
+        if (_subscription.Filters is { } filters)
+        {
+            if (filters.EventSourceType is { } eventSourceType &&
+                eventSourceType != EventSourceType.Unspecified &&
+                !events.Any(_ => _.Context.EventSourceType == eventSourceType))
             {
                 State = State with
                 {
@@ -83,9 +71,52 @@ public partial class Observer
                     TailEventSequenceNumber = observedTailEventSequenceNumber
                 };
                 await WriteStateAsync();
+                return;
             }
-            return;
+
+            if (filters.EventStreamType is { } eventStreamType &&
+                !eventStreamType.IsAll &&
+                !events.Any(_ => _.Context.EventStreamType == eventStreamType))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                };
+                await WriteStateAsync();
+                return;
+            }
+
+            if (filters.Tags.Any() &&
+                !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))))
+            {
+                State = State with
+                {
+                    NextEventSequenceNumber = observedTailEventSequenceNumber.Next(),
+                    TailEventSequenceNumber = observedTailEventSequenceNumber
+                };
+                await WriteStateAsync();
+                return;
+            }
         }
+
+        var failed = false;
+        var exceptionMessages = Enumerable.Empty<string>();
+        var exceptionStackTrace = string.Empty;
+        var tailEventSequenceNumber = State.NextEventSequenceNumber;
+
+        // Filter out events that don't pass the structural event-type subscription or the
+        // dynamic ObserverFilters BEFORE handing the batch to the subscriber. The batch-level
+        // skip checks above only catch the "every event misses" case; without this per-event
+        // filter, a mixed batch (e.g. one matching and one non-matching EventSourceType) would
+        // still flow every event into the subscriber and through to the reactor handler,
+        // producing the symptom we fixed in observability: a reactor with [EventSourceType] sees
+        // events from the wrong source. State bookkeeping below uses result.LastSuccessfulObservation
+        // unchanged — non-matching trailing events get re-fetched once and filtered again,
+        // which is a one-roundtrip cost we accept to keep the rest of the machinery identical.
+        var eventsToHandle = events
+            .Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber && EventMatchesSubscription(_))
+            .ToArray();
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
@@ -138,22 +169,9 @@ public partial class Observer
                     if (numEventsSuccessfullyHandled > 0)
                     {
                         stateChanged = true;
-
-                        // When every matching event in the batch was successfully handled we can
-                        // advance past the batch tail rather than past the last matching event —
-                        // any non-matching events between LastSuccessfulObservation and the batch
-                        // tail were already filtered, re-fetching them would just cost a round
-                        // trip to filter them again. Partial success keeps the conservative
-                        // LastSuccessfulObservation.Next() so the next attempt retries from the
-                        // first unhandled matching event.
-                        var allMatchingHandled = numEventsSuccessfullyHandled.Value == (ulong)eventsToHandle.Length;
-                        var nextSequence = allMatchingHandled
-                            ? observedTailEventSequenceNumber.Next()
-                            : result.LastSuccessfulObservation.Next();
-
                         State = State with
                         {
-                            NextEventSequenceNumber = nextSequence,
+                            NextEventSequenceNumber = result.LastSuccessfulObservation.Next(),
                             TailEventSequenceNumber = observedTailEventSequenceNumber
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -395,10 +413,10 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Returns true when the event matches the structural event-type subscription and all dynamic
-    /// <see cref="ObserverFilters"/> the subscription declared. Used to drop non-matching events
-    /// from a batch before dispatching to the subscriber so partial-match batches no longer leak
-    /// the non-matching tail to the handler.
+    /// Returns true when the event matches the structural event-type subscription and all
+    /// dynamic <see cref="ObserverFilters"/> the subscription declared. Used to drop non-matching
+    /// events from a batch before dispatching to the subscriber so partial-match batches no longer
+    /// leak the non-matching tail to the handler.
     /// </summary>
     /// <param name="event">The <see cref="AppendedEvent"/> to evaluate.</param>
     /// <returns>True when the event should reach the subscriber; false when it should be skipped.</returns>
