@@ -4,14 +4,14 @@
 using Cratis.Chronicle.Events;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_pii.many_events_with_subjects.context;
+using context = Cratis.Chronicle.Integration.for_EventSequence.when_appending_event_with_pii.many_events_with_subjects.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_EventSequence.when_appending_event_with_pii;
+namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending_event_with_pii;
 
 [Collection(ChronicleCollection.Name)]
 public class many_events_with_subjects(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
     {
         public EventSourceId EventSourceId { get; } = "request-1";
         public EventWithSubjectAndPII FirstEvent { get; private set; }

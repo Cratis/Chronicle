@@ -47,7 +47,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
         }
 
         _database = Substitute.For<IDatabase>();
-        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
+        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
         _sink = new SqlSink(
@@ -112,7 +112,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
             .AddConceptAsSupport()
             .Options;
 
-        return new ReadModelDbContext(options, ContainerName, Substitute.For<IReadModelMigrator>());
+        return new ReadModelDbContext(options, ContainerName, [], Substitute.For<IReadModelMigrator>());
     }
 
     static ExpandoObject CreateRole(string role)
