@@ -45,14 +45,13 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
-        var observerStates = await namespaceStorage.Observers.GetObservers();
-        return await Task.WhenAll(observerStates.Select(async state =>
-        {
-            var observer = grainFactory.GetObserver(request.EventStore, request.Namespace, state.ObserverId);
-            var definition = await observer.GetDefinition();
-            return (definition, state).ToContract();
-        }));
+        var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+        var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        var observers =
+            from definition in observerDefinitions
+            join state in observerStates on definition.Identifier equals state.Identifier
+            select (definition, state);
+        return observers.ToContract();
     }
 
     /// <inheritdoc/>
@@ -158,6 +157,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         EventTypes = info.EventTypes,
         NextEventSequenceNumber = info.NextEventSequenceNumber,
         LastHandledEventSequenceNumber = info.LastHandledEventSequenceNumber,
+        TailEventSequenceNumber = info.TailEventSequenceNumber,
+        HandledEventCount = info.HandledEventCount,
         RunningState = info.RunningState,
         IsSubscribed = info.IsSubscribed,
         IsReplayable = info.IsReplayable

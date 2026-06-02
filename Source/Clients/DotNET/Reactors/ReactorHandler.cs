@@ -121,7 +121,7 @@ public class ReactorHandler(
         var state = observers.FirstOrDefault(o => o.Id == Id.ToString() && o.EventSequenceId == EventSequenceId.ToString());
         if (state is null)
         {
-            return new ReactorState(Id, ObserverRunningState.Unknown, false, 0, 0);
+            return new ReactorState(Id, ObserverRunningState.Unknown, false, 0, 0, 0);
         }
 
         return new ReactorState(

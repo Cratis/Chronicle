@@ -48,7 +48,7 @@ public class ProjectionHandler(
         var state = observers.FirstOrDefault(o => o.Id == projectionId.ToString() && o.EventSequenceId == eventSequenceId.ToString());
         if (state is null)
         {
-            return new ProjectionState(ObserverRunningState.Unknown, false, 0, 0);
+            return new ProjectionState(ObserverRunningState.Unknown, false, 0, 0, 0);
         }
 
         return new ProjectionState(

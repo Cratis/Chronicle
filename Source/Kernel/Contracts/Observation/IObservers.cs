@@ -39,23 +39,6 @@ public interface IObservers
     [Operation]
     Task RetryPartition(RetryPartitionRequest request, CallContext callContext = default);
     /// <summary>
-    /// Clear quarantine for an observer.
-    /// </summary>
-    /// <param name="command">The clear quarantine command.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>Awaitable task.</returns>
-    [Operation]
-    Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default);
-
-    /// <summary>
-    /// Get the current details of an observer.
-    /// </summary>
-    /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>
-    /// <param name="context">gRPC call context.</param>
-    /// <returns>The <see cref="ObserverInformation"/>.</returns>
-    Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default);
-
-    /// <summary>
     /// Executes the AllObservers query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -71,6 +54,23 @@ public interface IObservers
     /// <returns>The query result.</returns>
     [Operation]
     IObservable<IEnumerable<ObserverInformationResponse>> ObserveObservers(ObserveObserversRequest request, CallContext callContext = default);
+
+    /// <summary>
+    /// Clear quarantine for an observer.
+    /// </summary>
+    /// <param name="command">The clear quarantine command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default);
+
+    /// <summary>
+    /// Get the current details of an observer.
+    /// </summary>
+    /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="ObserverInformation"/>.</returns>
+    Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default);
 
     /// <summary>
     /// Get all observers.
@@ -254,6 +254,18 @@ public class ObserverInformationResponse
     /// </summary>
     [ProtoMember(7)]
     public UInt64 LastHandledEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the TailEventSequenceNumber.
+    /// </summary>
+    [ProtoMember(11)]
+    public UInt64 TailEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HandledEventCount.
+    /// </summary>
+    [ProtoMember(12)]
+    public UInt64 HandledEventCount { get; set; }
 
     /// <summary>
     /// Gets or sets the RunningState.
