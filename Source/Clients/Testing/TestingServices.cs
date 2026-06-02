@@ -26,6 +26,7 @@ using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Traces;
 using Cratis.Types;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
@@ -85,6 +86,7 @@ internal sealed class TestingServices(
             new KernelReactorMediator(),
             storage,
             jsonSerializerOptions,
+            new ActivitySource<KernelReactorsService>(),
             NullLogger<KernelReactorsService>.Instance));
 
     readonly Lazy<IReducers> _reducers = new(() =>
@@ -93,6 +95,7 @@ internal sealed class TestingServices(
             new KernelReducerMediator(),
             new ExpandoObjectConverter(new TypeFormats()),
             jsonSerializerOptions,
+            new ActivitySource<KernelReducersService>(),
             NullLogger<KernelReducersService>.Instance));
 
     readonly Lazy<IProjections> _projections = new(() =>

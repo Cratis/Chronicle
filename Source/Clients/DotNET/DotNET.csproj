@@ -46,6 +46,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Cratis.Metrics.Roslyn" />
       <PackageReference Include="OpenTelemetry" />
         <PrivatePackageAssembly Include="$(ContractsImplementationAssembly)" />
     </ItemGroup>

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -23,6 +24,8 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task Handle(Key partition, IEnumerable<AppendedEvent> events)
     {
+        using var span = activitySource.Handle();
+        span?.Activity?.Tag(_observerKey);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         if (!events.Any())
