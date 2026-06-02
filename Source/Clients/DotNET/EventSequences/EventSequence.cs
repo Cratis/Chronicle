@@ -15,7 +15,9 @@ using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Transactions;
+using Cratis.Monads;
 using Cratis.Traces;
+using ContractCompleteStreamError = Cratis.Chronicle.Contracts.EventSequences.CompleteStreamError;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -475,6 +477,30 @@ public class EventSequence(
             Causation = causationChain,
             CausedBy = identity.ToContract()
         });
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        var response = await _servicesAccessor.Services.EventSequences.CompleteStream(new()
+        {
+            EventStore = eventStoreName,
+            Namespace = @namespace,
+            EventSequenceId = eventSequenceId,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId
+        });
+
+        if (response.IsSuccess)
+        {
+            return (EventSequenceNumber)response.SequenceNumber;
+        }
+
+        return response.Error switch
+        {
+            ContractCompleteStreamError.DefaultStreamCannotBeCompleted => CompleteStreamError.DefaultStreamCannotBeCompleted,
+            _ => CompleteStreamError.AlreadyCompleted
+        };
     }
 
     static void ThrowIfUnknownEventType(IEventTypes eventTypes, Type eventClrType)

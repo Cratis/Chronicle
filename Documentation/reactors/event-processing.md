@@ -8,7 +8,7 @@ Reactors use convention-based method discovery. Chronicle finds and invokes publ
 
 - Accept the event type as the first parameter
 - Optionally accept `EventContext` as the second parameter
-- Return `void` or `Task`
+- Return `void`, `Task`, `Task<T>`, or a synchronous side-effect type (see below)
 
 Event parameter types must be marked with `[EventType]`.
 
@@ -26,7 +26,18 @@ Task MethodName(TEvent @event);
 
 // Async with event and context
 Task MethodName(TEvent @event, EventContext context);
+
+// Async returning a side-effect event
+Task<TResult> MethodName(TEvent @event);
+Task<TResult> MethodName(TEvent @event, EventContext context);
+
+// Synchronous returning a side-effect event (no Task overhead)
+TResult MethodName(TEvent @event);
+TResult MethodName(TEvent @event, EventContext context);
 ```
+
+`TResult` can be an event type or `IEnumerable<TEvent>`.
+See [Returning Side Effects](side-effects.md) for the full list of supported return types and metadata resolution.
 
 ## Event Context
 

@@ -16,11 +16,11 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor SignatureRule = new(
         id: DiagnosticIds.ReactorMethodSignatureMustMatchAllowed,
         title: "Reactor method signature must match allowed signatures",
-        messageFormat: "Reactor method '{0}' must have signature: Task MethodName(TEvent event) or Task MethodName(TEvent event, EventContext context) or void MethodName(TEvent event) or void MethodName(TEvent event, EventContext context)",
+        messageFormat: "Reactor method '{0}' must have signature: Task MethodName(TEvent event) or Task MethodName(TEvent event, EventContext context) or Task<TResult> MethodName(TEvent event) or Task<TResult> MethodName(TEvent event, EventContext context) or void MethodName(TEvent event) or void MethodName(TEvent event, EventContext context) or TResult MethodName(TEvent event) or TResult MethodName(TEvent event, EventContext context)",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle dispatches events to reactor methods by matching event types. Methods with unsupported signatures are silently skipped. Change the method to one of the allowed forms: 'void MethodName(TEvent event)', 'void MethodName(TEvent event, EventContext context)', 'Task MethodName(TEvent event)', or 'Task MethodName(TEvent event, EventContext context)'.");
+        description: "Chronicle dispatches events to reactor methods by matching event types. Methods with unsupported signatures are silently skipped. Change the method to one of the allowed forms: 'void MethodName(TEvent event)', 'void MethodName(TEvent event, EventContext context)', 'Task MethodName(TEvent event)', 'Task MethodName(TEvent event, EventContext context)', 'Task<TResult> MethodName(TEvent event)', or 'Task<TResult> MethodName(TEvent event, EventContext context)', or the synchronous side-effect forms 'TResult MethodName(TEvent event)' / 'TResult MethodName(TEvent event, EventContext context)'. TResult must be an event type or IEnumerable of event types.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -74,10 +74,20 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check if this could be an event handler method based on return type
+        // Check if this could be an event handler method based on return type.
+        // Valid return types: void, Task, Task<T>, or any reference type (sync side-effect returns such as
+        // event types or IEnumerable of event types).
+        // Value types (int, bool, struct, etc.) are not valid reactor return types.
         var taskType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
+        var taskOfTType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
+        var isGenericTask = taskOfTType != null &&
+            methodSymbol.ReturnType is INamedTypeSymbol namedReturn &&
+            namedReturn.IsGenericType &&
+            SymbolEqualityComparer.Default.Equals(namedReturn.OriginalDefinition, taskOfTType);
         var validReturnType = methodSymbol.ReturnsVoid ||
-            (taskType != null && SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, taskType));
+            (taskType != null && SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, taskType)) ||
+            isGenericTask ||
+            (!methodSymbol.ReturnType.IsValueType && methodSymbol.ReturnType.SpecialType == SpecialType.None);
 
         if (!validReturnType)
         {

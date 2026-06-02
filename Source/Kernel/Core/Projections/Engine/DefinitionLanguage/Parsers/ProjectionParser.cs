@@ -22,6 +22,8 @@ internal sealed class ProjectionParser
         TokenType.With,
         TokenType.Join,
         TokenType.Children,
+        TokenType.Nested,
+        TokenType.Clear,
         TokenType.Remove,
         TokenType.Increment,
         TokenType.Decrement,

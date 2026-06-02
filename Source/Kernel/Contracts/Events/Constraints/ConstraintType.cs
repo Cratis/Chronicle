@@ -26,5 +26,10 @@ public enum ConstraintType
     /// <summary>
     /// Represents a schema validation constraint.
     /// </summary>
-    Schema = 3
+    Schema = 3,
+
+    /// <summary>
+    /// Represents a stream-closed constraint.
+    /// </summary>
+    StreamClosed = 4
 }

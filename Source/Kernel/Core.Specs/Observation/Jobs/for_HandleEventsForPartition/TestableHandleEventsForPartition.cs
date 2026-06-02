@@ -5,7 +5,6 @@ using System.Reflection;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Monads;
@@ -21,18 +20,16 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="state">The persistent state for the job step.</param>
 /// <param name="throttle">The throttle for limiting parallel execution.</param>
 /// <param name="storage">The storage for the cluster.</param>
-/// <param name="complianceManager">The compliance manager.</param>
-/// <param name="expandoObjectConverter">The expando object converter.</param>
+/// <param name="eventComplianceHelper">The event compliance helper.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IEventComplianceHelper eventComplianceHelper,
     ILogger<HandleEventsForPartition> logger)
-    : HandleEventsForPartition(state, throttle, storage, complianceManager, expandoObjectConverter, logger), IGrainType
+    : HandleEventsForPartition(state, throttle, storage, eventComplianceHelper, logger), IGrainType
 {
     static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
     static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance)!;

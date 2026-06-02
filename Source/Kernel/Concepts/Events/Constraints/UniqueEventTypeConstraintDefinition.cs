@@ -13,4 +13,7 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, EventType
 {
     /// <inheritdoc/>
     public bool Equals(IConstraintDefinition? other) => base.Equals(other);
+
+    /// <inheritdoc/>
+    public ConstraintChange CompareWith(IConstraintDefinition existing) => ConstraintChange.None;
 }

@@ -28,6 +28,7 @@ namespace Cratis.Chronicle.Testing;
 /// <param name="uniqueConstraintsStorage">Optional <see cref="InMemoryUniqueConstraintsStorage"/> for unique constraints.</param>
 /// <param name="uniqueEventTypesStorage">Optional <see cref="InMemoryUniqueEventTypesConstraintsStorage"/> for unique event type constraints.</param>
 /// <param name="constraintsStorage">Optional <see cref="InMemoryConstraintsStorage"/> with client constraint definitions.</param>
+/// <param name="closedStreamsStorage">Optional <see cref="InMemoryClosedStreamsConstraintStorage"/> for closed streams.</param>
 /// <param name="identityStorage">Optional <see cref="InMemoryIdentityStorage"/>.</param>
 /// <param name="eventTypesStorage">Optional <see cref="InMemoryEventTypesStorage"/>.</param>
 internal sealed class InMemoryEventStoreStorage(
@@ -36,6 +37,7 @@ internal sealed class InMemoryEventStoreStorage(
     InMemoryUniqueConstraintsStorage? uniqueConstraintsStorage = null,
     InMemoryUniqueEventTypesConstraintsStorage? uniqueEventTypesStorage = null,
     InMemoryConstraintsStorage? constraintsStorage = null,
+    InMemoryClosedStreamsConstraintStorage? closedStreamsStorage = null,
     InMemoryIdentityStorage? identityStorage = null,
     InMemoryEventTypesStorage? eventTypesStorage = null) : IEventStoreStorage
 {
@@ -81,5 +83,6 @@ internal sealed class InMemoryEventStoreStorage(
             eventSequenceStorage,
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
+            closedStreamsStorage,
             identityStorage);
 }

@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
-using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -20,6 +19,13 @@ public partial class Observer
             LastHandledEventSequenceNumber = lastHandledEventSequenceNumber
         };
 
+        return WriteStateAsync();
+    }
+
+    /// <inheritdoc/>
+    public Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents)
+    {
+        State = WithIncrementedHandledEventCounts(State, partition, handledEvents);
         return WriteStateAsync();
     }
 
@@ -104,6 +110,14 @@ public partial class Observer
         var stateChanged = false;
         if (eventsToHandle.Length != 0)
         {
+            // Record the highest sequence number we're about to attempt for this partition. If the silo
+            // dies between this point and the post-handling state write, the entry survives to drive
+            // partition catch-up on the next activation. Recording the tail of the batch is enough: the
+            // in-flight entry is conceptually a marker that work *may have started* for this partition.
+            var inFlightStorage = await GetInFlightEventsStorage();
+            var inFlightTail = eventsToHandle[^1].Context.SequenceNumber;
+            await inFlightStorage.Add(_observerId, partition, inFlightTail);
+
             using (new WriteSuspension(this))
             {
                 try
@@ -159,6 +173,9 @@ public partial class Observer
                                 ? result.LastSuccessfulObservation
                                 : previousLastHandled,
                         };
+
+                        var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
+                        State = WithIncrementedHandledEventCounts(State, partition, handledEvents);
                     }
                 }
                 catch (Exception ex)
@@ -184,6 +201,14 @@ public partial class Observer
                 {
                     await WriteStateAsync();
                 }
+
+                // Clear in-flight markers for everything we processed (successfully or otherwise). Failures
+                // are tracked through FailedPartitions storage; keeping the in-flight marker would force a
+                // double recovery for events we already know about.
+                var clearUpTo = numEventsSuccessfullyHandled > 0
+                    ? eventsToHandle.Take((int)numEventsSuccessfullyHandled.Value).Last().Context.SequenceNumber
+                    : tailEventSequenceNumber;
+                await inFlightStorage.RemoveUpTo(_observerId, partition, clearUpTo);
             }
             catch (Exception ex)
             {
@@ -192,30 +217,109 @@ public partial class Observer
         }
     }
 
-    async Task<IEnumerable<AppendedEvent>> DecryptEvents(IEnumerable<AppendedEvent> events)
+    /// <summary>
+    /// Returns a new <see cref="Storage.Observation.ObserverState"/> with handled event counts incremented
+    /// for the given partition and the provided successfully handled events.
+    /// </summary>
+    /// <param name="state">The current <see cref="Storage.Observation.ObserverState"/> to update.</param>
+    /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to increment.</param>
+    /// <param name="handledEvents">The events that were successfully handled.</param>
+    /// <returns>A new <see cref="Storage.Observation.ObserverState"/> with <see cref="Storage.Observation.ObserverState.HandledEventCount"/>, <see cref="Storage.Observation.ObserverState.HandledEventCountPerEventType"/>, and <see cref="Storage.Observation.ObserverState.HandledEventCountPerPartition"/> incremented accordingly.</returns>
+    static Storage.Observation.ObserverState WithIncrementedHandledEventCounts(
+        Storage.Observation.ObserverState state,
+        Key partition,
+        IEnumerable<AppendedEvent> handledEvents)
     {
-        var eventsToRelease = events.ToArray();
-        await EnsureEventTypeSchemasFor(eventsToRelease);
+        var perEventType = new Dictionary<EventTypeId, EventCount>(state.HandledEventCountPerEventType);
+        var perPartition = new Dictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(state.HandledEventCountPerPartition);
+        var partitionCounts = perPartition.TryGetValue(partition, out var existing)
+            ? new Dictionary<EventTypeId, EventCount>(existing)
+            : [];
 
-        var releasedEvents = new List<AppendedEvent>();
-        foreach (var @event in eventsToRelease)
+        var count = 0UL;
+        foreach (var eventTypeId in handledEvents.Select(_ => _.Context.EventType.Id))
         {
-            if (!_eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
-                !schema.Schema.HasComplianceMetadata())
-            {
-                releasedEvents.Add(@event);
-                continue;
-            }
-
-            var released = await EventComplianceHelper.ReleaseEventContent(
-                complianceManager,
-                expandoObjectConverter,
-                @event,
-                schema.Schema);
-            releasedEvents.Add(released);
+            count++;
+            perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
+            partitionCounts[eventTypeId] = partitionCounts.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
         }
 
-        return releasedEvents;
+        if (count == 0)
+        {
+            return state;
+        }
+
+        perPartition[partition] = partitionCounts;
+        return state with
+        {
+            HandledEventCount = state.HandledEventCount + count,
+            HandledEventCountPerEventType = perEventType,
+            HandledEventCountPerPartition = perPartition
+        };
+    }
+
+    /// <summary>
+    /// Returns a new <see cref="Storage.Observation.ObserverState"/> with the given partition's contribution
+    /// subtracted from all handled event counts, and the partition removed from <see cref="Storage.Observation.ObserverState.HandledEventCountPerPartition"/>.
+    /// Used when a partition replay begins.
+    /// </summary>
+    /// <param name="state">The current <see cref="Storage.Observation.ObserverState"/> to update.</param>
+    /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to subtract.</param>
+    /// <returns>A new <see cref="Storage.Observation.ObserverState"/> with the partition's counts removed and aggregates adjusted.</returns>
+    static Storage.Observation.ObserverState WithSubtractedPartitionHandledEventCounts(
+        Storage.Observation.ObserverState state,
+        Key partition)
+    {
+        if (!state.HandledEventCountPerPartition.TryGetValue(partition, out var partitionCounts))
+        {
+            return state;
+        }
+
+        var perEventType = new Dictionary<EventTypeId, EventCount>(state.HandledEventCountPerEventType);
+        var totalForPartition = 0UL;
+        foreach (var (eventTypeId, count) in partitionCounts)
+        {
+            totalForPartition += count.Value;
+            if (perEventType.TryGetValue(eventTypeId, out var existing))
+            {
+                var newCount = existing.Value > count.Value ? existing.Value - count.Value : 0UL;
+                if (newCount == 0)
+                {
+                    perEventType.Remove(eventTypeId);
+                }
+                else
+                {
+                    perEventType[eventTypeId] = newCount;
+                }
+            }
+        }
+
+        var perPartition = new Dictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(state.HandledEventCountPerPartition);
+        perPartition.Remove(partition);
+
+        var newTotal = state.HandledEventCount.Value > totalForPartition
+            ? state.HandledEventCount.Value - totalForPartition
+            : 0UL;
+
+        return state with
+        {
+            HandledEventCount = newTotal,
+            HandledEventCountPerEventType = perEventType,
+            HandledEventCountPerPartition = perPartition
+        };
+    }
+
+    Task<IInFlightEventsStorage> GetInFlightEventsStorage() =>
+        Task.FromResult(storage
+            .GetEventStore(_observerKey.EventStore)
+            .GetNamespace(_observerKey.Namespace)
+            .InFlightEvents);
+
+    async Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events)
+    {
+        var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
+        await EnsureEventTypeSchemasFor(eventsToDecrypt);
+        return await eventComplianceHelper.DecryptEvents(eventsToDecrypt, _eventTypeSchemas);
     }
 
     async Task EnsureEventTypeSchemasFor(IEnumerable<AppendedEvent> events)
