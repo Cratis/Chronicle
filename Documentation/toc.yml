@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: Why Event Sourcing
+  href: why-event-sourcing.md
 - name: Getting started
   href: get-started/toc.yml
 - name: Concepts
@@ -18,6 +20,8 @@
   href: namespaces/toc.yml
 - name: Constraints
   href: constraints/toc.yml
+- name: Closing Streams
+  href: closing-streams/toc.yml
 - name: Migrations
   href: migrations/toc.yml
 - name: Compliance

@@ -13,13 +13,13 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -33,10 +33,10 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
+/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII fields in event content.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
@@ -47,10 +47,10 @@ public partial class Observer(
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IEventComplianceHelper eventComplianceHelper,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
     ObserverId _observerId = ObserverId.Unspecified;
@@ -87,6 +87,9 @@ public partial class Observer(
         var eventSequenceKey = new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace);
         _appendedEventsQueues = GrainFactory.GetGrain<IAppendedEventsQueues>(eventSequenceKey);
         _metrics = meter.BeginObserverScope(_observerId, _observerKey);
+
+        var config = await configurationProvider.GetFor(_observerKey);
+        RegisterWatchdog(config.WatchdogInterval);
     }
 
     /// <inheritdoc/>
@@ -126,7 +129,19 @@ public partial class Observer(
     public Task<bool> HasFailedPartitions() => Task.FromResult(Failures.HasFailedPartitions);
 
     /// <inheritdoc/>
+    public Task<bool> IsObserverQuarantined() => Task.FromResult(State.RunningState == ObserverRunningState.Quarantined);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<Key>> GetFailedPartitionKeys() => Task.FromResult(Failures.Partitions.Select(p => p.Partition));
+
+    /// <inheritdoc/>
+    public async Task ClearObserverQuarantine()
+    {
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            await TransitionTo<Routing>();
+        }
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<EventType>> GetEventTypes() => Task.FromResult(Definition.EventTypes);
@@ -177,7 +192,14 @@ public partial class Observer(
             subscriberArgs,
             isReplayable,
             filters);
+
+        State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
 
         if (await TransitionToReplayIfNeeded())
         {
@@ -185,7 +207,57 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
+    }
+
+    /// <inheritdoc/>
+    public async Task SubscribeToAllEvents<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs = null,
+        bool isReplayable = true)
+        where TObserverSubscriber : IObserverSubscriber
+    {
+        var owner = GetOwner<TObserverSubscriber>();
+
+        using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+
+        logger.Subscribing();
+        logger.SubscribingToAllEvents();
+
+        observerDefinition.State = observerDefinition.State with
+        {
+            Type = type,
+            Owner = owner,
+            EventTypes = [],
+            IsReplayable = isReplayable
+        };
+        await observerDefinition.WriteStateAsync();
+
+        _subscription = new(
+            _observerId,
+            _observerKey,
+            [],
+            typeof(TObserverSubscriber),
+            siloAddress,
+            subscriberArgs,
+            isReplayable);
+
+        State = State with { SubscribesToAllEvents = true };
+        await WriteStateAsync();
+
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        if (await TransitionToReplayIfNeeded())
+        {
+            return;
+        }
+        await ResumeJobs();
+        await TryRecoverAllFailedPartitions();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -205,6 +277,18 @@ public partial class Observer(
             _jobsManager,
             loggerFactory.CreateLogger<Replay>()),
 
+        new QuarantinedObserver(
+            _observerKey,
+            loggerFactory.CreateLogger<QuarantinedObserver>()),
+
+        new CatchingUpInFlight(
+            _observerKey,
+            observerDefinition,
+            failures,
+            storage,
+            _jobsManager,
+            loggerFactory.CreateLogger<CatchingUpInFlight>()),
+
         new Observing(
             _appendedEventsQueues,
             _observerKey.EventStore,
@@ -218,6 +302,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public async Task Unsubscribe()
     {
+        await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
     }
@@ -226,6 +311,11 @@ public partial class Observer(
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         await RemoveReminder(reminderName);
+        if (State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
         if (!_subscription.IsSubscribed)
         {
             return;
@@ -245,6 +335,31 @@ public partial class Observer(
     internal void SetSubscription(ObserverSubscription subscription)
     {
         _subscription = subscription;
+    }
+
+    /// <summary>
+    /// Removes all reminders for currently failed partitions.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task RemoveFailedPartitionReminders()
+    {
+        foreach (var partition in Failures.Partitions.Select(_ => _.Partition))
+        {
+            await RemoveReminder(partition);
+        }
+    }
+
+    /// <summary>
+    /// Stops all retry jobs for the current observer.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    internal async Task StopAllRetryFailedPartitionJobs()
+    {
+        var jobs = await _jobsManager.GetAllJobs();
+        var stopTasks = jobs
+            .Where(_ => _.Request is RetryFailedPartitionRequest request && request.ObserverKey == _observerKey)
+            .Select(_ => _jobsManager.Stop(_.Id));
+        await Task.WhenAll(stopTasks);
     }
 
     /// <inheritdoc/>
@@ -273,6 +388,27 @@ public partial class Observer(
             _ => ObserverOwner.None
         };
 
+    /// <summary>
+    /// Stops all non-replay observer jobs that are currently preparing or running so they can be resumed when the observer reconnects.
+    /// Replay jobs are excluded because they are managed independently of the observer's subscription lifecycle.
+    /// </summary>
+    async Task PauseJobs()
+    {
+        var allJobs = await _jobsManager.GetAllJobs();
+
+        // Explicitly do not pause replay jobs.
+        var pauseTasks = allJobs
+            .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
+                          observerJobRequest is not ReplayObserverRequest &&
+                          ShouldPauseJob(job.Status) &&
+                          observerJobRequest.ObserverKey == _observerKey)
+            .Select(job => _jobsManager.Stop(job.Id));
+        await Task.WhenAll(pauseTasks);
+        return;
+
+        static bool ShouldPauseJob(JobStatus status) => status is JobStatus.Running or JobStatus.PreparingJob or JobStatus.PreparingSteps or JobStatus.StartingSteps;
+    }
+
     async Task ResumeJobs()
     {
         var unfilteredJobs = await _jobsManager.GetAllJobs();
@@ -287,7 +423,7 @@ public partial class Observer(
         await Task.WhenAll(resumeTasks);
         return;
 
-        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.Stopped and not JobStatus.CompletedSuccessfully
+        static bool ShouldResumeJob(JobStatus status) => status is not JobStatus.Failed and not JobStatus.CompletedSuccessfully
             and not JobStatus.CompletedWithFailures and not JobStatus.Removing;
     }
 

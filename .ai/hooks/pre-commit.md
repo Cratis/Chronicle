@@ -10,11 +10,11 @@ Before executing any `git commit` terminal command, automatically run the specs 
 
 ## When this hook applies
 
-This hook fires before **every** `runInTerminal` call. Check whether the command being run is a `git commit` (including `git commit -m`, `git commit --amend`, etc.). If it is not a commit command, do nothing and let the tool proceed.
+This hook fires before **every** `runInTerminal` call. Check whether the command being run is a `git commit` (including `git commit -m`, `git commit --amend`, etc.) or an `rtk git commit` variant. If it is not a commit command, do nothing and let the tool proceed.
 
 ## Steps
 
-1. **Detect a git commit command** — inspect the terminal command string. If it does not start with `git commit`, skip all steps below and proceed normally.
+1. **Detect a git commit command** — inspect the terminal command string. Treat both `git commit ...` and `rtk git commit ...` as commit commands. If neither pattern matches, skip all steps below and proceed normally.
 
 2. **Identify affected projects** from the staged changes:
    ```

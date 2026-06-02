@@ -22,7 +22,7 @@ public class EventSequenceAppendAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Types appended to event sequences must be marked with the [EventType] attribute.");
+        description: "The [EventType] attribute registers a type in Chronicle's event type registry, which is required for serialization, routing, and replay. Add [EventType(\"<guid>\")] to the class being appended, or replace it with a dedicated event type class already marked with [EventType].");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

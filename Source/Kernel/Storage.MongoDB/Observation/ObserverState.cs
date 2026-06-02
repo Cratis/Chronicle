@@ -29,6 +29,11 @@ public class ObserverState
     public EventSequenceNumber NextEventSequenceNumber { get; set; } = EventSequenceNumber.First;
 
     /// <summary>
+    /// Gets or sets the current tail event sequence number.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
+
+    /// <summary>
     /// Gets or sets the current running state of the observer.
     /// </summary>
     public ObserverRunningState RunningState { get; set; } = ObserverRunningState.Unknown;
@@ -44,7 +49,32 @@ public class ObserverState
     public IEnumerable<Key> CatchingUpPartitions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the count of failed partitions for the observer.
+    /// </summary>
+    public int FailedPartitionCount { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the observer is currently replaying events.
     /// </summary>
     public bool IsReplaying { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer subscribes to all event types.
+    /// </summary>
+    public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of events the observer has successfully handled.
+    /// </summary>
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled, broken down by event type identifier.
+    /// </summary>
+    public IDictionary<string, ulong> HandledEventCountPerEventType { get; set; } = new Dictionary<string, ulong>();
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled per partition, broken down by event type identifier.
+    /// </summary>
+    public IDictionary<string, IDictionary<string, ulong>> HandledEventCountPerPartition { get; set; } = new Dictionary<string, IDictionary<string, ulong>>();
 }

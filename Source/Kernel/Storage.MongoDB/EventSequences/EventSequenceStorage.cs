@@ -110,7 +110,7 @@ public class EventSequenceStorage(
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
-        Concepts.Events.Subject? subject = null)
+        Subject? subject = null)
     {
         try
         {
@@ -158,7 +158,7 @@ public class EventSequenceStorage(
 
             var eventHash = contentHashes.TryGetValue(eventType.Generation, out var hash) ? hash : EventHash.NotSet;
 
-            var resolvedSubject = subject?.IsSet == true ? subject : new Concepts.Events.Subject(eventSourceId.Value);
+            var resolvedSubject = subject?.IsSet == true ? subject : new Subject(eventSourceId.Value);
             return Result<AppendedEvent, DuplicateEventSequenceNumber>.Success(new AppendedEvent(
                 new(
                     eventType,
@@ -218,6 +218,10 @@ public class EventSequenceStorage(
                 var schema = await eventTypesStorage.GetFor(eventToAppend.EventType.Id, eventToAppend.EventType.Generation);
                 var jsonObject = expandoObjectConverter.ToJsonObject(eventToAppend.Content, schema.Schema);
                 var document = BsonDocument.Parse(JsonSerializer.Serialize(jsonObject, jsonSerializerOptions));
+                var resolvedSubject = eventToAppend.Subject?.IsSet == true
+                    ? eventToAppend.Subject
+                    : new Subject(eventToAppend.EventSourceId.Value);
+
                 var @event = new Event(
                     eventToAppend.SequenceNumber,
                     eventToAppend.CorrelationId,
@@ -238,7 +242,8 @@ public class EventSequenceStorage(
                     {
                         { eventToAppend.EventType.Generation.ToString(), eventToAppend.Hash.Value }
                     },
-                    []);
+                    [],
+                    Subject: eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 eventsToInsert.Add(@event);
 
@@ -257,7 +262,8 @@ public class EventSequenceStorage(
                         eventToAppend.Causation,
                         await identityStorage.GetFor(eventToAppend.CausedByChain),
                         eventToAppend.Tags,
-                        eventToAppend.Hash),
+                        eventToAppend.Hash,
+                        Subject: resolvedSubject),
                     eventToAppend.Content));
             }
 
@@ -524,8 +530,8 @@ public class EventSequenceStorage(
         return Task.FromResult(new TailEventSequenceNumbers(
             eventSequenceId,
             eventTypes.ToImmutableList(),
-            hasTail ? new EventSequenceNumber((ulong)tail!.AsInt64) : EventSequenceNumber.Unavailable,
-            hasTailForEventTypes ? new EventSequenceNumber((ulong)tailForEventTypes!.AsInt64) : EventSequenceNumber.Unavailable));
+            hasTail ? ToEventSequenceNumber(tail!) : EventSequenceNumber.Unavailable,
+            hasTailForEventTypes ? ToEventSequenceNumber(tailForEventTypes!) : EventSequenceNumber.Unavailable));
     }
 
     /// <inheritdoc/>
@@ -570,7 +576,7 @@ public class EventSequenceStorage(
             var eventType = eventTypes.FirstOrDefault(_ => _.Id == (EventTypeId)item["_id"].AsString);
             if (eventType != null)
             {
-                resultAsDictionary[eventType] = new EventSequenceNumber((ulong)item["items"][0].AsInt64);
+                resultAsDictionary[eventType] = ToEventSequenceNumber(item["items"][0]);
             }
         }
 
@@ -851,6 +857,12 @@ public class EventSequenceStorage(
             new CreateIndexModel<Event>(
                 Builders<Event>.IndexKeys.Ascending(e => e.Subject),
                 new CreateIndexOptions { Sparse = true, Name = SubjectIndexName })).ConfigureAwait(false);
+    }
+
+    static EventSequenceNumber ToEventSequenceNumber(BsonValue value)
+    {
+        var sequenceNumber = Convert.ToUInt64(value.ToDecimal());
+        return new EventSequenceNumber(sequenceNumber);
     }
 
     /// <summary>

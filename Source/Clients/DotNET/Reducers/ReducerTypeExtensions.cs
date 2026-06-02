@@ -5,7 +5,6 @@ using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reducers.Validators;
-using Cratis.Reflection;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -53,7 +52,8 @@ public static class ReducerTypeExtensions
             parameters[0].ParameterType.IsEventType(eventTypes) &&
             parameters[1].ParameterType.Equals(readModelType))
         {
-            if ((methodInfo.DeclaringType?.IsNullableContext() ?? false) && !parameters[1].IsNullableReferenceType())
+            var nullabilityContext = new NullabilityInfoContext();
+            if (nullabilityContext.Create(parameters[1]).ReadState == NullabilityState.NotNull)
             {
                 return false;
             }

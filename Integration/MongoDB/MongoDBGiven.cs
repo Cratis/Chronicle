@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.MongoDB.Integration;
 
 /// <summary>
 /// Base class for MongoDB integration specs that use a typed context.
-/// Equivalent to <see cref="Cratis.Chronicle.XUnit.Integration.Given{TSetup}"/> but without
+/// Equivalent to <see cref="Given{TSetup}"/> but without
 /// the <c>IChronicleSetupFixture</c> constraint so that lightweight MongoDB-only contexts
 /// can be used without starting an Orleans silo.
 /// </summary>

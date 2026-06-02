@@ -11,6 +11,8 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -36,6 +38,8 @@ public class Reactors : IReactors
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly IActivitySource<Reactors> _activitySource;
+    readonly IReactorSideEffectHandlers _sideEffectHandlers;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -55,6 +59,8 @@ public class Reactors : IReactors
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
+    /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
+    /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -67,6 +73,8 @@ public class Reactors : IReactors
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
+        IActivitySource<Reactors> activitySource,
+        IReactorSideEffectHandlers sideEffectHandlers,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -80,12 +88,18 @@ public class Reactors : IReactors
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _activitySource = activitySource;
+        _sideEffectHandlers = sideEffectHandlers;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            _registered = false;
-            DisconnectHandlers();
+            lock (_registerLock)
+            {
+                _registered = false;
+                RecreateHandlersForReconnect();
+            }
+
             return Task.CompletedTask;
         };
     }
@@ -262,6 +276,21 @@ public class Reactors : IReactors
         }
     }
 
+    void RecreateHandlersForReconnect()
+    {
+        var reactorTypes = _handlers.Values
+            .Select(_ => _.ReactorType)
+            .ToArray();
+
+        DisconnectHandlers();
+        _handlers.Clear();
+
+        foreach (var reactorType in reactorTypes)
+        {
+            _handlers[reactorType] = CreateHandlerFor(reactorType);
+        }
+    }
+
     void RegisterReactor(IReactorHandler handler)
     {
         _logger.RegisteringReactor(handler.Id);
@@ -312,6 +341,20 @@ public class Reactors : IReactors
                     var streamFailed = new ReactorObservationStreamFailed(handler.Id, ex);
                     _logger.RegisteringReactorFailed(handler.Id, streamFailed);
                     messages.Dispose();
+
+                    if (!handler.CancellationToken.IsCancellationRequested)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                                _logger.ReconnectingReactor(handler.Id);
+                                RegisterReactor(handler);
+                            }
+                            catch (OperationCanceledException) { }
+                        });
+                    }
                 });
     }
 
@@ -342,6 +385,18 @@ public class Reactors : IReactors
 
     async Task ObserverMethod(BehaviorSubject<ReactorMessage> messages, IReactorHandler handler, EventsToObserve events)
     {
+        if (events.ReplayState != ReplayState.None)
+        {
+            await HandleReplayNotification(handler, events.ReplayState, events.Partition);
+            return;
+        }
+
+        using var span = _activitySource.Handle(
+            _eventStore.Name,
+            _eventStore.Namespace,
+            handler.EventSequenceId,
+            handler.Id);
+
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -363,7 +418,9 @@ public class Reactors : IReactors
             middlewares,
             handler.ReactorType,
             activatedReactor,
-            _loggerFactory.CreateLogger<ReactorInvoker>());
+            _loggerFactory.CreateLogger<ReactorInvoker>(),
+            _sideEffectHandlers,
+            _eventStore);
 
         foreach (var @event in events.Events)
         {
@@ -435,6 +492,37 @@ public class Reactors : IReactors
             };
 
             messages.OnNext(new(new(result)));
+        }
+    }
+
+    async Task HandleReplayNotification(IReactorHandler handler, ReplayState replayState, string partition)
+    {
+        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
+        var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
+        if (activatedReactorResult.TryGetException(out var ex))
+        {
+            _logger.FailedActivatingReactorForReplayNotification(ex, handler.Id, replayState);
+            return;
+        }
+
+        await using var activatedReactor = activatedReactorResult.AsT0;
+        switch (replayState)
+        {
+            case ReplayState.BeginReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.BeginReplay();
+                break;
+
+            case ReplayState.EndReplay when activatedReactor.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.EndReplay();
+                break;
+
+            case ReplayState.BeginReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.BeginReplayPartition(partition);
+                break;
+
+            case ReplayState.EndReplayPartition when activatedReactor.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.EndReplayPartition(partition);
+                break;
         }
     }
 }

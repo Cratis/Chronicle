@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -12,10 +13,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
-using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -28,7 +26,6 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/>.</param>
 /// <param name="eventSequenceMigrator">The <see cref="IEventSequenceMigrator"/> for managing event sequence table migrations.</param>
 /// <param name="uniqueConstraintMigrator">The <see cref="IUniqueConstraintMigrator"/> for managing unique constraint table migrations.</param>
-[Singleton]
 public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOptions> options, IEventSequenceMigrator eventSequenceMigrator, IUniqueConstraintMigrator uniqueConstraintMigrator) : IDatabase
 {
     readonly AsyncLocal<ClusterDbContext> _clusterDbContext = new();
@@ -47,9 +44,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(options.Value.Storage.ConnectionDetails);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
             _clusterDbContext.Value = new ClusterDbContext(builder.Options);
         }
 
@@ -68,9 +63,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = new EventStoreDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -99,9 +92,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = new NamespaceDbContext(builder.Options);
             await dbContext.Database.MigrateAsync();
@@ -168,9 +159,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
             builder.UseDatabaseFromConnectionString(connectionString);
             builder
                 .UseApplicationServiceProvider(serviceProvider)
-                .ReplaceService<IEvaluatableExpressionFilter, ConceptAsEvaluatableExpressionFilter>()
-                .ReplaceService<IModelCustomizer, ConceptAsModelCustomizer>()
-                .AddInterceptors(new ConceptAsQueryExpressionInterceptor(), new ConceptAsDbCommandInterceptor());
+                .AddConceptAsSupport();
 
             dbContext = createDbContext(builder.Options, tableName);
             await dbContext.EnsureTableExists();
@@ -208,6 +197,7 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         {
             return dataSource;
         }
+
         if (TryReplaceFilename("Filename", postfix, out var filename))
         {
             return filename;

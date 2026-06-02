@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -16,7 +17,9 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="ReplayingPartitions">The individual partitions that are being replayed.</param>
 /// <param name="CatchingUpPartitions">The individual partitions that are catching up.</param>
 /// <param name="FailedPartitions">Collection of <see cref="FailedPartition"/>.</param>
+/// <param name="FailedPartitionCount">Count of failed partitions for the observer.</param>
 /// <param name="IsReplaying">Whether the observer is replaying.</param>
+/// <param name="SubscribesToAllEvents">Whether the observer subscribes to all event types.</param>
 public record ObserverState(
     ObserverId Identifier,
     EventSequenceNumber LastHandledEventSequenceNumber,
@@ -24,7 +27,9 @@ public record ObserverState(
     ISet<Key> ReplayingPartitions,
     ISet<Key> CatchingUpPartitions,
     IEnumerable<FailedPartition> FailedPartitions,
-    bool IsReplaying)
+    FailedPartitionCount FailedPartitionCount,
+    bool IsReplaying,
+    bool SubscribesToAllEvents)
 {
     /// <summary>
     /// Represents an empty observer state.
@@ -44,6 +49,8 @@ public record ObserverState(
               new HashSet<Key>(),
               new HashSet<Key>(),
               [],
+              FailedPartitionCount.Zero,
+              false,
               false)
     {
     }
@@ -56,4 +63,41 @@ public record ObserverState(
         get => _nextEventSequenceNumber;
         init => _nextEventSequenceNumber = !value.IsActualValue ? EventSequenceNumber.First : value;
     }
+
+    /// <summary>
+    /// Gets or inits the tail <see cref="EventSequenceNumber"/> for the observed event sequence.
+    /// </summary>
+    public EventSequenceNumber TailEventSequenceNumber
+    {
+        get;
+        init;
+    }
+        = EventSequenceNumber.Unavailable;
+
+    /// <summary>
+    /// Gets or inits the total number of events the observer has successfully handled.
+    /// </summary>
+    public EventCount HandledEventCount { get; init; } = EventCount.Zero;
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled, broken down by event type identifier.
+    /// </summary>
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; set; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
+
+    /// <summary>
+    /// Gets or sets the number of events successfully handled, broken down by event type identifier.
+    /// Kept for backwards compatibility with integration tests and benchmarks using the previous property name.
+    /// </summary>
+    [Obsolete($"Use {nameof(HandledEventCountPerEventType)} instead.")]
+    public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventTypesCount
+    {
+        get => HandledEventCountPerEventType;
+        set => HandledEventCountPerEventType = value;
+    }
+
+    /// <summary>
+    /// Gets or inits the number of events successfully handled per partition, broken down by event type identifier.
+    /// Used to compute the contribution of a specific partition so it can be subtracted when that partition is replayed.
+    /// </summary>
+    public IReadOnlyDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>> HandledEventCountPerPartition { get; init; } = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty;
 }

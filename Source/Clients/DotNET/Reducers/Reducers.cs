@@ -15,6 +15,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,6 +42,7 @@ public class Reducers : IReducers
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
+    readonly IActivitySource<Reducers> _activitySource;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
     readonly SinkTypeId _defaultSinkTypeId;
@@ -63,6 +65,7 @@ public class Reducers : IReducers
     /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
+    /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reducer event handling.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Reducers(
         IEventStore eventStore,
@@ -76,12 +79,17 @@ public class Reducers : IReducers
         IOptions<ChronicleOptions> options,
         IIdentityProvider identityProvider,
         IReducerObservers reducerObservers,
+        IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
         {
-            _registered = false;
-            DisconnectHandlers();
+            lock (_registerLock)
+            {
+                _registered = false;
+                RecreateHandlersForReconnect();
+            }
+
             return Task.CompletedTask;
         };
         _eventStore = eventStore;
@@ -96,6 +104,7 @@ public class Reducers : IReducers
         _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
         _identityProvider = identityProvider;
         _reducerObservers = reducerObservers;
+        _activitySource = activitySource;
         _logger = logger;
     }
 
@@ -244,6 +253,71 @@ public class Reducers : IReducers
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<object?> GetInstanceById(Type readModelType, ReadModelKey readModelKey)
+    {
+        var handler = GetHandlerForReadModelType(readModelType);
+        var events = await _eventStore
+            .GetEventSequence(handler.EventSequenceId)
+            .GetForEventSourceIdAndEventTypes((EventSourceId)readModelKey.Value, handler.EventTypes);
+
+        if (events.Count == 0)
+        {
+            return null;
+        }
+
+        var reduceResult = await handler.Invoker.Invoke(
+            _serviceProvider,
+            events
+                .OrderBy(@event => @event.Context.SequenceNumber)
+                .Select(@event => new EventAndContext(@event.Content, @event.Context)),
+            null);
+
+        if (!reduceResult.IsSuccess)
+        {
+            throw new InvalidOperationException($"Failed to reduce read model '{readModelType.Name}'. {string.Join(Environment.NewLine, reduceResult.ErrorMessages)}");
+        }
+
+        return reduceResult.ReadModelState;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<object>> GetInstances(Type readModelType, EventCount? eventCount = null)
+    {
+        var handler = GetHandlerForReadModelType(readModelType);
+        var events = await _eventStore
+            .GetEventSequence(handler.EventSequenceId)
+            .GetFromSequenceNumber(EventSequenceNumber.First, filterEventTypes: handler.EventTypes);
+
+        var orderedEvents = events.OrderBy(_ => _.Context.SequenceNumber);
+        IEnumerable<AppendedEvent> eventsToReduce = eventCount is { Value: not ulong.MaxValue }
+            ? orderedEvents.Take(eventCount.Value > int.MaxValue ? int.MaxValue : (int)eventCount.Value).ToList()
+            : orderedEvents;
+
+        var result = new List<object>();
+        foreach (var eventsForEventSource in eventsToReduce
+                     .GroupBy(_ => _.Context.EventSourceId)
+                     .Select(group => group.ToList()))
+        {
+            var reduceResult = await handler.Invoker.Invoke(
+                _serviceProvider,
+                eventsForEventSource.Select(@event => new EventAndContext(@event.Content, @event.Context)),
+                null);
+
+            if (!reduceResult.IsSuccess)
+            {
+                throw new InvalidOperationException($"Failed to reduce read model '{readModelType.Name}'. {string.Join(Environment.NewLine, reduceResult.ErrorMessages)}");
+            }
+
+            if (reduceResult.ReadModelState is not null)
+            {
+                result.Add(reduceResult.ReadModelState);
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// Get snapshots for a reduced read model by its key.
     /// </summary>
@@ -318,6 +392,22 @@ public class Reducers : IReducers
         }
     }
 
+    void RecreateHandlersForReconnect()
+    {
+        var reducerTypes = _handlersByType.Values
+            .Select(_ => (_.ReducerType, _.ReadModelType))
+            .ToArray();
+
+        DisconnectHandlers();
+
+        _handlersByType = reducerTypes.ToDictionary(
+            _ => _.ReducerType,
+            _ => CreateHandlerFor(_.ReducerType, _.ReadModelType) as IReducerHandler);
+        _handlersByModelType = _handlersByType.ToDictionary(
+            _ => _.Value.ReadModelType,
+            _ => _.Value);
+    }
+
     void RegisterReducer(IReducerHandler handler)
     {
         _logger.RegisterReducer(
@@ -364,11 +454,42 @@ public class Reducers : IReducers
                 _logger.EventHandlingCompleted(handler.Id);
             }))
             .Concat()
-            .Subscribe(_ => { }, messages.Dispose);
+            .Subscribe(
+                _ => { },
+                ex =>
+                {
+                    messages.Dispose();
+
+                    if (!handler.CancellationToken.IsCancellationRequested)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(2), handler.CancellationToken);
+                                _logger.ReconnectingReducer(handler.Id);
+                                RegisterReducer(handler);
+                            }
+                            catch (OperationCanceledException) { }
+                        });
+                    }
+                });
     }
 
     async Task ObserverMethod(BehaviorSubject<ReducerMessage> messages, IReducerHandler handler, ReduceOperationMessage operation)
     {
+        if (operation.ReplayState != ReplayState.None)
+        {
+            await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
+            return;
+        }
+
+        using var span = _activitySource.Handle(
+            _eventStore.Name,
+            _eventStore.Namespace,
+            handler.EventSequenceId,
+            handler.Id);
+
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -439,6 +560,37 @@ public class Reducers : IReducers
             ExceptionStackTrace = exceptionStackTrace
         };
         messages.OnNext(new(new(result)));
+    }
+
+    async Task HandleReplayNotification(IReducerHandler handler, ReplayState replayState, string partition)
+    {
+        await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
+        var activatedReducerResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReducerType);
+        if (activatedReducerResult.TryGetException(out var ex))
+        {
+            _logger.FailedActivatingReducerForReplayNotification(ex, handler.Id, replayState);
+            return;
+        }
+
+        await using var activatedReducer = activatedReducerResult.AsT0;
+        switch (replayState)
+        {
+            case ReplayState.BeginReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.BeginReplay();
+                break;
+
+            case ReplayState.EndReplay when activatedReducer.Instance is ICanBeNotifiedWhenReplay notifiable:
+                await notifiable.EndReplay();
+                break;
+
+            case ReplayState.BeginReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.BeginReplayPartition(partition);
+                break;
+
+            case ReplayState.EndReplayPartition when activatedReducer.Instance is ICanBeNotifiedWhenPartitionReplayed notifiable:
+                await notifiable.EndReplayPartition(partition);
+                break;
+        }
     }
 
     bool ShouldReducerBeActive(Type reducerType)

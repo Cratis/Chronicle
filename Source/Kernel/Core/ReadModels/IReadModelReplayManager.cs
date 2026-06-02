@@ -24,4 +24,11 @@ public interface IReadModelReplayManager : IGrainWithStringKey
     /// </summary>
     /// <returns>Collection of <see cref="ReadModelOccurrence"/>.</returns>
     Task<IEnumerable<ReadModelOccurrence>> GetOccurrences();
+
+    /// <summary>
+    /// Applies replay retention policy and removes old occurrences.
+    /// </summary>
+    /// <param name="versionsToKeep">Number of versions to keep.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ApplyRetentionPolicy(int versionsToKeep);
 }

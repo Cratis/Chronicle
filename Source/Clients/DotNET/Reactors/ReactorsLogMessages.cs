@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
 
@@ -28,4 +29,10 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to register Reactor '{Id}' — the reactive observation stream errored out")]
     internal static partial void RegisteringReactorFailed(this ILogger<Reactors> logger, ReactorId id, Exception exception);
+
+    [LoggerMessage(LogLevel.Information, "Reconnecting Reactor '{Id}' after stream failure")]
+    internal static partial void ReconnectingReactor(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Error, "Failed to activate Reactor '{ReactorId}' for replay notification '{ReplayState}'")]
+    internal static partial void FailedActivatingReactorForReplayNotification(this ILogger<Reactors> logger, Exception ex, ReactorId reactorId, ReplayState replayState);
 }

@@ -44,10 +44,10 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         {
             if (existing.EventSourceId == eventSourceId)
             {
-                return (true, (EventSequenceNumber)existing.SequenceNumber);
+                return (true, (EventSequenceNumber)(ulong)existing.SequenceNumber);
             }
 
-            return (false, (EventSequenceNumber)existing.SequenceNumber);
+            return (false, (EventSequenceNumber)(ulong)existing.SequenceNumber);
         }
 
         return (true, EventSequenceNumber.Unavailable);

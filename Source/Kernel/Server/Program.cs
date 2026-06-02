@@ -41,12 +41,11 @@ var env = Environment.GetEnvironmentVariables();
 
 ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
 var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
+    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddHealthChecks()
-    .AddMongoDb(
-        _ => new MongoDB.Driver.MongoClient(chronicleOptions.Storage.ConnectionDetails),
-        name: "mongodb",
-        timeout: TimeSpan.FromSeconds(3));
+builder.Services.AddHealthChecks();
 
 if (chronicleOptions.Features.Api)
 {
@@ -128,10 +127,6 @@ builder.WebHost.UseKestrel(options =>
     options.Limits.Http2.MaxStreamsPerConnection = 100;
 });
 
-var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.SqlServer, StringComparison.OrdinalIgnoreCase)
-    || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
-
 var hostBuilder = builder.Host
 .UseDefaultServiceProvider(_ =>
 {
@@ -170,6 +165,9 @@ hostBuilder
                 chronicleBuilder.WithSql(chronicleOptions);
             else
                 chronicleBuilder.WithMongoDB(chronicleOptions);
+
+            chronicleBuilder.WithVaultComplianceStorage(chronicleOptions);
+            chronicleBuilder.WithAzureKeyVaultComplianceStorage(chronicleOptions);
         }))
    .ConfigureServices((context, services) =>
    {
@@ -195,6 +193,17 @@ hostBuilder
                .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.MongoDB") == true)
                .ToList();
            foreach (var descriptor in mongoStorageDescriptors)
+               services.Remove(descriptor);
+       }
+       else
+       {
+           // Convention binding auto-registers SQL storage implementations alongside MongoDB ones.
+           // In MongoDB mode, SQL implementations must be removed to prevent DI failures (they
+           // require SQL infrastructure such as ITableMigrator<> that is not registered in MongoDB mode).
+           var sqlStorageDescriptors = services
+               .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.Sql") == true)
+               .ToList();
+           foreach (var descriptor in sqlStorageDescriptors)
                services.Remove(descriptor);
        }
    });

@@ -185,7 +185,7 @@ public class EventSequenceCommands(
     /// <param name="redaction">The redaction filter to use.</param>
     /// <returns>Awaitable task.</returns>
     [HttpPost("redact-events")]
-    public async Task RedactMany(
+    public Task RedactMany(
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string eventSequenceId,

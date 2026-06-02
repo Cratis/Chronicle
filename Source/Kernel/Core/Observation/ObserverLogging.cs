@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -20,6 +21,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Subscribing observer with {Count} event types: {EventTypes}")]
     internal static partial void SubscribingWithEventTypes(this ILogger<Observer> logger, int count, string eventTypes);
 
+    [LoggerMessage(LogLevel.Information, "Subscribing observer to all event types")]
+    internal static partial void SubscribingToAllEvents(this ILogger<Observer> logger);
+
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} failed for event with sequence number {EventSequenceNumber}. Error: {ExceptionMessages}. StackTrace: {StackTrace}")]
     internal static partial void PartitionFailed(this ILogger<Observer> logger, Key partition, EventSequenceNumber eventSequenceNumber, IEnumerable<string> exceptionMessages, string stackTrace);
 
@@ -37,6 +41,27 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Partition {Partition} has exceeded maximum retry attempts and is being quarantined. Manual intervention required to resume processing.")]
     internal static partial void QuarantiningFailedPartition(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Warning, "Observer is quarantined. Automatic retries and catch-up are paused until quarantine is cleared.")]
+    internal static partial void ObserverQuarantined(this ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Observer failed partition count threshold reached ({FailedPartitionCount}/{Threshold}). Transitioning observer to quarantined state.")]
+    internal static partial void ObserverFailedPartitionCountThresholdReached(this ILogger<Observer> logger, int failedPartitionCount, int threshold);
+
+    [LoggerMessage(LogLevel.Warning, "Observer failed partition percentage threshold exceeded ({FailedPartitionPercentage:P2} > {Threshold:P2}). Transitioning observer to quarantined state.")]
+    internal static partial void ObserverFailedPartitionPercentageThresholdExceeded(this ILogger<Observer> logger, double failedPartitionPercentage, double threshold);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping failed partition recovery because observer is quarantined")]
+    internal static partial void SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
+    internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping partition catch-up because observer is replaying")]
+    internal static partial void SkippingPartitionCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping partition replay because observer is already performing a full replay")]
+    internal static partial void SkippingPartitionReplayBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Attempting to replay partition {Partition} to event sequence number {ToEventSequenceNumber}")]
     internal static partial void AttemptReplayPartition(this ILogger<Observer> logger, Key partition, EventSequenceNumber toEventSequenceNumber);
@@ -106,6 +131,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Observer needs to replay. Transitioning to replay state.")]
     internal static partial void NeedsToReplay(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that client {ConnectionId} is no longer connected. Unsubscribing observer.")]
+    internal static partial void WatchdogClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
+    internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
+    internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Debug, "Watchdog fast-forwarding NextEventSequenceNumber from {NextEventSequenceNumber} to tail {TailEventSequenceNumber} because there are no relevant events in that range.")]
+    internal static partial void WatchdogFastForwardingNextEventSequenceNumber(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber, EventSequenceNumber tailEventSequenceNumber);
 }
 
 internal static class ObserverScopes

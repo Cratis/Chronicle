@@ -56,6 +56,7 @@ See the following pages for detailed information on each feature:
 - [Set Constant Value](./set-value.md) - Set a property to a fixed value with SetValue
 - [Convention-Based](./convention-based.md) - Automatic property mapping with FromEvent (equivalent to AutoMap)
 - [FromEvery](./from-every.md) - Update properties from all events
+- [FromAll](./from-all.md) - Subscribe to all event types without filtering
 - [Counters](./counters.md) - Increment, Decrement, Count
 - [Children](./children.md) - Managing child collections
 - [Removal](./removal.md) - Removing read models and children with RemovedWith, RemovedWithJoin

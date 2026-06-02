@@ -18,6 +18,8 @@ export const getObserverRunningStateAsText = (
             return strings.eventStore.namespaces.observers.states.replaying;
         case ObserverRunningState.disconnected:
             return strings.eventStore.namespaces.observers.states.disconnected;
+        case ObserverRunningState.quarantined:
+            return strings.eventStore.namespaces.observers.states.quarantined;
     }
     return '[N/A]';
 };

@@ -243,5 +243,20 @@ public enum TokenType
     /// <summary>
     /// The keyword 'literal'.
     /// </summary>
-    Literal = 48
+    Literal = 48,
+
+    /// <summary>
+    /// The keyword 'all'.
+    /// </summary>
+    All = 49,
+
+    /// <summary>
+    /// The keyword 'nested'.
+    /// </summary>
+    Nested = 50,
+
+    /// <summary>
+    /// The keyword 'clear'.
+    /// </summary>
+    Clear = 51
 }

@@ -55,6 +55,7 @@ public class ProjectionHandler(
             state.RunningState.ToClient(),
             state.IsSubscribed,
             state.NextEventSequenceNumber,
-            state.LastHandledEventSequenceNumber);
+            state.LastHandledEventSequenceNumber,
+            state.TailEventSequenceNumber);
     }
 }

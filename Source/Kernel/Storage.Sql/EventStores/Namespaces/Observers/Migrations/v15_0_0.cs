@@ -24,11 +24,14 @@ public class v15_0_0 : Migration
             {
                 Id = table.StringColumn(migrationBuilder),
                 LastHandledEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
+                TailEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder, nullable: false, defaultValue: ulong.MaxValue),
                 RunningState = table.NumberColumn<int>(migrationBuilder),
                 ReplayingPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),
                 CatchingUpPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),
                 FailedPartitions = table.JsonColumn<IEnumerable<FailedPartition>>(migrationBuilder),
-                IsReplaying = table.BoolColumn(migrationBuilder)
+                FailedPartitionCount = table.NumberColumn<int>(migrationBuilder, nullable: false, defaultValue: 0),
+                IsReplaying = table.BoolColumn(migrationBuilder),
+                SubscribesToAllEvents = table.BoolColumn(migrationBuilder)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.Observers}", x => x.Id));
     }

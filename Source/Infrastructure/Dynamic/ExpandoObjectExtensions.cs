@@ -145,6 +145,7 @@ public static class ExpandoObjectExtensions
     /// <param name="property"><see cref="PropertyPath"/> to get or create for.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <returns><see cref="ExpandoObject"/> at property.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the current target unexpectedly becomes null while traversing array properties.</exception>
     /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
     public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
     {
@@ -175,49 +176,59 @@ public static class ExpandoObjectExtensions
 
                 case ArrayProperty arrayProperty:
                     {
-                        var indexer = arrayIndexers.GetFor(currentPath);
-                        IEnumerable<ExpandoObject> collection;
-                        if (!currentTarget.ContainsKey(arrayProperty.Value))
+                        var matchingIndexers = arrayIndexers.All
+                            .Where(indexer => indexer.ArrayProperty == currentPath)
+                            .ToArray();
+
+                        if (matchingIndexers.Length == 0)
                         {
-                            collection = [];
-                            currentTarget[segment.Value] = collection;
+                            matchingIndexers = [arrayIndexers.GetFor(currentPath)];
                         }
-                        else
+
+                        foreach (var indexer in matchingIndexers)
                         {
-                            if (currentTarget[segment.Value] is not IEnumerable enumerable)
+                            if (currentTarget is null)
                             {
-                                throw new SegmentValueIsNotCollection(property, segment);
+                                throw new InvalidOperationException("Current target cannot be null while processing array properties.");
                             }
-                            collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
-                        }
 
-                        IDictionary<string, object>? element = null;
-
-                        if (!indexer.IdentifierProperty.IsSet &&
-                            indexer.Identifier is int index &&
-                            collection.Count() > index)
-                        {
-                            element = collection.ToArray()[index]!;
-                        }
-                        else
-                        {
-                            element = collection
-                                .Cast<IDictionary<string, object>>()
-                                .SingleOrDefault(item =>
-                                    item.ContainsKey(indexer.IdentifierProperty.Path) &&
-                                    item[indexer.IdentifierProperty.Path].IsEqualTo(indexer.Identifier));
-                        }
-
-                        if (element == default)
-                        {
-                            element = new ExpandoObject()!;
-                            if (indexer.IdentifierProperty.IsSet)
+                            IEnumerable<ExpandoObject> collection;
+                            if (!currentTarget.ContainsKey(arrayProperty.Value))
                             {
-                                element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                                collection = [];
+                                currentTarget[segment.Value] = collection;
                             }
-                            currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
+                            else
+                            {
+                                if (currentTarget[segment.Value] is not IEnumerable enumerable)
+                                {
+                                    throw new SegmentValueIsNotCollection(property, segment);
+                                }
+                                collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
+                            }
+
+                            var element =
+                                !indexer.IdentifierProperty.IsSet &&
+                                indexer.Identifier is int index &&
+                                collection.Count() > index
+                                    ? collection.ToArray()[index]!
+                                    : collection
+                                        .Cast<IDictionary<string, object>>()
+                                        .SingleOrDefault(item =>
+                                            item.TryGetValue(indexer.IdentifierProperty.Path, out var identifierValue) &&
+                                            identifierValue.IsEqualTo(indexer.Identifier));
+
+                            if (element == default)
+                            {
+                                element = new ExpandoObject()!;
+                                if (indexer.IdentifierProperty.IsSet)
+                                {
+                                    element[indexer.IdentifierProperty.Path] = indexer.Identifier;
+                                }
+                                currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
+                            }
+                            currentTarget = (element as ExpandoObject)!;
                         }
-                        currentTarget = (element as ExpandoObject)!;
                     }
                     break;
             }
@@ -315,6 +326,7 @@ public static class ExpandoObjectExtensions
     {
         var valueType = value.GetType();
         if (!valueType.IsPrimitive &&
+            !valueType.IsEnum &&
             valueType != typeof(string) &&
             valueType != typeof(Guid) &&
             valueType != typeof(DateOnly) &&

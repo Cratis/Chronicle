@@ -42,4 +42,9 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the <see cref="EventObservationState"/>.
     /// </summary>
     public EventObservationState EventObservationState { get; set; } = EventObservationState.None;
+
+    /// <summary>
+    /// Gets or sets the collection of <see cref="EventType"/> to process.
+    /// </summary>
+    public IEnumerable<EventType> EventTypes { get; set; } = [];
 }

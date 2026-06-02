@@ -95,6 +95,8 @@ A slice is **not done** until:
 - [ ] `npx tsc -b` passes with zero errors (if frontend is present)
 - [ ] All integration specs pass (`dotnet test`)
 - [ ] All TypeScript specs pass (`yarn test`) if applicable
+- [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
+- [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
 - [ ] Code review by `code-reviewer` finds no blocking issues
 - [ ] Security review by `security-reviewer` finds no vulnerabilities
 - [ ] PR description follows the pull request template

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Storage.MongoDB;
 using Cratis.Chronicle.Storage.MongoDB.Serialization;
 using Cratis.Compliance.MongoDB;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Setup;
 
@@ -34,8 +35,10 @@ public static class MongoDBChronicleBuilderExtensions
     /// <returns><see cref="IChronicleBuilder"/> for continuation.</returns>
     public static IChronicleBuilder WithMongoDB(this IChronicleBuilder builder, string server, string database = WellKnownDatabaseNames.Chronicle)
     {
+        var settings = GetMongoClientSettings(server);
+
         builder.SiloBuilder
-            .UseMongoDBClient(server)
+            .UseMongoDBClient(_ => settings)
 
             // .UseMongoDBClustering(options =>
             // {
@@ -53,8 +56,24 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<IStorage, Storage.Storage>();
+
+            services.AddHealthChecks().AddMongoDb(
+                _ => new MongoClient(settings),
+                name: "mongodb",
+                timeout: TimeSpan.FromSeconds(3));
         });
 
         return builder;
+    }
+
+    /// <summary>
+    /// Create <see cref="MongoClientSettings"/> from a server connection string.
+    /// </summary>
+    /// <param name="server">Connection string for the MongoDB server.</param>
+    /// <returns><see cref="MongoClientSettings"/> for the connection string.</returns>
+    internal static MongoClientSettings GetMongoClientSettings(string server)
+    {
+        var url = new MongoUrl(server);
+        return MongoClientSettings.FromUrl(url);
     }
 }

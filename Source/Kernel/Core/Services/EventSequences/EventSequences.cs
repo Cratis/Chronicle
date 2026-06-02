@@ -3,10 +3,13 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Events.EventSequences;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Auditing;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.EventSequences.Concurrency;
@@ -26,10 +29,12 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing events.</param>
+/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII event content.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class EventSequences(
     IGrainFactory grainFactory,
     IStorage storage,
+    IEventComplianceHelper eventComplianceHelper,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
@@ -37,10 +42,10 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceGrain(request);
         var result = await eventSequence.Append(
-            request.EventSourceType,
+            request.EventSourceType is null ? EventSourceType.Default : (EventSourceType)request.EventSourceType,
             request.EventSourceId,
-            request.EventStreamType,
-            request.EventStreamId,
+            request.EventStreamType is null ? EventStreamType.All : (EventStreamType)request.EventStreamType,
+            request.EventStreamId is null ? EventStreamId.Default : (EventStreamId)request.EventStreamId,
             request.EventType.ToChronicle(),
             JsonSerializer.Deserialize<JsonNode>(request.Content, jsonSerializerOptions)!.AsObject(),
             request.CorrelationId,
@@ -89,17 +94,21 @@ internal sealed class EventSequences(
 
         using var cursor = await eventSequence.GetFromSequenceNumber(
             EventSequenceNumber.First,
-            request.EventSourceId,
-            request.EventStreamType,
-            request.EventStreamId,
+            request.EventSourceId is null ? null : (EventSourceId)request.EventSourceId,
+            request.EventStreamType is null ? null : (EventStreamType)request.EventStreamType,
+            request.EventStreamId is null ? null : (EventStreamId)request.EventStreamId,
             request.EventTypes.ToChronicle());
 
-        var events = new List<Contracts.Events.AppendedEvent>();
+        var appendedEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
         {
-            var current = cursor.Current;
-            events.AddRange(current.ToContract(jsonSerializerOptions));
+            appendedEvents.AddRange(cursor.Current);
         }
+
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetFor(appendedEvents.Select(_ => _.Context.EventType).Distinct());
+        var schemasByEventType = eventTypeSchemas.ToDictionary(_ => _.Type);
+        var events = await ToContracts(appendedEvents, schemasByEventType);
+
         return new()
         {
             Events = events
@@ -159,14 +168,17 @@ internal sealed class EventSequences(
                 request.EventTypes.ToChronicle());
         }
 
-        var events = new List<Contracts.Events.AppendedEvent>();
+        var appendedEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
         {
-            var current = cursor.Current;
-            events.AddRange(current.ToContract(jsonSerializerOptions));
+            appendedEvents.AddRange(cursor.Current);
         }
 
         cursor.Dispose();
+        var eventTypeSchemas = await storage.GetEventStore(request.EventStore).EventTypes.GetFor(appendedEvents.Select(_ => _.Context.EventType).Distinct());
+        var schemasByEventType = eventTypeSchemas.ToDictionary(_ => _.Type);
+        var events = await ToContracts(appendedEvents, schemasByEventType);
+
         return new()
         {
             Events = events
@@ -204,6 +216,40 @@ internal sealed class EventSequences(
             correlationId: request.CorrelationId,
             causation: request.Causation.ToChronicle(),
             causedBy: request.CausedBy.ToChronicle());
+    }
+
+    /// <inheritdoc/>
+    public async Task<CompleteStreamResponse> CompleteStream(CompleteStreamRequest request, CallContext context = default)
+    {
+        var eventSequence = GetEventSequenceGrain(request);
+        var result = await eventSequence.CompleteStream(
+            (EventStreamType)request.EventStreamType,
+            (EventStreamId)request.EventStreamId);
+
+        return result.ToContract();
+    }
+
+    async Task<IList<Contracts.Events.AppendedEvent>> ToContracts(
+        IEnumerable<AppendedEvent> events,
+        Dictionary<EventType, EventTypeSchema> schemasByEventType)
+    {
+        var contracts = new List<Contracts.Events.AppendedEvent>();
+        foreach (var @event in events)
+        {
+            if (!schemasByEventType.TryGetValue(@event.Context.EventType, out var schema) ||
+                !schema.Schema.HasComplianceMetadata())
+            {
+                contracts.Add(@event.ToContract(jsonSerializerOptions));
+                continue;
+            }
+
+            var releasedEvent = await eventComplianceHelper.ReleaseEventContent(
+                @event,
+                schema.Schema);
+            contracts.Add(releasedEvent.ToContract(jsonSerializerOptions));
+        }
+
+        return contracts;
     }
 
     IEventSequenceStorage GetEventSequenceStorage(IEventSequenceRequest request) =>

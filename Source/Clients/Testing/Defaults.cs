@@ -1,14 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Testing.Events;
-using Cratis.Json;
-using Cratis.Serialization;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Testing;
 
@@ -28,34 +23,11 @@ public class Defaults
     public Defaults()
     {
         EventStore = new EventStoreForTesting();
-        JsonSchemaGenerator = new JsonSchemaGenerator(
-            new ComplianceMetadataResolver(
-                new KnownInstancesOf<ICanProvideComplianceMetadataForType>(),
-                new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>()),
-            new CamelCaseNamingPolicy());
-
-        var assembliesProvider = new CompositeAssemblyProvider(ProjectReferencedAssemblies.Instance, PackageReferencedAssemblies.Instance);
-        ClientArtifactsProvider = new DefaultClientArtifactsProvider(assembliesProvider);
-
-#pragma warning disable CA2000 // Dispose objects before losing scope
-        var serviceProvider = new DefaultServiceProvider();
-        var eventTypeMigrators = new EventTypeMigrators(ClientArtifactsProvider, serviceProvider);
-
-        EventTypes = new EventTypes(
-            EventStore,
-            JsonSchemaGenerator,
-            ClientArtifactsProvider,
-            eventTypeMigrators);
-
-        EventTypes.Discover().Wait();
-
-        var artifactActivator = new ClientArtifactsActivator(serviceProvider, new NullLoggerFactory());
-        EventSerializer = new EventSerializer(
-            ClientArtifactsProvider,
-            artifactActivator,
-            EventTypes,
-            Globals.JsonSerializerOptions);
-#pragma warning restore CA2000 // Dispose objects before losing scope
+        var testingStore = (EventStoreForTesting)EventStore;
+        JsonSchemaGenerator = testingStore.JsonSchemaGenerator;
+        ClientArtifactsProvider = testingStore.ClientArtifactsProvider;
+        EventTypes = testingStore.EventTypes;
+        EventSerializer = testingStore.EventSerializer;
     }
 
     /// <summary>

@@ -58,7 +58,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
         _subscriptionHandle.UnsubscribeAsync().Returns(Task.CompletedTask);
 
         // Set up all SubscribeAsync overloads — the exact one called depends on which Orleans extension is used
-        Task<StreamSubscriptionHandle<ProjectionChangeset>> SubscribeHandler(NSubstitute.Core.CallInfo ci)
+        Task<StreamSubscriptionHandle<ProjectionChangeset>> SubscribeHandler(CallInfo ci)
         {
             _capturedObserver = ci.Arg<IAsyncObserver<ProjectionChangeset>>();
             _observerCaptured.SetResult();

@@ -621,3 +621,71 @@ jobs:
           token: ${{ secrets.PAT_DOCUMENTATION }}
           repository: cratis/samples
           event-type: update-dependencies
+
+  publish-docker-development-slim:
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    needs: [release, dotnet-x64, dotnet-arm64, workbench, dotnet-x64-development, dotnet-arm64-development]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        id: dotnet-x64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/x64
+          key: ${{ env.DOTNET_X64_CACHE }}-development
+          fail-on-cache-miss: true
+
+      - uses: actions/cache@v3
+        id: dotnet-arm64-development-output
+        with:
+          path: ./Source/Kernel/Server/out/arm64
+          key: ${{ env.DOTNET_ARM64_CACHE }}-development
+          fail-on-cache-miss: true
+
+      - uses: actions/cache@v3
+        id: workbench-output
+        with:
+          path: ./Source/Workbench/wwwroot
+          key: ${{ env.WORKBENCH_CACHE }}
+          fail-on-cache-miss: true
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Prepare Docker tags
+        id: docker-tags
+        run: |
+          TAGS="cratis/chronicle:${{ needs.release.outputs.version }}-development-slim"
+          if [ "${{ needs.release.outputs.prerelease }}" != "true" ]; then
+            TAGS="${TAGS}\ncratis/chronicle:latest-development-slim"
+          fi
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build Development Slim Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: .
+          file: ./Docker/DevelopmentSlim/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.docker-tags.outputs.tags }}
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}

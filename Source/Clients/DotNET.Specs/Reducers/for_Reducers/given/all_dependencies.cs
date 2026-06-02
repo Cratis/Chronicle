@@ -8,6 +8,7 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +25,7 @@ public class all_dependencies : Specification
     protected IEventSerializer _eventSerializer;
     protected INamingPolicy _namingPolicy;
     protected JsonSerializerOptions _jsonSerializerOptions;
+    protected IActivitySource<Reducers> _activitySource;
     protected ILogger<Reducers> _logger;
     protected IChronicleServicesAccessor _servicesAccessor;
     protected IServices _services;
@@ -48,6 +50,7 @@ public class all_dependencies : Specification
         _eventSerializer = Substitute.For<IEventSerializer>();
         _namingPolicy = new DefaultNamingPolicy();
         _jsonSerializerOptions = new();
+        _activitySource = Substitute.For<IActivitySource<Reducers>>();
         _logger = Substitute.For<ILogger<Reducers>>();
 
         _observers = Substitute.For<IObservers>();
@@ -77,6 +80,7 @@ public class all_dependencies : Specification
             Options.Create(new ChronicleOptions()),
             _identityProvider,
             _reducerObservers,
+            _activitySource,
             _logger);
 
         // Use reflection to set the private handler fields

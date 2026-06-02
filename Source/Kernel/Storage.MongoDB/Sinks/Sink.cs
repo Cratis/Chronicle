@@ -221,6 +221,9 @@ public class Sink(
     }
 
     /// <inheritdoc/>
+    public Task Remove(ReadModelContainerName containerName) => collections.Remove(containerName);
+
+    /// <inheritdoc/>
     public async Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue)
     {
         if (_isBulkMode)

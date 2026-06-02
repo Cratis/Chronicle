@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Cratis.Arc.EntityFrameworkCore.Json;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
@@ -16,7 +17,7 @@ public class ReducerDefinition
     /// Gets or sets the unique identifier for the event type.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ReducerId Id { get; set; }
 
     /// <summary>
     /// Gets or sets the event sequence identifier for the reactor.

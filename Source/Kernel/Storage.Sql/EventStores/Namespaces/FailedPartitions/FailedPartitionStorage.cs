@@ -80,4 +80,27 @@ public class FailedPartitionStorage(
             Partitions = failedPartitions
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<Concepts.Observation.FailedPartitions> GetFor(IEnumerable<ObserverId> observerIds)
+    {
+        var ids = observerIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new Concepts.Observation.FailedPartitions();
+        }
+        var idsAsStrings = ids.Select(_ => _.Value).ToArray();
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        var entities = await scope.DbContext.FailedPartitions
+            .Where(fp => idsAsStrings.Contains(fp.ObserverId))
+            .ToListAsync();
+        var failedPartitions = entities.Select(e => e.ToFailedPartition());
+
+        return new Concepts.Observation.FailedPartitions
+        {
+            Partitions = failedPartitions
+        };
+    }
 }

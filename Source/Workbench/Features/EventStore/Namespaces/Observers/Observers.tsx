@@ -146,6 +146,7 @@ const runningStateFilterTemplate = (options: ColumnFilterElementTemplateOptions)
             { label: strings.eventStore.namespaces.observers.states.suspended, value: ObserverRunningState.suspended },
             { label: strings.eventStore.namespaces.observers.states.replaying, value: ObserverRunningState.replaying },
             { label: strings.eventStore.namespaces.observers.states.disconnected, value: ObserverRunningState.disconnected },
+            { label: strings.eventStore.namespaces.observers.states.quarantined, value: ObserverRunningState.quarantined },
         ]}
         onChange={(e) => options.filterCallback(e.value)}
         optionLabel='label'
@@ -199,6 +200,12 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !viewModel.selectedObserver,
             command: () => viewModel.replay()
+        },
+        {
+            label: strings.eventStore.namespaces.observers.actions.clearQuarantine,
+            icon: <faIcons.FaShield className='mr-2' />,
+            disabled: !viewModel.canClearObserverQuarantine,
+            command: () => viewModel.clearObserverQuarantine()
         }
     ];
 
@@ -279,6 +286,11 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                         field='nextEventSequenceNumber'
                         dataType='numeric'
                         header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
+                        sortable />
+                    <Column
+                        field='handledEventCount'
+                        dataType='numeric'
+                        header={strings.eventStore.namespaces.observers.columns.handledEventCount}
                         sortable />
                     <Column
                         field='runningState'

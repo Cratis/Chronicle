@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Reactors;
 /// <param name="IsSubscribed">Indicates whether the reducer is subscribed its handler.</param>
 /// <param name="NextEventSequenceNumber">The next event sequence number.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
+/// <param name="TailEventSequenceNumber">The current tail event sequence number.</param>
 public record ReactorState(
     ReactorId Id,
     ObserverRunningState RunningState,
     bool IsSubscribed,
     EventSequenceNumber NextEventSequenceNumber,
-    EventSequenceNumber LastHandledEventSequenceNumber);
+    EventSequenceNumber LastHandledEventSequenceNumber,
+    EventSequenceNumber TailEventSequenceNumber);

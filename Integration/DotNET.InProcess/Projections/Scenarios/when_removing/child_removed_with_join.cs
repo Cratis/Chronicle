@@ -41,7 +41,11 @@ public class child_removed_with_join(context context) : Given<context>(context)
 
         async Task Because()
         {
-            var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<User>().FindAsync(_ => true);
+            // Only consider IDs that could have been created by the events in this scenario to
+            // avoid picking up User documents written by other tests sharing the same fixture.
+            var relevantIds = new[] { ReadModelId, (string)FirstGroupId, (string)SecondGroupId };
+            var filter = Builders<User>.Filter.In(new StringFieldDefinition<User, string>("_id"), relevantIds);
+            var result = await ChronicleInProcessFixture.ReadModels.Database.GetCollection<User>().FindAsync(filter);
             Users = (await result.ToListAsync()).ToArray();
         }
     }

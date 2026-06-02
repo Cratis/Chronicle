@@ -13,7 +13,7 @@ public class ArrayIndexers
     /// </summary>
     public static readonly ArrayIndexers NoIndexers = new([]);
 
-    readonly IDictionary<PropertyPath, ArrayIndexer> _arrayIndexers = new Dictionary<PropertyPath, ArrayIndexer>();
+    readonly List<ArrayIndexer> _arrayIndexers = [];
 
     int? _computedHashCode;
 
@@ -49,8 +49,8 @@ public class ArrayIndexers
     /// <returns>Collection of <see cref="ArrayIndexer"/>.</returns>
     public IEnumerable<ArrayIndexer> All
     {
-        get => _arrayIndexers.Values;
-        init => _arrayIndexers = value.ToDictionary(_ => _.ArrayProperty, _ => _);
+        get => _arrayIndexers;
+        init => _arrayIndexers = value.ToList();
     }
 
     /// <summary>
@@ -58,18 +58,16 @@ public class ArrayIndexers
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to get for.</param>
     /// <returns>The <see cref="ArrayIndexer"/>.</returns>
+    /// <exception cref="MissingArrayIndexerForPropertyPath">Thrown when no matching <see cref="ArrayIndexer"/> exists for <paramref name="propertyPath"/>.</exception>
     public ArrayIndexer GetFor(PropertyPath propertyPath)
-    {
-        ThrowIfMissingArrayIndexerForPropertyPath(propertyPath);
-        return _arrayIndexers[propertyPath];
-    }
+        => FindFor(propertyPath) ?? throw new MissingArrayIndexerForPropertyPath(propertyPath);
 
     /// <summary>
     /// Check if there is an <see cref="ArrayIndexer"/> for a <see cref="PropertyPath"/>.
     /// </summary>
     /// <param name="propertyPath"><see cref="PropertyPath"/> to check for.</param>
     /// <returns>True if it has it, false if not.</returns>
-    public bool HasFor(PropertyPath propertyPath) => _arrayIndexers.ContainsKey(propertyPath);
+    public bool HasFor(PropertyPath propertyPath) => FindFor(propertyPath) is not null;
 
     /// <inheritdoc/>
     public override bool Equals(object? obj)
@@ -93,11 +91,17 @@ public class ArrayIndexers
         }
     }
 
-    void ThrowIfMissingArrayIndexerForPropertyPath(PropertyPath propertyPath)
+    ArrayIndexer? FindFor(PropertyPath propertyPath)
     {
-        if (!_arrayIndexers.ContainsKey(propertyPath))
+        for (var index = _arrayIndexers.Count - 1; index >= 0; index--)
         {
-            throw new MissingArrayIndexerForPropertyPath(propertyPath);
+            var candidate = _arrayIndexers[index];
+            if (candidate.ArrayProperty == propertyPath)
+            {
+                return candidate;
+            }
         }
+
+        return null;
     }
 }

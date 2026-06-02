@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Server.Authentication;
 public class ChronicleClaimsTransformation(UserManager<User> userManager) : IClaimsTransformation
 {
     /// <inheritdoc/>
-    public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+    public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated ?? false)
         {
@@ -42,6 +42,6 @@ public class ChronicleClaimsTransformation(UserManager<User> userManager) : ICla
             }
         }
 
-        return principal;
+        return Task.FromResult(principal);
     }
 }

@@ -9,6 +9,7 @@ export const languageId = 'projection-declaration-language';
 const KEYWORDS = [
     'projection',
     'sequence',
+    'all',
     'every',
     'on',
     'from',
@@ -18,6 +19,7 @@ const KEYWORDS = [
     'automap',
     'no',
     'children',
+    'nested',
     'identified',
     'by',
     'add',
@@ -31,6 +33,7 @@ const KEYWORDS = [
     'count',
     'set',
     'unset',
+    'clear',
     'events',
     'id',
     'exclude',
@@ -74,13 +77,13 @@ export const configuration: languages.LanguageConfiguration = {
         { open: '`', close: '`' },
     ],
     indentationRules: {
-        increaseIndentPattern: /^.*(:|\bon\b|\bevery\b|\bchildren\b|\bparent\b)\s*$/,
+        increaseIndentPattern: /^.*(:|\bon\b|\ball\b|\bevery\b|\bchildren\b|\bnested\b|\bparent\b)\s*$/,
         decreaseIndentPattern: /^.*\}.*$/,
     },
     folding: {
         offSide: true,
         markers: {
-            start: /^\s*(projection|every|on|children|parent)/,
+            start: /^\s*(projection|all|every|on|children|nested|parent)/,
             end: /^\s*$/,
         },
     },

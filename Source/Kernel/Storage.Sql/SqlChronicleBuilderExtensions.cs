@@ -8,8 +8,11 @@ using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.Cluster;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using SqlStorage = Cratis.Chronicle.Storage.Sql.SystemStorage;
@@ -41,11 +44,31 @@ public static class SqlChronicleBuilderExtensions
                 .UseApplicationServiceProvider(serviceProvider);
         });
 
+        builder.Services.AddSingleton(typeof(ITableMigrator<>), typeof(TableMigrator<>));
+        builder.Services.AddSingleton<IEventSequenceMigrator, EventSequenceMigrator>();
+        builder.Services.AddSingleton<IUniqueConstraintMigrator, UniqueConstraintMigrator>();
         builder.Services.AddSingleton<IReminderTable, ReminderTable>();
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
         builder.Services.AddSingleton<IReadModelMigrator, ReadModelMigrator>();
         builder.Services.AddSingleton<ISinkFactory, SinkFactory>();
+
+        AddHealthCheck(builder, options);
+
         return builder;
+    }
+
+    static void AddHealthCheck(IChronicleBuilder builder, ChronicleOptions options)
+    {
+        var connectionString = options.Storage.ConnectionDetails;
+
+        if (string.Equals(options.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddHealthChecks().AddNpgSql(connectionString, name: "postgresql", timeout: TimeSpan.FromSeconds(3));
+        }
+        else if (string.Equals(options.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddHealthChecks().AddSqlServer(connectionString, name: "mssql", timeout: TimeSpan.FromSeconds(3));
+        }
     }
 }

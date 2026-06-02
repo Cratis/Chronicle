@@ -22,4 +22,10 @@ public class EventsToObserve
     /// </summary>
     [ProtoMember(2)]
     public IList<AppendedEvent> Events { get; set; }
+
+    /// <summary>
+    /// Gets or sets the replay state for this message.
+    /// </summary>
+    [ProtoMember(3)]
+    public ReplayState ReplayState { get; set; }
 }

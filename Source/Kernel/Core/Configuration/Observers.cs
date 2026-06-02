@@ -9,6 +9,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Observers
 {
     /// <summary>
+    /// Gets the maximum number of observer partitions that can be handled concurrently.
+    /// </summary>
+    public int MaxConcurrentPartitions { get; init; } = 32;
+
+    /// <summary>
     /// Gets the timeout in seconds for observer calling its subscriber.
     /// </summary>
     public int SubscriberTimeout { get; init; } = 5;
@@ -37,9 +42,28 @@ public class Observers
     public int MaximumBackoffDelay { get; init; } = 60 * 10;
 
     /// <summary>
+    /// Gets the threshold for quarantining an observer based on the number of failed partitions.
+    /// A value of 0 disables observer quarantine based on failed partition count.
+    /// </summary>
+    public int QuarantineOnFailedPartitionCount { get; init; }
+
+    /// <summary>
+    /// Gets the threshold for quarantining an observer based on the percentage of failed partitions.
+    /// A value of 0.0 disables observer quarantine based on failed partition percentage.
+    /// </summary>
+    public double QuarantineOnFailedPartitionPercentage { get; init; }
+
+    /// <summary>
     /// Gets whether observers should automatically replay when their definition changes.
     /// When enabled, projections, reducers, reactors, and webhooks replay immediately on definition change
     /// instead of creating a recommendation for manual replay.
     /// </summary>
     public bool ReplayOnDefinitionChange { get; init; }
+
+    /// <summary>
+    /// Gets the interval in seconds between watchdog checks on each observer.
+    /// The watchdog verifies that connected clients are still active, that running jobs
+    /// are progressing, and that the <c>NextEventSequenceNumber</c> is up-to-date.
+    /// </summary>
+    public int WatchdogInterval { get; init; } = 60;
 }

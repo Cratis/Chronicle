@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,11 +36,44 @@ public class ProjectionDefinitionComparer(IStorage storage, IObjectComparer obje
 
         // Note: Ignore the model and initial model state as they are not relevant for comparison and also have potential for recursive comparison
         // that can potentially lead to a stack overflow. LastUpdated is also ignored since it is metadata, not structural definition.
-        first = first with { ReadModel = null!, InitialModelState = null!, LastUpdated = null };
-        second = second with { ReadModel = null!, InitialModelState = null!, LastUpdated = null };
+        // Optional collections are normalized to avoid false positives caused by storage serialization defaults (null vs empty).
+        first = Normalize(first);
+        second = Normalize(second);
 
         return objectComparer.Compare(first, second, ObjectComparerMode.Loose, out _)
             ? ProjectionDefinitionCompareResult.Same
             : ProjectionDefinitionCompareResult.Different;
+    }
+
+    static ProjectionDefinition Normalize(ProjectionDefinition definition) =>
+        definition with
+        {
+            ReadModel = null!,
+            InitialModelState = null!,
+            LastUpdated = null,
+            Tags = NormalizeTags(definition.Tags),
+            Nested = NormalizeNested(definition.Nested)
+        };
+
+    static string[]? NormalizeTags(IEnumerable<string>? tags)
+    {
+        if (tags is null)
+        {
+            return null;
+        }
+
+        // Tags are metadata; normalize ordering so different insertion order does not trigger a replay.
+        var normalizedTags = tags.Order().ToArray();
+        return normalizedTags.Length == 0 ? null : normalizedTags;
+    }
+
+    static IDictionary<PropertyPath, ChildrenDefinition>? NormalizeNested(IDictionary<PropertyPath, ChildrenDefinition>? nested)
+    {
+        if (nested is null || nested.Count == 0)
+        {
+            return null;
+        }
+
+        return nested;
     }
 }

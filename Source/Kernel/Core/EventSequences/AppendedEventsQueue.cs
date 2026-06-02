@@ -5,11 +5,14 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Metrics;
 using Cratis.Tasks;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,6 +28,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly ITaskFactory _taskFactory;
     readonly IGrainFactory _grainFactory;
     readonly IMeter<AppendedEventsQueue> _meter;
+    readonly IActivitySource<AppendedEventsQueue> _activitySource;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -34,6 +38,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     Task _queueTask = Task.CompletedTask;
     bool _isDisposed;
     IMeterScope<AppendedEventsQueue>? _metrics;
+    EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
@@ -41,18 +46,21 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="taskFactory"><see cref="ITaskFactory"/> for creating tasks.</param>
     /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
     /// <param name="meter"><see cref="IMeterScope{T}"/> for metering.</param>
+    /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
+        [FromKeyedServices(WellKnown.MeterName)] IActivitySource<AppendedEventsQueue> activitySource,
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger)
     {
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
+        _activitySource = activitySource;
         _logger = logger;
 
         var eventsConfig = options.Value.Events;
@@ -77,6 +85,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
+        _eventSequenceKey = EventSequenceKey.Parse(key!);
         _metrics = _meter.BeginScope(key!, queueId);
         return base.OnActivateAsync(cancellationToken);
     }
@@ -91,11 +100,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public async Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToList();
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
+        using var span = _activitySource.Enqueue();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
         await _channel.Writer.WriteAsync(batch);
-        _metrics?.EventsEnqueued(batch.Count);
+        _metrics?.EventsEnqueued(batch.Length);
     }
 
     /// <inheritdoc/>
@@ -222,6 +235,69 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return true;
     }
 
+    static bool MatchesSubscription(AppendedEventsQueueObserverSubscription subscription, AppendedEvent @event)
+    {
+        if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+        {
+            return false;
+        }
+
+        if (!MatchesFilters(subscription, @event))
+        {
+            return false;
+        }
+
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+        {
+            return IsRedactionForSubscribedEventType(@event, subscription.EventTypeIds);
+        }
+
+        return true;
+    }
+
+    static bool IsRedactionForSubscribedEventType(AppendedEvent @event, IEnumerable<EventTypeId> subscribedEventTypeIds)
+    {
+        if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+        {
+            return false;
+        }
+
+        var originalEventTypeId = originalEventTypeObj?.ToString();
+        return originalEventTypeId is not null && subscribedEventTypeIds.Contains(new EventTypeId(originalEventTypeId));
+    }
+
+    /// <summary>
+    /// Gets the filtered events for a subscription.
+    /// </summary>
+    /// <param name="events">The events to filter.</param>
+    /// <param name="subscription">The subscription to match events against.</param>
+    /// <returns>An array of matching events.</returns>
+    static AppendedEvent[] GetFilteredEvents(
+        List<AppendedEvent> events,
+        AppendedEventsQueueObserverSubscription subscription)
+    {
+        var matchingEvents = new AppendedEvent[events.Count];
+        var numberOfMatchingEvents = 0;
+        foreach (var @event in events)
+        {
+            if (!MatchesSubscription(subscription, @event))
+            {
+                continue;
+            }
+
+            matchingEvents[numberOfMatchingEvents++] = @event;
+        }
+
+        if (numberOfMatchingEvents == 0)
+        {
+            return [];
+        }
+
+        return numberOfMatchingEvents == matchingEvents.Length
+            ? matchingEvents
+            : matchingEvents[..numberOfMatchingEvents];
+    }
+
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
     {
         lock (_subscriptionsLock)
@@ -289,19 +365,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         var @event = events[0];
         foreach (var subscription in GetSubscriptionsSnapshot())
         {
-            if (!subscription.EventTypeIds.Contains(@event.Context.EventType.Id))
+            if (!MatchesSubscription(subscription, @event))
             {
                 continue;
             }
 
-            if (!MatchesFilters(subscription, @event))
-            {
-                continue;
-            }
-
+            using var span = _activitySource.Dispatch();
+            span?.Activity?.Tag(subscription.ObserverKey);
             var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-            var eventToHandle = new List<AppendedEvent> { @event };
-            await observer.Handle(@event.Context.EventSourceId, eventToHandle);
+            await observer.Handle(@event.Context.EventSourceId, events);
         }
     }
 
@@ -329,19 +401,24 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             var tasks = new List<Task>();
             foreach (var subscription in subscriptions)
             {
-                var actualEvents = partitionEvents
-                    .Where(@event => subscription.EventTypeIds.Contains(@event.Context.EventType.Id) && MatchesFilters(subscription, @event))
-                    .ToList();
-                if (actualEvents.Count == 0)
+                var actualEvents = GetFilteredEvents(partitionEvents, subscription);
+                if (actualEvents.Length == 0)
                 {
                     continue;
                 }
 
                 var observer = _grainFactory.GetGrain<IObserver>(subscription.ObserverKey);
-                tasks.Add(observer.Handle(partition, actualEvents));
+                tasks.Add(DispatchWithTracing(observer, partition, actualEvents, subscription.ObserverKey));
             }
 
             await Task.WhenAll(tasks);
         }
+    }
+
+    async Task DispatchWithTracing(IObserver observer, EventSourceId partition, AppendedEvent[] events, ObserverKey observerKey)
+    {
+        using var span = _activitySource.Dispatch();
+        span?.Activity?.Tag(observerKey);
+        await observer.Handle(partition, events);
     }
 }

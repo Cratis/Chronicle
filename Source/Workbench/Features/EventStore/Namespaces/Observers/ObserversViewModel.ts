@@ -3,11 +3,12 @@
 
 import { inject, injectable } from 'tsyringe';
 import { ObserverInformation } from 'Api/Observation/ObserverInformation';
-import { Replay } from 'Api/Observation';
+import { ClearObserverQuarantine, Replay } from 'Api/Observation';
 import { INamespaces } from 'State/Namespaces';
 import { IDialogs } from '@cratis/arc.react.mvvm/dialogs';
 import { DialogButtons, DialogResult } from '@cratis/arc.react/dialogs';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { ObserverRunningState } from 'Api/Observation/ObserverRunningState';
 
 @injectable()
 export class ObserversViewModel {
@@ -15,6 +16,7 @@ export class ObserversViewModel {
     constructor(
         namespaces: INamespaces,
         private readonly _replay: Replay,
+        private readonly _clearObserverQuarantine: ClearObserverQuarantine,
         private readonly _dialogs: IDialogs,
         @inject('params') private readonly _params: EventStoreAndNamespaceParams) {
         this.currentNamespace = '';
@@ -26,6 +28,9 @@ export class ObserversViewModel {
 
     currentNamespace: string;
     selectedObserver: ObserverInformation | undefined;
+    get canClearObserverQuarantine() {
+        return this.selectedObserver?.runningState === ObserverRunningState.quarantined;
+    }
 
     async replay() {
         if (this.selectedObserver) {
@@ -42,5 +47,21 @@ export class ObserversViewModel {
                     });
             }
         }
+    }
+
+    async clearObserverQuarantine() {
+        if (!this.canClearObserverQuarantine || !this.selectedObserver) {
+            return;
+        }
+
+        const observerId = this.selectedObserver.id;
+        this._clearObserverQuarantine.eventStore = this._params.eventStore!;
+        this._clearObserverQuarantine.namespace = this.currentNamespace;
+        this._clearObserverQuarantine.observerId = observerId;
+        const commandResult = await this._clearObserverQuarantine.execute();
+        commandResult
+            .onException((error) => {
+                this._dialogs.showConfirmation('Clear quarantine', `Clear quarantine for ${observerId} failed: ${error}`, DialogButtons.Ok);
+            });
     }
 }

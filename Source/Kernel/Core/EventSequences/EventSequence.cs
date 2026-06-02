@@ -15,18 +15,22 @@ using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
 using Cratis.Monads;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
@@ -42,6 +46,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="constraintValidatorSetFactory"><see cref="IConstraintValidationFactory"/> for creating a set of constraint validators.</param>
 /// <param name="eventTypeMigrations"><see cref="IEventTypeMigrations"/> for migrating events between generations.</param>
 /// <param name="meter">The meter to use for metrics.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="jsonComplianceManagerProvider"><see cref="IJsonComplianceManager"/> for handling compliance on events.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between json and expando object.</param>
 /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing and deserializing events.</param>
@@ -53,6 +58,7 @@ public class EventSequence(
     IConstraintValidationFactory constraintValidatorSetFactory,
     IEventTypeMigrations eventTypeMigrations,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<EventSequence> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<EventSequence> activitySource,
     IJsonComplianceManager jsonComplianceManagerProvider,
     IExpandoObjectConverter expandoObjectConverter,
     IEventSerializer eventSerializer,
@@ -63,6 +69,7 @@ public class EventSequence(
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
     IObserverDefinitionsStorage? _observerDefinitionsStorage;
+    IClosedStreamsConstraintStorage? _closedStreamsStorage;
     EventSequenceId _eventSequenceId = EventSequenceId.Unspecified;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     IMeterScope<EventSequence>? _metrics;
@@ -72,6 +79,7 @@ public class EventSequence(
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
     IIdentityStorage IdentityStorage => _identityStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).Identities;
     IObserverDefinitionsStorage ObserverStorage => _observerDefinitionsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).Observers;
+    IClosedStreamsConstraintStorage ClosedStreamsStorage => _closedStreamsStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetClosedStreamsConstraints(_eventSequenceId);
     ConcurrencyValidator ConcurrencyValidator => new(EventSequenceStorage);
 
     /// <inheritdoc/>
@@ -255,8 +263,14 @@ public class EventSequence(
         Identity causedBy,
         ConcurrencyScopes concurrencyScopes)
     {
+        using var span = activitySource.AppendMany();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            events = events as IList<EventToAppend> ?? events.ToList();
+
             var tasks = events.Select(async e =>
             {
                 var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId);
@@ -451,6 +465,27 @@ public class EventSequence(
         await RewindPartitionForAffectedObservers(eventSourceId, affectedEventTypes);
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<EventSequenceNumber, CompleteStreamError>> CompleteStream(EventStreamType eventStreamType, EventStreamId eventStreamId)
+    {
+        if (eventStreamType == EventStreamType.All && eventStreamId.Value == EventStreamId.Default)
+        {
+            return CompleteStreamError.DefaultStreamCannotBeCompleted;
+        }
+
+        if (await ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId))
+        {
+            return CompleteStreamError.AlreadyCompleted;
+        }
+
+        await ClosedStreamsStorage.CloseStream(eventStreamType, eventStreamId);
+        return State.SequenceNumber - 1;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsStreamCompleted(EventStreamType eventStreamType, EventStreamId eventStreamId) =>
+        ClosedStreamsStorage.IsStreamClosed(eventStreamType, eventStreamId);
+
     async Task<AppendResult> AppendValidAndCompliantEvent(
         EventSourceType eventSourceType,
         EventSourceId eventSourceId,
@@ -466,6 +501,12 @@ public class EventSequence(
         DateTimeOffset? occurred = null,
         Subject? subject = null)
     {
+        using var span = activitySource.Append();
+        span?.Activity?.Tag(_eventSequenceKey.EventStore);
+        span?.Activity?.Tag(_eventSequenceKey.Namespace);
+        span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
+        span?.Activity?.Tag(eventType);
+        span?.Activity?.Tag(eventSourceType, eventSourceId);
         try
         {
             Result<AppendedEvent, DuplicateEventSequenceNumber>? appendResult = null;
@@ -716,6 +757,16 @@ public class EventSequence(
     async Task OnConstraintsChanged(ConstraintsChanged payload)
     {
         _constraints = await constraintValidatorSetFactory.Create(_eventSequenceKey);
+
+        var changedConstraintsRequiringReindex = payload.Changes
+            .Where(_ => _.RequiresReindex)
+            .ToArray();
+
+        if (changedConstraintsRequiringReindex.Length > 0)
+        {
+            var jobsManager = GrainFactory.GetJobsManager(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+            await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(_eventSequenceId, changedConstraintsRequiringReindex));
+        }
     }
 
     Task OnConstraintsChangedError(Exception exception)

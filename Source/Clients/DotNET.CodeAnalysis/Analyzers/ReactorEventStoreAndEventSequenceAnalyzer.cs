@@ -20,7 +20,7 @@ public class ReactorEventStoreAndEventSequenceAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A reactor with [EventStore] must use implicit inbox routing and cannot also define an explicit event sequence.");
+        description: "When [EventStore] is applied to a reactor, Chronicle routes events via the event store's inbox, making an explicit event sequence redundant and conflicting. Remove [EventSequence], [EventLog], or the eventSequence constructor argument from this reactor to use inbox routing, or remove [EventStore] if you need to subscribe to a specific event sequence.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);

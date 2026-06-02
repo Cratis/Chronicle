@@ -36,6 +36,7 @@ public static class ConstraintValidatorExtensions
         {
             UniqueConstraintValidator => ConstraintType.Unique,
             UniqueEventTypeConstraintValidator => ConstraintType.UniqueEventType,
+            ClosedStreamConstraintValidator => ConstraintType.StreamClosed,
             _ => ConstraintType.Unknown
         };
 }

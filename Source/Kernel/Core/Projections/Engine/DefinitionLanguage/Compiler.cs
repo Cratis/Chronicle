@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 public class Compiler
 {
     bool _hasNoAutoMapDirective;
+    bool _hasAllBlock;
 
     /// <summary>
     /// Gets the read model identifier from an AST Document.
@@ -95,6 +96,7 @@ public class Compiler
 
         // Check if NoAutoMapDirective is present in the projection
         _hasNoAutoMapDirective = projection.Directives.OfType<NoAutoMapDirective>().Any();
+        _hasAllBlock = projection.Directives.OfType<AllBlock>().Any();
 
         // Extract event sequence ID from sequence directive, or default to Log
         var eventSequenceId = EventSequenceId.Log;
@@ -107,6 +109,7 @@ public class Compiler
         var from = new Dictionary<EventType, FromDefinition>();
         var join = new Dictionary<EventType, JoinDefinition>();
         var children = new Dictionary<PropertyPath, ChildrenDefinition>();
+        var nested = new Dictionary<PropertyPath, ChildrenDefinition>();
         var removedWith = new Dictionary<EventType, RemovedWithDefinition>();
         var removedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>();
         var fromEvery = new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false);
@@ -114,7 +117,7 @@ public class Compiler
         // Process each directive
         foreach (var directive in projection.Directives)
         {
-            ProcessDirective(directive, from, join, children, removedWith, removedWithJoin, ref fromEvery);
+            ProcessDirective(directive, from, join, children, nested, removedWith, removedWithJoin, ref fromEvery);
         }
 
         return new ProjectionDefinition(
@@ -135,7 +138,9 @@ public class Compiler
             FromEventProperty: null,
             LastUpdated: DateTimeOffset.UtcNow,
             Tags: default,
-            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled);
+            AutoMap: _hasNoAutoMapDirective ? AutoMap.Disabled : AutoMap.Enabled,
+            Nested: nested.Count > 0 ? nested : null,
+            SubscribesToAllEvents: _hasAllBlock);
     }
 
     void ProcessDirective(
@@ -143,6 +148,7 @@ public class Compiler
         Dictionary<EventType, FromDefinition> from,
         Dictionary<EventType, JoinDefinition> join,
         Dictionary<PropertyPath, ChildrenDefinition> children,
+        Dictionary<PropertyPath, ChildrenDefinition> nested,
         Dictionary<EventType, RemovedWithDefinition> removedWith,
         Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin,
         ref FromEveryDefinition fromEvery)
@@ -162,6 +168,9 @@ public class Compiler
             case EveryBlock every:
                 fromEvery = ProcessEveryBlock(every);
                 break;
+            case AllBlock all:
+                fromEvery = ProcessAllBlock(all);
+                break;
             case SequenceDirective:
                 // Sequence is handled before processing directives
                 break;
@@ -177,6 +186,9 @@ public class Compiler
                 break;
             case ChildrenBlock childrenBlock:
                 ProcessChildrenBlock(childrenBlock, children);
+                break;
+            case NestedBlock nestedBlock:
+                ProcessNestedBlock(nestedBlock, nested);
                 break;
             case JoinBlock joinBlock:
                 ProcessJoinBlock(joinBlock, join);
@@ -248,13 +260,14 @@ public class Compiler
         var childFrom = new Dictionary<EventType, FromDefinition>();
         var childJoin = new Dictionary<EventType, JoinDefinition>();
         var nestedChildren = new Dictionary<PropertyPath, ChildrenDefinition>();
+        var nestedScalar = new Dictionary<PropertyPath, ChildrenDefinition>();
         var childRemovedWith = new Dictionary<EventType, RemovedWithDefinition>();
         var childRemovedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>();
         var childEvery = new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false);
 
         foreach (var childBlock in childrenBlock.ChildBlocks)
         {
-            ProcessChildBlock(childBlock, childFrom, childJoin, nestedChildren, childRemovedWith, childRemovedWithJoin, childEvery);
+            ProcessChildBlock(childBlock, childFrom, childJoin, nestedChildren, nestedScalar, childRemovedWith, childRemovedWithJoin, childEvery);
         }
 
         children[collectionPath] = new ChildrenDefinition(
@@ -264,10 +277,9 @@ public class Compiler
             nestedChildren,
             childEvery,
             childRemovedWith,
-            childRemovedWithJoin)
-        {
-            AutoMap = GetAutoMapValue(childrenBlock.AutoMap)
-        };
+            childRemovedWithJoin,
+            AutoMap: GetAutoMapValue(childrenBlock.AutoMap),
+            Nested: nestedScalar.Count > 0 ? nestedScalar : null);
     }
 
     /// <summary>
@@ -278,6 +290,7 @@ public class Compiler
     /// <param name="from">Dictionary of event type to from definitions.</param>
     /// <param name="join">Dictionary of event type to join definitions.</param>
     /// <param name="children">Dictionary of property path to children definitions.</param>
+    /// <param name="nested">Dictionary of property path to nested scalar child definitions.</param>
     /// <param name="removedWith">Dictionary of event type to removed with definitions.</param>
     /// <param name="removedWithJoin">Dictionary of event type to removed with join definitions.</param>
     /// <param name="fromEvery">The from every definition to populate when processing every blocks.</param>
@@ -287,6 +300,7 @@ public class Compiler
         Dictionary<EventType, FromDefinition> from,
         Dictionary<EventType, JoinDefinition> join,
         Dictionary<PropertyPath, ChildrenDefinition> children,
+        Dictionary<PropertyPath, ChildrenDefinition> nested,
         Dictionary<EventType, RemovedWithDefinition> removedWith,
         Dictionary<EventType, RemovedWithJoinDefinition> removedWithJoin,
         FromEveryDefinition fromEvery)
@@ -310,6 +324,12 @@ public class Compiler
                 break;
             case ChildEveryBlock everyBlock:
                 ProcessChildEveryBlock(everyBlock, fromEvery);
+                break;
+            case NestedChildBlock nestedChildBlock:
+                ProcessNestedChildBlock(nestedChildBlock, nested);
+                break;
+            case ClearWithDirective clearWith:
+                ProcessClearWithDirective(clearWith, removedWith);
                 break;
             default:
                 throw new NotSupportedException($"Child block type {childBlock.GetType().Name} is not yet supported");
@@ -363,6 +383,85 @@ public class Compiler
             nestedChildren.ChildBlocks);
 
         ProcessChildrenBlock(childrenBlock, children);
+    }
+
+    /// <summary>
+    /// Process a top-level nested object block and emit a ChildrenDefinition into the projection's
+    /// Nested dictionary with <see cref="PropertyPath.NotSet"/> as the identifier — the engine treats
+    /// the entry as scalar (one nullable child object) rather than as a collection.
+    /// </summary>
+    /// <param name="nestedBlock">The nested block to process.</param>
+    /// <param name="nested">The nested dictionary on the parent projection definition.</param>
+    void ProcessNestedBlock(
+        NestedBlock nestedBlock,
+        Dictionary<PropertyPath, ChildrenDefinition> nested)
+    {
+        var propertyPath = new PropertyPath(nestedBlock.PropertyName);
+        nested[propertyPath] = BuildNestedDefinition(nestedBlock.AutoMap, nestedBlock.ChildBlocks);
+    }
+
+    /// <summary>
+    /// Process a nested block that appears inside a children or another nested block.
+    /// </summary>
+    /// <param name="nestedChildBlock">The nested child block to process.</param>
+    /// <param name="nested">The nested dictionary on the enclosing children/nested definition.</param>
+    void ProcessNestedChildBlock(
+        NestedChildBlock nestedChildBlock,
+        Dictionary<PropertyPath, ChildrenDefinition> nested)
+    {
+        var propertyPath = new PropertyPath(nestedChildBlock.PropertyName);
+        nested[propertyPath] = BuildNestedDefinition(nestedChildBlock.AutoMap, nestedChildBlock.ChildBlocks);
+    }
+
+    /// <summary>
+    /// Builds a <see cref="ChildrenDefinition"/> representing a scalar nested object from a set of child blocks.
+    /// The resulting definition uses <see cref="PropertyPath.NotSet"/> as its identifier so the engine treats it
+    /// as scalar; <c>from</c> events become From entries and <c>clear with</c> directives become RemovedWith entries.
+    /// </summary>
+    /// <param name="autoMap">AutoMap behavior declared on the nested block.</param>
+    /// <param name="childBlocks">Child blocks inside the nested block.</param>
+    /// <returns>The constructed nested <see cref="ChildrenDefinition"/>.</returns>
+    ChildrenDefinition BuildNestedDefinition(
+        AutoMap autoMap,
+        IReadOnlyList<ChildBlock> childBlocks)
+    {
+        var from = new Dictionary<EventType, FromDefinition>();
+        var join = new Dictionary<EventType, JoinDefinition>();
+        var innerChildren = new Dictionary<PropertyPath, ChildrenDefinition>();
+        var innerNested = new Dictionary<PropertyPath, ChildrenDefinition>();
+        var removedWith = new Dictionary<EventType, RemovedWithDefinition>();
+        var removedWithJoin = new Dictionary<EventType, RemovedWithJoinDefinition>();
+        var every = new FromEveryDefinition(new Dictionary<PropertyPath, string>(), false);
+
+        foreach (var childBlock in childBlocks)
+        {
+            ProcessChildBlock(childBlock, from, join, innerChildren, innerNested, removedWith, removedWithJoin, every);
+        }
+
+        return new ChildrenDefinition(
+            PropertyPath.NotSet,
+            from,
+            join,
+            innerChildren,
+            every,
+            removedWith,
+            removedWithJoin,
+            AutoMap: GetAutoMapValue(autoMap),
+            Nested: innerNested.Count > 0 ? innerNested : null);
+    }
+
+    /// <summary>
+    /// Process a 'clear with' directive inside a nested block — adds the event to the nested
+    /// block's RemovedWith so the engine clears the nested object back to null when the event is observed.
+    /// </summary>
+    /// <param name="clearWith">The 'clear with' directive to process.</param>
+    /// <param name="removedWith">The RemovedWith dictionary of the enclosing nested definition.</param>
+    void ProcessClearWithDirective(
+        ClearWithDirective clearWith,
+        Dictionary<EventType, RemovedWithDefinition> removedWith)
+    {
+        var eventType = EventType.Parse(clearWith.EventType.Name);
+        removedWith[eventType] = new RemovedWithDefinition(PropertyExpression.NotSet, ParentKey: null);
     }
 
     void ProcessRemoveBlock(RemoveBlock remove, Dictionary<EventType, RemovedWithDefinition> removedWith)
@@ -447,6 +546,21 @@ public class Compiler
         return new FromEveryDefinition(properties, !every.ExcludeChildren)
         {
             AutoMap = GetAutoMapValue(every.AutoMap)
+        };
+    }
+
+    FromEveryDefinition ProcessAllBlock(AllBlock all)
+    {
+        var properties = new Dictionary<PropertyPath, string>();
+
+        foreach (var operation in all.Mappings)
+        {
+            ProcessMappingOperation(operation, properties);
+        }
+
+        return new FromEveryDefinition(properties, IncludeChildren: true)
+        {
+            AutoMap = GetAutoMapValue(all.AutoMap)
         };
     }
 

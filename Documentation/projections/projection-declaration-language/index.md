@@ -97,6 +97,7 @@ projection BadProjection
 - [Keys](keys.md) - Explicit and composite keys for projection instances
 - [Event Context](event-context.md) - Access event metadata like timestamps and correlation IDs
 - [From Every](from-every.md) - Apply rules to all events
+- [From All](from-all.md) - Subscribe to all event types without filtering
 - [Counters](counters.md) - Increment, decrement, and count operations
 - [Arithmetic](arithmetic.md) - Add and subtract operations
 - [Joins](joins.md) - Combine data from related events

@@ -2,7 +2,16 @@
 
 Configure the storage backend for Chronicle Server.
 
-## Example configuration
+## Storage types
+
+| Type | Description |
+| --- | --- |
+| `MongoDB` | MongoDB (default) |
+| `PostgreSql` | PostgreSQL |
+| `MsSql` | Microsoft SQL Server |
+| `Sqlite` | SQLite (embedded, file-based) |
+
+## MongoDB
 
 ```json
 {
@@ -13,8 +22,41 @@ Configure the storage backend for Chronicle Server.
 }
 ```
 
+## PostgreSQL
+
+```json
+{
+  "storage": {
+    "type": "PostgreSql",
+    "connectionDetails": "Host=localhost;Port=5432;Database=chronicle;Username=chronicle;Password=secret"
+  }
+}
+```
+
+## Microsoft SQL Server
+
+```json
+{
+  "storage": {
+    "type": "MsSql",
+    "connectionDetails": "Server=localhost;Database=chronicle;User Id=chronicle;Password=secret;TrustServerCertificate=True"
+  }
+}
+```
+
+## SQLite
+
+```json
+{
+  "storage": {
+    "type": "Sqlite",
+    "connectionDetails": "Data Source=/data/chronicle.db"
+  }
+}
+```
+
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| type | string | Yes | Storage type (currently "MongoDB") |
-| connectionDetails | string | Yes | MongoDB connection string |
+| type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, or `Sqlite` |
+| connectionDetails | string | Yes | Connection string for the chosen storage backend |
 

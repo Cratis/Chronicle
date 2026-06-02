@@ -67,4 +67,9 @@ public static class WellKnownExpressions
     /// The caused by expression.
     /// </summary>
     public const string CausedBy = "$causedBy";
+
+    /// <summary>
+    /// The all expression for subscribing to all event types.
+    /// </summary>
+    public const string All = "$all";
 }

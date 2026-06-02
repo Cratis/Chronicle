@@ -21,6 +21,7 @@ public class when_creating_success_result : Specification
 
     [Fact] void should_set_correlation_id() => _result.CorrelationId.ShouldEqual(_correlationId);
     [Fact] void should_set_sequence_numbers() => _result.SequenceNumbers.ShouldEqual(_sequenceNumbers);
+    [Fact] void should_set_tail_sequence_number() => _result.TailSequenceNumber.ShouldEqual((EventSequenceNumber)3UL);
     [Fact] void should_be_success() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_have_no_constraint_violations() => _result.ConstraintViolations.ShouldBeEmpty();
     [Fact] void should_have_no_concurrency_violations() => _result.ConcurrencyViolations.ShouldBeEmpty();

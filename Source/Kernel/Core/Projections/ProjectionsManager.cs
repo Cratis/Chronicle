@@ -200,10 +200,19 @@ public class ProjectionsManager(
         // collection, the in-memory subscription state can be stale after
         // databases are dropped. Subscribe is idempotent and re-reads
         // persistent state, which detects the reset.
-        await observer.Subscribe<IProjectionObserverSubscriber>(
-            ObserverType.Projection,
-            projection.EventTypes,
-            localSiloDetails.SiloAddress);
+        if (definition.SubscribesToAllEvents)
+        {
+            await observer.SubscribeToAllEvents<IProjectionObserverSubscriber>(
+                ObserverType.Projection,
+                localSiloDetails.SiloAddress);
+        }
+        else
+        {
+            await observer.Subscribe<IProjectionObserverSubscriber>(
+                ObserverType.Projection,
+                projection.EventTypes,
+                localSiloDetails.SiloAddress);
+        }
     }
 
     Task OnError(Exception exception) => Task.CompletedTask;

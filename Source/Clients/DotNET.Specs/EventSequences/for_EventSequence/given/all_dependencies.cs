@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
@@ -27,6 +28,9 @@ public class all_dependencies : Specification
     internal IServices services;
     protected ICorrelationIdAccessor _correlationIdAccessor;
     protected IConcurrencyScopeStrategies _concurrencyScopeStrategies;
+    protected IConcurrencyScopeStrategy _concurrencyScopeStrategy;
+    protected IImmutableList<Causation> _currentCausationChain;
+    protected ConcurrencyScope _defaultConcurrencyScope;
 
     void Establish()
     {
@@ -45,5 +49,16 @@ public class all_dependencies : Specification
         _correlationIdAccessor = Substitute.For<ICorrelationIdAccessor>();
         _correlationIdAccessor.Current.Returns((CorrelationId)Guid.Empty);
         _concurrencyScopeStrategies = Substitute.For<IConcurrencyScopeStrategies>();
+        _concurrencyScopeStrategy = Substitute.For<IConcurrencyScopeStrategy>();
+        _currentCausationChain = [Causation.Unknown()];
+        _defaultConcurrencyScope = new(42UL);
+        _causationManager.GetCurrentChain().Returns(_currentCausationChain);
+        _concurrencyScopeStrategies.GetFor(Arg.Any<IEventSequence>()).Returns(_concurrencyScopeStrategy);
+        _concurrencyScopeStrategy.GetScope(
+            Arg.Any<EventSourceId>(),
+            Arg.Any<EventStreamType?>(),
+            Arg.Any<EventStreamId?>(),
+            Arg.Any<EventSourceType?>(),
+            Arg.Any<IEnumerable<EventType>?>()).Returns(Task.FromResult(_defaultConcurrencyScope));
     }
 }

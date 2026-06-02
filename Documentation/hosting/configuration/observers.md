@@ -1,6 +1,6 @@
 # Observers
 
-Observer configuration controls retry behavior and timeouts for observer subscribers.
+Observer configuration controls retry behavior, timeouts, and watchdog monitoring for observer subscribers.
 
 ## Example configuration
 
@@ -11,7 +11,8 @@ Observer configuration controls retry behavior and timeouts for observer subscri
     "maxRetryAttempts": 10,
     "backoffDelay": 1,
     "exponentialBackoffDelayFactor": 2,
-    "maximumBackoffDelay": 600
+    "maximumBackoffDelay": 600,
+    "watchdogInterval": 60
   }
 }
 ```
@@ -23,4 +24,5 @@ Observer configuration controls retry behavior and timeouts for observer subscri
 | backoffDelay | number | 1 | Initial backoff delay in seconds |
 | exponentialBackoffDelayFactor | number | 2 | Exponential backoff multiplier |
 | maximumBackoffDelay | number | 600 | Maximum backoff delay in seconds |
+| watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 

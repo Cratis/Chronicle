@@ -5,15 +5,19 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using System.Dynamic;
+using System.Reflection;
 using System.Text.Json;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Keys;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks;
+using Cratis.Chronicle.Storage.Sinks.InMemory;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Json;
+using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
@@ -158,11 +162,23 @@ internal static class ProjectionReadModelProcessor
             ? initialState.AsExpandoObject(false)
             : CreateInitialStateFromSchema(schema);
 
+        // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
+        // upserts each read model document with `_id` = this key value, and the BSON deserializer maps
+        // `_id` back onto the read model's identifier property (the property marked [Key] / [Subject]
+        // or conventionally named "Id"). The in-memory test harness skips the MongoDB round-trip, so
+        // we mirror that mapping ourselves before serializing the state — otherwise identifier
+        // properties whose only source is the event-source ID surface as null in _scenario.Instance.
+        KernelKey? rootKey = null;
+
+        using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
+
         // Process events, retrying any that return DeferredKey once all other events have been processed.
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            state = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, @event, state, deferredEvents);
+            var (newState, eventKey) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents);
+            state = newState;
+            rootKey ??= eventKey;
         }
 
         // Retry deferred events once; if still deferred, throw a descriptive exception.
@@ -170,7 +186,7 @@ internal static class ProjectionReadModelProcessor
         {
             var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
             var keyResolver = engineProjection.GetKeyResolverFor(@event.Context.EventType);
-            var keyResult = await keyResolver(inMemoryEventSequenceStorage, NullSink.Instance, @event);
+            var keyResult = await keyResolver(inMemoryEventSequenceStorage, inMemorySink, @event);
 
             if (keyResult is KernelProjectionEngine::DeferredKey)
             {
@@ -180,6 +196,7 @@ internal static class ProjectionReadModelProcessor
             }
 
             var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
+            rootKey ??= key;
             var context = new KernelProjectionEngine::ProjectionEventContext(
                 key,
                 @event,
@@ -189,10 +206,78 @@ internal static class ProjectionReadModelProcessor
 
             HandleEventFor(engineProjection, context);
             state = ApplyActualChanges(key, changeset.Changes, state);
+            await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
+
+        InjectIdentifierFromKey<TReadModel>(state, rootKey);
 
         var json = JsonSerializer.Serialize(state);
         return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Mirrors MongoDB's `_id` → identifier property mapping for the in-memory test harness.
+    /// Finds the read model's identifier property (preferring <c>[Key]</c>, then <c>[Subject]</c>,
+    /// then a property named "Id" by convention) and writes the resolved projection key value into
+    /// the state under that property's camel-cased name — unless an event mapping has already
+    /// populated that property.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
+    /// <param name="state">The projection state ExpandoObject to inject into.</param>
+    /// <param name="key">The resolved projection key, or <see langword="null"/> if no event resolved one.</param>
+    static void InjectIdentifierFromKey<TReadModel>(ExpandoObject state, KernelKey? key)
+        where TReadModel : class
+    {
+        if (key is null || key.Value is null) return;
+
+        var identifierProperty = FindIdentifierProperty(typeof(TReadModel));
+        if (identifierProperty is null) return;
+
+        var propertyName = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifierProperty.Name);
+        var stateDict = (IDictionary<string, object?>)state;
+
+        // Don't overwrite an explicit projection mapping (e.g. [SetFrom<T>] or [SetFromContext<T>]
+        // that wrote to the identifier property). The MongoDB analogue is: if the projection
+        // updates `_id`, that update wins; we only fill in `_id` when no update touched it.
+        if (stateDict.TryGetValue(propertyName, out var existing) && existing is not null)
+        {
+            return;
+        }
+
+        stateDict[propertyName] = key.Value;
+    }
+
+    /// <summary>
+    /// Locates the property a read model uses as its document identifier, following the same
+    /// precedence MongoDB uses to map to `_id`:
+    /// <list type="number">
+    /// <item><description><see cref="KeyAttribute"/> on a property or record positional parameter</description></item>
+    /// <item><description><see cref="SubjectAttribute"/> on a property or record positional parameter</description></item>
+    /// <item><description>A property literally named <c>Id</c> (MongoDB default-id convention)</description></item>
+    /// </list>
+    /// </summary>
+    /// <param name="readModelType">The read model CLR type to inspect.</param>
+    static PropertyInfo? FindIdentifierProperty(Type readModelType)
+    {
+        var properties = readModelType.GetProperties();
+        var primaryCtor = readModelType.GetConstructors().FirstOrDefault();
+        var parameters = primaryCtor?.GetParameters() ?? [];
+
+        return FindByAttribute<KeyAttribute>(properties, parameters)
+            ?? FindByAttribute<SubjectAttribute>(properties, parameters)
+            ?? properties.FirstOrDefault(p => string.Equals(p.Name, "Id", StringComparison.Ordinal));
+    }
+
+    static PropertyInfo? FindByAttribute<TAttribute>(PropertyInfo[] properties, ParameterInfo[] parameters)
+        where TAttribute : Attribute
+    {
+        var taggedProperty = properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
+        if (taggedProperty is not null) return taggedProperty;
+
+        var taggedParameter = parameters.FirstOrDefault(p => Attribute.IsDefined(p, typeof(TAttribute)));
+        return taggedParameter is null
+            ? null
+            : properties.FirstOrDefault(p => string.Equals(p.Name, taggedParameter.Name, StringComparison.Ordinal));
     }
 
     static ExpandoObject CreateInitialStateFromSchema(JsonSchema schema)
@@ -246,20 +331,21 @@ internal static class ProjectionReadModelProcessor
         return schemas;
     }
 
-    static async Task<ExpandoObject> ProcessSingleEvent(
+    static async Task<(ExpandoObject State, KernelKey? Key)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         InMemoryEventSequenceStorage eventSequenceStorage,
+        InMemorySink sink,
         KernelAppendedEvent @event,
         ExpandoObject state,
         Queue<KernelAppendedEvent> deferredEvents)
     {
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
-        var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, NullSink.Instance, @event);
+        var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
 
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
             deferredEvents.Enqueue(@event);
-            return state;
+            return (state, null);
         }
 
         var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
@@ -271,7 +357,9 @@ internal static class ProjectionReadModelProcessor
             false);
 
         HandleEventFor(projection, context);
-        return ApplyActualChanges(key, changeset.Changes, state);
+        var updatedState = ApplyActualChanges(key, changeset.Changes, state);
+        await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+        return (updatedState, key);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
@@ -324,11 +412,12 @@ internal static class ProjectionReadModelProcessor
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject>:
-                    state = state.MergeWith((change.State as ExpandoObject)!);
+                    ApplyPropertyDifferences((change as PropertiesChanged<ExpandoObject>)!.Differences, state);
                     break;
 
                 case ChildAdded childAdded:
-                    var items = state.EnsureCollection<object>(childAdded.ChildrenProperty, key.ArrayIndexers);
+                    InjectChildIdentifierFromKey(childAdded);
+                    var items = EnsureChildCollection(state, childAdded);
                     items.Add(childAdded.Child);
                     break;
 
@@ -343,5 +432,106 @@ internal static class ProjectionReadModelProcessor
         }
 
         return state;
+    }
+
+    static void ApplyPropertyDifferences(IEnumerable<PropertyDifference> differences, ExpandoObject state)
+    {
+        foreach (var difference in differences)
+        {
+            difference.PropertyPath.SetValue(state, NormalizeStateValue(difference.Changed)!, NormalizeArrayIndexers(difference.ArrayIndexers));
+        }
+    }
+
+    static List<object> EnsureChildCollection(ExpandoObject state, ChildAdded childAdded)
+    {
+        var normalizedIndexers = NormalizeArrayIndexers(childAdded.ArrayIndexers).All.ToArray();
+        var current = (IDictionary<string, object?>)state;
+
+        foreach (var indexer in normalizedIndexers.Take(Math.Max(0, normalizedIndexers.Length - 1)))
+        {
+            var collectionName = indexer.ArrayProperty.LastSegment.Value;
+            var collection = current.TryGetValue(collectionName, out var existingCollection) && existingCollection is System.Collections.IEnumerable existingEnumerable
+                ? existingEnumerable.Cast<object>().ToList()
+                : [];
+
+            var element = !indexer.IdentifierProperty.IsSet &&
+                indexer.Identifier is int index &&
+                collection.Count > index
+                    ? collection[index] as ExpandoObject
+                    : collection
+                        .OfType<ExpandoObject>()
+                        .SingleOrDefault(item =>
+                        {
+                            var itemDictionary = (IDictionary<string, object?>)item;
+                            return itemDictionary.TryGetValue(indexer.IdentifierProperty.Path, out var value) &&
+                                   Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier));
+                        });
+
+            if (element is null)
+            {
+                element = new ExpandoObject();
+                if (indexer.IdentifierProperty.IsSet)
+                {
+                    ((IDictionary<string, object?>)element)[indexer.IdentifierProperty.Path] = NormalizeStateValue(indexer.Identifier);
+                }
+
+                collection.Add(element);
+                current[collectionName] = collection;
+            }
+
+            current = element;
+        }
+
+        var targetCollectionName = childAdded.ChildrenProperty.LastSegment.Value;
+        if (current.TryGetValue(targetCollectionName, out var targetCollection) &&
+            targetCollection is System.Collections.IEnumerable targetEnumerable)
+        {
+            var items = targetEnumerable.Cast<object>().ToList();
+            current[targetCollectionName] = items;
+            return items;
+        }
+
+        var newItems = new List<object>();
+        current[targetCollectionName] = newItems;
+        return newItems;
+    }
+
+    static ArrayIndexers NormalizeArrayIndexers(ArrayIndexers arrayIndexers) =>
+        arrayIndexers.IsEmpty
+            ? ArrayIndexers.NoIndexers
+            : new ArrayIndexers(arrayIndexers.All.Select(indexer => indexer with { Identifier = NormalizeStateValue(indexer.Identifier)! }));
+
+    static object? NormalizeStateValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var type = value.GetType();
+        var isSpecified = type.GetProperty("IsSpecified");
+        var wrappedValue = type.GetProperty("Value");
+
+        if (isSpecified?.PropertyType == typeof(bool) && wrappedValue is not null)
+        {
+            return wrappedValue.GetValue(value);
+        }
+
+        return value;
+    }
+
+    static void InjectChildIdentifierFromKey(ChildAdded childAdded)
+    {
+        if (childAdded.Child is not ExpandoObject childState ||
+            !childAdded.IdentifiedByProperty.IsSet ||
+            childAdded.IdentifiedByProperty.IsRoot)
+        {
+            return;
+        }
+
+        var propertyName = childAdded.IdentifiedByProperty.LastSegment.Value;
+        var childStateDict = (IDictionary<string, object?>)childState;
+
+        childStateDict[propertyName] = NormalizeStateValue(childAdded.Key);
     }
 }

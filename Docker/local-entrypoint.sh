@@ -24,6 +24,6 @@ try {
 }
 "
 
-dotnet ./Cratis.Chronicle.Server.dll &
+./Cratis.Chronicle.Server &
 
 wait -n

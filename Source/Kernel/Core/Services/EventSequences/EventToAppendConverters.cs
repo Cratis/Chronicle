@@ -21,10 +21,10 @@ internal static class EventToAppendConverters
     /// <returns>A converted <see cref="EventToAppend"/>.</returns>
     public static EventToAppend ToChronicle(this Contracts.Events.EventToAppend eventToAppend, JsonSerializerOptions jsonSerializerOptions) =>
         new(
-            eventToAppend.EventSourceType,
+            eventToAppend.EventSourceType is null ? EventSourceType.Default : (EventSourceType)eventToAppend.EventSourceType,
             eventToAppend.EventSourceId,
-            eventToAppend.EventStreamType,
-            eventToAppend.EventStreamId,
+            eventToAppend.EventStreamType is null ? EventStreamType.All : (EventStreamType)eventToAppend.EventStreamType,
+            eventToAppend.EventStreamId is null ? EventStreamId.Default : (EventStreamId)eventToAppend.EventStreamId,
             eventToAppend.EventType.ToChronicle(),
             eventToAppend.Tags.Select(t => new Tag(t)).ToArray(),
             JsonSerializer.Deserialize<JsonNode>(eventToAppend.Content, jsonSerializerOptions)!.AsObject(),

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.Sql.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+    </ItemGroup>
+</Project>

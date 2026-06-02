@@ -586,8 +586,34 @@ public class ProjectionFactory(
                 Format = projection.TargetReadModelSchema.Format
             };
         }
+        else
+        {
+            if (schemaProperty is null && propertyPath.LastSegment is not ThisAccessor)
+            {
+                schemaProperty = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(propertyPath.LastSegment.Value));
+            }
 
-        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty!, expression);
+            schemaProperty ??= new JsonSchemaProperty
+            {
+                Type = JsonObjectType.None
+            };
+        }
+
+        // Check if this is a dynamic property path (dictionary with runtime-determined keys)
+        // Pattern: propertyName.$eventContext... or propertyName.$causedBy...
+        var propertyPathString = propertyPath.Path;
+        if (propertyPathString.Contains(".$", StringComparison.Ordinal))
+        {
+            // Extract the base property name (before .$)
+            var dynamicKeyIndex = propertyPathString.IndexOf(".$", StringComparison.Ordinal);
+            var basePropertyPath = propertyPathString[..dynamicKeyIndex];
+
+            // Get or create the schema property for the base property and mark it as dynamic
+            var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
+            baseSchema?.ActualTypeSchema.MarkAsDynamic();
+        }
+
+        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty, expression);
     }
 
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
@@ -603,12 +629,18 @@ public class ProjectionFactory(
         // Collect event types from all nested definitions (nested objects use the same key resolver as the parent)
         var nestedEventTypes = CollectNestedEventTypes(projection, projectionDefinition.Nested, actualIdentifiedByProperty, hasParent);
 
-        var operationTypes = fromEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.From)
-            .Concat(joinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join))
-            .Concat(removedWithEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Remove))
-            .Concat(removedWithJoinEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.Join | ProjectionOperationType.Remove))
-            .Concat(nestedEventTypes.ToDictionary(_ => _.EventType, _ => ProjectionOperationType.From))
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        // Combine all operation-type contributions per event type. The same event type can be registered
+        // through multiple mechanisms simultaneously — e.g. class-level [FromEvent<T>] on the parent +
+        // a nested definition that also projects T via [SetFrom<T>] on its properties. We OR the
+        // ProjectionOperationType flags together so a single event type can carry multiple operation
+        // semantics (From + Remove, From + Join, etc.) without colliding on dictionary insert.
+        var operationTypes = fromEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.From))
+            .Concat(joinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join)))
+            .Concat(removedWithEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Remove)))
+            .Concat(removedWithJoinEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.Join | ProjectionOperationType.Remove)))
+            .Concat(nestedEventTypes.Select(_ => (_.EventType, Op: ProjectionOperationType.From)))
+            .GroupBy(t => t.EventType)
+            .ToDictionary(g => g.Key, g => g.Aggregate(ProjectionOperationType.None, (acc, x) => acc | x.Op));
 
         List<EventTypeWithKeyResolver> eventsForProjection = [.. fromEventTypes, .. joinEventTypes, .. removedWithEventTypes, .. removedWithJoinEventTypes, .. nestedEventTypes];
         if (projectionDefinition.FromDerivatives is not null)

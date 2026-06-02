@@ -24,6 +24,8 @@ internal static class ObserverInformationConverters
             (observerInformation.EventTypes ?? []).Select(id => new EventType(id, 1, false)),
             observerInformation.NextEventSequenceNumber,
             observerInformation.LastHandledEventSequenceNumber,
+            observerInformation.TailEventSequenceNumber,
+            observerInformation.HandledEventCount,
             (ObserverRunningState)(int)observerInformation.RunningState,
             observerInformation.IsSubscribed,
             observerInformation.IsReplayable);

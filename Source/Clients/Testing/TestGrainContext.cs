@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Testing;
 /// the constructor receives a valid <see cref="IGrainLifecycle"/> without requiring a full Orleans silo.
 /// </remarks>
 #pragma warning disable SA1648 // inheritdoc should be used with inheriting class — IGrainContext is an interface, not a base class
+#pragma warning disable MA0196 // False positive: generic methods GetComponent<T>/GetTarget<T> do implement IGrainContext
 internal sealed class TestGrainContext : IGrainContext
 {
     /// <inheritdoc/>

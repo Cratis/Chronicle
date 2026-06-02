@@ -56,7 +56,8 @@ public class Projection(
     {
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         logger.SettingDefinition(key.ProjectionId);
-        var compareResult = await projectionDefinitionComparer.Compare(key, State, definition);
+        var previousDefinition = State;
+        var compareResult = await projectionDefinitionComparer.Compare(key, previousDefinition, definition);
 
         State = definition;
         await WriteStateAsync();
@@ -86,15 +87,22 @@ public class Projection(
             logger.ProjectionHasChanged(key.ProjectionId);
             _projectionsByNamespace.Clear();
             await _definitionObservers.Notify(notifier => notifier.OnProjectionDefinitionsChanged(definition));
-            var namespaceNames = await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll();
+            var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
+            // Schedule replay as a separate grain turn so that SetDefinition() returns immediately.
+            // Replay triggers observer.Replay() which calls GetDefinition() back on this grain — if
+            // triggered inline, that re-entrant call deadlocks because the grain's execution slot is
+            // still held by SetDefinition(). With dueTime=Zero the timer fires in a new grain turn,
+            // after this call has returned, so GetDefinition() is free to execute.
             if (options.Value.Observers.ReplayOnDefinitionChange)
             {
-                await ReplayForAllNamespaces(key, namespaceNames);
+                this.RegisterGrainTimer(
+                    async _ => await ReplayForAllNamespaces(key, namespaceNames),
+                    new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
             }
             else
             {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames, previousDefinition, definition);
             }
         }
     }
@@ -427,18 +435,54 @@ public class Projection(
         }
     }
 
-    async Task AddReplayRecommendationForAllNamespaces(ProjectionKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task AddReplayRecommendationForAllNamespaces(
+        ProjectionKey key,
+        IEnumerable<EventStoreNamespaceName> namespaces,
+        ProjectionDefinition previousDefinition,
+        ProjectionDefinition currentDefinition)
     {
+        var readModelDefinitions = storage.GetEventStore(key.EventStore).ReadModels;
+        var readModelDefinition = await readModelDefinitions.Get(currentDefinition.ReadModel);
+        var readModelMigrationRecommendation = ProjectionReplayRecommendationEvaluator.GetReadModelMigrationRecommendation(readModelDefinition);
+
+        var eventTypesToCheckFor = ProjectionReplayRecommendationEvaluator.GetAddedEventTypesIfOnlyEventTypesChanged(
+            previousDefinition,
+            currentDefinition,
+            objectComparer);
+
+        (string Description, ReplayCandidateReason Reason) replayRecommendation = readModelMigrationRecommendation switch
+        {
+            ProjectionReadModelMigrationRecommendation.UpdateAvailable => (
+                "Projection definition has changed. Update available.",
+                new ProjectionUpdateAvailableReplayCandidateReason()),
+            ProjectionReadModelMigrationRecommendation.SelectiveReplayAvailable => (
+                "Projection definition has changed. Selective replay available.",
+                new ProjectionSelectiveReplayAvailableReplayCandidateReason()),
+            _ => (
+                "Projection definition has changed.",
+                new ProjectionDefinitionChangedReplayCandidateReason())
+        };
+
         foreach (var @namespace in namespaces)
         {
+            if (eventTypesToCheckFor.Length > 0)
+            {
+                var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(@namespace).GetEventSequence(State.EventSequenceId);
+                var tailSequenceNumberForAddedEventTypes = await eventSequenceStorage.GetTailSequenceNumber(eventTypes: eventTypesToCheckFor);
+                if (!tailSequenceNumberForAddedEventTypes.IsActualValue)
+                {
+                    continue;
+                }
+            }
+
             var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
             await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
-                "Projection definition has changed.",
+                replayRecommendation.Description,
                 new()
                 {
                     ObserverId = key.ProjectionId,
                     ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
-                    Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
+                    Reasons = [replayRecommendation.Reason]
                 });
         }
     }

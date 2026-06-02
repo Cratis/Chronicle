@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
@@ -25,12 +27,14 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
+/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
+    IEventComplianceHelper eventComplianceHelper,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -39,13 +43,14 @@ public class HandleEventsForPartition(
     IObserver _observer = null!;
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
     IObserverSubscriber? _subscriber;
+    Dictionary<EventType, EventTypeSchema> _eventTypeSchemas = [];
 
     IHandleEventsForPartition _selfGrainReference = null!;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _selfGrainReference = this.AsReference<IHandleEventsForPartition>();
+        _selfGrainReference = GetSelfGrainReference();
 
         if (State.IsPrepared)
         {
@@ -70,11 +75,18 @@ public class HandleEventsForPartition(
         }
     }
 
+    /// <summary>
+    /// Gets the self grain reference for this grain instance.
+    /// </summary>
+    /// <returns>The <see cref="IHandleEventsForPartition"/> grain reference.</returns>
+    protected virtual IHandleEventsForPartition GetSelfGrainReference() => this.AsReference<IHandleEventsForPartition>();
+
     /// <inheritdoc/>
     protected override ValueTask InitializeState(HandleEventsForPartitionArguments request)
     {
         State.ObserverKey = request.ObserverKey;
         State.EventObservationState = request.EventObservationState;
+        State.EventTypes = request.EventTypes.ToArray();
         State.Partition = request.Partition;
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
@@ -134,6 +146,16 @@ public class HandleEventsForPartition(
                 currentState.ObserverKey.EventStore,
                 currentState.ObserverKey.Namespace,
                 currentState.ObserverKey.EventSequenceId);
+            var requestedEventTypes = currentState.EventTypes.ToArray();
+            var eventTypesToRead = requestedEventTypes.Length != 0
+                ? requestedEventTypes
+                : subscription.EventTypes.ToArray();
+            var nonRedactionEventTypeIds = eventTypesToRead
+                .Where(et => et.Id != GlobalEventTypes.Redaction)
+                .Select(et => et.Id)
+                .ToHashSet();
+            _eventTypeSchemas = (await storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes.GetFor(eventTypesToRead))
+                .ToDictionary(_ => _.Type);
 
             using var events = await eventSequenceStorage.GetRange(
                 currentState.LastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable
@@ -141,7 +163,7 @@ public class HandleEventsForPartition(
                     : currentState.LastSuccessfullyHandledEventSequenceNumber.Next(),
                 currentState.EndEventSequenceNumber,
                 _eventSourceId,
-                subscription.EventTypes,
+                eventTypesToRead,
                 cancellationToken);
 
             var subscriberContext = new ObserverSubscriberContext(subscription.Arguments);
@@ -160,13 +182,13 @@ public class HandleEventsForPartition(
                 }
                 var handledCount = EventCount.Zero;
 
-                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext);
+                var handleEventsResult = await TryHandleEvents(currentState, events, subscriberContext, nonRedactionEventTypeIds);
                 if (handleEventsResult.TryGetException(out var handleEventsException))
                 {
                     failed = true;
                     exceptionMessages = handleEventsException.GetAllMessages().ToArray();
                     exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
-                    lastEventSequenceNumberAttempted = lastSuccessfullyHandledEventSequenceNumber.Next();
+                    lastEventSequenceNumberAttempted = events.Current.First().Context.SequenceNumber;
                 }
                 else if (handleEventsResult.TryGetResult(out var handledEventsResult))
                 {
@@ -181,6 +203,8 @@ public class HandleEventsForPartition(
                             lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
                             await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                             lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                            var okHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
+                            await _observer.ReportHandledEvents(currentState.Partition, okHandledEvents);
                             break;
                         case ObserverSubscriberState.Failed:
                             failed = true;
@@ -195,6 +219,8 @@ public class HandleEventsForPartition(
 
                                 await _selfGrainReference.ReportNewSuccessfullyHandledEvent(eventObserverResult.LastSuccessfulObservation);
                                 lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
+                                var failedHandledEvents = handledEvents.Where(e => e.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation).ToArray();
+                                await _observer.ReportHandledEvents(currentState.Partition, failedHandledEvents);
                             }
                             else
                             {
@@ -206,7 +232,7 @@ public class HandleEventsForPartition(
                         case ObserverSubscriberState.Disconnected:
                             failed = true;
                             exceptionMessages = [SubscriberDisconnected];
-                            lastEventSequenceNumberAttempted = lastSuccessfullyHandledEventSequenceNumber.Next();
+                            lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
                             logger.EventHandlerDisconnected(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
                             break;
                     }
@@ -265,20 +291,56 @@ public class HandleEventsForPartition(
 
         return events.Current.ToArray();
     }
+
+    static AppendedEvent[] FilterRedactedEventsForUnsubscribedTypes(AppendedEvent[] events, HashSet<EventTypeId> nonRedactionEventTypeIds)
+    {
+        if (nonRedactionEventTypeIds.Count == 0)
+        {
+            return events;
+        }
+
+        var filtered = new AppendedEvent[events.Length];
+        var count = 0;
+        foreach (var @event in events)
+        {
+            if (@event.Context.EventType.Id != GlobalEventTypes.Redaction)
+            {
+                filtered[count++] = @event;
+                continue;
+            }
+
+            if (@event.Content is not IDictionary<string, object?> contentDict || !contentDict.TryGetValue("originalEventType", out var originalEventTypeObj))
+            {
+                continue;
+            }
+
+            var originalEventTypeId = originalEventTypeObj?.ToString();
+            if (originalEventTypeId is not null && nonRedactionEventTypeIds.Contains(new EventTypeId(originalEventTypeId)))
+            {
+                filtered[count++] = @event;
+            }
+        }
+
+        return count == filtered.Length ? filtered : filtered[..count];
+    }
+
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
     async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
         HandleEventsForPartitionState state,
         IEventCursor events,
-        ObserverSubscriberContext subscriberContext)
+        ObserverSubscriberContext subscriberContext,
+        HashSet<EventTypeId> nonRedactionEventTypeIds)
     {
         try
         {
             var eventsToHandle = SetObservationStateIfSpecified(state.EventObservationState, events);
+            eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
             if (eventsToHandle.Length != 0)
             {
-                var result = await _subscriber!.OnNext(state.Partition, eventsToHandle, subscriberContext);
-                return (result, eventsToHandle);
+                var decryptedEvents = await DecryptEvents(eventsToHandle);
+                var result = await _subscriber!.OnNext(state.Partition, decryptedEvents, subscriberContext);
+                return (result, decryptedEvents);
             }
 
             logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
@@ -316,4 +378,7 @@ public class HandleEventsForPartition(
 
     IEventSequenceStorage GetEventSequenceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId) =>
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+
+    Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
+        eventComplianceHelper.DecryptEvents(events, _eventTypeSchemas);
 }

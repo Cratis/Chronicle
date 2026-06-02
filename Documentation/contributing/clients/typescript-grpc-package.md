@@ -27,6 +27,7 @@ An npm package that provides strongly-typed TypeScript bindings for the Chronicl
 
 **How it works:**
 - Uses `ts-proto` to generate TypeScript files from proto definitions
+- Generates proto `int64`/`uint64` fields as TypeScript `bigint` (`forceLong=bigint`)
 - Generates strongly-typed clients with full IDE support and IntelliSense
 - Provides `ChronicleConnection` class for easy connection management
 - Provides `ChronicleConnectionString` class for connection string parsing
@@ -235,4 +236,3 @@ Development dependencies include:
 - `typescript` - TypeScript compiler
 - `rollup` - Module bundler for builds
 - Various Rollup plugins for TypeScript and module resolution
-

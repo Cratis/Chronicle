@@ -59,3 +59,45 @@ The most common use of `AppendOperations` in application code is through the
 `IEventAppendCollection` helper provided by `Cratis.Chronicle.XUnit.Integration`. It subscribes
 internally and provides a ready-to-assert collection of `AppendedEventWithResult` entries.
 See <xref:Chronicle.Testing.EventAppendCollection> for full details.
+
+## Waiting for Observer Completion After Append
+
+When you need to wait until observers affected by an append operation have completed, use
+`WaitForCompletion()` from the `Cratis.Chronicle.Observation` namespace.
+
+If any affected observer fails while catching up, the returned result includes failed partitions.
+
+### Append
+
+```csharp
+using Cratis.Chronicle.Observation;
+
+var appendResult = await eventLog.Append(eventSourceId, new SomeEvent());
+var completion = await appendResult.WaitForCompletion();
+
+if (!completion.IsSuccess)
+{
+    foreach (var failedPartition in completion.FailedPartitions)
+    {
+        Console.WriteLine($"Observer {failedPartition.ObserverId} failed partition {failedPartition.Partition}");
+    }
+}
+```
+
+### AppendMany
+
+```csharp
+using Cratis.Chronicle.Observation;
+
+var appendManyResult = await eventLog.AppendMany(eventSourceId, new object[]
+{
+    new FirstEvent(),
+    new SecondEvent()
+});
+
+var completion = await appendManyResult.WaitForCompletion();
+if (!completion.IsSuccess)
+{
+    // Inspect failed partitions from affected observers
+}
+```

@@ -62,7 +62,7 @@ public class MongoDBConverter(
                             propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
                             var identifierPropertyName = arrayIndexer.IdentifierProperty.Path.ToMongoDBPropertyName();
                             var identifierPath = currentPropertyPath + arrayIndexer.IdentifierProperty;
-                            var identifierBsonValue = ToBsonValue(arrayIndexer.Identifier, identifierPath);
+                            var identifierBsonValue = ToBsonValueForArrayIndexer(arrayIndexer.Identifier, identifierPath);
                             var filterDocument = new BsonDocument { [$"{collectionIdentifier}.{identifierPropertyName}"] = identifierBsonValue };
                             arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(filterDocument));
                         }
@@ -86,9 +86,14 @@ public class MongoDBConverter(
         var schema = readModel.GetSchemaForLatestGeneration();
         var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
 
+        if (string.IsNullOrWhiteSpace(idPropertyName))
+        {
+            return new BsonString(key.Value?.ToString() ?? string.Empty);
+        }
+
         var bsonValue = key.Value is ExpandoObject ?
-                expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
-                ToBsonValue(key.Value, idPropertyName);
+            expandoObjectConverter.ToBsonDocument((key.Value as ExpandoObject)!, schema.GetSchemaForPropertyPath(idPropertyName)) :
+            ToBsonValue(key.Value, idPropertyName);
 
         // If the schema does not have the Id property, we assume it is the event source identifier, which is of type string.
         return bsonValue == BsonNull.Value ? new BsonString(key.Value?.ToString() ?? string.Empty) : bsonValue;
@@ -176,5 +181,11 @@ public class MongoDBConverter(
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         return value == BsonNull.Value ? BsonNull.Value : value;
+    }
+
+    BsonValue ToBsonValueForArrayIndexer(object? input, PropertyPath property)
+    {
+        var schemaProperty = readModel.GetSchemaForLatestGeneration().GetSchemaPropertyForPropertyPath(property);
+        return schemaProperty is null ? ToBsonValue(input!) : ToBsonValue(input, schemaProperty);
     }
 }

@@ -107,4 +107,9 @@ public class ProjectionDefinition
     /// Gets or sets all the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.
     /// </summary>
     public IDictionary<string, ChildrenDefinition> Nested { get; set; } = new Dictionary<string, ChildrenDefinition>();
+
+    /// <summary>
+    /// Gets or sets whether the projection subscribes to all event types in the system.
+    /// </summary>
+    public bool SubscribesToAllEvents { get; set; }
 }

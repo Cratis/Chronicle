@@ -20,15 +20,30 @@ public class ConstraintsStorage(EventStoreName eventStore, IDatabase database) :
     {
         await using var scope = await database.EventStore(eventStore);
         var constraints = await scope.DbContext.Constraints.ToListAsync();
-        return constraints.Select(c => c.ToKernel()).ToArray();
+        return constraints
+            .GroupBy(_ => _.Name)
+            .Select(_ => _.OrderByDescending(c => c.Version).First())
+            .Select(c => c.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
     public async Task SaveDefinition(IConstraintDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);
-        var entity = definition.ToSql();
-        await scope.DbContext.Constraints.Upsert(entity);
+        var existing = await scope.DbContext.Constraints
+            .Where(_ => _.Name == definition.Name.Value)
+            .OrderByDescending(_ => _.Version)
+            .FirstOrDefaultAsync();
+
+        if (existing?.ToKernel().Equals(definition) == true)
+        {
+            return;
+        }
+
+        var nextVersion = existing is null ? 1uL : existing.Version + 1;
+        var entity = definition.ToSql(nextVersion);
+        scope.DbContext.Constraints.Add(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 }

@@ -93,7 +93,6 @@ public static class OpenIddictServiceCollectionExtensions
                 var identityProviderHasSecureCertificate = identityProviderCertificate.Enabled && !string.IsNullOrEmpty(identityProviderCertificate.CertificatePath);
 
                 // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
-#if DEVELOPMENT
                 if (!identityProviderHasSecureCertificate)
                 {
                     options.UseAspNetCore()
@@ -105,19 +104,6 @@ public static class OpenIddictServiceCollectionExtensions
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough();
                 }
-#else
-                if (!identityProviderHasSecureCertificate)
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough()
-                           .DisableTransportSecurityRequirement();
-                }
-                else
-                {
-                    options.UseAspNetCore()
-                           .EnableTokenEndpointPassthrough();
-                }
-#endif
 
                 if (!string.IsNullOrWhiteSpace(chronicleOptions.Authentication.Authority))
                 {

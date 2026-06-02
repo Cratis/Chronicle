@@ -52,7 +52,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     public async Task Rename(ObserverId currentId, ObserverId newId)
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
-        var existing = await scope.DbContext.Observers.FindAsync(currentId.Value);
+        var existing = await scope.DbContext.Observers.FindAsync(currentId);
         if (existing is null)
         {
             return;
@@ -62,10 +62,12 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         {
             Id = newId,
             LastHandledEventSequenceNumber = existing.LastHandledEventSequenceNumber,
+            TailEventSequenceNumber = existing.TailEventSequenceNumber,
             RunningState = existing.RunningState,
             ReplayingPartitions = existing.ReplayingPartitions,
             CatchingUpPartitions = existing.CatchingUpPartitions,
             FailedPartitions = existing.FailedPartitions,
+            FailedPartitionCount = existing.FailedPartitionCount,
             IsReplaying = existing.IsReplaying
         };
 

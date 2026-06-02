@@ -35,8 +35,16 @@ public partial class Observer
             return;
         }
 
+        if (State.RunningState == ObserverRunningState.Replaying)
+        {
+            logger.SkippingPartitionReplayBecauseObserverIsReplaying();
+            return;
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
+
+        State = WithSubtractedPartitionHandledEventCounts(State, partition);
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, Definition.EventTypes));
 
         State.ReplayingPartitions.Add(partition);

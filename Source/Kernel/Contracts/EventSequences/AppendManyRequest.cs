@@ -15,15 +15,15 @@ namespace Cratis.Chronicle.Contracts.EventSequences;
 public class AppendManyRequest : IEventSequenceRequest
 {
     /// <inheritdoc/>
-    [ProtoMember(1)]
+    [ProtoMember(1, IsRequired = true)]
     public string EventStore { get; set; }
 
     /// <inheritdoc/>
-    [ProtoMember(2)]
+    [ProtoMember(2, IsRequired = true)]
     public string Namespace { get; set; }
 
     /// <inheritdoc/>
-    [ProtoMember(3)]
+    [ProtoMember(3, IsRequired = true)]
     public string EventSequenceId { get; set; }
 
     /// <summary>
@@ -36,13 +36,13 @@ public class AppendManyRequest : IEventSequenceRequest
     /// Gets or sets the events to append.
     /// </summary>
     [ProtoMember(5)]
-    public IList<EventToAppend> Events { get; set; }
+    public IList<EventToAppend> Events { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the causation.
     /// </summary>
     [ProtoMember(6)]
-    public IList<Causation> Causation { get; set; }
+    public IList<Causation> Causation { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the caused by.
@@ -54,5 +54,5 @@ public class AppendManyRequest : IEventSequenceRequest
     /// Gets or sets the concurrency scopes per event source id.
     /// </summary>
     [ProtoMember(8)]
-    public IDictionary<string, ConcurrencyScope> ConcurrencyScopes { get; set; }
+    public IDictionary<string, ConcurrencyScope> ConcurrencyScopes { get; set; } = new Dictionary<string, ConcurrencyScope>();
 }

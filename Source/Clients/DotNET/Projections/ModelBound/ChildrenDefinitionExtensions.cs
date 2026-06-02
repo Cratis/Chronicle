@@ -48,13 +48,16 @@ static class ChildrenDefinitionExtensions
             eventType,
             processMember,
             definition,
-            parentModelType);
+            parentModelType,
+            includeSelfReferencingEvents: false);
+
+        var visited = parentModelType is null ? new HashSet<Type>() : new HashSet<Type> { parentModelType };
 
         // Recursively process nested children on the child type
         var childType = GetChildType(memberType);
         if (childType is not null)
         {
-            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef, visited);
         }
     }
 
@@ -71,6 +74,7 @@ static class ChildrenDefinitionExtensions
     /// <param name="processMember">The action to process child members recursively.</param>
     /// <param name="definition">The root projection definition for processing member attributes.</param>
     /// <param name="parentModelType">The type of the parent model that contains this children collection.</param>
+    /// <param name="visitedChildTypes">Set of child types already visited in the current recursion chain, used to break cycles for self-referential or mutually recursive types.</param>
     internal static void ProcessChildrenFromAttributeForNestedChildren(
         this ChildrenDefinition parentChildrenDef,
         Func<Type, EventType> getOrCreateEventType,
@@ -81,8 +85,12 @@ static class ChildrenDefinitionExtensions
         Type eventType,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
-        Type? parentModelType = null)
+        Type? parentModelType = null,
+        HashSet<Type>? visitedChildTypes = null)
     {
+        var childType = GetChildType(memberType);
+        var includeSelfReferencingEvents = childType is not null && visitedChildTypes?.Contains(childType) == true;
+
         var childrenDef = ProcessChildrenFromAttributeCore(
             parentChildrenDef.Children,
             getOrCreateEventType,
@@ -93,13 +101,13 @@ static class ChildrenDefinitionExtensions
             eventType,
             processMember,
             definition,
-            parentModelType);
+            parentModelType,
+            includeSelfReferencingEvents);
 
         // Recursively process nested children on the child type
-        var childType = GetChildType(memberType);
         if (childType is not null)
         {
-            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef);
+            ProcessNestedChildren(childType, getOrCreateEventType, namingPolicy, processMember, definition, childrenDef, visitedChildTypes ?? []);
         }
     }
 
@@ -113,7 +121,8 @@ static class ChildrenDefinitionExtensions
         Type eventType,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
-        Type? parentModelType = null)
+        Type? parentModelType = null,
+        bool includeSelfReferencingEvents = false)
     {
         var propertyPath = new PropertyPath(memberName);
         var propertyName = namingPolicy.GetPropertyName(propertyPath);
@@ -204,6 +213,11 @@ static class ChildrenDefinitionExtensions
                     // Process SetFrom attributes on constructor parameters
                     foreach (var (setFromAttr, setFromEventType) in parameter.GetAttributesOfGenericType<SetFromAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(setFromEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
                         var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
                         var propertyToUse = eventPropertyName ?? parameter.Name!;
@@ -213,6 +227,11 @@ static class ChildrenDefinitionExtensions
                     // Process AddFrom attributes on constructor parameters
                     foreach (var (addFromAttr, addFromEventType) in parameter.GetAttributesOfGenericType<AddFromAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(addFromEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         var eventPropertyNameProperty = addFromAttr.GetType().GetProperty(nameof(AddFromAttribute<object>.EventPropertyName));
                         var eventPropertyName = eventPropertyNameProperty?.GetValue(addFromAttr) as string;
                         var propertyToUse = eventPropertyName ?? parameter.Name!;
@@ -222,6 +241,11 @@ static class ChildrenDefinitionExtensions
                     // Process SubtractFrom attributes on constructor parameters
                     foreach (var (subtractFromAttr, subtractFromEventType) in parameter.GetAttributesOfGenericType<SubtractFromAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(subtractFromEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         var eventPropertyNameProperty = subtractFromAttr.GetType().GetProperty(nameof(SubtractFromAttribute<object>.EventPropertyName));
                         var eventPropertyName = eventPropertyNameProperty?.GetValue(subtractFromAttr) as string;
                         var propertyToUse = eventPropertyName ?? parameter.Name!;
@@ -231,19 +255,51 @@ static class ChildrenDefinitionExtensions
                     // Process Increment attributes on constructor parameters
                     foreach (var (incrementAttr, incrementEventType) in parameter.GetAttributesOfGenericType<IncrementAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(incrementEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         childrenDef.From.AddIncrementMapping(getOrCreateEventType, incrementEventType, paramPropertyName);
                     }
 
                     // Process Decrement attributes on constructor parameters
                     foreach (var (decrementAttr, decrementEventType) in parameter.GetAttributesOfGenericType<DecrementAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(decrementEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         childrenDef.From.AddDecrementMapping(getOrCreateEventType, decrementEventType, paramPropertyName);
                     }
 
                     // Process Count attributes on constructor parameters
                     foreach (var (countAttr, countEventType) in parameter.GetAttributesOfGenericType<CountAttribute<object>>())
                     {
+                        if (!ShouldPropagateChildMemberEvent(countEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
                         childrenDef.From.AddCountMapping(getOrCreateEventType, countEventType, paramPropertyName);
+                    }
+
+                    // Process SetValue attributes on constructor parameters
+                    foreach (var (setValueAttr, setValueEventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
+                    {
+                        if (!ShouldPropagateChildMemberEvent(setValueEventType, childType, includeSelfReferencingEvents))
+                        {
+                            continue;
+                        }
+
+                        var valueProperty = setValueAttr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+                        var value = valueProperty?.GetValue(setValueAttr);
+                        if (value is not null)
+                        {
+                            var invariantValue = FromDefinitionExtensions.ConvertValueToInvariantString(value);
+                            childrenDef.From.AddSetValueMapping(getOrCreateEventType, setValueEventType, paramPropertyName, invariantValue);
+                        }
                     }
 
                     // Check if this parameter has any explicit mapping attributes
@@ -252,7 +308,8 @@ static class ChildrenDefinitionExtensions
                                    (a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(SetFromAttribute<>) ||
                                     a.GetType().GetGenericTypeDefinition() == typeof(AddFromAttribute<>) ||
-                                    a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>)));
+                                    a.GetType().GetGenericTypeDefinition() == typeof(SubtractFromAttribute<>) ||
+                                     a.GetType().GetGenericTypeDefinition() == typeof(SetValueAttribute<>)));
 
                     var isIdentifiedByProperty = parameter.Name!.Equals(identifiedBy, StringComparison.OrdinalIgnoreCase);
                     var hasKeyAttribute = parameter.GetCustomAttribute<KeyAttribute>() is not null;
@@ -285,6 +342,17 @@ static class ChildrenDefinitionExtensions
                         fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
                     }
 
+                    if (includeSelfReferencingEvents && shouldAutoMap && !hasExplicitMapping)
+                    {
+                        foreach (var fromEventType in childType
+                            .GetAttributesOfGenericType<FromEventAttribute<object>>()
+                            .Select(_ => _.EventType)
+                            .Where(fromEventType => fromEventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null))
+                        {
+                            childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, fromEventType, paramPropertyName, parameter.Name!);
+                        }
+                    }
+
                     // Process Join attributes on constructor parameters
                     foreach (var (joinAttr, joinEventType) in parameter.GetAttributesOfGenericType<JoinAttribute<object>>())
                     {
@@ -314,13 +382,14 @@ static class ChildrenDefinitionExtensions
             // Collect class-level FromEvent attributes on the child type
             var childClassLevelFromEvents = childType.GetCustomAttributes()
                 .Where(attr => attr.GetType().IsGenericType &&
-                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>))
+                              attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>) &&
+                              (includeSelfReferencingEvents || ShouldPropagateChildClassLevelFromEvent(attr, childType)))
                 .ToList();
 
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
             foreach (var childProperty in childType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
-                processMember(childProperty, definition, childClassLevelFromEvents, false, null, childrenDef);
+                processMember(childProperty, definition, childClassLevelFromEvents, false, childType, childrenDef);
             }
         }
 
@@ -333,8 +402,14 @@ static class ChildrenDefinitionExtensions
         INamingPolicy namingPolicy,
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
-        ChildrenDefinition parentChildrenDef)
+        ChildrenDefinition parentChildrenDef,
+        HashSet<Type> visitedChildTypes)
     {
+        if (!visitedChildTypes.Add(childType))
+        {
+            return;
+        }
+
         // Process constructor parameters for ChildrenFrom and Nested attributes
         var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
             .OrderByDescending(c => c.GetParameters().Length)
@@ -359,7 +434,8 @@ static class ChildrenDefinitionExtensions
                         eventType,
                         processMember,
                         definition,
-                        childType);
+                        childType,
+                        visitedChildTypes);
                 }
 
                 if (parameter.IsDefined(typeof(NestedAttribute), inherit: false))
@@ -396,7 +472,8 @@ static class ChildrenDefinitionExtensions
                     eventType,
                     processMember,
                     definition,
-                    childType);
+                    childType,
+                    visitedChildTypes);
             }
 
             if (Attribute.IsDefined(property, typeof(NestedAttribute)))
@@ -428,6 +505,49 @@ static class ChildrenDefinitionExtensions
             childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, attr, eventType);
         }
     }
+
+    static bool ShouldPropagateChildClassLevelFromEvent(Attribute fromEventAttribute, Type childType)
+    {
+        var hasExplicitKey = fromEventAttribute is IKeyedAttribute keyedAttribute &&
+                             !string.IsNullOrEmpty(keyedAttribute.Key);
+        if (hasExplicitKey)
+        {
+            return true;
+        }
+
+        var eventType = fromEventAttribute.GetType().GetGenericArguments()[0];
+        return !HasChildrenFromForEventType(childType, eventType);
+    }
+
+    static bool ShouldPropagateChildMemberEvent(Type eventType, Type? childType, bool includeSelfReferencingEvents)
+    {
+        if (includeSelfReferencingEvents || childType is null)
+        {
+            return true;
+        }
+
+        return !HasChildrenFromForEventType(childType, eventType);
+    }
+
+    static bool HasChildrenFromForEventType(Type childType, Type eventType)
+    {
+        var primaryConstructor = childType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        if (primaryConstructor?.GetParameters().Any(parameter => parameter.GetCustomAttributes().Any(attr => IsChildrenFromAttributeForEventType(attr, eventType))) == true)
+        {
+            return true;
+        }
+
+        return childType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Any(property => property.GetCustomAttributes().Any(attr => IsChildrenFromAttributeForEventType(attr, eventType)));
+    }
+
+    static bool IsChildrenFromAttributeForEventType(Attribute attribute, Type eventType) =>
+        attribute.GetType().IsGenericType &&
+        attribute.GetType().GetGenericTypeDefinition() == typeof(ChildrenFromAttribute<>) &&
+        attribute.GetType().GetGenericArguments()[0] == eventType;
 
     static Type? GetChildType(Type propertyType)
     {

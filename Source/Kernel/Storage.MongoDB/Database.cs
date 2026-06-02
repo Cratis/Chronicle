@@ -35,7 +35,10 @@ public class Database : IDatabase
 
         var url = new MongoUrl(mongoDBOptions.Value.Server);
         var settings = MongoClientSettings.FromUrl(url);
-        settings.DirectConnection = mongoDBOptions.Value.DirectConnection;
+        if (mongoDBOptions.Value.DirectConnection == true)
+        {
+            settings.DirectConnection = true;
+        }
         var client = clientManager.GetClientFor(settings);
         _database = client.GetDatabase(WellKnownDatabaseNames.Chronicle);
         _clientManager = clientManager;
@@ -77,9 +80,12 @@ public class Database : IDatabase
         var databaseName = (@namespace == EventStoreNamespaceName.Default) ? $"{eventStore}" : $"{eventStore}+{@namespace}";
         var urlBuilder = new MongoUrlBuilder(_mongoDBOptions.Value.Server)
         {
-            DatabaseName = databaseName,
-            DirectConnection = _mongoDBOptions.Value.DirectConnection
+            DatabaseName = databaseName
         };
+        if (_mongoDBOptions.Value.DirectConnection == true)
+        {
+            urlBuilder.DirectConnection = true;
+        }
 
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = _clientManager.GetClientFor(settings);

@@ -13,10 +13,13 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
+using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
 using KernelSequenceConcepts = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences;
 
@@ -130,6 +133,7 @@ public class EventScenario(
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
+        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
@@ -140,6 +144,7 @@ public class EventScenario(
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
             constraintsStorage,
+            closedStreamsStorage,
             identityStorage,
             eventTypesStorage);
 
@@ -152,9 +157,14 @@ public class EventScenario(
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
+        var eventComplianceHelper = new KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper(
+            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()));
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
+            eventComplianceHelper,
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

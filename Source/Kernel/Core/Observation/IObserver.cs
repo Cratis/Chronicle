@@ -43,6 +43,16 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber);
 
     /// <summary>
+    /// Report a batch of events that have been successfully handled for a partition.
+    /// Increments both the aggregate and per-event-type handled event counts, as well as
+    /// the per-partition breakdown used to subtract counts when a partition is replayed.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition that handled the events.</param>
+    /// <param name="handledEvents">The events that were successfully handled.</param>
+    /// <returns>Awaitable task.</returns>
+    Task ReportHandledEvents(Key partition, IEnumerable<AppendedEvent> handledEvents);
+
+    /// <summary>
     /// Get the subscription for the observer.
     /// </summary>
     /// <returns>Tbe <see cref="ObserverSubscription"/>.</returns>
@@ -81,6 +91,22 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
         object? subscriberArgs = default,
         bool isReplayable = true,
         ObserverFilters? filters = default)
+        where TObserverSubscriber : IObserverSubscriber;
+
+    /// <summary>
+    /// Subscribe to all event types in the observer.
+    /// </summary>
+    /// <typeparam name="TObserverSubscriber">Type of <see cref="IObserverSubscriber"/> to subscribe.</typeparam>
+    /// <param name="type"><see cref="ObserverType"/>.</param>
+    /// <param name="siloAddress"><see cref="SiloAddress"/> the subscriber is connected to.</param>
+    /// <param name="subscriberArgs">Optional arguments associated with the subscription.</param>
+    /// <param name="isReplayable">Whether the observer supports replay scenarios. Defaults to true.</param>
+    /// <returns>Awaitable task.</returns>
+    Task SubscribeToAllEvents<TObserverSubscriber>(
+        ObserverType type,
+        SiloAddress siloAddress,
+        object? subscriberArgs = default,
+        bool isReplayable = true)
         where TObserverSubscriber : IObserverSubscriber;
 
     /// <summary>
@@ -168,11 +194,24 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task<bool> HasFailedPartitions();
 
     /// <summary>
+    /// Check if the observer is currently quarantined.
+    /// </summary>
+    /// <returns>True if observer is quarantined, false otherwise.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsObserverQuarantined();
+
+    /// <summary>
     /// Get the keys of all currently failed partitions.
     /// </summary>
     /// <returns>Collection of <see cref="Key"/> for failed partitions.</returns>
     [AlwaysInterleave]
     Task<IEnumerable<Key>> GetFailedPartitionKeys();
+
+    /// <summary>
+    /// Clears observer quarantine and resumes normal state evaluation.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    Task ClearObserverQuarantine();
 
     /// <summary>
     /// Catch up the observer.

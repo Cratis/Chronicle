@@ -7,6 +7,7 @@ TypeScript gRPC contracts for Chronicle with full type safety and IDE support.
 - **Promise-based API**: Modern async/await support for all unary RPC calls
 - **AsyncIterable Streams**: Server streaming with `AsyncIterable` for easy iteration
 - **Full Type Safety**: Strongly-typed clients and message types generated from proto definitions
+- **64-bit Safety**: Proto `int64`/`uint64` values are represented as `bigint`
 - **Zero Wrapper Code**: Direct client method calls without manual Promise wrapping
 
 ## Installation

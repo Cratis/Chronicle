@@ -26,6 +26,9 @@ Chronicle Server loads configuration from a `chronicle.json` file in the applica
         "exponentialBackoffDelayFactor": 2,
         "maximumBackoffDelay": 600
     },
+    "readModels": {
+        "replayedVersionsToKeep": 1
+    },
     "events": {
         "queues": 8
     },
@@ -52,7 +55,7 @@ Environment variables can override any of these values. See [Configuration Prece
 | features | Feature toggles for API, Workbench, and OAuth authority |
 | storage | Storage provider configuration |
 | observers | Retry and timeout settings for observers |
+| readModels | Replay retention settings for replay-generated read model versions |
 | events | Event queue configuration |
 | authentication | Authentication and default admin settings |
 | identityProvider | Optional internal identity provider certificate settings |
-

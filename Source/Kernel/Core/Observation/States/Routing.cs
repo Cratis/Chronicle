@@ -35,7 +35,8 @@ public class Routing(
     {
         typeof(Disconnected),
         typeof(Replay),
-        typeof(Observing)
+        typeof(Observing),
+        typeof(CatchingUpInFlight)
     }.ToImmutableList();
 
     /// <inheritdoc/>
@@ -58,6 +59,10 @@ public class Routing(
         logger.Entering();
 
         _tailEventSequenceNumber = await eventSequence.GetTailSequenceNumber();
+        if (_tailEventSequenceNumber.IsActualValue && (!state.TailEventSequenceNumber.IsActualValue || state.TailEventSequenceNumber < _tailEventSequenceNumber))
+        {
+            state = state with { TailEventSequenceNumber = _tailEventSequenceNumber };
+        }
 
         // First-time subscription after state reset: start from beginning so existing events are not skipped.
         // NextEventSequenceNumber is Unavailable when the observer grain reloaded state from an empty DB.

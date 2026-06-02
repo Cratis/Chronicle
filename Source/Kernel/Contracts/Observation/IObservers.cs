@@ -39,6 +39,23 @@ public interface IObservers
     [Operation]
     Task RetryPartition(RetryPartitionRequest request, CallContext callContext = default);
     /// <summary>
+    /// Clear quarantine for an observer.
+    /// </summary>
+    /// <param name="command">The clear quarantine command.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default);
+
+    /// <summary>
+    /// Get the current details of an observer.
+    /// </summary>
+    /// <param name="request">The <see cref="GetObserverInformationRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="ObserverInformation"/>.</returns>
+    Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default);
+
+    /// <summary>
     /// Executes the AllObservers query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -54,6 +71,35 @@ public interface IObservers
     /// <returns>The query result.</returns>
     [Operation]
     IObservable<IEnumerable<ObserverInformationResponse>> ObserveObservers(ObserveObserversRequest request, CallContext callContext = default);
+
+    /// <summary>
+    /// Get all observers.
+    /// </summary>
+    /// <param name="request">The <see cref="AllObserversRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ObserverInformation"/>.</returns>
+    [Operation]
+    Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Waits for all affected observers to complete for a specific append tail sequence number.
+    /// </summary>
+    /// <param name="request">The <see cref="WaitForObserverCompletionRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A <see cref="WaitForObserverCompletionResponse"/> describing completion and failures.</returns>
+    /// <remarks>
+    /// The wait is bounded by the cancellation token on <paramref name="context"/>.
+    /// </remarks>
+    Task<WaitForObserverCompletionResponse> WaitForCompletion(WaitForObserverCompletionRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Get all replayable observers for specific event types.
+    /// </summary>
+    /// <param name="request">The <see cref="GetReplayableObserversForEventTypesRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>A collection of <see cref="ObserverInformation"/> for observers that support replay and observe the given event types.</returns>
+    [Operation]
+    Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default);
 }
 
 /// <summary>

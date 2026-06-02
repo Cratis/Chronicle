@@ -16,12 +16,17 @@ public class ObserverState
     /// Gets or sets the unique identifier for the observer.
     /// </summary>
     [Key]
-    public required string Id { get; set; }
+    public required ObserverId Id { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
     /// </summary>
     public ulong LastHandledEventSequenceNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tail sequence number for the observer.
+    /// </summary>
+    public ulong TailEventSequenceNumber { get; set; } = ulong.MaxValue;
 
     /// <summary>
     /// Gets or sets the running state of the observer.
@@ -47,7 +52,17 @@ public class ObserverState
     public IEnumerable<FailedPartition> FailedPartitions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the count of failed partitions for the observer.
+    /// </summary>
+    public int FailedPartitionCount { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the observer is currently replaying events.
     /// </summary>
     public bool IsReplaying { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the observer subscribes to all event types.
+    /// </summary>
+    public bool SubscribesToAllEvents { get; set; }
 }

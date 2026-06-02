@@ -42,7 +42,7 @@ public class and_authentication_fails_then_succeeds_on_retry : given.an_authenti
         };
     }
 
-    async Task Because() => _result = _interceptor.AsyncUnaryCall(_request, _context, _continuation);
+    void Because() => _result = _interceptor.AsyncUnaryCall(_request, _context, _continuation);
 
     [Fact] async Task should_call_refresh_on_token_provider() => await _tokenProvider.Received(1).Refresh(Arg.Any<CancellationToken>());
     [Fact] async Task should_return_successful_response() => (await _result.ResponseAsync).Message.ShouldEqual("Success");

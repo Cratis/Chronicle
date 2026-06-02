@@ -36,10 +36,10 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     public async Task<Observation.ObserverDefinition> Get(ObserverId id)
     {
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Observers
+        var entity = await scope.DbContext.Observers
             .Where(observer => observer.Id == id)
-            .Select(observer => observer.ToKernel())
-            .FirstOrDefaultAsync() ?? Observation.ObserverDefinition.Empty;
+            .FirstOrDefaultAsync();
+        return entity?.ToKernel() ?? Observation.ObserverDefinition.Empty;
     }
 
     /// <inheritdoc/>

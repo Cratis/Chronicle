@@ -175,6 +175,12 @@ public class ReadModels(
             throw new UnknownReadModel(readModelType);
         }
 
+        if (reducers.HasFor(readModelType))
+        {
+            var reducedInstance = await reducers.GetInstanceById(readModelType, key);
+            return reducedInstance ?? throw new InvalidOperationException($"Read model returned null for type '{readModelType.Name}' with key '{key.Value}'");
+        }
+
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
 
         var request = new GetInstanceByKeyRequest
@@ -197,10 +203,16 @@ public class ReadModels(
     {
         var readModelType = typeof(TReadModel);
 
-        // Validate that the read model is known by projections (immediate projections only)
-        if (!projections.HasFor(readModelType))
+        // Validate that the read model is known by projections or reducers
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
         {
             throw new UnknownReadModel(readModelType);
+        }
+
+        if (reducers.HasFor(readModelType))
+        {
+            var reducerInstances = await reducers.GetInstances(readModelType, eventCount);
+            return reducerInstances.Cast<TReadModel>();
         }
 
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
@@ -347,7 +359,7 @@ public class ReadModels(
             return instance;
         }
 
-        return await Release(subject, instance);
+        return await ReleaseWithSubject(subject, instance);
     }
 
     /// <inheritdoc/>
@@ -362,8 +374,7 @@ public class ReadModels(
         return result;
     }
 
-    /// <inheritdoc/>
-    public async Task<TReadModel> Release<TReadModel>(Subject subject, TReadModel instance)
+    async Task<TReadModel> ReleaseWithSubject<TReadModel>(Subject subject, TReadModel instance)
     {
         var schema = schemaGenerator.Generate(typeof(TReadModel));
         if (!schema.HasComplianceMetadata())

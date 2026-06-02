@@ -10,11 +10,13 @@ using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Serialization;
+using Cratis.Traces;
 using KernelCore::Cratis.Chronicle.Diagnostics.OpenTelemetry;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Clients;
 using KernelCore::Cratis.Chronicle.Observation.Reducers.Clients;
@@ -88,8 +90,8 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                 // Keep every host-level Chronicle client registration pointed at the
                 // shared test event store so reconnect does not create a second unnamed
                 // event store with its own failing OnConnected registration.
-                services.PostConfigure<Cratis.Chronicle.ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
-                services.PostConfigure<Microsoft.AspNetCore.Builder.ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleClientOptions>(options => options.EventStore = Constants.EventStore);
+                services.PostConfigure<ChronicleAspNetCoreOptions>(options => options.EventStore = Constants.EventStore);
 
                 // Register test services directly in DI so the first test works normally,
                 // and also capture them in the MutableServiceRegistry so subsequent tests
@@ -133,12 +135,13 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
         var siloPort = GetFreePort();
         var gatewayPort = GetFreePort();
+        var clusterId = Guid.NewGuid().ToString("N");
 
         var delegatingProvider = DelegatingClientArtifactsProvider.GetOrCreate(_fixture);
 
         builder.UseOrleans(silo =>
             {
-                silo.UseLocalhostClustering(siloPort, gatewayPort);
+                silo.UseLocalhostClustering(siloPort, gatewayPort, serviceId: clusterId, clusterId: clusterId);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ChronicleOrleansInProcessWebApplicationFactory<TStartup>).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -186,6 +189,23 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         sp.GetRequiredService<ILogger<IdentityProvider>>()));
                     services.AddSingleton(Globals.JsonSerializerOptions);
                     services.AddHttpContextAccessor();
+                    services.AddNamedActivitySource(ClientActivity.SourceName);
+                    for (var index = services.Count - 1; index >= 0; index--)
+                    {
+                        var descriptor = services[index];
+                        if (descriptor.ServiceType == typeof(IActivitySource<>) &&
+                            Equals(descriptor.ServiceKey, ClientActivity.SourceName))
+                        {
+                            services.RemoveAt(index);
+                            break;
+                        }
+                    }
+                    services.AddKeyedSingleton<IActivitySource<EventSequences.EventSequence>>(ClientActivity.SourceName, (sp, key) =>
+                        new ActivitySource<EventSequences.EventSequence>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
+                    services.AddKeyedSingleton<IActivitySource<Cratis.Chronicle.Reactors.Reactors>>(ClientActivity.SourceName, (sp, key) =>
+                        new ActivitySource<Cratis.Chronicle.Reactors.Reactors>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
+                    services.AddKeyedSingleton<IActivitySource<Cratis.Chronicle.Reducers.Reducers>>(ClientActivity.SourceName, (sp, key) =>
+                        new ActivitySource<Cratis.Chronicle.Reducers.Reducers>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
 
                     services.AddSingleton<IChronicleClient>(sp =>
                     {

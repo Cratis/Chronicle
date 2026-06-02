@@ -52,6 +52,12 @@ public class ChronicleOptions
     public Storage Storage { get; init; } = new Storage();
 
     /// <summary>
+    /// Gets or inits the compliance configuration.
+    /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
+    /// </summary>
+    public Compliance Compliance { get; init; } = new Compliance();
+
+    /// <summary>
     /// Gets the observers configuration.
     /// </summary>
     public Observers Observers { get; init; } = new Observers();
@@ -60,6 +66,11 @@ public class ChronicleOptions
     /// Gets the jobs configuration.
     /// </summary>
     public Jobs Jobs { get; init; } = new Jobs();
+
+    /// <summary>
+    /// Gets the read models configuration.
+    /// </summary>
+    public ReadModels ReadModels { get; init; } = new ReadModels();
 
     /// <summary>
     /// Gets the authentication configuration.

@@ -33,9 +33,12 @@ public class EventStoreDatabase : IEventStoreDatabase
     {
         var urlBuilder = new MongoUrlBuilder(mongoDBOptions.Value.Server)
         {
-            DatabaseName = eventStore.Value,
-            DirectConnection = mongoDBOptions.Value.DirectConnection
+            DatabaseName = eventStore.Value
         };
+        if (mongoDBOptions.Value.DirectConnection == true)
+        {
+            urlBuilder.DirectConnection = true;
+        }
 
         var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
         var client = clientManager.GetClientFor(settings);

@@ -168,9 +168,16 @@ public abstract class ChronicleFixture : IChronicleFixture
                 await Task.Delay(2000);
             }
 
-            var logs = await container.GetLogsAsync();
-            Console.WriteLine(logs.Stdout);
-            Console.WriteLine(logs.Stderr);
+            try
+            {
+                var logs = await container.GetLogsAsync();
+                Console.WriteLine(logs.Stdout);
+                Console.WriteLine(logs.Stderr);
+            }
+            catch (Exception logException)
+            {
+                Console.WriteLine($"Could not retrieve container logs: {logException.Message}");
+            }
         }
         while (failure is not null && ++retryCount < 10);
 

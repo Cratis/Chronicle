@@ -34,11 +34,10 @@ public class ReactorDefinitionsStorage(EventStoreName eventStore, IDatabase data
     public async Task<Concepts.Observation.Reactors.ReactorDefinition> Get(ReactorId id)
     {
         await using var scope = await database.EventStore(eventStore);
-        var reactor = await scope.DbContext.Reactors
-            .Where(reactor => reactor.Id == id)
-            .Select(reactor => reactor.ToKernel())
+        var entity = await scope.DbContext.Reactors
+            .Where(r => r.Id == id)
             .FirstOrDefaultAsync();
-        return reactor!;
+        return entity?.ToKernel()!;
     }
 
     /// <inheritdoc/>

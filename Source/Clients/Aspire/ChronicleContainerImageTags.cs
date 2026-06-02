@@ -29,6 +29,11 @@ public static class ChronicleContainerImageTags
     public const string DevelopmentTag = "latest-development";
 
     /// <summary>
+    /// Tag for the Chronicle slim development image (no embedded MongoDB).
+    /// </summary>
+    public const string DevelopmentSlimTag = "latest-development-slim";
+
+    /// <summary>
     /// Name of the gRPC endpoint.
     /// </summary>
     public const string GrpcEndpointName = "grpc";
