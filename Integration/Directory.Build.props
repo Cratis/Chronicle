@@ -14,6 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\Testing\Testing.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Clients\XUnit.Integration\XUnit.Integration.csproj" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)..\Source\Infrastructure\Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>

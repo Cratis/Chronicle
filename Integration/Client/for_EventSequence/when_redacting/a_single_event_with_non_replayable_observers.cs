@@ -1,0 +1,110 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
+using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reducers;
+using context = Cratis.Chronicle.Integration.for_EventSequence.when_redacting.a_single_event_with_non_replayable_observers.context;
+
+namespace Cratis.Chronicle.Integration.for_EventSequence.when_redacting;
+
+[Collection(ChronicleCollection.Name)]
+public class a_single_event_with_non_replayable_observers(context context) : Given<context>(context)
+{
+    public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    {
+        public EventSourceId EventSourceId { get; } = "some source";
+        public SomeEvent FirstEvent { get; private set; }
+        public AnotherEvent SecondEvent { get; private set; }
+        public SomeEvent ThirdEvent { get; private set; }
+        public ReactorState ReactorState { get; private set; }
+        public ReducerState ReducerState { get; private set; }
+        public SomeReactor Reactor { get; private set; }
+        public SomeReducer Reducer { get; private set; }
+        public NonReplayableReactor NonReplayableReactorInstance { get; private set; }
+        public ReactorState NonReplayableReactorState { get; private set; }
+
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(AnotherEvent)];
+        public override IEnumerable<Type> Reactors => [typeof(SomeReactor), typeof(NonReplayableReactor)];
+        public override IEnumerable<Type> Reducers => [typeof(SomeReducer)];
+
+        protected override void ConfigureServices(IServiceCollection services)
+        {
+            Reactor = new SomeReactor();
+            Reducer = new SomeReducer();
+            NonReplayableReactorInstance = new NonReplayableReactor();
+            services.AddSingleton(Reactor);
+            services.AddSingleton(Reducer);
+            services.AddSingleton(NonReplayableReactorInstance);
+        }
+
+        void Establish()
+        {
+            FirstEvent = new SomeEvent("first content");
+            SecondEvent = new AnotherEvent(42);
+            ThirdEvent = new SomeEvent("third content");
+        }
+
+        async Task Because()
+        {
+            var startupTimeout = TimeSpanFactory.FromSeconds(30);
+            var reactorHandler = EventStore.Reactors.GetHandlerFor<SomeReactor>();
+            var reducerHandler = EventStore.Reducers.GetHandlerFor<SomeReducer>();
+            var nonReplayableReactorHandler = EventStore.Reactors.GetHandlerFor<NonReplayableReactor>();
+
+            await reactorHandler.WaitTillSubscribed(startupTimeout);
+            await reducerHandler.WaitTillSubscribed(startupTimeout);
+            await nonReplayableReactorHandler.WaitTillSubscribed(startupTimeout);
+
+            await EventStore.EventLog.Append(EventSourceId, FirstEvent);
+            await EventStore.EventLog.Append(EventSourceId, SecondEvent);
+            var lastAppendResult = await EventStore.EventLog.Append(EventSourceId, ThirdEvent);
+
+            var lastAppendedSequenceNumber = lastAppendResult.SequenceNumber;
+
+            // Wait for all observers to process the appended events.
+            await reactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await reducerHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+            await nonReplayableReactorHandler.WaitTillReachesEventSequenceNumber(lastAppendedSequenceNumber, startupTimeout);
+
+            // Reset counters before redaction to measure replay.
+            Reactor.HandledEvents = 0;
+            Reducer.HandledEvents = 0;
+            NonReplayableReactorInstance.HandledEvents = 0;
+
+            // Redact the second event (sequence number 1).
+            await this.RedactEvent(EventSequenceNumber.First + 1, "test reason");
+
+            // Wait for replay jobs to complete.
+            await EventStore.Jobs.WaitForThereToBeNoJobs();
+
+            // Wait for replayable observers to finish processing the replay.
+            await Reactor.WaitTillHandledEventReaches(2, startupTimeout);
+            await Reducer.WaitTillHandledEventReaches(2, startupTimeout);
+
+            ReactorState = await reactorHandler.GetState();
+            ReducerState = await reducerHandler.GetState();
+            NonReplayableReactorState = await nonReplayableReactorHandler.GetState();
+        }
+    }
+
+    [Fact]
+    void should_have_replayed_reactor() => Context.Reactor.HandledEvents.ShouldBeGreaterThanOrEqual(2);
+
+    [Fact]
+    void should_have_replayed_reducer() => Context.Reducer.HandledEvents.ShouldBeGreaterThanOrEqual(2);
+
+    [Fact]
+    void should_not_have_replayed_non_replayable_reactor() => Context.NonReplayableReactorInstance.HandledEvents.ShouldEqual(0);
+
+    [Fact]
+    void should_have_reactor_in_active_state() => Context.ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_have_reducer_in_active_state() => Context.ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
+
+    [Fact]
+    void should_keep_non_replayable_reactor_in_active_state() => Context.NonReplayableReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
+}

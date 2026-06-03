@@ -21,6 +21,10 @@ public class EventSequenceMigrator(
     public Task EnsureTableMigrated(string tableName, EventSequenceDbContext context) =>
         tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
 
+    /// <inheritdoc/>
+    public void ClearMigrationCache(string connectionStringPrefix) =>
+        tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
     async Task CreateTable(EventSequenceDbContext context, string tableName)
     {
         logger.CreatingEventSequenceTable(tableName);
@@ -35,13 +39,14 @@ public class EventSequenceMigrator(
                 CorrelationId = table.StringColumn(migrationBuilder),
                 Causation = table.StringColumn(migrationBuilder),
                 CausedBy = table.StringColumn(migrationBuilder),
-                Type = table.StringColumn(migrationBuilder),
+                Type = table.StringColumn(migrationBuilder, maxLength: 200),
                 Occurred = table.Column<DateTimeOffset>(nullable: false),
-                EventSourceType = table.StringColumn(migrationBuilder),
-                EventSourceId = table.StringColumn(migrationBuilder),
-                EventStreamType = table.StringColumn(migrationBuilder),
-                EventStreamId = table.StringColumn(migrationBuilder),
+                EventSourceType = table.StringColumn(migrationBuilder, maxLength: 200),
+                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200),
+                EventStreamType = table.StringColumn(migrationBuilder, maxLength: 200),
+                EventStreamId = table.StringColumn(migrationBuilder, maxLength: 200),
                 Content = table.StringColumn(migrationBuilder),
+                ContentHashes = table.StringColumn(migrationBuilder),
                 Compensations = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
                 Subject = table.StringColumn(migrationBuilder, nullable: true)
             },

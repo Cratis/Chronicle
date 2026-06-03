@@ -87,6 +87,38 @@ public class ChronicleOptions(
     public int ConnectTimeout { get; set; } = connectTimeout;
 
     /// <summary>
+    /// Gets or sets a value indicating whether to skip the keep-alive handshake on connect.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The default Chronicle client opens a bidirectional keep-alive stream right after connect.
+    /// A background watchdog measures the time since the last server ping and, if it exceeds
+    /// five seconds, treats the channel as dead — disposes the underlying gRPC channel, raises
+    /// <see cref="IConnectionLifecycle.Disconnected"/>, and asks the connection to reconnect.
+    /// This is exactly what a long-lived client wants: liveness detection that survives transient
+    /// network glitches, kernel restarts, and silo reactivation.
+    /// </para>
+    /// <para>
+    /// For short-lived, one-shot callers the watchdog is a hazard rather than a feature. A
+    /// development-only kernel reset (<c>IServer.ResetKernelState</c>), a CLI that issues a
+    /// single command, or any other client whose lifetime is a single RPC does not benefit from
+    /// liveness detection and is actively harmed by it: a single RPC that takes longer than the
+    /// five-second window (for example a SQL backend wipe that has to enumerate, connect to, and
+    /// drop tables across every event store / namespace / read-model database) trips the
+    /// watchdog mid-call, disposes the channel out from under the in-flight call, and surfaces
+    /// as <see cref="ObjectDisposedException"/> on <c>Grpc.Net.Client.GrpcChannel</c>.
+    /// </para>
+    /// <para>
+    /// Set this to <see langword="true"/> when the client will issue at most a handful of RPCs
+    /// before being disposed, or when the longest RPC the client will issue can exceed five
+    /// seconds of server-side processing. With keep-alive skipped the lifecycle is marked
+    /// connected immediately after the gRPC channel is established, the watchdog is never
+    /// started, and the channel survives for the full lifetime of the client.
+    /// </para>
+    /// </remarks>
+    public bool SkipKeepAlive { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum receive message size in bytes for gRPC messages. Defaults to 100 MB.
     /// </summary>
     public int? MaxReceiveMessageSize { get; set; } = 100 * 1024 * 1024;

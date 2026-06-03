@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Types;
+
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
@@ -8,7 +10,8 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// reactor return values to all registered <see cref="IReactorSideEffectHandler"/> instances.
 /// </summary>
 /// <param name="handlers">All registered <see cref="IReactorSideEffectHandler"/> instances.</param>
-public class ReactorSideEffectHandlers(IEnumerable<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers
+[Singleton]
+public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers
 {
     /// <inheritdoc/>
     public bool CanHandle(ReactorContext reactorContext, object value) =>

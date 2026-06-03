@@ -20,6 +20,10 @@ public class UniqueConstraintMigrator(
     public Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context) =>
         tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
 
+    /// <inheritdoc/>
+    public void ClearMigrationCache(string connectionStringPrefix) =>
+        tableMigrator.ClearMigrationCacheForConnectionString(connectionStringPrefix);
+
     async Task CreateTable(UniqueConstraintDbContext context, string tableName)
     {
         logger.CreatingUniqueConstraintTable(tableName);
@@ -30,9 +34,9 @@ public class UniqueConstraintMigrator(
             name: tableName,
             columns: table => new
             {
-                EventSourceId = table.StringColumn(migrationBuilder),
-                Value = table.StringColumn(migrationBuilder),
-                SequenceNumber = table.Column<decimal>(nullable: false)
+                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Value = table.StringColumn(migrationBuilder, maxLength: 200),
+                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false)
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.EventSourceId));
 

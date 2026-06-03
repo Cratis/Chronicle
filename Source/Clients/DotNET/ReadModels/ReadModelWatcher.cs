@@ -18,6 +18,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly JsonSerializerOptions _jsonSerializerOptions;
+    TaskCompletionSource _subscribedTcs;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
     bool _started;
@@ -31,6 +32,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     public ReadModelWatcher(IEventStore eventStore, Action stopped, JsonSerializerOptions jsonSerializerOptions)
     {
         _observable = new Subject<ReadModelChangeset<TReadModel>>();
+        _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         _eventStore = eventStore;
         _stopped = stopped;
@@ -40,6 +42,9 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
 
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Observable => _observable;
+
+    /// <inheritdoc/>
+    public Task Subscribed => _subscribedTcs.Task;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -59,6 +64,10 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         }
 
         _started = true;
+        if (_subscribedTcs.Task.IsCompleted)
+        {
+            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
 
         var request = new ContractReadModels.WatchRequest
         {
@@ -70,6 +79,12 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
         _serverObservable.Subscribe(changeset =>
         {
+            if (changeset.Subscribed)
+            {
+                _subscribedTcs.TrySetResult();
+                return;
+            }
+
             var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
             _observable.OnNext(new ReadModelChangeset<TReadModel>(
                 changeset.Namespace,

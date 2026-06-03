@@ -113,7 +113,7 @@ public class ReactorHandler(
     public async Task<ReactorState> GetState()
     {
         var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
-        var observers = await servicesAccessor.Services.Observers.AllObservers(new Contracts.Observation.AllObserversRequest
+        var observers = await servicesAccessor.Services.Observers.GetObservers(new Contracts.Observation.AllObserversRequest
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace

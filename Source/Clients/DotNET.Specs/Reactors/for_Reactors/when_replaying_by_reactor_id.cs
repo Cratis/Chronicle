@@ -11,7 +11,7 @@ public class when_replaying_by_reactor_id : given.all_dependencies
 
     void Establish()
     {
-        _observers.ReplayObserver(Arg.Any<ReplayObserverRequest>()).Returns(Task.CompletedTask);
+        _observers.Replay(Arg.Any<Replay>()).Returns(new ReplayResponse { JobId = Guid.NewGuid().ToString() });
     }
 
     async Task Because() => await _reactors.Replay(_reactorId);
@@ -20,7 +20,7 @@ public class when_replaying_by_reactor_id : given.all_dependencies
     void should_call_replay_with_correct_parameters() =>
         _observers
             .Received(1)
-            .ReplayObserver(Arg.Is<ReplayObserverRequest>(r =>
+            .Replay(Arg.Is<Replay>(r =>
                 r.EventStore == _eventStore.Name.Value &&
                 r.Namespace == _eventStore.Namespace.Value &&
                 r.ObserverId == _reactorId.Value &&

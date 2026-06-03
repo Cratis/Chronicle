@@ -22,8 +22,8 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ProjectionFutures,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
-                ProjectionId = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                ProjectionId = table.StringColumn(migrationBuilder, maxLength: 200),
                 EventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
                 EventTypeId = table.StringColumn(migrationBuilder),
                 EventTypeGeneration = table.NumberColumn<uint>(migrationBuilder),

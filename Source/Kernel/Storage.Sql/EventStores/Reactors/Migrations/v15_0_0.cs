@@ -22,11 +22,13 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReactorDefinitions,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 EventSequenceId = table.StringColumn(migrationBuilder),
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
                 IsReplayable = table.BoolColumn(migrationBuilder),
+                Tags = table.StringColumn(migrationBuilder, nullable: true),
+                Filters = table.StringColumn(migrationBuilder, nullable: true),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReactorDefinitions}", x => x.Id));
     }

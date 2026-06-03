@@ -96,6 +96,9 @@ public class Storage(
         return _eventStores[eventStore] = eventStoreStorage;
     }
 
+    /// <inheritdoc/>
+    public void Clear() => _eventStores.Clear();
+
     void ThrowIfEventStoreNameIsInvalid(EventStoreName eventStore)
     {
         if (eventStore is null || string.IsNullOrWhiteSpace(eventStore.Value))

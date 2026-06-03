@@ -7,7 +7,6 @@ using Cratis.Chronicle;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
-using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
@@ -123,10 +122,6 @@ internal static class ChronicleClientServiceCollectionExtensions
         }
 
         services.AddKeyedSingleton(typeof(IActivitySource<>), ClientActivity.SourceName, typeof(KeyedActivitySource<>));
-
-        services.AddSingleton<IReactorSideEffectHandler, EventResultHandler>();
-        services.AddSingleton<IReactorSideEffectHandler, EventsResultHandler>();
-        services.AddSingleton<IReactorSideEffectHandlers, ReactorSideEffectHandlers>();
 
         return services;
     }

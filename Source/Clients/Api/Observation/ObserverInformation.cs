@@ -49,7 +49,7 @@ public record ObserverInformation(
         string eventStore,
         string @namespace,
         IObservers observers) =>
-        (await observers.AllObservers(new() { EventStore = eventStore, Namespace = @namespace })).ToApi();
+        (await observers.GetObservers(new() { EventStore = eventStore, Namespace = @namespace })).ToApi();
 
     /// <summary>
     /// Get and observe all observers for an event store and namespace.

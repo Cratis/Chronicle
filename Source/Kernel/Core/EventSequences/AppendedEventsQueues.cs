@@ -16,7 +16,6 @@ namespace Cratis.Chronicle.EventSequences;
 public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
-    int _nextQueue;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -33,12 +32,15 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     /// <inheritdoc/>
     public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
     {
-        var currentQueue = _nextQueue % _queues.Length;
-        var subscription = new AppendedEventsQueueSubscription(observerKey, currentQueue);
-        await _queues[currentQueue].Subscribe(observerKey, eventTypes, filters);
-
-        _nextQueue++;
-
+        // Deterministic hash-based queue assignment ensures the same observer always lands on
+        // the same queue across subscribe/unsubscribe cycles. The previous round-robin counter
+        // moved an observer to a different queue every time the Observing state was re-entered
+        // (e.g. after a catch-up cycle), leaving brief windows where dispatched events landed
+        // on a queue the observer was no longer subscribed to — surfacing as silently dropped
+        // events for projections that aggregate across event sources.
+        var queueIndex = GetQueueIndexFor(observerKey);
+        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
+        await _queues[queueIndex].Subscribe(observerKey, eventTypes, filters);
         return subscription;
     }
 
@@ -46,5 +48,13 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     public async Task Unsubscribe(AppendedEventsQueueSubscription subscription)
     {
         await _queues[subscription.Queue].Unsubscribe(subscription.ObserverKey);
+    }
+
+    int GetQueueIndexFor(ObserverKey observerKey)
+    {
+        // Use the observer identifier as the hash input — it is stable for a given observer
+        // and produces a deterministic queue assignment.
+        var hash = observerKey.ObserverId.Value.GetHashCode(StringComparison.Ordinal);
+        return (int)((uint)hash % (uint)_queues.Length);
     }
 }

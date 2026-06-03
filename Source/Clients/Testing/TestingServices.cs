@@ -160,14 +160,13 @@ internal sealed class TestingServices(
         new KernelApplicationsService(grainFactory, storage));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!));
+        new KernelServerService(null!, null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
         new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
 
     readonly Lazy<IReadModels> _readModels = new(() =>
         new KernelReadModelsService(
-            null!,
             grainFactory,
             storage,
             new ExpandoObjectConverter(new TypeFormats()),
@@ -242,4 +241,12 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IServer Server => _server.Value;
+
+    sealed class EmptyInstancesOf<T> : IInstancesOf<T>
+        where T : class
+    {
+        public IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

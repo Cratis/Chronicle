@@ -19,6 +19,11 @@ public class ConstraintsStorage(EventStoreName eventStore, IDatabase database) :
     public async Task<IEnumerable<IConstraintDefinition>> GetDefinitions()
     {
         await using var scope = await database.EventStore(eventStore);
+
+        // Pull rows then group/order client-side: ulong is not translatable in ORDER BY on the
+        // SQLite provider, and the version history per name is small enough that materializing
+        // the full table is fine. Translating via cast would diverge between providers and
+        // narrowing Version to a signed integer would silently shift behavior in the kernel.
         var constraints = await scope.DbContext.Constraints.ToListAsync();
         return constraints
             .GroupBy(_ => _.Name)
@@ -31,10 +36,12 @@ public class ConstraintsStorage(EventStoreName eventStore, IDatabase database) :
     public async Task SaveDefinition(IConstraintDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);
-        var existing = await scope.DbContext.Constraints
+
+        // Materialize before sorting — SQLite EF cannot translate OrderByDescending on a ulong.
+        var existingByName = await scope.DbContext.Constraints
             .Where(_ => _.Name == definition.Name.Value)
-            .OrderByDescending(_ => _.Version)
-            .FirstOrDefaultAsync();
+            .ToListAsync();
+        var existing = existingByName.OrderByDescending(_ => _.Version).FirstOrDefault();
 
         if (existing?.ToKernel().Equals(definition) == true)
         {

@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Observation.Replaying;
@@ -128,16 +127,11 @@ public class Reducer(
                 // Grain activation may already be invalid during silo shutdown.
             }
 
-            var subscription = await observer.GetSubscription();
-            if (subscription.IsSubscribed &&
-                subscription.Arguments is ConnectedClient connectedClient &&
-                connectedClient.ConnectionId != _observerKey!.ConnectionId)
-            {
-                _subscribed = false;
-                return;
-            }
-
-            await observer.Unsubscribe();
+            // Atomic check-and-unsubscribe inside the Observer grain. Doing the check (GetSubscription)
+            // and the action (Unsubscribe) as two separate grain calls would race against a new client's
+            // Subscribe that lands between them — the old client's Unsubscribe would then destroy the
+            // new client's subscription.
+            await observer.UnsubscribeIfMatchesClient(_observerKey!.ConnectionId);
             _subscribed = false;
         }
     }

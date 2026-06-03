@@ -63,57 +63,103 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var connection = Services.GetRequiredService<IChronicleConnection>();
         await connection.Lifecycle.Disconnected();
 
-        // 2. Deactivate all grains so stale in-memory state (e.g. LastHandledEventSequenceNumber)
-        //    is discarded. Now that streams are torn down, grains have no active subscriptions
-        //    and can be deactivated.
-        await DeactivateAllGrains();
+        // 1b. Evict every cached IEventStore held by the shared IChronicleClient so the next
+        //     Connect() does not fan out a RegisterAll for every event-store/namespace combination
+        //     ever created by prior test classes. Without this, pairs of cached EventStores that
+        //     share an event-store name (different namespaces — e.g. sourceTenantA/sourceTenantB)
+        //     each invoke EventStores.Ensure(name) concurrently and race on the same kernel
+        //     Reactors row.
+        var chronicleClient = Services.GetRequiredService<IChronicleClient>();
+        chronicleClient.EvictEventStores();
 
-        // 2b. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
-        //     service whose cache persists across test classes. Without this, a test that registers
-        //     ProjectionX can leave a stale pipeline in the cache that is then reused — with the
-        //     wrong schema or Sink state — when a later test registers a different projection that
-        //     happens to resolve to the same pipeline key.
+        // 1c. EvictEventStores detached the RegisterAll OnConnected handler from the cached
+        //     IEventStore singleton (the one DI returns and the test specs use). The Chronicle
+        //     client cache is cleared but the singleton instance is reused — without re-attaching
+        //     the handler, future client-initiated reconnects (e.g. the test body calling
+        //     Disconnected()/Connect() to exercise reconnect behavior) would not re-register
+        //     reactors and reducers, leaving the kernel observer subscribed to a stale
+        //     ConnectionId. Subsequent events would route to the now-disconnected client and
+        //     the observer would transition to Disconnected when the subscriber returns
+        //     ObserverSubscriberState.Disconnected.
+        //
+        //     The `-=` before `+=` is critical: EvictEventStores removes the constructor's
+        //     attachment, but on subsequent boundaries the cache is already empty so it removes
+        //     nothing. Each previous boundary already appended via this code path; without the
+        //     prior subtraction the count grows by one per test and RegisterAll runs once per
+        //     prior boundary on every reconnect — re-running EventTypes.Register,
+        //     Constraints.Register and Seeding.Register N times and corrupting test state.
+        var sharedEventStore = Services.GetRequiredService<IEventStore>();
+        connection.Lifecycle.OnConnected -= sharedEventStore.RegisterAll;
+        connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
+
+        // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
+        //    service whose cache persists across test classes. Without this, a test that registers
+        //    ProjectionX can leave a stale pipeline in the cache that is then reused — with the
+        //    wrong schema or Sink state — when a later test registers a different projection that
+        //    happens to resolve to the same pipeline key.
         Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
 
-        // 3. Remove all databases again. The previous test's DisposeAsync already dropped
-        //    databases, but StateMachine.OnDeactivateAsync calls WriteStateAsync(), which
-        //    auto-creates MongoDB databases with stale grain state. A second cleanup ensures
-        //    grains start with a clean slate when they reactivate during RegisterAll.
+        // 3. Wipe storage BEFORE deactivating grains. The order matters: wiping first truncates
+        //    the OrleansReminders table so reminders cannot re-activate grains while we are
+        //    deactivating, and it also truncates every Chronicle table so any in-flight grain
+        //    that writes via OnDeactivateAsync (step 4) writes into a known-empty database. If
+        //    we deactivated first, reminders would race the wipe by re-activating grains
+        //    (notably EventStoreSubscriptionsManager, which schedules a 1-minute reminder),
+        //    leaving their in-memory State populated from the previous test class — and that
+        //    state would then be re-persisted on next WriteStateAsync, recreating rows the
+        //    wipe was supposed to remove.
+        //
+        //    For out-of-process mode this resets the OOP container's backing store via gRPC
+        //    (the OOP-container-side ICanPerformKernelStateReset wipes the kernel's files /
+        //    tables AND invalidates its per-context migration cache atomically). For the
+        //    in-process silo's SQL storage, the per-test fixture override invokes
+        //    IDatabase.Wipe() on the test silo's IDatabase so the same atomic wipe + cache
+        //    invalidation happens on this side too.
         await ChronicleFixture.RemoveAllDatabases();
+        await WipeInProcessStorage();
 
-        // 3b. Re-bootstrap the kernel reactors for the system event store. The startup task
-        //     that normally does this has been removed from the test silo (it deadlocks when
-        //     PatchManager grain can't activate during silo startup). Since DB was wiped, the
-        //     system Namespaces grain and ReactorsReactor are gone. Without this, events like
-        //     EventStoreAdded/NamespaceAdded won't be processed and webhook/subscription
-        //     definitions never get saved.
+        // 4. Deactivate all grains so stale in-memory state (e.g. State.Subscriptions held
+        //    by EventStoreSubscriptionsManager) is discarded. With the OrleansReminders table
+        //    truncated in step 3, no reminder can re-activate a grain we are trying to deactivate.
+        await DeactivateAllGrains();
+
+        // 4a. Re-wipe storage. Grain deactivation runs OnDeactivateAsync which writes any dirty
+        //     in-memory state back to storage — so a [KeepAlive] grain that was active when the
+        //     previous test finished (e.g. an Observer grain at NextEventSequenceNumber=2) will
+        //     re-populate its row in the freshly-wiped database during deactivation. The next
+        //     test then reads that stale row in Observer.Subscribe -> ReadStateAsync and
+        //     silently filters out every appended event whose sequence number is below the
+        //     stored NextEventSequenceNumber. Wiping again here catches anything written
+        //     between the first wipe and the deactivation cycle.
+        await ChronicleFixture.RemoveAllDatabases();
+        await WipeInProcessStorage();
+
+        // 4b. Evict the per-event-store storage cache so the next access reconstructs the
+        //     namespace storage and its sinks from scratch. Sinks retain in-memory bookkeeping
+        //     (bulk-mode flag, in-replay flag on the underlying collection helper, per-key
+        //     state caches used during bulk writes) that the database wipe does not clear; a
+        //     sink left mid-replay by a previous test would silently route the next test's
+        //     writes into the temporary replay collection while the test reads from the real
+        //     one. Doing this *after* DeactivateAllGrains is critical: while a subscriber grain
+        //     is still active it holds a reference to its cached pipeline, which holds a
+        //     reference to the old sink instance, and continues to write through the stale
+        //     reference — evict before deactivation and the writes go to an orphaned sink that
+        //     the new reader never sees.
+        Services.GetRequiredService<IStorage>().Clear();
+
+        // 3b. Re-bootstrap kernel reactors for the system event store and the test event store.
+        //     The ChronicleServerStartupTask that normally does this has been removed from the
+        //     test silo (it deadlocks during silo startup), and the previous test's DiscoverAll
+        //     leaves nothing useful in the wiped database. Without re-registering here, events
+        //     such as EventStoreAdded / NamespaceAdded never reach the kernel reactors and
+        //     downstream webhook/subscription definitions never get saved.
         var grainFactory = Services.GetRequiredService<IGrainFactory>();
+        var kernelReactors = Services.GetRequiredService<IReactors>();
         await grainFactory.GetGrain<INamespaces>(
             (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System).EnsureDefault();
-        var kernelReactors = Services.GetRequiredService<IReactors>();
         await kernelReactors.DiscoverAndRegister(
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
-
-        // 3c. Drop all test event store databases a second time, preserving the system event
-        //     store databases written by step 3b. Grain OnDeactivateAsync writes in step 2
-        //     can re-create test databases after the drop in step 3, carrying stale event type
-        //     schemas into the next test. By this point (after step 3b), all deactivation
-        //     writes have had sufficient time to complete, so this second drop leaves a clean
-        //     slate without destroying the kernel reactor state.
-        await ChronicleFixture.RemoveAllDatabases(
-            excludePrefixes: [(string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System]);
-
-        // 3c.5. Re-bootstrap the test event store namespace and kernel reactors.
-        //       After step 3c drops the test databases the INamespaces grain for the test event
-        //       store loses its state. Webhooks.Add calls INamespaces.GetAll() to find namespaces
-        //       to subscribe webhook observers; if the namespace list is empty, no observer is
-        //       subscribed and webhook HTTP calls never fire. EnsureDefault() re-creates the
-        //       default namespace in the grain (and persists it to the now-clean test DB).
-        //       DiscoverAndRegister re-subscribes kernel reactors (e.g. WebhookReactor) for the
-        //       test event store AFTER the drop so their observer states survive into the test.
-        //       The ReactorsReactor won't re-do this automatically because it already processed
-        //       the EventStoreAdded event for the test event store in the previous test.
         await grainFactory.GetGrain<INamespaces>(
             (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore)
             .EnsureDefault();
@@ -151,6 +197,32 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     }
 
     /// <summary>
+    /// Gets an optional action to configure Chronicle storage on the in-process silo.
+    /// Returns null to use the default MongoDB configuration.
+    /// </summary>
+    /// <param name="mongoServer">The MongoDB connection string from the fixture container.</param>
+    /// <returns>An optional storage configurator action, or null for default MongoDB.</returns>
+    protected virtual Action<KernelCore::Cratis.Chronicle.Configuration.IChronicleBuilder>? GetStorageConfigurator(string mongoServer) => null;
+
+    /// <summary>
+    /// Gets the default sink type identifier for projection registration.
+    /// Returns default to keep the MongoDB default.
+    /// </summary>
+    /// <returns>The sink type identifier, or default to preserve existing behavior.</returns>
+    protected virtual Sinks.SinkTypeId? GetDefaultSinkTypeId() => null;
+
+    /// <summary>
+    /// Gets additional host configuration key-value pairs to inject when the in-process silo
+    /// uses a non-MongoDB storage backend. These are added to the host configuration before
+    /// the silo options are bound, so <c>IOptions&lt;ChronicleOptions&gt;</c> picks up the correct
+    /// storage type and connection string.
+    /// Returns null (the default) when no extra configuration is needed.
+    /// </summary>
+    /// <param name="mongoServer">The MongoDB connection string from the fixture container.</param>
+    /// <returns>An optional dictionary of configuration key-value pairs, or null for default MongoDB.</returns>
+    protected virtual IReadOnlyDictionary<string, string?>? GetStorageHostConfiguration(string mongoServer) => null;
+
+    /// <summary>
     /// Creates the in-process web application factory for the current test assembly.
     /// </summary>
     /// <returns>The web application factory instance for the discovered startup type.</returns>
@@ -162,7 +234,15 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var configureServices = ConfigureServices;
         var configureMongoDB = ConfigureMongoDB;
         var configureWebHostBuilder = ConfigureWebHostBuilder;
-        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, ContentRoot]) as IAsyncDisposable)!;
+
+        // Determine storage configuration without reading the MongoDB port. No current override
+        // of GetStorageConfigurator or GetStorageHostConfiguration uses the mongoServer parameter
+        // for SQL modes, so passing an empty string is safe. The real port is only needed for the
+        // MongoDB (default) path inside ChronicleOrleansInProcessWebApplicationFactory.
+        var storageConfigurator = GetStorageConfigurator(string.Empty);
+        var defaultSinkTypeId = GetDefaultSinkTypeId();
+        var storageHostConfiguration = GetStorageHostConfiguration(string.Empty);
+        return (Activator.CreateInstance(webApplicationFactoryType, [this, configureServices, configureMongoDB, configureWebHostBuilder, storageConfigurator, defaultSinkTypeId, storageHostConfiguration, ContentRoot]) as IAsyncDisposable)!;
     }
 
     /// <summary>
@@ -185,6 +265,18 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
     protected override void ConfigureWebHostBuilder(IWebHostBuilder builder)
     {
     }
+
+    /// <summary>
+    /// Wipes the in-process silo's SQL storage (files for SQLite, tables for PostgreSQL /
+    /// Microsoft SQL Server) and atomically invalidates the silo's per-context migration cache.
+    /// The default implementation is a no-op; SQL-backed fixtures override this to invoke
+    /// <c>IDatabase.Wipe()</c> on the silo's <c>IDatabase</c> singleton. Doing the wipe and the
+    /// cache invalidation in one operation prevents reminder-driven and deactivation-driven
+    /// grain writes between the two steps from leaving the cache out of sync with the on-disk
+    /// (or in-table) state.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected virtual Task WipeInProcessStorage() => Task.CompletedTask;
 
     /// <summary>
     /// Deactivates all Orleans grains so that stale in-memory state does not leak between tests.

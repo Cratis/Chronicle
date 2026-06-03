@@ -20,10 +20,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// <param name="migrator">The <see cref="IEventSequenceMigrator"/> for managing table migrations.</param>
 public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> options, string tableName, IEventSequenceMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
-    /// <summary>
-    /// Gets the name of the table for the event sequence.
-    /// </summary>
-    internal readonly string _tableName = tableName;
+    /// <inheritdoc/>
+    public string TableName => tableName;
 
     /// <summary>
     /// Gets or sets the event entries DbSet.
@@ -36,7 +34,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task EnsureTableExists()
     {
-        await migrator.EnsureTableMigrated(_tableName, this);
+        await migrator.EnsureTableMigrated(tableName, this);
     }
 
     /// <inheritdoc/>
@@ -69,7 +67,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
 
         modelBuilder.Entity<EventEntry>(entity =>
         {
-            entity.ToTable(_tableName);
+            entity.ToTable(tableName);
             entity.HasKey(e => e.SequenceNumber);
             entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);

@@ -34,7 +34,7 @@ public class ObserverCommands : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace,
         [FromRoute] string observerId) =>
-        _observers.ReplayObserver(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
+        _observers.Replay(new() { EventStore = eventStore, Namespace = @namespace, ObserverId = observerId, EventSequenceId = string.Empty });
 
     /// <summary>
     /// Clear quarantine for a specific observer in an event store and specific namespace.

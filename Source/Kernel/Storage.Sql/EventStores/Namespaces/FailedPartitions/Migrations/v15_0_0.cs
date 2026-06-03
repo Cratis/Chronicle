@@ -22,9 +22,9 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.FailedPartitions,
             columns: table => new
             {
-                Id = table.GuidColumn(migrationBuilder),
-                Partition = table.StringColumn(migrationBuilder),
-                ObserverId = table.StringColumn(migrationBuilder),
+                Id = table.GuidColumn(migrationBuilder, nullable: false),
+                Partition = table.StringColumn(migrationBuilder, maxLength: 200),
+                ObserverId = table.StringColumn(migrationBuilder, maxLength: 200),
                 IsResolved = table.BoolColumn(migrationBuilder),
                 StateJson = table.JsonColumn<string>(migrationBuilder),
             },

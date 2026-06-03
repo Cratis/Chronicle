@@ -37,4 +37,18 @@ public interface IChronicleClient
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
     /// <returns>An asynchronous enumerable.</returns>
     Task<IEnumerable<EventStoreName>> GetEventStores(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evict every cached <see cref="IEventStore"/>, unsubscribing each one's <c>RegisterAll</c>
+    /// handler from the shared connection lifecycle.
+    /// </summary>
+    /// <remarks>
+    /// Used to release per-event-store subscriptions when the calling environment needs to
+    /// fully reset client state without disposing the client itself — for example, between
+    /// integration test classes that share an <see cref="IChronicleClient"/> instance. Without
+    /// this, every <c>IEventStore</c> ever created stays subscribed to <c>OnConnected</c> and
+    /// re-runs <c>RegisterAll</c> on subsequent reconnects, causing the kernel to receive a
+    /// fanout of concurrent <c>Ensure</c> calls for the same event-store name.
+    /// </remarks>
+    void EvictEventStores();
 }

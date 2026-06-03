@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Monads;
 using Cratis.Serialization;
@@ -97,7 +98,7 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public Task Replay<TProjection>()
+    public Task<JobId> Replay<TProjection>()
         where TProjection : IProjection
     {
         var projectionType = typeof(TProjection);
@@ -106,15 +107,16 @@ public class Projections(
     }
 
     /// <inheritdoc/>
-    public Task Replay(ProjectionId projectionId)
+    public async Task<JobId> Replay(ProjectionId projectionId)
     {
-        return _servicesAccessor.Services.Observers.ReplayObserver(new Contracts.Observation.ReplayObserverRequest
+        var response = await _servicesAccessor.Services.Observers.Replay(new Contracts.Observation.Replay
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
             ObserverId = projectionId,
             EventSequenceId = string.Empty
         });
+        return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
     /// <inheritdoc/>

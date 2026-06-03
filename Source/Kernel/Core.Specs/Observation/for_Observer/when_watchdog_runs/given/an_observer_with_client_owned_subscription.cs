@@ -27,7 +27,7 @@ public class an_observer_with_client_owned_subscription : for_Observer.given.an_
         };
 
         _connectedClientsGrain = Substitute.For<IConnectedClients>();
-        _silo.AddProbe<IConnectedClients>(_ => _connectedClientsGrain);
+        _silo.AddProbe(_ => _connectedClientsGrain);
 
         _jobsManager
             .GetJobsOfType<IReplayObserver, ReplayObserverRequest>()

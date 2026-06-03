@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Dynamic;
 using System.Text.Json;
 
 namespace Cratis.Chronicle.Events;
@@ -33,8 +34,17 @@ internal static class AppendedEventConverters
     internal static AppendedEvent ToClient(this Contracts.Events.AppendedEvent @event, IEventTypes eventTypes, JsonSerializerOptions jsonSerializerOptions)
     {
         var context = @event.Context.ToClient();
-        var clrType = eventTypes.GetClrTypeFor(context.EventType.Id);
-        var content = JsonSerializer.Deserialize(@event.Content, clrType, jsonSerializerOptions)!;
+        object content;
+
+        if (eventTypes.HasFor(context.EventType.Id))
+        {
+            var clrType = eventTypes.GetClrTypeFor(context.EventType.Id);
+            content = JsonSerializer.Deserialize(@event.Content, clrType, jsonSerializerOptions)!;
+        }
+        else
+        {
+            content = JsonSerializer.Deserialize<ExpandoObject>(@event.Content, jsonSerializerOptions) ?? new ExpandoObject();
+        }
 
         return new(context, content);
     }

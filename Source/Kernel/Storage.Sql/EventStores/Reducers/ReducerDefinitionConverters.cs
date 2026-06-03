@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -13,6 +14,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Reducers;
 /// </summary>
 public static class ReducerDefinitionConverters
 {
+    static readonly JsonSerializerOptions _jsonOptions = new();
+
     /// <summary>
     /// Convert to a <see cref="ReducerDefinition">SQL</see> representation.
     /// </summary>
@@ -27,7 +30,7 @@ public static class ReducerDefinitionConverters
             ReadModel = definition.ReadModel,
             SinkType = definition.Sink.Type,
             SinkConfigurationId = definition.Sink.Configuration,
-            Tags = definition.Tags?.ToArray() ?? [],
+            Tags = JsonSerializer.Serialize(definition.Tags ?? [], _jsonOptions),
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
 
@@ -44,6 +47,6 @@ public static class ReducerDefinitionConverters
             schema.ReadModel,
             true,
             new SinkDefinition(schema.SinkConfigurationId, schema.SinkType),
-            schema.Tags,
+            JsonSerializer.Deserialize<IEnumerable<string>>(schema.Tags ?? "[]", _jsonOptions) ?? [],
             schema.Filters.ToKernel());
 }

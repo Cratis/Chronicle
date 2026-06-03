@@ -69,7 +69,8 @@ public class FailedPartitionStorage(
         var query = scope.DbContext.FailedPartitions.AsQueryable();
         if (observerId is not null)
         {
-            query = query.Where(fp => fp.ObserverId == observerId);
+            var observerIdValue = observerId.Value;
+            query = query.Where(fp => fp.ObserverId == observerIdValue);
         }
 
         var entities = await query.ToListAsync();

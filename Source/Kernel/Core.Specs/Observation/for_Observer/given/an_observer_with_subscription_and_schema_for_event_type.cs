@@ -14,7 +14,18 @@ public class an_observer_with_subscription_and_schema_for_event_type : an_observ
 
     async Task Establish()
     {
-        event_type_schema = new EventTypeSchema(event_type, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema());
+        var schema = new JsonSchema();
+        schema.Properties["ssn"] = new JsonSchemaProperty
+        {
+            ExtensionData = new Dictionary<string, object?>
+            {
+                {
+                    ComplianceJsonSchemaExtensions.ComplianceKey,
+                    new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) }
+                }
+            }
+        };
+        event_type_schema = new EventTypeSchema(event_type, EventTypeOwner.Client, EventTypeSource.Code, schema);
 
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([event_type_schema]);
 

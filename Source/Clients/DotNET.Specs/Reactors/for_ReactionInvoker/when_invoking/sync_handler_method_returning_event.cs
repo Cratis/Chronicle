@@ -29,7 +29,7 @@ public class sync_handler_method_returning_event : Specification
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers([new EventResultHandler(eventTypes)]);
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithSyncEventReturnType(_outboundEvent);
 
         _invoker = new ReactorInvoker(

@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.StateMachines;
@@ -116,10 +118,26 @@ public interface IObserver : IStateMachine<ObserverState>, IGrainWithStringKey
     Task Unsubscribe();
 
     /// <summary>
+    /// Unsubscribe from the observer only if the current subscription was made by the given client.
+    /// </summary>
+    /// <remarks>
+    /// This is an atomic check-and-unsubscribe operation. When a client reconnects, the old client's
+    /// stream cleanup races against the new client's <c>Subscribe</c> call: if the new client has
+    /// already replaced the subscription, the old client's <c>Unsubscribe</c> must be a no-op.
+    /// Doing the check inside the grain prevents the TOCTOU race where the subscription is read
+    /// (still owned by the old client), then replaced by the new client, then unsubscribed by the
+    /// old client — destroying the new subscription.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client that owns the
+    /// subscription it expects to unsubscribe.</param>
+    /// <returns>Awaitable task.</returns>
+    Task UnsubscribeIfMatchesClient(ConnectionId connectionId);
+
+    /// <summary>
     /// Rewind the observer.
     /// </summary>
-    /// <returns>Awaitable task.</returns>
-    Task Replay();
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the observer is not replayable.</returns>
+    Task<JobId> Replay();
 
     /// <summary>
     /// Rewind the observer for a specific partition.

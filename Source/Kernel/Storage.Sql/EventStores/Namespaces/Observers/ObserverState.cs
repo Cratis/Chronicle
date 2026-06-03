@@ -24,6 +24,18 @@ public class ObserverState
     public ulong LastHandledEventSequenceNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the sequence number of the next event the observer is expecting to handle.
+    /// </summary>
+    /// <remarks>
+    /// Persisting this is essential: when the grain reactivates and reloads its state, the
+    /// state machine reads NextEventSequenceNumber to decide whether catch-up is needed.
+    /// Without it the observer cannot know how far it has progressed and will re-deliver
+    /// already-handled events to subscribers on every reactivation, producing duplicate
+    /// reactor invocations.
+    /// </remarks>
+    public ulong NextEventSequenceNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the tail sequence number for the observer.
     /// </summary>
     public ulong TailEventSequenceNumber { get; set; } = ulong.MaxValue;

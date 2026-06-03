@@ -48,6 +48,7 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
         foreach (var eventType in request.Types)
         {
             var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
+            schema.EnsureComplianceMetadata();
             var owner = (Concepts.Events.EventTypeOwner)(int)eventType.Owner;
             var source = (Concepts.Events.EventTypeSource)(int)eventType.Source;
             var eventTypeId = new EventTypeId(eventType.Type.Id);
@@ -75,6 +76,7 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
                 foreach (var genDef in eventType.Generations)
                 {
                     var genSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
+                    genSchema.EnsureComplianceMetadata();
                     generations.Add(new Concepts.Events.EventTypeGenerationDefinition(genDef.Generation, genSchema));
                 }
 
@@ -362,6 +364,11 @@ internal sealed class EventTypes(IStorage storage, IGrainFactory grainFactory) :
 
             var existingSchema = await eventTypesStorage.GetFor(eventTypeId, generation);
             var newSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
+
+            // Storage applies EnsureComplianceMetadata() when deserializing a stored schema
+            // (in EventTypeConverters.ToKernel). Apply the same transformation to the incoming
+            // schema so both sides go through identical normalization before comparison.
+            newSchema.EnsureComplianceMetadata();
             if (existingSchema.Schema.ToJson() != newSchema.ToJson())
             {
                 throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);

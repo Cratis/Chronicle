@@ -11,4 +11,5 @@ namespace Cratis.Chronicle.Api.EventSequences;
 /// </summary>
 /// <param name="EventType">The <see cref="EventType">type of event</see> to append.</param>
 /// <param name="Content">The JSON payload of the event.</param>
-public record EventToAppend(EventType EventType, JsonObject Content);
+/// <param name="Subject">Optional subject that identifies the compliance target for the event.</param>
+public record EventToAppend(EventType EventType, JsonObject Content, string? Subject = null);

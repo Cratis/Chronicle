@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Contracts.Clients;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Reflection;
@@ -81,6 +82,7 @@ internal sealed class ConnectionService(
     }
 
     /// <inheritdoc/>
+    [AllowAnonymous]
     public Task<DescriptorSetResponse> GetDescriptorSet()
     {
         return Task.FromResult(new DescriptorSetResponse

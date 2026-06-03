@@ -21,9 +21,9 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ClosedStreams,
             columns: table => new
             {
-                EventSequenceId = table.StringColumn(migrationBuilder),
-                StreamType = table.StringColumn(migrationBuilder),
-                StreamId = table.StringColumn(migrationBuilder)
+                EventSequenceId = table.StringColumn(migrationBuilder, maxLength: 255, nullable: false),
+                StreamType = table.StringColumn(migrationBuilder, maxLength: 255, nullable: false),
+                StreamId = table.StringColumn(migrationBuilder, maxLength: 255, nullable: false)
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ClosedStreams}", x => new { x.EventSequenceId, x.StreamType, x.StreamId }));
     }

@@ -13,8 +13,8 @@ The various client projects have the following dependency hierarchy:
 %%{ init: { "flowchart": { "curve": "basis" } } }%%
 flowchart TD
     XUnit.Integration --> XUnit
-    XUnit.Integration --> DotNET.InProcess
-    DotNET.InProcess --> AspNetCore
+    XUnit.Integration --> ClientIntegration
+    ClientIntegration --> AspNetCore
     AspNetCore --> DotNET
     Orleans --> DotNET
     XUnit --> DotNET
@@ -48,12 +48,10 @@ Most clients are built on top of the common .NET client, which serves as the idi
 It relies on the [gRPC contracts](../kernel/contracts.md) for communication.
 The goal is to provide a C#-friendly API that is intuitive and easy to use. For more details, see [the .NET client documentation](dotnet.md).
 
-## .NET InProcess
+## Client Integration
 
-The InProcess client allows Chronicle to run entirely in-memory within the same process as your application.
-This approach embeds the full Kernel, resulting in a larger NuGet package.
-Importantly, it does **not** expose any Kernel APIs publicly, preserving the flexibility to evolve internal APIs without
-breaking consumers. Learn more about the [internalization process](./internalization.md).
+The `Integration/Client` project hosts the shared .NET integration specifications and can run them against either an
+in-process kernel or an out-of-process Chronicle container.
 
 ## ASP.NET Core
 

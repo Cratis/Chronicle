@@ -22,8 +22,12 @@ public static class EventSeedingConverters
         new()
         {
             Id = 0,
-            ByEventTypeJson = JsonSerializer.Serialize(eventSeeds.ByEventType, jsonSerializerOptions),
-            ByEventSourceJson = JsonSerializer.Serialize(eventSeeds.ByEventSource, jsonSerializerOptions)
+            ByEventTypeJson = JsonSerializer.Serialize(
+                eventSeeds.ByEventType.ToDictionary(k => k.Key.Value, v => v.Value),
+                jsonSerializerOptions),
+            ByEventSourceJson = JsonSerializer.Serialize(
+                eventSeeds.ByEventSource.ToDictionary(k => k.Key.Value, v => v.Value),
+                jsonSerializerOptions)
         };
 
     /// <summary>
@@ -34,8 +38,17 @@ public static class EventSeedingConverters
     /// <returns>The converted <see cref="EventSeeds"/>.</returns>
     public static EventSeeds ToEventSeeds(EventSeedsEntity entity, JsonSerializerOptions jsonSerializerOptions)
     {
-        var byEventType = JsonSerializer.Deserialize<IDictionary<EventTypeId, IEnumerable<SeededEventEntry>>>(entity.ByEventTypeJson, jsonSerializerOptions) ?? new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>();
-        var byEventSource = JsonSerializer.Deserialize<IDictionary<EventSourceId, IEnumerable<SeededEventEntry>>>(entity.ByEventSourceJson, jsonSerializerOptions) ?? new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>();
+        var byEventTypeRaw = JsonSerializer.Deserialize<IDictionary<string, IEnumerable<SeededEventEntry>>>(entity.ByEventTypeJson, jsonSerializerOptions)
+            ?? new Dictionary<string, IEnumerable<SeededEventEntry>>();
+        var byEventType = byEventTypeRaw.ToDictionary<KeyValuePair<string, IEnumerable<SeededEventEntry>>, EventTypeId, IEnumerable<SeededEventEntry>>(
+            k => (EventTypeId)k.Key,
+            v => v.Value);
+
+        var byEventSourceRaw = JsonSerializer.Deserialize<IDictionary<string, IEnumerable<SeededEventEntry>>>(entity.ByEventSourceJson, jsonSerializerOptions)
+            ?? new Dictionary<string, IEnumerable<SeededEventEntry>>();
+        var byEventSource = byEventSourceRaw.ToDictionary<KeyValuePair<string, IEnumerable<SeededEventEntry>>, EventSourceId, IEnumerable<SeededEventEntry>>(
+            k => (EventSourceId)k.Key,
+            v => v.Value);
 
         return new EventSeeds(byEventType, byEventSource);
     }
