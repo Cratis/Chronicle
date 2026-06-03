@@ -6,8 +6,8 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Represents the unique identifier of a failed partition.
 /// </summary>
-/// <param name="value">The inner value.</param>
-public record FailedPartitionId(Guid value) : ConceptAs<Guid>(value)
+/// <param name="Value">The inner value.</param>
+public record FailedPartitionId(Guid Value) : ConceptAs<Guid>(Value)
 {
     public static implicit operator FailedPartitionId(Guid value) => new(value);
 

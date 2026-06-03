@@ -120,6 +120,7 @@ public class an_observer : Specification
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns(EventSequenceNumber.Unavailable);
 
         _jobsManager.GetJobsOfType<IRetryFailedPartition, RetryFailedPartitionRequest>()
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
@@ -142,10 +143,10 @@ public class an_observer : Specification
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
 
     protected void EventSequenceHasNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
-        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
         .Returns(sequenceNumber.Next());
 
     protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
-        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
-        .Returns(sequenceNumber);
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(EventSequenceNumber.Unavailable);
 }

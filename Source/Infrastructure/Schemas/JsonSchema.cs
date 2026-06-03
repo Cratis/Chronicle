@@ -267,12 +267,16 @@ public class JsonSchema
     public bool IsEnumeration => Node["enum"] is not null;
 
     /// <summary>
-    /// Gets the enumeration names (string values from "enum").
+    /// Gets the enumeration names (string values from "x-enumNames" extension, or "enum" array if string-valued).
     /// </summary>
     public IList<string> EnumerationNames
     {
         get
         {
+            if (Node["x-enumNames"] is JsonArray namesArr)
+            {
+                return [.. namesArr.Select(v => v?.GetValue<string>() ?? string.Empty)];
+            }
             if (Node["enum"] is JsonArray arr)
             {
                 return [.. arr.Select(v => v?.GetValue<string>() ?? string.Empty)];

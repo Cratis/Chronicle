@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Events.for_EventTypes.when_registering;
 
@@ -11,7 +12,8 @@ public class and_event_type_already_exists_and_gets_new_generation : given.all_d
 {
     Exception _exception;
 
-    void Establish() =>
+    void Establish()
+    {
         _eventTypesStorage.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>())
             .Returns(callInfo =>
             {
@@ -25,6 +27,14 @@ public class and_event_type_already_exists_and_gets_new_generation : given.all_d
                 return generation.Value == 1;
             });
 
+        _eventTypesStorage.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>())
+            .Returns(Task.FromResult(new Concepts.EventTypes.EventTypeSchema(
+                new Concepts.Events.EventType("some-event", 1),
+                Concepts.Events.EventTypeOwner.Client,
+                Concepts.Events.EventTypeSource.Code,
+                JsonSchema.FromJsonAsync("{}").GetAwaiter().GetResult())));
+    }
+
     async Task Because() =>
         _exception = await Catch.Exception(async () => await _subject.Register(new RegisterEventTypesRequest
         {
@@ -37,7 +47,7 @@ public class and_event_type_already_exists_and_gets_new_generation : given.all_d
                     Schema = "{}",
                     Migrations =
                     {
-                        new EventTypeMigrationDefinition
+                        new Contracts.Events.EventTypeMigrationDefinition
                         {
                             FromGeneration = 1,
                             ToGeneration = 2,
@@ -47,8 +57,8 @@ public class and_event_type_already_exists_and_gets_new_generation : given.all_d
                     },
                     Generations =
                     {
-                        new EventTypeGenerationDefinition { Generation = 1, Schema = "{}" },
-                        new EventTypeGenerationDefinition { Generation = 2, Schema = "{}" }
+                        new Contracts.Events.EventTypeGenerationDefinition { Generation = 1, Schema = "{}" },
+                        new Contracts.Events.EventTypeGenerationDefinition { Generation = 2, Schema = "{}" }
                     }
                 }
             ]

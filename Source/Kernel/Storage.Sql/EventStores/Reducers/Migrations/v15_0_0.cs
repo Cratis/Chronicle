@@ -22,12 +22,14 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.ReducerDefinitions,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 EventSequenceId = table.StringColumn(migrationBuilder),
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
                 ReadModel = table.StringColumn(migrationBuilder),
                 SinkType = table.GuidColumn(migrationBuilder),
-                SinkConfigurationId = table.GuidColumn(migrationBuilder)
+                SinkConfigurationId = table.GuidColumn(migrationBuilder),
+                Tags = table.StringColumn(migrationBuilder, nullable: true),
+                Filters = table.StringColumn(migrationBuilder, nullable: true),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ReducerDefinitions}", x => x.Id));
     }

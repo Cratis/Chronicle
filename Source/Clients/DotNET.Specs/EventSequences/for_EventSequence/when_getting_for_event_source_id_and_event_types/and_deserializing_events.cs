@@ -35,6 +35,7 @@ public class and_deserializing_events : given.an_event_sequence
 
         foreach (var eventType in _eventTypes)
         {
+            base._eventTypes.HasFor(eventType.Id).Returns(true);
             base._eventTypes.GetClrTypeFor(eventType.Id).Returns(typeof(TestEvent));
         }
 

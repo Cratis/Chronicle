@@ -129,9 +129,9 @@ public partial class Observer
 
     async Task<Result<bool, GetSequenceNumberError>> NeedsCatchup(Key partition, EventSequenceNumber lastHandledEventSequenceNumber)
     {
-        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber, _subscription.EventTypes, partition);
+        var nextSequenceNumber = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(lastHandledEventSequenceNumber.Next(), _subscription.EventTypes, partition);
         return nextSequenceNumber.Match<Result<bool, GetSequenceNumberError>>(
-            number => number != lastHandledEventSequenceNumber,
+            number => number.IsActualValue,
             error => error);
     }
 }

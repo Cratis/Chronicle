@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
@@ -12,6 +13,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Reactors;
 /// </summary>
 public static class ReactorDefinitionConverters
 {
+    static readonly JsonSerializerOptions _jsonOptions = new();
+
     /// <summary>
     /// Convert to a <see cref="ReactorDefinition">SQL</see> representation.
     /// </summary>
@@ -25,7 +28,7 @@ public static class ReactorDefinitionConverters
             EventSequenceId = definition.EventSequenceId,
             EventTypes = definition.EventTypes.Select(et => new EventTypeWithKeyExpression(et.EventType, et.EventType.Generation, et.Key.Expression)).ToArray(),
             IsReplayable = definition.IsReplayable,
-            Tags = definition.Tags?.ToArray() ?? [],
+            Tags = JsonSerializer.Serialize(definition.Tags ?? [], _jsonOptions),
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToSql()
         };
 
@@ -41,6 +44,6 @@ public static class ReactorDefinitionConverters
             schema.EventSequenceId,
             schema.EventTypes.Select(et => new Concepts.Observation.EventTypeWithKeyExpression(new EventType(et.EventType, et.Generation), et?.KeyExpression ?? PropertyExpression.NotSet)).ToArray(),
             schema.IsReplayable,
-            schema.Tags,
+            JsonSerializer.Deserialize<IEnumerable<string>>(schema.Tags ?? "[]", _jsonOptions) ?? [],
             schema.Filters.ToKernel());
 }

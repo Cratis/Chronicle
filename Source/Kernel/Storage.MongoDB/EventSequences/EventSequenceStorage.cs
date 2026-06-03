@@ -343,25 +343,52 @@ public class EventSequenceStorage(
         logger.Redacting(eventSequenceId, sequenceNumber);
         var collection = _collection;
 
-        // Load the raw document so we can preserve the original event's context in the replacement content
-        var filter = Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber);
-        var rawEvent = await collection.Find(filter)
-                                       .SortByDescendingSequenceNumber()
-                                       .Limit(1)
-                                       .SingleAsync()
-                                       .ConfigureAwait(false);
-        var @event = await converter.ToAppendedEvent(rawEvent);
+        // Atomically claim the redaction: FindOneAndUpdate with a filter that only matches an
+        // event that has NOT already been redacted, returning the pre-update document. If two
+        // callers race (e.g. a fixture that drives the redaction directly and the kernel's
+        // EventSequencesReactor reacting to the same EventRedactionRequested system event),
+        // only the call that actually flipped Type to Redaction gets back the non-null original.
+        // The losing call gets null, falls through to a plain read, and signals
+        // "already redacted" by returning the @event with EventType == Redaction so the caller
+        // in EventSequence.Redact can skip the duplicate RewindPartitionForAffectedObservers.
+        var alreadyRedactedFilter = Builders<Event>.Filter.And(
+            Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber),
+            Builders<Event>.Filter.Ne(_ => _.Type, GlobalEventTypes.Redaction));
 
-        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
+        var existingRaw = await collection.Find(alreadyRedactedFilter)
+                                          .Limit(1)
+                                          .SingleOrDefaultAsync()
+                                          .ConfigureAwait(false);
+
+        if (existingRaw is null)
         {
             logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
-            return @event;
+            var redactedRaw = await collection.Find(Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber))
+                                              .Limit(1)
+                                              .SingleAsync()
+                                              .ConfigureAwait(false);
+            return await converter.ToAppendedEvent(redactedRaw);
         }
 
-        var updateModel = CreateRedactionUpdateModelFor(rawEvent, reason, correlationId, causation, causedByChain, occurred);
-        await collection.UpdateOneAsync(updateModel.Filter, updateModel.Update).ConfigureAwait(false);
+        var updateModel = CreateRedactionUpdateModelFor(existingRaw, reason, correlationId, causation, causedByChain, occurred);
+        var updateResult = await collection.UpdateOneAsync(
+            Builders<Event>.Filter.And(updateModel.Filter, Builders<Event>.Filter.Ne(_ => _.Type, GlobalEventTypes.Redaction)),
+            updateModel.Update).ConfigureAwait(false);
 
-        return @event;
+        if (updateResult.ModifiedCount == 0)
+        {
+            // Another caller redacted between our pre-read and our conditional update.
+            // Signal the caller via the synthetic Redaction event type so the duplicate
+            // rewind is skipped.
+            logger.RedactionAlreadyApplied(eventSequenceId, sequenceNumber);
+            var redactedRaw = await collection.Find(Builders<Event>.Filter.Eq(_ => _.SequenceNumber, sequenceNumber))
+                                              .Limit(1)
+                                              .SingleAsync()
+                                              .ConfigureAwait(false);
+            return await converter.ToAppendedEvent(redactedRaw);
+        }
+
+        return await converter.ToAppendedEvent(existingRaw);
     }
 
     /// <inheritdoc/>

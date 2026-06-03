@@ -43,7 +43,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IJobStorage Jobs { get; } = new Jobs.JobStorage(eventStore, @namespace, database, jobTypes);
+    public IJobStorage Jobs { get; } = new Jobs.JobStorage(eventStore, @namespace, database, jobTypes, jsonSerializerOptions);
 
     /// <inheritdoc/>
     public IJobStepStorage JobSteps { get; } = new JobSteps.JobStepStorage(eventStore, @namespace, database);

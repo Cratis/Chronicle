@@ -32,9 +32,20 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     /// <inheritdoc/>
     public async Task<Observation.ObserverState> Get(ObserverId observerId)
     {
+        // KeyHelper.Parse decodes an empty leading segment of a grain key as a null ObserverId
+        // (the constructor accepts it as null!). The MongoDB sink quietly returns Empty in that
+        // case because Match on null matches nothing; the SQL path used to NRE on observerId.Value
+        // and abort grain activation. Match the MongoDB contract here so storage choice never
+        // changes whether a grain can re-activate.
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return Observation.ObserverState.Empty;
+        }
+
         await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
         return await scope.DbContext.Observers
-            .Where(observer => observer.Id == observerId)
+            .Where(observer => observer.Id == observerIdValue)
             .Select(observer => observer.ToKernel())
             .FirstOrDefaultAsync() ?? Observation.ObserverState.Empty;
     }
@@ -42,6 +53,15 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     /// <inheritdoc/>
     public async Task Save(Observation.ObserverState state)
     {
+        // EF change-tracking rejects a null primary key. Mirror the Get path tolerance: an
+        // observer whose grain key decoded to an empty ObserverId has no real identity to
+        // persist, and MongoDB's ReplaceOneAsync(IsUpsert: true) silently accepts the same
+        // input. Returning here keeps storage-layer behavior aligned across backends.
+        if (state.Identifier is null || string.IsNullOrEmpty(state.Identifier.Value))
+        {
+            return;
+        }
+
         await using var scope = await database.Namespace(eventStore, @namespace);
         var entity = state.ToSql();
         await scope.DbContext.Observers.Upsert(entity);

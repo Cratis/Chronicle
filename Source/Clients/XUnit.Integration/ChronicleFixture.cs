@@ -47,13 +47,18 @@ public abstract class ChronicleFixture : IChronicleFixture
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
 
+        // MongoDBContainer is virtual so derived fixtures can swap the container source.
+        // The override is the documented extension point; the base ctor must call it to
+        // trigger the lazy build-and-start cycle that every fixture relies on.
+#pragma warning disable MA0056
         StartContainer(MongoDBContainer).GetAwaiter().GetResult();
+#pragma warning restore MA0056
     }
 
     /// <summary>
     /// Get the MongoDB container.
     /// </summary>
-    public IContainer MongoDBContainer
+    public virtual IContainer MongoDBContainer
     {
         get
         {
@@ -139,6 +144,22 @@ public abstract class ChronicleFixture : IChronicleFixture
     }
 
     /// <summary>
+    /// Restarts the MongoDB server so that client reconnection behavior can be tested.
+    /// </summary>
+    /// <remarks>
+    /// The default implementation stops and starts the <see cref="MongoDBContainer"/>.
+    /// Subclasses may override this to use a lighter-weight mechanism (e.g. killing only
+    /// the mongod process inside the container) when stopping the container would destroy
+    /// storage that must survive the restart.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public virtual async Task RestartMongoDBAsync()
+    {
+        await MongoDBContainer.StopAsync();
+        await MongoDBContainer.StartAsync();
+    }
+
+    /// <summary>
     /// Builds the container with the specified network.
     /// </summary>
     /// <param name="network">The network to use.</param>
@@ -183,12 +204,16 @@ public abstract class ChronicleFixture : IChronicleFixture
 
         if (failure is not null)
         {
-            Console.WriteLine($"Failed to start the container after {retryCount} attempts.");
+            // Surfacing the underlying failure prevents downstream code from operating on an
+            // unstarted container. Without throwing, the fixture would silently continue and
+            // every subsequent GetMappedPublicPort call would surface as a confusing
+            // ArgumentOutOfRangeException far away from the real cause.
+            throw new InvalidOperationException(
+                $"Failed to start container '{container.Image.FullName}' after {retryCount} attempts.",
+                failure);
         }
-        else
-        {
-            _started = true;
-            Console.WriteLine("We have started the container successfully.");
-        }
+
+        _started = true;
+        Console.WriteLine("We have started the container successfully.");
     }
 }

@@ -20,6 +20,7 @@ public static class ObserverStateConverters
         {
             Id = definition.Identifier,
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
+            NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
             RunningState = definition.RunningState,
             ReplayingPartitions = definition.ReplayingPartitions.Select(partition => partition.Value.ToString()!).ToHashSet(),
@@ -69,6 +70,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber
         };
 }

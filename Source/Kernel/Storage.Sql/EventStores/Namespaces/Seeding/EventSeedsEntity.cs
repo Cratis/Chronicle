@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Seeding;
 
@@ -12,8 +13,11 @@ public class EventSeedsEntity
 {
     /// <summary>
     /// Gets or sets the identifier.
+    /// The migration creates this column as plain NOT NULL int — not IDENTITY —
+    /// so EF must supply the value rather than expect the database to generate it.
     /// </summary>
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public int Id { get; set; }
 
     /// <summary>

@@ -12,6 +12,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Serialization;
@@ -142,7 +143,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             disableTls,
             certificatePath,
             certificatePassword,
-            tokenProvider);
+            tokenProvider,
+            skipKeepAlive: options.SkipKeepAlive);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
     }
 
@@ -230,6 +232,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return eventStore;
         }
 
+        var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
+            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
+
         eventStore = new EventStore(
             name,
             @namespace,
@@ -243,6 +248,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _jsonSchemaGenerator,
             _namingPolicy,
             _serviceProvider,
+            reactorSideEffectHandlers,
             _artifactActivator,
             Options.AutoDiscoverAndRegister,
             Options.JsonSerializerOptions,
@@ -265,6 +271,21 @@ public class ChronicleClient : IChronicleClient, IDisposable
     {
         var eventStores = await _servicesAccessor.Services.EventStores.GetEventStores();
         return eventStores.Select(_ => (EventStoreName)_).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public void EvictEventStores()
+    {
+        foreach (var eventStore in _eventStores.Values)
+        {
+            // Drop the RegisterAll handler the EventStore constructor wired up so the shared
+            // connection's OnConnected event no longer fans out into this evicted instance.
+            // Without this, the next reconnect would still run RegisterAll for every event
+            // store created in the lifetime of the client, including those the caller no
+            // longer cares about.
+            eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
+        }
+        _eventStores.Clear();
     }
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()

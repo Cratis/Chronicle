@@ -116,6 +116,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         lock (_subscriptionsLock)
         {
+            // Replace any existing subscription for this observer instead of appending a
+            // duplicate. Re-subscription is legitimate (the Observing state may be entered
+            // multiple times during the observer's lifetime as it cycles through Routing for
+            // catch-up); each entry would otherwise leave stale duplicates behind and cause
+            // observer.Handle to be invoked multiple times for the same event.
+            _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
         }
 

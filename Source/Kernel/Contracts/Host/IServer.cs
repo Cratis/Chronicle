@@ -22,4 +22,15 @@ public interface IServer
     /// <returns>A <see cref="ServerVersionInfo"/> with server and contracts versions.</returns>
     [Operation]
     Task<ServerVersionInfo> GetVersionInfo();
+
+    /// <summary>
+    /// Reset the kernel's in-memory state by deactivating all grains and clearing transient
+    /// caches. The server only honours this when compiled with the <c>DEVELOPMENT</c>
+    /// preprocessor symbol; production builds throw a <see cref="NotSupportedException"/>.
+    /// Used by integration test fixtures to recycle the kernel between specs without
+    /// restarting the container.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task ResetKernelState();
 }

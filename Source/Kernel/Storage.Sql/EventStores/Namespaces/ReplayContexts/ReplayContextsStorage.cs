@@ -29,10 +29,11 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
     /// <inheritdoc/>
     public async Task<Result<ReplayContext, GetContextError>> TryGet(ReadModelIdentifier readModel)
     {
+        var readModelValue = readModel.Value;
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entry = await scope.DbContext.ReplayContexts
-            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel);
+            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModelValue);
 
         if (entry is null)
         {
@@ -46,10 +47,11 @@ public class ReplayContextsStorage(EventStoreName eventStore, EventStoreNamespac
     /// <inheritdoc/>
     public async Task Remove(ReadModelIdentifier readModel)
     {
+        var readModelValue = readModel.Value;
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entry = await scope.DbContext.ReplayContexts
-            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModel);
+            .FirstOrDefaultAsync(rc => rc.ReadModelIdentifier == readModelValue);
 
         if (entry is not null)
         {

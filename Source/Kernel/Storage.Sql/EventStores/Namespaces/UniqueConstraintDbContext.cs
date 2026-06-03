@@ -2,8 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -20,6 +22,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="migrator">The <see cref="IUniqueConstraintMigrator"/> for managing table migrations.</param>
 public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContext> options, string tableName, IUniqueConstraintMigrator migrator) : BaseDbContext(options), ITableDbContext
 {
+    /// <inheritdoc/>
+    public string TableName => tableName;
+
     /// <summary>
     /// Gets or sets the unique constraint index entries DbSet.
     /// </summary>
@@ -32,6 +37,19 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
     public async Task EnsureTableExists()
     {
         await migrator.EnsureTableMigrated(tableName, this);
+    }
+
+    /// <inheritdoc/>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // CRITICAL: EF Core caches models by DbContext type + model cache key.
+        // Since we use the same UniqueConstraintDbContext type for different constraint tables,
+        // we must include the table name in the cache key to prevent model reuse across
+        // different constraint tables — without this, the second constraint table query uses
+        // the model (with the wrong table name) cached from the first constraint table.
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, DynamicTableModelCacheKeyFactory>();
     }
 
     /// <inheritdoc/>

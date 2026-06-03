@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Dynamic;
-using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -34,6 +33,21 @@ public class EventSequenceStorage(
     IIdentityStorage identityStorage,
     ILogger<EventSequenceStorage> logger) : IEventSequenceStorage
 {
+    /// <summary>
+    /// Truncate a <see cref="DateTimeOffset"/> to microsecond precision (10 .NET ticks).
+    /// </summary>
+    /// <param name="value">The value to truncate.</param>
+    /// <returns>The truncated <see cref="DateTimeOffset"/> with the same offset.</returns>
+    /// <remarks>
+    /// PostgreSQL's <c>timestamp</c> stores microsecond precision and drops the lower .NET
+    /// tick digit on write. Applying it on append keeps the value the projection observes
+    /// equal to what GetForEventSourceIdAndEventTypes returns later, so specs that compare
+    /// event.Occurred.Ticks to a projected value do not flake when DateTime.UtcNow happens
+    /// to land off a microsecond boundary.
+    /// </remarks>
+    public static DateTimeOffset TruncateToMicrosecond(DateTimeOffset value) =>
+        new(value.Ticks - (value.Ticks % (TimeSpan.TicksPerMillisecond / 1000)), value.Offset);
+
     /// <inheritdoc/>
     public Task EnsureIndexes() => Task.CompletedTask;
 
@@ -42,7 +56,7 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId);
+        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
         if (entry is null)
         {
             return new Chronicle.Storage.EventSequences.EventSequenceState();
@@ -68,7 +82,8 @@ public class EventSequenceStorage(
         var query = scope.DbContext.Events.AsQueryable();
         if (lastEventSequenceNumber is not null)
         {
-            query = query.Where(e => e.SequenceNumber <= lastEventSequenceNumber);
+            var lastSeqNumValue = lastEventSequenceNumber.Value;
+            query = query.Where(e => e.SequenceNumber <= lastSeqNumValue);
         }
 
         if (eventTypes?.Any() == true)
@@ -101,8 +116,22 @@ public class EventSequenceStorage(
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+            // Truncate to the precision the database will actually preserve so the value the
+            // projection observes (via the returned AppendedEvent) round-trips byte-identical
+            // with what GetForEventSourceIdAndEventTypes returns later. PostgreSQL truncates
+            // .NET 100ns ticks to microseconds; without this, the read-back drops the lower
+            // tick digit while the projection's read-model JSON retains it, and any spec that
+            // compares event.Occurred.Ticks to the projected value (e.g. FromEvery setting
+            // LastUpdated from the EventContext) flakes whenever DateTime.UtcNow happens to
+            // sit off a microsecond boundary. The cap is microsecond because that is the
+            // narrowest precision a Chronicle-supported relational provider preserves; SQLite
+            // (TEXT) and MSSQL (datetime2) keep more precision but stay correct under the
+            // tighter cap.
+            occurred = TruncateToMicrosecond(occurred);
+
+            var seqNumValue = sequenceNumber.Value;
             var existingEvent = await scope.DbContext.Events
-                .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+                .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumValue);
 
             if (existingEvent is not null)
             {
@@ -121,6 +150,7 @@ public class EventSequenceStorage(
                 causedByChain,
                 occurred,
                 content,
+                contentHashes,
                 subject?.IsSet == true ? subject : null);
 
             scope.DbContext.Events.Add(eventEntry);
@@ -148,7 +178,8 @@ public class EventSequenceStorage(
                 eventHash,
                 Subject: resolvedSubject);
 
-            return new AppendedEvent(eventContext, returnContent);
+            var generationalContent = EventEntryConverter.BuildGenerationalContent(content);
+            return new AppendedEvent(eventContext, returnContent) { GenerationalContent = generationalContent };
         }
         catch (Exception ex)
         {
@@ -170,7 +201,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumRevise = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstOrDefaultAsync(e => e.SequenceNumber == seqNumRevise);
         if (eventEntry is null)
         {
             return;
@@ -186,7 +218,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumReplace = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumReplace);
         EventEntryConverter.ReplaceAllGenerationContent(eventEntry, content);
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
@@ -208,9 +241,15 @@ public class EventSequenceStorage(
 
             foreach (var eventToAppend in eventsArray)
             {
+                // Same precision-cap rationale as the single Append path: keep the value the
+                // projection observes equal to what GetForEventSourceIdAndEventTypes returns
+                // later. See the comment in Append for details.
+                var truncatedOccurred = TruncateToMicrosecond(eventToAppend.Occurred);
+
                 // Check if sequence number already exists
+                var appendManySeqNum = eventToAppend.SequenceNumber.Value;
                 var existingEvent = await scope.DbContext.Events
-                    .FirstOrDefaultAsync(e => e.SequenceNumber == eventToAppend.SequenceNumber);
+                    .FirstOrDefaultAsync(e => e.SequenceNumber == appendManySeqNum);
 
                 if (existingEvent is not null)
                 {
@@ -227,8 +266,9 @@ public class EventSequenceStorage(
                     eventToAppend.CorrelationId,
                     eventToAppend.Causation,
                     eventToAppend.CausedByChain,
-                    eventToAppend.Occurred,
+                    truncatedOccurred,
                     eventToAppend.Content,
+                    eventToAppend.Hash,
                     eventToAppend.Subject?.IsSet == true ? eventToAppend.Subject : null);
 
                 scope.DbContext.Events.Add(eventEntry);
@@ -243,7 +283,7 @@ public class EventSequenceStorage(
                     eventToAppend.EventStreamType,
                     eventToAppend.EventStreamId,
                     eventToAppend.SequenceNumber,
-                    eventToAppend.Occurred,
+                    truncatedOccurred,
                     eventStore,
                     @namespace,
                     eventToAppend.CorrelationId,
@@ -271,20 +311,66 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == sequenceNumber);
+        var seqNumRedact = sequenceNumber.Value;
+        var eventEntry = await scope.DbContext.Events.FirstAsync(e => e.SequenceNumber == seqNumRedact);
 
-        // Replace content with redaction marker
-        eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
+        // If the event has already been redacted (either by an earlier call or by a racing
+        // caller — e.g. the kernel's EventSequencesReactor reacting to the same
+        // EventRedactionRequested system event), return the AppendedEvent with EventType ==
+        // Redaction so the upstream caller in EventSequence.Redact can skip the duplicate
+        // RewindPartitionForAffectedObservers. Doing the duplicate rewind would replay any
+        // observer subscribed to EventRedacted for a redaction that was already applied and
+        // already triggered its own rewind, producing duplicate EventRedacted notifications.
+        if (eventEntry.Type == GlobalEventTypes.Redaction)
         {
-            { "redacted", true },
-            { "reason", reason },
-            { "redactedAt", occurred }
-        });
+            return await BuildAppendedEventFromRedactionEntry(eventEntry);
+        }
+
+        // Capture the original event type BEFORE we overwrite it. The kernel uses the
+        // returned AppendedEvent's event type to find which observers must replay the
+        // affected partition (RewindPartitionForAffectedObservers), so it must be the
+        // pre-redaction type — observers subscribe to the original type, not the synthetic
+        // Redaction marker that replaces it in storage. This matches the MongoDB behavior.
+        var originalEventType = EventEntryConverter.GetEventType(eventEntry);
+        var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventType.Id.Value, reason, correlationId, causation, causedByChain, occurred);
+
+        eventEntry.Type = GlobalEventTypes.Redaction;
+        eventEntry.Occurred = occurred;
+        eventEntry.CorrelationId = correlationId.ToString();
+        eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
+        eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
+        eventEntry.Content = redactionContent;
+
         scope.DbContext.Events.Update(eventEntry);
         await scope.DbContext.SaveChangesAsync();
 
-        // Return the redacted event
-        return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
+        // Return the AppendedEvent with the ORIGINAL event type so the kernel can route
+        // the replay to the right observers. Content is the now-stored redaction marker,
+        // but metadata carries the original type for routing — main's ToAppendedEvent
+        // helper would read the synthetic Redaction marker that just replaced it and
+        // route to the wrong observer set.
+        var content = EventEntryConverter.GetContentForGeneration(eventEntry, originalEventType.Generation);
+        var eventCausation = EventEntryConverter.GetCausation(eventEntry);
+        var eventCausedBy = EventEntryConverter.GetCausedBy(eventEntry);
+
+        var eventMetadata = new EventContext(
+            originalEventType,
+            eventEntry.EventSourceType,
+            eventEntry.EventSourceId,
+            eventEntry.EventStreamType,
+            eventEntry.EventStreamId,
+            new EventSequenceNumber(eventEntry.SequenceNumber),
+            eventEntry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(eventEntry.CorrelationId)),
+            eventCausation,
+            await identityStorage.GetFor(eventCausedBy),
+            [],
+            EventEntryConverter.GetHashForGeneration(eventEntry, originalEventType.Generation),
+            Subject: EventEntryConverter.GetSubject(eventEntry));
+
+        return new AppendedEvent(eventMetadata, content);
     }
 
     /// <inheritdoc/>
@@ -305,17 +391,25 @@ public class EventSequenceStorage(
 
         foreach (var eventEntry in eventsToRedact)
         {
-            // Replace content with redaction marker
-            eventEntry.Content = JsonSerializer.Serialize(new Dictionary<string, object>
+            if (eventEntry.Type == GlobalEventTypes.Redaction)
             {
-                { "redacted", true },
-                { "reason", reason },
-                { "redactedAt", occurred }
-            });
-            scope.DbContext.Events.Update(eventEntry);
+                continue;
+            }
 
-            var eventType = EventEntryConverter.GetEventType(eventEntry);
-            affectedEventTypes.Add(eventType);
+            var originalEventTypeId = eventEntry.Type.Value;
+            var originalEventType = EventEntryConverter.GetEventType(eventEntry);
+            affectedEventTypes.Add(originalEventType);
+
+            var redactionContent = EventEntryConverter.CreateRedactionContent(originalEventTypeId, reason, correlationId, causation, causedByChain, occurred);
+
+            eventEntry.Type = GlobalEventTypes.Redaction;
+            eventEntry.Occurred = occurred;
+            eventEntry.CorrelationId = correlationId.ToString();
+            eventEntry.Causation = EventEntryConverter.SerializeCausation(causation);
+            eventEntry.CausedBy = EventEntryConverter.SerializeCausedBy(causedByChain);
+            eventEntry.Content = redactionContent;
+
+            scope.DbContext.Events.Update(eventEntry);
         }
 
         await scope.DbContext.SaveChangesAsync();
@@ -458,7 +552,8 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= sequenceNumber);
+        var nextSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= nextSeqNumValue);
 
         if (eventTypes?.Any() == true)
         {
@@ -523,8 +618,9 @@ public class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
+        var seqNumAt = sequenceNumber.Value;
         var eventEntry = await scope.DbContext.Events
-            .FirstOrDefaultAsync(e => e.SequenceNumber == sequenceNumber)
+            .FirstOrDefaultAsync(e => e.SequenceNumber == seqNumAt)
             ?? throw new InvalidOperationException($"Event with sequence number {sequenceNumber} not found in event sequence {eventSequenceId}");
 
         return await EventEntryConverter.ToAppendedEvent(eventEntry, eventStore, @namespace, identityStorage);
@@ -555,9 +651,10 @@ public class EventSequenceStorage(
     /// <inheritdoc/>
     public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= sequenceNumber);
+        var fromSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -580,18 +677,26 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events
-            .Where(e =>
-                e.SequenceNumber >= start
-                && e.SequenceNumber <= end);
+        var startValue = start.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
+
+        // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
+        // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
+        // and the original Where clause matched zero rows. Skip the upper-bound predicate
+        // entirely when the caller signals "unbounded" by passing Max.
+        if (end != EventSequenceNumber.Max)
+        {
+            var endValue = end.Value;
+            query = query.Where(e => e.SequenceNumber <= endValue);
+        }
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -604,7 +709,7 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -617,9 +722,10 @@ public class EventSequenceStorage(
         IEnumerable<EventType>? eventTypes = default,
         CancellationToken cancellationToken = default)
     {
-        await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+        var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= start);
+        var limitStartValue = start.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= limitStartValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -644,6 +750,33 @@ public class EventSequenceStorage(
 
         query = query.Take(limit);
 
-        return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
+        return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
+    }
+
+    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
+    {
+        var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
+        var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
+        var eventCausation = EventEntryConverter.GetCausation(redactionEntry);
+        var eventCausedBy = EventEntryConverter.GetCausedBy(redactionEntry);
+
+        var eventMetadata = new EventContext(
+            redactionEventType,
+            redactionEntry.EventSourceType,
+            redactionEntry.EventSourceId,
+            redactionEntry.EventStreamType,
+            redactionEntry.EventStreamId,
+            new EventSequenceNumber(redactionEntry.SequenceNumber),
+            redactionEntry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(redactionEntry.CorrelationId)),
+            eventCausation,
+            await identityStorage.GetFor(eventCausedBy),
+            [],
+            EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
+            Subject: EventEntryConverter.GetSubject(redactionEntry));
+
+        return new AppendedEvent(eventMetadata, content);
     }
 }

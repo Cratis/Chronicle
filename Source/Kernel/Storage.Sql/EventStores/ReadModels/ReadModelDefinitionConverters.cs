@@ -22,6 +22,10 @@ public static class ReadModelDefinitionConverters
             Id = definition.Identifier,
             Name = definition.ContainerName,
             Owner = definition.Owner,
+            Source = definition.Source,
+            ObserverType = definition.ObserverType,
+            ObserverIdentifier = definition.ObserverIdentifier,
+            DisplayName = definition.DisplayName,
             Schemas = definition.Schemas.ToDictionary(kvp => (uint)kvp.Key, kvp => kvp.Value.ToJson())
         };
 
@@ -34,11 +38,11 @@ public static class ReadModelDefinitionConverters
         new(
             schema.Id,
             schema.Name,
-            ReadModelDisplayName.NotSet,
+            schema.DisplayName,
             schema.Owner,
-            ReadModelSource.Unknown,
-            ReadModelObserverType.NotSet,
-            ReadModelObserverIdentifier.Unspecified,
+            schema.Source,
+            schema.ObserverType,
+            schema.ObserverIdentifier,
             Concepts.Sinks.SinkDefinition.None,
             schema.Schemas.ToDictionary(kvp => (ReadModelGeneration)kvp.Key, kvp => JsonSchema.FromJson(kvp.Value)),
             []);

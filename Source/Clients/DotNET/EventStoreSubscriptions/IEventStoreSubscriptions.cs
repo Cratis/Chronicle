@@ -23,4 +23,10 @@ public interface IEventStoreSubscriptions
     /// <param name="subscriptionId">The <see cref="EventStoreSubscriptionId"/> to remove.</param>
     /// <returns>Awaitable task.</returns>
     Task Unsubscribe(EventStoreSubscriptionId subscriptionId);
+
+    /// <summary>
+    /// Get all subscriptions registered for this event store.
+    /// </summary>
+    /// <returns>A collection of <see cref="EventStoreSubscriptionDefinition"/>.</returns>
+    Task<IEnumerable<EventStoreSubscriptionDefinition>> GetAll();
 }

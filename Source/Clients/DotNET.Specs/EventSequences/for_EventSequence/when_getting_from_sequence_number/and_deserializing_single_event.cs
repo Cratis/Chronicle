@@ -24,6 +24,7 @@ public class and_deserializing_single_event : given.an_event_sequence
         _eventType = new(Guid.NewGuid().ToString(), EventTypeGeneration.First);
         _expectedEvent = new("Test Content", 123);
 
+        _eventTypes.HasFor(_eventType.Id).Returns(true);
         _eventTypes.GetClrTypeFor(_eventType.Id).Returns(typeof(TestEvent));
 
         var contractEvent = new Contracts.Events.AppendedEvent

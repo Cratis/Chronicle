@@ -22,8 +22,9 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.Observers,
             columns: table => new
             {
-                Id = table.StringColumn(migrationBuilder),
+                Id = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
                 LastHandledEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder),
+                NextEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder, nullable: false, defaultValue: 0UL),
                 TailEventSequenceNumber = table.NumberColumn<ulong>(migrationBuilder, nullable: false, defaultValue: ulong.MaxValue),
                 RunningState = table.NumberColumn<int>(migrationBuilder),
                 ReplayingPartitions = table.JsonColumn<IEnumerable<string>>(migrationBuilder),

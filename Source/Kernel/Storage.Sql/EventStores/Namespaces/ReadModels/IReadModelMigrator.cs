@@ -15,4 +15,12 @@ public interface IReadModelMigrator
     /// <param name="context">The <see cref="ReadModelDbContext"/> instance.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task EnsureTableMigrated(string tableName, ReadModelDbContext context);
+
+    /// <summary>
+    /// Clears cached migration state for all tables whose connection string starts with the given prefix.
+    /// </summary>
+    /// <param name="connectionStringPrefix">
+    /// Connection string prefix to match. Pass an empty string to clear all cached entries.
+    /// </param>
+    void ClearMigrationCache(string connectionStringPrefix);
 }

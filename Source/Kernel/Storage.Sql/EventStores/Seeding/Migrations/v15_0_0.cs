@@ -22,7 +22,7 @@ public class v15_0_0 : Migration
             name: WellKnownTableNames.EventSeeds,
             columns: table => new
             {
-                Id = table.NumberColumn<int>(migrationBuilder),
+                Id = table.NumberColumn<int>(migrationBuilder, nullable: false),
                 ByEventTypeJson = table.JsonColumn<string>(migrationBuilder),
                 ByEventSourceJson = table.JsonColumn<string>(migrationBuilder)
             },

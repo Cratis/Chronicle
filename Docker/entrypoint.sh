@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-/usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
+# Only start MongoDB when the storage type is MongoDB (the default).
+# SQL backends (PostgreSQL, MsSql, Sqlite) use an external database and do not
+# need the embedded mongod — starting it wastes memory and can crash under the
+# extra load of running alongside heavy containers such as SQL Server.
+STORAGE_TYPE="${Cratis__Chronicle__Storage__Type:-MongoDB}"
 
-# Wait for MongoDB to start
-until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-  sleep 1
-done
+if [ "${STORAGE_TYPE,,}" = "mongodb" ]; then
+  /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
 
-# Initialize replica set if not already initialized
-mongosh --quiet --eval "
+  # Wait for MongoDB to start
+  until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+    sleep 1
+  done
+
+  # Initialize replica set if not already initialized
+  mongosh --quiet --eval "
 try {
   rs.status();
 } catch(e) {
@@ -23,6 +30,7 @@ try {
   }
 }
 "
+fi
 
 ./Cratis.Chronicle.Server &
 

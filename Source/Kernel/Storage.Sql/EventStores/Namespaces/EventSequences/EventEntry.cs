@@ -69,6 +69,12 @@ public class EventEntry
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the content hash per event type generation, serialised as a JSON object
+    /// keyed by generation number. Empty when no hashes were supplied.
+    /// </summary>
+    public string ContentHashes { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the subject that identifies the compliance target for the event.
     /// </summary>
     public string? Subject { get; set; }

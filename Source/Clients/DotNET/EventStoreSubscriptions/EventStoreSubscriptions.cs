@@ -59,4 +59,16 @@ public class EventStoreSubscriptions(IEventTypes eventTypes, IEventStore eventSt
 
         await _servicesAccessor.Services.EventStoreSubscriptions.Remove(request);
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventStoreSubscriptionDefinition>> GetAll()
+    {
+        var request = new GetEventStoreSubscriptionsRequest { TargetEventStore = eventStore.Name };
+        var subscriptions = await _servicesAccessor.Services.EventStoreSubscriptions.GetSubscriptions(request);
+
+        return subscriptions.Select(s => new EventStoreSubscriptionDefinition(
+            new EventStoreSubscriptionId(s.Identifier),
+            s.SourceEventStore,
+            s.EventTypes.Select(et => new Events.EventTypeId(et.Id))));
+    }
 }

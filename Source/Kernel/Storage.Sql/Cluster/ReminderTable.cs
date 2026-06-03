@@ -8,12 +8,13 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <summary>
 /// Represents an implementation of the reminder table for Orleans.
 /// </summary>
-/// <param name="dbContext">The database context.</param>
-public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
+/// <param name="dbContextFactory">The <see cref="IDbContextFactory{TContext}"/> for creating <see cref="ClusterDbContext"/> instances.</param>
+public class ReminderTable(IDbContextFactory<ClusterDbContext> dbContextFactory) : IReminderTable
 {
     /// <inheritdoc/>
     public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var rowKey = ReminderEntryConverters.GetRowKey(grainId, reminderName);
         return (await dbContext.Reminders.FindAsync(rowKey))!.ToOrleans();
     }
@@ -21,6 +22,7 @@ public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
     /// <inheritdoc/>
     public async Task<ReminderTableData> ReadRows(GrainId grainId)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var reminders = await dbContext.Reminders
             .Where(r => r.GrainId == grainId.ToString())
             .ToListAsync();
@@ -31,6 +33,7 @@ public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
     /// <inheritdoc/>
     public async Task<ReminderTableData> ReadRows(uint begin, uint end)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var reminders = await dbContext.Reminders
             .Where(r => r.GrainHash >= begin && r.GrainHash <= end)
             .ToListAsync();
@@ -41,6 +44,7 @@ public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
     /// <inheritdoc/>
     public async Task<bool> RemoveRow(GrainId grainId, string reminderName, string eTag)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var rowKey = ReminderEntryConverters.GetRowKey(grainId, reminderName);
         var reminder = await dbContext.Reminders.FindAsync(rowKey);
         if (reminder == null || reminder.ETag != eTag)
@@ -54,17 +58,19 @@ public class ReminderTable(ClusterDbContext dbContext) : IReminderTable
     }
 
     /// <inheritdoc/>
-    public Task TestOnlyClearTable()
+    public async Task TestOnlyClearTable()
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         dbContext.Reminders.RemoveRange(dbContext.Reminders);
-        return dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
     }
 
     /// <inheritdoc/>
     public async Task<string> UpsertRow(ReminderEntry entry)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var entity = entry.ToSql();
-        dbContext.Reminders.Update(entity);
+        await dbContext.Reminders.Upsert(entity);
         await dbContext.SaveChangesAsync();
         return entity.Id;
     }

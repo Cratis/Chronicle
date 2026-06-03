@@ -12,7 +12,6 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.given;
 
@@ -34,11 +33,8 @@ public class all_dependencies : Specification
     protected IReducerMediator _reducerMediator;
     protected Contracts.ReadModels.IReadModels _service;
 
-    protected IClusterClient _clusterClient;
-
     void Establish()
     {
-        _clusterClient = Substitute.For<IClusterClient, IKeyedServiceProvider>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _storage = Substitute.For<IStorage>();
 
@@ -73,7 +69,6 @@ public class all_dependencies : Specification
         _reducerMediator = Substitute.For<IReducerMediator>();
 
         _service = new ReadModels(
-            _clusterClient,
             _grainFactory,
             _storage,
             _expandoObjectConverter,

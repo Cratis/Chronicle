@@ -32,6 +32,7 @@ public class when_converting_back_and_forth : Specification
         var content = new TestEvent { Value = "test", Number = 42 };
         _original = new(context, content);
 
+        _eventTypes.HasFor(eventTypeId).Returns(true);
         _eventTypes.GetClrTypeFor(eventTypeId).Returns(typeof(TestEvent));
 
         _contract = _original.ToContract(JsonSerializerOptions.Default);

@@ -13,7 +13,7 @@ public static class WellKnownProperties
     /// <summary>
     /// The property name for the last handled sequence number.
     /// </summary>
-    public const string LasHandledEventSequenceNumber = "__lastHandledEventSequenceNumber";
+    public const string LastHandledEventSequenceNumber = "__lastHandledEventSequenceNumber";
 
     /// <summary>
     /// The property name for whether an model instance is initialized.

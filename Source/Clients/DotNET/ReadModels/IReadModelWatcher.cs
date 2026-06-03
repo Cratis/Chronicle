@@ -29,4 +29,11 @@ public interface IReadModelWatcher<TReadModel> : IReadModelWatcher
     /// Gets the observable for the read model.
     /// </summary>
     IObservable<ReadModelChangeset<TReadModel>> Observable { get; }
+
+    /// <summary>
+    /// Gets a <see cref="Task"/> that completes once the watcher's underlying change-stream
+    /// subscription on the server has been established. Awaiting this guarantees that any events
+    /// appended afterwards will be observed through <see cref="Observable"/>.
+    /// </summary>
+    Task Subscribed { get; }
 }

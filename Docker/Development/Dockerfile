@@ -63,6 +63,10 @@ RUN mkdir -p /data/db /data/configdb \
 
 VOLUME /data/db /data/configdb
 
+# Microsoft.Data.SqlClient requires full ICU globalization support and throws
+# NotSupportedException when running in invariant mode. The server project has
+# <InvariantGlobalization>true</InvariantGlobalization> for minimal-image mode,
+# so we override it here at the Docker layer so MSSQL storage works correctly.
 WORKDIR /app
 
 COPY Docker/${ENTRYPOINT} ./entrypoint.sh
@@ -72,6 +76,13 @@ RUN chmod +x ./entrypoint.sh
 # stage and is never baked into this image.
 COPY --from=prep /app/. ./
 COPY ./Docker/Development/appsettings.json ./appsettings.json
+
+# Microsoft.Data.SqlClient does not support Globalization Invariant Mode and throws
+# NotSupportedException when System.Globalization.Invariant is true. The server project
+# sets <InvariantGlobalization>true</InvariantGlobalization> which bakes the switch into
+# runtimeconfig.json. Patch it here so MSSQL storage works; MongoDB and Postgres are unaffected.
+RUN sed -i 's/"System.Globalization.Invariant": true/"System.Globalization.Invariant": false/g' \
+    Cratis.Chronicle.Server.runtimeconfig.json
 
 EXPOSE 8080 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

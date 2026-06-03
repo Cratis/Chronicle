@@ -35,6 +35,14 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     /// <inheritdoc/>
     public async Task<Observation.ObserverDefinition> Get(ObserverId id)
     {
+        // KeyHelper.Parse decodes an empty leading segment of a grain key as a null ObserverId.
+        // MongoDB's Get returns Empty for that input; SQL needs the same contract so the grain's
+        // ReadStateAsync doesn't NRE while constructing the LINQ filter expression.
+        if (id is null || string.IsNullOrEmpty(id.Value))
+        {
+            return Observation.ObserverDefinition.Empty;
+        }
+
         await using var scope = await database.EventStore(eventStore);
         var entity = await scope.DbContext.Observers
             .Where(observer => observer.Id == id)
@@ -57,6 +65,14 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
     /// <inheritdoc/>
     public async Task Save(Observation.ObserverDefinition definition)
     {
+        // EF Core rejects a null primary key during change-tracking. Mirror the Get path —
+        // definitions whose key decoded to an empty ObserverId have no real identity to
+        // persist, matching MongoDB's IsUpsert behavior with an empty filter.
+        if (definition.Identifier is null || string.IsNullOrEmpty(definition.Identifier.Value))
+        {
+            return;
+        }
+
         await using var scope = await database.EventStore(eventStore);
         var entity = definition.ToSql();
         await scope.DbContext.Observers.Upsert(entity);

@@ -14,9 +14,9 @@ public interface IObservers
     /// </summary>
     /// <param name="command">The replay command.</param>
     /// <param name="context">gRPC call context.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>A <see cref="ReplayResponse"/> containing the identifier of the replay job that was started or resumed.</returns>
     [Operation]
-    Task Replay(Replay command, CallContext context = default);
+    Task<ReplayResponse> Replay(Replay command, CallContext context = default);
 
     /// <summary>
     /// Rewind a partition for an observer.

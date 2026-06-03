@@ -24,6 +24,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Execution;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -68,8 +69,6 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddProjectionsService()
             .AddReminders()
             .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
-            .AddStreaming()
-            .AddMemoryStreams(WellKnownStreamProviders.ProjectionChangesets)
             .AddStorageProviders()
             .AddWebhookObserverHttpClient()
             .ConfigureSerialization();
@@ -131,12 +130,17 @@ public static class ChronicleServerSiloBuilderExtensions
                 projections,
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(clusterClient, grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),
                 new Cratis.Chronicle.Services.Security.Applications(grainFactory, storage),
-                new Cratis.Chronicle.Services.Host.Server(clusterClient));
+                new Cratis.Chronicle.Services.Host.Server(
+                    clusterClient,
+                    grainFactory,
+                    sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
+                    sp.GetRequiredService<IInstancesOf<ICanPerformKernelStateReset>>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Setup.KernelBootstrapResetHandler>()));
         });
 
         return builder;

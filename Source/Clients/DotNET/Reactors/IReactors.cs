@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Reactors;
@@ -71,14 +72,14 @@ public interface IReactors
     /// Replay a specific reactor.
     /// </summary>
     /// <typeparam name="TReactor">Type of reactor to replay.</typeparam>
-    /// <returns>Awaitable task.</returns>
-    Task Replay<TReactor>()
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable.</returns>
+    Task<JobId> Replay<TReactor>()
         where TReactor : IReactor;
 
     /// <summary>
     /// Replay a specific reactor by its identifier.
     /// </summary>
     /// <param name="reactorId"><see cref="ReactorId"/> to replay.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Replay(ReactorId reactorId);
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reactor is not replayable.</returns>
+    Task<JobId> Replay(ReactorId reactorId);
 }

@@ -65,6 +65,15 @@ public interface IReadModels
     IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
 
     /// <summary>
+    /// Get the underlying <see cref="IReadModelWatcher{TReadModel}"/> for a specific read model.
+    /// Useful when the caller needs explicit control over lifecycle or to await
+    /// <see cref="IReadModelWatcher{TReadModel}.Subscribed"/> before producing events.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to get a watcher for.</typeparam>
+    /// <returns>The <see cref="IReadModelWatcher{TReadModel}"/>.</returns>
+    IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>();
+
+    /// <summary>
     /// Dehydrate a session.
     /// </summary>
     /// <param name="sessionId">The <see cref="ReadModelSessionId"/> to dehydrate.</param>

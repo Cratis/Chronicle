@@ -24,8 +24,25 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
 {
     const string ContainerName = "test_read_models";
 
+    /// <summary>
+    /// The read-model schema names the columns the typed-column sink writes through. The sink
+    /// derives its column list from this schema via ProjectedColumns.ForSchema; the spec passes
+    /// the same derivation into ReadModelDbContext so EF builds an entity whose key and columns
+    /// line up with what the sink is about to write.
+    /// </summary>
+    const string SchemaJson = """
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "roles": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+        """;
+
     readonly EventStoreName _eventStoreName = "test-event-store";
     readonly EventStoreNamespaceName _namespace = "test-namespace";
+    readonly JsonSchema _schema = JsonSchema.FromJson(SchemaJson);
 
     SqliteConnection _connection;
     SqlSink _sink;
@@ -34,9 +51,11 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
     Key _key;
     ExpandoObject? _result;
     IEnumerable<FailedPartition> _failedPartitions;
+    IReadOnlyList<ProjectedColumn> _columns;
 
     void Establish()
     {
+        _columns = ProjectedColumns.ForSchema(_schema);
         _key = new Key("user-1", ArrayIndexers.NoIndexers);
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
@@ -47,7 +66,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
         }
 
         _database = Substitute.For<IDatabase>();
-        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
+        _database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>())
             .Returns(_ => Task.FromResult(new DbContextScope<ReadModelDbContext>(CreateContext(), () => { })));
 
         _sink = new SqlSink(
@@ -112,7 +131,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
             .AddConceptAsSupport()
             .Options;
 
-        return new ReadModelDbContext(options, ContainerName, Substitute.For<IReadModelMigrator>());
+        return new ReadModelDbContext(options, ContainerName, _columns, Substitute.For<IReadModelMigrator>());
     }
 
     static ExpandoObject CreateRole(string role)
@@ -122,7 +141,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
         return item;
     }
 
-    static ReadModelDefinition CreateReadModelDefinition() =>
+    ReadModelDefinition CreateReadModelDefinition() =>
         new(
             "test-read-model",
             "TestReadModel",
@@ -134,7 +153,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { ReadModelGeneration.First, new JsonSchema() }
+                { ReadModelGeneration.First, _schema }
             },
             []);
 }

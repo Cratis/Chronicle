@@ -18,7 +18,7 @@ public class an_append_result_for_completion : Specification
         {
             EventStore = "event-store",
             EventStoreNamespace = "event-store-namespace",
-            EventSequenceId = EventSequences.EventSequenceId.Log,
+            EventSequenceId = EventSequenceId.Log,
             SequenceNumber = 42UL,
             Observers = _observers
         };

@@ -7,9 +7,12 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 /// <summary>
-/// Represents a model cache key factory that includes the table name in the cache key.
-/// This ensures that each <see cref="ReadModelDbContext"/> instance with a different table name
-/// gets its own cached model, preventing table name conflicts.
+/// Represents a model cache key factory that includes the table name AND the column schema
+/// in the cache key. Two different read models can declare the same table name (for example,
+/// integration specs that re-use a generic CLR type name across scenarios), so the column
+/// set must participate in the cache key — otherwise EF Core hands back a cached model whose
+/// PK ClrType belongs to a different read model and any subsequent <c>Add</c> on the wrong
+/// shape throws <see cref="InvalidCastException"/> inside the change tracker.
 /// </summary>
 public class ReadModelCacheKeyFactory : IModelCacheKeyFactory
 {
@@ -18,7 +21,10 @@ public class ReadModelCacheKeyFactory : IModelCacheKeyFactory
     {
         if (context is ReadModelDbContext readModelContext)
         {
-            return (context.GetType(), readModelContext.TableName, designTime);
+            var columnsKey = string.Join(
+                '|',
+                readModelContext.Columns.Select(c => $"{c.Name}:{c.ClrType.FullName}:{c.IsKey}:{c.IsJson}:{c.IsArray}:{c.IsNullable}"));
+            return (context.GetType(), readModelContext.TableName, columnsKey, designTime);
         }
 
         return (context.GetType(), designTime);

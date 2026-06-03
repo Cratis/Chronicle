@@ -31,6 +31,8 @@ public class when_converting_collection_to_client : Specification
         var firstEventType = new EventType(firstEventTypeId, 1);
         var secondEventType = new EventType(secondEventTypeId, 1);
 
+        _eventTypes.HasFor(firstEventTypeId).Returns(true);
+        _eventTypes.HasFor(secondEventTypeId).Returns(true);
         _eventTypes.GetClrTypeFor(firstEventTypeId).Returns(typeof(FirstEvent));
         _eventTypes.GetClrTypeFor(secondEventTypeId).Returns(typeof(SecondEvent));
 

@@ -66,6 +66,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="reactorSideEffectHandlers"><see cref="Reactors.SideEffects.IReactorSideEffectHandlers"/> for handling reactor side-effect return values.</param>
     /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -85,6 +86,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        Reactors.SideEffects.IReactorSideEffectHandlers reactorSideEffectHandlers,
         IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
@@ -151,7 +153,7 @@ public class EventStore : IEventStore
             causationManager,
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
-            serviceProvider.GetRequiredService<Reactors.SideEffects.IReactorSideEffectHandlers>(),
+            reactorSideEffectHandlers,
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 

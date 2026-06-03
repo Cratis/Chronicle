@@ -29,7 +29,7 @@ public class handler_method_returning_event_from_reactor_with_event_source_type_
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers([new EventResultHandler(eventTypes)]);
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithEventSourceTypeAttribute(_outboundEvent);
 
         _invoker = new ReactorInvoker(

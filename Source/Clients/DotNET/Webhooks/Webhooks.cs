@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Security;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Webhooks;
@@ -37,5 +38,23 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
         };
 
         await _servicesAccessor.Services.Webhooks.Add(request);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<WebhookDefinition>> GetAll()
+    {
+        var request = new GetWebhooksRequest { EventStore = eventStore.Name };
+        var webhooks = await _servicesAccessor.Services.Webhooks.GetWebhooks(request);
+
+        return webhooks.Select(w => new WebhookDefinition(
+            new WebhookId(w.Identifier),
+            w.EventTypes.Select(et => new EventType(new EventTypeId(et.Id), new EventTypeGeneration(et.Generation))),
+            new WebhookTarget(
+                new WebhookTargetUrl(w.Target.Url),
+                OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None>.FromT3(default),
+                new Dictionary<string, string>(w.Target.Headers ?? new Dictionary<string, string>())),
+            new EventSequences.EventSequenceId(w.EventSequenceId),
+            w.IsReplayable,
+            w.IsActive));
     }
 }

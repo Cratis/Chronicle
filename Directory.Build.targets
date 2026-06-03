@@ -1,8 +1,13 @@
 
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <!-- Define DEVELOPMENT compile symbol automatically for Debug configuration -->
-    <!-- This must be in .targets file to run after SDK sets the initial DefineConstants -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <!-- Define DEVELOPMENT compile symbol automatically for Debug configuration. -->
+    <!-- Also enable it on demand via -p:EnableDevelopmentSymbol=true (global property -->
+    <!-- propagates to every project reference, so the integration test stack — in-process -->
+    <!-- silo + Storage.Sql, Storage.MongoDB, etc. — gets the same #if DEVELOPMENT surface -->
+    <!-- (e.g. IDatabase.Wipe) that the kernel Docker image is published with via -->
+    <!-- -p:DefineConstants=DEVELOPMENT, even when CI invokes the tests in Release. -->
+    <!-- This must be in .targets file to run after SDK sets the initial DefineConstants. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug' OR '$(EnableDevelopmentSymbol)' == 'true'">
         <DefineConstants>$(DefineConstants);DEVELOPMENT</DefineConstants>
     </PropertyGroup>
 </Project>

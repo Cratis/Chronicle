@@ -10,6 +10,7 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// The event is appended to the event log using metadata resolved from the <see cref="ReactorContext"/>.
 /// </summary>
 /// <param name="eventTypes"><see cref="IEventTypes"/> for checking whether the value is a known event type.</param>
+[Singleton]
 public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler
 {
     /// <inheritdoc/>
