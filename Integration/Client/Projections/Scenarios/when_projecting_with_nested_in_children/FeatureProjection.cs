@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_nested_in_children;
 
-public class FeatureProjection : IProjectionFor<FeatureReadModel>
+public class FeatureProjection : IProjectionFor<NestedFeatureReadModel>
 {
-    public void Define(IProjectionBuilderFor<FeatureReadModel> builder) => builder
+    public void Define(IProjectionBuilderFor<NestedFeatureReadModel> builder) => builder
         .From<FeatureCreated>(b => b.Set(m => m.Name).To(e => e.Name))
         .Children(_ => _.Slices, slices => slices
             .IdentifiedBy(_ => _.Id)

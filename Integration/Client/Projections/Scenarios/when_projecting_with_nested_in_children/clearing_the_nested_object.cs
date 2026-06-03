@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_wit
 [Collection(ChronicleCollection.Name)]
 public class clearing_the_nested_object(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture fixture) : given.a_projection_and_events_appended_to_it<FeatureProjection, FeatureReadModel>(fixture)
+    public class context(ChronicleFixture fixture) : given.a_projection_and_events_appended_to_it<FeatureProjection, NestedFeatureReadModel>(fixture)
     {
         public override IEnumerable<Type> EventTypes =>
         [
