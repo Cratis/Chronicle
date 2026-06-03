@@ -278,14 +278,24 @@ internal sealed class InMemoryEventSequenceStorage(
         KernelEvents::EventStreamType? eventStreamType = default,
         KernelEvents::EventStreamId? eventStreamId = default,
         IEnumerable<KernelEvents::EventType>? eventTypes = default,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
         CancellationToken cancellationToken = default)
     {
         var filtered = Filter(_events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes)
-            .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
-            .OrderBy(_ => _.Context.SequenceNumber)
-            .ToList();
+            .Where(_ => _.Context.SequenceNumber >= sequenceNumber);
 
-        return Task.FromResult<IEventCursor>(new InMemoryEventCursor(filtered));
+        if (from is not null)
+        {
+            filtered = filtered.Where(_ => _.Context.Occurred >= from.Value);
+        }
+
+        if (to is not null)
+        {
+            filtered = filtered.Where(_ => _.Context.Occurred <= to.Value);
+        }
+
+        return Task.FromResult<IEventCursor>(new InMemoryEventCursor(filtered.OrderBy(_ => _.Context.SequenceNumber).ToList()));
     }
 
     /// <inheritdoc/>
@@ -294,14 +304,24 @@ internal sealed class InMemoryEventSequenceStorage(
         KernelEvents::EventSequenceNumber end,
         KernelEvents::EventSourceId? eventSourceId = default,
         IEnumerable<KernelEvents::EventType>? eventTypes = default,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
         CancellationToken cancellationToken = default)
     {
         var filtered = Filter(_events, eventSourceId, null, null, null, eventTypes)
-            .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end)
-            .OrderBy(_ => _.Context.SequenceNumber)
-            .ToList();
+            .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end);
 
-        return Task.FromResult<IEventCursor>(new InMemoryEventCursor(filtered));
+        if (from is not null)
+        {
+            filtered = filtered.Where(_ => _.Context.Occurred >= from.Value);
+        }
+
+        if (to is not null)
+        {
+            filtered = filtered.Where(_ => _.Context.Occurred <= to.Value);
+        }
+
+        return Task.FromResult<IEventCursor>(new InMemoryEventCursor(filtered.OrderBy(_ => _.Context.SequenceNumber).ToList()));
     }
 
     /// <inheritdoc/>

@@ -47,4 +47,16 @@ public class GetFromEventSequenceNumberRequest : IEventSequenceRequest
     /// </summary>
     [ProtoMember(7, IsRequired = true)]
     public IList<EventType> EventTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional inclusive lower-bound occurred-time filter.
+    /// </summary>
+    [ProtoMember(8)]
+    public SerializableDateTimeOffset? From { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional inclusive upper-bound occurred-time filter.
+    /// </summary>
+    [ProtoMember(9)]
+    public SerializableDateTimeOffset? To { get; set; }
 }

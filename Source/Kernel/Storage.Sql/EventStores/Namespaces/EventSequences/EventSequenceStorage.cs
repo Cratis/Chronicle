@@ -636,7 +636,7 @@ public class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetFromSequenceNumber(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -663,11 +663,21 @@ public class EventSequenceStorage(
             query = query.Where(e => eventTypeIds.Contains(e.Type));
         }
 
+        if (from is not null)
+        {
+            query = query.Where(e => e.Occurred >= from.Value);
+        }
+
+        if (to is not null)
+        {
+            query = query.Where(e => e.Occurred <= to.Value);
+        }
+
         return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, CancellationToken cancellationToken = default)
+    public async Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, DateTimeOffset? from = null, DateTimeOffset? to = null, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
@@ -685,6 +695,16 @@ public class EventSequenceStorage(
         {
             var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
             query = query.Where(e => eventTypeIds.Contains(e.Type));
+        }
+
+        if (from is not null)
+        {
+            query = query.Where(e => e.Occurred >= from.Value);
+        }
+
+        if (to is not null)
+        {
+            query = query.Where(e => e.Occurred <= to.Value);
         }
 
         return new EventCursor(query, eventStore, @namespace, identityStorage, 100, cancellationToken);

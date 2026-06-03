@@ -695,6 +695,8 @@ public class EventSequenceStorage(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         IEnumerable<EventType>? eventTypes = null,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
         CancellationToken cancellationToken = default)
     {
         logger.GettingFromSequenceNumber(eventSequenceId, sequenceNumber);
@@ -725,6 +727,16 @@ public class EventSequenceStorage(
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
         }
 
+        if (from is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Gte(e => e.Occurred, from.Value));
+        }
+
+        if (to is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Lte(e => e.Occurred, to.Value));
+        }
+
         var filter = Builders<Event>.Filter.And([.. filters]);
         var cursor = await collection.Find(filter)
                                      .SortByAscendingSequenceNumber()
@@ -739,6 +751,8 @@ public class EventSequenceStorage(
         EventSequenceNumber end,
         EventSourceId? eventSourceId = default,
         IEnumerable<EventType>? eventTypes = default,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
         CancellationToken cancellationToken = default)
     {
         logger.GettingRange(eventSequenceId, start, end);
@@ -757,6 +771,16 @@ public class EventSequenceStorage(
         if (eventTypes?.Any() == true)
         {
             filters.Add(Builders<Event>.Filter.In(e => e.Type, eventTypes.Select(_ => _.Id).ToArray()));
+        }
+
+        if (from is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Gte(e => e.Occurred, from.Value));
+        }
+
+        if (to is not null)
+        {
+            filters.Add(Builders<Event>.Filter.Lte(e => e.Occurred, to.Value));
         }
 
         var filter = Builders<Event>.Filter.And([.. filters]);

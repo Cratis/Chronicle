@@ -91,6 +91,8 @@ export const Query = ({ query, onSave }: QueryProps) => {
             label: 'Event types',
             type: 'string',
             multi: true,
+            searchable: true,
+            searchPlaceholder: 'Search event types…',
             options: (eventTypes.data ?? [])
                 .map(type => ({
                     key: type.id,

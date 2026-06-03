@@ -37,6 +37,8 @@ export const EventList = (props: EventListProps) => {
         eventTypes: props.filter?.eventTypes && props.filter.eventTypes.length > 0
             ? props.filter.eventTypes
             : undefined,
+        startTime: props.filter?.startTime as unknown as AppendedEventsParameters['startTime'],
+        endTime: props.filter?.endTime as unknown as AppendedEventsParameters['endTime'],
     };
 
     return (

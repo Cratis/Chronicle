@@ -151,6 +151,9 @@ internal sealed class EventSequences(
     {
         var eventSequence = GetEventSequenceStorage(request);
 
+        var from = request.From is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(request.From.Value, System.Globalization.CultureInfo.InvariantCulture);
+        var to = request.To is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(request.To.Value, System.Globalization.CultureInfo.InvariantCulture);
+
         IEventCursor cursor;
 
         if (request.ToEventSequenceNumber is not null)
@@ -159,7 +162,9 @@ internal sealed class EventSequences(
                 request.FromEventSequenceNumber,
                 request.ToEventSequenceNumber,
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
-                request.EventTypes.ToChronicle());
+                request.EventTypes.ToChronicle(),
+                from,
+                to);
         }
         else
         {
@@ -168,7 +173,9 @@ internal sealed class EventSequences(
                 string.IsNullOrWhiteSpace(request.EventSourceId) ? (EventSourceId)null! : request.EventSourceId,
                 EventStreamType.All,
                 EventStreamId.Default,
-                request.EventTypes.ToChronicle());
+                request.EventTypes.ToChronicle(),
+                from,
+                to);
         }
 
         var appendedEvents = new List<AppendedEvent>();
