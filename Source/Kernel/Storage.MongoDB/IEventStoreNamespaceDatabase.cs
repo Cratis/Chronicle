@@ -49,6 +49,6 @@ public interface IEventStoreNamespaceDatabase
     /// <summary>
     /// Get the identifiers of all event sequences that exist in this namespace database.
     /// </summary>
-    /// <returns>Collection of event-sequence id strings.</returns>
-    Task<IEnumerable<string>> GetEventSequenceIds();
+    /// <returns>Collection of <see cref="EventSequenceId"/>.</returns>
+    Task<IEnumerable<EventSequenceId>> GetEventSequenceIds();
 }

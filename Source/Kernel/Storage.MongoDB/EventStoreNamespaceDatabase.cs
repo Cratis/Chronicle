@@ -76,27 +76,11 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<string>> GetEventSequenceIds()
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequenceIds()
     {
-        var allCollections = await (await _database.ListCollectionNamesAsync()).ToListAsync();
-
-        var nonSequenceCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            WellKnownCollectionNames.Observers,
-            WellKnownCollectionNames.FailedPartitions,
-            WellKnownCollectionNames.Jobs,
-            WellKnownCollectionNames.JobSteps,
-            WellKnownCollectionNames.FailedJobSteps,
-            WellKnownCollectionNames.Recommendations,
-            WellKnownCollectionNames.Identities,
-            WellKnownCollectionNames.ReplayContexts,
-            WellKnownCollectionNames.ReplayedReadModels,
-            WellKnownCollectionNames.EventSeeds,
-            WellKnownCollectionNames.ProjectionFutures,
-            WellKnownCollectionNames.Constraints,
-        };
-
-        return allCollections.Where(name => !nonSequenceCollections.Contains(name));
+        var collection = _database.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences);
+        var documents = await (await collection.FindAsync(FilterDefinition<BsonDocument>.Empty)).ToListAsync();
+        return documents.Select(document => (EventSequenceId)document["_id"].AsString).ToArray();
     }
 
     void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)

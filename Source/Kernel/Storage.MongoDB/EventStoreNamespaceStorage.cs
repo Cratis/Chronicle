@@ -193,9 +193,5 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventSequenceId>> GetEventSequenceIds()
-    {
-        var ids = await _eventStoreNamespaceDatabase.GetEventSequenceIds();
-        return ids.Select(id => (EventSequenceId)id);
-    }
+    public Task<IEnumerable<EventSequenceId>> GetEventSequenceIds() => _eventStoreNamespaceDatabase.GetEventSequenceIds();
 }
