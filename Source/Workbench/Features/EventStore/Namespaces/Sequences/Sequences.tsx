@@ -1,48 +1,121 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { SequencesViewModel } from './SequencesViewModel';
-import { withViewModel } from '@cratis/arc.react.mvvm';
 import { Page } from 'Components/Common/Page';
 import { Bookmark } from './Bookmark/Bookmark';
 import { Query } from './Query';
+import { QueryDefinition } from './QueryDefinition';
 import { Allotment } from 'allotment';
 import { TabPanel, TabView } from 'primereact/tabview';
+import { Guid } from '@cratis/fundamentals';
 import { AllEventSequenceQueryFolders } from 'Api/SequenceQueries/Listing/AllEventSequenceQueryFolders';
+import { AddEventSequenceQuery } from 'Api/SequenceQueries/Adding/AddEventSequenceQuery';
+import { AddEventSequenceQueryFolder } from 'Api/SequenceQueries/Adding/AddEventSequenceQueryFolder';
+import { AddEventSequenceQueryFolderForUser } from 'Api/SequenceQueries/Adding/AddEventSequenceQueryFolderForUser';
+import { EventSequenceQueryFolder } from 'Api/SequenceQueries/Listing/EventSequenceQueryFolder';
+import { SequenceQueryFilter } from 'Api/SequenceQueries/SequenceQueryFilter';
 import { type EventStoreAndNamespaceParams } from 'Shared';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Button } from 'primereact/button';
-import { useCallback, useEffect } from 'react';
 
-export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
+const flattenQueries = (folders: EventSequenceQueryFolder[]): QueryDefinition[] =>
+    folders.flatMap(folder => (folder.queries ?? []).map(query => ({
+        id: query.queryId?.toString(),
+        name: query.name,
+        eventSequenceId: query.eventSequenceId,
+        eventSourceId: query.filter?.eventSourceId ?? undefined,
+        eventTypes: query.filter?.eventTypes ?? [],
+        startTime: query.filter?.startTime ? new Date(query.filter.startTime as unknown as string) : undefined,
+        endTime: query.filter?.endTime ? new Date(query.filter.endTime as unknown as string) : undefined,
+        folderId: folder.folderId?.toString(),
+        isUnsaved: false,
+    } as QueryDefinition)));
+
+export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const eventStore = params.eventStore!;
     const namespace = params.namespace!;
 
     const [folders, refresh] = AllEventSequenceQueryFolders.use({ eventStore, namespace });
 
+    const [queries, setQueries] = useState<QueryDefinition[]>([]);
+    const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
+
+    const savedQueries = useMemo(() => flattenQueries(folders.data ?? []), [folders.data]);
+
     useEffect(() => {
-        if (folders.hasData) {
-            viewModel.setFoldersFromApi(folders.data);
+        setQueries(previous => {
+            const drafts = previous.filter(query => query.isUnsaved === true);
+            return [...savedQueries, ...drafts];
+        });
+    }, [savedQueries]);
+
+    const handleAddFolder = useCallback(async (group: 'myQueries' | 'sharedQueries', name: string) => {
+        const folderId = Guid.create();
+        if (group === 'sharedQueries') {
+            const command = new AddEventSequenceQueryFolder();
+            command.eventStore = eventStore;
+            command.namespace = namespace;
+            command.folderId = folderId;
+            command.name = name;
+            await command.execute();
+        } else {
+            const command = new AddEventSequenceQueryFolderForUser();
+            command.eventStore = eventStore;
+            command.namespace = namespace;
+            command.folderId = folderId;
+            command.name = name;
+            await command.execute();
         }
-    }, [folders.hasData, folders.data, viewModel]);
-
-    const handleSaveFolder = useCallback(async (name: string, shared: boolean) => {
-        await viewModel.addFolder(eventStore, namespace, name, shared);
         refresh();
-    }, [viewModel, eventStore, namespace, refresh]);
+    }, [eventStore, namespace, refresh]);
 
-    const handleAddQuery = () => {
-        const firstFolder = viewModel.folders[0];
-        viewModel.addUnsavedQuery(firstFolder?.folderId?.toString());
-    };
+    const handleAddQueryForGroup = useCallback((group: 'myQueries' | 'sharedQueries') => {
+        const allFolders = folders.data ?? [];
+        const systemOwner = 'System';
+        const groupFolder = group === 'sharedQueries'
+            ? allFolders.find(folder => folder.owner === systemOwner)
+            : allFolders.find(folder => folder.owner !== systemOwner);
 
-    const handleSaveCurrentQuery = useCallback(async () => {
-        await viewModel.saveCurrentQuery(eventStore, namespace);
+        setQueries(previous => {
+            const draft: QueryDefinition = {
+                id: undefined,
+                name: `Query ${previous.length + 1}`,
+                eventSequenceId: 'event-log',
+                folderId: groupFolder?.folderId?.toString(),
+                isUnsaved: true,
+            };
+            const next = [...previous, draft];
+            setActiveTabIndex(next.length - 1);
+            return next;
+        });
+    }, [folders.data]);
+
+    const handleSaveQuery = useCallback(async (updated: QueryDefinition) => {
+        if (updated.folderId === undefined || updated.isUnsaved !== true) {
+            return;
+        }
+        const queryId = Guid.create();
+        const command = new AddEventSequenceQuery();
+        command.eventStore = eventStore;
+        command.namespace = namespace;
+        command.queryId = queryId;
+        command.folderId = Guid.parse(updated.folderId);
+        command.name = updated.name;
+        command.eventSequenceId = updated.eventSequenceId;
+
+        const filter = new SequenceQueryFilter();
+        filter.eventSourceId = updated.eventSourceId ?? '';
+        filter.eventTypes = updated.eventTypes ?? [];
+        filter.startTime = updated.startTime ?? null as unknown as Date;
+        filter.endTime = updated.endTime ?? null as unknown as Date;
+        command.filter = filter;
+
+        await command.execute();
         refresh();
-    }, [viewModel, eventStore, namespace, refresh]);
+    }, [eventStore, namespace, refresh]);
 
-    const tabHeader = (query: { name: string; isUnsaved?: boolean }) => (
+    const tabHeader = (query: QueryDefinition) => (
         <span className="px-1">
             {query.name}
             {query.isUnsaved === true && <span className="ml-1">*</span>}
@@ -55,34 +128,29 @@ export const Sequences = withViewModel(SequencesViewModel, ({ viewModel }) => {
                 <Allotment.Pane preferredSize="270px">
                     <Bookmark
                         folders={folders.data ?? []}
-                        onSaveFolder={handleSaveFolder}
+                        onAddFolder={handleAddFolder}
+                        onAddQuery={handleAddQueryForGroup}
                     />
                 </Allotment.Pane>
                 <Allotment.Pane className="h-full">
-                    <div className="flex flex-col h-full w-full">
-                        <div className="flex items-start">
-                            <Button
-                                icon="pi pi-plus"
-                                className="p-button-text p-button-sm flex-shrink-0 mt-1 ml-2"
-                                tooltip="New query"
-                                tooltipOptions={{ position: 'bottom' }}
-                                onClick={handleAddQuery} />
-                            <TabView
-                                className="flex-1"
-                                activeIndex={viewModel.activeTabIndex}
-                                onTabChange={(event) => { viewModel.activeTabIndex = event.index; }}>
-                                {viewModel.queries.map((query, index) => (
-                                    <TabPanel
-                                        key={query.id ?? `draft-${index}`}
-                                        header={tabHeader(query)}>
-                                        <Query query={query} onSave={handleSaveCurrentQuery} />
-                                    </TabPanel>
-                                ))}
-                            </TabView>
-                        </div>
-                    </div>
+                    <TabView
+                        activeIndex={activeTabIndex}
+                        onTabChange={(event) => setActiveTabIndex(event.index)}
+                        pt={{
+                            root: { className: 'h-full flex flex-col' },
+                            panelContainer: { className: 'flex-1 min-h-0 overflow-hidden p-0' },
+                        }}>
+                        {queries.map((query, index) => (
+                            <TabPanel
+                                key={query.id ?? `draft-${index}`}
+                                header={tabHeader(query)}
+                                contentClassName="h-full">
+                                <Query query={query} onSave={handleSaveQuery} />
+                            </TabPanel>
+                        ))}
+                    </TabView>
                 </Allotment.Pane>
             </Allotment>
         </Page>
     );
-});
+};

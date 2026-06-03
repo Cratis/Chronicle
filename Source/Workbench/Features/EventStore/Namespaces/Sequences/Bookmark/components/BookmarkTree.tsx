@@ -14,6 +14,7 @@ export interface BookmarkTreeProps {
     expandedKeys: { [key: string]: boolean };
     setExpandedKeys: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
     addNewFolder: (group: BookmarkOwnerGroup) => void;
+    addNewQuery: (group: BookmarkOwnerGroup) => void;
     handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
     handleInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
     exitEditMode: () => void;
@@ -26,6 +27,7 @@ export const BookmarkTree = ({
     expandedKeys,
     setExpandedKeys,
     addNewFolder,
+    addNewQuery,
     handleInputChange,
     handleInputKeyDown,
     exitEditMode,
@@ -36,6 +38,7 @@ export const BookmarkTree = ({
             node={node as unknown as BookmarkNode}
             editingNodeKey={editingNodeKey}
             addNewFolder={addNewFolder}
+            addNewQuery={addNewQuery}
             handleInputChange={handleInputChange}
             handleInputKeyDown={handleInputKeyDown}
             exitEditMode={exitEditMode}

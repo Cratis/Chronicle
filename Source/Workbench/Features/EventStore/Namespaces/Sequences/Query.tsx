@@ -1,191 +1,269 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { withViewModel } from '@cratis/arc.react.mvvm';
-import { QueryViewModel } from './QueryViewModel';
 import { EventList } from './EventList';
 import { EventDetails } from './EventDetails';
-import { Button } from 'primereact/button';
+import { Allotment } from 'allotment';
+import { InputText } from 'primereact/inputtext';
+import { Menubar } from 'primereact/menubar';
+import { MenuItem } from 'primereact/menuitem';
 import { AppendedEvent } from 'Api/Events';
 import { QueryDefinition } from './QueryDefinition';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { EventHistogram } from './Histogram/Histogram';
+import { FilterPanel, FilterEditor, useFilterState } from '@cratis/components/Filter';
+import type { FilterDefinition } from '@cratis/components/Filter';
 import { SequenceSelector } from './SequenceSelector';
-import { MenuItem } from 'primereact/menuitem';
-import { useRef, useState } from 'react';
-import { useToggle } from 'usehooks-ts';
-import { Menubar } from 'primereact/menubar';
-import { InputText } from 'primereact/inputtext';
-import { MultiSelect } from 'primereact/multiselect';
-import { Calendar } from 'primereact/calendar';
+import { useMemo, useRef, useState } from 'react';
 import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
+import { ForSequence } from 'Api/EventSequences/ForSequence';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 
 export interface QueryProps {
     query: QueryDefinition;
-    onSave?: () => Promise<void>;
+    onSave?: (query: QueryDefinition) => Promise<void>;
 }
 
-export const Query = withViewModel<QueryViewModel, QueryProps>(QueryViewModel, ({ viewModel, props }) => {
-    const [showTimeRange, toggleTimeRange] = useToggle(false);
-    const [showFilters, toggleFilters] = useToggle(false);
-    const selectSequencePanelRef = useRef<OverlayPanel>(null);
-    const params = useParams<EventStoreAndNamespaceParams>();
-    const { query } = props;
+const FILTER_KEY_EVENT_SEQUENCE = 'eventSequence';
+const FILTER_KEY_EVENT_SOURCE_ID = 'eventSourceId';
+const FILTER_KEY_EVENT_TYPES = 'eventTypes';
+const FILTER_KEY_TIME_RANGE = 'timeRange';
 
+const FilterIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+);
+
+export const Query = ({ query, onSave }: QueryProps) => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+
+    const filterButtonRef = useRef<HTMLButtonElement>(null);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [appliedFilter, setAppliedFilter] = useState<{
         eventSourceId?: string;
         eventTypes?: string[];
         startTime?: Date;
         endTime?: Date;
     }>({});
+    const [appliedEventSequenceId, setAppliedEventSequenceId] = useState<string>(query.eventSequenceId);
+    const [isDirty, setIsDirty] = useState<boolean>(query.isUnsaved === true);
 
-    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
+    const [eventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
 
-    const [eventTypes] = AllEventTypes.use({
-        eventStore: params.eventStore!
+    const [histogram] = ForSequence.use({
+        eventStore: params.eventStore!,
+        namespace: params.namespace!,
+        eventSequenceId: appliedEventSequenceId,
+        resolution: 'Hour',
     });
 
-    const hasUnsavedChanges = query.isUnsaved === true || viewModel.hasChanges;
+    const histogramData = histogram.data ?? [];
 
-    const items: MenuItem[] = [
-        {
-            id: 'selectSequence',
-            label: 'Event log',
-            icon: 'pi pi-list',
-            command: (e) => selectSequencePanelRef.current?.toggle(e.originalEvent),
-        },
-        {
-            id: 'run',
-            label: 'Run',
-            icon: 'pi pi-play',
-            command: () => setAppliedFilter({
-                eventSourceId: viewModel.eventSourceId,
-                eventTypes: viewModel.eventTypes,
-                startTime: viewModel.startTime ?? undefined,
-                endTime: viewModel.endTime ?? undefined,
-            })
-        },
-        {
-            id: 'filters',
-            label: 'Filters',
-            icon: 'pi pi-filter',
-            className: showFilters ? 'highlight' : '',
-            command: () => toggleFilters(),
-        },
-        {
-            id: 'timeRange',
-            label: 'Time range',
-            icon: 'pi pi-chart-line',
-            className: showTimeRange ? 'highlight' : '',
-            command: () => toggleTimeRange(),
-        },
-        {
-            id: 'save',
-            label: 'Save',
-            icon: 'pi pi-save',
-            disabled: !hasUnsavedChanges,
-            command: async () => {
-                if (props.onSave !== undefined) {
-                    await props.onSave();
-                }
-                viewModel.save();
+    const timeRange = useMemo(() => {
+        if (histogramData.length === 0) {
+            const now = Date.now();
+            return { min: now - 24 * 60 * 60 * 1000, max: now, values: [] as number[] };
+        }
+        const times = histogramData.map(bucket => {
+            const occurred = bucket.occurred;
+            return occurred instanceof Date ? occurred.getTime() : new Date(occurred as unknown as string).getTime();
+        });
+        const expanded: number[] = [];
+        histogramData.forEach((bucket, index) => {
+            const count = Number(bucket.count ?? 0);
+            for (let i = 0; i < count; i++) {
+                expanded.push(times[index]);
             }
-        },
-    ];
+        });
+        return {
+            min: Math.min(...times),
+            max: Math.max(...times),
+            values: expanded.length > 0 ? expanded : times,
+        };
+    }, [histogramData]);
 
-    const filter = appliedFilter;
+    const filters: FilterDefinition[] = useMemo(() => [
+        { key: FILTER_KEY_EVENT_SEQUENCE, label: 'Event Sequence', type: 'custom' },
+        { key: FILTER_KEY_EVENT_SOURCE_ID, label: 'Event source id', type: 'custom' },
+        {
+            key: FILTER_KEY_EVENT_TYPES,
+            label: 'Event types',
+            type: 'string',
+            multi: true,
+            options: (eventTypes.data ?? [])
+                .map(type => ({
+                    key: type.id,
+                    label: type.id,
+                    value: type.id,
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label)),
+        },
+        {
+            key: FILTER_KEY_TIME_RANGE,
+            label: 'Time range',
+            type: 'date',
+            buckets: 20,
+            numericRange: {
+                min: timeRange.min,
+                max: timeRange.max,
+                values: timeRange.values,
+            },
+        },
+    ], [eventTypes.data, timeRange]);
+
+    const filterState = useFilterState(filters);
+
+    const activeFilterCount =
+        ((filterState.filterValues[FILTER_KEY_EVENT_TYPES]?.size ?? 0) > 0 ? 1 : 0) +
+        (filterState.rangeValues[FILTER_KEY_TIME_RANGE] ? 1 : 0) +
+        (((filterState.customValues[FILTER_KEY_EVENT_SOURCE_ID] as string | undefined)?.trim().length ?? 0) > 0 ? 1 : 0) +
+        (filterState.customValues[FILTER_KEY_EVENT_SEQUENCE] ? 1 : 0);
+
+    const markDirty = () => setIsDirty(true);
+
+    const runQuery = () => {
+        const selectedTypes = Array.from(filterState.filterValues[FILTER_KEY_EVENT_TYPES] ?? []);
+        const range = filterState.rangeValues[FILTER_KEY_TIME_RANGE] ?? null;
+        const eventSourceId = (filterState.customValues[FILTER_KEY_EVENT_SOURCE_ID] as string | undefined) ?? '';
+        const eventSequenceId = (filterState.customValues[FILTER_KEY_EVENT_SEQUENCE] as string | undefined) ?? query.eventSequenceId;
+
+        setAppliedEventSequenceId(eventSequenceId);
+        setAppliedFilter({
+            eventSourceId: eventSourceId || undefined,
+            eventTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+            startTime: range ? new Date(range[0]) : undefined,
+            endTime: range ? new Date(range[1]) : undefined,
+        });
+    };
+
+    const save = async () => {
+        if (onSave === undefined) {
+            return;
+        }
+        const selectedTypes = Array.from(filterState.filterValues[FILTER_KEY_EVENT_TYPES] ?? []);
+        const range = filterState.rangeValues[FILTER_KEY_TIME_RANGE] ?? null;
+        const eventSourceId = (filterState.customValues[FILTER_KEY_EVENT_SOURCE_ID] as string | undefined) ?? '';
+        const eventSequenceId = (filterState.customValues[FILTER_KEY_EVENT_SEQUENCE] as string | undefined) ?? query.eventSequenceId;
+        await onSave({
+            ...query,
+            eventSequenceId,
+            eventSourceId: eventSourceId || undefined,
+            eventTypes: selectedTypes,
+            startTime: range ? new Date(range[0]) : undefined,
+            endTime: range ? new Date(range[1]) : undefined,
+        });
+        setIsDirty(false);
+    };
 
     return (
-        <>
-            <div className="px-4 py-2">
-                <Menubar model={items} />
-                <OverlayPanel ref={selectSequencePanelRef}>
-                    <SequenceSelector />
-                </OverlayPanel>
-
-                {showFilters && (
-                    <div className="flex flex-row gap-4 mt-2 items-center">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-gray-500">Event Source ID</label>
-                            <InputText
-                                value={viewModel.eventSourceId}
-                                onChange={(e) => { viewModel.eventSourceId = e.target.value; }}
-                                placeholder="Filter by event source ID"
-                                className="p-inputtext-sm w-64" />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-gray-500">Event Types</label>
-                            <MultiSelect
-                                value={viewModel.eventTypes}
-                                options={eventTypes.data ?? []}
-                                onChange={(e) => { viewModel.eventTypes = e.value; }}
-                                optionLabel="id"
-                                optionValue="id"
-                                placeholder="Filter by event type"
-                                maxSelectedLabels={2}
-                                className="p-inputtext-sm w-72" />
-                        </div>
-                    </div>
-                )}
-
-                {showTimeRange && (
-                    <>
-                        <EventHistogram
-                            eventStore={params.eventStore!}
-                            namespace={params.namespace!}
-                            eventSequenceId={query.eventSequenceId}
-                        />
-                        <div className="flex flex-row gap-4 mt-2 items-center">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-500">Start time</label>
-                                <Calendar
-                                    value={viewModel.startTime}
-                                    onChange={(e) => { viewModel.startTime = e.value as Date | null; }}
-                                    showTime
-                                    hourFormat="24"
-                                    placeholder="Start time"
-                                    className="p-inputtext-sm" />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-500">End time</label>
-                                <Calendar
-                                    value={viewModel.endTime}
-                                    onChange={(e) => { viewModel.endTime = e.value as Date | null; }}
-                                    showTime
-                                    hourFormat="24"
-                                    placeholder="End time"
-                                    className="p-inputtext-sm" />
-                            </div>
-                        </div>
-                    </>
-                )}
+        <div className="flex flex-col h-full w-full">
+            <div className="px-4 py-2" onMouseDownCapture={markDirty} onKeyDownCapture={markDirty}>
+                <Menubar model={[
+                    {
+                        id: 'run',
+                        label: 'Run',
+                        icon: 'pi pi-play',
+                        command: runQuery,
+                    },
+                    {
+                        id: 'filters',
+                        label: 'Filters',
+                        className: filtersOpen ? 'highlight' : '',
+                        template: (item, options) => (
+                            <button
+                                ref={filterButtonRef}
+                                type="button"
+                                className={options.className}
+                                onClick={() => setFiltersOpen(open => !open)}>
+                                <span className={options.iconClassName} style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0.5rem' }}>
+                                    <FilterIcon />
+                                </span>
+                                <span className={options.labelClassName}>{item.label}</span>
+                                {activeFilterCount > 0 && (
+                                    <span
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginLeft: '0.5rem',
+                                            minWidth: '1.25rem',
+                                            height: '1.25rem',
+                                            padding: '0 0.4rem',
+                                            borderRadius: '999px',
+                                            background: 'var(--primary-color)',
+                                            color: 'var(--primary-color-text)',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600,
+                                            lineHeight: 1,
+                                        }}>
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </button>
+                        ),
+                    },
+                    {
+                        id: 'save',
+                        label: 'Save',
+                        icon: 'pi pi-save',
+                        disabled: !isDirty,
+                        command: save,
+                    },
+                ] as MenuItem[]} />
             </div>
 
-            <div className="flex flex-row flex-1 overflow-hidden">
-                <div className="flex-1 overflow-hidden min-w-0">
-                    <EventList
-                        key={JSON.stringify(filter)}
-                        filter={filter}
-                        eventSequenceId={query.eventSequenceId}
-                        selection={selectedEvent}
-                        onSelectionChange={setSelectedEvent} />
-                </div>
-                {selectedEvent !== null && (
-                    <div className="w-[40%] min-w-[360px] overflow-auto border-l border-[var(--surface-border)]">
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--surface-border)]">
-                            <span className="text-sm">Event #{selectedEvent.context.sequenceNumber} — {selectedEvent.context.eventType.id}</span>
-                            <Button
-                                icon="pi pi-times"
-                                className="p-button-text p-button-sm"
-                                onClick={() => setSelectedEvent(null)} />
-                        </div>
-                        <EventDetails item={selectedEvent} />
-                    </div>
-                )}
+            <FilterPanel
+                isOpen={filtersOpen}
+                filters={filters}
+                anchorRef={filterButtonRef}
+                filterValues={filterState.filterValues}
+                rangeValues={filterState.rangeValues}
+                customValues={filterState.customValues}
+                expandedFilterKey={filterState.expandedFilterKey}
+                onClose={() => setFiltersOpen(false)}
+                onFilterToggle={(key, optionKey, multi) => { markDirty(); filterState.handleToggleFilter(key, optionKey, multi); }}
+                onFilterClear={(key) => { markDirty(); filterState.handleClearFilter(key); }}
+                onRangeChange={(key, range) => { markDirty(); filterState.handleRangeChange(key, range); }}
+                onExpandedFilterChange={filterState.setExpandedFilterKey}
+                onCustomValueChange={(key, value) => { markDirty(); filterState.handleCustomValueChange(key, value); }}>
+                <FilterEditor filterKey={FILTER_KEY_EVENT_SEQUENCE}>
+                    {({ value, onChange }) => (
+                        <SequenceSelector
+                            value={(value as string | undefined) ?? query.eventSequenceId}
+                            onChange={onChange} />
+                    )}
+                </FilterEditor>
+                <FilterEditor filterKey={FILTER_KEY_EVENT_SOURCE_ID}>
+                    {({ value, onChange }) => (
+                        <InputText
+                            value={(value as string | undefined) ?? ''}
+                            onChange={(event) => onChange(event.target.value)}
+                            placeholder="Filter by event source id"
+                            className="p-inputtext-sm w-full" />
+                    )}
+                </FilterEditor>
+            </FilterPanel>
+
+            <div className="flex-1 min-h-0">
+                <Allotment className="h-full" proportionalLayout={false}>
+                    <Allotment.Pane>
+                        <EventList
+                            key={`${appliedEventSequenceId}:${JSON.stringify(appliedFilter)}`}
+                            filter={appliedFilter}
+                            eventSequenceId={appliedEventSequenceId}
+                            selection={selectedEvent}
+                            onSelectionChange={setSelectedEvent} />
+                    </Allotment.Pane>
+                    {selectedEvent !== null && (
+                        <Allotment.Pane preferredSize="40%" minSize={360}>
+                            <div className="h-full overflow-auto">
+                                <EventDetails item={selectedEvent} />
+                            </div>
+                        </Allotment.Pane>
+                    )}
+                </Allotment>
             </div>
-        </>
+        </div>
     );
-});
-
+};

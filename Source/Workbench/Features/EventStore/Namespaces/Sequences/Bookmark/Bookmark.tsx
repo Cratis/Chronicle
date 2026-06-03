@@ -2,17 +2,19 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { BookmarkTree } from './components/BookmarkTree';
+import { BookmarkOwnerGroup } from './BookmarkNode';
 import { useBookmarkNodes } from './hook/useBookmark';
 import { EventSequenceQueryFolder } from 'Api/SequenceQueries/Listing/EventSequenceQueryFolder';
 
 export interface BookmarkProps {
     folders: EventSequenceQueryFolder[];
     currentUserSubject?: string;
-    onSaveFolder: (name: string, shared: boolean) => Promise<void>;
+    onAddFolder: (group: BookmarkOwnerGroup, name: string) => Promise<void>;
+    onAddQuery: (group: BookmarkOwnerGroup) => void;
     onSelectQuery?: (folderId: string, queryId: string) => void;
 }
 
-export const Bookmark = ({ folders, currentUserSubject, onSaveFolder, onSelectQuery }: BookmarkProps) => {
+export const Bookmark = ({ folders, currentUserSubject, onAddFolder, onAddQuery, onSelectQuery }: BookmarkProps) => {
     const {
         nodes,
         editingNodeKey,
@@ -22,7 +24,7 @@ export const Bookmark = ({ folders, currentUserSubject, onSaveFolder, onSelectQu
         handleInputChange,
         handleInputKeyDown,
         exitEditMode,
-    } = useBookmarkNodes({ folders, currentUserSubject, onSaveFolder });
+    } = useBookmarkNodes({ folders, currentUserSubject, onSaveFolder: (name, group) => onAddFolder(group, name) });
 
     return (
         <BookmarkTree
@@ -31,6 +33,7 @@ export const Bookmark = ({ folders, currentUserSubject, onSaveFolder, onSelectQu
             expandedKeys={expandedKeys}
             setExpandedKeys={setExpandedKeys}
             addNewFolder={addNewFolder}
+            addNewQuery={onAddQuery}
             handleInputChange={handleInputChange}
             handleInputKeyDown={handleInputKeyDown}
             exitEditMode={exitEditMode}

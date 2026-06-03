@@ -31,7 +31,7 @@ const buildFolderNode = (folder: EventSequenceQueryFolder, ownerGroup: BookmarkO
 export interface UseBookmarkArgs {
     folders: EventSequenceQueryFolder[];
     currentUserSubject?: string;
-    onSaveFolder: (name: string, shared: boolean) => Promise<void>;
+    onSaveFolder: (name: string, group: BookmarkOwnerGroup) => Promise<void>;
 }
 
 export const useBookmarkNodes = ({ folders, currentUserSubject, onSaveFolder }: UseBookmarkArgs) => {
@@ -72,6 +72,7 @@ export const useBookmarkNodes = ({ folders, currentUserSubject, onSaveFolder }: 
             {
                 key: myQueriesKey,
                 label: 'My queries',
+                icon: 'pi pi-fw pi-user',
                 ownerGroup: 'myQueries',
                 isFolder: true,
                 children: myChildren,
@@ -79,6 +80,7 @@ export const useBookmarkNodes = ({ folders, currentUserSubject, onSaveFolder }: 
             {
                 key: sharedQueriesKey,
                 label: 'Shared queries',
+                icon: 'pi pi-fw pi-users',
                 ownerGroup: 'sharedQueries',
                 isFolder: true,
                 children: sharedChildren,
@@ -103,7 +105,7 @@ export const useBookmarkNodes = ({ folders, currentUserSubject, onSaveFolder }: 
             const name = draftName.trim();
             const group = draftGroup;
             if (name.length > 0 && group !== null) {
-                await onSaveFolder(name, group === 'sharedQueries');
+                await onSaveFolder(name, group);
             }
             setEditingNodeKey(null);
             setDraftGroup(null);
