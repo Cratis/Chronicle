@@ -27,14 +27,14 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="state"><see cref="IPersistentState{TState}"/> for managing state of the job step.</param>
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
-/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII event content before dispatching to subscribers.</param>
+/// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<HandleEventsForPartitionState> state,
     IJobStepThrottle throttle,
     IStorage storage,
-    IEventComplianceHelper eventComplianceHelper,
+    IEventCompliance eventCompliance,
     ILogger<HandleEventsForPartition> logger) : JobStep<HandleEventsForPartitionArguments, HandleEventsForPartitionResult, HandleEventsForPartitionState>(state, throttle, logger), IHandleEventsForPartition
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -380,5 +380,5 @@ public class HandleEventsForPartition(
         _eventSequenceStorage ??= storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
 
     Task<AppendedEvent[]> DecryptEvents(IEnumerable<AppendedEvent> events) =>
-        eventComplianceHelper.DecryptEvents(events, _eventTypeSchemas);
+        eventCompliance.DecryptEvents(events, _eventTypeSchemas);
 }

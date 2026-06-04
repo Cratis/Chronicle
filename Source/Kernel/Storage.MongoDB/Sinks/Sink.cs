@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -315,6 +316,37 @@ public class Sink(
 
         var instances = documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, readModel.GetSchemaForLatestGeneration()));
         return new ReadModelInstances(instances, totalCount);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
+        var schema = readModel.GetSchemaForLatestGeneration();
+
+        // Return an observable that transforms MongoDB change stream events into instance collections
+        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
+        {
+            // Get initial instances
+            var documents = await collection
+                .Find(FilterDefinition<BsonDocument>.Empty)
+                .Skip(skip)
+                .Limit(take)
+                .ToListAsync();
+
+            observer.OnNext(documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
+
+            // Subscribe to changes using Arc's Observe extension
+            return collection.Observe().Subscribe(
+                allDocuments =>
+                {
+                    // Re-query with skip/take when changes occur
+                    var updatedDocuments = allDocuments.Skip(skip).Take(take);
+                    observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
+                },
+                observer.OnError,
+                observer.OnCompleted);
+        });
     }
 
     async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)

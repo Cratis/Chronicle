@@ -18,8 +18,8 @@ public class with_last_partial_page(context context) : Given<context>(context)
         {
             await AppendAllEvents();
 
-            var readModels = Services.GetRequiredService<IServices>().ReadModels;
-            Response = await readModels.GetInstances(new GetInstancesRequest
+            var materializedReadModels = Services.GetRequiredService<IServices>().MaterializedReadModels;
+            Response = await materializedReadModels.GetInstances(new GetInstancesRequest
             {
                 EventStore = Constants.EventStore,
                 Namespace = "Default",

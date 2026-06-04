@@ -8,7 +8,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 
-namespace Cratis.Chronicle.Compliance.for_EventComplianceHelper.when_releasing_event_content;
+namespace Cratis.Chronicle.Compliance.for_EventCompliance.when_releasing_event_content;
 
 public class and_event_has_multiple_pii_properties : Specification
 {
@@ -63,8 +63,8 @@ public class and_event_has_multiple_pii_properties : Specification
             Identifier,
             _converter.ToJsonObject(CreateEventContent(), _schema));
 
-        var helper = new EventComplianceHelper(_complianceManager, _converter);
-        _released = await helper.ReleaseEventContent(
+        var compliance = new EventCompliance(_complianceManager, _converter);
+        _released = await compliance.ReleaseEventContent(
             CreateEvent(_converter.ToExpandoObject(encryptedContent, _schema)),
             _schema);
     }

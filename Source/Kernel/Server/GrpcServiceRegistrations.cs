@@ -36,6 +36,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
+        services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
         services.AddSingleton<Contracts.Jobs.IJobs, Services.Jobs.Jobs>();
         services.AddSingleton<Contracts.Seeding.IEventSeeding, Services.Seeding.EventSeeding>();
         services.AddSingleton<Contracts.Security.IUsers, Services.Security.Users>();
@@ -71,6 +72,7 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
+            _.MapGrpcService<Services.ReadModels.MaterializedReadModels>();
             _.MapGrpcService<Services.Jobs.Jobs>();
             _.MapGrpcService<Services.Seeding.EventSeeding>();
             _.MapGrpcService<Services.Security.Users>();

@@ -16,6 +16,11 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
 
+    /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
+    public IMaterializedReadModels Materialized => inner.Materialized;
+
     /// <inheritdoc/>
     public Task Register() => inner.Register();
 

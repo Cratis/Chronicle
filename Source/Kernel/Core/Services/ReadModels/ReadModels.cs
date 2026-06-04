@@ -37,13 +37,15 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for applying compliance.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
+    IReadModelsCompliance complianceHelper,
     IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
@@ -137,20 +139,13 @@ internal sealed class ReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var decryptedInstances = new List<ExpandoObject>();
-        foreach (var instance in instances ?? [])
-        {
-            var decrypted = await ReadModelComplianceHelper.Release(
-                complianceManager,
-                request.EventStore,
-                request.Namespace,
-                schema,
-                instance,
-                expandoObjectConverter);
-            decryptedInstances.Add(decrypted);
-        }
+        var releasedInstances = await complianceHelper.Release(
+            request.EventStore,
+            request.Namespace,
+            schema,
+            instances ?? []);
 
-        var instancesAsJson = decryptedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
         {
             Instances = instancesAsJson,

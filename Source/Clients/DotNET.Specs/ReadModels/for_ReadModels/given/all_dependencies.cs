@@ -53,6 +53,15 @@ public class all_dependencies : Specification
         _servicesAccessor.Services.Returns(_services);
         _eventStore.Connection.Returns(connection);
 
+        var materializedReadModels = new MaterializedReadModels(
+            _eventStore,
+            _projections,
+            _reducers,
+            _schemaGenerator,
+            _servicesAccessor!,
+            _jsonSerializerOptions,
+            Substitute.For<ILogger<MaterializedReadModels>>());
+
         _readModels = new ReadModels(
             _eventStore,
             _namingPolicy,
@@ -64,6 +73,7 @@ public class all_dependencies : Specification
             _jsonSerializerOptions,
             _readModelWatcherManager,
             _reducerObservers,
+            materializedReadModels,
             Substitute.For<ILogger<ReadModels>>());
     }
 }

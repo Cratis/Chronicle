@@ -25,7 +25,7 @@ public class and_event_type_schema_is_loaded_during_handling : given.an_observer
 
     [Fact] void should_fetch_the_missing_schema_during_handling() => _eventTypesStorage.Received(1).GetFor(Arg.Any<IEnumerable<EventType>>());
 
-    [Fact] void should_decrypt_using_the_loaded_schema() => _eventComplianceHelper.Received(1).DecryptEvents(
+    [Fact] void should_decrypt_using_the_loaded_schema() => _eventCompliance.Received(1).DecryptEvents(
         Arg.Any<IEnumerable<AppendedEvent>>(),
         Arg.Is<IDictionary<EventType, EventTypeSchema>>(_ => _.ContainsKey(event_type)));
 }

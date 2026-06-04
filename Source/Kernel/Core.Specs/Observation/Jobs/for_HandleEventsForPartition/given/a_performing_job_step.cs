@@ -72,11 +72,11 @@ public class a_performing_job_step : Specification
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
 
-        var eventComplianceHelper = Substitute.For<IEventComplianceHelper>();
-        eventComplianceHelper
+        var eventCompliance = Substitute.For<IEventCompliance>();
+        eventCompliance
             .DecryptEvents(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
-        _silo.AddService(eventComplianceHelper);
+        _silo.AddService(eventCompliance);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForPartition>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

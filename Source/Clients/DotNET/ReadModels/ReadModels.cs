@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="readModelWatcherManager"><see cref="IReadModelWatcherManager"/> for managing watchers.</param>
 /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
+/// <param name="materializedReadModels">The <see cref="IMaterializedReadModels"/> for materialized read model operations.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 public class ReadModels(
     IEventStore eventStore,
@@ -46,10 +47,16 @@ public class ReadModels(
     JsonSerializerOptions jsonSerializerOptions,
     IReadModelWatcherManager readModelWatcherManager,
     IReducerObservers reducerObservers,
+    IMaterializedReadModels materializedReadModels,
     ILogger<ReadModels> logger) : IReadModels
 {
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
+
+    /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
+    public IMaterializedReadModels Materialized => materializedReadModels;
 
     /// <inheritdoc/>
     public async Task Register()

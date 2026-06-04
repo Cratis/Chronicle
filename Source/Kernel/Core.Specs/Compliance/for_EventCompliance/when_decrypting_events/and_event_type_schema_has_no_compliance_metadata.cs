@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
 
-namespace Cratis.Chronicle.Compliance.for_EventComplianceHelper.when_decrypting_events;
+namespace Cratis.Chronicle.Compliance.for_EventCompliance.when_decrypting_events;
 
 public class and_event_type_schema_has_no_compliance_metadata : given.all_dependencies
 {
@@ -26,7 +26,7 @@ public class and_event_type_schema_has_no_compliance_metadata : given.all_depend
             content);
     }
 
-    async Task Because() => _result = await _helper.DecryptEvents(
+    async Task Because() => _result = await _compliance.DecryptEvents(
         [_event],
         new Dictionary<EventType, EventTypeSchema> { { SomeEventType, new EventTypeSchema(SomeEventType, EventTypeOwner.Client, EventTypeSource.Code, _schemaWithoutPii) } });
 

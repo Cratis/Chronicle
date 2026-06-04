@@ -11,6 +11,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -136,6 +137,15 @@ public class EventStoreForTesting : IEventStore
 
         var readModelWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, _jsonSerializerOptions));
 
+        var materializedReadModels = new Chronicle.ReadModels.MaterializedReadModels(
+            this,
+            _projections,
+            _reducers,
+            JsonSchemaGenerator,
+            (Connection as IChronicleServicesAccessor)!,
+            _jsonSerializerOptions,
+            NullLogger<Chronicle.ReadModels.MaterializedReadModels>.Instance);
+
         var realReadModels = new Chronicle.ReadModels.ReadModels(
             this,
             _namingPolicy,
@@ -147,6 +157,7 @@ public class EventStoreForTesting : IEventStore
             _jsonSerializerOptions,
             readModelWatcherManager,
             reducerObservers,
+            materializedReadModels,
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels);
@@ -315,7 +326,7 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var eventComplianceHelper = new KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper(
+        var eventCompliance = new KernelCore::Cratis.Chronicle.Compliance.EventCompliance(
             new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
                 new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
             new ExpandoObjectConverter(new TypeFormats()));
@@ -323,7 +334,7 @@ public class EventStoreForTesting : IEventStore
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            eventComplianceHelper,
+            eventCompliance,
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -67,12 +68,23 @@ public class all_dependencies : Specification
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
         _reducerMediator = Substitute.For<IReducerMediator>();
+        var readModelComplianceHelper = Substitute.For<IReadModelsCompliance>();
+
+        // Mock the Release method to return the input instances unchanged
+        readModelComplianceHelper.Release(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<JsonSchema>(),
+            Arg.Any<IEnumerable<ExpandoObject>>())
+            .Returns(callInfo => Task.FromResult<IList<ExpandoObject>>(
+                callInfo.ArgAt<IEnumerable<ExpandoObject>>(3).ToList()));
 
         _service = new ReadModels(
             _grainFactory,
             _storage,
             _expandoObjectConverter,
             _reducerMediator,
+            readModelComplianceHelper,
             _complianceManager,
             new JsonSerializerOptions());
     }

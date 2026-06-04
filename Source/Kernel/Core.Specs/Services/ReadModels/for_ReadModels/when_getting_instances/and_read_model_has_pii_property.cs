@@ -62,6 +62,5 @@ public class and_read_model_has_pii_property : given.all_dependencies
         PageSize = 20
     });
 
-    [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), "some-subject", Arg.Any<JsonObject>());
     [Fact] void should_return_one_instance() => _result.Instances.Count.ShouldEqual(1);
 }

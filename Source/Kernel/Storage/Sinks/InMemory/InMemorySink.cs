@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
@@ -32,6 +34,7 @@ public class InMemorySink(
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
+    readonly Subject<object> _changeSubject = new();
     bool _isReplaying;
 
     /// <inheritdoc/>
@@ -76,12 +79,16 @@ public class InMemorySink(
         if (changeset.HasBeenRemoved())
         {
             collection.Remove(keyValue);
+            _changeSubject.OnNext(keyValue);
             return Task.FromResult<IEnumerable<FailedPartition>>([]);
         }
 
         var result = ApplyActualChanges(key, changeset.Changes, state);
         ((dynamic)result).id = key.Value;
         collection[keyValue] = result;
+
+        // Notify observers of the change
+        _changeSubject.OnNext(keyValue);
 
         return Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
@@ -156,8 +163,31 @@ public class InMemorySink(
     }
 
     /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        // For in-memory sink, return an observable that emits whenever the collection changes
+        return Observable.Create<IEnumerable<ExpandoObject>>(observer =>
+        {
+            // Emit initial state
+            var initialInstances = Collection.Values.Skip(skip).Take(take);
+            observer.OnNext(initialInstances);
+
+            // Subscribe to changes on _changeSubject and emit updated instances
+            return _changeSubject.Subscribe(
+                _ =>
+                {
+                    var instances = Collection.Values.Skip(skip).Take(take);
+                    observer.OnNext(instances);
+                },
+                observer.OnError,
+                observer.OnCompleted);
+        });
+    }
+
+    /// <inheritdoc/>
     public void Dispose()
     {
+        _changeSubject?.Dispose();
         GC.SuppressFinalize(this);
     }
 

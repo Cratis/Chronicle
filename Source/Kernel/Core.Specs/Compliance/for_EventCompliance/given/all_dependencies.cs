@@ -8,7 +8,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 
-namespace Cratis.Chronicle.Compliance.for_EventComplianceHelper.given;
+namespace Cratis.Chronicle.Compliance.for_EventCompliance.given;
 
 public class all_dependencies : Specification
 {
@@ -18,7 +18,7 @@ public class all_dependencies : Specification
 
     protected IJsonComplianceManager _complianceManager;
     protected IExpandoObjectConverter _expandoObjectConverter;
-    protected EventComplianceHelper _helper;
+    protected EventCompliance _compliance;
 
     protected JsonSchema _schemaWithPii;
 
@@ -58,6 +58,6 @@ public class all_dependencies : Specification
                 Arg.Any<JsonObject>())
             .Returns(_ => Task.FromResult(new JsonObject { ["name"] = "decrypted-name" }));
 
-        _helper = new EventComplianceHelper(_complianceManager, _expandoObjectConverter);
+        _compliance = new EventCompliance(_complianceManager, _expandoObjectConverter);
     }
 }

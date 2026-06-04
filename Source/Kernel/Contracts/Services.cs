@@ -40,6 +40,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
 /// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
+/// <param name="MaterializedReadModels"><see cref="IMaterializedReadModels"/> instance.</param>
 /// <param name="Jobs"><see cref="IJobs"/> instance.</param>
 /// <param name="Seeding"><see cref="IEventSeeding"/> instance.</param>
 /// <param name="Users"><see cref="IUsers"/> instance.</param>
@@ -62,6 +63,7 @@ public sealed record Services(
     IWebhooks Webhooks,
     IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
+    IMaterializedReadModels MaterializedReadModels,
     IJobs Jobs,
     IEventSeeding Seeding,
     IUsers Users,

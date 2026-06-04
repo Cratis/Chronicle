@@ -29,12 +29,12 @@ namespace Cratis.Chronicle.Services.EventSequences;
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="storage"><see cref="IStorage"/> for storing events.</param>
-/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII event content.</param>
+/// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 internal sealed class EventSequences(
     IGrainFactory grainFactory,
     IStorage storage,
-    IEventComplianceHelper eventComplianceHelper,
+    IEventCompliance eventCompliance,
     JsonSerializerOptions jsonSerializerOptions) : IEventSequences
 {
     /// <inheritdoc/>
@@ -243,7 +243,7 @@ internal sealed class EventSequences(
                 continue;
             }
 
-            var releasedEvent = await eventComplianceHelper.ReleaseEventContent(
+            var releasedEvent = await eventCompliance.ReleaseEventContent(
                 @event,
                 schema.Schema);
             contracts.Add(releasedEvent.ToContract(jsonSerializerOptions));

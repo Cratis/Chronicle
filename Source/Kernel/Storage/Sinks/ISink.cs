@@ -125,4 +125,13 @@ public interface ISink
     /// <param name="take">Number of instances to take.</param>
     /// <returns>A tuple containing the collection of instances and the total count.</returns>
     Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50);
+
+    /// <summary>
+    /// Observe changes to instances in the sink.
+    /// </summary>
+    /// <param name="occurrence">Optional <see cref="ReadModelContainerName"/> of the occurrence to observe. If not provided, observes from the default/current model.</param>
+    /// <param name="skip">Number of instances to skip.</param>
+    /// <param name="take">Number of instances to observe.</param>
+    /// <returns>An observable stream of instance collections.</returns>
+    IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50);
 }
