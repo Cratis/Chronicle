@@ -23,7 +23,7 @@ public class when_watching_instances_with_skip_and_take : given.all_dependencies
         _services.MaterializedReadModels.Returns(_materializedReadModelsService);
     }
 
-    void Because() => _result = _readModels.Materialized.ObserveInstances<MyReadModel>((InstanceCountToSkip)5, (InstanceCount)10);
+    void Because() => _result = _readModels.Materialized.ObserveInstances<MyReadModel>(5, 10);
 
     [Fact] void should_return_observable() => _result.ShouldNotBeNull();
 }

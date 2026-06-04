@@ -39,7 +39,7 @@ public class when_getting_instances_with_skip_and_take : given.all_dependencies
         _services.MaterializedReadModels.Returns(_materializedReadModelsService);
     }
 
-    async Task Because() => _result = await _readModels.Materialized.GetInstances<MyReadModel>((InstanceCountToSkip)2, (InstanceCount)2);
+    async Task Because() => _result = await _readModels.Materialized.GetInstances<MyReadModel>(2, 2);
 
     [Fact] void should_call_materialized_read_models_service_with_correct_page() =>
         _materializedReadModelsService.Received(1).GetInstances(Arg.Is<GetInstancesRequest>(req => req.Page == 1));

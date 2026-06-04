@@ -6,7 +6,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
@@ -18,13 +17,11 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-/// <param name="expandoObjectConverter">The expando object converter.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="readModelComplianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
-    IExpandoObjectConverter expandoObjectConverter,
-    IJsonComplianceManager complianceManager) : IMaterializedReadModels
+    IReadModelComplianceHelper readModelComplianceHelper) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
@@ -47,13 +44,11 @@ internal sealed class MaterializedReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var releasedInstances = await ReadModelReleaseHelper.Release(
-            complianceManager,
+        var releasedInstances = await readModelComplianceHelper.Release(
             request.EventStore,
             request.Namespace,
             schema,
-            instances ?? [],
-            expandoObjectConverter);
+            instances ?? []);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
@@ -89,13 +84,11 @@ internal sealed class MaterializedReadModels(
                 return sink.ObserveInstances(occurrence, skip, request.PageSize)
                     .SelectMany(async instances =>
                     {
-                        var releasedInstances = await ReadModelReleaseHelper.Release(
-                            complianceManager,
+                        var releasedInstances = await readModelComplianceHelper.Release(
                             request.EventStore,
                             request.Namespace,
                             schema,
-                            instances,
-                            expandoObjectConverter);
+                            instances);
 
                         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
                         var (_, totalCount) = await sink.GetInstances(occurrence, skip, request.PageSize);

@@ -37,13 +37,15 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="readModelComplianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for applying compliance.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
+    IReadModelComplianceHelper readModelComplianceHelper,
     IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
@@ -137,13 +139,11 @@ internal sealed class ReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var releasedInstances = await ReadModelReleaseHelper.Release(
-            complianceManager,
+        var releasedInstances = await readModelComplianceHelper.Release(
             request.EventStore,
             request.Namespace,
             schema,
-            instances ?? [],
-            expandoObjectConverter);
+            instances ?? []);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()

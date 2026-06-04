@@ -9,27 +9,20 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Helper for releasing (decrypting) PII-annotated properties in read model instances.
+/// Represents an implementation of <see cref="IReadModelComplianceHelper"/> for releasing (decrypting) PII-annotated properties in read model instances.
 /// </summary>
-public static class ReadModelReleaseHelper
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="expandoObjectConverter">The expando object converter.</param>
+public class ReadModelReleaseHelper(
+    IJsonComplianceManager complianceManager,
+    IExpandoObjectConverter expandoObjectConverter) : IReadModelComplianceHelper
 {
-    /// <summary>
-    /// Release (decrypt) PII-annotated properties in a single read model instance.
-    /// </summary>
-    /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-    /// <param name="eventStore">The event store name.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <param name="schema">The read model schema.</param>
-    /// <param name="instance">The read model instance to decrypt.</param>
-    /// <param name="expandoObjectConverter">The expando object converter.</param>
-    /// <returns>The decrypted instance, or the original when release is not applicable or fails.</returns>
-    public static async Task<ExpandoObject> Release(
-        IJsonComplianceManager complianceManager,
+    /// <inheritdoc/>
+    public async Task<ExpandoObject> Release(
         string eventStore,
         string @namespace,
         JsonSchema schema,
-        ExpandoObject instance,
-        IExpandoObjectConverter expandoObjectConverter)
+        ExpandoObject instance)
     {
         return await ReadModelComplianceHelper.Release(
             complianceManager,
@@ -40,34 +33,21 @@ public static class ReadModelReleaseHelper
             expandoObjectConverter);
     }
 
-    /// <summary>
-    /// Release (decrypt) PII-annotated properties in a collection of read model instances.
-    /// </summary>
-    /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-    /// <param name="eventStore">The event store name.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <param name="schema">The read model schema.</param>
-    /// <param name="instances">The collection of instances to decrypt.</param>
-    /// <param name="expandoObjectConverter">The expando object converter.</param>
-    /// <returns>The decrypted instances.</returns>
-    public static async Task<IList<ExpandoObject>> Release(
-        IJsonComplianceManager complianceManager,
+    /// <inheritdoc/>
+    public async Task<IList<ExpandoObject>> Release(
         string eventStore,
         string @namespace,
         JsonSchema schema,
-        IEnumerable<ExpandoObject> instances,
-        IExpandoObjectConverter expandoObjectConverter)
+        IEnumerable<ExpandoObject> instances)
     {
         var result = new List<ExpandoObject>();
         foreach (var instance in instances)
         {
             var released = await Release(
-                complianceManager,
                 eventStore,
                 @namespace,
                 schema,
-                instance,
-                expandoObjectConverter);
+                instance);
             result.Add(released);
         }
         return result;
