@@ -424,5 +424,5 @@ public void ObserveWithErrorHandling()
 - [Watching Read Models](watching-read-models.md) - Observe read model changesets
 - [Projections](../projections/index.md) - Define materialized read models
 - [Reducers](../reducers/index.md) - Define state-based read models
-- [MongoDB Storage](../storage/mongodb.md) - MongoDB sink implementation
-- [SQL Storage](../storage/sql.md) - SQL Server sink implementation
+- [MongoDB Sink](../sinks/index.md#mongodb-sink) - How read model instances are stored in MongoDB
+- [SQL Sink](../sinks/index.md#sql-sink) - How read model instances are stored in a SQL database
