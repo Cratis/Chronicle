@@ -137,20 +137,15 @@ internal sealed class ReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var decryptedInstances = new List<ExpandoObject>();
-        foreach (var instance in instances ?? [])
-        {
-            var decrypted = await ReadModelComplianceHelper.Release(
-                complianceManager,
-                request.EventStore,
-                request.Namespace,
-                schema,
-                instance,
-                expandoObjectConverter);
-            decryptedInstances.Add(decrypted);
-        }
+        var releasedInstances = await ReadModelReleaseHelper.Release(
+            complianceManager,
+            request.EventStore,
+            request.Namespace,
+            schema,
+            instances ?? [],
+            expandoObjectConverter);
 
-        var instancesAsJson = decryptedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = releasedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
         return new()
         {
             Instances = instancesAsJson,

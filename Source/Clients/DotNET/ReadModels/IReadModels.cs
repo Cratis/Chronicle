@@ -50,13 +50,9 @@ public interface IReadModels
     Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null);
 
     /// <summary>
-    /// Get paginated instances of a read model from the sink.
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
     /// </summary>
-    /// <typeparam name="TReadModel">The read model type.</typeparam>
-    /// <param name="skip">Number of instances to skip.</param>
-    /// <param name="take">Number of instances to retrieve.</param>
-    /// <returns>Collection of read model instances.</returns>
-    Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take);
+    IMaterializedReadModels Materialized { get; }
 
     /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.
@@ -72,15 +68,6 @@ public interface IReadModels
     /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
     /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
     IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
-
-    /// <summary>
-    /// Observe changes for a paginated window of read model instances.
-    /// </summary>
-    /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
-    /// <param name="skip">Number of instances to skip.</param>
-    /// <param name="take">Number of instances to observe.</param>
-    /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
-    IObservable<IEnumerable<TReadModel>> WatchInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take);
 
     /// <summary>
     /// Get the underlying <see cref="IReadModelWatcher{TReadModel}"/> for a specific read model.

@@ -107,6 +107,11 @@ public interface IServices
     IReadModels ReadModels { get; }
 
     /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> service.
+    /// </summary>
+    IMaterializedReadModels MaterializedReadModels { get; }
+
+    /// <summary>
     /// Gets the <see cref="IJobs"/> service.
     /// </summary>
     IJobs Jobs { get; }

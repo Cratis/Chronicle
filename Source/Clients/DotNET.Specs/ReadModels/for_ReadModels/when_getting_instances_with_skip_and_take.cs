@@ -14,7 +14,7 @@ public class when_getting_instances_with_skip_and_take : given.all_dependencies
     }
 
     IEnumerable<MyReadModel> _result = [];
-    Contracts.ReadModels.IReadModels _readModelsService = null!;
+    Contracts.ReadModels.IMaterializedReadModels _materializedReadModelsService = null!;
     GetInstancesResponse _serviceResponse = null!;
 
     void Establish()
@@ -34,18 +34,18 @@ public class when_getting_instances_with_skip_and_take : given.all_dependencies
             PageSize = 2
         };
 
-        _readModelsService = Substitute.For<Contracts.ReadModels.IReadModels>();
-        _readModelsService.GetInstances(Arg.Any<GetInstancesRequest>()).Returns(_serviceResponse);
-        _services.ReadModels.Returns(_readModelsService);
+        _materializedReadModelsService = Substitute.For<Contracts.ReadModels.IMaterializedReadModels>();
+        _materializedReadModelsService.GetInstances(Arg.Any<GetInstancesRequest>()).Returns(_serviceResponse);
+        _services.MaterializedReadModels.Returns(_materializedReadModelsService);
     }
 
-    async Task Because() => _result = await _readModels.GetInstances<MyReadModel>((InstanceCountToSkip)2, (InstanceCount)2);
+    async Task Because() => _result = await _readModels.Materialized.GetInstances<MyReadModel>((InstanceCountToSkip)2, (InstanceCount)2);
 
-    [Fact] void should_call_read_models_service_with_correct_page() =>
-        _readModelsService.Received(1).GetInstances(Arg.Is<GetInstancesRequest>(req => req.Page == 1));
+    [Fact] void should_call_materialized_read_models_service_with_correct_page() =>
+        _materializedReadModelsService.Received(1).GetInstances(Arg.Is<GetInstancesRequest>(req => req.Page == 1));
 
-    [Fact] void should_call_read_models_service_with_correct_page_size() =>
-        _readModelsService.Received(1).GetInstances(Arg.Is<GetInstancesRequest>(req => req.PageSize == 2));
+    [Fact] void should_call_materialized_read_models_service_with_correct_page_size() =>
+        _materializedReadModelsService.Received(1).GetInstances(Arg.Is<GetInstancesRequest>(req => req.PageSize == 2));
 
     [Fact] void should_return_two_instances() => _result.Count().ShouldEqual(2);
 

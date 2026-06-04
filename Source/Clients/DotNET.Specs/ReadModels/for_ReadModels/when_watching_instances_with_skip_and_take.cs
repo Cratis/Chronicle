@@ -12,18 +12,18 @@ public class when_watching_instances_with_skip_and_take : given.all_dependencies
     }
 
     IObservable<IEnumerable<MyReadModel>> _result = null!;
-    Contracts.ReadModels.IReadModels _readModelsService = null!;
+    Contracts.ReadModels.IMaterializedReadModels _materializedReadModelsService = null!;
 
     void Establish()
     {
         _projections.HasFor(typeof(MyReadModel)).Returns(true);
         _reducers.HasFor(typeof(MyReadModel)).Returns(false);
 
-        _readModelsService = Substitute.For<Contracts.ReadModels.IReadModels>();
-        _services.ReadModels.Returns(_readModelsService);
+        _materializedReadModelsService = Substitute.For<Contracts.ReadModels.IMaterializedReadModels>();
+        _services.MaterializedReadModels.Returns(_materializedReadModelsService);
     }
 
-    void Because() => _result = _readModels.WatchInstances<MyReadModel>((InstanceCountToSkip)5, (InstanceCount)10);
+    void Because() => _result = _readModels.Materialized.ObserveInstances<MyReadModel>((InstanceCountToSkip)5, (InstanceCount)10);
 
     [Fact] void should_return_observable() => _result.ShouldNotBeNull();
 }

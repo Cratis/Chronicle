@@ -192,6 +192,14 @@ public class EventStore : IEventStore
         FailedPartitions = new FailedPartitions(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
+        var materializedReadModels = new ReadModels.MaterializedReadModels(
+            this,
+            projections,
+            Reducers,
+            schemaGenerator,
+            connection as IChronicleServicesAccessor,
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<ReadModels.MaterializedReadModels>());
 
         ReadModels = new ReadModels.ReadModels(
             this,
@@ -204,6 +212,7 @@ public class EventStore : IEventStore
             jsonSerializerOptions,
             readModelsWatcherManager,
             reducerObservers,
+            materializedReadModels,
             loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
         Seeding = new EventSeeding(
