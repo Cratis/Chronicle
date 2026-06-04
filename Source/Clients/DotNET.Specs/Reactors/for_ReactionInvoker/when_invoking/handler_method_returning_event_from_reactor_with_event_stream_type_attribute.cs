@@ -39,7 +39,8 @@ public class handler_method_returning_event_from_reactor_with_event_stream_type_
             new ActivatedArtifact(reactor, typeof(ReactorWithEventStreamTypeAttribute), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             sideEffectHandlers,
-            _eventStore);
+            _eventStore,
+            ReactorContextValuesBuilders.ForSpecifications());
 
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }

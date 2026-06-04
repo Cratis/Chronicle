@@ -39,7 +39,8 @@ public class sync_handler_method_returning_event : Specification
             new ActivatedArtifact(reactor, typeof(ReactorWithSyncEventReturnType), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             sideEffectHandlers,
-            _eventStore);
+            _eventStore,
+            ReactorContextValuesBuilders.ForSpecifications());
 
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }

@@ -41,7 +41,8 @@ public class handler_method_returning_event_from_reactor_implementing_ICanProvid
             new ActivatedArtifact(reactor, typeof(ReactorWithSubjectProvider), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             sideEffectHandlers,
-            _eventStore);
+            _eventStore,
+            ReactorContextValuesBuilders.ForSpecifications());
 
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }
