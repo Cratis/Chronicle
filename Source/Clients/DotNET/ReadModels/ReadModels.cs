@@ -53,7 +53,9 @@ public class ReadModels(
     readonly IChronicleServicesAccessor _chronicleServicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly SinkTypeId _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
     public IMaterializedReadModels Materialized => materializedReadModels;
 
     /// <inheritdoc/>

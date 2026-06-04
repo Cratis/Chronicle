@@ -1,15 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using ProtoBuf.Grpc;
@@ -23,13 +20,11 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-/// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
-    IJsonComplianceManager complianceManager,
-    JsonSerializerOptions jsonSerializerOptions) : IMaterializedReadModels
+    IJsonComplianceManager complianceManager) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
@@ -60,7 +55,7 @@ internal sealed class MaterializedReadModels(
             instances ?? [],
             expandoObjectConverter);
 
-        var instancesAsJson = releasedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -102,13 +97,13 @@ internal sealed class MaterializedReadModels(
                             instances,
                             expandoObjectConverter);
 
-                        var instancesAsJson = releasedInstances.ToList().ConvertAll(instance => JsonSerializer.Serialize(instance));
+                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
                         var (_, totalCount) = await sink.GetInstances(occurrence, skip, request.PageSize);
 
                         return new ObserveInstancesResponse
                         {
                             Instances = instancesAsJson,
-                            TotalCount = totalCount,
+                            TotalCount = (int)totalCount,
                             Page = request.Page,
                             PageSize = request.PageSize
                         };

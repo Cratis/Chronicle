@@ -50,7 +50,7 @@ public static class ReadModelReleaseHelper
     /// <param name="instances">The collection of instances to decrypt.</param>
     /// <param name="expandoObjectConverter">The expando object converter.</param>
     /// <returns>The decrypted instances.</returns>
-    public static async Task<List<ExpandoObject>> Release(
+    public static async Task<IList<ExpandoObject>> Release(
         IJsonComplianceManager complianceManager,
         string eventStore,
         string @namespace,

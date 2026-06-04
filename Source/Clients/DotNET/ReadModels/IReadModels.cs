@@ -50,11 +50,6 @@ public interface IReadModels
     Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(EventCount? eventCount = null);
 
     /// <summary>
-    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
-    /// </summary>
-    IMaterializedReadModels Materialized { get; }
-
-    /// <summary>
     /// Get snapshots of a read model grouped by CorrelationId by walking through events from the beginning.
     /// </summary>
     /// <typeparam name="TReadModel">Type of read model.</typeparam>

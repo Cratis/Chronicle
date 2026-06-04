@@ -3,9 +3,8 @@
 
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -20,8 +19,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="projections">Projections to get read models from.</param>
 /// <param name="reducers">Reducers to get read models from.</param>
 /// <param name="schemaGenerator">Schema generator to use.</param>
-/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="chronicleServicesAccessor">Accessor for Chronicle services.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use for JSON serialization.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
 public class MaterializedReadModels(
     IEventStore eventStore,

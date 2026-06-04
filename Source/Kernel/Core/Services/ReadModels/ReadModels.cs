@@ -145,7 +145,7 @@ internal sealed class ReadModels(
             instances ?? [],
             expandoObjectConverter);
 
-        var instancesAsJson = releasedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
         {
             Instances = instancesAsJson,

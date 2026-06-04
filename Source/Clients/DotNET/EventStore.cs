@@ -197,7 +197,7 @@ public class EventStore : IEventStore
             projections,
             Reducers,
             schemaGenerator,
-            connection as IChronicleServicesAccessor,
+            _servicesAccessor,
             jsonSerializerOptions,
             loggerFactory.CreateLogger<ReadModels.MaterializedReadModels>());
 
