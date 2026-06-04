@@ -255,6 +255,49 @@ public class ReadModels(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take)
+    {
+        var readModelType = typeof(TReadModel);
+
+        // Validate that the read model is known by projections or reducers
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        var readModelIdentifier = readModelType.GetReadModelIdentifier();
+        var pageSize = take.Value == InstanceCount.Unlimited.Value ? int.MaxValue : take.Value;
+        var page = 0;
+
+        // Calculate skip by converting to page-based pagination
+        if (skip.Value > 0 && take.Value > 0 && take.Value != InstanceCount.Unlimited.Value)
+        {
+            page = skip.Value / take.Value;
+        }
+
+        var request = new GetInstancesRequest
+        {
+            EventStore = eventStore.Name,
+            Namespace = eventStore.Namespace,
+            ReadModel = readModelIdentifier,
+            Page = page,
+            PageSize = pageSize
+        };
+
+        var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstances(request);
+        var instances = response.Instances.Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
+
+        // If there's a remaining skip within the page, skip those instances
+        var skipWithinPage = skip.Value % take.Value;
+        if (skipWithinPage > 0)
+        {
+            instances = instances.Skip(skipWithinPage);
+        }
+
+        return instances;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey)
     {
         // Check for projection first
@@ -363,6 +406,53 @@ public class ReadModels(
         }
 
         return readModelWatcherManager.GetWatcher<TReadModel>();
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<TReadModel>> WatchInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take)
+    {
+        var readModelType = typeof(TReadModel);
+
+        // Validate that the read model is known by projections or reducers
+        if (!projections.HasFor(readModelType) && !reducers.HasFor(readModelType))
+        {
+            throw new UnknownReadModel(readModelType);
+        }
+
+        // Get the read model identifier
+        var readModelIdentifier = readModelType.GetReadModelIdentifier();
+        var pageSize = take.Value == InstanceCount.Unlimited.Value ? int.MaxValue : take.Value;
+        var page = 0;
+
+        // Calculate skip by converting to page-based pagination
+        if (skip.Value > 0 && take.Value > 0 && take.Value != InstanceCount.Unlimited.Value)
+        {
+            page = skip.Value / take.Value;
+        }
+
+        var skipWithinPage = skip.Value % take.Value;
+
+        // Return an observable that polls periodically for changes
+        // In a real implementation, this would connect to a server-side observable endpoint
+        return Observable.Interval(TimeSpan.FromSeconds(1))
+            .SelectMany(async _ =>
+            {
+                var request = new GetInstancesRequest
+                {
+                    EventStore = eventStore.Name,
+                    Namespace = eventStore.Namespace,
+                    ReadModel = readModelIdentifier,
+                    Page = page,
+                    PageSize = pageSize
+                };
+
+                var response = await _chronicleServicesAccessor.Services.ReadModels.GetInstances(request);
+                var instances = response.Instances
+                    .Select(json => JsonSerializer.Deserialize<TReadModel>(json, jsonSerializerOptions)!);
+
+                // If there's a remaining skip within the page, skip those instances
+                return skipWithinPage > 0 ? instances.Skip(skipWithinPage) : instances;
+            });
     }
 
     /// <inheritdoc/>

@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using System.Globalization;
+using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Arc.EntityFrameworkCore;
@@ -392,6 +393,31 @@ public class Sink : ISink
         var totalCount = await scope.DbContext.Entries.CountAsync();
         var entries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
         return new ReadModelInstances(entries.Select(MaterializeExpando), totalCount);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var containerName = occurrence?.Value ?? ActiveTableName;
+
+        // Return an observable that transforms Entity Framework change tracking into instance collections
+        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
+        {
+            // Get initial instances
+            await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            var initialEntries = await scope.DbContext.Entries.AsNoTracking().Skip(skip).Take(take).ToListAsync();
+            observer.OnNext(initialEntries.Select(MaterializeExpando));
+
+            // Subscribe to changes using Arc's Observe extension
+            return scope.DbContext.Entries.Observe().Subscribe(
+                allEntries =>
+                {
+                    // Re-query with skip/take when changes occur
+                    observer.OnNext(allEntries.Skip(skip).Take(take).Select(MaterializeExpando));
+                },
+                observer.OnError,
+                observer.OnCompleted);
+        });
     }
 
     async Task ApplyJoinedChange(DbContextScope<ReadModelDbContext> scope, Joined joined, EventSequenceNumber eventSequenceNumber)

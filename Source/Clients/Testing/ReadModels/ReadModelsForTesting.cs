@@ -51,12 +51,20 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
         inner.GetInstances<TReadModel>(eventCount);
 
     /// <inheritdoc/>
+    public Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take) =>
+        inner.GetInstances<TReadModel>(skip, take);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<ReadModelSnapshot<TReadModel>>> GetSnapshotsById<TReadModel>(ReadModelKey readModelKey) =>
         inner.GetSnapshotsById<TReadModel>(readModelKey);
 
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>() =>
         inner.Watch<TReadModel>();
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<TReadModel>> WatchInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take) =>
+        inner.WatchInstances<TReadModel>(skip, take);
 
     /// <inheritdoc/>
     public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>() =>

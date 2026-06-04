@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -66,4 +67,8 @@ public class NullSink : ISink
     /// <inheritdoc/>
     public Task<ReadModelInstances> GetInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
         Task.FromResult(new ReadModelInstances([], 0));
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50) =>
+        Observable.Empty<IEnumerable<ExpandoObject>>();
 }
