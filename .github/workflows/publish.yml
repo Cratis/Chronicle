@@ -86,40 +86,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT_WORKFLOWS }}
 
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+      - name: Restore cached coverage
+        uses: actions/cache@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          path: ./coverage-reports
+          key: coverage-cache-${{ github.sha }}
+          fail-on-cache-miss: true
 
-      - name: Install coverage tools
-        run: |
-          dotnet tool install --global coverlet.console
-          dotnet tool install --global dotnet-reportgenerator-globaltool
-
-      - name: Build
-        run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
-
-      - name: Run tests with coverage
-        continue-on-error: true
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --collect:"XPlat Code Coverage" --results-directory ./coverage-results
-
-      - name: Generate coverage reports
-        run: |
-          reportgenerator \
-            -reports:"./coverage-results/**/coverage.cobertura.xml" \
-            -targetdir:"./coverage-reports" \
-            -reporttypes:"JsonSummary" \
-            -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
-
-          # Debug: Show the generated file
-          echo "Generated Summary.json:"
-          cat ./coverage-reports/Summary.json || echo "File not found"
-
-          # Debug: Show the generated file
-          echo "Generated Summary.json:"
-          cat ./coverage-reports/Summary.json || echo "File not found"
-
-      - name: Collect coverage statistics
+      - name: Collect coverage statistics for release
         run: |
           .github/scripts/collect-coverage.sh \
             "./coverage-reports" \
@@ -136,7 +110,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No coverage statistics changes to commit"
           else
-            git commit -m "Update coverage statistics [skip ci]"
+            git commit -m "Update coverage statistics for release ${{ needs.release.outputs.version }} [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push
           fi
@@ -155,32 +129,25 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT_WORKFLOWS }}
 
-      - name: Download benchmark data artifact
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
-          RUN_ID=$(gh run list \
-            --repo "${{ github.repository }}" \
-            --workflow benchmarks.yml \
-            --branch "$HEAD_BRANCH" \
-            --json databaseId,conclusion \
-            --jq '[.[] | select(.conclusion == "success")] | .[0].databaseId // empty')
+      - name: Restore cached benchmark results
+        uses: actions/cache@v4
+        with:
+          path: Documentation/benchmarks/benchmark-data.json
+          key: benchmark-cache-${{ github.sha }}
+          fail-on-cache-miss: false
 
-          if [ -z "$RUN_ID" ]; then
-            echo "No successful benchmark run found for branch '$HEAD_BRANCH', skipping"
-            exit 0
+      - name: Check if benchmark data exists
+        id: check-benchmark
+        run: |
+          if [ -f "Documentation/benchmarks/benchmark-data.json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No cached benchmark data found for commit ${{ github.sha }}, skipping"
           fi
 
-          echo "Downloading benchmark data from run $RUN_ID"
-          mkdir -p Documentation/benchmarks
-          gh run download "$RUN_ID" \
-            --repo "${{ github.repository }}" \
-            --name benchmark-data \
-            --dir Documentation/benchmarks/ \
-            || { echo "No benchmark-data artifact found in run $RUN_ID, skipping"; exit 0; }
-
       - name: Commit benchmark results
+        if: steps.check-benchmark.outputs.exists == 'true'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -188,7 +155,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No benchmark result changes to commit"
           else
-            git commit -m "Update benchmark results [skip ci]"
+            git commit -m "Update benchmark results for release ${{ needs.release.outputs.version }} [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push
           fi
