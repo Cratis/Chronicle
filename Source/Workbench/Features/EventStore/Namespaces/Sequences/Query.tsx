@@ -15,7 +15,7 @@ import { QueryDefinition } from './QueryDefinition';
 import { FilterPanel, FilterEditor, useFilterState } from '@cratis/components/Filter';
 import type { FilterDefinition } from '@cratis/components/Filter';
 import { SequenceSelector } from './SequenceSelector';
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { AppendedEvents } from 'Api/EventSequences';
 import { ForSequence } from 'Api/EventSequences/ForSequence';
@@ -52,6 +52,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
     const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
 
     const filterButtonRef = useRef<HTMLButtonElement>(null);
+    const refreshTimeoutRef = useRef<number | null>(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
     const [refreshToken, setRefreshToken] = useState(0);
@@ -139,8 +140,19 @@ export const Query = ({ query, onSave }: QueryProps) => {
 
     const markDirty = () => setIsDirty(true);
 
+    useEffect(() => {
+        return () => {
+            if (refreshTimeoutRef.current !== null) {
+                window.clearTimeout(refreshTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const refresh = () => {
-        setTimeout(() => setRefreshToken(prev => prev + 1), REFRESH_DELAY_MS);
+        if (refreshTimeoutRef.current !== null) {
+            window.clearTimeout(refreshTimeoutRef.current);
+        }
+        refreshTimeoutRef.current = window.setTimeout(() => setRefreshToken(prev => prev + 1), REFRESH_DELAY_MS);
     };
 
     const observerTypeName = (type: ObserverType): string => {
@@ -187,7 +199,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
         const queryResult = await query.perform({
             eventStore: params.eventStore!,
             namespace: params.namespace!,
-            eventTypeIds: selectedEvent.context.eventType.id
+            eventTypeIds: [selectedEvent.context.eventType.id]
         });
 
         const observers = queryResult.data;
@@ -229,6 +241,8 @@ export const Query = ({ query, onSave }: QueryProps) => {
         }
     };
 
+    const sanitizeForFilename = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+
     const handleExportEvents = useCallback(async () => {
         const exportQuery = new AppendedEvents();
         const result = await exportQuery.perform({
@@ -242,10 +256,9 @@ export const Query = ({ query, onSave }: QueryProps) => {
             startTime: appliedFilter.startTime,
             endTime: appliedFilter.endTime,
         });
-
+        if (!result.hasData || result.data.length === 0) return;
         if (!result.hasData || result.data.length === 0) return;
 
-        const sanitizeForFilename = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
         const exportData = result.data.map(event => ({
             eventSequenceId: appliedEventSequenceId,
             eventType: event.context.eventType.id,
@@ -260,12 +273,20 @@ export const Query = ({ query, onSave }: QueryProps) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `events-${sanitizeForFilename(params.eventStore!)}-${sanitizeForFilename(params.namespace!)}-${sanitizeForFilename(appliedEventSequenceId)}-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = buildExportFilename();
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }, [appliedEventSequenceId, appliedFilter, params.eventStore, params.namespace]);
+
+    const buildExportFilename = () => {
+        const eventStorePart = sanitizeForFilename(params.eventStore!);
+        const namespacePart = sanitizeForFilename(params.namespace!);
+        const sequencePart = sanitizeForFilename(appliedEventSequenceId);
+        const datePart = new Date().toISOString().slice(0, 10);
+        return `events-${eventStorePart}-${namespacePart}-${sequencePart}-${datePart}.json`;
+    };
 
     const runQuery = () => {
         const selectedTypes = Array.from(filterState.filterValues[FILTER_KEY_EVENT_TYPES] ?? []);
