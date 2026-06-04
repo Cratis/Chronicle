@@ -14,9 +14,13 @@ Materialized read models are already computed and stored in a database sink, mak
 Access materialized read models through the `Materialized` property on `IReadModels`:
 
 ```csharp
+// With explicit pagination
 var instances = await eventStore.ReadModels.Materialized.GetInstances<MyModel>(
     skip: 10,
     take: 20);
+
+// Using defaults (skip: 0, take: 50)
+var instances = await eventStore.ReadModels.Materialized.GetInstances<MyModel>();
 ```
 
 ## Getting Paginated Instances
@@ -45,6 +49,26 @@ public class ProductListService
         return products;
     }
 }
+```
+
+### Optional Parameters with Defaults
+
+Both `skip` and `take` parameters are optional:
+
+```csharp
+// Get first 50 instances (using default skip: 0, take: 50)
+var instances = await readModels.Materialized.GetInstances<Order>();
+
+// Get first 100 instances (using default skip: 0)
+var instances = await readModels.Materialized.GetInstances<Order>(take: 100);
+
+// Skip 20, get 50 instances (using default take: 50)
+var instances = await readModels.Materialized.GetInstances<Order>(skip: 20);
+
+// Explicit skip and take
+var instances = await readModels.Materialized.GetInstances<Order>(
+    skip: 0,
+    take: 50);
 ```
 
 ### Type-Safe Parameters
@@ -131,6 +155,26 @@ public class InventoryMonitor
         _subscription?.Dispose();
     }
 }
+```
+
+### Optional Parameters with Defaults
+
+Both `skip` and `take` parameters are optional for observation:
+
+```csharp
+// Observe first 50 instances (using default skip: 0, take: 50)
+var observable = readModels.Materialized.ObserveInstances<Product>();
+
+// Observe first 100 instances (using default skip: 0)
+var observable = readModels.Materialized.ObserveInstances<Product>(take: 100);
+
+// Skip 20, observe 50 instances (using default take: 50)
+var observable = readModels.Materialized.ObserveInstances<Product>(skip: 20);
+
+// Explicit skip and take
+var observable = readModels.Materialized.ObserveInstances<Product>(
+    skip: 0,
+    take: 50);
 ```
 
 ### Paginated Observation

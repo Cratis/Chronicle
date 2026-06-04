@@ -32,8 +32,12 @@ public class MaterializedReadModels(
     ILogger<MaterializedReadModels> logger) : IMaterializedReadModels
 {
     /// <inheritdoc/>
-    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take)
+    public async Task<IEnumerable<TReadModel>> GetInstances<TReadModel>(InstanceCountToSkip? skip = null, InstanceCount? take = null)
     {
+        // Apply defaults if not provided
+        skip ??= InstanceCountToSkip.Zero;
+        take ??= InstanceCount.Default;
+
         var readModelType = typeof(TReadModel);
 
         // Validate that the read model is known by projections or reducers
@@ -76,8 +80,12 @@ public class MaterializedReadModels(
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<TReadModel>> ObserveInstances<TReadModel>(InstanceCountToSkip skip, InstanceCount take)
+    public IObservable<IEnumerable<TReadModel>> ObserveInstances<TReadModel>(InstanceCountToSkip? skip = null, InstanceCount? take = null)
     {
+        // Apply defaults if not provided
+        skip ??= InstanceCountToSkip.Zero;
+        take ??= InstanceCount.Default;
+
         var readModelType = typeof(TReadModel);
 
         // Validate that the read model is known by projections or reducers
