@@ -7,14 +7,14 @@ using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using MongoDB.Driver;
-using context = Cratis.Chronicle.InProcess.Integration.for_Clustering.when_appending_an_event_with_reactor_reducer_and_projection.context;
+using context = Cratis.Chronicle.Integration.for_Clustering.when_appending_an_event_with_reactor_reducer_and_projection.context;
 
-namespace Cratis.Chronicle.InProcess.Integration.for_Clustering;
+namespace Cratis.Chronicle.Integration.for_Clustering;
 
 [Collection(ChronicleCollection.Name)]
 public class when_appending_an_event_with_reactor_reducer_and_projection(context context) : Given<context>(context)
 {
-    public class context(ChronicleInProcessFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
         readonly TaskCompletionSource _reactorHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         readonly TaskCompletionSource _reducerHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
