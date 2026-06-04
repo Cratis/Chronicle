@@ -63,51 +63,43 @@ internal sealed class MaterializedReadModels(
     /// <inheritdoc/>
     public IObservable<ObserveInstancesResponse> ObserveInstances(ObserveInstancesRequest request, CallContext context = default)
     {
-        return Observable.Create<ObserveInstancesResponse>(async observer =>
+        return Observable.FromAsync(async () =>
         {
-            try
-            {
-                var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-                var definition = await readModel.GetDefinition();
-                var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
-                var sink = await sinks.GetFor(definition);
-                var skip = Math.Max(0, request.Page * request.PageSize);
+            var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
+            var definition = await readModel.GetDefinition();
+            var sinks = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Sinks;
+            var sink = await sinks.GetFor(definition);
+            var skip = Math.Max(0, request.Page * request.PageSize);
 
-                ReadModelContainerName? occurrence = null;
-                if (!string.IsNullOrEmpty(request.Occurrence))
+            ReadModelContainerName? occurrence = null;
+            if (!string.IsNullOrEmpty(request.Occurrence))
+            {
+                occurrence = request.Occurrence;
+            }
+
+            var schema = definition.GetSchemaForLatestGeneration();
+            return (sink, occurrence, skip, schema);
+        })
+        .SelectMany(state =>
+            state.sink.ObserveInstances(state.occurrence, state.skip, request.PageSize)
+                .SelectMany(async instances =>
                 {
-                    occurrence = request.Occurrence;
-                }
+                    var releasedInstances = await complianceHelper.Release(
+                        request.EventStore,
+                        request.Namespace,
+                        state.schema,
+                        instances);
 
-                var schema = definition.GetSchemaForLatestGeneration();
+                    var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
+                    var (_, totalCount) = await state.sink.GetInstances(state.occurrence, state.skip, request.PageSize);
 
-                return sink.ObserveInstances(occurrence, skip, request.PageSize)
-                    .SelectMany(async instances =>
+                    return new ObserveInstancesResponse
                     {
-                        var releasedInstances = await complianceHelper.Release(
-                            request.EventStore,
-                            request.Namespace,
-                            schema,
-                            instances);
-
-                        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
-                        var (_, totalCount) = await sink.GetInstances(occurrence, skip, request.PageSize);
-
-                        return new ObserveInstancesResponse
-                        {
-                            Instances = instancesAsJson,
-                            TotalCount = (int)totalCount,
-                            Page = request.Page,
-                            PageSize = request.PageSize
-                        };
-                    })
-                    .Subscribe(observer);
-            }
-            catch (Exception ex)
-            {
-                observer.OnError(ex);
-                return System.Reactive.Disposables.Disposable.Empty;
-            }
-        });
+                        Instances = instancesAsJson,
+                        TotalCount = (int)totalCount,
+                        Page = request.Page,
+                        PageSize = request.PageSize
+                    };
+                }));
     }
 }
