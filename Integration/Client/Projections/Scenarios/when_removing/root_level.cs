@@ -14,6 +14,9 @@ public class root_level(context context) : Given<context>(context)
     {
         public override IEnumerable<Type> EventTypes => [typeof(EventWithPropertiesForAllSupportedTypes), typeof(RemoveRoot)];
 
+        /// <inheritdoc/>
+        protected override bool ExpectsPrimaryReadModel => false; // root is removed, so no instance remains
+
         void Establish()
         {
             EventsToAppend.Add(EventWithPropertiesForAllSupportedTypes.CreateWithRandomValues());
