@@ -26,7 +26,6 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 var logger = builder.Logging.Services
@@ -65,13 +64,13 @@ else if (grpcCertificate is not null)
 {
     logger.TlsCertificateLoaded();
 }
-else if (isDevelopmentEnvironment)
-{
-    logger.TlsCertificateMissingDevelopment();
-}
 else
 {
+#if DEVELOPMENT
+    logger.TlsCertificateMissingDevelopment();
+#else
     logger.TlsCertificateMissingProduction();
+#endif
 }
 
 logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
@@ -88,7 +87,8 @@ builder.WebHost.UseKestrel(options =>
         {
             listenOptions.UseHttps(workbenchCertificate);
         }
-        else if (!isDevelopmentEnvironment)
+#if !DEVELOPMENT
+        else
         {
             // In production, Workbench TLS can be explicitly disabled for deployments
             // behind an ingress/reverse proxy that terminates TLS upstream.
@@ -101,6 +101,7 @@ builder.WebHost.UseKestrel(options =>
                     "if TLS is terminated upstream by an ingress/reverse proxy.");
             }
         }
+#endif
     });
 
     // Listen on Port for gRPC (HTTP/2)
@@ -113,12 +114,14 @@ builder.WebHost.UseKestrel(options =>
         {
             listenOptions.UseHttps(grpcCertificate);
         }
-        else if (!isDevelopmentEnvironment && grpcTls.Enabled)
+#if !DEVELOPMENT
+        else if (grpcTls.Enabled)
         {
             throw new InvalidOperationException(
                 "No TLS certificate is configured for gRPC while TLS is enabled. " +
                 "Please provide a certificate path in configuration, or set Tls:Enabled to false.");
         }
+#endif
     });
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
