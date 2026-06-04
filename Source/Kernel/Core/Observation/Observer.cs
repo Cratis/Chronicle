@@ -34,7 +34,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
-/// <param name="eventComplianceHelper"><see cref="IEventComplianceHelper"/> for decrypting PII fields in event content.</param>
+/// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
@@ -48,7 +48,7 @@ public partial class Observer(
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
     IStorage storage,
-    IEventComplianceHelper eventComplianceHelper,
+    IEventCompliance eventCompliance,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,

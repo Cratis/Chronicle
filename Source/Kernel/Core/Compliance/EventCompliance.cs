@@ -9,13 +9,13 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventComplianceHelper"/> for applying compliance release to event content.
+/// Represents an implementation of <see cref="IEventCompliance"/> for applying compliance release to event content.
 /// </summary>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> to use for releasing compliance.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting event content.</param>
-public class EventComplianceHelper(
+public class EventCompliance(
     IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter) : IEventComplianceHelper
+    IExpandoObjectConverter expandoObjectConverter) : IEventCompliance
 {
     /// <inheritdoc/>
     public async Task<AppendedEvent> ReleaseEventContent(AppendedEvent @event, JsonSchema schema)

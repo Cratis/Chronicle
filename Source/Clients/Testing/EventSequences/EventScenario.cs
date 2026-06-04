@@ -157,14 +157,14 @@ public class EventScenario(
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var eventComplianceHelper = new KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper(
+        var eventCompliance = new KernelCore::Cratis.Chronicle.Compliance.EventCompliance(
             new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
                 new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
             new ExpandoObjectConverter(new TypeFormats()));
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            eventComplianceHelper,
+            eventCompliance,
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

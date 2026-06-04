@@ -8,9 +8,9 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Defines a helper for applying compliance release to event content.
+/// Defines a system for applying compliance release to event content.
 /// </summary>
-public interface IEventComplianceHelper
+public interface IEventCompliance
 {
     /// <summary>
     /// Decrypts PII fields in an appended event content payload for a given schema.

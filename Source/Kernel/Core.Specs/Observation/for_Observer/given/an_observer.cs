@@ -53,7 +53,7 @@ public class an_observer : Specification
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
     protected IEventTypesStorage _eventTypesStorage;
-    protected IEventComplianceHelper _eventComplianceHelper;
+    protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
 
     async Task Establish()
@@ -70,7 +70,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
-        _eventComplianceHelper = Substitute.For<IEventComplianceHelper>();
+        _eventCompliance = Substitute.For<IEventCompliance>();
 
         // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -83,12 +83,12 @@ public class an_observer : Specification
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
 
         // By default, the compliance helper passes events through unchanged.
-        _eventComplianceHelper
+        _eventCompliance
             .DecryptEvents(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
 
         _silo.AddService(_storage);
-        _silo.AddService(_eventComplianceHelper);
+        _silo.AddService(_eventCompliance);
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);

@@ -31,7 +31,7 @@ using Cratis.Types;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
-using KernelEventComplianceHelper = KernelCore::Cratis.Chronicle.Compliance.EventComplianceHelper;
+using KernelEventCompliance = KernelCore::Cratis.Chronicle.Compliance.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
@@ -132,7 +132,7 @@ internal sealed class TestingServices(
         new KernelEventSequencesService(
             grainFactory,
             storage,
-            new KernelEventComplianceHelper(
+            new KernelEventCompliance(
                 new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
                 new ExpandoObjectConverter(new TypeFormats())),
             jsonSerializerOptions));
