@@ -17,6 +17,9 @@ public class using_composite_key_from_property_and_context_property(context cont
         public CompositeKey CompositeId;
         public ReadModelWithCompositeKey ReadModel;
 
+        /// <inheritdoc/>
+        protected override bool ExpectsPrimaryReadModel => false; // keyed by a composite key, never appears at ReadModelId
+
         void Establish()
         {
             CompositeId = new(Guid.NewGuid().ToString(), 0);

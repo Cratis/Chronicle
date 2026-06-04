@@ -23,6 +23,32 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
     protected IProjectionHandler Projection;
     protected bool WaitForEachEvent;
 
+    /// <summary>
+    /// Gets the bounded window the final result read polls for the instance to become visible.
+    /// </summary>
+    /// <remarks>
+    /// The window only needs to cover the read-after-write gap between the observer reporting it
+    /// reached the tail and the sink committing the instance — a short, fixed window is enough and
+    /// is deliberately not the (much larger) end-to-end pipeline timeout, so scenarios that
+    /// legitimately end without an instance do not stall for long.
+    /// </remarks>
+    protected static readonly TimeSpan ReadModelVisibilityTimeout = TimeSpanFactory.FromSeconds(30);
+
+    /// <summary>
+    /// Gets a value indicating whether the primary read model (keyed by <see cref="ReadModelId"/>)
+    /// is expected to materialize once the projection has reached the tail.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="true"/>, which makes the final result read poll (within
+    /// <see cref="ReadModelVisibilityTimeout"/>) until the instance is visible — closing the
+    /// read-after-write gap between the observer reporting it reached the tail and the sink
+    /// committing the instance. Scenarios whose instance lives under a different key space than
+    /// <see cref="ReadModelId"/> (e.g. composite-key projections), or that intentionally end with
+    /// the instance removed, override this to <see langword="false"/> so the read is performed once
+    /// without waiting for an instance that, by design, never appears at that id.
+    /// </remarks>
+    protected virtual bool ExpectsPrimaryReadModel => true;
+
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(new TProjection());
@@ -71,16 +97,47 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
 
         if (appendResult is not null)
         {
-            await WaitForProjectionAndSetResult(LastEventSequenceNumber);
+            await WaitForProjectionAndSetResult(LastEventSequenceNumber, requireMaterialized: true);
         }
     }
 
     protected virtual Task<TReadModel> GetReadModelResult() => GetReadModel(ReadModelId);
 
-    protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber)
+    /// <summary>
+    /// Waits for the projection to reach the given sequence number and reads the resulting instance into <see cref="Result"/>.
+    /// </summary>
+    /// <param name="eventSequenceNumber">The <see cref="EventSequenceNumber"/> the projection observer must reach first.</param>
+    /// <param name="requireMaterialized">
+    /// When <see langword="true"/> (the final read after all events are appended), the read is retried
+    /// within <see cref="ReadModelVisibilityTimeout"/> until the instance is visible — closing the
+    /// read-after-write gap that otherwise leaves <see cref="Result"/> null and surfaces as a confusing
+    /// <see cref="NullReferenceException"/> in a downstream assertion. The wait is best-effort: if the
+    /// instance never appears (a scenario may legitimately end with it removed) the read simply returns
+    /// null. When <see langword="false"/> (per-event intermediate reads), the instance may legitimately
+    /// not exist yet, so it is read once without waiting.
+    /// </param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    protected async Task WaitForProjectionAndSetResult(EventSequenceNumber eventSequenceNumber, bool requireMaterialized = false)
     {
         await Projection.WaitTillReachesEventSequenceNumber(eventSequenceNumber);
-        Result = await GetReadModelResult();
+
+        if (!requireMaterialized || !ExpectsPrimaryReadModel)
+        {
+            Result = await GetReadModelResult();
+            return;
+        }
+
+        var deadline = DateTime.UtcNow.Add(ReadModelVisibilityTimeout);
+        while (true)
+        {
+            Result = await GetReadModelResult();
+            if (Result is not null || DateTime.UtcNow >= deadline)
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
     }
 
     protected async Task<TReadModel> GetReadModel(EventSourceId eventSourceId) =>
