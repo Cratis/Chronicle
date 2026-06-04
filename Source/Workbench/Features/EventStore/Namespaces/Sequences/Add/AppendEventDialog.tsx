@@ -104,10 +104,11 @@ export const AppendEventDialog = () => {
         appendEvent.content = eventContent as Record<string, Record<string, unknown>>;
 
         const executeResult = await appendEvent.execute();
-        if (executeResult.isSuccess) {
+        const succeeded = executeResult.isSuccess;
+        if (succeeded) {
             closeDialog(DialogResult.Ok);
         }
-        return executeResult.isSuccess;
+        return succeeded;
     };
 
     const isValid = selectedEventType !== null && eventSourceId.trim() !== '' && !hasValidationErrors;

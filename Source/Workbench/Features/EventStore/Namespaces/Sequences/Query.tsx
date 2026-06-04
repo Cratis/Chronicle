@@ -17,7 +17,7 @@ import type { FilterDefinition } from '@cratis/components/Filter';
 import { SequenceSelector } from './SequenceSelector';
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
-import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
+import { AppendedEvents } from 'Api/EventSequences';
 import { ForSequence } from 'Api/EventSequences/ForSequence';
 import { useConfirmationDialog, useDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { GetReplayableObserversForEventTypes } from 'Api/Observation';
@@ -154,8 +154,8 @@ export const Query = ({ query, onSave }: QueryProps) => {
     };
 
     const handleAppendEvent = async () => {
-        const [result] = await showAppendEvent({ eventSequenceId: appliedEventSequenceId });
-        if (result === DialogResult.Ok) {
+        const [dialogResult] = await showAppendEvent({ eventSequenceId: appliedEventSequenceId });
+        if (dialogResult === DialogResult.Ok) {
             refresh();
         }
     };
@@ -169,13 +169,13 @@ export const Query = ({ query, onSave }: QueryProps) => {
         );
         if (confirmResult !== DialogResult.Yes) return;
 
-        const [result] = await showRedactEvent({
+        const [dialogResult] = await showRedactEvent({
             eventStore: params.eventStore!,
             namespace: params.namespace!,
             eventSequenceId: appliedEventSequenceId,
             sequenceNumber: selectedEvent.context.sequenceNumber
         });
-        if (result === DialogResult.Ok) {
+        if (dialogResult === DialogResult.Ok) {
             refresh();
             setSelectedEvent(null);
         }
@@ -210,14 +210,22 @@ export const Query = ({ query, onSave }: QueryProps) => {
         );
         if (confirmResult !== DialogResult.Yes) return;
 
-        const [result] = await showRevise({
+        const [dialogResult] = await showRevise({
             event: selectedEvent,
             eventStore: params.eventStore!,
             namespace: params.namespace!,
             eventSequenceId: appliedEventSequenceId
         });
-        if (result === DialogResult.Ok) {
+        if (dialogResult === DialogResult.Ok) {
             refresh();
+        }
+    };
+
+    const parseEventContent = (content: string) => {
+        try {
+            return JSON.parse(content);
+        } catch {
+            return content;
         }
     };
 
@@ -231,26 +239,20 @@ export const Query = ({ query, onSave }: QueryProps) => {
             eventTypes: appliedFilter.eventTypes && appliedFilter.eventTypes.length > 0
                 ? appliedFilter.eventTypes
                 : undefined,
-            startTime: appliedFilter.startTime as unknown as AppendedEventsParameters['startTime'],
-            endTime: appliedFilter.endTime as unknown as AppendedEventsParameters['endTime'],
+            startTime: appliedFilter.startTime,
+            endTime: appliedFilter.endTime,
         });
 
         if (!result.hasData || result.data.length === 0) return;
 
-        const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+        const sanitizeForFilename = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
         const exportData = result.data.map(event => ({
             eventSequenceId: appliedEventSequenceId,
             eventType: event.context.eventType.id,
             eventSourceId: event.context.eventSourceId,
             sequenceNumber: event.context.sequenceNumber,
             occurred: event.context.occurred,
-            content: (() => {
-                try {
-                    return JSON.parse(event.content);
-                } catch {
-                    return event.content;
-                }
-            })()
+            content: parseEventContent(event.content)
         }));
 
         const json = JSON.stringify(exportData, null, 2);
@@ -258,7 +260,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `events-${sanitize(params.eventStore!)}-${sanitize(params.namespace!)}-${sanitize(appliedEventSequenceId)}-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `events-${sanitizeForFilename(params.eventStore!)}-${sanitizeForFilename(params.namespace!)}-${sanitizeForFilename(appliedEventSequenceId)}-${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
