@@ -3,6 +3,9 @@
 
 import { EventList } from './EventList';
 import { EventDetails } from './EventDetails';
+import { AppendEventDialog, type AppendEventDialogProps } from './Add/AppendEventDialog';
+import { RedactEventDialog, type RedactEventDialogProps } from './RedactEventDialog';
+import { ReviseDialog, type ReviseDialogProps } from './ReviseDialog';
 import { Allotment } from 'allotment';
 import { InputText } from 'primereact/inputtext';
 import { Menubar } from 'primereact/menubar';
@@ -12,9 +15,14 @@ import { QueryDefinition } from './QueryDefinition';
 import { FilterPanel, FilterEditor, useFilterState } from '@cratis/components/Filter';
 import type { FilterDefinition } from '@cratis/components/Filter';
 import { SequenceSelector } from './SequenceSelector';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
+import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
 import { ForSequence } from 'Api/EventSequences/ForSequence';
+import { useConfirmationDialog, useDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
+import { GetReplayableObserversForEventTypes } from 'Api/Observation';
+import { ObserverType } from 'Api/Observation/ObserverType';
+import strings from 'Strings';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 
@@ -22,6 +30,8 @@ export interface QueryProps {
     query: QueryDefinition;
     onSave?: (query: QueryDefinition) => Promise<void>;
 }
+
+const REFRESH_DELAY_MS = 200;
 
 const FILTER_KEY_EVENT_SEQUENCE = 'eventSequence';
 const FILTER_KEY_EVENT_SOURCE_ID = 'eventSourceId';
@@ -36,10 +46,15 @@ const FilterIcon = () => (
 
 export const Query = ({ query, onSave }: QueryProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
+    const [showConfirmation] = useConfirmationDialog();
+    const [AppendEventWrapper, showAppendEvent] = useDialog<AppendEventDialogProps>(AppendEventDialog);
+    const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
+    const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
 
     const filterButtonRef = useRef<HTMLButtonElement>(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
+    const [refreshToken, setRefreshToken] = useState(0);
     const [appliedFilter, setAppliedFilter] = useState<{
         eventSourceId?: string;
         eventTypes?: string[];
@@ -124,6 +139,132 @@ export const Query = ({ query, onSave }: QueryProps) => {
 
     const markDirty = () => setIsDirty(true);
 
+    const refresh = () => {
+        setTimeout(() => setRefreshToken(prev => prev + 1), REFRESH_DELAY_MS);
+    };
+
+    const observerTypeName = (type: ObserverType): string => {
+        switch (type) {
+            case ObserverType.reactor: return 'Reactor';
+            case ObserverType.projection: return 'Projection';
+            case ObserverType.reducer: return 'Reducer';
+            case ObserverType.external: return 'External';
+            default: return 'Unknown';
+        }
+    };
+
+    const handleAppendEvent = async () => {
+        const [result] = await showAppendEvent({ eventSequenceId: appliedEventSequenceId });
+        if (result === DialogResult.Ok) {
+            refresh();
+        }
+    };
+
+    const handleRedactEvent = async () => {
+        if (!selectedEvent) return;
+        const confirmResult = await showConfirmation(
+            strings.eventStore.namespaces.sequences.dialogs.redact.confirmTitle,
+            strings.eventStore.namespaces.sequences.dialogs.redact.confirmMessage,
+            DialogButtons.YesNo
+        );
+        if (confirmResult !== DialogResult.Yes) return;
+
+        const [result] = await showRedactEvent({
+            eventStore: params.eventStore!,
+            namespace: params.namespace!,
+            eventSequenceId: appliedEventSequenceId,
+            sequenceNumber: selectedEvent.context.sequenceNumber
+        });
+        if (result === DialogResult.Ok) {
+            refresh();
+            setSelectedEvent(null);
+        }
+    };
+
+    const handleReviseEvent = async () => {
+        if (!selectedEvent) return;
+        const query = new GetReplayableObserversForEventTypes();
+        const queryResult = await query.perform({
+            eventStore: params.eventStore!,
+            namespace: params.namespace!,
+            eventTypeIds: selectedEvent.context.eventType.id
+        });
+
+        const observers = queryResult.data;
+        const reviseStrings = strings.eventStore.namespaces.sequences.dialogs.revise;
+        let confirmMessage: string;
+
+        if (observers.length > 0) {
+            const observerList = observers
+                .map(o => `• ${o.id} (${observerTypeName(o.type)})`)
+                .join('\n');
+            confirmMessage = `${reviseStrings.confirmMessage}\n\n${observerList}`;
+        } else {
+            confirmMessage = reviseStrings.confirmNoObservers;
+        }
+
+        const confirmResult = await showConfirmation(
+            reviseStrings.confirmTitle,
+            confirmMessage,
+            DialogButtons.YesNo
+        );
+        if (confirmResult !== DialogResult.Yes) return;
+
+        const [result] = await showRevise({
+            event: selectedEvent,
+            eventStore: params.eventStore!,
+            namespace: params.namespace!,
+            eventSequenceId: appliedEventSequenceId
+        });
+        if (result === DialogResult.Ok) {
+            refresh();
+        }
+    };
+
+    const handleExportEvents = useCallback(async () => {
+        const exportQuery = new AppendedEvents();
+        const result = await exportQuery.perform({
+            eventStore: params.eventStore!,
+            namespace: params.namespace!,
+            eventSequenceId: appliedEventSequenceId,
+            eventSourceId: appliedFilter.eventSourceId,
+            eventTypes: appliedFilter.eventTypes && appliedFilter.eventTypes.length > 0
+                ? appliedFilter.eventTypes
+                : undefined,
+            startTime: appliedFilter.startTime as unknown as AppendedEventsParameters['startTime'],
+            endTime: appliedFilter.endTime as unknown as AppendedEventsParameters['endTime'],
+        });
+
+        if (!result.hasData || result.data.length === 0) return;
+
+        const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
+        const exportData = result.data.map(event => ({
+            eventSequenceId: appliedEventSequenceId,
+            eventType: event.context.eventType.id,
+            eventSourceId: event.context.eventSourceId,
+            sequenceNumber: event.context.sequenceNumber,
+            occurred: event.context.occurred,
+            content: (() => {
+                try {
+                    return JSON.parse(event.content);
+                } catch {
+                    return event.content;
+                }
+            })()
+        }));
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `events-${sanitize(params.eventStore!)}-${sanitize(params.namespace!)}-${sanitize(appliedEventSequenceId)}-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [appliedEventSequenceId, appliedFilter, params.eventStore, params.namespace]);
+
     const runQuery = () => {
         const selectedTypes = Array.from(filterState.filterValues[FILTER_KEY_EVENT_TYPES] ?? []);
         const range = filterState.rangeValues[FILTER_KEY_TIME_RANGE] ?? null;
@@ -206,6 +347,32 @@ export const Query = ({ query, onSave }: QueryProps) => {
                         ),
                     },
                     {
+                        id: 'append',
+                        label: strings.eventStore.namespaces.sequences.actions.appendEvent,
+                        icon: 'pi pi-plus',
+                        command: handleAppendEvent,
+                    },
+                    {
+                        id: 'revise',
+                        label: strings.eventStore.namespaces.sequences.actions.revise,
+                        icon: 'pi pi-arrows-rotate',
+                        disabled: selectedEvent === null,
+                        command: handleReviseEvent,
+                    },
+                    {
+                        id: 'redact',
+                        label: strings.eventStore.namespaces.sequences.actions.redact,
+                        icon: 'pi pi-eraser',
+                        disabled: selectedEvent === null,
+                        command: handleRedactEvent,
+                    },
+                    {
+                        id: 'export',
+                        label: strings.eventStore.namespaces.sequences.actions.export,
+                        icon: 'pi pi-file-export',
+                        command: handleExportEvents,
+                    },
+                    {
                         id: 'save',
                         label: 'Save',
                         icon: 'pi pi-save',
@@ -251,7 +418,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
                 <Allotment className="h-full" proportionalLayout={false}>
                     <Allotment.Pane>
                         <EventList
-                            key={`${appliedEventSequenceId}:${JSON.stringify(appliedFilter)}`}
+                            key={`${appliedEventSequenceId}:${JSON.stringify(appliedFilter)}:${refreshToken}`}
                             filter={appliedFilter}
                             eventSequenceId={appliedEventSequenceId}
                             selection={selectedEvent}
@@ -266,6 +433,9 @@ export const Query = ({ query, onSave }: QueryProps) => {
                     )}
                 </Allotment>
             </div>
+            <AppendEventWrapper />
+            <RedactEventWrapper />
+            <ReviseWrapper />
         </div>
     );
 };

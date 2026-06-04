@@ -16,6 +16,7 @@ export interface ReviseDialogProps {
     event: AppendedEvent;
     eventStore: string;
     namespace: string;
+    eventSequenceId: string;
 }
 
 export const ReviseDialog = () => {
@@ -59,7 +60,7 @@ export const ReviseDialog = () => {
             initialValues={{
                 eventStore: request.eventStore,
                 namespace: request.namespace,
-                eventSequenceId: 'event-log',
+                eventSequenceId: request.eventSequenceId,
                 sequenceNumber: request.event.context.sequenceNumber,
                 eventType: request.event.context.eventType,
                 content: parsedContent

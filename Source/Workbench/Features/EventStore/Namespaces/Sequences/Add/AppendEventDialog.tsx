@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DialogResult } from '@cratis/arc.react/dialogs';
+import { DialogResult, useDialogContext } from '@cratis/arc.react/dialogs';
 import { Guid } from '@cratis/fundamentals';
 import { Append } from 'Api/EventSequences';
 import { AllEventTypesWithSchemas } from 'Api/EventTypes';
@@ -18,7 +18,12 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import type { Json, JsonSchema } from '@cratis/components/types';
 
+export interface AppendEventDialogProps {
+    eventSequenceId: string;
+}
+
 export const AppendEventDialog = () => {
+    const { request, closeDialog } = useDialogContext<AppendEventDialogProps>();
     const params = useParams<EventStoreAndNamespaceParams>();
     const [appendEvent] = Append.use();
 
@@ -80,6 +85,7 @@ export const AppendEventDialog = () => {
 
     const handleClose = async (result: DialogResult) => {
         if (result !== DialogResult.Ok) {
+            closeDialog(result);
             return true;
         }
 
@@ -89,7 +95,7 @@ export const AppendEventDialog = () => {
 
         appendEvent.eventStore = params.eventStore!;
         appendEvent.namespace = params.namespace!;
-        appendEvent.eventSequenceId = 'event-log';
+        appendEvent.eventSequenceId = request?.eventSequenceId ?? 'event-log';
         appendEvent.eventSourceId = eventSourceId;
         appendEvent.eventSourceType = eventSourceType;
         appendEvent.eventStreamType = eventStreamType;
@@ -98,6 +104,9 @@ export const AppendEventDialog = () => {
         appendEvent.content = eventContent as Record<string, Record<string, unknown>>;
 
         const executeResult = await appendEvent.execute();
+        if (executeResult.isSuccess) {
+            closeDialog(DialogResult.Ok);
+        }
         return executeResult.isSuccess;
     };
 
