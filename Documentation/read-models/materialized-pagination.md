@@ -232,7 +232,7 @@ var allOrders = await readModels.GetInstances<Order>();
 Observation uses database change streams when available:
 
 - **MongoDB**: Uses native MongoDB change streams for real-time updates
-- **SQL Server**: Uses `DbContext.Observe()` with polling or EF triggers
+- **SQL Server**: Uses `DbContext.Observe()` with polling-based change detection
 - **In-Memory/Testing**: Simulated observation for testing scenarios
 
 ## Use Cases

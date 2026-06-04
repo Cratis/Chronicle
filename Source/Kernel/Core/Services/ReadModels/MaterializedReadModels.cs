@@ -17,11 +17,11 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-/// <param name="readModelComplianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
-    IReadModelComplianceHelper readModelComplianceHelper) : IMaterializedReadModels
+    IReadModelComplianceHelper complianceHelper) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)
@@ -44,7 +44,7 @@ internal sealed class MaterializedReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var releasedInstances = await readModelComplianceHelper.Release(
+        var releasedInstances = await complianceHelper.Release(
             request.EventStore,
             request.Namespace,
             schema,
@@ -84,7 +84,7 @@ internal sealed class MaterializedReadModels(
                 return sink.ObserveInstances(occurrence, skip, request.PageSize)
                     .SelectMany(async instances =>
                     {
-                        var releasedInstances = await readModelComplianceHelper.Release(
+                        var releasedInstances = await complianceHelper.Release(
                             request.EventStore,
                             request.Namespace,
                             schema,

@@ -9,7 +9,8 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Represents an implementation of <see cref="IReadModelComplianceHelper"/> for releasing (decrypting) PII-annotated properties in read model instances.
+/// Implementation of <see cref="IReadModelComplianceHelper"/> that delegates to the static <see cref="ReadModelComplianceHelper"/> methods for PII release operations.
+/// This class serves as a bridge between the injectable service pattern and the underlying compliance infrastructure.
 /// </summary>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
