@@ -181,6 +181,9 @@ internal sealed class TestingServices(
     public IReadModels ReadModels => _readModels.Value;
 
     /// <inheritdoc/>
+    public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");
+
+    /// <inheritdoc/>
     public ICompliance Compliance => _compliance.Value;
 
     /// <inheritdoc/>

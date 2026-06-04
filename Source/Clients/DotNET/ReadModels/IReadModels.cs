@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.ReadModels;
 public interface IReadModels
 {
     /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
+    IMaterializedReadModels Materialized { get; }
+
+    /// <summary>
     /// Register the read models in the system.
     /// </summary>
     /// <returns>An awaitable task.</returns>
