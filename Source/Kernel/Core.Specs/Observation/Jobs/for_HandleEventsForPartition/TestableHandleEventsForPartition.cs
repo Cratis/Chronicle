@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition;
 /// <param name="state">The persistent state for the job step.</param>
 /// <param name="throttle">The throttle for limiting parallel execution.</param>
 /// <param name="storage">The storage for the cluster.</param>
-/// <param name="eventCompliance">The event compliance system.</param>
+/// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="logger">The logger.</param>
 public class TestableHandleEventsForPartition(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]

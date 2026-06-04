@@ -8,7 +8,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Defines a system for applying compliance release to event content.
+/// Defines a service for applying compliance release to event content.
 /// </summary>
 public interface IEventCompliance
 {
