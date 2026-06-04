@@ -11,4 +11,5 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 /// </summary>
 /// <param name="EventContext">The <see cref="Events.EventContext"/> of the event that triggered the reactor.</param>
 /// <param name="Reactor">The reactor instance that handled the event.</param>
-public record ReactorContext(EventContext EventContext, object Reactor);
+/// <param name="Values">The <see cref="ReactorContextValues"/> carrying append-metadata resolved for the side-effect.</param>
+public record ReactorContext(EventContext EventContext, object Reactor, ReactorContextValues Values);

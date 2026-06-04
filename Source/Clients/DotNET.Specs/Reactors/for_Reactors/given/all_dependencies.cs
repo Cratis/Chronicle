@@ -26,6 +26,7 @@ public class all_dependencies : Specification
     protected ICausationManager _causationManager;
     protected IActivitySource<Reactors> _activitySource;
     protected IReactorSideEffectHandlers _sideEffectHandlers;
+    protected IReactorContextValuesBuilder _reactorContextValuesBuilder;
     protected ILogger<Reactors> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IChronicleServicesAccessor _servicesAccessor;
@@ -53,6 +54,7 @@ public class all_dependencies : Specification
         _causationManager = Substitute.For<ICausationManager>();
         _activitySource = Substitute.For<IActivitySource<Reactors>>();
         _sideEffectHandlers = Substitute.For<IReactorSideEffectHandlers>();
+        _reactorContextValuesBuilder = Substitute.For<IReactorContextValuesBuilder>();
         _logger = Substitute.For<ILogger<Reactors>>();
         _loggerFactory = Substitute.For<ILoggerFactory>();
 
@@ -86,6 +88,7 @@ public class all_dependencies : Specification
             _identityProvider,
             _activitySource,
             _sideEffectHandlers,
+            _reactorContextValuesBuilder,
             _logger,
             _loggerFactory);
 

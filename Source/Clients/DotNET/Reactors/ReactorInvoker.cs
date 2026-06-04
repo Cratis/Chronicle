@@ -30,6 +30,10 @@ namespace Cratis.Chronicle.Reactors;
 /// Optional <see cref="IEventStore"/> supplied to side effect handlers when appending events.
 /// When <see langword="null"/>, any return values are silently discarded even if handlers are registered.
 /// </param>
+/// <param name="reactorContextValuesBuilder">
+/// Optional <see cref="IReactorContextValuesBuilder"/> used to resolve append-metadata for side-effect events.
+/// When <see langword="null"/>, no values are resolved and append-metadata falls back to the triggering event.
+/// </param>
 public class ReactorInvoker(
     IEventTypes eventTypes,
     IReactorMiddlewares middlewares,
@@ -37,7 +41,8 @@ public class ReactorInvoker(
     ActivatedArtifact activatedReactor,
     ILogger<ReactorInvoker> logger,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
-    IEventStore? eventStore = null) : IReactorInvoker
+    IEventStore? eventStore = null,
+    IReactorContextValuesBuilder? reactorContextValuesBuilder = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
@@ -136,7 +141,7 @@ public class ReactorInvoker(
                 return;
             }
 
-            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance);
+            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
             if (sideEffectHandlers.CanHandle(reactorContext, result))
             {
                 await sideEffectHandlers.Handle(reactorContext, eventStore, result);
@@ -151,12 +156,15 @@ public class ReactorInvoker(
             return;
         }
 
-        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance);
+        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
         if (sideEffectHandlers.CanHandle(syncReactorContext, returnValue))
         {
             await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
         }
     }
+
+    ReactorContextValues BuildValues(EventContext eventContext) =>
+        reactorContextValuesBuilder?.Build(activatedReactor.Instance, eventContext) ?? ReactorContextValues.Empty;
 
     static class MethodsByEventType
     {

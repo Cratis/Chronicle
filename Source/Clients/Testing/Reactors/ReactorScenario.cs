@@ -5,6 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Execution;
+using Cratis.Types;
 
 namespace Cratis.Chronicle.Testing.Reactors;
 
@@ -95,7 +96,15 @@ public class ReactorScenario<TReactor>(
             activatedReactor,
             NullLogger<ReactorInvoker>.Instance,
             sideEffectHandlers,
-            eventStore);
+            eventStore,
+            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
+            [
+                new EventSourceIdValuesProvider(),
+                new EventStreamIdValuesProvider(),
+                new EventStreamTypeValuesProvider(),
+                new EventSourceTypeValuesProvider(),
+                new SubjectValuesProvider()
+            ])));
 
         foreach (var @event in events)
         {

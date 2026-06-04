@@ -39,7 +39,8 @@ public class handler_method_returning_task_of_event : Specification
             new ActivatedArtifact(reactor, typeof(ReactorWithTaskOfEventReturnType), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             sideEffectHandlers,
-            _eventStore);
+            _eventStore,
+            ReactorContextValuesBuilders.ForSpecifications());
 
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }

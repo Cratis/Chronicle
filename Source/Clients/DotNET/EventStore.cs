@@ -19,6 +19,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -27,6 +28,7 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
 using Cratis.Traces;
+using Cratis.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -154,6 +156,7 @@ public class EventStore : IEventStore
             identityProvider,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
             reactorSideEffectHandlers,
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 

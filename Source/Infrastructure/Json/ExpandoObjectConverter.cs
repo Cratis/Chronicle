@@ -58,7 +58,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             }
 
             var name = property.Name;
-            var schemaProperty = schemaProperties.FirstOrDefault(_ => _.Name == name);
+            var schemaProperty = schemaProperties.Find(_ => _.Name == name);
             if (schemaProperty is null)
             {
                 ConvertUnknownSchemaTypeToJsonValue(keyValue.Value);
