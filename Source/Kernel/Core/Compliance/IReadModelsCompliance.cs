@@ -7,7 +7,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Defines a system for applying compliance release to read model instances.
+/// Defines operations for applying compliance release to read model instances.
 /// </summary>
 public interface IReadModelsCompliance
 {
