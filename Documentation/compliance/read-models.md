@@ -27,8 +27,8 @@ public record Employee(
     string Name,        // mapped from PersonName — stored encrypted at rest
     string Department)
 {
-    public static ISubject<Employee?> ById(EmployeeId id) =>
-        Query.ForEventSource<Employee>(id);
+    public static ISubject<Employee> ById([Key] EmployeeId id, IMongoCollection<Employee> collection) =>
+        collection.ObserveById(id);
 }
 ```
 
@@ -86,8 +86,8 @@ Read model queries are transparent to PII encryption. No changes to query code a
 [ReadModel]
 public record Employee(EmployeeId Id, string Name, string Department)
 {
-    public static ISubject<Employee?> ById(EmployeeId id) =>
-        Query.ForEventSource<Employee>(id);
+    public static ISubject<Employee> ById([Key] EmployeeId id, IMongoCollection<Employee> collection) =>
+        collection.ObserveById(id);
 }
 ```
 

@@ -35,8 +35,8 @@ Everything in Chronicle is reached through a `ChronicleClient`. From a client yo
 ```csharp
 using Cratis.Chronicle;
 
-// Explicitly use the Chronicle Options to set the naming policy to camelCase for the projection/reducer sinks
-using var client = new ChronicleClient(ChronicleOptions.FromUrl("http://localhost:35000").WithCamelCaseNamingPolicy());
+// Build the Chronicle options from a connection string pointing at the local kernel
+using var client = new ChronicleClient(ChronicleOptions.FromConnectionString("chronicle://localhost:35000"));
 var eventStore = await client.GetEventStore("Quickstart");
 ```
 

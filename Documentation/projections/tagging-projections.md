@@ -16,11 +16,10 @@ Apply a single tag to your projection:
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 
+[Projection("order-analytics")]
 [Tag("Analytics")]
 public class OrderAnalyticsProjection : IProjectionFor<OrderAnalytics>
 {
-    public ProjectionId Identifier => "order-analytics";
-
     public void Define(IProjectionBuilderFor<OrderAnalytics> builder)
     {
         builder
@@ -37,11 +36,10 @@ public class OrderAnalyticsProjection : IProjectionFor<OrderAnalytics>
 Use the params feature to specify multiple tags in a single attribute:
 
 ```csharp
+[Projection("sales-report")]
 [Tag("Analytics", "Reporting", "Dashboard")]
 public class SalesReportProjection : IProjectionFor<SalesReport>
 {
-    public ProjectionId Identifier => "sales-report";
-
     public void Define(IProjectionBuilderFor<SalesReport> builder)
     {
         // Projection definition
@@ -54,13 +52,12 @@ public class SalesReportProjection : IProjectionFor<SalesReport>
 Apply multiple `[Tag]` attributes:
 
 ```csharp
+[Projection("compliance-report")]
 [Tag("Analytics")]
 [Tag("Compliance")]
 [Tag("Auditing")]
 public class ComplianceReportProjection : IProjectionFor<ComplianceReport>
 {
-    public ProjectionId Identifier => "compliance-report";
-
     public void Define(IProjectionBuilderFor<ComplianceReport> builder)
     {
         // Projection definition
@@ -73,12 +70,11 @@ public class ComplianceReportProjection : IProjectionFor<ComplianceReport>
 Combine both approaches:
 
 ```csharp
+[Projection("executive-dashboard")]
 [Tag("Analytics", "Reporting")]
 [Tag("Executive")]
 public class ExecutiveDashboardProjection : IProjectionFor<ExecutiveDashboard>
 {
-    public ProjectionId Identifier => "executive-dashboard";
-
     public void Define(IProjectionBuilderFor<ExecutiveDashboard> builder)
     {
         // Projection definition

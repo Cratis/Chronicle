@@ -39,8 +39,8 @@ public class NotificationService
         subscription = observable.Subscribe(
             changeset =>
             {
-                Console.WriteLine($"Order {changeset.ReadModelKey} changed");
-                Console.WriteLine($"New state: {changeset.Current}");
+                Console.WriteLine($"Order {changeset.ModelKey} changed");
+                Console.WriteLine($"New state: {changeset.ReadModel}");
             },
             error => Console.WriteLine($"Error: {error}"),
             () => Console.WriteLine("Watch completed")
@@ -55,11 +55,10 @@ Each changeset emitted by the observable contains:
 
 ```csharp
 public record ReadModelChangeset<TReadModel>(
-    ReadModelKey ReadModelKey,              // The key of the changed instance
-    TReadModel Current,                     // The current state of the instance
-    TReadModel? Previous,                   // The previous state (null on first change)
-    IEnumerable<AppendedEvent> Events,      // Events that caused this change
-    CorrelationId CorrelationId);           // Links related changes together
+    EventStoreNamespaceName Namespace,      // The namespace for the event store
+    ReadModelKey ModelKey,                  // The key of the changed instance
+    TReadModel? ReadModel,                  // The current state of the instance (null when removed)
+    bool Removed);                          // Whether the read model was removed
 ```
 
 ## Usage Patterns
@@ -88,9 +87,9 @@ public class OrderWatchHub : Hub
             {
                 await Clients.All.SendAsync("OrderChanged", new
                 {
-                    orderId = changeset.ReadModelKey,
-                    order = changeset.Current,
-                    previousState = changeset.Previous
+                    orderId = changeset.ModelKey,
+                    order = changeset.ReadModel,
+                    removed = changeset.Removed
                 });
             },
             error => Console.WriteLine($"Error: {error}")
@@ -123,8 +122,16 @@ public class CachedReadModelService
         _subscription = observable.Subscribe(
             changeset =>
             {
-                _cache[changeset.ReadModelKey] = changeset.Current;
-                Console.WriteLine($"Cache updated: {changeset.ReadModelKey}");
+                if (changeset.Removed)
+                {
+                    _cache.Remove(changeset.ModelKey);
+                }
+                else if (changeset.ReadModel is not null)
+                {
+                    _cache[changeset.ModelKey] = changeset.ReadModel;
+                }
+
+                Console.WriteLine($"Cache updated: {changeset.ModelKey}");
             },
             error => Console.WriteLine($"Cache sync error: {error}")
         );
@@ -161,12 +168,12 @@ public class BackgroundJobService
             async changeset =>
             {
                 // Only process completed orders
-                if (changeset.Current.Status == OrderStatus.Completed)
+                if (changeset.ReadModel?.Status == OrderStatus.Completed)
                 {
                     await _jobQueue.Enqueue(new GenerateInvoiceJob
                     {
-                        OrderId = changeset.ReadModelKey,
-                        Order = changeset.Current
+                        OrderId = changeset.ModelKey,
+                        Order = changeset.ReadModel
                     });
                 }
             }
@@ -177,7 +184,7 @@ public class BackgroundJobService
 
 ### State Transition Notifications
 
-React to specific state changes:
+React to specific states as the read model reaches them:
 
 ```csharp
 public class StateChangeNotifier
@@ -190,30 +197,30 @@ public class StateChangeNotifier
 
         observable.Subscribe(changeset =>
         {
-            var previous = changeset.Previous;
-            var current = changeset.Current;
-
-            // Order shipped
-            if (previous?.Status != OrderStatus.Shipped && current.Status == OrderStatus.Shipped)
+            if (changeset.Removed || changeset.ReadModel is null)
             {
-                NotifyCustomerOfShipment(changeset.ReadModelKey, current);
+                return;
             }
 
-            // Payment received
-            if (previous?.TotalPaid < current.TotalPaid)
+            var current = changeset.ReadModel;
+
+            // Order shipped
+            if (current.Status == OrderStatus.Shipped)
             {
-                NotifyOfPayment(changeset.ReadModelKey, current.TotalPaid - (previous?.TotalPaid ?? 0m));
+                NotifyCustomerOfShipment(changeset.ModelKey, current);
             }
 
             // Order completed
-            if (previous?.Status != OrderStatus.Completed && current.Status == OrderStatus.Completed)
+            if (current.Status == OrderStatus.Completed)
             {
-                SendFeedbackRequest(changeset.ReadModelKey);
+                SendFeedbackRequest(changeset.ModelKey);
             }
         });
     }
 }
 ```
+
+The changeset carries the current state of the read model, not its previous state. If you need to react to a transition (the difference between two states), track the last value you saw per `ModelKey` yourself, or derive the transition from a dedicated event using a [reactor](../reactors/index.md).
 
 ### Logging and Audit Trail
 
@@ -232,11 +239,10 @@ public class AuditLogger
         observable.Subscribe(changeset =>
         {
             _logger.LogInformation(
-                "Order changed: Key={OrderKey}, Previous={Previous}, Current={Current}, CorrelationId={CorrelationId}",
-                changeset.ReadModelKey,
-                changeset.Previous,
-                changeset.Current,
-                changeset.CorrelationId
+                "Order changed: Key={OrderKey}, Current={Current}, Removed={Removed}",
+                changeset.ModelKey,
+                changeset.ReadModel,
+                changeset.Removed
             );
         });
     }
@@ -294,12 +300,12 @@ public class FilteredWatcher
     public void WatchHighValueOrders()
     {
         var observable = _eventStore.ReadModels.Watch<Order>()
-            .Where(changeset => changeset.Current.TotalAmount > 1000m)
+            .Where(changeset => changeset.ReadModel?.TotalAmount > 1000m)
             .Select(changeset => new
             {
-                OrderId = changeset.ReadModelKey,
-                Amount = changeset.Current.TotalAmount,
-                Status = changeset.Current.Status
+                OrderId = changeset.ModelKey,
+                Amount = changeset.ReadModel!.TotalAmount,
+                Status = changeset.ReadModel!.Status
             });
 
         observable.Subscribe(order =>
@@ -422,7 +428,7 @@ public class DashboardHub : Hub
             async changeset =>
             {
                 await Clients.User(userId.ToString())
-                    .SendAsync("DashboardUpdated", changeset.Current);
+                    .SendAsync("DashboardUpdated", changeset.ReadModel);
             }
         );
     }
@@ -442,16 +448,21 @@ public class OrderOrchestrator
         _eventStore.ReadModels.Watch<Order>()
             .Subscribe(changeset =>
             {
-                switch (changeset.Current.Status)
+                if (changeset.ReadModel is null)
+                {
+                    return;
+                }
+
+                switch (changeset.ReadModel.Status)
                 {
                     case OrderStatus.New:
-                        _inventoryService.ReserveItems(changeset.Current);
+                        _inventoryService.ReserveItems(changeset.ReadModel);
                         break;
                     case OrderStatus.Confirmed:
-                        _paymentService.ProcessPayment(changeset.Current);
+                        _paymentService.ProcessPayment(changeset.ReadModel);
                         break;
                     case OrderStatus.Shipped:
-                        _notificationService.SendShipmentNotice(changeset.Current);
+                        _notificationService.SendShipmentNotice(changeset.ReadModel);
                         break;
                 }
             });
@@ -471,8 +482,13 @@ public class CollaborativeWorkspace
         _eventStore.ReadModels.Watch<Document>()
             .Subscribe(changeset =>
             {
+                if (changeset.ReadModel is null)
+                {
+                    return;
+                }
+
                 // Broadcast to all users editing this document
-                BroadcastToUsers(changeset.Current.DocumentId, changeset.Current);
+                BroadcastToUsers(changeset.ReadModel.DocumentId, changeset.ReadModel);
             });
     }
 }

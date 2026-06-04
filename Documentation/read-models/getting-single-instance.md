@@ -59,7 +59,7 @@ public record OrderSummary(
     [Key] Guid OrderId,
     [SetFrom<OrderCreated>(nameof(OrderCreated.CustomerId))] Guid CustomerId,
     [SetFrom<OrderCreated>(nameof(OrderCreated.TotalAmount))]
-    [Add<PaymentReceived>(nameof(PaymentReceived.Amount))] decimal TotalPaid);
+    [AddFrom<PaymentReceived>(nameof(PaymentReceived.Amount))] decimal TotalPaid);
 
 // Retrieve instance
 public async Task<OrderSummary?> GetOrderSummary(Guid orderId)
@@ -77,20 +77,18 @@ public record ShoppingCart(Guid Id, List<CartItem> Items, decimal Total);
 
 public class ShoppingCartReducer : IReducerFor<ShoppingCart>
 {
-    public ReducerId Identifier => "ShoppingCart";
+    public ShoppingCart OnCartCreated(CartCreated @event, ShoppingCart? current, EventContext context) =>
+        (current ?? new ShoppingCart(Guid.Empty, [], 0m)) with { Id = @event.CartId };
 
-    public ShoppingCart Initial => new(Guid.Empty, [], 0m);
-
-    public ShoppingCart Reduce(ShoppingCart current, object @event) => @event switch
+    public ShoppingCart OnItemAdded(ItemAdded @event, ShoppingCart? current, EventContext context)
     {
-        CartCreated e => current with { Id = e.CartId },
-        ItemAdded e => current with
+        current ??= new ShoppingCart(Guid.Empty, [], 0m);
+        return current with
         {
-            Items = [..current.Items, new CartItem(e.ProductId, e.Quantity, e.Price)],
-            Total = current.Total + (e.Quantity * e.Price)
-        },
-        _ => current
-    };
+            Items = [.. current.Items, new CartItem(@event.ProductId, @event.Quantity, @event.Price)],
+            Total = current.Total + (@event.Quantity * @event.Price)
+        };
+    }
 }
 
 // Retrieve instance

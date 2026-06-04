@@ -89,7 +89,7 @@ public void Define(IProjectionBuilderFor<Account> builder) => builder
     .From<AccountOpened>()  // Uses default AutoMap
     .From<AccountClosed>(_ => _
         .NoAutoMap()  // Disables AutoMap for this event only
-        .Set(m => m.IsActive).To(false)
+        .Set(m => m.IsActive).ToValue(false)
         .Set(m => m.ClosedAt).ToEventContextProperty(c => c.Occurred));
 ```
 
@@ -164,8 +164,8 @@ public void Define(IProjectionBuilderFor<Account> builder) => builder
     .AutoMap()  // Maps matching properties automatically
     .From<AccountOpened>(_ => _
         // Explicit mappings override/extend AutoMap
-        .Set(m => m.Status).To("Active")
-        .Set(m => m.Balance).To(0m)
+        .Set(m => m.Status).ToValue("Active")
+        .Set(m => m.Balance).ToValue(0m)
         .Set(m => m.CreatedAt).ToEventContextProperty(c => c.Occurred))
     .From<MoneyDeposited>();  // Uses only AutoMap
 ```
@@ -262,7 +262,7 @@ public class CustomerProjection : IProjectionFor<Customer>
     public void Define(IProjectionBuilderFor<Customer> builder) => builder
         .AutoMap()
         .From<CustomerRegistered>(_ => _
-            .Set(m => m.Status).To("Active")
+            .Set(m => m.Status).ToValue("Active")
             .Set(m => m.MemberSince).ToEventContextProperty(c => c.Occurred))
         .From<CustomerDetailsUpdated>();  // Pure AutoMap
 }

@@ -21,7 +21,7 @@ public class GroupProjection : IProjectionFor<Group>
                 .UsingKey(e => e.UserId))
             .From<UserRoleChanged>(b => b
                 .UsingKey(e => e.UserId))
-            .RemovedWith<UserRemovedFromGroup>(e => e.UserId));
+            .RemovedWith<UserRemovedFromGroup>(_ => _.UsingKey(e => e.UserId)));
 }
 
 ```
@@ -158,7 +158,7 @@ The `RemovedWith<>()` method specifies how to remove child items from collection
 .Children(m => m.Members, children => children
     .IdentifiedBy(e => e.UserId)
     .From<UserAddedToGroup>(_ => /* ... */)
-    .RemovedWith<UserRemovedFromGroup>(e => e.UserId))
+    .RemovedWith<UserRemovedFromGroup>(_ => _.UsingKey(e => e.UserId)))
 
 ```
 

@@ -40,7 +40,7 @@ public class UniqueProjectInitialization : IConstraint
 {
     public void Define(IConstraintBuilder builder) =>
         builder.Unique<ProjectInitialized>(
-            messageCallback: violation => $"Project '{violation.EventSourceId}' has already been initialized.");
+            messageCallback: violation => $"Constraint '{violation.ConstraintName}' was violated - the project has already been initialized.");
 }
 ```
 

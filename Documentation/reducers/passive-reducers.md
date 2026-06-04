@@ -138,13 +138,12 @@ Compute read model state at specific points in time without maintaining continuo
 ```csharp
 public class HistoricalBalanceService
 {
-    readonly IReducers _reducers;
+    readonly IEventStore _eventStore;
 
     public async Task<AccountBalance> GetBalanceAtDate(Guid accountId, DateTimeOffset date)
     {
         // Passive reducer computes state on-demand from historical events
-        var result = await _reducers.GetInstanceById<AccountBalance>(accountId);
-        return result.ReadModel;
+        return await _eventStore.ReadModels.GetInstanceById<AccountBalance>(accountId);
     }
 }
 ```
@@ -170,18 +169,17 @@ Passive reducers compute state on-demand using the same API as active reducers:
 ```csharp
 public class ReportingService
 {
-    readonly IReducers _reducers;
+    readonly IEventStore _eventStore;
 
-    public ReportingService(IReducers reducers)
+    public ReportingService(IEventStore eventStore)
     {
-        _reducers = reducers;
+        _eventStore = eventStore;
     }
 
     public async Task<MonthlyRevenueReport> GenerateReport(Guid reportId)
     {
         // This triggers the passive reducer to compute state from events
-        var result = await _reducers.GetInstanceById<MonthlyRevenueReport>(reportId);
-        return result.ReadModel;
+        return await _eventStore.ReadModels.GetInstanceById<MonthlyRevenueReport>(reportId);
     }
 }
 ```

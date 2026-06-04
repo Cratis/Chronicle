@@ -10,10 +10,10 @@ The outbox exists by convention — you do not need to create it. Append events 
 
 ## The Inbox
 
-When event store **A** subscribes to event store **B**, Chronicle automatically manages an **inbox** sequence on A for events forwarded from B. The inbox sequence identifier is derived from the source event store name:
+When event store **A** subscribes to event store **B**, Chronicle automatically manages an **inbox** sequence on A for events forwarded from B. The well-known inbox sequence is `EventSequenceId.Inbox`, and the per-source inbox identifier is derived from the source event store name using `EventSequenceId.InboxPrefix`:
 
 ```csharp
-var inboxId = WellKnownEventSequences.Inbox("source-event-store");
+var inboxId = new EventSequenceId($"{EventSequenceId.InboxPrefix}source-event-store");
 // Resolves to: "inbox-source-event-store"
 ```
 

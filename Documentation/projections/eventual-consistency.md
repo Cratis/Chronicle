@@ -94,10 +94,10 @@ public class BookService
         _eventStore = eventStore;
     }
 
-    public IObservable<ProjectionChangeset<BookInventory>> WatchBookChanges()
+    public IObservable<ReadModelChangeset<BookInventory>> WatchBookChanges()
     {
         // Subscribe to all changes for BookInventory projections
-        return _eventStore.Projections.Watch<BookInventory>();
+        return _eventStore.ReadModels.Watch<BookInventory>();
     }
 
     public async Task CreateBookAndWatch(CreateBookCommand command)
@@ -106,8 +106,8 @@ public class BookService
         await _eventStore.EventLog.Append(command.BookId, new BookCreated(command.Title, command.Author));
 
         // 2. Subscribe to changes (will be notified when projection is updated)
-        var subscription = _eventStore.Projections.Watch<BookInventory>()
-            .Where(changeset => changeset.ReadModelKey == command.BookId)
+        var subscription = _eventStore.ReadModels.Watch<BookInventory>()
+            .Where(changeset => changeset.ModelKey == command.BookId)
             .Subscribe(changeset =>
             {
                 // React to the projection update

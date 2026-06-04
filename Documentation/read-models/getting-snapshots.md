@@ -141,7 +141,7 @@ public async Task AnalyzeTransactionGroups(Guid accountId)
     {
         TransactionNumber = i + 1,
         CorrelationId = s.CorrelationId,
-        EventIds = s.Events.Select(e => e.EventId),
+        EventSequenceNumbers = s.Events.Select(e => e.Context.SequenceNumber),
         ResultingBalance = s.Instance.Balance,
         OccurredAt = s.Occurred
     });
@@ -149,7 +149,7 @@ public async Task AnalyzeTransactionGroups(Guid accountId)
     foreach (var transaction in transactions)
     {
         Console.WriteLine($"Transaction {transaction.TransactionNumber}: {transaction.CorrelationId}");
-        Console.WriteLine($"  Events: {string.Join(", ", transaction.EventIds)}");
+        Console.WriteLine($"  Events: {string.Join(", ", transaction.EventSequenceNumbers)}");
         Console.WriteLine($"  Balance: {transaction.ResultingBalance:C}");
     }
 }

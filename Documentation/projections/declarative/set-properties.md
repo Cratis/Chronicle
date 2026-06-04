@@ -15,8 +15,8 @@ public class AccountProjection : IProjectionFor<Account>
         .From<AccountOpened>(_ => _
             .Set(m => m.AccountNumber).To(e => e.Number)
             .Set(m => m.CustomerName).To(e => e.Owner.Name)
-            .Set(m => m.Balance).To(42.0m)
-            .Set(m => m.IsActive).To(true)
+            .Set(m => m.Balance).ToValue(42.0m)
+            .Set(m => m.IsActive).ToValue(true)
             .Set(m => m.OpenedAt).To(e => e.Timestamp))
         .From<MoneyDeposited>(_ => _
             .Set(m => m.Balance).To(e => e.Amount)
@@ -35,7 +35,7 @@ public class AccountProjection : IProjectionFor<Account>
         .AutoMap()  // Automatically maps matching properties
         .From<AccountOpened>(_ => _
             .Set(m => m.CustomerName).To(e => e.Owner.Name)  // Custom mapping for nested property
-            .Set(m => m.IsActive).To(true))                  // Custom mapping for constant
+            .Set(m => m.IsActive).ToValue(true))             // Custom mapping for constant
         .From<MoneyDeposited>();  // Uses AutoMap for all properties
 }
 ```
@@ -91,7 +91,7 @@ public record Customer(string Name, string Email);
 You can map properties in several ways:
 
 - **From event property**: `.Set(m => m.CustomerName).To(e => e.Owner.Name)`
-- **From constant value**: `.Set(m => m.IsActive).To(true)`
+- **From constant value**: `.Set(m => m.IsActive).ToValue(true)`
 - **From computed value**: `.Set(m => m.DisplayName).To(e => $"{e.FirstName} {e.LastName}")`
 - **From event source ID**: `.Set(m => m.Id).ToEventSourceId()`
 

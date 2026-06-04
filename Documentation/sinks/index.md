@@ -52,9 +52,9 @@ Or in `appsettings.json`:
 The SQL sink is provided by the `Cratis.Chronicle.Storage.Sql` NuGet package. Add it to your Kernel host project and register it in the `IChronicleBuilder`:
 
 ```csharp
-builder.AddCratisChronicleKernel(chronicle =>
+siloBuilder.AddChronicleToSilo(chronicle =>
 {
-    chronicle.WithSqlStorage(connectionString);
+    chronicle.WithSql(options);
 });
 ```
 

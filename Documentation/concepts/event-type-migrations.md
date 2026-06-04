@@ -35,8 +35,8 @@ public class AuthorRegisteredMigrator : IEventTypeMigrationFor<AuthorRegistered>
     {
         builder.Properties(pb =>
         {
-            pb.Split("Name", " ", 0);   // FirstName from first part of Name
-            pb.Split("Name", " ", 1);   // LastName from second part of Name
+            pb.Split("FirstName", "Name", " ", 0);   // FirstName from first part of Name
+            pb.Split("LastName", "Name", " ", 1);    // LastName from second part of Name
         });
     }
 
@@ -59,8 +59,8 @@ The migration builder supports the following operations:
 Splits a source property into parts using a separator:
 
 ```csharp
-pb.Split("FullName", " ", 0);  // Gets first part
-pb.Split("FullName", " ", 1);  // Gets second part
+pb.Split("FirstName", "FullName", " ", 0);  // Gets first part
+pb.Split("LastName", "FullName", " ", 1);   // Gets second part
 ```
 
 ### Combine
@@ -76,7 +76,7 @@ pb.Combine("FullName", " ", "FirstName", "LastName");  // Joins with space separ
 Renames a property from a previous name:
 
 ```csharp
-pb.RenamedFrom("OldPropertyName");
+pb.RenamedFrom("NewPropertyName", "OldPropertyName");
 ```
 
 ### Default Value
@@ -84,8 +84,8 @@ pb.RenamedFrom("OldPropertyName");
 Sets a default value for a new property:
 
 ```csharp
-pb.DefaultValue(42);
-pb.DefaultValue("default string");
+pb.DefaultValue("RetryCount", 42);
+pb.DefaultValue("Description", "default string");
 ```
 
 ## How Migrations Work

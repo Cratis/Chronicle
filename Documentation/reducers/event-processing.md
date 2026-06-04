@@ -109,7 +109,7 @@ public record EventContext
     public EventType EventType { get; }
     public DateTimeOffset Occurred { get; }
     public CorrelationId CorrelationId { get; }
-    public CausationId CausationId { get; }
+    public IEnumerable<Causation> Causation { get; }
     public Identity CausedBy { get; }
     // ... and more
 }
