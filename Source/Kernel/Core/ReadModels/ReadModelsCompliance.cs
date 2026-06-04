@@ -9,14 +9,14 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Implementation of <see cref="IReadModelComplianceHelper"/> that delegates to the static <see cref="ReadModelComplianceHelper"/> methods for PII release operations.
+/// Implementation of <see cref="IReadModelsCompliance"/> that delegates to the static <see cref="ReadModelComplianceHelper"/> methods for PII release operations.
 /// This class serves as a bridge between the injectable service pattern and the underlying compliance infrastructure.
 /// </summary>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
-public class ReadModelReleaseHelper(
+public class ReadModelsCompliance(
     IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter) : IReadModelComplianceHelper
+    IExpandoObjectConverter expandoObjectConverter) : IReadModelsCompliance
 {
     /// <inheritdoc/>
     public async Task<ExpandoObject> Release(

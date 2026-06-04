@@ -17,11 +17,11 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// </summary>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
-/// <param name="complianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
 internal sealed class MaterializedReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
-    IReadModelComplianceHelper complianceHelper) : IMaterializedReadModels
+    IReadModelsCompliance complianceHelper) : IMaterializedReadModels
 {
     /// <inheritdoc/>
     public async Task<GetInstancesResponse> GetInstances(GetInstancesRequest request, CallContext context = default)

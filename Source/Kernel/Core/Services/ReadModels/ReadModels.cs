@@ -37,7 +37,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
-/// <param name="complianceHelper">The <see cref="IReadModelComplianceHelper"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
 /// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for applying compliance.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
@@ -45,7 +45,7 @@ internal sealed class ReadModels(
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
-    IReadModelComplianceHelper complianceHelper,
+    IReadModelsCompliance complianceHelper,
     IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {

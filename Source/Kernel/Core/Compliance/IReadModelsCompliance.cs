@@ -7,9 +7,9 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.Compliance;
 
 /// <summary>
-/// Defines a helper for applying compliance release to read model instances.
+/// Defines a system for applying compliance release to read model instances.
 /// </summary>
-public interface IReadModelComplianceHelper
+public interface IReadModelsCompliance
 {
     /// <summary>
     /// Release (decrypt) PII-annotated properties in a single read model instance.

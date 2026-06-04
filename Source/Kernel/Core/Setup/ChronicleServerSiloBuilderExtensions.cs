@@ -59,7 +59,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
         builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
         builder.Services.TryAddSingleton<IEventComplianceHelper, EventComplianceHelper>();
-        builder.Services.TryAddSingleton<IReadModelComplianceHelper, ReadModelReleaseHelper>();
+        builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder
             .AddChronicleServicesAsInMemory()
@@ -132,8 +132,8 @@ public static class ChronicleServerSiloBuilderExtensions
                 projections,
                 new Cratis.Chronicle.Services.Observation.Webhooks.Webhooks(grainFactory, storage, sp.GetRequiredService<IWebhookDefinitionComparer>(), sp.GetRequiredService<Cratis.Chronicle.Security.IEncryption>(), sp.GetRequiredService<IOAuthClient>(), sp.GetRequiredService<IWebhookMediator>()),
                 new Cratis.Chronicle.Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions(grainFactory, storage),
-                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IReadModelComplianceHelper>(), sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
-                new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelComplianceHelper>()),
+                new Cratis.Chronicle.Services.ReadModels.ReadModels(grainFactory, storage, expandoObjectConverter, sp.GetRequiredService<IReducerMediator>(), sp.GetRequiredService<IReadModelsCompliance>(), sp.GetRequiredService<IJsonComplianceManager>(), jsonSerializerOptions),
+                new Cratis.Chronicle.Services.ReadModels.MaterializedReadModels(grainFactory, storage, sp.GetRequiredService<IReadModelsCompliance>()),
                 new Cratis.Chronicle.Services.Jobs.Jobs(grainFactory, storage),
                 new Cratis.Chronicle.Services.Seeding.EventSeeding(grainFactory),
                 new Cratis.Chronicle.Services.Security.Users(grainFactory, storage),

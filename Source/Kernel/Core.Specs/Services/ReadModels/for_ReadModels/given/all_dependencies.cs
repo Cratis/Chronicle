@@ -67,7 +67,7 @@ public class all_dependencies : Specification
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
         _reducerMediator = Substitute.For<IReducerMediator>();
-        var readModelComplianceHelper = Substitute.For<IReadModelComplianceHelper>();
+        var readModelComplianceHelper = Substitute.For<IReadModelsCompliance>();
 
         _service = new ReadModels(
             _grainFactory,

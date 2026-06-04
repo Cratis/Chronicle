@@ -45,6 +45,7 @@ using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelsCompliance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelsCompliance;
 using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
@@ -169,6 +170,9 @@ internal sealed class TestingServices(
             storage,
             new ExpandoObjectConverter(new TypeFormats()),
             new KernelReducerMediator(),
+            new KernelReadModelsCompliance(
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new ExpandoObjectConverter(new TypeFormats())),
             new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
             jsonSerializerOptions));
 
