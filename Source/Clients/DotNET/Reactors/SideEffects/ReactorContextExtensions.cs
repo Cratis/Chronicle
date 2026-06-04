@@ -6,111 +6,58 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
-/// Extension methods for <see cref="ReactorContext"/> that resolve append-metadata from the
-/// reactor instance, its type attributes, and the incoming <see cref="EventContext"/>.
+/// Extension methods for <see cref="ReactorContext"/> that read append-metadata from the
+/// <see cref="ReactorContext.Values"/> populated by the registered <see cref="IReactorContextValuesProvider"/> instances.
 /// </summary>
 public static class ReactorContextExtensions
 {
     /// <summary>
-    /// Resolves the <see cref="EventSourceId"/> to use when appending side-effect events.
+    /// Gets the <see cref="EventSourceId"/> to use when appending side-effect events.
     /// </summary>
-    /// <remarks>
-    /// Resolution order:
-    /// <list type="number">
-    ///   <item>Reactor implements <see cref="ICanProvideEventSourceId"/> — calls <see cref="ICanProvideEventSourceId.GetEventSourceId"/>.</item>
-    ///   <item>Falls back to <see cref="EventContext.EventSourceId"/> of the triggering event.</item>
-    /// </list>
-    /// </remarks>
     /// <param name="reactorContext">The reactor context.</param>
-    /// <returns>The resolved <see cref="EventSourceId"/>.</returns>
-    public static EventSourceId GetEventSourceId(this ReactorContext reactorContext)
-    {
-        if (reactorContext.Reactor is ICanProvideEventSourceId provider)
-        {
-            return provider.GetEventSourceId();
-        }
-
-        return reactorContext.EventContext.EventSourceId;
-    }
+    /// <returns>The resolved <see cref="EventSourceId"/>, or the <see cref="EventSourceId"/> of the triggering event when none was provided.</returns>
+    public static EventSourceId GetEventSourceId(this ReactorContext reactorContext) =>
+        reactorContext.Values.TryGetValue(WellKnownReactorContextKeys.EventSourceId, out var value) && value is EventSourceId eventSourceId
+            ? eventSourceId
+            : reactorContext.EventContext.EventSourceId;
 
     /// <summary>
-    /// Resolves the <see cref="EventStreamType"/> to use when appending side-effect events.
+    /// Gets the <see cref="EventStreamType"/> to use when appending side-effect events.
     /// </summary>
-    /// <remarks>
-    /// Reads the <see cref="EventStreamTypeAttribute"/> from the reactor type.
-    /// Returns <see langword="null"/> when the attribute is absent.
-    /// </remarks>
     /// <param name="reactorContext">The reactor context.</param>
-    /// <returns>The <see cref="EventStreamType"/> from the reactor's attribute, or <see langword="null"/>.</returns>
-    public static EventStreamType? GetEventStreamType(this ReactorContext reactorContext)
-    {
-        var attribute = Attribute.GetCustomAttribute(reactorContext.Reactor.GetType(), typeof(EventStreamTypeAttribute)) as EventStreamTypeAttribute;
-        return attribute?.EventStreamType;
-    }
+    /// <returns>The <see cref="EventStreamType"/>, or <see langword="null"/> when none was provided.</returns>
+    public static EventStreamType? GetEventStreamType(this ReactorContext reactorContext) =>
+        reactorContext.Values.TryGetValue(WellKnownReactorContextKeys.EventStreamType, out var value) && value is EventStreamType eventStreamType
+            ? eventStreamType
+            : null;
 
     /// <summary>
-    /// Resolves the <see cref="EventStreamId"/> to use when appending side-effect events.
+    /// Gets the <see cref="EventStreamId"/> to use when appending side-effect events.
     /// </summary>
-    /// <remarks>
-    /// Resolution order:
-    /// <list type="number">
-    ///   <item>Reactor implements <see cref="ICanProvideEventStreamId"/> — calls <see cref="ICanProvideEventStreamId.GetEventStreamId"/>. Takes priority over the attribute.</item>
-    ///   <item>Reactor type has <see cref="EventStreamIdAttribute"/> with a value other than <see cref="EventStreamId.NotSet"/> (the sentinel for "not configured").</item>
-    ///   <item>Returns <see langword="null"/>.</item>
-    /// </list>
-    /// </remarks>
     /// <param name="reactorContext">The reactor context.</param>
-    /// <returns>The resolved <see cref="EventStreamId"/>, or <see langword="null"/>.</returns>
-    public static EventStreamId? GetEventStreamId(this ReactorContext reactorContext)
-    {
-        if (reactorContext.Reactor is ICanProvideEventStreamId provider)
-        {
-            return provider.GetEventStreamId();
-        }
-
-        var attribute = Attribute.GetCustomAttribute(reactorContext.Reactor.GetType(), typeof(EventStreamIdAttribute)) as EventStreamIdAttribute;
-        if (attribute is not null && attribute.Value != EventStreamId.NotSet)
-        {
-            return attribute.Value;
-        }
-
-        return null;
-    }
+    /// <returns>The resolved <see cref="EventStreamId"/>, or <see langword="null"/> when none was provided.</returns>
+    public static EventStreamId? GetEventStreamId(this ReactorContext reactorContext) =>
+        reactorContext.Values.TryGetValue(WellKnownReactorContextKeys.EventStreamId, out var value) && value is EventStreamId eventStreamId
+            ? eventStreamId
+            : null;
 
     /// <summary>
-    /// Resolves the <see cref="EventSourceType"/> to use when appending side-effect events.
+    /// Gets the <see cref="EventSourceType"/> to use when appending side-effect events.
     /// </summary>
-    /// <remarks>
-    /// Reads the <see cref="EventSourceTypeAttribute"/> from the reactor type.
-    /// Returns <see langword="null"/> when the attribute is absent.
-    /// </remarks>
     /// <param name="reactorContext">The reactor context.</param>
-    /// <returns>The <see cref="EventSourceType"/> from the reactor's attribute, or <see langword="null"/>.</returns>
-    public static EventSourceType? GetEventSourceType(this ReactorContext reactorContext)
-    {
-        var attribute = Attribute.GetCustomAttribute(reactorContext.Reactor.GetType(), typeof(EventSourceTypeAttribute)) as EventSourceTypeAttribute;
-        return attribute?.EventSourceType;
-    }
+    /// <returns>The <see cref="EventSourceType"/>, or <see langword="null"/> when none was provided.</returns>
+    public static EventSourceType? GetEventSourceType(this ReactorContext reactorContext) =>
+        reactorContext.Values.TryGetValue(WellKnownReactorContextKeys.EventSourceType, out var value) && value is EventSourceType eventSourceType
+            ? eventSourceType
+            : null;
 
     /// <summary>
-    /// Resolves the <see cref="Subject"/> to use when appending side-effect events.
+    /// Gets the <see cref="Subject"/> to use when appending side-effect events.
     /// </summary>
-    /// <remarks>
-    /// Resolution order:
-    /// <list type="number">
-    ///   <item>Reactor implements <see cref="ICanProvideSubject"/> — calls <see cref="ICanProvideSubject.GetSubject"/>.</item>
-    ///   <item>Returns <see langword="null"/>.</item>
-    /// </list>
-    /// </remarks>
     /// <param name="reactorContext">The reactor context.</param>
-    /// <returns>The <see cref="Subject"/> from the reactor, or <see langword="null"/>.</returns>
-    public static Subject? GetSubject(this ReactorContext reactorContext)
-    {
-        if (reactorContext.Reactor is ICanProvideSubject provider)
-        {
-            return provider.GetSubject();
-        }
-
-        return null;
-    }
+    /// <returns>The <see cref="Subject"/>, or <see langword="null"/> when none was provided.</returns>
+    public static Subject? GetSubject(this ReactorContext reactorContext) =>
+        reactorContext.Values.TryGetValue(WellKnownReactorContextKeys.Subject, out var value) && value is Subject subject
+            ? subject
+            : null;
 }

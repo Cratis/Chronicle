@@ -41,6 +41,7 @@ public class Reactors : IReactors
     readonly IIdentityProvider _identityProvider;
     readonly IActivitySource<Reactors> _activitySource;
     readonly IReactorSideEffectHandlers _sideEffectHandlers;
+    readonly IReactorContextValuesBuilder _reactorContextValuesBuilder;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -62,6 +63,7 @@ public class Reactors : IReactors
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
     /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
+    /// <param name="reactorContextValuesBuilder"><see cref="IReactorContextValuesBuilder"/> for resolving append-metadata for side-effect events.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -76,6 +78,7 @@ public class Reactors : IReactors
         IIdentityProvider identityProvider,
         IActivitySource<Reactors> activitySource,
         IReactorSideEffectHandlers sideEffectHandlers,
+        IReactorContextValuesBuilder reactorContextValuesBuilder,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -91,6 +94,7 @@ public class Reactors : IReactors
         _identityProvider = identityProvider;
         _activitySource = activitySource;
         _sideEffectHandlers = sideEffectHandlers;
+        _reactorContextValuesBuilder = reactorContextValuesBuilder;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -423,7 +427,8 @@ public class Reactors : IReactors
             activatedReactor,
             _loggerFactory.CreateLogger<ReactorInvoker>(),
             _sideEffectHandlers,
-            _eventStore);
+            _eventStore,
+            _reactorContextValuesBuilder);
 
         foreach (var @event in events.Events)
         {
