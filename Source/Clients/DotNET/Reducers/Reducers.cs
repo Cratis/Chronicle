@@ -11,10 +11,12 @@ using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -41,6 +43,7 @@ public class Reducers : IReducers
     readonly INamingPolicy _namingPolicy;
     readonly JsonSerializerOptions _jsonSerializerOptions;
     readonly IIdentityProvider _identityProvider;
+    readonly IActivitySource<Reducers> _activitySource;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
     readonly SinkTypeId _defaultSinkTypeId;
@@ -63,6 +66,7 @@ public class Reducers : IReducers
     /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
+    /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reducer event handling.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     public Reducers(
         IEventStore eventStore,
@@ -76,6 +80,7 @@ public class Reducers : IReducers
         IOptions<ChronicleOptions> options,
         IIdentityProvider identityProvider,
         IReducerObservers reducerObservers,
+        IActivitySource<Reducers> activitySource,
         ILogger<Reducers> logger)
     {
         eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -100,6 +105,7 @@ public class Reducers : IReducers
         _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
         _identityProvider = identityProvider;
         _reducerObservers = reducerObservers;
+        _activitySource = activitySource;
         _logger = logger;
     }
 
@@ -228,7 +234,7 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task Replay<TReducer>()
+    public Task<JobId> Replay<TReducer>()
         where TReducer : IReducer
     {
         var reducerType = typeof(TReducer);
@@ -237,15 +243,16 @@ public class Reducers : IReducers
     }
 
     /// <inheritdoc/>
-    public Task Replay(ReducerId reducerId)
+    public async Task<JobId> Replay(ReducerId reducerId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new()
+        var response = await _servicesAccessor.Services.Observers.Replay(new()
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ObserverId = reducerId,
             EventSequenceId = string.Empty
         });
+        return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
     /// <inheritdoc/>
@@ -478,6 +485,12 @@ public class Reducers : IReducers
             await HandleReplayNotification(handler, operation.ReplayState, operation.Partition);
             return;
         }
+
+        using var span = _activitySource.Handle(
+            _eventStore.Name,
+            _eventStore.Namespace,
+            handler.EventSequenceId,
+            handler.Id);
 
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();

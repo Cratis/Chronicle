@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Dynamic;
+using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -93,10 +94,24 @@ public class Sink(
         var hasDirectKeyScopedChanges = changeset.Changes.Any(change =>
             change is PropertiesChanged<ExpandoObject> or ChildAdded or ChildRemoved);
         var keyFilterValue = converter.ToBsonValue(key);
+        var hasConstructiveChanges = changeset.Changes.Any(change =>
+            change is ChildAdded or ChildRemoved);
 
-        var filter = changeset.HasJoined() && !hasDirectKeyScopedChanges ?
+        // When the event was consumed by a Join (Children Join<TEvent>) AND the only direct
+        // key-scoped changes are PropertiesChanged (no ChildAdded / ChildRemoved that would
+        // legitimately construct a document at this key), the upsert keyed on the join value
+        // would create a phantom document. The classic case: a Group projection with
+        // FromEvery.Set(LastUpdated) + Children.Join<UserCreated>. When UserCreated arrives
+        // for a UserId that no Group has, the FromEvery PropertiesChanged would otherwise
+        // upsert a phantom Group keyed on UserId. Use the join-targets-only filter (Empty)
+        // in this case so only existing documents are updated.
+        var hasJoined = changeset.HasJoined();
+        var onlyPropertyUpdatesAlongsideJoin = hasJoined && hasDirectKeyScopedChanges && !hasConstructiveChanges;
+
+        var filter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin ?
             FilterDefinition<BsonDocument>.Empty :
             Builders<BsonDocument>.Filter.Eq("_id", keyFilterValue);
+        var isUpsert = !onlyPropertyUpdatesAlongsideJoin;
 
         if (changeset.HasBeenRemoved())
         {
@@ -134,7 +149,7 @@ public class Sink(
         {
             var updateModel = new UpdateOneModel<BsonDocument>(filter, converted.UpdateDefinition)
             {
-                IsUpsert = true,
+                IsUpsert = isUpsert,
                 ArrayFilters = converted.ArrayFilters
             };
             AddToBulk(updateModel, key, eventSequenceNumber);
@@ -158,7 +173,7 @@ public class Sink(
             converted.UpdateDefinition,
             new UpdateOptions
             {
-                IsUpsert = true,
+                IsUpsert = isUpsert,
                 ArrayFilters = converted.ArrayFilters
             });
         return [];
@@ -301,6 +316,37 @@ public class Sink(
 
         var instances = documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, readModel.GetSchemaForLatestGeneration()));
         return new ReadModelInstances(instances, totalCount);
+    }
+
+    /// <inheritdoc/>
+    public IObservable<IEnumerable<ExpandoObject>> ObserveInstances(ReadModelContainerName? occurrence = null, int skip = 0, int take = 50)
+    {
+        var collection = occurrence is not null ? collections.GetCollection(occurrence) : Collection;
+        var schema = readModel.GetSchemaForLatestGeneration();
+
+        // Return an observable that transforms MongoDB change stream events into instance collections
+        return Observable.Create<IEnumerable<ExpandoObject>>(async observer =>
+        {
+            // Get initial instances
+            var documents = await collection
+                .Find(FilterDefinition<BsonDocument>.Empty)
+                .Skip(skip)
+                .Limit(take)
+                .ToListAsync();
+
+            observer.OnNext(documents.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
+
+            // Subscribe to changes using Arc's Observe extension
+            return collection.Observe().Subscribe(
+                allDocuments =>
+                {
+                    // Re-query with skip/take when changes occur
+                    var updatedDocuments = allDocuments.Skip(skip).Take(take);
+                    observer.OnNext(updatedDocuments.Select(doc => expandoObjectConverter.ToExpandoObject(doc, schema)));
+                },
+                observer.OnError,
+                observer.OnCompleted);
+        });
     }
 
     async Task<HashSet<string>> GetExistingIndexNamesAsync(IMongoCollection<BsonDocument> collection)

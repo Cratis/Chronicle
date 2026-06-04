@@ -1,9 +1,14 @@
 name: Auto-Approve Publish Deployments
+# Reusable workflow that approves pending environment deployments (npm/nuget)
+# for a workflow run, intended for trusted publishing flows.
 
 on:
-  workflow_run:
-    workflows: ["Publish"]
-    types: [requested]
+  workflow_call:
+    inputs:
+      workflow_run_id:
+        description: Workflow run id to approve pending deployments for
+        required: true
+        type: number
 
 permissions:
   actions: read
@@ -11,7 +16,49 @@ permissions:
 
 jobs:
   approve:
-    uses: Cratis/Workflows/.github/workflows/auto-approve-publish-deployments.yml@main
-    with:
-      workflow_run_id: ${{ github.event.workflow_run.id }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve pending npm/nuget deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_RUN_ID: ${{ inputs.workflow_run_id }}
+        run: |
+          set -euo pipefail
+
+          max_attempts=180
+          sleep_seconds=10
+
+          for ((attempt=1; attempt<=max_attempts; attempt++)); do
+            mapfile -t env_ids < <(
+              gh api "repos/${{ github.repository }}/actions/runs/${WORKFLOW_RUN_ID}/pending_deployments" \
+                --jq '.[] | select(.environment.name == "npm" or .environment.name == "nuget") | .environment.id' |
+                sort -u
+            )
+
+            if [ "${#env_ids[@]}" -gt 0 ]; then
+              args=()
+              for env_id in "${env_ids[@]}"; do
+                args+=(-F "environment_ids[]=${env_id}")
+              done
+
+              gh api -X POST "repos/${{ github.repository }}/actions/runs/${WORKFLOW_RUN_ID}/pending_deployments" \
+                "${args[@]}" \
+                -f state=approved \
+                -f comment='Auto-approved for trusted publishing'
+
+              echo "Approved pending deployments for environments: ${env_ids[*]}"
+              exit 0
+            fi
+
+            run_status=$(gh api "repos/${{ github.repository }}/actions/runs/${WORKFLOW_RUN_ID}" --jq '.status')
+            if [ "$run_status" = "completed" ]; then
+              echo "No pending npm/nuget deployments found for run ${WORKFLOW_RUN_ID}"
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}/${max_attempts}: no pending npm/nuget deployments yet for run ${WORKFLOW_RUN_ID}; run status is ${run_status}. Waiting ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done
+
+          echo "::error::Timed out waiting for pending npm/nuget deployments for run ${WORKFLOW_RUN_ID}"
+          exit 1

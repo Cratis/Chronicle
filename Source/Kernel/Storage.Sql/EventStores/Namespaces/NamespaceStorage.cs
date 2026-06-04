@@ -46,7 +46,8 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
     public async Task<IEnumerable<NamespaceState>> GetAll()
     {
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.Namespaces.Select(ns => new NamespaceState(ns.Name, ns.Created)).ToListAsync();
+        var rows = await scope.DbContext.Namespaces.Select(ns => new { ns.Name, ns.Created }).ToListAsync();
+        return rows.Select(r => new NamespaceState(r.Name, r.Created));
     }
 
     /// <inheritdoc/>

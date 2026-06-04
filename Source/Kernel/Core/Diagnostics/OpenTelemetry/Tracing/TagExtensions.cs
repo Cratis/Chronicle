@@ -23,6 +23,7 @@ public static class TagExtensions
     const string ObserverId = "cratis.observer.id";
     const string ObserverType = "cratis.observer.type";
     const string ConnectionId = "cratis.connection.id";
+    const string EventTypeId = "cratis.eventtype.id";
 
     /// <summary>
     /// Tag <see cref="EventSourceId"/>.
@@ -138,6 +139,33 @@ public static class TagExtensions
             activity.Tag(observerType.Value);
         }
 
+        return activity;
+    }
+
+    /// <summary>
+    /// Tag <see cref="ObserverKey"/>.
+    /// </summary>
+    /// <param name="activity">The <see cref="Activity"/>.</param>
+    /// <param name="key">The <see cref="ObserverKey"/>.</param>
+    /// <returns>The <see cref="Activity"/> with the tag.</returns>
+    public static Activity Tag(this Activity activity, ObserverKey key)
+    {
+        activity.Tag(key.ObserverId);
+        activity.Tag(key.EventSequenceId);
+        activity.Tag(key.Namespace);
+        activity.Tag(key.EventStore);
+        return activity;
+    }
+
+    /// <summary>
+    /// Tag <see cref="EventType"/>.
+    /// </summary>
+    /// <param name="activity">The <see cref="Activity"/>.</param>
+    /// <param name="eventType">The <see cref="EventType"/>.</param>
+    /// <returns>The <see cref="Activity"/> with the tag.</returns>
+    public static Activity Tag(this Activity activity, EventType eventType)
+    {
+        activity.SetTag(EventTypeId, eventType.Id.Value);
         return activity;
     }
 }

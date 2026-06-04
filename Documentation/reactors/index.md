@@ -50,6 +50,7 @@ public class EmailNotificationsReactor : IReactor
 - [Getting Started](getting-started.md)
 - [Subscribe to External Event Stores](external-event-store-subscriptions.md)
 - [Event Processing](event-processing.md)
+- [Returning Side Effects](side-effects.md)
 - [Event Sequence](event-sequence.md)
 - [Once-Only Processing](once-only.md)
 - [Filtering by appended event metadata](../events/filtering/index.md)

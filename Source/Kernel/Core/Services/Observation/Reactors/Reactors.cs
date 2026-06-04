@@ -10,11 +10,14 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Collections;
+using Cratis.Traces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProtoBuf.Grpc;
 using ObserverType = Cratis.Chronicle.Concepts.Observation.ObserverType;
@@ -31,12 +34,14 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     ILogger<Reactors> logger) : IReactors
 {
     /// <inheritdoc/>
@@ -137,8 +142,9 @@ internal sealed class Reactors(
                     registration.Namespace,
                     (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = replayState }));
 
-                using (Tracing.RegisterObserver(key, ObserverType.Reactor))
+                using (var span = activitySource.Register())
                 {
+                    span?.Activity?.Tag(key, ObserverType.Reactor);
                     clientObserver = grainFactory.GetGrain<IReactor>(key);
                     await clientObserver.SetDefinitionAndSubscribe(registration.Reactor.ToChronicle());
                 }

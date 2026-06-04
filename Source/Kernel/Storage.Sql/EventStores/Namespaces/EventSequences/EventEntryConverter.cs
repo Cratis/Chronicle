@@ -3,9 +3,11 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
+using Cratis.Chronicle.Storage.Identities;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -34,6 +36,8 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The caused by chain.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content.</param>
+    /// <param name="hash">Optional content hash, computed by the kernel.</param>
+    /// <param name="subject">Optional subject identifying the compliance target.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
         EventSequenceNumber sequenceNumber,
@@ -46,12 +50,20 @@ public static class EventEntryConverter
         IEnumerable<Causation> causation,
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
-        ExpandoObject content)
+        ExpandoObject content,
+        EventHash? hash = null,
+        Subject? subject = null)
     {
         var contentDict = new Dictionary<string, object>
         {
             { eventType.Generation.ToString(), content }
         };
+
+        var contentHashesJson = hash is not null && !string.IsNullOrEmpty(hash.Value)
+            ? JsonSerializer.Serialize(
+                new Dictionary<string, string> { { ((uint)eventType.Generation).ToString(), hash.Value } },
+                _jsonSerializerOptions)
+            : string.Empty;
 
         return new EventEntry
         {
@@ -66,7 +78,9 @@ public static class EventEntryConverter
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
-            Compensations = new Dictionary<string, string>()
+            ContentHashes = contentHashesJson,
+            Compensations = new Dictionary<string, string>(),
+            Subject = subject?.Value
         };
     }
 
@@ -84,6 +98,7 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The caused by chain.</param>
     /// <param name="occurred">When the event occurred.</param>
     /// <param name="content">The event content per generation.</param>
+    /// <param name="contentHashes">Optional hash per generation, computed by the kernel.</param>
     /// <param name="subject">Optional subject identifying the compliance target.</param>
     /// <returns>The <see cref="EventEntry"/>.</returns>
     public static EventEntry ToEventEntry(
@@ -98,11 +113,18 @@ public static class EventEntryConverter
         IEnumerable<IdentityId> causedByChain,
         DateTimeOffset occurred,
         IDictionary<EventTypeGeneration, ExpandoObject> content,
+        IDictionary<EventTypeGeneration, EventHash>? contentHashes = null,
         Subject? subject = null)
     {
         var contentDict = content.ToDictionary(
             kvp => ((uint)kvp.Key).ToString(),
             kvp => (object)kvp.Value);
+
+        var contentHashesJson = contentHashes is { Count: > 0 }
+            ? JsonSerializer.Serialize(
+                contentHashes.ToDictionary(kvp => ((uint)kvp.Key).ToString(), kvp => kvp.Value.Value),
+                _jsonSerializerOptions)
+            : string.Empty;
 
         return new EventEntry
         {
@@ -117,6 +139,7 @@ public static class EventEntryConverter
             EventStreamType = eventStreamType,
             EventStreamId = eventStreamId,
             Content = JsonSerializer.Serialize(contentDict, _jsonSerializerOptions),
+            ContentHashes = contentHashesJson,
             Compensations = new Dictionary<string, string>(),
             Subject = subject?.Value
         };
@@ -153,13 +176,65 @@ public static class EventEntryConverter
     }
 
     /// <summary>
-    /// Get the event type from an event entry.
+    /// Get the stored content hash for a specific generation.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <param name="generation">The generation to read the hash for.</param>
+    /// <returns>The <see cref="EventHash"/> for the generation, or <see cref="EventHash.NotSet"/> when none was stored.</returns>
+    public static EventHash GetHashForGeneration(EventEntry entry, EventTypeGeneration generation)
+    {
+        if (string.IsNullOrEmpty(entry.ContentHashes))
+        {
+            return EventHash.NotSet;
+        }
+
+        var hashesByGeneration = JsonSerializer.Deserialize<Dictionary<string, string>>(entry.ContentHashes, _jsonSerializerOptions);
+        if (hashesByGeneration is null)
+        {
+            return EventHash.NotSet;
+        }
+
+        return hashesByGeneration.TryGetValue(((uint)generation).ToString(), out var hash)
+            ? new EventHash(hash)
+            : EventHash.NotSet;
+    }
+
+    /// <summary>
+    /// Get the event type from an event entry. Selects the highest available generation so
+    /// observers and projections subscribed to a newer generation receive the migrated content
+    /// by default — mirrors the MongoDB backend.
     /// </summary>
     /// <param name="entry">The event entry.</param>
     /// <returns>The event type.</returns>
     public static EventType GetEventType(EventEntry entry)
     {
-        return new EventType(entry.Type, EventTypeGeneration.First, false);
+        var highestGeneration = GetHighestGeneration(entry);
+        return new EventType(entry.Type, new EventTypeGeneration(highestGeneration), false);
+    }
+
+    /// <summary>
+    /// Get the highest generation stored in an event entry's content.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The highest generation number, or 1 if none are stored.</returns>
+    public static uint GetHighestGeneration(EventEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.Content))
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (contentDict is null || contentDict.Count == 0)
+        {
+            return EventTypeGeneration.First.Value;
+        }
+
+        var highest = contentDict.Keys
+            .Select(k => uint.TryParse(k, out var g) ? g : 0u)
+            .DefaultIfEmpty(EventTypeGeneration.First.Value)
+            .Max();
+        return highest == 0u ? EventTypeGeneration.First.Value : highest;
     }
 
     /// <summary>
@@ -167,7 +242,16 @@ public static class EventEntryConverter
     /// </summary>
     /// <param name="entry">The event entry.</param>
     /// <param name="generation">The generation to get content for.</param>
-    /// <returns>The content as ExpandoObject.</returns>
+    /// <returns>The content as <see cref="ExpandoObject"/>.</returns>
+    /// <remarks>
+    /// The stored content is a JSON object keyed by generation. The deserialized
+    /// <see cref="ExpandoObject"/> must contain CLR-typed values (strings, primitives,
+    /// nested <see cref="ExpandoObject"/>, <c>object[]</c>) — not <see cref="JsonElement"/> —
+    /// because downstream consumers (e.g. <c>ExpandoObjectConverter.ToJsonObject</c>) only
+    /// know how to project CLR types back to JSON. The default <c>JsonSerializer.Deserialize&lt;ExpandoObject&gt;</c>
+    /// path leaves nested arrays as <see cref="JsonElement"/>, which silently strips them when
+    /// the content is re-projected to JSON.
+    /// </remarks>
     public static ExpandoObject GetContentForGeneration(EventEntry entry, EventTypeGeneration generation)
     {
         if (string.IsNullOrEmpty(entry.Content))
@@ -176,13 +260,58 @@ public static class EventEntryConverter
         }
 
         var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
-        if (contentDict?.TryGetValue(generation.ToString(), out var contentElement) == true)
+        if (contentDict?.TryGetValue(generation.ToString(), out var contentElement) == true && contentElement.ValueKind == JsonValueKind.Object)
         {
-            var contentAsObject = JsonSerializer.Deserialize<ExpandoObject>(contentElement.GetRawText(), _jsonSerializerOptions);
-            return contentAsObject ?? new ExpandoObject();
+            return ConvertJsonObjectToExpando(contentElement);
         }
 
         return new ExpandoObject();
+    }
+
+    /// <summary>
+    /// Build a generational content dictionary from the in-memory content map used during event append.
+    /// </summary>
+    /// <param name="content">The content per generation as ExpandoObjects.</param>
+    /// <returns>Dictionary mapping generation number to serialized JSON content string.</returns>
+    public static IReadOnlyDictionary<int, string> BuildGenerationalContent(IDictionary<EventTypeGeneration, ExpandoObject> content)
+    {
+        var result = new Dictionary<int, string>();
+        foreach (var (generation, expandoContent) in content)
+        {
+            result[(int)generation.Value] = JsonSerializer.Serialize(expandoContent, _jsonSerializerOptions);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Get all generational content from an event entry as a dictionary keyed by generation number.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>Dictionary mapping generation number to serialized JSON content.</returns>
+    public static IReadOnlyDictionary<int, string> GetAllGenerationalContent(EventEntry entry)
+    {
+        if (string.IsNullOrEmpty(entry.Content))
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        if (contentDict is null)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var result = new Dictionary<int, string>();
+        foreach (var (key, value) in contentDict)
+        {
+            if (int.TryParse(key, out var generation))
+            {
+                result[generation] = value.GetRawText();
+            }
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -214,5 +343,151 @@ public static class EventEntryConverter
 
         var identityStrings = JsonSerializer.Deserialize<IEnumerable<string>>(entry.CausedBy, _jsonSerializerOptions) ?? [];
         return identityStrings.Select(id => new IdentityId(Guid.Parse(id)));
+    }
+
+    /// <summary>
+    /// Create the serialized redaction content in generation-keyed format, matching the MongoDB storage pattern.
+    /// </summary>
+    /// <param name="originalEventTypeId">The original event type identifier before redaction.</param>
+    /// <param name="reason">The reason for the redaction.</param>
+    /// <param name="correlationId">The correlation identifier of the redaction operation.</param>
+    /// <param name="causation">The causation chain for the redaction.</param>
+    /// <param name="causedByChain">The identity chain that caused the redaction.</param>
+    /// <param name="occurred">When the redaction occurred.</param>
+    /// <returns>Serialized JSON string with generation "1" key wrapping the redaction content.</returns>
+    public static string CreateRedactionContent(
+        string originalEventTypeId,
+        RedactionReason reason,
+        CorrelationId correlationId,
+        IEnumerable<Causation> causation,
+        IEnumerable<IdentityId> causedByChain,
+        DateTimeOffset occurred)
+    {
+        var content = new
+        {
+            reason = reason.Value,
+            originalEventType = originalEventTypeId,
+            occurred,
+            correlationId = correlationId.ToString(),
+            causation = causation.Select(c => new { type = c.Type.Value, occurred = c.Occurred }),
+            causedBy = causedByChain.Select(id => id.ToString())
+        };
+
+        var contentWrapper = new Dictionary<string, object>
+        {
+            { EventTypeGeneration.First.ToString(), content }
+        };
+
+        return JsonSerializer.Serialize(contentWrapper, _jsonSerializerOptions);
+    }
+
+    /// <summary>
+    /// Serialize a causation chain to JSON.
+    /// </summary>
+    /// <param name="causation">The causation chain to serialize.</param>
+    /// <returns>Serialized JSON string.</returns>
+    public static string SerializeCausation(IEnumerable<Causation> causation) =>
+        JsonSerializer.Serialize(causation, _jsonSerializerOptions);
+
+    /// <summary>
+    /// Serialize a caused-by identity chain to JSON.
+    /// </summary>
+    /// <param name="causedByChain">The identity chain to serialize.</param>
+    /// <returns>Serialized JSON string.</returns>
+    public static string SerializeCausedBy(IEnumerable<IdentityId> causedByChain) =>
+        JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions);
+
+    /// <summary>
+    /// Get the <see cref="Subject"/> from an event entry, falling back to the event source id when no explicit subject was stored.
+    /// </summary>
+    /// <param name="entry">The event entry.</param>
+    /// <returns>The <see cref="Subject"/> identifying the compliance target.</returns>
+    /// <remarks>
+    /// Mirrors the invariant upheld by the MongoDB converter — <see cref="EventContext.Subject"/> is always set, defaulting
+    /// to the event source id when no explicit subject was stored. Events appended before subjects existed have no stored value.
+    /// </remarks>
+    public static Subject GetSubject(EventEntry entry) =>
+        string.IsNullOrEmpty(entry.Subject) ? new Subject(entry.EventSourceId.Value) : new Subject(entry.Subject);
+
+    /// <summary>
+    /// Convert an <see cref="EventEntry"/> to an <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="entry">The <see cref="EventEntry"/> to convert.</param>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the event belongs to.</param>
+    /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event belongs to.</param>
+    /// <param name="identityStorage">The <see cref="IIdentityStorage"/> for resolving the caused by chain.</param>
+    /// <returns>The converted <see cref="AppendedEvent"/>.</returns>
+    public static async Task<AppendedEvent> ToAppendedEvent(
+        EventEntry entry,
+        EventStoreName eventStore,
+        EventStoreNamespaceName @namespace,
+        IIdentityStorage identityStorage)
+    {
+        var eventType = GetEventType(entry);
+        var content = GetContentForGeneration(entry, eventType.Generation);
+        var causation = GetCausation(entry);
+        var causedBy = GetCausedBy(entry);
+
+        var eventContext = new EventContext(
+            eventType,
+            entry.EventSourceType,
+            entry.EventSourceId,
+            entry.EventStreamType,
+            entry.EventStreamId,
+            new EventSequenceNumber(entry.SequenceNumber),
+            entry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(entry.CorrelationId)),
+            causation,
+            await identityStorage.GetFor(causedBy),
+            [],
+            GetHashForGeneration(entry, eventType.Generation),
+            Subject: GetSubject(entry));
+
+        return new AppendedEvent(eventContext, content) { GenerationalContent = GetAllGenerationalContent(entry) };
+    }
+
+    static ExpandoObject ConvertJsonObjectToExpando(JsonElement element)
+    {
+        var expando = new ExpandoObject();
+        var dictionary = (IDictionary<string, object?>)expando;
+        foreach (var property in element.EnumerateObject())
+        {
+            dictionary[property.Name] = ConvertJsonElementToClrValue(property.Value);
+        }
+        return expando;
+    }
+
+    static object? ConvertJsonElementToClrValue(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                return ConvertJsonObjectToExpando(element);
+            case JsonValueKind.Array:
+                var items = new List<object?>();
+                foreach (var item in element.EnumerateArray())
+                {
+                    items.Add(ConvertJsonElementToClrValue(item));
+                }
+
+                return items.ToArray();
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                if (element.TryGetInt64(out var l))
+                {
+                    return l;
+                }
+
+                return element.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            default:
+                return null;
+        }
     }
 }

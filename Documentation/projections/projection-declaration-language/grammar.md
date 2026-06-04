@@ -43,6 +43,7 @@ Block           = EveryBlock
                 | FromEventBlock
                 | JoinBlock
                 | ChildrenBlock
+                | NestedBlock
                 | RemoveWithBlock
                 | RemoveWithJoinBlock ;
 
@@ -91,7 +92,17 @@ ChildBlock      = ChildEveryBlock
                 | JoinBlock
                 | RemoveWithBlock
                 | RemoveWithJoinBlock
-                | ChildrenBlock ;
+                | ChildrenBlock
+                | NestedBlock
+                | ClearWithBlock ;
+
+NestedBlock     = "nested", Ident, NL,
+                  INDENT,
+                    [ "automap" | "no", "automap", NL ],
+                    { ProjDirective | Block | NestedBlock | ClearWithBlock },
+                  DEDENT ;
+
+ClearWithBlock  = "clear", "with", TypeRef, NL ;
 
 ChildEveryBlock = "every", NL,
                   INDENT,
@@ -286,7 +297,9 @@ ChildBlock = ChildEveryBlock
            | JoinBlock
            | RemoveWithBlock
            | RemoveWithJoinBlock
-           | ChildrenBlock ;
+           | ChildrenBlock
+           | NestedBlock
+           | ClearWithBlock ;
 
 ChildEveryBlock = "every", NL,
                   INDENT,
@@ -296,6 +309,22 @@ ChildEveryBlock = "every", NL,
 ```
 
 **Note:** `ChildEveryBlock` applies mappings to all events within the children collection. Unlike the top-level `EveryBlock`, it does not support the `exclude children` directive as it operates within a children context.
+
+### Nested Block
+
+Define a single nullable child object on the parent — unlike `children`, which manages a collection. A `nested` block must contain at least one `from` directive.
+
+```ebnf
+NestedBlock = "nested", Ident, NL,
+              INDENT,
+                [ "automap" | "no", "automap", NL ],
+                { ProjDirective | Block | NestedBlock | ClearWithBlock },
+              DEDENT ;
+
+ClearWithBlock = "clear", "with", TypeRef, NL ;
+```
+
+A `nested` block may appear at the projection level, inside a `children` block, or inside another `nested` block. The `clear with` directive nulls the nested object when the given event occurs.
 
 ### Removal Blocks
 
@@ -400,6 +429,7 @@ Beyond the grammar, these semantic rules apply:
 6. `remove via join` requires an available join key
 7. Composite keys must contain at least one field
 8. Parent keys required in children's from and remove blocks
+9. `nested` blocks must contain at least one `from` directive
 
 ## Formatting Conventions
 

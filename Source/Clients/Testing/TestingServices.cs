@@ -26,10 +26,12 @@ using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Traces;
 using Cratis.Types;
 using KernelApplicationsService = KernelCore::Cratis.Chronicle.Services.Security.Applications;
 using KernelComplianceService = KernelCore::Cratis.Chronicle.Services.Compliance.ComplianceService;
 using KernelConstraintsService = KernelCore::Cratis.Chronicle.Services.Events.Constraints.Constraints;
+using KernelEventCompliance = KernelCore::Cratis.Chronicle.Compliance.EventCompliance;
 using KernelEventSequencesService = KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences;
 using KernelEventStoresService = KernelCore::Cratis.Chronicle.Services;
 using KernelEventTypesService = KernelCore::Cratis.Chronicle.Services.Events.EventTypes;
@@ -43,6 +45,7 @@ using KernelObserversService = KernelCore::Cratis.Chronicle.Services.Observation
 using KernelProjectionsService = KernelCore::Cratis.Chronicle.Services.Projections.Projections;
 using KernelReactorMediator = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients.ReactorMediator;
 using KernelReactorsService = KernelCore::Cratis.Chronicle.Services.Observation.Reactors.Reactors;
+using KernelReadModelsCompliance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelsCompliance;
 using KernelReadModelsService = KernelCore::Cratis.Chronicle.Services.ReadModels.ReadModels;
 using KernelRecommendationsService = KernelCore::Cratis.Chronicle.Services.Recommendations.Recommendations;
 using KernelReducerMediator = KernelCore::Cratis.Chronicle.Observation.Reducers.Clients.ReducerMediator;
@@ -85,6 +88,7 @@ internal sealed class TestingServices(
             new KernelReactorMediator(),
             storage,
             jsonSerializerOptions,
+            new ActivitySource<KernelReactorsService>(),
             NullLogger<KernelReactorsService>.Instance));
 
     readonly Lazy<IReducers> _reducers = new(() =>
@@ -93,6 +97,7 @@ internal sealed class TestingServices(
             new KernelReducerMediator(),
             new ExpandoObjectConverter(new TypeFormats()),
             jsonSerializerOptions,
+            new ActivitySource<KernelReducersService>(),
             NullLogger<KernelReducersService>.Instance));
 
     readonly Lazy<IProjections> _projections = new(() =>
@@ -127,8 +132,9 @@ internal sealed class TestingServices(
         new KernelEventSequencesService(
             grainFactory,
             storage,
-            new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
-            new ExpandoObjectConverter(new TypeFormats()),
+            new KernelEventCompliance(
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new ExpandoObjectConverter(new TypeFormats())),
             jsonSerializerOptions));
 
     readonly Lazy<INamespaces> _namespaces = new(() =>
@@ -153,18 +159,20 @@ internal sealed class TestingServices(
         new KernelApplicationsService(grainFactory, storage));
 
     readonly Lazy<IServer> _server = new(() =>
-        new KernelServerService(null!));
+        new KernelServerService(null!, null!, null!, new EmptyInstancesOf<ICanPerformKernelStateReset>(), null!));
 
     readonly Lazy<IEventStores> _eventStores = new(() =>
         new KernelEventStoresService.EventStores(grainFactory, storage, null!, null!));
 
     readonly Lazy<IReadModels> _readModels = new(() =>
         new KernelReadModelsService(
-            null!,
             grainFactory,
             storage,
             new ExpandoObjectConverter(new TypeFormats()),
             new KernelReducerMediator(),
+            new KernelReadModelsCompliance(
+                new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
+                new ExpandoObjectConverter(new TypeFormats())),
             new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
             jsonSerializerOptions));
 
@@ -175,6 +183,9 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IReadModels ReadModels => _readModels.Value;
+
+    /// <inheritdoc/>
+    public IMaterializedReadModels MaterializedReadModels => throw new NotSupportedException("MaterializedReadModels is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public ICompliance Compliance => _compliance.Value;
@@ -235,4 +246,12 @@ internal sealed class TestingServices(
 
     /// <inheritdoc/>
     public IServer Server => _server.Value;
+
+    sealed class EmptyInstancesOf<T> : IInstancesOf<T>
+        where T : class
+    {
+        public IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

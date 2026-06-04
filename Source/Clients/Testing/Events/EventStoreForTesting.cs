@@ -11,6 +11,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -23,6 +24,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -34,6 +36,7 @@ using Cratis.Chronicle.Webhooks;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Serialization;
+using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
@@ -128,10 +131,20 @@ public class EventStoreForTesting : IEventStore
             Options.Create(new ChronicleOptions()),
             new BaseIdentityProvider(),
             reducerObservers,
+            new ActivitySource<Reducers.Reducers>(),
             NullLogger<Reducers.Reducers>.Instance);
         _reducers.Discover().GetAwaiter().GetResult();
 
         var readModelWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, _jsonSerializerOptions));
+
+        var materializedReadModels = new Chronicle.ReadModels.MaterializedReadModels(
+            this,
+            _projections,
+            _reducers,
+            JsonSchemaGenerator,
+            (Connection as IChronicleServicesAccessor)!,
+            _jsonSerializerOptions,
+            NullLogger<Chronicle.ReadModels.MaterializedReadModels>.Instance);
 
         var realReadModels = new Chronicle.ReadModels.ReadModels(
             this,
@@ -144,6 +157,7 @@ public class EventStoreForTesting : IEventStore
             _jsonSerializerOptions,
             readModelWatcherManager,
             reducerObservers,
+            materializedReadModels,
             NullLogger<Chronicle.ReadModels.ReadModels>.Instance);
 
         _readModelsForTesting = new ReadModelsForTesting(realReadModels);
@@ -162,6 +176,16 @@ public class EventStoreForTesting : IEventStore
             EventSerializer,
             new CausationManager(),
             new BaseIdentityProvider(),
+            new ActivitySource<ReactorsImpl>(),
+            new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(_eventTypes), new EventsResultHandler(_eventTypes)])),
+            new ReactorContextValuesBuilder(new KnownInstancesOf<IReactorContextValuesProvider>(
+            [
+                new EventSourceIdValuesProvider(),
+                new EventStreamIdValuesProvider(),
+                new EventStreamTypeValuesProvider(),
+                new EventSourceTypeValuesProvider(),
+                new SubjectValuesProvider()
+            ])),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
@@ -281,6 +305,7 @@ public class EventStoreForTesting : IEventStore
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
+        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var constraintsStorage = new InMemoryConstraintsStorage(_constraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
         var eventTypesStorage = new InMemoryEventTypesStorage();
@@ -290,6 +315,7 @@ public class EventStoreForTesting : IEventStore
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
             constraintsStorage,
+            closedStreamsStorage,
             identityStorage,
             eventTypesStorage);
 
@@ -300,15 +326,15 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
-        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
+        var eventCompliance = new KernelCore::Cratis.Chronicle.Compliance.EventCompliance(
+            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()));
 
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            complianceManager,
-            expandoObjectConverter,
+            eventCompliance,
             _jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

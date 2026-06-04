@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -76,4 +77,35 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// Gets or sets the encryption keys DbSet.
     /// </summary>
     public DbSet<Encryption.EncryptionKey> EncryptionKeys { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the closed streams DbSet.
+    /// </summary>
+    public DbSet<ClosedStreamEntry> ClosedStreams { get; set; } = null!;
+
+    /// <inheritdoc/>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ClosedStreamEntry>(entity =>
+        {
+            entity.ToTable(WellKnownTableNames.ClosedStreams);
+            entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId });
+        });
+
+        // Match the column mappings to the provider-native JSON type the migrations create
+        // (jsonb on Npgsql), so EF Core sends parameters with the correct OID. PostgreSQL is
+        // the only provider that requires this because its jsonb type rejects implicit
+        // casts from text. See arc-issues.md for the upstream tracking issue in Cratis.Arc.
+        if (!Database.IsNpgsql())
+        {
+            return;
+        }
+
+        foreach (var (entityType, propertyName) in NamespaceJsonStringColumns.All)
+        {
+            modelBuilder.Entity(entityType).Property(propertyName).HasColumnType("jsonb");
+        }
+    }
 }

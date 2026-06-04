@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -13,13 +14,13 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
+using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
@@ -33,10 +34,10 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="failures"><see cref="IPersistentState{T}"/> for failed partitions.</param>
 /// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> for getting the <see cref="Observers"/> configuration.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
-/// <param name="complianceManager"><see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
-/// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between JSON and expando objects.</param>
+/// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII fields in event content.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="meter"><see cref="Meter{T}"/> for the observer.</param>
+/// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
@@ -47,10 +48,10 @@ public partial class Observer(
     IPersistentState<FailedPartitions> failures,
     IConfigurationForObserverProvider configurationProvider,
     IStorage storage,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IEventCompliance eventCompliance,
     ILogger<Observer> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<Observer> meter,
+    [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Observer> activitySource,
     ILoggerFactory loggerFactory) : StateMachine<ObserverState>, IObserver, IRemindable
 {
     ObserverId _observerId = ObserverId.Unspecified;
@@ -207,7 +208,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -257,7 +258,7 @@ public partial class Observer(
         }
         await ResumeJobs();
         await TryRecoverAllFailedPartitions();
-        await TransitionTo<Routing>();
+        await TransitionTo<CatchingUpInFlight>();
     }
 
     /// <inheritdoc/>
@@ -281,6 +282,14 @@ public partial class Observer(
             _observerKey,
             loggerFactory.CreateLogger<QuarantinedObserver>()),
 
+        new CatchingUpInFlight(
+            _observerKey,
+            observerDefinition,
+            failures,
+            storage,
+            _jobsManager,
+            loggerFactory.CreateLogger<CatchingUpInFlight>()),
+
         new Observing(
             _appendedEventsQueues,
             _observerKey.EventStore,
@@ -297,6 +306,22 @@ public partial class Observer(
         await PauseJobs();
         _subscription = ObserverSubscription.Unsubscribed;
         await TransitionTo<Disconnected>();
+    }
+
+    /// <inheritdoc/>
+    public Task UnsubscribeIfMatchesClient(ConnectionId connectionId)
+    {
+        // Single-threaded grain — the check and Unsubscribe form an atomic action.
+        // If a new client has already replaced the subscription, the old client's
+        // disconnect cleanup must not tear down the new client's subscription.
+        if (_subscription.IsSubscribed &&
+            _subscription.Arguments is ConnectedClient connectedClient &&
+            connectedClient.ConnectionId != connectionId)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Unsubscribe();
     }
 
     /// <inheritdoc/>

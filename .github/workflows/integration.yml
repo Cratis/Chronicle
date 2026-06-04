@@ -1,0 +1,199 @@
+name: Integration Specs
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-cache-key:
+        description: "Cache key for dotnet build artifacts"
+        required: true
+        type: string
+      chronicle-image:
+        description: "Chronicle Docker image to use for out-of-process tests"
+        required: true
+        type: string
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      client-matrix: ${{ steps.client.outputs.matrix }}
+      kernel-matrix: ${{ steps.kernel.outputs.matrix }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Discover Client integration namespaces
+        id: client
+        run: |
+          namespaces=""
+          while IFS= read -r dir; do
+            if grep -R -q '\[Fact\]' "$dir" --include='*.cs'; then
+              namespaces+="$(basename "$dir")"$'\n'
+            fi
+          done < <(find Integration/Client -mindepth 1 -maxdepth 1 -type d ! -name 'bin' ! -name 'obj' | sort)
+
+          namespaces=$(echo "$namespaces" | sed '/^$/d' | sort -u)
+
+          # mode|database|needs-docker
+          declare -a configs=(
+            "inprocess|mongodb|false"
+            "outofprocess|mongodb|true"
+            "outofprocess|sqlite|true"
+            "outofprocess|postgresql|true"
+            "outofprocess|mssql|true"
+          )
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            for config in "${configs[@]}"; do
+              IFS='|' read -r mode database needs_docker <<< "$config"
+              matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.${ns}\",\"mode\":\"${mode}\",\"database\":\"${database}\",\"needs-docker\":${needs_docker}},"
+            done
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Discover Kernel integration namespaces
+        id: kernel
+        run: |
+          namespaces=$(find Integration/Kernel -mindepth 1 -maxdepth 1 -type d \
+            ! -name 'bin' ! -name 'obj' \
+            -exec basename {} \; | sort)
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  client-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.410
+            9.0.x
+            10.0.x
+
+      - name: Restore build output
+        uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Login to GitHub Docker Registry
+        if: matrix.needs-docker == true
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore Client project
+        run: dotnet restore Integration/Client/Client.csproj
+
+      # Pre-pull Docker Hub images once per job so the per-fixture image
+      # existence checks in Testcontainers do not race against anonymous
+      # Docker Hub rate limits or transient registry timeouts. MCR-hosted
+      # images (mssql) and locally built images (cratis/chronicle) do not
+      # need pre-pulling.
+      - name: Pre-pull Docker Hub images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: |
+            docker pull mongo
+            if [ "${{ matrix.database }}" = "postgresql" ]; then
+              docker pull postgres:16
+            fi
+            if [ "${{ matrix.database }}" = "mssql" ]; then
+              docker pull mcr.microsoft.com/mssql/server:2025-latest
+            fi
+
+      - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
+        env:
+          CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
+          CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
+          CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
+          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '600' }}
+          # Ryuk is the Testcontainers reaper sidecar. It exists to clean
+          # up containers when the host process dies unexpectedly. GitHub-
+          # hosted runners are destroyed after the job, so Ryuk has nothing
+          # to do and its anonymous Docker Hub manifest call at session
+          # init is a frequent source of flakiness. Disable it on CI.
+          TESTCONTAINERS_RYUK_DISABLED: true
+        # On failure, only the failed tests are re-run (up to TEST_MAX_ATTEMPTS), so a
+        # transient pipeline/container flake does not redden the whole job. A systemic
+        # failure (many tests failing, e.g. a fixture/container start error) fails fast
+        # without retrying, and a deterministic failure stays red on every attempt.
+        run: |
+          .github/scripts/run-tests-with-retry.sh \
+            Integration/Client/Client.csproj \
+            "FullyQualifiedName~${{ matrix.namespace }}" \
+            -p:DisableDockerBuild=true \
+            -p:EnableDevelopmentSymbol=true
+
+  kernel-integration-specs:
+    needs: [discover]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.410
+            9.0.x
+            10.0.x
+
+      - name: Restore build output
+        uses: actions/cache@v4
+        with:
+          path: ./**/bin
+          key: ${{ inputs.dotnet-cache-key }}
+
+      - name: Restore Kernel project
+        run: dotnet restore Integration/Kernel/Kernel.csproj
+
+      # See the equivalent step in client-integration-specs for the rationale.
+      - name: Pre-pull Docker Hub images
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 15
+          command: docker pull mongo
+
+      - name: Run Kernel integration tests (${{ matrix.namespace }})
+        env:
+          # See client-integration-specs for the rationale.
+          TESTCONTAINERS_RYUK_DISABLED: true
+        # See client-integration-specs for the retry rationale. The kernel project
+        # does not have Client's Docker build target.
+        run: |
+          .github/scripts/run-tests-with-retry.sh \
+            Integration/Kernel/Kernel.csproj \
+            "FullyQualifiedName~${{ matrix.namespace }}" \
+            -p:EnableDevelopmentSymbol=true

@@ -41,4 +41,18 @@ public interface IStorage
     /// <param name="eventStore"><see cref="EventStoreName"/> to get.</param>
     /// <returns>The <see cref="IEventStoreStorage"/> instance.</returns>
     IEventStoreStorage GetEventStore(EventStoreName eventStore);
+
+    /// <summary>
+    /// Evicts every cached <see cref="IEventStoreStorage"/> so the next <see cref="GetEventStore"/>
+    /// call reconstructs them — and the per-namespace sinks they own — from scratch.
+    /// </summary>
+    /// <remarks>
+    /// Intended for integration-test boundaries where the database is wiped between tests.
+    /// Sinks keep in-memory state (bulk-mode flags, in-replay flags on the underlying
+    /// collections, per-key state caches) that the database wipe does not touch; without
+    /// evicting them, the next test inherits whatever state the previous test left behind —
+    /// for example a sink stuck in replay mode silently buffers writes into the temporary
+    /// replay collection while the test reads from the real one and sees nothing.
+    /// </remarks>
+    void Clear();
 }

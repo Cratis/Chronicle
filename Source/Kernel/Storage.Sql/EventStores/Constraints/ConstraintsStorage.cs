@@ -19,16 +19,38 @@ public class ConstraintsStorage(EventStoreName eventStore, IDatabase database) :
     public async Task<IEnumerable<IConstraintDefinition>> GetDefinitions()
     {
         await using var scope = await database.EventStore(eventStore);
+
+        // Pull rows then group/order client-side: ulong is not translatable in ORDER BY on the
+        // SQLite provider, and the version history per name is small enough that materializing
+        // the full table is fine. Translating via cast would diverge between providers and
+        // narrowing Version to a signed integer would silently shift behavior in the kernel.
         var constraints = await scope.DbContext.Constraints.ToListAsync();
-        return constraints.Select(c => c.ToKernel()).ToArray();
+        return constraints
+            .GroupBy(_ => _.Name)
+            .Select(_ => _.OrderByDescending(c => c.Version).First())
+            .Select(c => c.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
     public async Task SaveDefinition(IConstraintDefinition definition)
     {
         await using var scope = await database.EventStore(eventStore);
-        var entity = definition.ToSql();
-        await scope.DbContext.Constraints.Upsert(entity);
+
+        // Materialize before sorting — SQLite EF cannot translate OrderByDescending on a ulong.
+        var existingByName = await scope.DbContext.Constraints
+            .Where(_ => _.Name == definition.Name.Value)
+            .ToListAsync();
+        var existing = existingByName.OrderByDescending(_ => _.Version).FirstOrDefault();
+
+        if (existing?.ToKernel().Equals(definition) == true)
+        {
+            return;
+        }
+
+        var nextVersion = existing is null ? 1uL : existing.Version + 1;
+        var entity = definition.ToSql(nextVersion);
+        scope.DbContext.Constraints.Add(entity);
         await scope.DbContext.SaveChangesAsync();
     }
 }

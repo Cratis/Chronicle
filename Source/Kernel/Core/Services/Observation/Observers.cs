@@ -25,8 +25,11 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         grainFactory.GetObserver(command).TryStartRecoverJobForFailedPartition(command.Partition);
 
     /// <inheritdoc/>
-    public Task Replay(Replay command, CallContext context = default) =>
-        grainFactory.GetObserver(command).Replay();
+    public async Task<ReplayResponse> Replay(Replay command, CallContext context = default)
+    {
+        var jobId = await grainFactory.GetObserver(command).Replay();
+        return new ReplayResponse { JobId = jobId.Value.ToString() };
+    }
 
     /// <inheritdoc/>
     public Task ReplayPartition(ReplayPartition command, CallContext context = default) =>
@@ -100,6 +103,7 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             IsSubscribed = subscribed,
             IsReplayable = definition.IsReplayable

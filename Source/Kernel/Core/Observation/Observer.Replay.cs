@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
@@ -11,17 +12,21 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task Replay()
+    public async Task<JobId> Replay()
     {
         if (!Definition.IsReplayable)
         {
-            return;
+            return JobId.NotSet;
         }
 
         if (State.RunningState != ObserverRunningState.Replaying)
         {
             await TransitionTo<Replay>();
         }
+
+        var states = await GetStates();
+        var replayState = states.OfType<Replay>().FirstOrDefault();
+        return replayState?.LastStartedJobId ?? JobId.NotSet;
     }
 
     /// <inheritdoc/>
@@ -43,6 +48,8 @@ public partial class Observer
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
+
+        State = WithSubtractedPartitionHandledEventCounts(State, partition);
         await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, Definition.EventTypes));
 
         State.ReplayingPartitions.Add(partition);

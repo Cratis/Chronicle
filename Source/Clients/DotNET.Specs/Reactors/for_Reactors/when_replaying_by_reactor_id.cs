@@ -11,7 +11,7 @@ public class when_replaying_by_reactor_id : given.all_dependencies
 
     void Establish()
     {
-        _observers.Replay(Arg.Any<Replay>()).Returns(Task.CompletedTask);
+        _observers.Replay(Arg.Any<Replay>()).Returns(new ReplayResponse { JobId = Guid.NewGuid().ToString() });
     }
 
     async Task Because() => await _reactors.Replay(_reactorId);

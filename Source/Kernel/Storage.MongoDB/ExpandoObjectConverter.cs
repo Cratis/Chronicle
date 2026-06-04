@@ -159,7 +159,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         {
             return bsonValue.ToTargetType(typeFormats.GetTypeForFormat(schemaProperty.Format!));
         }
-        return ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
+
+        var result = ConvertBsonValueFromUnknownFormat(bsonValue, schemaProperty);
+        return result ?? ConvertUnknownSchemaTypeToClrType(bsonValue);
     }
 
     Dictionary<object, object> ToDictionary(BsonDocument childDocument)
@@ -252,7 +254,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             case BsonType.Int64:
                 return value.AsInt64;
             case BsonType.Decimal128:
-                return value.AsDecimal128;
+                return (ulong)value.AsDecimal;
         }
 
         return null;
@@ -280,6 +282,8 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 return value.ToBoolean();
 
             case JsonObjectType.Integer:
+                if (value.BsonType == BsonType.Decimal128)
+                    return value.ToInt64();
                 return value.ToInt32();
 
             case JsonObjectType.Number:

@@ -16,6 +16,11 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
 {
     readonly Dictionary<(string Identifier, string Key), object> _instances = [];
 
+    /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
+    public IMaterializedReadModels Materialized => inner.Materialized;
+
     /// <inheritdoc/>
     public Task Register() => inner.Register();
 
@@ -57,6 +62,10 @@ public class ReadModelsForTesting(IReadModels inner) : IReadModels
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>() =>
         inner.Watch<TReadModel>();
+
+    /// <inheritdoc/>
+    public IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>() =>
+        inner.GetWatcherFor<TReadModel>();
 
     /// <inheritdoc/>
     public Task DehydrateSession(ReadModelSessionId sessionId, Type readModelType, ReadModelKey readModelKey) =>

@@ -81,9 +81,32 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // WebhookTarget is a value object serialized as JSON via [Json] on WebhookDefinition.Target.
-        // Ignore it as an entity type so EF Core does not try to create a table or require a primary key.
-        modelBuilder.Ignore<WebhookTarget>();
+        // WebhookTarget and ObserverFilters are value objects serialized as JSON columns.
+        // Ignore them so EF Core does not try to create shadow tables or require primary keys.
+        modelBuilder.Ignore<WebhookTarget>()
+            .Ignore<ObserverFilters>();
+
+        // ObserverDefinition is stored in the ObserverDefinitions table. Override the default
+        // convention (DbSet name "Observers") so it doesn't collide with the NamespaceDbContext's
+        // Observers table when both contexts share the same PostgreSQL/MSSQL database.
+        modelBuilder.Entity<ObserverDefinition>().ToTable(WellKnownTableNames.ObserverDefinitions);
+
+        // ReadModelDefinition is stored in ReadModelDefinitions. The DbSet is named "ReadModels"
+        // which would default to table "ReadModels" and collide with user projection sink tables
+        // whose read model type is named "ReadModel" (pluralized to "ReadModels" by DefaultNamingPolicy).
+        modelBuilder.Entity<ReadModelDefinition>().ToTable(WellKnownTableNames.ReadModelDefinitions);
+
         base.OnModelCreating(modelBuilder);
+
+        // Match the column mappings to the provider-native JSON type the migrations create
+        // (jsonb on Npgsql). PostgreSQL is the only provider that requires this because its
+        // jsonb type rejects implicit casts from text; SQLite and MSSQL accept the string as-is.
+        // Mirrors NamespaceDbContext for entity columns whose values are pre-serialized JSON
+        // strings stored in a provider-native JSON column rather than via [Json] conversion.
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.Entity<EventSeedsEntity>().Property(e => e.ByEventTypeJson).HasColumnType("jsonb");
+            modelBuilder.Entity<EventSeedsEntity>().Property(e => e.ByEventSourceJson).HasColumnType("jsonb");
+        }
     }
 }

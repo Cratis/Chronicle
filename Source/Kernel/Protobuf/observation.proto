@@ -57,6 +57,8 @@ message ObserverInformation {
    ObserverRunningState RunningState = 8;
    bool IsSubscribed = 9;
    bool IsReplayable = 10; // default value could not be applied: True
+   uint64 TailEventSequenceNumber = 11;
+   uint64 HandledEventCount = 12;
 }
 enum ObserverOwner {
    None = 0;

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
 
@@ -140,14 +141,14 @@ public interface IReducers
     /// Replay a specific reducer.
     /// </summary>
     /// <typeparam name="TReducer">Type of reducer to replay.</typeparam>
-    /// <returns>Awaitable task.</returns>
-    Task Replay<TReducer>()
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    Task<JobId> Replay<TReducer>()
         where TReducer : IReducer;
 
     /// <summary>
     /// Replay a specific reducer by its identifier.
     /// </summary>
     /// <param name="reducerId"><see cref="ReducerId"/> to replay.</param>
-    /// <returns>Awaitable task.</returns>
-    Task Replay(ReducerId reducerId);
+    /// <returns>The <see cref="JobId"/> of the replay job that was started or resumed, or <see cref="JobId.NotSet"/> if the reducer is not replayable.</returns>
+    Task<JobId> Replay(ReducerId reducerId);
 }

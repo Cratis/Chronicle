@@ -738,7 +738,9 @@ public class ProjectionFactory(
             logger.GetEventTypeWithKeyResolverInferredParentKey(effectiveParentKey.Value, true);
         }
 
-        var parentKeyResolver = GetParentKeyResolverFor(projection, effectiveParentKey, actualIdentifiedByProperty);
+        var parentProjection = projection.HasParent ? projection.Parent! : projection;
+        var parentIdentifiedByProperty = projection.HasParent ? projection.Parent!.IdentifiedByProperty : actualIdentifiedByProperty;
+        var parentKeyResolver = GetParentKeyResolverFor(parentProjection, effectiveParentKey, parentIdentifiedByProperty);
         keyResolver = keyResolvers.FromParentHierarchy(projection, keyResolver, parentKeyResolver, actualIdentifiedByProperty);
 
         return new EventTypeWithKeyResolver(eventType, keyResolver);

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Reflection;
 using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Keys;
@@ -208,6 +209,18 @@ static class ChildrenDefinitionExtensions
                         var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
                         fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}({propertyToUse})";
+                    }
+
+                    // Process SetValue attributes on constructor parameters
+                    foreach (var (setValueAttr, setValueEventType) in parameter.GetAttributesOfGenericType<SetValueAttribute<object>>())
+                    {
+                        var valueProperty = setValueAttr.GetType().GetProperty(nameof(SetValueAttribute<object>.Value));
+                        var value = valueProperty?.GetValue(setValueAttr);
+                        if (value is not null)
+                        {
+                            var invariantValue = ConvertValueToInvariantString(value);
+                            childrenDef.From.AddSetValueMapping(getOrCreateEventType, setValueEventType, paramPropertyName, invariantValue);
+                        }
                     }
 
                     // Process SetFrom attributes on constructor parameters
@@ -647,5 +660,33 @@ static class ChildrenDefinitionExtensions
         return eventProperty is not null
             ? namingPolicy.GetPropertyName(new PropertyPath(eventProperty.Name))
             : null;
+    }
+
+    static string ConvertValueToInvariantString(object value)
+    {
+        var actualValue = value;
+
+        if (actualValue.GetType().IsEnum)
+        {
+            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
+            if (underlyingType == typeof(int))
+            {
+                actualValue = Convert.ChangeType(actualValue, underlyingType);
+            }
+            else
+            {
+                return actualValue.ToString()!;
+            }
+        }
+
+        return actualValue switch
+        {
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
+            TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => actualValue.ToString()!
+        };
     }
 }

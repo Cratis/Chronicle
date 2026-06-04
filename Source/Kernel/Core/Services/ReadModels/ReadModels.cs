@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
@@ -11,19 +12,20 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
-using Orleans.Streams;
 using ProtoBuf.Grpc;
 using AppendedEvent = Cratis.Chronicle.Concepts.Events.AppendedEvent;
-using ProjectionChangeset = Cratis.Chronicle.Projections.ProjectionChangeset;
 using ReadModelSnapshot = Cratis.Chronicle.Contracts.ReadModels.ReadModelSnapshot;
 
 namespace Cratis.Chronicle.Services.ReadModels;
@@ -31,19 +33,19 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <summary>
 /// Represents an implementation of <see cref="IReadModels"/>.
 /// </summary>
-/// <param name="clusterClient">The cluster client.</param>
 /// <param name="grainFactory">The grain factory.</param>
 /// <param name="storage">The storage.</param>
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for decrypting PII fields.</param>
+/// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
+/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for applying compliance.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
-    IClusterClient clusterClient,
     IGrainFactory grainFactory,
     IStorage storage,
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
+    IReadModelsCompliance complianceHelper,
     IJsonComplianceManager complianceManager,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
@@ -85,9 +87,9 @@ internal sealed class ReadModels(
             existingDefinition.ObserverType,
             existingDefinition.ObserverIdentifier,
             existingDefinition.Sink,
-            new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
+            new Dictionary<ReadModelGeneration, JsonSchema>
             {
-                { (Concepts.ReadModels.ReadModelGeneration)request.ReadModel.Type.Generation, schema }
+                { (ReadModelGeneration)request.ReadModel.Type.Generation, schema }
             },
             indexes);
 
@@ -125,7 +127,7 @@ internal sealed class ReadModels(
         var sink = await sinks.GetFor(definition);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
-        Concepts.ReadModels.ReadModelContainerName? occurrence = null;
+        ReadModelContainerName? occurrence = null;
         if (!string.IsNullOrEmpty(request.Occurrence))
         {
             occurrence = request.Occurrence;
@@ -137,20 +139,13 @@ internal sealed class ReadModels(
             request.PageSize);
 
         var schema = definition.GetSchemaForLatestGeneration();
-        var decryptedInstances = new List<ExpandoObject>();
-        foreach (var instance in instances ?? [])
-        {
-            var decrypted = await ReadModelComplianceHelper.Release(
-                complianceManager,
-                request.EventStore,
-                request.Namespace,
-                schema,
-                instance,
-                expandoObjectConverter);
-            decryptedInstances.Add(decrypted);
-        }
+        var releasedInstances = await complianceHelper.Release(
+            request.EventStore,
+            request.Namespace,
+            schema,
+            instances ?? []);
 
-        var instancesAsJson = decryptedInstances.ConvertAll(instance => JsonSerializer.Serialize(instance));
+        var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance)).ToList();
         return new()
         {
             Instances = instancesAsJson,
@@ -207,6 +202,57 @@ internal sealed class ReadModels(
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
+            // When no session is active, try to read from the sink first (the stored projected value).
+            // This correctly handles joins and events with custom key resolvers (UsingKey) because
+            // the projection observer processes all events and stores the result in the sink.
+            // ImmediateProjection only replays events by EventSourceId, which misses cross-source events.
+            // Note: when ReadModelKey is unspecified ("*") we cannot look it up by key in the sink;
+            // fall through to ImmediateProjection which replays all events and returns the last state.
+            if (string.IsNullOrEmpty(request.SessionId) && request.ReadModelKey != ReadModelKey.Unspecified.Value)
+            {
+                var namespaceStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace);
+                var sink = await namespaceStorage.Sinks.GetFor(definition);
+
+                // For passive projections the sink never has data; fall through to immediate projection.
+                if (sink.TypeId != WellKnownSinkTypes.Null)
+                {
+                    var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
+                    var storedState = await sink.FindOrDefault(key);
+
+                    if (storedState is not null)
+                    {
+                        var schema = definition.GetSchemaForLatestGeneration();
+                        var jsonObject = expandoObjectConverter.ToJsonObject(storedState, schema);
+                        var readModelJson = jsonObject.ToJsonString(jsonSerializerOptions);
+
+                        var lastSeq = EventSequenceNumber.Unavailable;
+                        var stateDict = (IDictionary<string, object?>)storedState;
+                        if (stateDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) &&
+                            seqObj is not null)
+                        {
+                            try { lastSeq = (EventSequenceNumber)Convert.ToUInt64(seqObj); }
+                            catch { /* value not convertible to ulong; leave as Unavailable */ }
+                        }
+
+                        return new GetInstanceByKeyResponse
+                        {
+                            ReadModel = readModelJson,
+                            ProjectedEventsCount = 0,
+                            LastHandledEventSequenceNumber = lastSeq
+                        };
+                    }
+
+                    // Document not found in the sink: either it was never created or it was removed.
+                    // Return a null-model response; the projection observer is authoritative for active sinks.
+                    return new GetInstanceByKeyResponse
+                    {
+                        ReadModel = "null",
+                        ProjectedEventsCount = 0,
+                        LastHandledEventSequenceNumber = EventSequenceNumber.Unavailable
+                    };
+                }
+            }
+
             var projectionKey = !string.IsNullOrEmpty(request.SessionId)
                 ? new ImmediateProjectionKey(
                     (ProjectionId)definition.ObserverIdentifier.Value,
@@ -400,7 +446,18 @@ internal sealed class ReadModels(
                 instance,
                 expandoObjectConverter);
 
-            readModels.Add(expandoObjectConverter.ToJsonObject(decrypted, schema).ToJsonString(jsonSerializerOptions));
+            var jsonObject = expandoObjectConverter.ToJsonObject(decrypted, schema);
+
+            // Ensure __lastHandledEventSequenceNumber is included in the JSON output since
+            // ToJsonObject may drop it if it is not mapped by the schema converter.
+            var decryptedDict = (IDictionary<string, object?>)decrypted;
+            if (decryptedDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) && seqObj is not null)
+            {
+                try { jsonObject[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(Convert.ToUInt64(seqObj)); }
+                catch { /* leave sequence number absent if conversion fails */ }
+            }
+
+            readModels.Add(jsonObject.ToJsonString(jsonSerializerOptions));
         }
 
         return new GetAllInstancesResponse
@@ -421,32 +478,37 @@ internal sealed class ReadModels(
 
             if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
             {
-                var streamProvider = clusterClient.GetStreamProvider(WellKnownStreamProviders.ProjectionChangesets);
-                var streamId = StreamId.Create(new StreamIdentity(Guid.Empty, definition.ObserverIdentifier));
-
-                var stream = streamProvider.GetStream<ProjectionChangeset>(streamId);
-
                 var schema = definition.GetSchemaForLatestGeneration();
-                var subscription = await stream.SubscribeAsync(async (changeset, _) =>
+
+                // Direct grain-to-observer notification — replaces Orleans MemoryStreams pub-sub
+                // whose subscriber propagation lagged the first publish under load and silently
+                // dropped early changesets. The notifier grain dispatches synchronously the moment
+                // Subscribe returns, so no warmup or wait is needed between Subscribed and the
+                // first appended event.
+                var forwardingObserver = new ChangesetForwardingObserver(
+                    observer,
+                    request.EventStore,
+                    schema,
+                    complianceManager,
+                    jsonSerializerOptions);
+                var observerReference = grainFactory.CreateObjectReference<IProjectionChangesetObserver>(forwardingObserver);
+                var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
+                await notifier.Subscribe(observerReference);
+
+                try
                 {
-                    var decrypted = await ReadModelComplianceHelper.ReleaseJson(
-                        complianceManager,
-                        request.EventStore,
-                        changeset.Namespace,
-                        schema,
-                        changeset.ReadModel);
+                    // Notify the client that the changeset notifier subscription is now active.
+                    // Direct grain dispatch means any changeset produced from this point on will
+                    // reach the forwarding observer below.
+                    observer.OnNext(new ReadModelChangeset { Subscribed = true });
 
-                    observer.OnNext(new ReadModelChangeset
-                    {
-                        Namespace = changeset.Namespace,
-                        ModelKey = changeset.ReadModelKey,
-                        ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
-                        Removed = false
-                    });
-                });
-
-                context.CancellationToken.Register(() => _ = subscription.UnsubscribeAsync());
-                await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                }
+                finally
+                {
+                    await notifier.Unsubscribe(observerReference).ConfigureAwait(false);
+                    grainFactory.DeleteObjectReference<IProjectionChangesetObserver>(observerReference);
+                }
             }
             else
             {
@@ -665,6 +727,32 @@ internal sealed class ReadModels(
         }
 
         return null;
+    }
+
+    sealed class ChangesetForwardingObserver(
+        IObserver<ReadModelChangeset> observer,
+        string eventStore,
+        JsonSchema schema,
+        IJsonComplianceManager complianceManager,
+        JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
+    {
+        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, Concepts.ReadModels.ReadModelKey readModelKey, JsonObject readModel)
+        {
+            var decrypted = await ReadModelComplianceHelper.ReleaseJson(
+                complianceManager,
+                eventStore,
+                namespaceName,
+                schema,
+                readModel);
+
+            observer.OnNext(new ReadModelChangeset
+            {
+                Namespace = namespaceName,
+                ModelKey = readModelKey,
+                ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
+                Removed = false
+            });
+        }
     }
 
     record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<Concepts.Events.EventType> EventTypes);

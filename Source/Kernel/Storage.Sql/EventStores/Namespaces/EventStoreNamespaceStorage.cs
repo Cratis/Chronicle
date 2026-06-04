@@ -43,7 +43,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
-    public IJobStorage Jobs { get; } = new Jobs.JobStorage(eventStore, @namespace, database, jobTypes);
+    public IJobStorage Jobs { get; } = new Jobs.JobStorage(eventStore, @namespace, database, jobTypes, jsonSerializerOptions);
 
     /// <inheritdoc/>
     public IJobStepStorage JobSteps { get; } = new JobSteps.JobStepStorage(eventStore, @namespace, database);
@@ -53,6 +53,9 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace);
 
     /// <inheritdoc/>
     public IRecommendationStorage Recommendations { get; } = new Recommendations.RecommendationStorage(eventStore, @namespace, database);
@@ -90,4 +93,7 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public IUniqueEventTypesConstraintsStorage GetUniqueEventTypesConstraints(EventSequenceId eventSequenceId) => new UniqueEventTypesConstraints.UniqueEventTypesConstraintsStorage(eventStore, @namespace, eventSequenceId, database);
+
+    /// <inheritdoc/>
+    public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) => new ClosedStreams.ClosedStreamsConstraintStorage(eventStore, @namespace, eventSequenceId, database);
 }

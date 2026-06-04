@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.ReadModels;
 public interface IReadModels
 {
     /// <summary>
+    /// Gets the <see cref="IMaterializedReadModels"/> for working with materialized read model instances.
+    /// </summary>
+    IMaterializedReadModels Materialized { get; }
+
+    /// <summary>
     /// Register the read models in the system.
     /// </summary>
     /// <returns>An awaitable task.</returns>
@@ -63,6 +68,15 @@ public interface IReadModels
     /// <typeparam name="TReadModel">Type of read model to observe changes for.</typeparam>
     /// <returns>An observable of <see cref="ReadModelChangeset{TReadModel}"/>.</returns>
     IObservable<ReadModelChangeset<TReadModel>> Watch<TReadModel>();
+
+    /// <summary>
+    /// Get the underlying <see cref="IReadModelWatcher{TReadModel}"/> for a specific read model.
+    /// Useful when the caller needs explicit control over lifecycle or to await
+    /// <see cref="IReadModelWatcher{TReadModel}.Subscribed"/> before producing events.
+    /// </summary>
+    /// <typeparam name="TReadModel">Type of read model to get a watcher for.</typeparam>
+    /// <returns>The <see cref="IReadModelWatcher{TReadModel}"/>.</returns>
+    IReadModelWatcher<TReadModel> GetWatcherFor<TReadModel>();
 
     /// <summary>
     /// Dehydrate a session.

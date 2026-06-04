@@ -22,13 +22,14 @@ public class ConstraintValidationFactory(IStorage storage) : IConstraintValidati
         var namespaceStorage = eventStore.GetNamespace(eventSequenceKey.Namespace);
         var uniqueConstraintsStorage = namespaceStorage.GetUniqueConstraintsStorage(eventSequenceKey.EventSequenceId);
         var uniqueEventTypeConstraintsStorage = namespaceStorage.GetUniqueEventTypesConstraints(eventSequenceKey.EventSequenceId);
+        var closedStreamsStorage = namespaceStorage.GetClosedStreamsConstraints(eventSequenceKey.EventSequenceId);
         var definitions = await eventStore.Constraints.GetDefinitions();
         var validators = definitions.Select<IConstraintDefinition, IConstraintValidator>(_ => _ switch
         {
             UniqueConstraintDefinition unique => new UniqueConstraintValidator(unique, uniqueConstraintsStorage),
             UniqueEventTypeConstraintDefinition uniqueEventType => new UniqueEventTypeConstraintValidator(uniqueEventType, uniqueEventTypeConstraintsStorage),
             _ => throw new UnknownConstraintType(_.GetType())
-        }).ToArray();
+        }).Append(new ClosedStreamConstraintValidator(closedStreamsStorage)).ToArray();
 
         return new ConstraintValidation(validators);
     }

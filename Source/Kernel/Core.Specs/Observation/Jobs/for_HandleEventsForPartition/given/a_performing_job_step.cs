@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Jobs;
@@ -72,8 +71,12 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
         _silo.AddService(Substitute.For<IJobStepThrottle>());
-        _silo.AddService(Substitute.For<IJsonComplianceManager>());
-        _silo.AddService(Substitute.For<IExpandoObjectConverter>());
+
+        var eventCompliance = Substitute.For<IEventCompliance>();
+        eventCompliance
+            .DecryptEvents(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
+            .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
+        _silo.AddService(eventCompliance);
 
         var logger = _silo.AddService(NullLogger<HandleEventsForPartition>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();

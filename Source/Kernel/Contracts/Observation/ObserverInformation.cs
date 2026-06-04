@@ -60,6 +60,12 @@ public class ObserverInformation
     public ulong TailEventSequenceNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of events the observer has handled, counted from the beginning of the event sequence to the last handled event sequence number.
+    /// </summary>
+    [ProtoMember(12)]
+    public ulong HandledEventCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the running state of the observer.
     /// </summary>
     [ProtoMember(8)]

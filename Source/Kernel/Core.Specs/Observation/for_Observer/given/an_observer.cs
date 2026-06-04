@@ -6,15 +6,16 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Jobs;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Core;
@@ -24,6 +25,7 @@ using Orleans.TestKit.Storage;
 using IChronicleEventStoreStorage = Cratis.Chronicle.Storage.IEventStoreStorage;
 using IChronicleStorage = Cratis.Chronicle.Storage.IStorage;
 using IEventSequence = Cratis.Chronicle.EventSequences.IEventSequence;
+using IEventStoreNamespaceStorage = Cratis.Chronicle.Storage.IEventStoreNamespaceStorage;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
@@ -48,9 +50,10 @@ public class an_observer : Specification
     protected IConfigurationForObserverProvider _configurationProvider;
     protected IChronicleStorage _storage;
     protected IChronicleEventStoreStorage _eventStoreStorage;
+    protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
+    protected IInFlightEventsStorage _inFlightEventsStorage;
     protected IEventTypesStorage _eventTypesStorage;
-    protected IJsonComplianceManager _complianceManager;
-    protected IExpandoObjectConverter _expandoObjectConverter;
+    protected IEventCompliance _eventCompliance;
     protected Observers _observersConfig;
 
     async Task Establish()
@@ -64,20 +67,28 @@ public class an_observer : Specification
         _eventSequence = Substitute.For<IEventSequence>();
         _storage = Substitute.For<IChronicleStorage>();
         _eventStoreStorage = Substitute.For<IChronicleEventStoreStorage>();
+        _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
+        _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _eventTypesStorage = Substitute.For<IEventTypesStorage>();
-        _complianceManager = Substitute.For<IJsonComplianceManager>();
-        _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
+        _eventCompliance = Substitute.For<IEventCompliance>();
 
-        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage
+        // Wire the storage chain: IStorage → IEventStoreStorage → IEventTypesStorage and IEventStoreNamespaceStorage → IInFlightEventsStorage
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
+        _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
+        _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
 
         // By default, no schemas are known — events pass through unchanged.
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
 
+        // By default, the compliance helper passes events through unchanged.
+        _eventCompliance
+            .DecryptEvents(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
+            .Returns(callInfo => Task.FromResult(callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
+
         _silo.AddService(_storage);
-        _silo.AddService(_complianceManager);
-        _silo.AddService(_expandoObjectConverter);
+        _silo.AddService(_eventCompliance);
 
         _silo.AddProbe(_ => _subscriber);
         _silo.AddProbe(_ => _jobsManager);
@@ -87,6 +98,8 @@ public class an_observer : Specification
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
         _silo.AddService(_observerServiceClient);
+
+        _silo.AddKeyedService<IActivitySource<Observer>>(WellKnown.MeterName, new ActivitySource<Observer>());
 
         var logger = _silo.AddService(NullLogger<Observer>.Instance);
         var loggerFactory = Substitute.For<ILoggerFactory>();
@@ -107,6 +120,7 @@ public class an_observer : Specification
 
         _eventSequence.GetTailSequenceNumber().Returns(EventSequenceNumber.Unavailable);
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>()).Returns(EventSequenceNumber.Unavailable);
+        _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>()).Returns(EventSequenceNumber.Unavailable);
 
         _jobsManager.GetJobsOfType<IRetryFailedPartition, RetryFailedPartitionRequest>()
             .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
@@ -129,10 +143,10 @@ public class an_observer : Specification
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
 
     protected void EventSequenceHasNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
-        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
         .Returns(sequenceNumber.Next());
 
     protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
-        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber, Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
-        .Returns(sequenceNumber);
+        .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
+        .Returns(EventSequenceNumber.Unavailable);
 }

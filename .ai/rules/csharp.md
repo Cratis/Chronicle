@@ -139,6 +139,38 @@ The framework discovers and wires dependencies by convention. Explicit registrat
 - Systems with a convention of `IFoo → Foo` do not need to be registered explicitly.
 - Command/query `Handle()` method parameters are automatically resolved from DI by type.
 
+### Discovering multiple implementations — use `IInstancesOf<T>`, never `IEnumerable<T>`
+
+When a type needs every implementation of an abstraction (handlers, strategies, filters, validators, formatters), inject `IInstancesOf<TInterface>` from `Cratis.Types`. The framework discovers and instantiates every implementation by convention — no `services.AddSingleton<TInterface, Impl1>()` calls anywhere.
+
+```csharp
+// ❌ Wrong — requires hand-maintained registrations for every implementation.
+// Adding a new IReactorSideEffectHandler somewhere else in the codebase silently
+// does nothing until someone remembers to register it here, and dead registrations
+// linger after types are removed.
+services.AddSingleton<IReactorSideEffectHandler, EventResultHandler>();
+services.AddSingleton<IReactorSideEffectHandler, EventsResultHandler>();
+services.AddSingleton<IReactorSideEffectHandlers, ReactorSideEffectHandlers>();
+
+public class ReactorSideEffectHandlers(IEnumerable<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers { ... }
+
+// ✅ Right — implementations discovered automatically. Mark singletons with [Singleton].
+[Singleton]
+public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler { ... }
+
+[Singleton]
+public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHandler { ... }
+
+[Singleton]
+public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> handlers) : IReactorSideEffectHandlers { ... }
+```
+
+**Rules:**
+- Never inject `IEnumerable<TInterface>` to enumerate implementations of an abstraction. That signature only works if every implementation is hand-registered, which defeats convention-based discovery. Use `IInstancesOf<TInterface>` instead.
+- Never write `services.AddSingleton<TInterface, Impl>()` or `services.AddTransient<TInterface, Impl>()` for a type that exists to be discovered. Mark the implementation with `[Singleton]` (for singletons) or rely on the `IFoo → Foo` convention (for transients) and remove the registration line.
+- `IInstancesOf<T>` resolves at the point of access — implementations added later in the assembly become available without touching the consumer or any composition root.
+- `IEnumerable<T>` is still the right type to **return** from a method that yields a sequence of values. The rule applies only when the goal is to enumerate **implementations** of an abstraction.
+
 ## Logging
 
 - Use structured logging with named parameters.

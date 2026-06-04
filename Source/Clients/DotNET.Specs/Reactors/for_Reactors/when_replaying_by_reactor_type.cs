@@ -17,7 +17,7 @@ public class when_replaying_by_reactor_type : given.all_dependencies
 
         _handlers[typeof(MyReactor)] = _handler;
 
-        _observers.Replay(Arg.Any<Replay>()).Returns(Task.CompletedTask);
+        _observers.Replay(Arg.Any<Replay>()).Returns(new ReplayResponse { JobId = Guid.NewGuid().ToString() });
     }
 
     async Task Because() => await _reactors.Replay<MyReactor>();

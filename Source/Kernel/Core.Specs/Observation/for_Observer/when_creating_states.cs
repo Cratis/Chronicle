@@ -12,10 +12,11 @@ public class when_creating_states : given.an_observer
 
     void Because() => _states = _observer.CreateStates();
 
-    [Fact] void should_return_5_states() => _states.Count.ShouldEqual(5);
+    [Fact] void should_return_6_states() => _states.Count.ShouldEqual(6);
     [Fact] void should_return_disconnected_state() => _states.FirstOrDefault(s => s is Disconnected).ShouldNotBeNull();
     [Fact] void should_return_routing_state() => _states.FirstOrDefault(s => s is Routing).ShouldNotBeNull();
     [Fact] void should_return_replay_state() => _states.FirstOrDefault(s => s is Replay).ShouldNotBeNull();
     [Fact] void should_return_quarantined_state() => _states.FirstOrDefault(s => s is QuarantinedObserver).ShouldNotBeNull();
+    [Fact] void should_return_catching_up_in_flight_state() => _states.FirstOrDefault(s => s is CatchingUpInFlight).ShouldNotBeNull();
     [Fact] void should_return_observing_state() => _states.FirstOrDefault(s => s is Observing).ShouldNotBeNull();
 }

@@ -95,6 +95,12 @@ internal sealed class NestedChildrenBlockVisitor
             return visitor.Visit(context);
         }
 
+        if (context.Check(TokenType.Nested))
+        {
+            var visitor = new NestedChildBlockVisitor();
+            return visitor.Visit(context);
+        }
+
         if (context.Check(TokenType.Remove))
         {
             var visitor = new RemoveBlockVisitor();

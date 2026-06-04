@@ -16,4 +16,10 @@ public interface IWebhooks
     /// <param name="configure">The <see cref="Action{T}"/> for configuring the <see cref="WebhookDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Register(WebhookId webhookId, WebhookTargetUrl targetUrl, Action<IWebhookDefinitionBuilder> configure);
+
+    /// <summary>
+    /// Get all registered webhook definitions for this event store.
+    /// </summary>
+    /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
+    Task<IEnumerable<WebhookDefinition>> GetAll();
 }

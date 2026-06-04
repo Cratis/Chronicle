@@ -38,6 +38,19 @@ public class ProjectionPipelineManager(
 {
     readonly ConcurrentDictionary<string, IProjectionPipeline> _pipelines = new();
 
+    /// <summary>
+    /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
+    /// </summary>
+    /// <remarks>
+    /// Survives pipeline cache eviction (which happens on every Replay) so concurrent Handle
+    /// calls across an old pipeline (still held by an already-activated subscriber) and a
+    /// new pipeline (the one EvictFor just created for the replay) still serialize on the
+    /// same lock. Without this, the read-modify-write cycle in SetInitialState → HandleEvent
+    /// → SaveChanges races for hierarchical or join projections, leaving parent/child links
+    /// empty.
+    /// </remarks>
+    readonly ConcurrentDictionary<string, SemaphoreSlim> _handleLocks = new();
+
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
         EventStoreName eventStore,
@@ -69,12 +82,15 @@ public class ProjectionPipelineManager(
             new SaveChanges(sink, namespaceStorage.Changesets, loggerFactory.CreateLogger<SaveChanges>())
         ];
 
+        var handleLock = _handleLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
         var newPipeline = new ProjectionPipeline(
             projection,
             sink,
             namespaceStorage.Changesets,
             objectComparer,
             steps,
+            handleLock,
             loggerFactory.CreateLogger<ProjectionPipeline>());
 
         return _pipelines[key] = newPipeline;

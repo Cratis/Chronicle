@@ -19,7 +19,6 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
 using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Contracts.Recommendations;
 using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
@@ -243,7 +242,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IProjections>(clientFactory),
             callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
             callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
-            callInvoker.CreateGrpcService<IReadModels>(clientFactory),
+            callInvoker.CreateGrpcService<Contracts.ReadModels.IReadModels>(clientFactory),
+            callInvoker.CreateGrpcService<Contracts.ReadModels.IMaterializedReadModels>(clientFactory),
             callInvoker.CreateGrpcService<IJobs>(clientFactory),
             callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),
             callInvoker.CreateGrpcService<IUsers>(clientFactory),

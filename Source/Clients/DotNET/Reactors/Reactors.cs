@@ -10,7 +10,10 @@ using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Reactors.SideEffects;
+using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -36,6 +39,9 @@ public class Reactors : IReactors
     readonly IEventSerializer _eventSerializer;
     readonly ICausationManager _causationManager;
     readonly IIdentityProvider _identityProvider;
+    readonly IActivitySource<Reactors> _activitySource;
+    readonly IReactorSideEffectHandlers _sideEffectHandlers;
+    readonly IReactorContextValuesBuilder _reactorContextValuesBuilder;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -55,6 +61,9 @@ public class Reactors : IReactors
     /// <param name="eventSerializer"><see cref="IEventSerializer"/> for serializing of events.</param>
     /// <param name="causationManager"><see cref="ICausationManager"/> for working with causation.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
+    /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
+    /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
+    /// <param name="reactorContextValuesBuilder"><see cref="IReactorContextValuesBuilder"/> for resolving append-metadata for side-effect events.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -67,6 +76,9 @@ public class Reactors : IReactors
         IEventSerializer eventSerializer,
         ICausationManager causationManager,
         IIdentityProvider identityProvider,
+        IActivitySource<Reactors> activitySource,
+        IReactorSideEffectHandlers sideEffectHandlers,
+        IReactorContextValuesBuilder reactorContextValuesBuilder,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -80,6 +92,9 @@ public class Reactors : IReactors
         _eventSerializer = eventSerializer;
         _causationManager = causationManager;
         _identityProvider = identityProvider;
+        _activitySource = activitySource;
+        _sideEffectHandlers = sideEffectHandlers;
+        _reactorContextValuesBuilder = reactorContextValuesBuilder;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -208,7 +223,7 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task Replay<TReactor>()
+    public Task<JobId> Replay<TReactor>()
         where TReactor : IReactor
     {
         var reactorType = typeof(TReactor);
@@ -217,15 +232,16 @@ public class Reactors : IReactors
     }
 
     /// <inheritdoc/>
-    public Task Replay(ReactorId reactorId)
+    public async Task<JobId> Replay(ReactorId reactorId)
     {
-        return _servicesAccessor.Services.Observers.Replay(new Replay
+        var response = await _servicesAccessor.Services.Observers.Replay(new Replay
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ObserverId = reactorId,
             EventSequenceId = string.Empty
         });
+        return Guid.TryParse(response.JobId, out var value) ? new JobId(value) : JobId.NotSet;
     }
 
     static void ThrowIfUnknownReactorId(IReactorHandler? handler, ReactorId reactorId)
@@ -294,6 +310,7 @@ public class Reactors : IReactors
                 ReactorId = handler.Id,
                 EventSequenceId = handler.EventSequenceId,
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
+                IsReplayable = !handler.ReactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false),
                 Tags = handler.ReactorType.GetTags().ToArray(),
                 Filters = new()
                 {
@@ -381,6 +398,12 @@ public class Reactors : IReactors
             return;
         }
 
+        using var span = _activitySource.Handle(
+            _eventStore.Name,
+            _eventStore.Namespace,
+            handler.EventSequenceId,
+            handler.Id);
+
         var lastSuccessfullyObservedEvent = EventSequenceNumber.Unavailable;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
@@ -402,7 +425,10 @@ public class Reactors : IReactors
             middlewares,
             handler.ReactorType,
             activatedReactor,
-            _loggerFactory.CreateLogger<ReactorInvoker>());
+            _loggerFactory.CreateLogger<ReactorInvoker>(),
+            _sideEffectHandlers,
+            _eventStore,
+            _reactorContextValuesBuilder);
 
         foreach (var @event in events.Events)
         {

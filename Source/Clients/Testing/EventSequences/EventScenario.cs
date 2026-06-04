@@ -133,6 +133,7 @@ public class EventScenario(
         var eventSequenceStorage = new InMemoryEventSequenceStorage(kernelEventSequenceId);
         var uniqueConstraintsStorage = new InMemoryUniqueConstraintsStorage();
         var uniqueEventTypesStorage = new InMemoryUniqueEventTypesConstraintsStorage(eventSequenceStorage);
+        var closedStreamsStorage = new InMemoryClosedStreamsConstraintStorage();
         var resolvedConstraintProvider = constraintProvider ?? new EmptyConstraintProvider();
         var constraintsStorage = new InMemoryConstraintsStorage(resolvedConstraintProvider);
         var identityStorage = new InMemoryIdentityStorage();
@@ -143,6 +144,7 @@ public class EventScenario(
             uniqueConstraintsStorage,
             uniqueEventTypesStorage,
             constraintsStorage,
+            closedStreamsStorage,
             identityStorage,
             eventTypesStorage);
 
@@ -155,14 +157,14 @@ public class EventScenario(
         var grainFactory = new InProcessGrainFactory(grain);
 
         var jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
-        var complianceManager = new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
-            new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>());
-        var expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
+        var eventCompliance = new KernelCore::Cratis.Chronicle.Compliance.EventCompliance(
+            new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
+                new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
+            new ExpandoObjectConverter(new TypeFormats()));
         var eventSequencesService = new KernelCore::Cratis.Chronicle.Services.EventSequences.EventSequences(
             grainFactory,
             storage,
-            complianceManager,
-            expandoObjectConverter,
+            eventCompliance,
             jsonSerializerOptions);
 
         var constraintsService = new InProcessNoOpConstraintsService();

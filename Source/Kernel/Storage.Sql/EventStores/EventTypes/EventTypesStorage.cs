@@ -144,7 +144,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         generation ??= EventTypeGeneration.First;
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel();
+            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel(generation);
         }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
         if (eventType.Schemas.Count == 0)
@@ -164,6 +164,16 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
         generation ??= EventTypeGeneration.First;
         if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
         {
+            // Verify the cache is consistent with the database. After an external database
+            // reset (e.g. between integration test classes), the cache may still hold entries
+            // for event types that no longer exist in the backing store.
+            var dbEventType = await GetSpecificEventType(type);
+            if (dbEventType?.Schemas.ContainsKey(generation) != true)
+            {
+                _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type));
+                return false;
+            }
+
             return true;
         }
 
@@ -180,7 +190,8 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
     {
+        var eventTypeIdValue = eventTypeId.Value;
         await using var scope = await database.EventStore(eventStore);
-        return await scope.DbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeId);
+        return await scope.DbContext.EventTypes.FirstOrDefaultAsync(e => e.Id == eventTypeIdValue);
     }
 }

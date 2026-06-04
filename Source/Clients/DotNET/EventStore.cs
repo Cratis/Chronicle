@@ -7,6 +7,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.Events.Migrations;
@@ -18,6 +19,7 @@ using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Schemas;
@@ -25,6 +27,9 @@ using Cratis.Chronicle.Seeding;
 using Cratis.Chronicle.Transactions;
 using Cratis.Chronicle.Webhooks;
 using Cratis.Serialization;
+using Cratis.Traces;
+using Cratis.Types;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -45,6 +50,7 @@ public class EventStore : IEventStore
     readonly IEventSerializer _eventSerializer;
     readonly IClientArtifactsProvider _clientArtifactsProvider;
     readonly ILogger<EventStore> _logger;
+    readonly IActivitySource<EventSequence> _activitySource;
     readonly ConcurrentDictionary<EventSequenceId, IEventSequence> _sequences = new();
 
     /// <summary>
@@ -62,6 +68,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
+    /// <param name="reactorSideEffectHandlers"><see cref="Reactors.SideEffects.IReactorSideEffectHandlers"/> for handling reactor side-effect return values.</param>
     /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -81,6 +88,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
+        Reactors.SideEffects.IReactorSideEffectHandlers reactorSideEffectHandlers,
         IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
@@ -100,6 +108,7 @@ public class EventStore : IEventStore
         _servicesAccessor = (connection as IChronicleServicesAccessor)!;
         _correlationIdAccessor = correlationIdAccessor;
         _concurrencyScopeStrategies = concurrencyScopeStrategies;
+        _activitySource = serviceProvider.GetRequiredKeyedService<IActivitySource<EventSequence>>(ClientActivity.SourceName);
         EventTypes = new EventTypes(this, schemaGenerator, clientArtifactsProvider, eventTypeMigrators, enableEventTypeGenerationValidation);
         UnitOfWorkManager = new UnitOfWorkManager(this);
         _correlationIdAccessor = correlationIdAccessor;
@@ -145,6 +154,9 @@ public class EventStore : IEventStore
             _eventSerializer,
             causationManager,
             identityProvider,
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName),
+            reactorSideEffectHandlers,
+            new ReactorContextValuesBuilder(new InstancesOf<IReactorContextValuesProvider>(Types.Types.Instance, serviceProvider)),
             loggerFactory.CreateLogger<Reactors.Reactors>(),
             loggerFactory);
 
@@ -162,6 +174,7 @@ public class EventStore : IEventStore
             options,
             identityProvider,
             reducerObservers,
+            serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),
             loggerFactory.CreateLogger<Reducers.Reducers>());
 
         var projections = new Projections.Projections(
@@ -179,6 +192,14 @@ public class EventStore : IEventStore
         FailedPartitions = new FailedPartitions(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
+        var materializedReadModels = new ReadModels.MaterializedReadModels(
+            this,
+            projections,
+            Reducers,
+            schemaGenerator,
+            _servicesAccessor,
+            jsonSerializerOptions,
+            loggerFactory.CreateLogger<ReadModels.MaterializedReadModels>());
 
         ReadModels = new ReadModels.ReadModels(
             this,
@@ -191,6 +212,7 @@ public class EventStore : IEventStore
             jsonSerializerOptions,
             readModelsWatcherManager,
             reducerObservers,
+            materializedReadModels,
             loggerFactory.CreateLogger<ReadModels.ReadModels>());
 
         Seeding = new EventSeeding(
@@ -318,7 +340,8 @@ public class EventStore : IEventStore
                 state._causationManager,
                 state.UnitOfWorkManager,
                 state._identityProvider,
-                state._jsonSerializerOptions),
+                state._jsonSerializerOptions,
+                state._activitySource),
             this);
 
     /// <inheritdoc/>

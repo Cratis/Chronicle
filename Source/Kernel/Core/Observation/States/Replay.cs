@@ -2,6 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
@@ -26,12 +29,19 @@ public class Replay(
     /// <inheritdoc/>
     public override ObserverRunningState RunningState => ObserverRunningState.Replaying;
 
+    /// <summary>
+    /// Gets the <see cref="JobId"/> of the most recent replay job started, resumed, or found running for this observer.
+    /// Returns <see cref="JobId.NotSet"/> if no replay job has been started in the current process lifetime.
+    /// </summary>
+    public JobId LastStartedJobId { get; private set; } = JobId.NotSet;
+
     /// <inheritdoc/>
     protected override IImmutableList<Type> AllowedTransitions => new[]
     {
         typeof(Routing),
         typeof(QuarantinedObserver),
-        typeof(Disconnected)
+        typeof(Disconnected),
+        typeof(CatchingUpInFlight)
     }.ToImmutableList();
 
     /// <inheritdoc/>
@@ -42,7 +52,7 @@ public class Replay(
 
         var subscription = await Observer.GetSubscription();
 
-        await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
+        LastStartedJobId = await jobsManager.StartOrResumeObserverJobFor<IReplayObserver, ReplayObserverRequest>(
             logger,
             new(observerKey, definitionState.State.Type, definitionState.State.EventTypes),
             requestPredicate: null,
@@ -61,6 +71,12 @@ public class Replay(
                 logger.StartReplayJob();
                 return Task.CompletedTask;
             });
-        return state with { IsReplaying = true };
+        return state with
+        {
+            IsReplaying = true,
+            HandledEventCount = EventCount.Zero,
+            HandledEventCountPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty,
+            HandledEventCountPerPartition = ImmutableDictionary<Key, IReadOnlyDictionary<EventTypeId, EventCount>>.Empty
+        };
     }
 }
