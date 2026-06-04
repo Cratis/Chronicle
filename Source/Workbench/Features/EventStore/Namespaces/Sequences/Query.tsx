@@ -15,7 +15,7 @@ import { QueryDefinition } from './QueryDefinition';
 import { FilterPanel, FilterEditor, useFilterState } from '@cratis/components/Filter';
 import type { FilterDefinition } from '@cratis/components/Filter';
 import { SequenceSelector } from './SequenceSelector';
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
 import { AppendedEvents } from 'Api/EventSequences';
 import { ForSequence } from 'Api/EventSequences/ForSequence';
@@ -43,6 +43,16 @@ const FilterIcon = () => (
         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
     </svg>
 );
+
+const parseEventContent = (content: string) => {
+    try {
+        return JSON.parse(content);
+    } catch {
+        return content;
+    }
+};
+
+const sanitizeForFilename = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 
 export const Query = ({ query, onSave }: QueryProps) => {
     const params = useParams<EventStoreAndNamespaceParams>();
@@ -152,6 +162,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
         if (refreshTimeoutRef.current !== null) {
             window.clearTimeout(refreshTimeoutRef.current);
         }
+        // Debounce refresh to avoid excessive re-renders when multiple operations complete quickly.
         refreshTimeoutRef.current = window.setTimeout(() => setRefreshToken(prev => prev + 1), REFRESH_DELAY_MS);
     };
 
@@ -233,17 +244,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
         }
     };
 
-    const parseEventContent = (content: string) => {
-        try {
-            return JSON.parse(content);
-        } catch {
-            return content;
-        }
-    };
-
-    const sanitizeForFilename = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
-
-    const handleExportEvents = useCallback(async () => {
+    const handleExportEvents = async () => {
         const exportQuery = new AppendedEvents();
         const result = await exportQuery.perform({
             eventStore: params.eventStore!,
@@ -256,7 +257,6 @@ export const Query = ({ query, onSave }: QueryProps) => {
             startTime: appliedFilter.startTime,
             endTime: appliedFilter.endTime,
         });
-        if (!result.hasData || result.data.length === 0) return;
         if (!result.hasData || result.data.length === 0) return;
 
         const exportData = result.data.map(event => ({
@@ -272,20 +272,16 @@ export const Query = ({ query, onSave }: QueryProps) => {
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
-        link.download = buildExportFilename();
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [appliedEventSequenceId, appliedFilter, params.eventStore, params.namespace]);
-
-    const buildExportFilename = () => {
         const eventStorePart = sanitizeForFilename(params.eventStore!);
         const namespacePart = sanitizeForFilename(params.namespace!);
         const sequencePart = sanitizeForFilename(appliedEventSequenceId);
         const datePart = new Date().toISOString().slice(0, 10);
-        return `events-${eventStorePart}-${namespacePart}-${sequencePart}-${datePart}.json`;
+        link.href = url;
+        link.download = `events-${eventStorePart}-${namespacePart}-${sequencePart}-${datePart}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const runQuery = () => {
