@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -764,15 +765,20 @@ internal sealed class ReadModels(
 
         string? InferSubjectFromJson()
         {
-            foreach (var property in new[] { WellKnownProperties.Subject, "_id", "id" })
-            {
-                if (readModel.TryGetPropertyValue(property, out var value) && value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var identifier))
+            return new[] { WellKnownProperties.Subject, "_id", "id" }
+                .Select(property =>
                 {
-                    return identifier;
-                }
-            }
+                    if (readModel.TryGetPropertyValue(property, out var value) &&
+                        value is JsonValue jsonValue &&
+                        jsonValue.TryGetValue<string>(out var identifier))
+                    {
+                        return identifier;
+                    }
 
-            return null;
+                    return null;
+                })
+                .Where(identifier => !string.IsNullOrWhiteSpace(identifier))
+                .FirstOrDefault();
         }
 
         readModel[WellKnownProperties.Subject] = resolvedSubject;
