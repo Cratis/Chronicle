@@ -172,8 +172,8 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
                 {
-                    options.Clustering.EventSequences = true;
-                    options.Clustering.Observers = false;
+                    options.Clustering.Roles.EventSequences = true;
+                    options.Clustering.Roles.Observers = false;
                 });
             });
 
@@ -197,8 +197,8 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
                 {
-                    options.Clustering.EventSequences = false;
-                    options.Clustering.Observers = true;
+                    options.Clustering.Roles.EventSequences = false;
+                    options.Clustering.Roles.Observers = true;
                 });
             });
 
