@@ -20,7 +20,7 @@ public class and_subject_is_different_from_event_source_id : given.all_dependenc
             {
                 {
                     ComplianceJsonSchemaExtensions.ComplianceKey,
-                    new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) }
+                    new[] { new ComplianceSchemaMetadata("PII", string.Empty) }
                 }
             }
         };

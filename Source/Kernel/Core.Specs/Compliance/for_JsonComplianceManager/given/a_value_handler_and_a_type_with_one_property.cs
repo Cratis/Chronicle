@@ -10,7 +10,7 @@ public class a_value_handler_and_a_type_with_one_property : a_type_with_one_prop
     protected IJsonCompliancePropertyValueHandler _valueHandler;
     protected JsonComplianceManager _manager;
 
-    protected readonly ComplianceMetadataType _metadataType = Guid.NewGuid();
+    protected readonly ComplianceMetadataType _metadataType = "test-metadata-type";
 
     void Establish()
     {

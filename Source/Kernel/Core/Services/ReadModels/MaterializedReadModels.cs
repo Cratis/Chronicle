@@ -3,7 +3,6 @@
 
 using System.Reactive.Linq;
 using System.Text.Json;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.ReadModels;

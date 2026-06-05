@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_DecryptInitialState.given;
@@ -46,7 +47,7 @@ public class all_dependencies : Specification
         _complianceManager.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(ci => Task.FromResult(new JsonObject()));
 
-        _step = new DecryptInitialState(_complianceManager, _expandoObjectConverter, EventStore, EventStoreNamespace);
+        _step = new DecryptInitialState(new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace);
     }
 
     protected ProjectionEventContext CreateContext(ExpandoObject? initialState)

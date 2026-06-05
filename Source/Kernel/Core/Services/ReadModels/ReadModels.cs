@@ -5,7 +5,6 @@ using System.Dynamic;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -15,6 +14,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Contracts.ReadModels;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="expandoObjectConverter">The expando object converter.</param>
 /// <param name="reducerMediator">The reducer mediator.</param>
 /// <param name="complianceHelper">The <see cref="IReadModelsCompliance"/> for decrypting PII fields.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for applying compliance.</param>
+/// <param name="eventCompliance">The <see cref="IEventCompliance"/> for decrypting PII event content.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
@@ -46,7 +46,7 @@ internal sealed class ReadModels(
     IExpandoObjectConverter expandoObjectConverter,
     IReducerMediator reducerMediator,
     IReadModelsCompliance complianceHelper,
-    IJsonComplianceManager complianceManager,
+    IEventCompliance eventCompliance,
     JsonSerializerOptions jsonSerializerOptions) : IReadModels
 {
     /// <inheritdoc/>
@@ -222,11 +222,16 @@ internal sealed class ReadModels(
                     if (storedState is not null)
                     {
                         var schema = definition.GetSchemaForLatestGeneration();
-                        var jsonObject = expandoObjectConverter.ToJsonObject(storedState, schema);
+                        var released = await complianceHelper.Release(
+                            request.EventStore,
+                            request.Namespace,
+                            schema,
+                            storedState);
+                        var jsonObject = expandoObjectConverter.ToJsonObject(released, schema);
                         var readModelJson = jsonObject.ToJsonString(jsonSerializerOptions);
 
                         var lastSeq = EventSequenceNumber.Unavailable;
-                        var stateDict = (IDictionary<string, object?>)storedState;
+                        var stateDict = (IDictionary<string, object?>)released;
                         if (stateDict.TryGetValue(WellKnownProperties.LastHandledEventSequenceNumber, out var seqObj) &&
                             seqObj is not null)
                         {
@@ -271,9 +276,17 @@ internal sealed class ReadModels(
             var projection = grainFactory.GetGrain<IImmediateProjection>(projectionKey);
             var result = await projection.GetModelInstance();
 
+            var immediateSchema = definition.GetSchemaForLatestGeneration();
+            var releasedReadModel = await ReleaseProjectedReadModel(
+                result.ReadModel,
+                immediateSchema,
+                request.EventStore,
+                request.Namespace,
+                request.ReadModelKey);
+
             return new GetInstanceByKeyResponse
             {
-                ReadModel = result.ReadModel.ToJsonString(jsonSerializerOptions),
+                ReadModel = releasedReadModel.ToJsonString(jsonSerializerOptions),
                 ProjectedEventsCount = (ulong)result.ProjectedEventsCount,
                 LastHandledEventSequenceNumber = result.LastHandledEventSequenceNumber
             };
@@ -307,13 +320,11 @@ internal sealed class ReadModels(
         }
 
         var readModelSchema = (await storage.GetEventStore(request.EventStore).ReadModels.Get(definition.Identifier)).GetSchemaForLatestGeneration();
-        var decrypted = await ReadModelComplianceHelper.Release(
-            complianceManager,
+        var decrypted = await complianceHelper.Release(
             request.EventStore,
             request.Namespace,
             readModelSchema,
-            reduceResult.ReadModelState,
-            expandoObjectConverter);
+            reduceResult.ReadModelState);
 
         return new GetInstanceByKeyResponse
         {
@@ -370,13 +381,11 @@ internal sealed class ReadModels(
                     dictionary[WellKnownProperties.Subject] = subject;
                 }
 
-                var decrypted = await ReadModelComplianceHelper.Release(
-                    complianceManager,
+                var decrypted = await complianceHelper.Release(
                     request.EventStore,
                     request.Namespace,
                     readModelSchema,
-                    reduceResult.ReadModelState,
-                    expandoObjectConverter);
+                    reduceResult.ReadModelState);
 
                 reducedReadModels.Add(expandoObjectConverter.ToJsonObject(decrypted, readModelSchema).ToJsonString(jsonSerializerOptions));
             }
@@ -438,13 +447,11 @@ internal sealed class ReadModels(
                 dictionary[WellKnownProperties.Subject] = subject;
             }
 
-            var decrypted = await ReadModelComplianceHelper.Release(
-                complianceManager,
+            var decrypted = await complianceHelper.Release(
                 request.EventStore,
                 request.Namespace,
                 schema,
-                instance,
-                expandoObjectConverter);
+                instance);
 
             var jsonObject = expandoObjectConverter.ToJsonObject(decrypted, schema);
 
@@ -489,7 +496,7 @@ internal sealed class ReadModels(
                     observer,
                     request.EventStore,
                     schema,
-                    complianceManager,
+                    complianceHelper,
                     jsonSerializerOptions);
                 var observerReference = grainFactory.CreateObjectReference<IProjectionChangesetObserver>(forwardingObserver);
                 var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(definition.ObserverIdentifier);
@@ -582,19 +589,28 @@ internal sealed class ReadModels(
         var eventTypes = await projection.GetEventTypes();
         var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, readModelKey, eventTypes: eventTypes);
 
-        var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
-
+        var allEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
         {
-            foreach (var appendedEvent in cursor.Current)
+            allEvents.AddRange(cursor.Current);
+        }
+        cursor.Dispose();
+
+        // Decrypt the stored events before projecting and returning them — both the snapshot read
+        // model and the events it carries must be released so no PII leaves encrypted.
+        var eventTypeSchemas = await storage.GetEventStore(eventStoreName).EventTypes.GetFor(allEvents.Select(_ => _.Context.EventType).Distinct());
+        var releasedEvents = await eventCompliance.Release(allEvents, eventTypeSchemas.ToDictionary(_ => _.Type));
+
+        var eventsByCorrelation = new Dictionary<Guid, List<AppendedEvent>>();
+        foreach (var appendedEvent in releasedEvents)
+        {
+            var correlationId = appendedEvent.Context.CorrelationId;
+            if (!eventsByCorrelation.TryGetValue(correlationId, out var eventsForCorrelation))
             {
-                var correlationId = appendedEvent.Context.CorrelationId;
-                if (!eventsByCorrelation.ContainsKey(correlationId))
-                {
-                    eventsByCorrelation[correlationId] = [];
-                }
-                eventsByCorrelation[correlationId].Add(appendedEvent);
+                eventsForCorrelation = [];
+                eventsByCorrelation[correlationId] = eventsForCorrelation;
             }
+            eventsForCorrelation.Add(appendedEvent);
         }
 
         var snapshots = new List<ReadModelSnapshot>();
@@ -619,7 +635,6 @@ internal sealed class ReadModels(
             });
         }
 
-        cursor.Dispose();
         return snapshots;
     }
 
@@ -729,17 +744,53 @@ internal sealed class ReadModels(
         return null;
     }
 
+    async Task<JsonObject> ReleaseProjectedReadModel(JsonObject readModel, JsonSchema schema, string eventStore, string @namespace, string? subject)
+    {
+        if (!schema.HasComplianceMetadata())
+        {
+            return readModel;
+        }
+
+        // The read model is projected directly from stored (encrypted) events, so its PII fields still
+        // hold the encrypted value keyed by the event source id. Stamp the subject so the compliance
+        // manager can decrypt them, then strip it again so the internal marker never leaves the kernel.
+        var resolvedSubject = !string.IsNullOrWhiteSpace(subject) && subject != ReadModelKey.Unspecified.Value
+            ? subject
+            : InferSubjectFromJson();
+        if (string.IsNullOrWhiteSpace(resolvedSubject))
+        {
+            return readModel;
+        }
+
+        string? InferSubjectFromJson()
+        {
+            foreach (var property in new[] { WellKnownProperties.Subject, "_id", "id" })
+            {
+                if (readModel.TryGetPropertyValue(property, out var value) && value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var identifier))
+                {
+                    return identifier;
+                }
+            }
+
+            return null;
+        }
+
+        readModel[WellKnownProperties.Subject] = resolvedSubject;
+        var released = await complianceHelper.ReleaseJson(eventStore, @namespace, schema, readModel);
+        released.Remove(WellKnownProperties.Subject);
+        return released;
+    }
+
     sealed class ChangesetForwardingObserver(
         IObserver<ReadModelChangeset> observer,
         string eventStore,
         JsonSchema schema,
-        IJsonComplianceManager complianceManager,
+        IReadModelsCompliance complianceHelper,
         JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
     {
         public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, Concepts.ReadModels.ReadModelKey readModelKey, JsonObject readModel)
         {
-            var decrypted = await ReadModelComplianceHelper.ReleaseJson(
-                complianceManager,
+            var decrypted = await complianceHelper.ReleaseJson(
                 eventStore,
                 namespaceName,
                 schema,

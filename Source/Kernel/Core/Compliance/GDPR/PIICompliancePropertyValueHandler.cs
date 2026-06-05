@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
@@ -18,6 +19,8 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <param name="encryption"><see cref="IEncryption"/> for performing encryption/decryption.</param>
 public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionKeyStore, IEncryption encryption) : IJsonCompliancePropertyValueHandler
 {
+    static readonly ConcurrentDictionary<string, SemaphoreSlim> _keyCreationGates = new();
+
     readonly IEncryptionKeyStorage _encryptionKeyStore = encryptionKeyStore;
     readonly IEncryption _encryption = encryption;
 
@@ -52,8 +55,26 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
             return await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
         }
 
-        var key = _encryption.GenerateKey();
-        await _encryptionKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
-        return key;
+        // Serialize key creation per subject. Appending a batch encrypts all events concurrently
+        // (Task.WhenAll), so multiple events for the same subject can otherwise each generate and
+        // save a key, with the last write overwriting the rest — orphaning the data encrypted with
+        // the losing keys. The gate ensures only the first caller creates the key; the rest reuse it.
+        var gate = _keyCreationGates.GetOrAdd($"{eventStore.Value}+{eventStoreNamespace.Value}+{identifier.Value}", _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            if (await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
+            {
+                return await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+            }
+
+            var key = _encryption.GenerateKey();
+            await _encryptionKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key);
+            return key;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 }

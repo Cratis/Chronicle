@@ -20,7 +20,7 @@ public class and_initial_state_has_pii_and_subject_is_stored : given.all_depende
         {
             ExtensionData = new Dictionary<string, object?>
             {
-                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
+                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata("PII", string.Empty) } }
             }
         };
 

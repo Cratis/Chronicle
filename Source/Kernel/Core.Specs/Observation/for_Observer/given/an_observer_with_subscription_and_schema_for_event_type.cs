@@ -21,7 +21,7 @@ public class an_observer_with_subscription_and_schema_for_event_type : an_observ
             {
                 {
                     ComplianceJsonSchemaExtensions.ComplianceKey,
-                    new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) }
+                    new[] { new ComplianceSchemaMetadata("PII", string.Empty) }
                 }
             }
         };
