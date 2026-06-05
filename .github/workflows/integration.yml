@@ -167,7 +167,8 @@ jobs:
             "FullyQualifiedName~${{ matrix.namespace }}" \
             -p:DisableDockerBuild=true \
             -p:EnableDevelopmentSymbol=true \
-            --collect:"XPlat Code Coverage"
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-results
 
       - name: Upload coverage results
         if: always()
