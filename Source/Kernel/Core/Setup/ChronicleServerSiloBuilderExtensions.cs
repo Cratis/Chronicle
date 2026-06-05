@@ -9,6 +9,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
@@ -65,6 +66,8 @@ public static class ChronicleServerSiloBuilderExtensions
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedObserverPlacementStrategy, ConnectedObserverPlacementDirector>()
+            .AddPlacementDirector<EventSequencePlacementStrategy, EventSequencePlacementDirector>()
+            .AddPlacementDirector<ObserverPlacementStrategy, ObserverPlacementDirector>()
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.NamespaceAdded, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ReloadState, _ => _.FireAndForgetDelivery = true)
