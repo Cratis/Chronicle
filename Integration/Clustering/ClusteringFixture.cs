@@ -7,6 +7,7 @@ extern alias KernelConcepts;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.XUnit.Integration;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -24,7 +25,7 @@ namespace Cratis.Chronicle.Integration.Clustering;
 /// <summary>
 /// Represents a fixture for clustered integration tests with 2 silos.
 /// </summary>
-public class ClusteringFixture : IAsyncLifetime
+public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 {
     readonly INetwork _network;
     IContainer? _mongoContainer;
@@ -40,9 +41,10 @@ public class ClusteringFixture : IAsyncLifetime
             .Build();
     }
 
-    /// <summary>
-    /// Gets the MongoDB container.
-    /// </summary>
+    /// <inheritdoc/>
+    public INetwork Network => _network;
+
+    /// <inheritdoc/>
     public IContainer MongoDBContainer => _mongoContainer!;
 
     /// <summary>
@@ -50,20 +52,16 @@ public class ClusteringFixture : IAsyncLifetime
     /// </summary>
     public string MongoConnectionString { get; private set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the event store database helper.
-    /// </summary>
-    public MongoDBDatabase EventStoreDatabase { get; private set; } = null!;
+    /// <inheritdoc/>
+    MongoDBDatabase IChronicleFixture.EventStore => _eventStoreDatabase;
 
-    /// <summary>
-    /// Gets the event store for namespace database helper.
-    /// </summary>
+    /// <inheritdoc/>
     public MongoDBDatabase EventStoreForNamespace { get; private set; } = null!;
 
-    /// <summary>
-    /// Gets the read models database helper.
-    /// </summary>
+    /// <inheritdoc/>
     public MongoDBDatabase ReadModels { get; private set; } = null!;
+
+    MongoDBDatabase _eventStoreDatabase = null!;
 
     /// <summary>
     /// Gets the Orleans test cluster.
@@ -102,7 +100,7 @@ public class ClusteringFixture : IAsyncLifetime
         MongoConnectionString = $"mongodb://localhost:{_mongoContainer.GetMappedPublicPort(27017)}/?directConnection=true";
 
         // Set up database helpers
-        EventStoreDatabase = new MongoDBDatabase(MongoConnectionString, "event-store");
+        _eventStoreDatabase = new MongoDBDatabase(MongoConnectionString, "event-store");
         EventStoreForNamespace = new MongoDBDatabase(MongoConnectionString, $"event-store-{NamespaceId.Default}");
         ReadModels = new MongoDBDatabase(MongoConnectionString, "read-models");
 
@@ -142,12 +140,20 @@ public class ClusteringFixture : IAsyncLifetime
         await _network.DisposeAsync();
     }
 
-    /// <summary>
-    /// Remove all databases.
-    /// </summary>
-    public async Task RemoveAllDatabases()
+    /// <inheritdoc/>
+    ValueTask IAsyncDisposable.DisposeAsync() => new(DisposeAsync());
+
+    /// <inheritdoc/>
+    public Task PerformBackupAsync(string? prefix = null)
     {
-        await EventStoreDatabase.Drop();
+        // Backup not implemented for clustering tests
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
+    {
+        await _eventStoreDatabase.Drop();
         await EventStoreForNamespace.Drop();
         await ReadModels.Drop();
     }
