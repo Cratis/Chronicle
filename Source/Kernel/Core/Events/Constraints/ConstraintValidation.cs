@@ -19,6 +19,7 @@ public class ConstraintValidation(IEnumerable<IConstraintValidator> validators) 
         ExpandoObject content,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default) =>
-        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId);
+        EventStreamId? eventStreamId = default,
+        ConstraintBatchClaims? batchClaims = default) =>
+        new(validators, eventSourceId, eventTypeId, content, eventSourceType, eventStreamType, eventStreamId, batchClaims);
 }
