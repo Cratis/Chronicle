@@ -63,6 +63,11 @@ public class ChronicleOptions
     public Observers Observers { get; init; } = new Observers();
 
     /// <summary>
+    /// Gets the clustering configuration.
+    /// </summary>
+    public Clustering Clustering { get; init; } = new Clustering();
+
+    /// <summary>
     /// Gets the jobs configuration.
     /// </summary>
     public Jobs Jobs { get; init; } = new Jobs();
