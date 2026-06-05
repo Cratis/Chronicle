@@ -13,7 +13,7 @@ We won't write much code yet — the template gives us a working example to read
 You don't need any to follow along — the steps work without it. If you'd rather understand the *why* before the *how*, read [Why Event Sourcing](/chronicle/why-event-sourcing/) first, then come back. Either order is fine.
 </Aside>
 
-## What you'll need
+## Prerequisites
 
 - The [.NET SDK](https://dotnet.microsoft.com/download) — .NET 8 or newer.
 - [Docker](https://www.docker.com/) with Compose. Chronicle runs as a small kernel next to your app, and the template wires it up with a `docker-compose.yml` so you don't have to install anything else.
@@ -71,7 +71,17 @@ That one line of output is the whole point — let's unpack how it got there.
 
 ## What you just ran
 
-The template's `Program.cs` is about twenty lines, and it contains a complete Chronicle loop. Here's the heart of it:
+That one line came out of a complete Chronicle loop. Here it is as an **[event model](/event-modeling/)** — a fact is appended, a projection folds it into a read model, and a reactor acts on it:
+
+```mermaid
+eventmodeling
+
+tf 01 evt Demo.TestEvent { message: string }
+tf 02 rmo Demo.TestProjection ->> 01
+tf 03 pcr Demo.TestReactor
+```
+
+The template's `Program.cs` is about twenty lines, and it wires up exactly those three blocks. Here's the heart of it:
 
 ```csharp title="Program.cs"
 using var client = new ChronicleClient();
@@ -124,6 +134,6 @@ The Docker image includes the **Chronicle workbench** — a web UI for poking at
 ## Where to go next
 
 - **Build something real, step by step** — the [tutorial](/chronicle/tutorial/) builds a small library system one concept at a time, and explains each as you go. It's the best next stop.
-- **Wire Chronicle into an existing app** — the same setup for [ASP.NET Core](./aspnetcore.md), a [Worker Service](./worker.md), or a bare [Console](./console.md) host.
+- **Wire Chronicle into an existing app** — [run the kernel](./running-chronicle.md), then follow the host guide for [ASP.NET Core](./aspnetcore.md), a [Worker Service](./worker.md), or a bare [Console](./console.md).
 - **Understand the model** — [Why Event Sourcing](/chronicle/why-event-sourcing/) makes the case, and the [Concepts](/chronicle/concepts/) section defines every term you just met.
 - **Go full-stack** — put commands and a React UI on top with [Build a full-stack feature](/build-a-full-app/).

@@ -1,8 +1,8 @@
+- name: Run Chronicle locally
+  href: running-chronicle.md
 - name: Console
   href: console.md
 - name: Worker Service
   href: worker.md
 - name: ASP.NET Core
   href: aspnetcore.md
-- name: Docker
-  href: docker.md
