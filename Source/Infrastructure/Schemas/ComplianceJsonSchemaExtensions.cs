@@ -128,7 +128,7 @@ public static class ComplianceJsonSchemaExtensions
                 Details = obj[nameof(ComplianceSchemaMetadata.details)]?.GetValue<string>()
             })
             .Where(x => x.MetadataTypeStr is not null && x.Details is not null)
-            .Select(x => new ComplianceSchemaMetadata(Guid.Parse(x.MetadataTypeStr!), x.Details!))
+            .Select(x => new ComplianceSchemaMetadata(x.MetadataTypeStr!, x.Details!))
             .ToList();
     }
 }

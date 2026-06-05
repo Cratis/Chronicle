@@ -20,7 +20,7 @@ public class and_read_model_has_pii_and_initial_state_is_null : given.all_depend
             {
                 {
                     ComplianceJsonSchemaExtensions.ComplianceKey,
-                    new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) }
+                    new[] { new ComplianceSchemaMetadata("PII", string.Empty) }
                 }
             }
         };

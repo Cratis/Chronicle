@@ -7,22 +7,22 @@ namespace Cratis.Chronicle.Compliance;
 /// Represents a type of compliance metadata.
 /// </summary>
 /// <param name="Value">Underlying value.</param>
-public record ComplianceMetadataType(Guid Value) : ConceptAs<Guid>(Value)
+public record ComplianceMetadataType(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Personal Identifiable Information according to the definition in GDPR.
+    /// Personally Identifiable Information according to the definition of Personal Data in GDPR.
     /// </summary>
-    public static readonly ComplianceMetadataType PII = new(Guid.Parse("cae5580e-83d6-44dc-9d7a-a72e8a2f17d7"));
+    public static readonly ComplianceMetadataType PII = new("PII");
 
     /// <summary>
-    /// Convert from a <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="ComplianceMetadataType"/>.
+    /// Convert from a <see cref="string"/> to <see cref="ComplianceMetadataType"/>.
     /// </summary>
-    /// <param name="value"><see cref="string"/> representation.</param>
-    public static implicit operator ComplianceMetadataType(string value) => new(Guid.Parse(value));
+    /// <param name="value"><see cref="string"/> to convert from.</param>
+    public static implicit operator ComplianceMetadataType(string value) => new(value);
 
     /// <summary>
-    /// Convert from <see cref="Guid"/> to <see cref="ComplianceMetadataType"/>.
+    /// Convert from <see cref="ComplianceMetadataType"/> to <see cref="string"/>.
     /// </summary>
-    /// <param name="value)"><see cref="Guid"/> to convert from.</param>
-    public static implicit operator ComplianceMetadataType(Guid value) => new(value);
+    /// <param name="value"><see cref="ComplianceMetadataType"/> to convert from.</param>
+    public static implicit operator string(ComplianceMetadataType value) => value.Value;
 }

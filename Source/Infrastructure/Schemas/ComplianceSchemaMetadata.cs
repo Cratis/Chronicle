@@ -8,4 +8,4 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 /// <param name="metadataType">Type of metadata.</param>
 /// <param name="details">Details.</param>
-public record ComplianceSchemaMetadata(Guid metadataType, string details);
+public record ComplianceSchemaMetadata(string metadataType, string details);
