@@ -20,6 +20,7 @@ public interface IConstraintValidation
     /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the event.</param>
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event.</param>
+    /// <param name="batchClaims">Optional <see cref="ConstraintBatchClaims"/> shared by all events in a batch append, used to detect intra-batch duplicates.</param>
     /// <returns>A <see cref="ConstraintValidationContext"/> that can be used for validation.</returns>
     ConstraintValidationContext Establish(
         EventSourceId eventSourceId,
@@ -27,5 +28,6 @@ public interface IConstraintValidation
         ExpandoObject content,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default);
+        EventStreamId? eventStreamId = default,
+        ConstraintBatchClaims? batchClaims = default);
 }

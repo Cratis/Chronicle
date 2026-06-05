@@ -24,6 +24,7 @@ public record ConstraintValidationContext
     /// <param name="eventSourceType">The <see cref="EventSourceType"/> of the event being validated.</param>
     /// <param name="eventStreamType">The <see cref="EventStreamType"/> of the event being validated.</param>
     /// <param name="eventStreamId">The <see cref="EventStreamId"/> of the event being validated.</param>
+    /// <param name="batchClaims">Optional <see cref="ConstraintBatchClaims"/> shared by all events in a batch append, used to detect intra-batch duplicates.</param>
     public ConstraintValidationContext(
         IEnumerable<IConstraintValidator> validators,
         EventSourceId eventSourceId,
@@ -31,7 +32,8 @@ public record ConstraintValidationContext
         ExpandoObject content,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default)
+        EventStreamId? eventStreamId = default,
+        ConstraintBatchClaims? batchClaims = default)
     {
         EventSourceId = eventSourceId;
         EventTypeId = eventTypeId;
@@ -39,6 +41,7 @@ public record ConstraintValidationContext
         EventSourceType = eventSourceType;
         EventStreamType = eventStreamType;
         EventStreamId = eventStreamId;
+        BatchClaims = batchClaims;
         _updaters = validators.OfType<IHaveUpdateConstraintIndex>().Select(v => v.GetUpdateFor(this)).ToArray();
         Validators = validators.Where(_ => _.CanValidate(this)).ToArray();
     }
@@ -77,6 +80,11 @@ public record ConstraintValidationContext
     /// Gets the <see cref="IConstraintValidator">validators</see> involved in the context.
     /// </summary>
     public IEnumerable<IConstraintValidator> Validators { get; }
+
+    /// <summary>
+    /// Gets the <see cref="ConstraintBatchClaims"/> shared by all events in a batch append, or <see langword="null"/> when validating a single event.
+    /// </summary>
+    public ConstraintBatchClaims? BatchClaims { get; }
 
     /// <summary>
     /// Perform validation on a <see cref="EventToValidateForConstraints"/>.
