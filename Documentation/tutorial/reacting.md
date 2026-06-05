@@ -5,6 +5,15 @@ description: Notify the next member on the waitlist when a book comes back — a
 
 Our library can record what happens and show the catalog. One thing's missing: when a popular book comes back, the next person waiting for it should hear about it. Projections build *state*; for *doing something* — sending a notification, calling another system, kicking off a process — we reach for a **reactor**. Let's write one, and meet the rules that keep it well-behaved.
 
+In [event-modeling](/event-modeling/) terms this is the **automation pattern** — a processor watches for an event and acts. It's the last block in our model:
+
+```mermaid
+eventmodeling
+
+tf 01 evt Library.BookReturned
+tf 02 pcr Library.WaitlistNotifier
+```
+
 ## A reactor is just a class that watches for an event
 
 `IReactor` is a marker — there's no method to override. Instead you write a method whose **first parameter is the event you care about**, and Chronicle routes matching events to it. So "when a book is returned, notify the next person" reads almost exactly like that in code:

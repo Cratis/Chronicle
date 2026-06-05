@@ -7,17 +7,19 @@ Imagine you're building the system for a small town library. Books arrive, membe
 
 Over the next three short chapters we'll build it together with Chronicle. We won't rush to the finish — at each step we'll stop to look at what just happened and why, so that by the end you don't just have working code, you understand the model well enough to build your own.
 
-Here's the whole system we're heading toward — don't worry if the pieces aren't familiar yet, we'll meet each one in turn:
+Here's the whole system we're heading toward, drawn as an **[event model](/event-modeling/)** — read it left to right like a comic strip: facts happen over time, get folded into a read model you can query, and trigger a reaction. Don't worry if the pieces aren't familiar yet; we'll meet each one in turn.
 
 ```mermaid
-flowchart LR
-    Add["a book arrives"] --> BA["BookAdded"]
-    Borrow["a member borrows it"] --> BB["BookBorrowed"]
-    Return["they bring it back"] --> BR["BookReturned"]
-    BA & BB & BR --> P["a projection"]
-    P --> RM["the Books read model<br/>(title · on loan?)"]
-    BR -.->|a reactor| N["notify the next person"]
+eventmodeling
+
+tf 01 evt Library.BookAdded { title: string, isbn: string }
+tf 02 evt Library.BookBorrowed { memberName: string }
+tf 03 evt Library.BookReturned
+tf 04 rmo Library.Book ->> 01 ->> 02 ->> 03
+tf 05 pcr Library.WaitlistNotifier
 ```
+
+Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The `evt` blocks become `[EventType]` records, the `rmo` (built from all three events) becomes a `[ReadModel]` with a projection, and the `pcr` becomes an `IReactor`. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
 
 ## What you'll need
 

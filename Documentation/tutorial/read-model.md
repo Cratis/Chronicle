@@ -5,6 +5,17 @@ description: Turn the library's stream of events into a queryable Books read mod
 
 We can record that a book arrived, but the librarian can't *see* the catalog yet — the books live only as history in the log. In this chapter we'll fix that: we'll build a `Books` read model that always reflects the current state of every book, and — here's the part that surprises people coming from CRUD — we'll do it **without writing a single line that updates anything**.
 
+In [event-modeling](/event-modeling/) terms that's the **view pattern** — events fold into a read model the UI can query. It's the slice of the model we build in this chapter:
+
+```mermaid
+eventmodeling
+
+tf 01 evt Library.BookAdded
+tf 02 evt Library.BookBorrowed
+tf 03 evt Library.BookReturned
+tf 04 rmo Library.Book ->> 01 ->> 02 ->> 03
+```
+
 ## First, a couple more facts
 
 A book doesn't just arrive; it gets borrowed and brought back. Those are facts too, so they're events:
