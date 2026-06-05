@@ -1,428 +1,172 @@
-# Materialized Read Models - Pagination and Observation
+---
+uid: Chronicle.ReadModels.Materialized
+---
 
-The `IMaterializedReadModels` interface provides paginated access and real-time observation of materialized read model instances stored in sinks (MongoDB, SQL, etc.). This is useful when you need to work with large datasets efficiently or observe changes to stored read models.
+# Materialized Read Models
 
-## Overview
+When a projection or reducer processes an event, Chronicle persists the resulting read model instance in a *sink* — a database-backed store that holds the materialized state. The `Materialized` API gives you direct, paginated access to that stored state without replaying the event log.
 
-Materialized read models are already computed and stored in a database sink, making them ideal for:
+> [!IMPORTANT]
+> The `Materialized` API is **not** a substitute for working directly with the underlying database. It provides a simple, database-agnostic way to retrieve and observe stored read model instances using skip/take pagination. For advanced queries — filtering, sorting, aggregation, full-text search, joins — use the sink's native query capabilities (MongoDB queries, SQL queries, etc.) directly.
 
-- **Paginated queries** - Retrieve manageable subsets of large datasets
-- **Real-time monitoring** - Observe changes to stored instances via change streams
-- **Performance** - Skip expensive event replay when data is already materialized
-- **Large datasets** - Handle thousands or millions of instances efficiently
+## What Materialized Access Covers
 
-Access materialized read models through the `Materialized` property on `IReadModels`:
+The `Materialized` API is intentionally narrow. It answers one question well: *give me a page of instances I already know are stored in a sink*. This keeps it:
+
+- **Database-agnostic** — the same call works regardless of whether the sink is MongoDB, SQL, or any future backend
+- **Simple to use** — two methods, optional skip/take, and sensible defaults
+- **Safe for large datasets** — only the requested page is loaded, never the full collection
+
+What it does **not** cover:
+
+- Filtering by field value
+- Sorting by any property
+- Aggregation or count queries
+- Full-text or range searches
+- Complex joins or projections across collections
+
+For those needs, inject the sink's native client directly. If your sink is MongoDB, inject `IMongoCollection<TReadModel>`. If it is SQL, inject your `DbContext`. Those tools are purpose-built for complex queries and Chronicle does not try to replace them.
+
+## Accessing the API
+
+`IMaterializedReadModels` is exposed through `IReadModels.Materialized`:
 
 ```csharp
-// With explicit pagination
-var instances = await eventStore.ReadModels.Materialized.GetInstances<MyModel>(
-    skip: 10,
-    take: 20);
-
-// Using defaults (skip: 0, take: 50)
-var instances = await eventStore.ReadModels.Materialized.GetInstances<MyModel>();
+// Inject IEventStore, then reach through to the Materialized API
+var instances = await eventStore.ReadModels.Materialized.GetInstances<Order>();
 ```
 
-## Getting Paginated Instances
+## Getting Instances
 
-### Basic Pagination
+### Basic Usage
 
-Retrieve a specific page of instances:
+Retrieve the first page of stored instances using the defaults (skip: 0, take: 50):
 
 ```csharp
-public class ProductListService
-{
-    readonly IEventStore _eventStore;
-
-    public ProductListService(IEventStore eventStore)
-    {
-        _eventStore = eventStore;
-    }
-
-    public async Task<IEnumerable<Product>> GetProductPage(int pageNumber, int pageSize)
-    {
-        var skip = pageNumber * pageSize;
-        var products = await _eventStore.ReadModels.Materialized.GetInstances<Product>(
-            skip: skip,
-            take: pageSize);
-
-        return products;
-    }
-}
+var instances = await eventStore.ReadModels.Materialized.GetInstances<Order>();
 ```
 
-### Optional Parameters with Defaults
+### Pagination
 
-Both `skip` and `take` parameters are optional:
+Both `skip` and `take` are optional with sensible defaults. Use them for page-based or offset-based navigation:
 
 ```csharp
-// Get first 50 instances (using default skip: 0, take: 50)
-var instances = await readModels.Materialized.GetInstances<Order>();
+// First page of 20
+var page1 = await eventStore.ReadModels.Materialized.GetInstances<Order>(take: 20);
 
-// Get first 100 instances (using default skip: 0)
-var instances = await readModels.Materialized.GetInstances<Order>(take: 100);
+// Second page of 20
+var page2 = await eventStore.ReadModels.Materialized.GetInstances<Order>(skip: 20, take: 20);
 
-// Skip 20, get 50 instances (using default take: 50)
-var instances = await readModels.Materialized.GetInstances<Order>(skip: 20);
-
-// Explicit skip and take
-var instances = await readModels.Materialized.GetInstances<Order>(
-    skip: 0,
-    take: 50);
+// Third page of 20
+var page3 = await eventStore.ReadModels.Materialized.GetInstances<Order>(skip: 40, take: 20);
 ```
 
-### Type-Safe Parameters
+### Pagination Parameters
 
-The pagination parameters use strongly-typed concepts with implicit conversion:
+The parameters use strongly-typed concepts that convert implicitly from `int`:
+
+| Parameter | Type | Default | Named Constants |
+|---|---|---|---|
+| `skip` | `InstanceCountToSkip?` | `0` | `InstanceCountToSkip.Zero` |
+| `take` | `InstanceCount?` | `50` | `InstanceCount.Default`, `InstanceCount.Unlimited` |
 
 ```csharp
-// Implicit conversion from int (recommended)
-var instances = await readModels.Materialized.GetInstances<Order>(
-    skip: 0,
-    take: 50);
-
-// Explicit concept types (also supported)
-var instances = await readModels.Materialized.GetInstances<Order>(
+// Using named constants
+var instances = await eventStore.ReadModels.Materialized.GetInstances<Order>(
     skip: InstanceCountToSkip.Zero,
     take: InstanceCount.Default);
-
-// Using named constants
-var instances = await readModels.Materialized.GetInstances<Order>(
-    skip: InstanceCountToSkip.Zero,      // Predefined: skip nothing
-    take: InstanceCount.Default);        // Predefined: 50 items
 ```
 
-### Building a Paginated API
+### Building a Paged API Endpoint
 
 ```csharp
-public class OrdersController : ControllerBase
+[HttpGet]
+public async Task<IEnumerable<Order>> GetOrders(
+    [FromQuery] int page = 0,
+    [FromQuery] int pageSize = 20)
 {
-    readonly IEventStore _eventStore;
-
-    [HttpGet]
-    public async Task<ActionResult<PagedResult<Order>>> GetOrders(
-        [FromQuery] int page = 0,
-        [FromQuery] int pageSize = 20)
-    {
-        var skip = page * pageSize;
-        var orders = await _eventStore.ReadModels.Materialized.GetInstances<Order>(
-            skip: skip,
-            take: pageSize);
-
-        return Ok(new PagedResult<Order>
-        {
-            Items = orders,
-            Page = page,
-            PageSize = pageSize
-        });
-    }
+    return await _eventStore.ReadModels.Materialized.GetInstances<Order>(
+        skip: page * pageSize,
+        take: pageSize);
 }
 ```
 
-## Observing Instances
+## Observing Changes
 
-### Real-Time Monitoring
-
-Watch for changes to materialized instances:
+`ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
 
 ```csharp
-public class InventoryMonitor
+var subscription = eventStore.ReadModels.Materialized
+    .ObserveInstances<Product>(take: 50)
+    .Subscribe(products =>
+    {
+        // Called whenever the stored instances change
+        Console.WriteLine($"Products updated: {products.Count()} in view");
+    });
+
+// Dispose when done to release the change stream
+subscription.Dispose();
+```
+
+Observation relies on the sink's change stream mechanism:
+
+- **MongoDB** — uses native MongoDB change streams
+- **SQL** — uses polling-based change detection via `DbContext`
+
+> [!NOTE]
+> Always dispose observation subscriptions when the consumer is torn down to prevent resource leaks and keep change streams closed.
+
+### Observing in a Service
+
+```csharp
+public class ProductDashboard : IDisposable
 {
-    readonly IEventStore _eventStore;
-    IDisposable? _subscription;
+    readonly IDisposable _subscription;
 
-    public void StartMonitoring()
+    public ProductDashboard(IEventStore eventStore)
     {
-        var observable = _eventStore.ReadModels.Materialized.ObserveInstances<Product>(
-            skip: 0,
-            take: 100);
-
-        _subscription = observable.Subscribe(
-            products =>
-            {
-                Console.WriteLine($"Received {products.Count()} products");
-                foreach (var product in products)
-                {
-                    Console.WriteLine($"  {product.Name}: {product.StockLevel} units");
-                }
-            },
-            error => Console.WriteLine($"Error: {error}"),
-            () => Console.WriteLine("Observation completed"));
+        _subscription = eventStore.ReadModels.Materialized
+            .ObserveInstances<Product>(take: 100)
+            .Subscribe(UpdateView);
     }
 
-    public void StopMonitoring()
-    {
-        _subscription?.Dispose();
-    }
+    void UpdateView(IEnumerable<Product> products) { /* ... */ }
+
+    public void Dispose() => _subscription.Dispose();
 }
 ```
 
-### Optional Parameters with Defaults
+## When to Use the Materialized API
 
-Both `skip` and `take` parameters are optional for observation:
+Use `Materialized.GetInstances` and `ObserveInstances` when:
 
-```csharp
-// Observe first 50 instances (using default skip: 0, take: 50)
-var observable = readModels.Materialized.ObserveInstances<Product>();
+- You need a page of stored read model instances for a list view, data grid, or infinite scroll UI
+- You want real-time updates pushed to a connected UI without polling
+- The dataset is large and loading everything into memory via event replay would be too slow or too expensive
 
-// Observe first 100 instances (using default skip: 0)
-var observable = readModels.Materialized.ObserveInstances<Product>(take: 100);
+Do **not** use the `Materialized` API when:
 
-// Skip 20, observe 50 instances (using default take: 50)
-var observable = readModels.Materialized.ObserveInstances<Product>(skip: 20);
+- You need to filter by a specific field — query the sink directly
+- You need instances sorted by a property — query the sink directly
+- You need a count of matching records — query the sink directly
+- You need to run an aggregation — query the sink directly
 
-// Explicit skip and take
-var observable = readModels.Materialized.ObserveInstances<Product>(
-    skip: 0,
-    take: 50);
-```
+## Comparison with On-Demand GetInstances
 
-### Paginated Observation
-
-Observe a specific range of instances:
-
-```csharp
-public class TopOrdersWatcher
-{
-    public void WatchTopOrders()
-    {
-        // Watch only the first 50 orders
-        var observable = _eventStore.ReadModels.Materialized.ObserveInstances<Order>(
-            skip: 0,
-            take: 50);
-
-        observable.Subscribe(orders =>
-        {
-            var topOrder = orders.OrderByDescending(o => o.TotalAmount).FirstOrDefault();
-            if (topOrder != null)
-            {
-                Console.WriteLine($"Highest order: ${topOrder.TotalAmount}");
-            }
-        });
-    }
-}
-```
-
-### Live Dashboard Updates
-
-Push updates to connected clients:
-
-```csharp
-public class DashboardHub : Hub
-{
-    readonly IEventStore _eventStore;
-    readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
-
-    public async Task SubscribeToProducts(int page, int pageSize)
-    {
-        var connectionId = Context.ConnectionId;
-
-        var skip = page * pageSize;
-        var observable = _eventStore.ReadModels.Materialized.ObserveInstances<Product>(
-            skip: skip,
-            take: pageSize);
-
-        var subscription = observable.Subscribe(
-            async products =>
-            {
-                await Clients.Client(connectionId).SendAsync("ProductsUpdated", new
-                {
-                    page,
-                    pageSize,
-                    items = products
-                });
-            });
-
-        _subscriptions[connectionId] = subscription;
-    }
-
-    public override Task OnDisconnectedAsync(Exception? exception)
-    {
-        if (_subscriptions.TryRemove(Context.ConnectionId, out var subscription))
-        {
-            subscription.Dispose();
-        }
-        return base.OnDisconnectedAsync(exception);
-    }
-}
-```
-
-## Performance Considerations
-
-### When to Use Materialized Access
-
-Use `Materialized.GetInstances()` and `ObserveInstances()` when:
-
-- Working with projection-based or reducer-based read models stored in MongoDB or SQL
-- Dataset contains hundreds to millions of instances
-- Need efficient pagination without loading everything into memory
-- Want to observe changes to stored data via change streams
-
-### Memory Efficiency
-
-Paginated access loads only the requested page:
-
-```csharp
-// Efficient - only loads 20 instances
-var page1 = await readModels.Materialized.GetInstances<Order>(skip: 0, take: 20);
-var page2 = await readModels.Materialized.GetInstances<Order>(skip: 20, take: 20);
-
-// Less efficient for large datasets - loads everything
-var allOrders = await readModels.GetInstances<Order>();
-```
-
-### Change Stream Support
-
-Observation uses database change streams when available:
-
-- **MongoDB**: Uses native MongoDB change streams for real-time updates
-- **SQL Server**: Uses `DbContext.Observe()` with polling-based change detection
-- **In-Memory/Testing**: Simulated observation for testing scenarios
-
-## Use Cases
-
-### Paginated Data Grids
-
-Build efficient data tables with server-side pagination:
-
-```csharp
-public class OrderGridService
-{
-    public async Task<GridResult> LoadOrderGrid(GridRequest request)
-    {
-        var orders = await _eventStore.ReadModels.Materialized.GetInstances<Order>(
-            skip: request.Skip,
-            take: request.PageSize);
-
-        return new GridResult
-        {
-            Data = orders,
-            Skip = request.Skip,
-            PageSize = request.PageSize
-        };
-    }
-}
-```
-
-### Infinite Scrolling
-
-Implement progressive loading for infinite scroll UIs:
-
-```csharp
-public class InfiniteScrollService
-{
-    int _currentPage = 0;
-    const int PageSize = 20;
-
-    public async Task<IEnumerable<Product>> LoadNextPage()
-    {
-        var products = await _eventStore.ReadModels.Materialized.GetInstances<Product>(
-            skip: _currentPage * PageSize,
-            take: PageSize);
-
-        _currentPage++;
-        return products;
-    }
-}
-```
-
-### Real-Time Reporting
-
-Monitor top performers in real-time:
-
-```csharp
-public class SalesMonitor
-{
-    public void MonitorTopSellers()
-    {
-        _eventStore.ReadModels.Materialized.ObserveInstances<ProductSales>(
-            skip: 0,
-            take: 10)
-            .Subscribe(topSellers =>
-            {
-                Console.WriteLine("Top 10 Products:");
-                foreach (var product in topSellers.OrderByDescending(p => p.TotalSales))
-                {
-                    Console.WriteLine($"  {product.Name}: ${product.TotalSales}");
-                }
-            });
-    }
-}
-```
-
-## Comparison with GetInstances
-
-| Feature | `ReadModels.GetInstances<T>()` | `ReadModels.Materialized.GetInstances<T>(skip, take)` |
-|---------|--------------------------------|-------------------------------------------------------|
-| **Data Source** | Event log replay | Materialized sink (DB) |
-| **Performance** | Slower (event replay) | Faster (direct DB query) |
-| **Pagination** | No | Yes (skip/take) |
-| **Dataset Size** | Small to medium | Small to very large |
-| **Memory Usage** | Loads all instances | Loads only requested page |
-| **Currency** | Always up-to-date | Eventually consistent |
-
-## Best Practices
-
-### Always Dispose Subscriptions
-
-Prevent memory leaks by disposing observation subscriptions:
-
-```csharp
-public class ManagedObserver : IDisposable
-{
-    IDisposable? _subscription;
-
-    public void Start()
-    {
-        _subscription = _eventStore.ReadModels.Materialized
-            .ObserveInstances<Product>(0, 100)
-            .Subscribe(HandleUpdate);
-    }
-
-    public void Dispose()
-    {
-        _subscription?.Dispose();
-    }
-}
-```
-
-### Use Appropriate Page Sizes
-
-Balance between network overhead and responsiveness:
-
-```csharp
-// Good for UI pagination
-const int UiPageSize = 20;
-
-// Good for background processing
-const int BatchPageSize = 100;
-
-// Too small - excessive round trips
-const int TooSmall = 5;
-
-// Too large - high memory and latency
-const int TooLarge = 10000;
-```
-
-### Handle Errors Gracefully
-
-```csharp
-public void ObserveWithErrorHandling()
-{
-    _eventStore.ReadModels.Materialized.ObserveInstances<Order>(0, 50)
-        .Retry(3)
-        .Subscribe(
-            orders => ProcessOrders(orders),
-            error => _logger.LogError(error, "Observation failed"),
-            () => _logger.LogInformation("Observation completed"));
-}
-```
+| | `ReadModels.GetInstances<T>()` | `ReadModels.Materialized.GetInstances<T>()` |
+|---|---|---|
+| **Data source** | Event log replay | Materialized sink (database) |
+| **Consistency** | Strong — always current | Eventual — milliseconds behind |
+| **Performance** | Proportional to event history | O(1) — direct database lookup |
+| **Pagination** | No | Yes — skip/take |
+| **Large datasets** | Slow — replays all events | Fast — loads only the requested page |
+| **Filtering/sorting** | Post-fetch with LINQ | Not supported — query the sink directly |
 
 ## Related Topics
 
-- [Getting a Collection of Instances](getting-collection-instances.md) - Retrieve all instances via event replay
-- [Watching Read Models](watching-read-models.md) - Observe read model changesets
-- [Projections](../projections/index.md) - Define materialized read models
-- [Reducers](../reducers/index.md) - Define state-based read models
-- [MongoDB Storage](../storage/mongodb.md) - MongoDB sink implementation
-- [SQL Storage](../storage/sql.md) - SQL Server sink implementation
+- [Consistency Models](consistency.md) — Understanding strong vs. eventual consistency
+- [Getting a Single Instance](getting-single-instance.md) — On-demand computation for a single instance
+- [Getting a Collection of Instances](getting-collection-instances.md) — On-demand collection retrieval via event replay
+- [Watching Read Models](watching-read-models.md) — Observe event-log-sourced read model changesets
+- [Projections](../projections/index.md) — How read models are produced from events
+- [Reducers](../reducers/index.md) — Imperative state-building from events
