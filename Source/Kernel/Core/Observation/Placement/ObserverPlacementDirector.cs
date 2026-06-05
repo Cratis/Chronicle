@@ -17,7 +17,7 @@ public class ObserverPlacementDirector(IOptions<ChronicleOptions> options) : IPl
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
         // Check if Observers are allowed on this silo
-        if (!options.Value.Clustering.Observers)
+        if (!options.Value.Clustering.Roles.Observers)
         {
             throw new InvalidOperationException(
                 "Observers placement is disabled in clustering configuration for this silo.");

@@ -17,7 +17,7 @@ public class EventSequencePlacementDirector(IOptions<ChronicleOptions> options) 
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
         // Check if EventSequences are allowed on this silo
-        if (!options.Value.Clustering.EventSequences)
+        if (!options.Value.Clustering.Roles.EventSequences)
         {
             throw new InvalidOperationException(
                 "EventSequences placement is disabled in clustering configuration for this silo.");
