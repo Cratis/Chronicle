@@ -52,7 +52,7 @@ public record OrderPlaced(OrderId Id, Money Total, Money? Discount);
 
 ## Capture the decision, not the field write
 
-The temptation coming from CRUD is to mirror table columns: a `Customer` changed, so emit `CustomerUpdated`. But the value of event sourcing is in the *meaning*. `AddressChanged` tells you a customer moved; a generic update tells you nothing. Model the business decision or transition, and the audit trail, analytics, and reactions become possible for free.
+The temptation coming from CRUD is to mirror table columns: a `Customer` changed, so emit `CustomerUpdated`. But the value of event sourcing is in the *meaning*. `AddressChanged` tells you a customer moved; a generic update tells you nothing. Model the business decision or transition, and the audit trail, analytics, and reactions have something precise to work from.
 
 ## Carry what was true then — and only that
 

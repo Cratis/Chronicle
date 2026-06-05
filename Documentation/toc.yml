@@ -2,7 +2,7 @@
   href: index.md
 - name: Why Event Sourcing
   href: why-event-sourcing.md
-- name: Coming from CRUD and EF Core
+- name: CRUD, EF Core, and Chronicle
   href: coming-from-crud.md
 - name: Understanding constraints and event evolution
   href: understanding-constraints-and-evolution.md

@@ -1,9 +1,9 @@
 ---
-title: Coming from CRUD and Entity Framework
-description: If you build apps with EF Core and think in tables, rows, and SaveChanges, here's how those ideas translate to Chronicle — and what genuinely changes.
+title: CRUD, EF Core, and Chronicle
+description: If you build apps with EF Core and think in tables, rows, and SaveChanges, here's how those ideas translate to Chronicle.
 ---
 
-If your instinct is to add a table, map an entity, and call `SaveChanges()`, you already have the muscle memory you need — it just points at a different target. This page translates the CRUD/EF Core model into Chronicle so you can stop translating in your head.
+If your instinct is to add a table, map an entity, and call `SaveChanges()`, you already have useful muscle memory. This page maps the CRUD/EF Core model onto Chronicle so the differences are explicit.
 
 ## The mental shift in one sentence
 

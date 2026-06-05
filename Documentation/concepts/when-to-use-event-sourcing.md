@@ -37,4 +37,4 @@ You don't have to choose globally. Event-source the part of the system where his
 ## Next
 
 - Convinced it fits? Start with [Get started](../get-started/) and the [tutorial](../tutorial/).
-- Coming from a CRUD/EF Core background? Read [Coming from CRUD and Entity Framework](../coming-from-crud.md).
+- Comparing with a CRUD/EF Core model? Read [CRUD, EF Core, and Chronicle](../coming-from-crud.md).

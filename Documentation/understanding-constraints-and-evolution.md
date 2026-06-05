@@ -8,7 +8,7 @@ Two questions stop a lot of teams at the door of event sourcing, and they're goo
 1. **"If state is derived from events, how do I stop two users registering the same email?"** There's no table to put a `UNIQUE` index on.
 2. **"Events are immutable — so what happens when I need to rename or split a field a year from now?"** You can't go back and edit history.
 
-Both have clean answers in Chronicle, and both are handled in the **kernel** — the server — so every client gets them for free. This page is the mental model; each section links to the reference and the recipe that take you further.
+Both have clean answers in Chronicle, and both are handled in the **kernel** — the server — so every client gets the same behavior. This page is the mental model; each section links to the reference and the recipe that take you further.
 
 ## Enforcing uniqueness without a unique index
 
