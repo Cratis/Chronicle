@@ -18,7 +18,7 @@ public class and_event_has_explicit_subject : given.all_dependencies
         {
             ExtensionData = new Dictionary<string, object?>
             {
-                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
+                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata("PII", string.Empty) } }
             }
         };
         _context = CreateContext(EventSourceIdValue, (Subject)SubjectValue);

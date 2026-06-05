@@ -25,7 +25,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
         {
             ExtensionData = new Dictionary<string, object?>
             {
-                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
+                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata("PII", string.Empty) } }
             }
         };
 

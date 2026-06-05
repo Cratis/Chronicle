@@ -6,6 +6,8 @@
   href: getting-single-instance.md
 - name: Getting a Collection of Instances
   href: getting-collection-instances.md
+- name: Materialized Read Models
+  href: materialized-pagination.md
 - name: Getting Snapshots
   href: getting-snapshots.md
 - name: Watching Read Models

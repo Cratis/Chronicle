@@ -10,6 +10,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps.for_EncryptChangeset.given;
@@ -49,7 +50,7 @@ public class all_dependencies : Specification
         _objectComparer.Compare(Arg.Any<ExpandoObject>(), Arg.Any<ExpandoObject>(), out Arg.Any<IEnumerable<PropertyDifference>>())
             .Returns(true);  // true = equal (no differences)
 
-        _step = new EncryptChangeset(_complianceManager, _expandoObjectConverter, _objectComparer, EventStore, EventStoreNamespace);
+        _step = new EncryptChangeset(new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), _objectComparer, EventStore, EventStoreNamespace);
     }
 
     protected ProjectionEventContext CreateContext(string eventSourceId, Subject? subject = null)

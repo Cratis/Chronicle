@@ -2,9 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -13,14 +12,12 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 /// Represents an implementation of <see cref="ICanPerformProjectionPipelineStep"/> that encrypts
 /// PII fields in the current state and writes the compliance subject into the document before saving.
 /// </summary>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for encrypting PII fields.</param>
-/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting PII fields.</param>
 /// <param name="objectComparer">The <see cref="IObjectComparer"/> for computing property differences.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this step belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this step belongs to.</param>
 public class EncryptChangeset(
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IReadModelsCompliance readModelsCompliance,
     IObjectComparer objectComparer,
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace) : ICanPerformProjectionPipelineStep
@@ -43,14 +40,12 @@ public class EncryptChangeset(
         currentStateAsDictionary.TryGetValue(WellKnownProperties.Subject, out var currentSubjectValue);
         var currentSubject = currentSubjectValue as string;
 
-        var encrypted = await ReadModelComplianceHelper.Apply(
-            complianceManager,
+        var encrypted = await readModelsCompliance.Apply(
             eventStore,
             eventStoreNamespace,
             schema,
             identifier,
-            currentState,
-            expandoObjectConverter);
+            currentState);
 
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
         var propertyDifferences = hasDifferences && differences is not null

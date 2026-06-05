@@ -319,7 +319,7 @@ public partial class Observer
     {
         var eventsToDecrypt = events as AppendedEvent[] ?? events.ToArray();
         await EnsureEventTypeSchemasFor(eventsToDecrypt);
-        return await eventCompliance.DecryptEvents(eventsToDecrypt, _eventTypeSchemas);
+        return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
     }
 
     async Task EnsureEventTypeSchemasFor(IEnumerable<AppendedEvent> events)

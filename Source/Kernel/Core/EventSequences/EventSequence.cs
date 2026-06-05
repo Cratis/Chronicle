@@ -271,13 +271,17 @@ public class EventSequence(
         {
             events = events as IList<EventToAppend> ?? events.ToList();
 
-            var tasks = events.Select(async e =>
+            // Validate sequentially with a shared set of batch claims so that two events in the same batch
+            // cannot both claim the same unique constraint value — the persisted index is only updated after
+            // the whole batch has been appended, so without this earlier events in the batch are invisible.
+            var batchClaims = new ConstraintBatchClaims();
+            var getValidAndCompliantEvents = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+            foreach (var e in events)
             {
-                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject);
-                return (Event: e, Result: result);
-            });
+                var result = await GetValidAndCompliantEvent(e.EventSourceType, e.EventSourceId, e.eventStreamType, e.eventStreamId, e.EventType, e.Content, correlationId, e.Subject, batchClaims);
+                getValidAndCompliantEvents.Add((e, result));
+            }
 
-            var getValidAndCompliantEvents = await Task.WhenAll(tasks);
             var failedEvents = getValidAndCompliantEvents.Where(eventAndResult => !eventAndResult.Result.IsSuccess).ToList();
 
             if (failedEvents.Count != 0)
@@ -595,7 +599,8 @@ public class EventSequence(
         EventType eventType,
         JsonObject content,
         CorrelationId correlationId,
-        Subject? subject = null)
+        Subject? subject = null,
+        ConstraintBatchClaims? batchClaims = default)
     {
         try
         {
@@ -606,7 +611,7 @@ public class EventSequence(
                 return schemaError;
             }
 
-            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId);
+            var checkConstraintViolation = await CheckConstraintViolation(eventSourceId, eventType, correlationId, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
             if (checkConstraintViolation.TryGetError(out var error))
             {
                 return error;
@@ -659,9 +664,10 @@ public class EventSequence(
         ExpandoObject compliantEventAsExpandoObject,
         EventSourceType? eventSourceType = default,
         EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default)
+        EventStreamId? eventStreamId = default,
+        ConstraintBatchClaims? batchClaims = default)
     {
-        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId);
+        var constraintContext = _constraints!.Establish(eventSourceId, eventType.Id, compliantEventAsExpandoObject, eventSourceType, eventStreamType, eventStreamId, batchClaims);
         var constraintValidationResult = await constraintContext.Validate();
         if (constraintValidationResult.IsValid)
         {

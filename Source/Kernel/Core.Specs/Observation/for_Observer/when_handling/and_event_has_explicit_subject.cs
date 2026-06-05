@@ -28,7 +28,7 @@ public class and_event_has_explicit_subject : given.an_observer_with_subscriptio
     }
 
     [Fact] void should_use_subject_value_as_identifier() =>
-        _eventCompliance.Received(1).DecryptEvents(
+        _eventCompliance.Received(1).Release(
             Arg.Is<IEnumerable<AppendedEvent>>(events => events.Any(e => e.Context.Subject == _subject)),
             Arg.Any<IDictionary<EventType, EventTypeSchema>>());
 }

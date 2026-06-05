@@ -22,7 +22,7 @@ public class and_event_has_pii_property : given.an_observer_with_subscription_an
         ((IDictionary<string, object?>)_decryptedEvent.Content)["ssn"] = "123-45-6789";
 
         _eventCompliance
-            .DecryptEvents(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
+            .Release(Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
             .Returns(_ => Task.FromResult(new[] { _decryptedEvent }));
 
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
@@ -36,7 +36,7 @@ public class and_event_has_pii_property : given.an_observer_with_subscription_an
     async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
     [Fact] void should_call_decrypt_events() =>
-        _eventCompliance.Received(1).DecryptEvents(
+        _eventCompliance.Received(1).Release(
             Arg.Any<IEnumerable<AppendedEvent>>(),
             Arg.Any<IDictionary<EventType, EventTypeSchema>>());
 

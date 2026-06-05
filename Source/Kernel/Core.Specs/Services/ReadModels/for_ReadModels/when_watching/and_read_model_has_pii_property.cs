@@ -21,7 +21,7 @@ public class and_read_model_has_pii_property : given.all_dependencies
         {
             ExtensionData = new Dictionary<string, object?>
             {
-                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata(Guid.NewGuid(), string.Empty) } }
+                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata("PII", string.Empty) } }
             }
         };
 
@@ -48,10 +48,6 @@ public class and_read_model_has_pii_property : given.all_dependencies
             .Do(ci => _observerCaptured.SetResult(ci.Arg<IProjectionChangesetObserver>()));
         _notifier.Subscribe(Arg.Any<IProjectionChangesetObserver>()).Returns(Task.CompletedTask);
         _notifier.Unsubscribe(Arg.Any<IProjectionChangesetObserver>()).Returns(Task.CompletedTask);
-
-        _complianceManager
-            .Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
-            .Returns(ci => Task.FromResult(new JsonObject { ["name"] = "decrypted-value" }));
     }
 
     async Task Because()
@@ -71,5 +67,5 @@ public class and_read_model_has_pii_property : given.all_dependencies
         await observer.OnChangeset("test-namespace", "key-1", model);
     }
 
-    [Fact] void should_call_compliance_manager_release() => _complianceManager.Received(1).Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), "some-subject", Arg.Any<JsonObject>());
+    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Is<JsonObject>(o => o[WellKnownProperties.Subject]!.GetValue<string>() == "some-subject"));
 }

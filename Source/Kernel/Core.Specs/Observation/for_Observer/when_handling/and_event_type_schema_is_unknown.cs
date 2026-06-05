@@ -35,7 +35,7 @@ public class and_event_type_schema_is_unknown : given.an_observer_with_subscript
     }
 
     [Fact] void should_call_decrypt_events_on_compliance_helper() =>
-        _eventCompliance.Received(1).DecryptEvents(
+        _eventCompliance.Received(1).Release(
             Arg.Any<IEnumerable<AppendedEvent>>(),
             Arg.Any<IDictionary<EventType, EventTypeSchema>>());
 

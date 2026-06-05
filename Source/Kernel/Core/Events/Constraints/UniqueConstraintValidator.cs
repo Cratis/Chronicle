@@ -38,6 +38,15 @@ public class UniqueConstraintValidator(
         var value = propertiesWithValues.GetValue();
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
         var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition, value, scopeKey);
+
+        // The persisted index does not yet reflect events earlier in the same batch, so also reconcile against
+        // the in-batch claims to catch two events in one batch claiming the same value for different sources.
+        if (isAllowed && context.BatchClaims is not null)
+        {
+            var claimValue = definition.IgnoreCasing ? value.ToLowerInvariant() : value;
+            isAllowed = context.BatchClaims.TryClaim(definition.Name, scopeKey, claimValue, context.EventSourceId);
+        }
+
         return isAllowed ?
             ConstraintValidationResult.Success :
             new()
