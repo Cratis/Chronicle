@@ -3,11 +3,10 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Json;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -22,16 +21,14 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
 /// <param name="sink"><see cref="ISink"/> to use in pipeline.</param>
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
-/// <param name="complianceManager">The <see cref="IJsonComplianceManager"/> for encrypting and decrypting PII fields.</param>
-/// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
+/// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting PII fields.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this pipeline belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
 public class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
     IObjectComparer objectComparer,
-    IJsonComplianceManager complianceManager,
-    IExpandoObjectConverter expandoObjectConverter,
+    IReadModelsCompliance readModelsCompliance,
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace) : IReducerPipeline
 {
@@ -61,13 +58,11 @@ public class ReducerPipeline(
 
         if (initial is not null)
         {
-            initial = await ReadModelComplianceHelper.Release(
-                complianceManager,
+            initial = await readModelsCompliance.Release(
                 eventStore,
                 eventStoreNamespace,
                 schema,
-                initial,
-                expandoObjectConverter);
+                initial);
         }
 
         var result = await reducer(context.Events, initial);
@@ -86,14 +81,12 @@ public class ReducerPipeline(
         }
         else
         {
-            var encryptedState = await ReadModelComplianceHelper.Apply(
-                complianceManager,
+            var encryptedState = await readModelsCompliance.Apply(
                 eventStore,
                 eventStoreNamespace,
                 schema,
                 identifier,
-                result.ReadModelState,
-                expandoObjectConverter);
+                result.ReadModelState);
 
             if (!objectComparer.Compare(initial, encryptedState, out var differences))
             {

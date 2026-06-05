@@ -326,7 +326,7 @@ public class EventStoreForTesting : IEventStore
             kernelNamespaceName).GetAwaiter().GetResult();
 
         var grainFactory = new InProcessGrainFactory(grain);
-        var eventCompliance = new KernelCore::Cratis.Chronicle.Compliance.EventCompliance(
+        var eventCompliance = new KernelCore::Cratis.Chronicle.Events.EventCompliance(
             new KernelCore::Cratis.Chronicle.Compliance.JsonComplianceManager(
                 new KnownInstancesOf<KernelCore::Cratis.Chronicle.Compliance.IJsonCompliancePropertyValueHandler>()),
             new ExpandoObjectConverter(new TypeFormats()));

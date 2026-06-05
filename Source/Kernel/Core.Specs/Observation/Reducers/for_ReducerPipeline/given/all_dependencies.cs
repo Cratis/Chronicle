@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sinks;
 
@@ -78,8 +79,7 @@ public class all_dependencies : Specification
             _readModelDefinition,
             _sink,
             _objectComparer,
-            _complianceManager,
-            _expandoObjectConverter,
+            new ReadModelsCompliance(_complianceManager, _expandoObjectConverter),
             EventStore,
             EventStoreNamespace);
     }

@@ -3,10 +3,12 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
@@ -31,6 +33,8 @@ public class all_dependencies : Specification
     protected ReadModelDefinition _readModelDefinition;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected IJsonComplianceManager _complianceManager;
+    protected IReadModelsCompliance _complianceHelper;
+    protected IEventCompliance _eventCompliance;
     protected IReducerMediator _reducerMediator;
     protected Contracts.ReadModels.IReadModels _service;
 
@@ -68,24 +72,39 @@ public class all_dependencies : Specification
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonComplianceManager>();
         _reducerMediator = Substitute.For<IReducerMediator>();
-        var readModelComplianceHelper = Substitute.For<IReadModelsCompliance>();
+        _eventCompliance = Substitute.For<IEventCompliance>();
+        _complianceHelper = Substitute.For<IReadModelsCompliance>();
 
-        // Mock the Release method to return the input instances unchanged
-        readModelComplianceHelper.Release(
-            Arg.Any<string>(),
-            Arg.Any<string>(),
+        // Mock the Release methods to return the input unchanged by default.
+        _complianceHelper.Release(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
             Arg.Any<JsonSchema>(),
             Arg.Any<IEnumerable<ExpandoObject>>())
-            .Returns(callInfo => Task.FromResult<IList<ExpandoObject>>(
+            .Returns(callInfo => Task.FromResult<IEnumerable<ExpandoObject>>(
                 callInfo.ArgAt<IEnumerable<ExpandoObject>>(3).ToList()));
+
+        _complianceHelper.Release(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<JsonSchema>(),
+            Arg.Any<ExpandoObject>())
+            .Returns(callInfo => Task.FromResult(callInfo.ArgAt<ExpandoObject>(3)));
+
+        _complianceHelper.ReleaseJson(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<JsonSchema>(),
+            Arg.Any<JsonObject>())
+            .Returns(callInfo => Task.FromResult(callInfo.ArgAt<JsonObject>(3)));
 
         _service = new ReadModels(
             _grainFactory,
             _storage,
             _expandoObjectConverter,
             _reducerMediator,
-            readModelComplianceHelper,
-            _complianceManager,
+            _complianceHelper,
+            _eventCompliance,
             new JsonSerializerOptions());
     }
 }
