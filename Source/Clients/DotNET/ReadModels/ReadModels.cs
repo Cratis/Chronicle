@@ -171,7 +171,14 @@ public class ReadModels(
     {
         var readModelType = typeof(TReadModel);
         var result = await GetInstanceById(readModelType, key, sessionId);
-        return (TReadModel)result;
+        var instance = (TReadModel)result;
+
+        if (reducers.HasFor(readModelType))
+        {
+            return await Release(instance);
+        }
+
+        return instance;
     }
 
     /// <inheritdoc/>
@@ -241,7 +248,7 @@ public class ReadModels(
         if (reducers.HasFor(readModelType))
         {
             var reducerInstances = await reducers.GetInstances(readModelType, eventCount);
-            return reducerInstances.Cast<TReadModel>();
+            return await Release(reducerInstances.Cast<TReadModel>());
         }
 
         var readModelIdentifier = readModelType.GetReadModelIdentifier();
@@ -303,7 +310,8 @@ public class ReadModels(
             var concreteReducers = reducers as Reducers.Reducers;
             if (concreteReducers is not null)
             {
-                return await concreteReducers.GetSnapshotsById<TReadModel>(readModelKey);
+                var reducerSnapshots = await concreteReducers.GetSnapshotsById<TReadModel>(readModelKey);
+                return await ReleaseSnapshotInstances(reducerSnapshots);
             }
 
             // Fallback to generic retrieval if not the concrete type
@@ -334,7 +342,7 @@ public class ReadModels(
                     snapshot.CorrelationId));
             }
 
-            return snapshots;
+            return await ReleaseSnapshotInstances(snapshots);
         }
 
         throw new UnknownReadModel(typeof(TReadModel));
@@ -440,6 +448,17 @@ public class ReadModels(
         }
 
         return JsonSerializer.Deserialize<TReadModel>(response.Payload, jsonSerializerOptions) ?? instance;
+    }
+
+    async Task<IEnumerable<ReadModelSnapshot<TReadModel>>> ReleaseSnapshotInstances<TReadModel>(IEnumerable<ReadModelSnapshot<TReadModel>> snapshots)
+    {
+        var released = new List<ReadModelSnapshot<TReadModel>>();
+        foreach (var snapshot in snapshots)
+        {
+            released.Add(snapshot with { Instance = await Release(snapshot.Instance) });
+        }
+
+        return released;
     }
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
