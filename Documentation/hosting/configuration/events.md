@@ -14,5 +14,5 @@ Event configuration controls how Chronicle Server queues appended events.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| queues | number | 8 | Number of appended event queues to use |
+| queues | number | 2 | Number of appended event queues to use |
 

@@ -8,12 +8,13 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 
 ```json
 {
-  "Chronicle": {
-    "Url": "chronicle://localhost:35000",
-    "Tls": {
-      "CertificatePath": "/path/to/certificate.pfx",
-      "CertificatePassword": "your-password",
-      "Disable": false
+  "Cratis": {
+    "Chronicle": {
+      "ConnectionString": "chronicle://localhost:35000",
+      "Tls": {
+        "CertificatePath": "/path/to/certificate.pfx",
+        "CertificatePassword": "your-password"
+      }
     }
   }
 }
@@ -28,8 +29,7 @@ var options = new ChronicleOptions
     Tls = new Tls
     {
         CertificatePath = "/path/to/certificate.pfx",
-        CertificatePassword = "your-password",
-        Disable = false
+        CertificatePassword = "your-password"
     }
 };
 
@@ -42,7 +42,7 @@ var client = new ChronicleClient(options);
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
 | CertificatePassword | string | null | Password for the certificate file |
-| Disable | boolean | false | Disable TLS for development servers running without TLS |
+| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. To connect to a non-TLS development server, use `?disableTls=true` in the connection string (see below) |
 
 ## Connection string option
 
@@ -78,6 +78,6 @@ The client validates server certificates using standard TLS rules:
 1. Ensure the server certificate is valid and not expired.
 2. Verify the client trusts the certificate authority.
 3. For development, install the self-signed certificate in the system trust store.
-4. As a last resort for development only, set `Disable` to true.
+4. As a last resort for development only, disable TLS with `?disableTls=true` in the connection string.
 
 
