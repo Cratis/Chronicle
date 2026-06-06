@@ -34,8 +34,8 @@ public class BankAccountService(IEventLog eventLog)
     public async Task OpenAccount(AccountId accountId, string accountName)
     {
         var concurrencyScope = new ConcurrencyScope(
-            sequenceNumber: 42,  // Expected sequence number
-            eventSourceId: accountId
+            SequenceNumber: 42,  // Expected sequence number
+            EventSourceId: accountId
         );
 
         await eventLog.Append(

@@ -37,7 +37,7 @@ This throws `MissingMigrationForEventTypeGeneration`.
 ### Invalid chain — no migrators at all
 
 ```text
-[EventType(3)]               ✗  no migrators defined
+[EventType(generation: 3)]   ✗  no migrators defined
 ```
 
 This throws `MissingEventTypeMigrators`.
@@ -50,7 +50,7 @@ When a new generation adds a property that did not exist in older events, declar
 [EventType]
 public record AuthorRegisteredV1(string Name);
 
-[EventType(2)]
+[EventType(generation: 2)]
 public record AuthorRegistered(string Name, string Status);
 
 public class AuthorRegisteredMigration : EventTypeMigration<AuthorRegistered, AuthorRegisteredV1>
