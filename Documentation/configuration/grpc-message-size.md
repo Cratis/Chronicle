@@ -13,7 +13,7 @@ You can configure the message sizes when creating a `ChronicleClient` or through
 ```csharp
 var options = new ChronicleOptions
 {
-    Url = new ChronicleConnectionString("chronicle://localhost:35000"),
+    ConnectionString = "chronicle://localhost:35000",
     MaxReceiveMessageSize = 200 * 1024 * 1024, // 200 MB
     MaxSendMessageSize = 200 * 1024 * 1024      // 200 MB
 };
@@ -23,25 +23,27 @@ var client = new ChronicleClient(options);
 
 ## Configuration via appsettings.json
 
-For ASP.NET Core applications, configure message sizes in `appsettings.json`:
+For ASP.NET Core applications, configure message sizes under the `Cratis:Chronicle` section of `appsettings.json`:
 
 ```json
 {
-  "Chronicle": {
-    "Url": "chronicle://localhost:35000",
-    "MaxReceiveMessageSize": 209715200,
-    "MaxSendMessageSize": 209715200
+  "Cratis": {
+    "Chronicle": {
+      "ConnectionString": "chronicle://localhost:35000",
+      "MaxReceiveMessageSize": 209715200,
+      "MaxSendMessageSize": 209715200
+    }
   }
 }
 ```
 
 ## Configuration via Environment Variables
 
-Message sizes can also be set using environment variables:
+Message sizes can also be set using environment variables. .NET maps the `__` separator onto nested configuration keys:
 
 ```bash
-Chronicle__MaxReceiveMessageSize=209715200
-Chronicle__MaxSendMessageSize=209715200
+Cratis__Chronicle__MaxReceiveMessageSize=209715200
+Cratis__Chronicle__MaxSendMessageSize=209715200
 ```
 
 ## Understanding the Error
@@ -72,4 +74,3 @@ var options = new ChronicleOptions
     MaxSendMessageSize = null     // Uses gRPC default of 4 MB - not recommended
 };
 ```
-

@@ -8,14 +8,14 @@ import SimpleCard from '@components/SimpleCard.astro';
 import TopicHero from '@components/TopicHero.astro';
 
 <TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
-Store **every change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, storage choice, Orleans-based processing, and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
+For information systems, this is the default architecture we recommend: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, storage choice, Orleans-based processing, and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
 </TopicHero>
 
 ## Start here
 
 <CardGrid>
   <SimpleCard title="Why event sourcing" icon="approve-check" link="/chronicle/why-event-sourcing/">
-    What keeping the full history buys you — audit, time-travel, many read models from one source of truth — and when *not* to reach for it.
+    Why we see full history as the default for information systems — audit, time-travel, many read models from one source of truth — and where the exceptions are.
   </SimpleCard>
   <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
     Scaffold a project from a template and watch one event flow through a projection and a reactor — in minutes.
@@ -79,4 +79,4 @@ Store **every change as an immutable event** — the complete history of what ha
   </SimpleCard>
 </CardGrid>
 
-Chronicle stands on its own — run it from any .NET host, with no other Cratis product required. When you want a typed full-stack app on top, [Arc](/arc/) builds on Chronicle and [Components](/components/) renders it. See [Why developers choose Cratis](/why-cratis/) for how the pieces fit — and which to reach for first.
+Chronicle stands on its own — run it from any .NET host, with no other Cratis product required. When you want a typed full-stack app on top, [Arc](/arc/) adds the CQRS boundary and [Components](/components/) renders it. CQRS and event sourcing fit naturally together, but neither depends on the other. See [Why developers choose Cratis](/why-cratis/) for how the pieces fit.

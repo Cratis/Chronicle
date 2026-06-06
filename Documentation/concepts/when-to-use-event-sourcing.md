@@ -1,13 +1,13 @@
 ---
 title: When to use event sourcing
-description: An honest look at where event sourcing pays off, where it costs more than it returns, and the trade-offs to weigh before you commit.
+description: An honest look at why event sourcing is the Cratis default for information systems, where it pays off, and where a current-state slice can stay simpler.
 ---
 
-Event sourcing is powerful, but it is not free. The most useful thing the docs can do is tell you *when not to reach for it* — so you adopt it where it pays off and avoid it where it just adds concepts. [Why Event Sourcing](../why-event-sourcing.md) makes the case *for* it; this page is the honest counterweight.
+Event sourcing is the Cratis default for information systems, but it is not free. The useful question is not "can this be event-sourced?" It is "which parts of this system carry meaningful facts over time, and which parts are genuinely just current-state data?" [Why Event Sourcing](../why-event-sourcing.md) makes the case for the default; this page names the boundaries.
 
-## Where it pays off
+## Where it pays off by default
 
-Event sourcing earns its keep when **history and change are part of the problem**, not an afterthought:
+Event sourcing earns its keep when **history and change are part of the problem**, which is true for most business-facing information systems:
 
 - **Audit and compliance** — you need a complete, tamper-evident record of what happened and when. The event log *is* the audit trail.
 - **Process-heavy domains** — orders, claims, onboarding, logistics: things move through states and the transitions matter.
@@ -15,7 +15,7 @@ Event sourcing earns its keep when **history and change are part of the problem*
 - **Multiple read shapes from the same facts** — you want several specialized [read models](../read-models/) over one stream of truth.
 - **Integration and reactions** — other parts of the system need to act when something happens.
 
-## Where it costs more than it returns
+## Where to be skeptical
 
 Be skeptical when:
 
@@ -32,7 +32,7 @@ Be skeptical when:
 
 ## A middle path
 
-You don't have to choose globally. Event-source the part of the system where history matters (the core domain, the process), and keep plain CRUD for the parts that are genuinely just data (reference tables, settings). Cratis is happy alongside a relational or document store for the CRUD bits.
+You don't have to choose globally. Event-source the core domain and the processes that define the system, and keep plain CRUD for parts that are genuinely just current-state data: reference tables, settings, or small admin surfaces. Cratis is happy alongside a relational or document store for those bits, and Arc can put the same CQRS boundary over them.
 
 ## Next
 
