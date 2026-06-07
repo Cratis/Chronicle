@@ -7,6 +7,8 @@ uid: Chronicle.Testing.ReadModels.Scenario
 
 It auto-detects how `TReadModel` is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
 
+In a [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
+
 ## Why use ReadModelScenario
 
 Integration tests against a live database are accurate but slow and fragile. `ReadModelScenario<TReadModel>` runs the same projection and reducer logic entirely in-process using null-stub storage, so your test suite stays fast without sacrificing correctness.
@@ -16,18 +18,26 @@ Integration tests against a live database are accurate but slow and fragile. `Re
 `ReadModelScenario<TReadModel>` is in the `Cratis.Chronicle.Testing` NuGet package:
 
 ```bash
+dotnet add package Cratis.Specifications.XUnit
 dotnet add package Cratis.Chronicle.Testing
 ```
 
 ## Basic usage
 
 ```csharp
-var scenario = new ReadModelScenario<MyReadModel>();
-await scenario.Given
-    .ForEventSource(myId)
-    .Events(new SomeEvent("value"), new SomeOtherEvent(42));
+public class when_projecting_events : Specification
+{
+    readonly EventSourceId _eventSourceId = EventSourceId.New();
+    readonly ReadModelScenario<MyReadModel> _scenario = new();
 
-scenario.Instance.SomeProperty.ShouldBe("expected value");
+    Task Because() =>
+        _scenario.Given
+            .ForEventSource(_eventSourceId)
+            .Events(new SomeEvent("value"), new SomeOtherEvent(42));
+
+    [Fact] void should_project_the_value() =>
+        _scenario.Instance!.SomeProperty.ShouldEqual("expected value");
+}
 ```
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
@@ -43,7 +53,7 @@ await scenario.Given
     .ForEventSource(myId)
     .Events(new ItemAdded());
 
-scenario.Instance.Count.ShouldBe(11);
+scenario.Instance.Count.ShouldEqual(11);
 ```
 
 ## Injecting dependencies
@@ -61,7 +71,7 @@ await scenario.Given
     .ForEventSource("order-1")
     .Events(new OrderCreated("order-1"));
 
-scenario.Instance!.Total.ShouldBe(0m);
+scenario.Instance!.Total.ShouldEqual(0m);
 ```
 
 ## Pre-seeding read model instances
@@ -80,7 +90,7 @@ await scenario.Given
 var sut = new OrderService(scenario.ReadModels);
 var result = await sut.GetOrderTotal("order-1");
 
-result.ShouldBe(99.99m);
+result.ShouldEqual(99.99m);
 ```
 
 `scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
@@ -120,7 +130,7 @@ await scenario.Given
         new ItemAdded(9.99m),
         new ItemAdded(4.50m));
 
-scenario.Instance!.Total.ShouldBe(14.49m);
+scenario.Instance!.Total.ShouldEqual(14.49m);
 ```
 
 ## Example: fluent projection
@@ -148,8 +158,8 @@ await scenario.Given
         new ProductCreated("Widget"),
         new StockAdjusted(100));
 
-scenario.Instance!.Name.ShouldBe("Widget");
-scenario.Instance!.Stock.ShouldBe(100);
+scenario.Instance!.Name.ShouldEqual("Widget");
+scenario.Instance!.Stock.ShouldEqual(100);
 ```
 
 ## Example: model-bound projection
@@ -170,7 +180,7 @@ await scenario.Given
         new ShipmentDispatched("FedEx"),
         new ShipmentDelivered(DateTimeOffset.UtcNow));
 
-scenario.Instance!.Carrier.ShouldBe("FedEx");
+scenario.Instance!.Carrier.ShouldEqual("FedEx");
 scenario.Instance!.DeliveredAt.ShouldNotBeNull();
 ```
 
@@ -179,5 +189,4 @@ scenario.Instance!.DeliveredAt.ShouldNotBeNull();
 - `Instance` is `null` until `Given` is called, or if no events were processed.
 - Each `Given.ForEventSource(id).Events(...)` call applies events to the specified event source. Call it multiple times to simulate events from different event sources.
 - `Given.ForEventSourceId(id)` is an alias for `ForEventSource(id)` that also exposes `.ReadModel(instance)` for pre-seeding.
-- The `.ShouldBe()` assertions in the examples come from your test framework (e.g., [Cratis.Specifications](https://github.com/Cratis/Specifications), Shouldly, or FluentAssertions).
-
+- Cratis Specifications provides `ShouldEqual`, `ShouldBeTrue`, `ShouldBeNull`, and related assertions. If you use Shouldly or FluentAssertions, translate the assertions to your project's style.

@@ -27,22 +27,21 @@ This projection:
 
 ## Using passive projections
 
-Passive projections are accessed through the `IProjections` interface using the `GetInstanceById` method:
+Passive projections are accessed through the event store's `ReadModels` using the `GetInstanceById` method:
 
 ```csharp
 public class UserService
 {
-    private readonly IProjections _projections;
+    private readonly IEventStore _eventStore;
 
-    public UserService(IProjections projections)
+    public UserService(IEventStore eventStore)
     {
-        _projections = projections;
+        _eventStore = eventStore;
     }
 
     public async Task<UserSummary?> GetUserSummaryAsync(string userId)
     {
-        var result = await _projections.GetInstanceById<UserSummary>(userId);
-        return result.Model;
+        return await _eventStore.ReadModels.GetInstanceById<UserSummary>(userId);
     }
 }
 ```

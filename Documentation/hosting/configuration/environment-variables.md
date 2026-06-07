@@ -116,8 +116,8 @@ Cratis__Chronicle__Observers__MaximumBackoffDelay=600
 ## Events
 
 ```bash
-# Number of appended event queues to use (default: 8)
-Cratis__Chronicle__Events__Queues=8
+# Number of appended event queues to use (default: 2)
+Cratis__Chronicle__Events__Queues=2
 ```
 
 ## Read models

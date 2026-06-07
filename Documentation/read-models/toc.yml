@@ -12,3 +12,5 @@
   href: getting-snapshots.md
 - name: Watching Read Models
   href: watching-read-models.md
+- name: Pagination and Observation
+  href: materialized-pagination.md

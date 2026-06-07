@@ -1,0 +1,1 @@
+../../.ai/rules/writing-correct-examples.md

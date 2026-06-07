@@ -57,7 +57,7 @@ public class AccountProjection : IProjectionFor<Account>
     public void Define(IProjectionBuilderFor<Account> builder) => builder
         .AutoMap()
         .From<AccountOpened>(_ => _
-            .Set(m => m.Balance).To(0m))
+            .Set(m => m.Balance).ToValue(0m))
         .From<MoneyDeposited>(_ => _
             .Add(m => m.Balance).With(e => e.Amount))
         .From<MoneyWithdrawn>(_ => _

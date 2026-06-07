@@ -2,9 +2,9 @@
 
 Event sourcing optimizes for understanding change, not just storing the latest value. Instead of asking "what does the row look like now?", you ask "what happened, in what order, and why?"
 
-That shift matters because most real systems are driven by processes, decisions, and handoffs over time. Chronicle models those changes as [events](./concepts/event.md) in an [event store](./concepts/event-store.md), grouped by [event source](./concepts/event-source.md), and then turns them into queryable views through [projections](./concepts/projection.md).
+At Cratis, we see event sourcing as the default architecture for information systems. Not because every table deserves an event stream, but because most real systems are driven by processes, decisions, and handoffs over time — and those facts become more valuable the longer the system lives. Chronicle models those changes as [events](./concepts/event.md) in an [event store](./concepts/event-store.md), grouped by [event source](./concepts/event-source.md), and then turns them into queryable views through [projections](./concepts/projection.md).
 
-This page is an explanation page. It helps you understand why teams choose event sourcing over a CRUD-first model and how Chronicle supports both classic aggregate-root thinking and Dynamic Consistency Boundary.
+This page explains why we choose event sourcing as the starting point for information systems and how Chronicle supports both classic aggregate-root thinking and Dynamic Consistency Boundary.
 
 ## CRUD focuses on state, event sourcing focuses on change
 
@@ -161,9 +161,9 @@ If you want Chronicle-specific guidance, read [Dynamic Consistency Boundary in C
 
 The key point is that event sourcing does not require aggregate roots. Aggregate roots are one way to structure decisions. Dynamic Consistency Boundary is another. Chronicle supports both, so you can choose the model that fits the problem instead of forcing every problem into the same shape.
 
-## When event sourcing is worth it
+## Why we use it by default
 
-Event sourcing is a strong fit when you care about:
+Event sourcing is almost always worth it for systems that carry real business information, because those systems tend to grow questions that current state cannot answer. It is a strong fit when you care about:
 
 - transparency of business behavior
 - auditability and compliance
@@ -172,4 +172,4 @@ Event sourcing is a strong fit when you care about:
 - integration through events
 - analytics or model training on full historical context
 
-If your problem is truly just "store the latest state and move on", CRUD can still be a perfectly reasonable choice. But many systems eventually need history, traceability, replayability, or better process insight. Event sourcing starts there instead of retrofitting it later.
+If your problem is truly just "store the latest state and move on", CRUD can still be a perfectly reasonable choice for that bounded slice. But information systems usually grow toward history, traceability, replayability, integration, or better process insight. Event sourcing starts there instead of retrofitting it later.

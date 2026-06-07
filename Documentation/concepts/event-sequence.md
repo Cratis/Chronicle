@@ -6,6 +6,18 @@ number that [observers](./observers.md) uses to maintain their offset.
 
 With every event, Chronicle collects additional metadata that is stored together with the event.
 
+A sequence is the timeline of your system — events laid out in the order they happened, each at a
+fixed sequence number that never changes:
+
+```mermaid
+flowchart LR
+    E0["#0<br/>BookAdded"] --> E1["#1<br/>BookBorrowed"] --> E2["#2<br/>BookReturned"] --> E3["#3<br/>BookBorrowed"]
+    O["Observer<br/>(offset: #2)"] -.->|reads next| E3
+```
+
+The observer's offset is just a sequence number — it remembers how far it has read, and picks up from
+there when new events arrive.
+
 Chronicle has formalized the following event sequences:
 
 | Type | Description |

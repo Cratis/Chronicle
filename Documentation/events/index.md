@@ -2,6 +2,13 @@
 
 Events are immutable facts that describe what happened in your system. Chronicle identifies events by their event type rather than the .NET CLR type, which makes the CLR type a convenient vessel for expressing intent and structure.
 
+```mermaid
+flowchart LR
+    T["[EventType] record"] --> A[Append]
+    A --> S["Event sequence<br/>(immutable, ordered)"]
+    S --> O["Observers<br/>(projections · reducers · reactors)"]
+```
+
 ```csharp
 using Cratis.Chronicle.Events;
 

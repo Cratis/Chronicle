@@ -5,6 +5,8 @@ uid: Chronicle.Testing.Events.Scenario
 
 `EventScenario` is a lightweight, in-process test utility for exercising code that appends events to an `IEventLog` or `IEventSequence`. It runs entirely in memory with no Chronicle server, database, or network required.
 
+In a [Cratis Specification](/testing-with-cratis/), `EventScenario.Given` is the **given** part of the spec, `EventLog.Append` or `EventSequence.Append` is the **when**, and the append result or event sequence assertions are the **then**.
+
 ## Why use EventScenario
 
 Chronicle integration tests against a live server are accurate but slow and require infrastructure. `EventScenario` lets you verify that your domain code appends the right events, handles constraint violations correctly, and reacts to pre-seeded state — all in a fast, isolated, and infrastructure-free way.
@@ -14,6 +16,7 @@ Chronicle integration tests against a live server are accurate but slow and requ
 `EventScenario` is in the `Cratis.Chronicle.Testing` NuGet package:
 
 ```bash
+dotnet add package Cratis.Specifications.XUnit
 dotnet add package Cratis.Chronicle.Testing
 ```
 
@@ -79,23 +82,25 @@ Create a **new `EventScenario` instance per test** to keep tests isolated. The i
 ## Example: full test
 
 ```csharp
-public class when_adding_a_book_to_an_author
+public class when_adding_a_book_to_an_author : Specification
 {
+    readonly EventSourceId _authorId = EventSourceId.New();
     readonly EventScenario _scenario = new();
+    AppendResult _result = default!;
 
-    [Fact]
-    public async Task and_the_author_is_registered()
-    {
-        var authorId = AuthorId.New();
-
-        await _scenario.Given
-            .ForEventSource(authorId)
+    Task Establish() =>
+        _scenario.Given
+            .ForEventSource(_authorId)
             .Events(new AuthorRegistered("Jane Smith"));
 
-        var result = await _scenario.EventLog.Append(authorId, new BookAdded("Clean Code"));
+    async Task Because() =>
+        _result = await _scenario.EventLog.Append(_authorId, new BookAdded("Clean Code"));
 
-        result.ShouldBeSuccessful();
-    }
+    [Fact] void should_append_successfully() =>
+        _result.ShouldBeSuccessful();
+
+    [Fact] Task should_have_appended_book_added() =>
+        _scenario.EventLog.ShouldHaveAppendedEvent<BookAdded>(new EventSequenceNumber(1));
 }
 ```
 

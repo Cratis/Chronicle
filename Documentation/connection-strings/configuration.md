@@ -1,13 +1,15 @@
 # Configuration
 
-The .NET client can read its connection string from configuration. A typical setup uses `appsettings.json` with the `Chronicle:Url` value and the `AddChronicle()` registration.
+The .NET client reads its connection string from configuration. A typical setup binds the `Cratis:Chronicle` section of `appsettings.json` and registers Chronicle on the host with `AddCratisChronicle`.
 
 **appsettings.json:**
 
 ```json
 {
-  "Chronicle": {
-    "Url": "chronicle://localhost:35000"
+  "Cratis": {
+    "Chronicle": {
+      "ConnectionString": "chronicle://localhost:35000"
+    }
   }
 }
 ```
@@ -18,8 +20,10 @@ The .NET client can read its connection string from configuration. A typical set
 **Program.cs:**
 
 ```csharp
-builder.Services.AddChronicle();
+builder.AddCratisChronicle(options => options.EventStore = "my-store");
 ```
+
+`AddCratisChronicle` is an extension on the host builder — `IHostApplicationBuilder` for worker and console hosts, `WebApplicationBuilder` for ASP.NET Core. It binds the `Cratis:Chronicle` section automatically, so the connection string comes from configuration rather than code. See [Add Chronicle to a worker service](../get-started/worker.md) and [Add Chronicle to an ASP.NET Core app](../get-started/aspnetcore.md) for the full host setup.
 
 ## Environment-specific configuration
 
@@ -29,8 +33,10 @@ Use per-environment configuration files to separate development and production s
 
 ```json
 {
-  "Chronicle": {
-    "Url": "chronicle://localhost:35000/?disableTls=true"
+  "Cratis": {
+    "Chronicle": {
+      "ConnectionString": "chronicle://localhost:35000/?disableTls=true"
+    }
   }
 }
 ```
@@ -39,21 +45,24 @@ Use per-environment configuration files to separate development and production s
 
 ```json
 {
-  "Chronicle": {
-    "Url": "chronicle://clientId:clientSecret@chronicle.production.example.com:35000"
+  "Cratis": {
+    "Chronicle": {
+      "ConnectionString": "chronicle://clientId:clientSecret@chronicle.production.example.com:35000"
+    }
   }
 }
 ```
 
 ## Environment variables
 
-You can also supply the connection string via environment variables:
+You can also supply the connection string via environment variables. .NET maps the `__` separator onto nested configuration keys, so `Cratis:Chronicle:ConnectionString` becomes:
 
 ```bash
-export CHRONICLE__URL="chronicle://clientId:clientSecret@server.example.com:35000"
+export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@server.example.com:35000"
 ```
 
 ## Related topics
 
 - [DotNET client usage](dotnet-client.md)
+- [ChronicleOptions reference](../configuration/chronicle-options.md)
 - [TLS configuration](../configuration/tls.md)

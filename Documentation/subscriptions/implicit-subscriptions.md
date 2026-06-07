@@ -167,11 +167,9 @@ Example consumer setup:
 
 ```csharp
 // OrderService/Program.cs
-var builder = WebApplicationBuilder.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddChronicle(c => c
-    .UseMongoDB("mongodb://localhost:27017/order-service")
-    .UseEventStore("order-service"));
+builder.AddCratisChronicle(options => options.EventStore = "order-service");
 
 // Just reference the events from the NuGet package
 using var app = builder.Build();

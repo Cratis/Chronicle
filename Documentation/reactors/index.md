@@ -2,6 +2,13 @@
 
 Reactors are observers that react to events and execute side effects. They are ideal for integrating with external systems, sending notifications, or emitting follow-up actions when events occur.
 
+```mermaid
+flowchart LR
+    E[Event appended] --> R[Reactor]
+    R --> S["Side effect<br/>(notify · call an API)"]
+    R -.->|via command pipeline| C[New command]
+```
+
 ## Key Concepts
 
 - **Event-driven side effects** - Reactors run when events are appended and can call external services or enqueue work

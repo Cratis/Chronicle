@@ -80,12 +80,10 @@ Model-bound projections use C# attributes on your read model classes, keeping th
 [Projection("MyModel")]
 public record MyModel
 {
-    [From<MyEvent>]
-    [Set("name", "$name")]
+    [SetFrom<MyEvent>(nameof(MyEvent.Name))]
     public string Name { get; init; }
 
-    [From<MyEvent>]
-    [Count]
+    [Count<MyEvent>]
     public int Count { get; init; }
 }
 
@@ -112,14 +110,14 @@ Declarative projections use a fluent C# API to define projections programmatical
 **Example:**
 
 ```csharp
-public class MyModelProjection : IProjectionDefinition
+public class MyModelProjection : IProjectionFor<MyModel>
 {
-    public void Define(IProjectionBuilder<MyModel> builder)
+    public void Define(IProjectionBuilderFor<MyModel> builder)
     {
         builder
-            .From<MyEvent>()
-            .Set(m => m.Name, e => e.EventProperty)
-            .Count(m => m.Count);
+            .From<MyEvent>(e => e
+                .Set(m => m.Name).To(e => e.EventProperty)
+                .Count(m => m.Count));
     }
 }
 

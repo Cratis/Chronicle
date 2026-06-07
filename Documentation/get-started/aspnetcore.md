@@ -1,101 +1,79 @@
-# Quickstart ASP.NET Core
+---
+title: Add Chronicle to an ASP.NET Core app
+description: Wire Chronicle into an ASP.NET Core web application — the DI container registers and discovers everything, and a minimal API endpoint appends events directly.
+---
 
-[!INCLUDE [pre-requisites](./prereq.md)]
+When your app is a web API, Chronicle fits the way you already build: it plugs into the `WebApplicationBuilder`, registers itself in the dependency-injection container, and lets your endpoints append events by taking `IEventLog` as a dependency. There's almost no glue — a couple of calls in `Program.cs` and your routes can start recording facts.
 
-## Objective
+We'll build a small library domain and expose an endpoint that borrows a book. If you're not building a web app — a background processor or scheduled host — the [Worker Service guide](./worker.md) covers that host instead, and the [console guide](./console.md) shows the bare-bones version with no container at all.
 
-In this quickstart, you will create a simple solution that covers the most important aspects of getting started with Chronicle
-in an ASP.NET Core application.
+## Before you start
 
-The sample will focus on a straightforward and well-understood domain: a library.
+Have the Chronicle kernel running locally. [Run Chronicle locally](./running-chronicle.md) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
 
-You can find the complete working sample [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore).
-which also leverages common things from [see documentation](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
+You can also find the [complete ASP.NET Core quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore) on GitHub.
 
-> **Not building a web app?** If you are creating a worker service or a background processing host without ASP.NET Core, see the [Worker Service Quickstart](./worker.md) instead.
+## Set up the project
 
-[!INCLUDE [docker](./docker.md)]
-
-## Setup project
-
-Start by creating a folder for your project and then create a .NET web project inside this folder:
+Create a folder for your project, then a .NET web project inside it:
 
 ```shell
 dotnet new web
 ```
 
-Add a reference to the [Chronicle package](https://www.nuget.org/packages/Cratis.Chronicle) and
-[Chronicle ASP.NET Core package](https://www.nuget.org/packages/Cratis.Chronicle.AspNetCore):
+Add a reference to the [Chronicle ASP.NET Core package](https://www.nuget.org/packages/Cratis.Chronicle.AspNetCore) (it brings in the base [Chronicle package](https://www.nuget.org/packages/Cratis.Chronicle) for you):
 
 ```shell
 dotnet add package Cratis.Chronicle.AspNetCore
 ```
 
-## WebApplication
+## Register Chronicle on the host
 
-When using ASP.NET Core you typically use the `WebApplicationBuilder` to build up your application.
-This includes having an IOC (Inversion of Control) container setup for dependency injection of all your services.
-Chronicle supports this paradigm out of the box, and there are convenience methods for hooking this up real easily.
-
-In your `Program.cs` simply change your setup to the following:
+ASP.NET Core builds your app through the `WebApplicationBuilder`, which already has a dependency-injection container. Chronicle hooks straight into it — two calls in `Program.cs` are the entire integration:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args)
     .AddCratisChronicle(options => options.EventStore = "Quickstart");
-```
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/AspNetCore/Program.cs#L19-L20)
-
-The code adds Chronicle to your application and sets the name of the event store to use.
-In contrast to what you need to do when running bare-bone as shown in the [console](./console.md) sample,
-all discovery and registration of artifacts will happen automatically.
-
-```csharp
 var app = builder.Build();
 app.UseCratisChronicle();
 ```
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/AspNetCore/Program.cs#L30-L31)
+`AddCratisChronicle` registers Chronicle's services and names the event store to use; `UseCratisChronicle` hooks it into the request pipeline. Unlike the bare-bones [console](./console.md) version, all discovery and registration of your artifacts happens automatically — the container finds your reactors, reducers, and projections for you.
+
+```mermaid
+flowchart LR
+    Builder["WebApplicationBuilder"] -->|AddCratisChronicle| DI["DI container<br/>(auto-discovers artifacts)"]
+    App["app"] -->|UseCratisChronicle| Pipeline["request pipeline"]
+    DI --> Endpoint["minimal API / controller"]
+    Endpoint -->|IEventLog.Append| ES["event store"]
+```
 
 [!INCLUDE [common](./common.md)]
 
-## Using in APIs
+## Append from an endpoint
 
-Appending events is typically something you would be doing directly, or indirectly through an API exposed as a minimal
-API or a Controller.
-
-```csharp
-        app.MapPost("/api/books/{bookId}/borrow/{userId}", async (
-            [FromServices] IEventLog eventLog,
-            [FromRoute] Guid bookId,
-            [FromRoute] Guid userId) => await eventLog.Append(bookId, new BookBorrowed(userId)));
-```
-
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/Api.cs#L19-L22)
-
-The code exposes an API endpoint that takes parameters for what book to borrow and what user is borrowing it.
-It then appends a `BookBorrowed` event. The `bookId` is used as the [event source](../concepts/event-source.md), while
-the `userId` is part of the event.
-
-## Services
-
-Chronicle will leverage the IOC container to get instances of any artifacts it discovers and will create instances of,
-such as **Reactors**, **Reducers** and **Projections**.
-In order for this to work, the artifacts needs to be registered as services. In your `Program.cs` file you would add
-service registrations for the artifacts you have:
+In a web app you usually append events from a route handler rather than inline. Take `IEventLog` as a dependency and append — the container injects it:
 
 ```csharp
-        builder.Services.AddTransient<UsersReactor>();
-        builder.Services.AddTransient<BooksReducer>();
-        builder.Services.AddTransient<BorrowedBooksProjection>();
-        builder.Services.AddTransient<OverdueBooksProjection>();
-        builder.Services.AddTransient<ReservedBooksProjection>();
+app.MapPost("/api/books/{bookId}/borrow", async (
+    [FromServices] IEventLog eventLog,
+    [FromRoute] Guid bookId,
+    [FromQuery] string memberName) =>
+        await eventLog.Append(bookId, new BookBorrowed(memberName)));
 ```
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/CommonServices.cs#L14-L18)
+The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projection and any reactors pick it up from there.
 
-This can become very tedious to do as your solution grows, Cratis Fundamentals offers a way couple of extension methods
-that will automatically hook this up:
+## Register your artifacts
+
+Chronicle creates its discovered artifacts — reactors, reducers, projections — through the container, so they need to be registered as services. For a handful, register them explicitly:
+
+```csharp
+builder.Services.AddTransient<BookReturnedNotifier>();
+```
+
+As the solution grows this gets tedious, so Cratis Fundamentals can do it by convention:
 
 ```csharp
 builder.Services
@@ -103,37 +81,30 @@ builder.Services
     .AddSelfBindings();
 ```
 
-The first statement adds service bindings by convention, which is basically any service that implements an interface with the same name only prefixed with `I` will be automatically registered (`IFoo` -> `Foo`). The second statement automatically registers all
-class instances as themselves, meaning you can then take dependencies to concrete types without having to register them.
+`AddBindingsByConvention` registers any service that implements an interface of the same name prefixed with `I` (`IFoo` → `Foo`); `AddSelfBindings` registers concrete classes as themselves, so you can depend on them directly without registering each one.
 
-[!INCLUDE [common](./mongodb.md)]
+## Configure the MongoDB client
 
-In addition to this, since you're in an environment with dependency injection enabled you typically want to register
-the things being used to be able to take these in as dependencies into your types such as controllers, route handler or
-any other type that needs it.
+The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
 
-For instance, for MongoDB, it can be very convenient to not have to think about the actual `MongoClient` and just focus on
-what you need; access to the specific database or specific collections.
+[!INCLUDE [mongodb](./mongodb.md)]
 
-The following code shows how to set this up for your `WebApplicationBuilder` to enable that scenario.
+Then register the database and the collections you want to inject, so a type can take an `IMongoCollection<Book>` dependency without ever touching `MongoClient`:
 
 ```csharp
-        builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
-        builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
-        builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
+builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
+builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
+builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
 ```
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common.AspNetCore/MongoDBServices.cs#L15-L17)
+Now the `Books` query from the read-model section above resolves its collection straight from the container.
 
-> Note: The code adds service registrations for typed collections based on types found in the [sample code](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Common).
+## Recap
 
-With this you can now quite easily create a type that encapsulates getting the data that takes a specific collection as a dependency:
+You added Chronicle to an ASP.NET Core app with two lines in `Program.cs` — `AddCratisChronicle` to register and discover everything, `UseCratisChronicle` to hook into the pipeline — then appended events straight from a minimal API endpoint and read them back through MongoDB collections injected by the container. Because you're in a DI world, your reactors, projections, and collections are all just registered services.
 
-```csharp
-public class Books(IMongoCollection<Book> collection)
-{
-    public IEnumerable<Book> GetAll() => collection.Find(Builders<Book>.Filter.Empty).ToList();
-}
-```
+## Where to go next
 
-[Snippet source](https://github.com/cratis/samples/blob/main/Chronicle/Quickstart/Common/Books.cs#L9-L12)
+- **Put a typed UI on top** — [Arc](/arc/) adds commands, queries, and generated TypeScript proxies so React stays in lockstep with your C#. See [Build a full-stack feature](/build-a-full-app/).
+- **Build the domain step by step** — the [tutorial](/chronicle/tutorial/) walks the library model one concept at a time.
+- **A different host** — the same artifacts run unchanged in a [Worker Service](./worker.md) or a bare [console](./console.md) app.

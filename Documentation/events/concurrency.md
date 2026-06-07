@@ -34,8 +34,8 @@ public class BankAccountService(IEventLog eventLog)
     public async Task OpenAccount(AccountId accountId, string accountName)
     {
         var concurrencyScope = new ConcurrencyScope(
-            sequenceNumber: 42,  // Expected sequence number
-            eventSourceId: accountId
+            SequenceNumber: 42,  // Expected sequence number
+            EventSourceId: accountId
         );
 
         await eventLog.Append(
@@ -203,14 +203,14 @@ public class BatchAccountProcessor(IEventLog eventLog)
     public async Task ProcessAccountBatch(AccountId accountId)
     {
         await eventLog
-            .For(accountId)
-            .WithConcurrencyScope(scope => scope
-                .WithSequenceNumber(30)
-                .WithEventType<AccountProcessed>()
-                .WithEventType<AccountValidated>())
-            .Append(new AccountValidated())
-            .Append(new AccountProcessed())
-            .Commit();
+            .ForEventSourceId(accountId, source => source
+                .WithConcurrencyScope(scope => scope
+                    .WithSequenceNumber(30)
+                    .WithEventType<AccountProcessed>()
+                    .WithEventType<AccountValidated>())
+                .Append(new AccountValidated())
+                .Append(new AccountProcessed()))
+            .Perform();
     }
 }
 ```
@@ -260,7 +260,7 @@ public class OptimisticAccountService(IEventLog eventLog, IConcurrencyScopeStrat
 {
     public async Task UpdateAccount(AccountId accountId, string newName)
     {
-        var strategy = strategies.GetFor<Account>();
+        var strategy = strategies.GetFor(eventLog);
         var concurrencyScope = await strategy.GetScope(accountId);
 
         await eventLog.Append(

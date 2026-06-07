@@ -170,3 +170,5 @@ Do **not** use the `Materialized` API when:
 - [Watching Read Models](watching-read-models.md) — Observe event-log-sourced read model changesets
 - [Projections](../projections/index.md) — How read models are produced from events
 - [Reducers](../reducers/index.md) — Imperative state-building from events
+- [MongoDB Sink](../sinks/index.md#mongodb-sink) — How read model instances are stored in MongoDB
+- [SQL Sink](../sinks/index.md#sql-sink) — How read model instances are stored in a SQL database

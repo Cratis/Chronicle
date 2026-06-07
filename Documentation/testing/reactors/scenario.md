@@ -7,6 +7,8 @@ uid: Chronicle.Testing.Reactors.Scenario
 
 It activates a fresh instance of `TReactor` from the provided service provider and routes events directly through the `ReactorInvoker` — the same execution path used in production.
 
+In a [Cratis Specification](/testing-with-cratis/), the event delivered to the reactor is the **when**, and the side effect captured by a mock, fake, or test double is the **then**. The scenario keeps that test in-process while still using the production reactor invocation path.
+
 ## Why use ReactorScenario
 
 End-to-end tests that require a live Chronicle server are accurate but slow. `ReactorScenario<TReactor>` drives the same reactor logic in-process so your specs remain fast and isolated without losing coverage of the handler logic.
@@ -16,6 +18,7 @@ End-to-end tests that require a live Chronicle server are accurate but slow. `Re
 `ReactorScenario<TReactor>` is in the `Cratis.Chronicle.Testing` NuGet package:
 
 ```bash
+dotnet add package Cratis.Specifications.XUnit
 dotnet add package Cratis.Chronicle.Testing
 ```
 
@@ -68,17 +71,28 @@ public class OrderNotificationReactor(IEmailService emailService) : IReactor
 }
 
 // In your spec:
-var emailService = Substitute.For<IEmailService>();
-var services = new ServiceCollection()
-    .AddSingleton(emailService)
-    .BuildServiceProvider();
+public class when_order_is_shipped : Specification
+{
+    readonly IEmailService _emailService = Substitute.For<IEmailService>();
+    ReactorScenario<OrderNotificationReactor> _scenario = default!;
 
-var scenario = new ReactorScenario<OrderNotificationReactor>(services);
-await scenario.Given
-    .ForEventSource("order-123")
-    .Events(new OrderShipped("order-123", "DHL"));
+    void Establish()
+    {
+        var services = new ServiceCollection()
+            .AddSingleton(_emailService)
+            .BuildServiceProvider();
 
-await emailService.Received(1).SendShippingConfirmation("order-123", "DHL");
+        _scenario = new ReactorScenario<OrderNotificationReactor>(services);
+    }
+
+    Task Because() =>
+        _scenario.Given
+            .ForEventSource("order-123")
+            .Events(new OrderShipped("order-123", "DHL"));
+
+    [Fact] async Task should_send_shipping_confirmation() =>
+        await _emailService.Received(1).SendShippingConfirmation("order-123", "DHL");
+}
 ```
 
 ## Example: multiple events across event sources

@@ -126,17 +126,16 @@ Once your reducer is set up, you can retrieve the computed state:
 ```csharp
 public class OrderService
 {
-    readonly IReducers _reducers;
+    readonly IEventStore _eventStore;
 
-    public OrderService(IReducers reducers)
+    public OrderService(IEventStore eventStore)
     {
-        _reducers = reducers;
+        _eventStore = eventStore;
     }
 
-    public async Task<OrderSummary> GetOrderSummary(Guid orderId)
+    public async Task<OrderSummary?> GetOrderSummary(Guid orderId)
     {
-        var result = await _reducers.GetInstanceById<OrderSummary>(orderId);
-        return result.ReadModel;
+        return await _eventStore.ReadModels.GetInstanceById<OrderSummary>(orderId);
     }
 }
 ```

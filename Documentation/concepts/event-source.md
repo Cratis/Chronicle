@@ -11,4 +11,19 @@ by this unique identifier, this is what we call an **event source id**.
 
 It can be compared to the **primary key** often used in database modelling.
 
+The diagram below shows two event sources — two people — each with its own ordered story of events,
+all sharing the same event source id throughout:
+
+```mermaid
+flowchart LR
+    subgraph ES1["EventSourceId: person-123"]
+        direction LR
+        A1[PersonRegistered] --> A2[AddressChanged] --> A3[PhoneChanged]
+    end
+    subgraph ES2["EventSourceId: person-456"]
+        direction LR
+        B1[PersonRegistered] --> B2[NameCorrected]
+    end
+```
+
 When events are appended in Chronicle, you'll see that the first argument is the `EventSourceId`.

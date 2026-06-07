@@ -2,10 +2,20 @@
   href: index.md
 - name: Why Event Sourcing
   href: why-event-sourcing.md
+- name: CRUD, EF Core, and Chronicle
+  href: coming-from-crud.md
+- name: Understanding constraints and event evolution
+  href: understanding-constraints-and-evolution.md
 - name: Getting started
   href: get-started/toc.yml
+- name: Tutorial
+  href: tutorial/toc.yml
+- name: Scenarios
+  href: scenarios/toc.yml
 - name: Concepts
   href: concepts/toc.yml
+- name: Architecture
+  href: architecture.md
 - name: Dynamic Consistency Boundary
   href: dynamic-consistency-boundary/toc.yml
 - name: Events
@@ -42,6 +52,8 @@
   href: code-analysis/toc.yml
 - name: Testing
   href: testing/toc.yml
+- name: Troubleshooting
+  href: troubleshooting/toc.yml
 - name: Hosting
   href: hosting/toc.yml
 - name: Contributing

@@ -1,55 +1,37 @@
----
-uid: Chronicle.ReadModels
----
 # Read Models
 
-Read models in Chronicle represent the current state of your application derived from events stored in the event log. They provide a denormalized, queryable view of your data optimized for reading, making them essential for building responsive applications.
+Your events are the truth of *what happened*, but they're a terrible thing to query — to show an
+account balance you'd have to replay every deposit and withdrawal. A **read model** is the answer to
+that: a shaped, queryable view of your data, built from events and kept up to date for you. It's the
+"read side" of CQRS — the events are the write side.
 
-> [!TIP]
-> For information on how to define and configure read models in Arc, see <xref:Arc.Chronicle.ReadModels>.
+```mermaid
+flowchart LR
+    EV[(Events)] -->|projection / reducer| RM[(Read model)]
+    RM -->|query| UI[Your app]
+```
 
-## What are Read Models?
+The power is specialization: one event log can feed *many* read models, each tailored to a single
+screen or question. You don't reuse one model across conflicting needs — you build a focused one per
+view, so each stays small, fast, and independent.
 
-A read model is a projection of events into a structured format that's optimized for querying. Unlike traditional databases where you store current state directly, Chronicle builds read models by applying events from the event log, ensuring your data is always in sync with what actually happened in your system.
+## How a read model gets built
 
-Read models serve several purposes:
+You don't write to a read model directly — an [observer](../concepts/observers/) keeps it in sync with
+the events:
 
-- **Query optimization**: Denormalized views designed for specific read patterns
-- **Strong consistency**: Can be retrieved with the exact current state
-- **Audit capability**: Can track how state evolved through event snapshots
-- **Flexibility**: Multiple read models can be created from the same events
+- A [projection](../projections/) maps events into the model declaratively — the usual choice.
+- A [reducer](../reducers/) folds events into the model imperatively, when you need more control.
 
-## How Read Models are Produced
+## What to read next
 
-Read models are produced by either projections or reducers, both exposed through the `IReadModels` API. Use the overview pages to choose the approach and then drill into the projection style you need:
+| Topic | What it covers |
+| ------- | ----------- |
+| [Consistency models](./consistency.md) | The key decision: when does the read model have to be correct — immediately, or eventually? |
+| [Getting a single instance](./getting-single-instance.md) | Retrieve one read model instance by its key. |
+| [Getting a collection](./getting-collection-instances.md) | Retrieve all instances of a read model. |
+| [Getting snapshots](./getting-snapshots.md) | Retrieve historical snapshots of a read model's state. |
+| [Watching read models](./watching-read-models.md) | Observe a read model and react to changes in real time. |
 
-- [Projections overview](../projections/index.md)
-- [Reducers overview](../reducers/index.md)
-- [Declarative projections](../projections/declarative/index.md)
-- [Model-bound projections](../projections/model-bound/index.md)
-
-## Read Model Access
-
-Chronicle provides an API for working with read models regardless of how they are produced. The next steps show the different ways to get instances, collections, and snapshots, and how to observe changes.
-
-## Key Characteristics
-
-### Strong Consistency
-
-When you retrieve a read model instance, Chronicle ensures you get the most up-to-date state by applying all relevant events from the event log. This provides strong consistency guarantees.
-
-### On-Demand Computation
-
-Read models are computed on-demand by replaying events. This ensures accuracy but comes with performance considerations for read models with long event histories.
-
-### Type Safety
-
-The API provides full type safety through generic methods, ensuring compile-time checking when working with read models.
-
-## Next Steps
-
-- [Getting a Single Instance](getting-single-instance.md) - Learn how to retrieve a specific read model instance
-- [Getting a Collection of Instances](getting-collection-instances.md) - Learn how to retrieve all instances of a read model
-- [Materialized Read Models](materialized-pagination.md) - Paginated access and real-time observation of stored read model instances
-- [Getting Snapshots](getting-snapshots.md) - Understand how to retrieve historical snapshots of read model state
-- [Watching Read Models](watching-read-models.md) - Learn how to observe real-time changes to read models
+To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/queries/) — or see
+the whole loop in [Build a full-stack feature](/build-a-full-app/).

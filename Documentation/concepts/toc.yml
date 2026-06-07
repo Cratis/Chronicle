@@ -2,6 +2,8 @@
   href: event.md
 - name: Event Type
   href: event-type.md
+- name: Modeling events well
+  href: modeling-events.md
 - name: Event Type Migrations
   href: event-type-migrations.md
 - name: Event Source
@@ -16,9 +18,19 @@
   href: event-sequence.md
 - name: Observers
   href: observers.md
+- name: Projections, reducers, and reactors
+  href: observer-patterns.md
 - name: Projection
   href: projection.md
+- name: Designing read models
+  href: designing-read-models.md
+- name: "Deep dive: consistency"
+  href: consistency.md
 - name: Constraints
   href: constraints.md
 - name: Event Metadata Tags
   href: event-metadata-tags.md
+- name: When to use event sourcing
+  href: when-to-use-event-sourcing.md
+- name: Glossary
+  href: glossary.md

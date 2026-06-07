@@ -14,6 +14,16 @@ it will automatically be rewound to the beginning of the sequence and replayed.
 During replay, the observer will not be active and when it reaches the end of the sequence it
 will become active again and observe any new events.
 
+There are three kinds of observer, each turning events into something different — queryable state, or
+an action:
+
+```mermaid
+flowchart LR
+    EV[(Event sequence)] --> P[Projection] --> RM1[(Read model)]
+    EV --> R[Reducer] --> RM2[(Read model)]
+    EV --> RC[Reactor] --> SE[Side effect:<br/>email, API call, new event]
+```
+
 ## State management
 
 One of the things you can use an observer for is to maintain application state, typically update

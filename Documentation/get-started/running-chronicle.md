@@ -1,34 +1,48 @@
-## Docker
+---
+title: Run Chronicle locally
+description: Get the Chronicle kernel running on your machine with Docker — the embedded-database dev image for the fastest start, or your own MongoDB, PostgreSQL, SQL Server, or SQLite when you need it. Every host guide starts here.
+---
 
-Chronicle is available as a [Docker image](https://hub.docker.com/r/cratis/chronicle).
+Chronicle runs as a small **kernel** — a Docker image your application talks to over the network. Before a single line of your host code can append an event, that kernel has to be up and reachable. This is the one page that covers getting it there, so the [console](./console.md), [worker service](./worker.md), and [ASP.NET Core](./aspnetcore.md) guides can all point here instead of repeating it.
 
-## Image Tags for Development
+You only need to do this once per machine. Leave it running in the background and come back to your code.
 
-Use one of these development tags:
+## Prerequisites
 
-| Tag | Includes MongoDB | Typical Use |
-| --- | --- | --- |
-| `cratis/chronicle:latest-development` | Yes | Fast local setup with no external database container |
-| `cratis/chronicle:latest-development-slim` | No | Local setup with your own database container (MongoDB, PostgreSQL, SQL Server, or SQLite) |
+- [.NET 8 or higher](https://dot.net) — the SDK you build and run your app with.
+- [Docker Desktop or compatible](https://www.docker.com/products/docker-desktop/) — the kernel ships as a container.
+- *Optional:* a MongoDB client such as [MongoDB Compass](https://www.mongodb.com/products/tools/compass), handy for peeking at the read models a projection builds. You don't need it to follow the guides — the built-in [workbench](#see-it-in-the-workbench) shows you the events.
 
-## Quick Start: Embedded MongoDB (Development Image)
+## The fastest start: the development image
 
-The development image bundles MongoDB, so no separate database setup is required.
+The `latest-development` image bundles MongoDB, so there's nothing else to install or wire up — one command and the kernel is running:
 
 ```shell
 docker run -d -p 27017:27017 -p 8080:8080 -p 35000:35000 cratis/chronicle:latest-development
 ```
 
-## Quick Start: External Database (Development Slim Image)
+Three ports, three jobs:
 
-Use `latest-development-slim` and configure Chronicle storage through Chronicle options environment variables:
+| Port | What it is |
+| --- | --- |
+| `35000` | The kernel endpoint your app connects to (`chronicle://localhost:35000`). |
+| `8080` | The [Chronicle workbench](#see-it-in-the-workbench) — a web UI for browsing your event store. |
+| `27017` | The bundled MongoDB, where projections write their read models. |
+
+That's everything most local work needs. If you'd rather run against a database you already have — or a different engine entirely — read on; otherwise [skip to picking a host](#next-pick-your-host).
+
+## Bring your own database
+
+The `latest-development-slim` image leaves the database out, so you point Chronicle at one you run yourself. Two environment variables tell it where to go:
 
 - `Cratis__Chronicle__Storage__Type`
 - `Cratis__Chronicle__Storage__ConnectionDetails`
 
+The Compose files below bring up the kernel and a database together. Pick the one for your engine.
+
 ### MongoDB with Docker Compose
 
-Chronicle uses MongoDB transactions (and change streams), so MongoDB must run as a replica set or a sharded cluster. The following example initializes a single-node replica set for local development.
+Chronicle uses MongoDB transactions and change streams, so MongoDB must run as a replica set (or a sharded cluster) — a standalone `mongod` won't do. This file initializes a single-node replica set for local development:
 
 ```yaml
 services:
@@ -151,9 +165,15 @@ volumes:
   chronicle-data:
 ```
 
-## Optional: Add Aspire Dashboard for Logs, Traces, and Metrics
+Bring any of these up the usual way, in the background:
 
-If you want local observability while developing, run Chronicle with the Aspire Dashboard and set `OTEL_EXPORTER_OTLP_ENDPOINT` on the Chronicle container. Use port `18888` for the dashboard UI in your browser, and port `18889` as the OTLP receiver that Chronicle exports telemetry to inside the Docker network:
+```shell
+docker compose up -d
+```
+
+## Optional: add the Aspire dashboard
+
+If you want local observability while developing — logs, traces, and metrics — run the kernel alongside the [Aspire dashboard](https://learn.microsoft.com/dotnet/aspire/fundamentals/dashboard/overview) and set `OTEL_EXPORTER_OTLP_ENDPOINT` on the Chronicle container. Port `18888` is the dashboard UI in your browser; port `18889` is the OTLP receiver Chronicle exports to inside the Docker network:
 
 ```yaml
 services:
@@ -177,3 +197,16 @@ services:
     ports:
       - 18888:18888
 ```
+
+## See it in the workbench
+
+Whichever image you ran, it includes the **Chronicle workbench** — a web UI for poking at your event store. Open [http://localhost:8080](http://localhost:8080), pick an event store, and look at **Sequences** to watch events land in order. It's the quickest way to confirm the kernel is up and your app is actually appending.
+
+## Next: pick your host
+
+The kernel is running and listening on `chronicle://localhost:35000`. Now connect your app to it:
+
+- **Just exploring?** The [Get started quickstart](/chronicle/get-started/) scaffolds a ready-to-run app from a template — the fastest way to see the whole loop.
+- **[Console](./console.md)** — the bare-bones version, no DI container, every connection explicit.
+- **[Worker service](./worker.md)** — a background host for the reacting side of an event-sourced system.
+- **[ASP.NET Core](./aspnetcore.md)** — a web API that appends events straight from its endpoints.

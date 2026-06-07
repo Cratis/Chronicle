@@ -109,7 +109,7 @@ public class UniqueProjectName : IConstraint
         builder.Unique(unique =>
             unique
                 .On<ProjectCreated>(e => e.Name)
-                .WithMessage(violation => $"A project named '{violation.Value}' already exists."));
+                .WithMessage(violation => $"A project named '{violation.Details[WellKnownConstraintDetailKeys.PropertyValue]}' already exists."));
 }
 ```
 

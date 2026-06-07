@@ -1,17 +1,19 @@
-# Quickstart Worker Service
+---
+title: Add Chronicle to a worker service
+description: Set up Chronicle in a .NET worker service (generic host) — the natural home for the reacting side of an event-sourced system, with the DI container wiring everything up for you.
+---
 
-[!INCLUDE [pre-requisites](./prereq.md)]
+A worker service is the natural home for the *reacting* side of an event-sourced system: no web front end, just a long-running host that processes events, runs scheduled jobs, or keeps derived data up to date. Setup is mostly a matter of letting the generic host's DI container do the wiring — register Chronicle once, then inject what you need wherever you need it.
 
-## Objective
+We'll build the same small library domain as the other host guides. If you're building a web API instead, the [ASP.NET Core guide](./aspnetcore.md) covers that host; for the bare-bones, no-container version, see the [console guide](./console.md).
 
-In this quickstart, you will set up Chronicle in a .NET worker service (generic host) application — without ASP.NET Core.
-Worker services are ideal for background processing: reacting to events, running scheduled jobs, or maintaining derived data in message-processing pipelines.
+## Before you start
 
-[!INCLUDE [docker](./docker.md)]
+Have the Chronicle kernel running locally. [Run Chronicle locally](./running-chronicle.md) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
 
-## Setup project
+## Set up the project
 
-Start by creating a folder for your project and then create a .NET worker service project inside this folder:
+Create a folder for your project, then a .NET worker service inside it:
 
 ```shell
 dotnet new worker
@@ -23,116 +25,104 @@ Add a reference to the [Chronicle client package](https://www.nuget.org/packages
 dotnet add package Cratis.Chronicle
 ```
 
-> **Note:** For worker services you only need the base `Cratis.Chronicle` package — the `Cratis.Chronicle.AspNetCore` package is for web applications only.
+> [!NOTE]
+> A worker only needs the base `Cratis.Chronicle` package — `Cratis.Chronicle.AspNetCore` is for web applications.
 
-## Host setup
+## Register Chronicle on the host
 
-Open your `Program.cs` and configure Chronicle using `AddCratisChronicle` on the `IHostApplicationBuilder`:
+The generic host builds your app through `IHostApplicationBuilder`, which already has a dependency-injection container. One call hooks Chronicle into it and names the event store to use:
 
 ```csharp
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.AddCratisChronicle(options =>
-{
-    options.EventStore = "MyWorkerApp";
-});
-
+builder.AddCratisChronicle(options => options.EventStore = "Quickstart");
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
 await host.RunAsync();
 ```
 
-The `AddCratisChronicle` call:
+Like the [ASP.NET Core](./aspnetcore.md) host, `AddCratisChronicle` registers Chronicle's services — `IEventStore`, `IEventLog`, `IReactors`, `IReducers`, `IProjections` — and automatically discovers and registers your artifacts (reactors, reducers, projections) from the loaded assemblies. It reads its connection settings from the `Cratis:Chronicle` section of `appsettings.json`:
 
-- Registers `IChronicleClient`, `IEventStore`, and all the event store components (`IEventLog`, `IReactors`, `IReducers`, `IProjections`, `IReadModels`) in the DI container.
-- Automatically discovers and registers all artifacts (Reactors, Reducers, Projections) from the loaded assemblies.
-- Reads configuration from the `Cratis:Chronicle` section of `appsettings.json` (connection string, timeouts, etc.).
+```mermaid
+flowchart LR
+    Host["Host.CreateApplicationBuilder"] -->|AddCratisChronicle| DI["DI container<br/>(auto-discovers artifacts)"]
+    DI --> Svcs["IEventStore · IEventLog ·<br/>IReactors · IReducers · IProjections"]
+    Svcs --> Worker["your BackgroundService"]
+```
 
-## Configuration
-
-Chronicle reads its connection settings from `appsettings.json`. Add the following to yours:
-
-```json
+```json title="appsettings.json"
 {
   "Cratis": {
     "Chronicle": {
       "ConnectionString": "chronicle://localhost:35000",
-      "EventStore": "MyWorkerApp"
+      "EventStore": "Quickstart"
     }
   }
 }
 ```
 
-You can also configure the event store name inline (as shown above) and keep the connection string in configuration.
+[!INCLUDE [common](./common.md)]
 
-## Worker implementation
+## Append from the worker
 
-Inject `IEventStore` or any of the event store sub-services into your hosted service:
+In a worker you append from your `BackgroundService` rather than inline. Inject `IEventStore` (or `IEventLog` directly) and append inside `ExecuteAsync`:
 
 ```csharp
 public class Worker(IEventStore eventStore) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Connect to Chronicle and start processing
         await eventStore.Connection.Connect();
 
-        // Keep running until the host shuts down
+        var bookId = Guid.NewGuid();
+        await eventStore.EventLog.Append(bookId, new BookAdded("The Pragmatic Programmer", "978-0135957059"));
+
+        // Keep running so reactors and projections keep processing.
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 }
 ```
 
-## Structural dependencies
+The projection and the `BookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
 
-For custom identity providers, correlation ID accessors, or namespace resolvers, use the `configure` callback:
+## Configure the MongoDB client
 
-```csharp
-builder.AddCratisChronicle(
-    configureOptions: options => options.EventStore = "MyWorkerApp",
-    configure: b => b
-        .WithIdentityProvider(new MyServiceIdentityProvider())
-        .WithNamespaceResolver(new MyTenantResolver()));
-```
+The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs to match how Chronicle stores them — register these conventions once at startup:
 
-See [Structural Dependencies](../configuration/structural-dependencies.md) for a full list of configurable dependencies.
+[!INCLUDE [mongodb](./mongodb.md)]
 
-## Namespace resolution
-
-By default the worker uses the default namespace for all operations. To support multi-tenant scenarios, provide a custom `IEventStoreNamespaceResolver` via `ChronicleClientOptions`:
+Then register the database and the collection so a type can take an `IMongoCollection<Book>` dependency:
 
 ```csharp
-builder.AddCratisChronicle(options =>
-{
-    options.EventStore = "MyWorkerApp";
-    options.EventStoreNamespaceResolverType = typeof(MyTenantNamespaceResolver);
-});
+builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
+builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
+builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
 ```
 
-Or pass a resolver instance directly through the builder:
+## Register your artifacts
 
-```csharp
-builder.AddCratisChronicle(
-    configureOptions: options => options.EventStore = "MyWorkerApp",
-    configure: b => b.WithNamespaceResolver(new MyTenantNamespaceResolver(config)));
-```
-
-See [Namespace resolution](../namespaces/dotnet-client.md) for details on built-in resolvers.
-
-## Services
-
-Chronicle uses the DI container to create instances of Reactors, Reducers, and Projections it discovers. Register them as services in `Program.cs`:
-
-```csharp
-builder.Services.AddTransient<MyReactor>();
-builder.Services.AddTransient<MyReducer>();
-```
-
-For larger solutions, the Cratis Fundamentals convention-based registration helpers keep this manageable:
+Chronicle creates its discovered artifacts through the container, so they need to be registered as services. For a handful, register them explicitly; as the solution grows, let Cratis Fundamentals do it by convention:
 
 ```csharp
 builder.Services
     .AddBindingsByConvention()
     .AddSelfBindings();
 ```
+
+`AddBindingsByConvention` registers any service that implements an interface of the same name prefixed with `I` (`IFoo` → `Foo`); `AddSelfBindings` registers concrete classes as themselves.
+
+## Going further
+
+- **Multi-tenant namespaces** — provide a custom `IEventStoreNamespaceResolver` to route operations per tenant. See [Namespace resolution](../namespaces/dotnet-client.md).
+- **Structural dependencies** — supply custom identity providers, correlation-id accessors, or namespace resolvers through the `configure` callback on `AddCratisChronicle`. See [Structural dependencies](../configuration/structural-dependencies.md).
+
+## Recap
+
+You added Chronicle to a worker service with a single `AddCratisChronicle` call, pointed it at an event store through `appsettings.json`, and appended events from a `BackgroundService` — the generic host's DI container discovered your reactors, reducers, and projections and handed you the services to use them. The same library domain runs here unchanged from the other hosts.
+
+## Where to go next
+
+- **[Build the domain step by step](/chronicle/tutorial/)** — the tutorial walks the library model one concept at a time.
+- **Reacting to events** — a worker's main job; see [Reactors](/chronicle/reactors/) for the patterns.
+- **A different host** — the same artifacts run unchanged behind a web API ([ASP.NET Core](./aspnetcore.md)) or with no container at all ([console](./console.md)).

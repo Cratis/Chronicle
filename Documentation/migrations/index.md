@@ -2,6 +2,13 @@
 
 Every system evolves. Business rules change, data models improve, and properties get renamed, split, or combined. In event-sourced systems this creates a challenge: events are immutable facts, and the historical record cannot simply be edited. Chronicle solves this with a declarative migration system that lets you evolve event schemas without losing backward compatibility.
 
+```mermaid
+flowchart LR
+    V1["Event<br/>(as written, v1)"] -->|migration| V2["Event v2"]
+    V2 -->|migration| V3["Event v3 (current)"]
+    V3 --> P[Read / projected]
+```
+
 ## Why migrations?
 
 Events in Chronicle represent things that happened, not the current state. That immutability is a feature — it gives you a reliable audit trail and the ability to replay history. But it also means you need a principled way to handle changes to event schemas over time.

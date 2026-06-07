@@ -1,15 +1,65 @@
 # Projections
 
-Projections in Cratis allow you to create read models from events stored in the event log. They provide different levels of complexity from simple auto-mapping to sophisticated hierarchical models with joins.
+Your events are the source of truth, but events are a poor thing to *read* — nobody wants to replay a
+thousand `MoneyDeposited` facts to show an account balance. A **projection** does that folding for you:
+it watches a stream of events and continuously builds a **read model** — a shaped, queryable view that's
+ready to serve to a UI.
+
+The win is specialization. The same events can feed *many* projections, each tailored to one screen or
+question: a balance, a transaction list, a monthly summary. You never reuse one bloated model across
+conflicting needs — you build a focused read model per view, and each stays simple, fast, and
+independent.
+
+```mermaid
+flowchart LR
+    E1[Event] --> P[Projection]
+    E2[Event] --> P
+    E3[Event] --> P
+    P -->|maps & merges| RM[(Read model)]
+    RM --> Q[Query]
+```
+
+## How you'll define one
+
+Projections join **events** (never other read models), and mapping is automatic by default — name a
+read model property the same as an event property and it just maps. For a read model backed by events,
+you usually choose between three styles:
+
+| Style | What it looks like | Reach for it when |
+| --- | --- | --- |
+| [Model-bound](model-bound/index.md) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
+| [Declarative](declarative/index.md) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
+| [Reducer](/chronicle/reducers/) | An `IReducerFor<T>` that receives the event, current state, and event context | The read model is easier to express as state transitions or calculations over previous state. |
+
+[Choose a read-model style](choosing-a-read-model-style.md) builds the same read model as a
+model-bound projection, a declarative projection, and a reducer so the trade-offs are visible side by
+side.
+
+## Choose your consistency
+
+The one decision worth making up front is *when* the read model has to be correct:
+
+| | [Eventual](eventual-consistency.md) | [Immediate](immediate-projections.md) |
+| --- | --- | --- |
+| **When it updates** | Shortly after the event is appended (the default) | Synchronously, before the append returns |
+| **Cost** | Cheap, scales freely | More expensive — pay only when you need it |
+| **Use it for** | Almost everything — lists, dashboards, history | A value you must read back correctly *right now* (e.g. a uniqueness check) |
+
+Start eventual. Promote a projection to immediate only when a workflow genuinely can't tolerate the
+read model being a moment behind.
 
 ## Topics
 
-| Recipe | Description |
+| Topic | Description |
 | ------ | ----------- |
-| [Architecture](architecture.md) | Overview of projection architecture |
-| [Immediate Projections](immediate-projections.md) | How to work with immediate projections for strong consistency |
-| [Eventual Consistency](eventual-consistency.md) | How projections are eventual consistent |
-| [Appended event metadata filters](../events/filtering/index.md) | How appended tags and metadata correlate to reducer and reactor filters that run alongside projections |
-| [Tagging Projections](tagging-projections.md) | How to organize and tag projections |
-| [Model-Bound Projections](model-bound/index.md) | How to work with model-bound projections |
-| [Declarative Projections](declarative/index.md) | How to work with declarative projections |
+| [Architecture](architecture.md) | How the projection engine turns events into read models |
+| [Choose a read-model style](choosing-a-read-model-style.md) | Compare model-bound, declarative, and reducer approaches on the same read model |
+| [Model-Bound Projections](model-bound/index.md) | Build read models with attributes — the default style |
+| [Declarative Projections](declarative/index.md) | Build read models with the fluent `IProjectionFor<T>` API |
+| [Immediate Projections](immediate-projections.md) | Strong consistency — the read model updates before the append returns |
+| [Eventual Consistency](eventual-consistency.md) | The default — how and when eventual projections catch up |
+| [Tagging Projections](tagging-projections.md) | Organize and tag projections |
+| [Appended event metadata filters](../events/filtering/index.md) | How tags and metadata correlate reducers and reactors that run alongside projections |
+
+Once your read model exists, expose it to the frontend with a [query](../read-models/index.md) — or see
+the whole loop in [Build a full-stack feature](/build-a-full-app/).

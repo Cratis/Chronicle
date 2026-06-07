@@ -17,7 +17,7 @@ Every `[EventType]` that has evolved past its first version must declare its cur
 public record AuthorRegisteredV1(string Name);
 
 // Generation 2 — Name has been split into FirstName and LastName
-[EventType(2)]
+[EventType(generation: 2)]
 public record AuthorRegistered(string FirstName, string LastName);
 ```
 
