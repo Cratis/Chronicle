@@ -40,13 +40,13 @@ public static class EventSeedingConverters
     {
         var byEventTypeRaw = JsonSerializer.Deserialize<IDictionary<string, IEnumerable<SeededEventEntry>>>(entity.ByEventTypeJson, jsonSerializerOptions)
             ?? new Dictionary<string, IEnumerable<SeededEventEntry>>();
-        var byEventType = byEventTypeRaw.ToDictionary<KeyValuePair<string, IEnumerable<SeededEventEntry>>, EventTypeId, IEnumerable<SeededEventEntry>>(
+        var byEventType = byEventTypeRaw.ToDictionary(
             k => (EventTypeId)k.Key,
             v => v.Value);
 
         var byEventSourceRaw = JsonSerializer.Deserialize<IDictionary<string, IEnumerable<SeededEventEntry>>>(entity.ByEventSourceJson, jsonSerializerOptions)
             ?? new Dictionary<string, IEnumerable<SeededEventEntry>>();
-        var byEventSource = byEventSourceRaw.ToDictionary<KeyValuePair<string, IEnumerable<SeededEventEntry>>, EventSourceId, IEnumerable<SeededEventEntry>>(
+        var byEventSource = byEventSourceRaw.ToDictionary(
             k => (EventSourceId)k.Key,
             v => v.Value);
 

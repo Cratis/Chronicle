@@ -137,14 +137,14 @@ public class EventStoreForTesting : IEventStore
 
         var readModelWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, _jsonSerializerOptions));
 
-        var materializedReadModels = new Chronicle.ReadModels.MaterializedReadModels(
+        var materializedReadModels = new MaterializedReadModels(
             this,
             _projections,
             _reducers,
             JsonSchemaGenerator,
             (Connection as IChronicleServicesAccessor)!,
             _jsonSerializerOptions,
-            NullLogger<Chronicle.ReadModels.MaterializedReadModels>.Instance);
+            NullLogger<MaterializedReadModels>.Instance);
 
         var realReadModels = new Chronicle.ReadModels.ReadModels(
             this,

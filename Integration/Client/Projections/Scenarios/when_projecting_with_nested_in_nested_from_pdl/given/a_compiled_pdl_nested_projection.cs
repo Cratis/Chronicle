@@ -38,7 +38,7 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_wit
 /// behaves identically to the declarative path that Phase 1 covers.
 /// </para>
 /// </remarks>
-public abstract class a_compiled_pdl_nested_projection : Cratis.Specifications.Specification
+public abstract class a_compiled_pdl_nested_projection : Specifications.Specification
 {
     public const string Declaration = """
         projection PdlSlice => PdlDeepNestedSlice
@@ -95,8 +95,8 @@ public abstract class a_compiled_pdl_nested_projection : Cratis.Specifications.S
             errors => throw new InvalidOperationException(
                 $"PDL compilation failed: {string.Join(", ", errors.Errors.Select(e => e.Message))}"));
 
-        _outerNested = _projection.Nested![(Cratis.Chronicle.Properties.PropertyPath)"command"];
-        _innerNested = _outerNested.Nested![(Cratis.Chronicle.Properties.PropertyPath)"validation"];
+        _outerNested = _projection.Nested![(Properties.PropertyPath)"command"];
+        _innerNested = _outerNested.Nested![(Properties.PropertyPath)"validation"];
     }
 
     static ReadModelDefinition CreateReadModelDefinition<T>()

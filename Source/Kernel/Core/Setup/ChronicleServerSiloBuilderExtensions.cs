@@ -144,7 +144,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     grainFactory,
                     sp.GetRequiredService<Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>(),
                     sp.GetRequiredService<IInstancesOf<ICanPerformKernelStateReset>>(),
-                    sp.GetRequiredService<Cratis.Chronicle.Setup.KernelBootstrapResetHandler>()));
+                    sp.GetRequiredService<KernelBootstrapResetHandler>()));
         });
 
         return builder;

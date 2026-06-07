@@ -32,7 +32,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
 /// SQL implementation of <see cref="ISink"/> backed by a per-read-model table whose column shape is
-/// derived from the read model's <see cref="Cratis.Chronicle.Schemas.JsonSchema"/>: each leaf
+/// derived from the read model's <see cref="JsonSchema"/>: each leaf
 /// property becomes a real typed column, collections and nested objects become a single JSON column
 /// (<c>jsonb</c> on PostgreSQL, <c>nvarchar(max)</c> on SQL Server, <c>TEXT</c> on SQLite). Changes
 /// from the projection engine are translated into per-column updates on a tracked

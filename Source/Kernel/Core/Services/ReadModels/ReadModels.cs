@@ -661,7 +661,7 @@ internal sealed class ReadModels(
         string namespaceName,
         string eventSequenceId,
         EventSourceId? eventSourceId = default,
-        IEnumerable<Concepts.Events.EventType>? eventTypes = default,
+        IEnumerable<EventType>? eventTypes = default,
         ulong? eventCount = default)
     {
         var eventSequenceStorage = storage
@@ -788,7 +788,7 @@ internal sealed class ReadModels(
         IReadModelsCompliance complianceHelper,
         JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
     {
-        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, Concepts.ReadModels.ReadModelKey readModelKey, JsonObject readModel)
+        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel)
         {
             var decrypted = await complianceHelper.ReleaseJson(
                 eventStore,
@@ -806,5 +806,5 @@ internal sealed class ReadModels(
         }
     }
 
-    record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<Concepts.Events.EventType> EventTypes);
+    record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<EventType> EventTypes);
 }

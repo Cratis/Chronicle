@@ -62,7 +62,7 @@ public interface IDatabase
     /// <param name="eventStore">The name of the event store.</param>
     /// <param name="namespace">The name of the namespace.</param>
     /// <param name="containerName">The container name of the read model (table name).</param>
-    /// <param name="columns">The columns derived from the read model's <see cref="Cratis.Chronicle.Schemas.JsonSchema"/>.</param>
+    /// <param name="columns">The columns derived from the read model's <see cref="Schemas.JsonSchema"/>.</param>
     /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the specified read model table.</returns>
     Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns);
 

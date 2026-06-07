@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 /// <summary>
 /// Represents an implementation of <see cref="IReadModelMigrator"/> that creates the read-model table
-/// with the column shape derived from the read model's <see cref="Cratis.Chronicle.Schemas.JsonSchema"/>.
+/// with the column shape derived from the read model's <see cref="Schemas.JsonSchema"/>.
 /// Each leaf property in the schema becomes a typed column; arrays and nested objects become a JSON
 /// column (jsonb on PostgreSQL, nvarchar(max) on SQL Server, text on SQLite).
 /// </summary>
