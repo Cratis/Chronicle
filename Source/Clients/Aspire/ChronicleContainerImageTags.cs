@@ -54,4 +54,22 @@ public static class ChronicleContainerImageTags
     /// Maps to <c>Cratis:Chronicle:Storage:ConnectionDetails</c> in the Chronicle server configuration.
     /// </summary>
     public const string StorageConnectionDetailsEnvironmentVariable = "Cratis__Chronicle__Storage__ConnectionDetails";
+
+    /// <summary>
+    /// Environment variable key for the Chronicle compliance encryption storage type.
+    /// Maps to <c>Cratis:Chronicle:Compliance:Encryption:Storage:Type</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string ComplianceEncryptionStorageTypeEnvironmentVariable = "Cratis__Chronicle__Compliance__Encryption__Storage__Type";
+
+    /// <summary>
+    /// Environment variable key for the Chronicle compliance encryption storage connection details.
+    /// Maps to <c>Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c> in the Chronicle server configuration.
+    /// </summary>
+    public const string ComplianceEncryptionStorageConnectionDetailsEnvironmentVariable = "Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails";
+
+    /// <summary>
+    /// Environment variable key for the HashiCorp Vault token used for Chronicle compliance encryption key storage.
+    /// Chronicle reads this variable directly; the value must be a valid Vault token.
+    /// </summary>
+    public const string VaultTokenEnvironmentVariable = "VAULT_TOKEN";
 }
