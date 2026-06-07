@@ -4,22 +4,23 @@
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventTypesStorage"/> for SQL.
+/// Represents an implementation of <see cref="IObserverStateStorage"/> for SQL.
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverStateStorage
+public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverStateStorage, IDisposable
 {
+    readonly ReplaySubject<IEnumerable<Observation.ObserverState>> _subject = new(1);
+
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => throw new NotImplementedException();
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => _subject;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Observation.ObserverState>> GetAll()
@@ -66,6 +67,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         var entity = state.ToSql();
         await scope.DbContext.Observers.Upsert(entity);
         await scope.DbContext.SaveChangesAsync();
+        await NotifyChange();
     }
 
     /// <inheritdoc/>
@@ -94,5 +96,19 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         scope.DbContext.Observers.Remove(existing);
         await scope.DbContext.Observers.AddAsync(renamed);
         await scope.DbContext.SaveChangesAsync();
+        await NotifyChange();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _subject.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    async Task NotifyChange()
+    {
+        var all = await GetAll();
+        _subject.OnNext(all);
     }
 }

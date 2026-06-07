@@ -136,7 +136,16 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType) => throw new NotImplementedException();
+    public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
+    {
+        var storedEventType = await GetSpecificEventType(eventType.Id);
+        if (storedEventType is null)
+        {
+            return [];
+        }
+
+        return storedEventType.Schemas.Select(kvp => storedEventType.ToKernel(new EventTypeGeneration(kvp.Key)));
+    }
 
     /// <inheritdoc/>
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = null)

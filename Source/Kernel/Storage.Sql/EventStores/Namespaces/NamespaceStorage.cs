@@ -13,14 +13,17 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </summary>
 /// <param name="eventStore">The event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : INamespaceStorage
+public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : INamespaceStorage, IDisposable
 {
+    readonly ReplaySubject<IEnumerable<NamespaceState>> _subject = new(1);
+
     /// <inheritdoc/>
     public async Task Create(EventStoreNamespaceName name, DateTimeOffset created)
     {
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.Namespaces.AddAsync(new Namespace { Name = name.ToString(), Created = created });
         await scope.DbContext.SaveChangesAsync();
+        await NotifyChange();
     }
 
     /// <inheritdoc/>
@@ -29,6 +32,7 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
         await using var scope = await database.EventStore(eventStore);
         scope.DbContext.Namespaces.Remove(new Namespace { Name = name.ToString() });
         await scope.DbContext.SaveChangesAsync();
+        await NotifyChange();
     }
 
     /// <inheritdoc/>
@@ -51,5 +55,18 @@ public class NamespaceStorage(EventStoreName eventStore, IDatabase database) : I
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<NamespaceState>> ObserveAll() => throw new NotImplementedException();
+    public ISubject<IEnumerable<NamespaceState>> ObserveAll() => _subject;
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _subject.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    async Task NotifyChange()
+    {
+        var all = await GetAll();
+        _subject.OnNext(all);
+    }
 }

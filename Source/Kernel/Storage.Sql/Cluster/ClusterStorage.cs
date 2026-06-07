@@ -19,8 +19,11 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
 /// <param name="jobTypes">The <see cref="IJobTypes"/> that knows about job types.</param>
 /// <param name="jsonSerializerOptions">The configured <see cref="JsonSerializerOptions"/> including all concept converters.</param>
-public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage
+public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
 {
+    readonly BehaviorSubject<IEnumerable<EventStoreName>> _eventStoresSubject = new([]);
+    int _eventStoresInitialized;
+
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
     {
@@ -30,7 +33,14 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores() => throw new NotImplementedException();
+    public ISubject<IEnumerable<EventStoreName>> ObserveEventStores()
+    {
+        if (Interlocked.CompareExchange(ref _eventStoresInitialized, 1, 0) == 0)
+        {
+            _ = PushEventStoresToSubjectAsync();
+        }
+        return _eventStoresSubject;
+    }
 
     /// <inheritdoc/>
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
@@ -44,5 +54,15 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
         await using var scope = await database.Cluster();
         await scope.DbContext.EventStores.Upsert(new EventStore { Name = eventStore });
         await scope.DbContext.SaveChangesAsync();
+        await PushEventStoresToSubjectAsync();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => _eventStoresSubject.Dispose();
+
+    async Task PushEventStoresToSubjectAsync()
+    {
+        var stores = await GetEventStores();
+        _eventStoresSubject.OnNext(stores);
     }
 }
