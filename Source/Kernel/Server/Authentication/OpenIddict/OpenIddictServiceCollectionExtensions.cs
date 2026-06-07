@@ -2,8 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography.X509Certificates;
-using Cratis.Chronicle.Storage.MongoDB.Security;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.Cluster.Security;
+using MongoDbApplicationStorage = Cratis.Chronicle.Storage.MongoDB.Security.ApplicationStorage;
+using MongoDbAuthorizationStorage = Cratis.Chronicle.Storage.MongoDB.Security.AuthorizationStorage;
+using MongoDbScopeStorage = Cratis.Chronicle.Storage.MongoDB.Security.ScopeStorage;
+using MongoDbTokenStorage = Cratis.Chronicle.Storage.MongoDB.Security.TokenStorage;
 
 namespace Cratis.Chronicle.Server.Authentication.OpenIddict;
 
@@ -27,11 +32,25 @@ public static class OpenIddictServiceCollectionExtensions
             return services;
         }
 
-        // Add Security storage implementations for OpenIddict
-        services.AddSingleton<IApplicationStorage, ApplicationStorage>();
-        services.AddSingleton<IAuthorizationStorage, AuthorizationStorage>();
-        services.AddSingleton<IScopeStorage, ScopeStorage>();
-        services.AddSingleton<ITokenStorage, TokenStorage>();
+        // Add Security storage implementations for OpenIddict — use SQL or MongoDB depending on storage type
+        var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+
+        if (isSqlStorage)
+        {
+            services.AddSingleton(sp => sp.GetRequiredService<ISystemStorage>().Applications);
+            services.AddSingleton<IAuthorizationStorage, SqlAuthorizationStorage>();
+            services.AddSingleton<IScopeStorage, SqlScopeStorage>();
+            services.AddSingleton<ITokenStorage, SqlTokenStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IApplicationStorage, MongoDbApplicationStorage>();
+            services.AddSingleton<IAuthorizationStorage, MongoDbAuthorizationStorage>();
+            services.AddSingleton<IScopeStorage, MongoDbScopeStorage>();
+            services.AddSingleton<ITokenStorage, MongoDbTokenStorage>();
+        }
 
         // Note: Data Protection is configured in AddChronicleAuthentication
         // and will be reused here for OpenIddict
