@@ -51,4 +51,4 @@ Cratis documentation is **not** one folder. The content lives in **each product'
 - **Code examples are copied verbatim by readers** — verify every framework API against real source before writing it. See [Writing Correct Code Examples](./writing-correct-examples.md).
 - Match the **tour voice** (teach, don't dump) and the right **Diátaxis** type — see [Writing Cratis Documentation](./writing-cratis-docs.md).
 
-→ Site build internals: [The Astro Starlight Docs Site](./astro-starlight-site.md). Rendering pipeline (Mermaid, fonts, tables) + visual QA: [Documentation Rendering & QA](./documentation-rendering-and-qa.md).
+→ Rendering pipeline (Mermaid, fonts, tables) + visual QA: [Documentation Rendering & QA](./documentation-rendering-and-qa.md). Site build internals live in the Documentation repo.

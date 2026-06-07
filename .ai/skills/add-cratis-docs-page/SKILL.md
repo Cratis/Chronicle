@@ -1,15 +1,17 @@
 ---
 name: add-cratis-docs-page
-description: Use this skill when creating a NEW Cratis documentation page that doesn't exist yet — a new tutorial chapter, how-to/guide, explanation/concept page, reference page, scenario/recipe, or a new site-level page. Handles where the file goes (which product repo), wiring it into the sidebar nav (toc.yml + Diátaxis bucket), and verifying it renders. Trigger when someone asks to add/create/write a new docs page, document a new feature, add a guide/tutorial/recipe/concept to the docs, or add a new section to a product's documentation.
+description: Use this skill when creating a NEW Cratis documentation page under `Documentation/**` in a product or contributing repo — a new tutorial chapter, how-to/guide, explanation/concept page, reference page, or scenario/recipe. Handles where the file goes (which product repo), wiring it into the sidebar nav (toc.yml + Diátaxis bucket), and verifying it renders. Trigger when someone asks to add/create/write a new docs page, document a new feature, add a guide/tutorial/recipe/concept to the docs, or add a new section to a product's documentation.
 ---
 
 # Adding a new Cratis documentation page
+
+> Scope this skill to new source files under `Documentation/**` in the product or contributing repo. Site-level pages in `Documentation/web` are owned by the Documentation repo.
 
 The site builds its navigation from each product's `toc.yml`, regrouped into Diátaxis buckets. A new page must be created in the right repo AND wired into the nav, or it builds but is unreachable.
 
 ## 1. Decide the type and the home
 
-- **Which product?** Put the file in that product's repo: `Chronicle/Documentation/`, `Arc/Documentation/`, `Components/Documentation/`, `cli/Documentation/`, `Fundamentals/Documentation/`. A cross-product / site-level page goes in `Documentation/web/src/content/docs/` as `.mdx`.
+- **Which product?** Put the file in that product's repo: `Chronicle/Documentation/`, `Arc/Documentation/`, `Components/Documentation/`, `cli/Documentation/`, `Fundamentals/Documentation/`. A cross-product / site-level page belongs in the Documentation repo's `web/src/content/docs/`, not in this product repo.
 - **Which Diátaxis type?** It decides the bucket and the voice — write *only* that type:
   - **Tutorial** (Get started) — learning by doing, steps with visible results.
   - **How-to / Guide** (Guides) — a recipe for a specific task; assume competence.
@@ -27,7 +29,7 @@ The site builds its navigation from each product's `toc.yml`, regrouped into Di�
 ## 3. Wire it into the nav
 
 - **Product page:** add the entry to that repo's `Documentation/toc.yml`, then add the entry's `name` to the correct bucket's `sections` in `Documentation/web/scripts/sync-content.mjs` (`PRODUCTS[].buckets`). Buckets order: **Get started → Guides → Understand → Reference**.
-- **Site-level page:** wire it in `astro.config.mjs` (`overviewTopic.items` + the topic glob).
+- **Site-level page:** use the Documentation repo copy of this skill; site-level pages are wired in `astro.config.mjs` there.
 - **Links:** to a `.mdx` page use an **extension-less** link; `.md` keeps the extension; cross-product links are root-relative (`/chronicle/...`).
 
 ## 4. Verify

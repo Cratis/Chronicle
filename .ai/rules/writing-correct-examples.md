@@ -1,8 +1,8 @@
 ---
-applyTo: "**/*.{md,mdx}"
+applyTo: "**/Documentation/**/*.{md,mdx}"
 paths:
-  - "**/*.md"
-  - "**/*.mdx"
+  - "**/Documentation/**/*.md"
+  - "**/Documentation/**/*.mdx"
 ---
 
 # Writing Correct Code Examples (Technical Docs)

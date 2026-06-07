@@ -1,9 +1,11 @@
 ---
 name: qa-cratis-docs
-description: Use this skill to visually QA the Cratis documentation site — screenshot pages headless in light AND dark, evaluate how they look against the aspire.dev bar, check diagrams/tables/code blocks render, and diagnose layout-shift ("flicker"/"twitch"/"pop") bugs. Trigger when someone asks to screenshot the docs, check how a docs page looks, review the docs visually, verify a diagram or table renders, compare the docs to aspire.dev, or investigate a flicker/jump/layout-shift on the docs site.
+description: Use this skill to visually QA rendered docs site pages after changes to source files under `Documentation/**` — screenshot pages headless in light AND dark, evaluate how they look against the aspire.dev bar, check diagrams/tables/code blocks render, and diagnose layout-shift ("flicker"/"twitch"/"pop") bugs. Trigger when someone asks to screenshot the docs, check how a docs page looks, review the docs visually, verify a diagram or table renders, compare the docs to aspire.dev, or investigate a flicker/jump/layout-shift on the docs site.
 ---
 
 # Visual & layout QA for the docs site
+
+> Scope this skill to visual checks for product or contributing docs whose source lives under `Documentation/**`. Site-level pages in `Documentation/web` are owned by the Documentation repo.
 
 `shot-scraper`/Playwright aren't dependencies, but Chrome is. Use the committed `Documentation/web/scripts/screenshot.mjs` (drives system Chrome over CDP) — it captures **light or dark**, full-page, with client-side rendering settled.
 

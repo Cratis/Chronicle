@@ -72,4 +72,4 @@ import { FullStackTabs, TopicHero, SimpleCard, StackDiagram, YouWillLearn, Recap
 
 **Study the masters (cloned locally):** `~/src/repos/aspire.dev` (Starlight — great CLI docs + tour writing), `~/src/repos/marten`, `~/src/repos/wolverine`. Mine their *patterns*; never copy their text.
 
-→ The mechanical format a page must follow (frontmatter, headings, asides, code fences, file layout): [Documentation Structure & Formatting](./documentation-structure-and-formatting.md). The edit→sync→verify loop and where pages live: [Editing Cratis Documentation](./editing-cratis-docs.md). Site build internals: [The Astro Starlight Docs Site](./astro-starlight-site.md).
+→ The mechanical format a page must follow (frontmatter, headings, asides, code fences, file layout): [Documentation Structure & Formatting](./documentation-structure-and-formatting.md). The edit→sync→verify loop and where pages live: [Editing Cratis Documentation](./editing-cratis-docs.md). Site build internals live in the Documentation repo.
