@@ -44,6 +44,7 @@ public class AccountBalanceReducer : IReducerFor<AccountBalance>
 ## Topics
 
 - [Getting Started](getting-started.md) - Learn how to create your first reducer
+- [Choose a read-model style](../projections/choosing-a-read-model-style.md) - Compare reducers with model-bound and declarative projections
 - [Subscribe to External Event Stores](external-event-store-subscriptions.md) - Configure outbox-to-inbox subscriptions for reducers
 - [Passive Reducers](passive-reducers.md) - Control when reducers actively observe events
 - [Event Processing](event-processing.md) - Understand how reducers process events

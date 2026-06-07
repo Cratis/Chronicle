@@ -1,5 +1,7 @@
 - name: Overview
   href: index.md
+- name: Choose a read-model style
+  href: choosing-a-read-model-style.md
 - name: Architecture
   href: architecture.md
 - name: Eventual Consistency

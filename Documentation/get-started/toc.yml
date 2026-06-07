@@ -1,5 +1,7 @@
 - name: Run Chronicle locally
   href: running-chronicle.md
+- name: Choose a hosting model
+  href: choose-hosting-model.md
 - name: Console
   href: console.md
 - name: Worker Service
