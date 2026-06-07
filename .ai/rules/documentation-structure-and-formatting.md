@@ -64,7 +64,7 @@ In `.mdx` you may also use `<Aside type="tip">…</Aside>` (import from `@astroj
 
 ## Tables, images, links, diagrams
 
-- **Tables** are GitHub-Flavored Markdown (`| … |` with a `| --- |` separator row, blank line before). They render as real tables (the site tints the header). A table that shows as raw `|` pipes means GFM isn't applying — see the rendering rule.
+- **Tables** are GitHub-Flavored Markdown (`| … |` with a `| --- |` separator row, blank line before). They render as real tables (the site tints the header). A table that shows as raw `|` pipes means GFM isn't applying — check the Documentation repo's site-rendering rule.
 - **Images** use relative paths next to the page; they're click-to-zoom automatically. Give meaningful alt text.
 - **Links:** product `.md` may use `./foo.md`; links to a `.mdx` page must be **extension-less** (`./foo`); site-level `.mdx` uses clean root-relative URLs (`/arc/…`). Cross-product links are root-relative. **Link text must describe the destination** — never `[here]` / `[see documentation]` (the gate fails on these).
 - **Diagrams:** ` ```mermaid ` fences for any non-trivial concept (pre-rendered to SVG at build).

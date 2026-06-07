@@ -48,4 +48,4 @@ The cause is almost always one of: **font swap** (fixed — `font-display: optio
 - The Astro dev toolbar appears mid-page in full-page captures — it's a dev-only overlay, not a real element.
 - `prefers-color-scheme` emulation can trigger astro-mermaid's theme observer on any client-rendered fallback diagram; pre-rendered diagrams are unaffected.
 
-→ Rendering internals: the `documentation-rendering-and-qa` rule.
+→ Rendering internals live in the Documentation repo.

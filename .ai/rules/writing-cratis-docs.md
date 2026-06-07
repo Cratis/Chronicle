@@ -56,7 +56,7 @@ import { FullStackTabs, TopicHero, SimpleCard, StackDiagram, YouWillLearn, Recap
 - **`<FullStackTabs>`** — synced C# ↔ generated-TypeScript tabs. **This is the differentiator** (full-stack type safety) — use it wherever a feature spans the stack; show both sides, not just the backend.
 - **`<TopicHero>` + `<SimpleCard>`** — the per-product Overview landings (pain→relief framing + a card grid).
 - **`<StackDiagram>`, `<YouWillLearn>`, `<Recap>`** — the stack picture, a chapter's learning goals, and the closing recap (checklist points 1 and 5).
-- **A Mermaid diagram for every non-trivial concept** — architecture, event/command flow, state transitions. A concept page without a diagram is usually incomplete. (They're pre-rendered to SVG at build — see the `documentation-rendering-and-qa` rule.)
+- **A Mermaid diagram for every non-trivial concept** — architecture, event/command flow, state transitions. A concept page without a diagram is usually incomplete. (The Documentation site pre-renders them to SVG at build time.)
 
 ## Two voices, and connect the products
 

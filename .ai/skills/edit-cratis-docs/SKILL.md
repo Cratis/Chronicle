@@ -47,4 +47,4 @@ For visual changes, screenshot the page in light and dark and read the result �
 
 Commit the change in the **product repo** that owns the page (the site repo only changes if you touched a site-level page, the nav buckets in `sync-content.mjs`, or the build). Keep commits to one logical unit; don't push without explicit approval.
 
-→ Background on visual rendering: the `documentation-rendering-and-qa` rule. Site build internals live in the Documentation repo. To create a *new* page (not edit an existing one), use the `add-cratis-docs-page` skill.
+→ Site build and rendering internals live in the Documentation repo. To create a *new* page (not edit an existing one), use the `add-cratis-docs-page` skill.
