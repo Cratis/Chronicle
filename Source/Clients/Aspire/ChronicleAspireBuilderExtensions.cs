@@ -11,6 +11,9 @@ namespace Cratis.Chronicle.Aspire;
 /// </summary>
 public static class ChronicleAspireBuilderExtensions
 {
+    const string HashiCorpVaultStorageType = "vault";
+    const string AzureKeyVaultStorageType = "azure-key-vault";
+
     /// <summary>
     /// Configures the Chronicle resource to use an external MongoDB connection string.
     /// </summary>
@@ -103,6 +106,67 @@ public static class ChronicleAspireBuilderExtensions
         {
             context.EnvironmentVariables[ChronicleContainerImageTags.StorageTypeEnvironmentVariable] = "Sqlite";
             context.EnvironmentVariables[ChronicleContainerImageTags.StorageConnectionDetailsEnvironmentVariable] = connectionString;
+        });
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the Chronicle resource to use HashiCorp Vault for compliance encryption key storage.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Sets the <c>Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c>vault</c>,
+    /// <c>Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the resolved Vault endpoint URL,
+    /// and <c>VAULT_TOKEN</c> to the provided token.
+    /// </para>
+    /// <para>
+    /// These map to <c>Cratis:Chronicle:Compliance:Encryption:Storage:Type</c>,
+    /// <c>Cratis:Chronicle:Compliance:Encryption:Storage:ConnectionDetails</c>, and the
+    /// <c>VAULT_TOKEN</c> environment variable in the Chronicle server configuration respectively.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="vaultEndpoint">The <see cref="EndpointReference"/> pointing to the HashiCorp Vault HTTP endpoint.</param>
+    /// <param name="vaultToken">The Vault authentication token. For development, this is typically the dev root token.</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    public static IChronicleAspireBuilder WithHashiCorpVault(
+        this IChronicleAspireBuilder builder,
+        EndpointReference vaultEndpoint,
+        string vaultToken)
+    {
+        builder.ResourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[ChronicleContainerImageTags.ComplianceEncryptionStorageTypeEnvironmentVariable] = HashiCorpVaultStorageType;
+            context.EnvironmentVariables[ChronicleContainerImageTags.ComplianceEncryptionStorageConnectionDetailsEnvironmentVariable] = vaultEndpoint;
+            context.EnvironmentVariables[ChronicleContainerImageTags.VaultTokenEnvironmentVariable] = vaultToken;
+        });
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the Chronicle resource to use Azure Key Vault for compliance encryption key storage.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Sets the <c>Cratis__Chronicle__Compliance__Encryption__Storage__Type</c> container environment variable to <c>azure-key-vault</c>
+    /// and <c>Cratis__Chronicle__Compliance__Encryption__Storage__ConnectionDetails</c> to the Azure Key Vault URI.
+    /// </para>
+    /// <para>
+    /// Authentication is performed via <c>DefaultAzureCredential</c> on the Chronicle server side.
+    /// Ensure the Chronicle container's managed identity or workload identity has the necessary Key Vault permissions.
+    /// </para>
+    /// </remarks>
+    /// <param name="builder">The <see cref="IChronicleAspireBuilder"/> to configure.</param>
+    /// <param name="keyVaultUri">The Azure Key Vault URI (e.g. <c>https://my-vault.vault.azure.net/</c>).</param>
+    /// <returns>The same <see cref="IChronicleAspireBuilder"/> for continuation.</returns>
+    public static IChronicleAspireBuilder WithAzureKeyVault(
+        this IChronicleAspireBuilder builder,
+        string keyVaultUri)
+    {
+        builder.ResourceBuilder.WithEnvironment(context =>
+        {
+            context.EnvironmentVariables[ChronicleContainerImageTags.ComplianceEncryptionStorageTypeEnvironmentVariable] = AzureKeyVaultStorageType;
+            context.EnvironmentVariables[ChronicleContainerImageTags.ComplianceEncryptionStorageConnectionDetailsEnvironmentVariable] = keyVaultUri;
         });
         return builder;
     }

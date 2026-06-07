@@ -219,10 +219,10 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                     }
                     services.AddKeyedSingleton<IActivitySource<EventSequences.EventSequence>>(ClientActivity.SourceName, (sp, key) =>
                         new ActivitySource<EventSequences.EventSequence>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
-                    services.AddKeyedSingleton<IActivitySource<Cratis.Chronicle.Reactors.Reactors>>(ClientActivity.SourceName, (sp, key) =>
-                        new ActivitySource<Cratis.Chronicle.Reactors.Reactors>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
-                    services.AddKeyedSingleton<IActivitySource<Cratis.Chronicle.Reducers.Reducers>>(ClientActivity.SourceName, (sp, key) =>
-                        new ActivitySource<Cratis.Chronicle.Reducers.Reducers>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
+                    services.AddKeyedSingleton<IActivitySource<Reactors.Reactors>>(ClientActivity.SourceName, (sp, key) =>
+                        new ActivitySource<Reactors.Reactors>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
+                    services.AddKeyedSingleton<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName, (sp, key) =>
+                        new ActivitySource<Reducers.Reducers>(sp.GetRequiredKeyedService<System.Diagnostics.ActivitySource>(key)));
 
                     services.AddSingleton<IChronicleClient>(sp =>
                     {

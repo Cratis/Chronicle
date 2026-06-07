@@ -218,15 +218,15 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Returns a new <see cref="Storage.Observation.ObserverState"/> with handled event counts incremented
+    /// Returns a new <see cref="ObserverState"/> with handled event counts incremented
     /// for the given partition and the provided successfully handled events.
     /// </summary>
-    /// <param name="state">The current <see cref="Storage.Observation.ObserverState"/> to update.</param>
+    /// <param name="state">The current <see cref="ObserverState"/> to update.</param>
     /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to increment.</param>
     /// <param name="handledEvents">The events that were successfully handled.</param>
-    /// <returns>A new <see cref="Storage.Observation.ObserverState"/> with <see cref="Storage.Observation.ObserverState.HandledEventCount"/>, <see cref="Storage.Observation.ObserverState.HandledEventCountPerEventType"/>, and <see cref="Storage.Observation.ObserverState.HandledEventCountPerPartition"/> incremented accordingly.</returns>
-    static Storage.Observation.ObserverState WithIncrementedHandledEventCounts(
-        Storage.Observation.ObserverState state,
+    /// <returns>A new <see cref="ObserverState"/> with <see cref="ObserverState.HandledEventCount"/>, <see cref="ObserverState.HandledEventCountPerEventType"/>, and <see cref="ObserverState.HandledEventCountPerPartition"/> incremented accordingly.</returns>
+    static ObserverState WithIncrementedHandledEventCounts(
+        ObserverState state,
         Key partition,
         IEnumerable<AppendedEvent> handledEvents)
     {
@@ -259,15 +259,15 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Returns a new <see cref="Storage.Observation.ObserverState"/> with the given partition's contribution
-    /// subtracted from all handled event counts, and the partition removed from <see cref="Storage.Observation.ObserverState.HandledEventCountPerPartition"/>.
+    /// Returns a new <see cref="ObserverState"/> with the given partition's contribution
+    /// subtracted from all handled event counts, and the partition removed from <see cref="ObserverState.HandledEventCountPerPartition"/>.
     /// Used when a partition replay begins.
     /// </summary>
-    /// <param name="state">The current <see cref="Storage.Observation.ObserverState"/> to update.</param>
+    /// <param name="state">The current <see cref="ObserverState"/> to update.</param>
     /// <param name="partition">The <see cref="Key"/> identifying the partition whose counts to subtract.</param>
-    /// <returns>A new <see cref="Storage.Observation.ObserverState"/> with the partition's counts removed and aggregates adjusted.</returns>
-    static Storage.Observation.ObserverState WithSubtractedPartitionHandledEventCounts(
-        Storage.Observation.ObserverState state,
+    /// <returns>A new <see cref="ObserverState"/> with the partition's counts removed and aggregates adjusted.</returns>
+    static ObserverState WithSubtractedPartitionHandledEventCounts(
+        ObserverState state,
         Key partition)
     {
         if (!state.HandledEventCountPerPartition.TryGetValue(partition, out var partitionCounts))

@@ -16,7 +16,7 @@ internal static class NamespaceJsonStringColumns
     /// <summary>
     /// The (entity type, property name) pairs to bind to the provider-native JSON column type.
     /// </summary>
-    public static readonly (System.Type EntityType, string PropertyName)[] All =
+    public static readonly (Type EntityType, string PropertyName)[] All =
     [
         (typeof(Jobs.Job), "StateJson"),
         (typeof(JobSteps.JobStep), "StateJson"),

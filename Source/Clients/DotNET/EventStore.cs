@@ -68,7 +68,7 @@ public class EventStore : IEventStore
     /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
-    /// <param name="reactorSideEffectHandlers"><see cref="Reactors.SideEffects.IReactorSideEffectHandlers"/> for handling reactor side-effect return values.</param>
+    /// <param name="reactorSideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for handling reactor side-effect return values.</param>
     /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
     /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -88,7 +88,7 @@ public class EventStore : IEventStore
         IJsonSchemaGenerator schemaGenerator,
         INamingPolicy namingPolicy,
         IServiceProvider serviceProvider,
-        Reactors.SideEffects.IReactorSideEffectHandlers reactorSideEffectHandlers,
+        IReactorSideEffectHandlers reactorSideEffectHandlers,
         IClientArtifactsActivator artifactActivator,
         bool autoDiscoverAndRegister,
         JsonSerializerOptions jsonSerializerOptions,
@@ -192,14 +192,14 @@ public class EventStore : IEventStore
         FailedPartitions = new FailedPartitions(this);
 
         var readModelsWatcherManager = new ReadModelWatcherManager(new ReadModelWatcherFactory(this, jsonSerializerOptions));
-        var materializedReadModels = new ReadModels.MaterializedReadModels(
+        var materializedReadModels = new MaterializedReadModels(
             this,
             projections,
             Reducers,
             schemaGenerator,
             _servicesAccessor,
             jsonSerializerOptions,
-            loggerFactory.CreateLogger<ReadModels.MaterializedReadModels>());
+            loggerFactory.CreateLogger<MaterializedReadModels>());
 
         ReadModels = new ReadModels.ReadModels(
             this,

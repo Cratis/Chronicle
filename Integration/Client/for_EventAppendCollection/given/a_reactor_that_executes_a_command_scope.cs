@@ -23,9 +23,9 @@ public class a_reactor_that_executes_a_command_scope(ChronicleFixture fixture) :
 
     static void RegisterArcActivitySource(IServiceCollection services, string typeName)
     {
-        var type = typeof(Cratis.Arc.Commands.ICommandPipeline).Assembly.GetType(typeName)!;
-        var activitySourceType = typeof(Cratis.Traces.ActivitySource<>).MakeGenericType(type);
-        var activitySourceInterfaceType = typeof(Cratis.Traces.IActivitySource<>).MakeGenericType(type);
+        var type = typeof(Arc.Commands.ICommandPipeline).Assembly.GetType(typeName)!;
+        var activitySourceType = typeof(Traces.ActivitySource<>).MakeGenericType(type);
+        var activitySourceInterfaceType = typeof(Traces.IActivitySource<>).MakeGenericType(type);
         services.AddSingleton(activitySourceType, _ => Activator.CreateInstance(
             activitySourceType,
             new System.Diagnostics.ActivitySource(activitySourceType.FullName ?? activitySourceType.Name))!);

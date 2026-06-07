@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 /// <summary>
-/// Describes a single column on a read-model table derived from the read model's <see cref="Cratis.Chronicle.Schemas.JsonSchema"/>.
+/// Describes a single column on a read-model table derived from the read model's <see cref="Schemas.JsonSchema"/>.
 /// Leaf properties (primitives, dates, guids, concepts of those) map to a typed column. Collections and
 /// complex objects map to a single JSON-typed column (jsonb on PostgreSQL, nvarchar(max) on SQL Server, text on SQLite).
 /// </summary>
