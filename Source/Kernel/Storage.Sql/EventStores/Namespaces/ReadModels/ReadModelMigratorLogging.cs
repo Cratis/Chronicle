@@ -12,4 +12,7 @@ internal static partial class ReadModelMigratorLogging
 {
     [LoggerMessage(LogLevel.Debug, "Creating read model table {TableName}")]
     internal static partial void CreatingReadModelTable(this ILogger<ReadModelMigrator> logger, string tableName);
+
+    [LoggerMessage(LogLevel.Debug, "Adding {ColumnCount} missing column(s) to read model table {TableName}: {Columns}")]
+    internal static partial void AddingMissingColumns(this ILogger<ReadModelMigrator> logger, int columnCount, string tableName, string columns);
 }
