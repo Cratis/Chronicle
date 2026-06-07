@@ -22,7 +22,6 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, IJobTypes jobTypes, JsonSerializerOptions jsonSerializerOptions) : IClusterStorage, IDisposable
 {
     readonly BehaviorSubject<IEnumerable<EventStoreName>> _eventStoresSubject = new([]);
-    int _eventStoresInitialized;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores()
@@ -35,10 +34,12 @@ public class ClusterStorage(IDatabase database, IInstancesOf<ISinkFactory> sinkF
     /// <inheritdoc/>
     public ISubject<IEnumerable<EventStoreName>> ObserveEventStores()
     {
-        if (Interlocked.CompareExchange(ref _eventStoresInitialized, 1, 0) == 0)
-        {
-            _ = PushEventStoresToSubjectAsync();
-        }
+        // Always push the current state so any new SSE subscriber receives the data once
+        // the async DB fetch completes — the Subject intermediary in InvokeAndWrapWithTransformSubject
+        // is a plain Subject (no replay), so the BehaviorSubject's synchronous initial emission
+        // is swallowed before the subscriber attaches. Re-pushing after each subscribe call ensures
+        // the subscriber gets data via the async emission that follows.
+        _ = PushEventStoresToSubjectAsync();
         return _eventStoresSubject;
     }
 
