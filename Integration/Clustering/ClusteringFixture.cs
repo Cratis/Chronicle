@@ -180,14 +180,13 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
-            // Register concept type converters
-            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
-            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-            // Convention binding must run BEFORE AddChronicleToSilo so that Storage.MongoDB services are registered
             siloBuilder.Services.AddTypeDiscovery();
             siloBuilder.Services.AddBindingsByConvention();
             siloBuilder.Services.AddSelfBindings();
+
+            // Register concept type converters after initial setup
+            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
 
             siloBuilder.ConfigureServices(services =>
             {
@@ -200,9 +199,10 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 
             if (_mongoContainerStatic is not null)
             {
+                var mongoUrl = $"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/";
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
-                    builder => builder.WithMongoDB($"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/", "integration-test"));
+                    builder => builder.WithMongoDB(mongoUrl, "integration-test"));
             }
         }
     }
@@ -214,14 +214,13 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
-            // Register concept type converters
-            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
-            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-            // Convention binding must run BEFORE AddChronicleToSilo so that Storage.MongoDB services are registered
             siloBuilder.Services.AddTypeDiscovery();
             siloBuilder.Services.AddBindingsByConvention();
             siloBuilder.Services.AddSelfBindings();
+
+            // Register concept type converters after initial setup
+            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
 
             siloBuilder.ConfigureServices(services =>
             {
@@ -234,9 +233,10 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 
             if (_mongoContainerStatic is not null)
             {
+                var mongoUrl = $"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/";
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
-                    builder => builder.WithMongoDB($"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/", "integration-test"));
+                    builder => builder.WithMongoDB(mongoUrl, "integration-test"));
             }
         }
     }
