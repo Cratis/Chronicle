@@ -3,6 +3,7 @@
 
 extern alias KernelCore;
 
+using Cratis.Arc;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.XUnit.Integration;
@@ -12,7 +13,7 @@ using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.TestingHost;
+using Microsoft.Extensions.Hosting;
 using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Integration.Clustering;
@@ -22,14 +23,10 @@ namespace Cratis.Chronicle.Integration.Clustering;
 /// </summary>
 public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 {
-    /// <summary>
-    /// Static reference to allow configurators to access mongo container during silo initialization.
-    /// </summary>
-    static IContainer? _mongoContainerStatic;
-
     readonly INetwork _network;
     IContainer? _mongoContainer;
-    TestCluster? _cluster;
+    IHost? _silo1;
+    IHost? _silo2;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusteringFixture"/> class.
@@ -57,19 +54,14 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     public MongoDBDatabase ReadModels => new(_mongoContainer!, "read-models");
 
     /// <summary>
-    /// Gets the Orleans test cluster.
+    /// Gets the <see cref="IEventStore"/> instance from Silo1.
     /// </summary>
-    public TestCluster Cluster => _cluster!;
+    public IEventStore EventStore => _silo1!.Services.GetRequiredService<IEventStore>();
 
     /// <summary>
-    /// Gets the <see cref="IEventStore"/> instance.
+    /// Gets the <see cref="IChronicleClient"/> instance from Silo1.
     /// </summary>
-    public IEventStore EventStore => Cluster.ServiceProvider.GetRequiredService<IEventStore>();
-
-    /// <summary>
-    /// Gets the <see cref="IChronicleClient"/> instance.
-    /// </summary>
-    public IChronicleClient ChronicleClient => Cluster.ServiceProvider.GetRequiredService<IChronicleClient>();
+    public IChronicleClient ChronicleClient => _silo1!.Services.GetRequiredService<IChronicleClient>();
 
     /// <inheritdoc/>
     public async Task InitializeAsync()
@@ -90,28 +82,42 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         _mongoContainer = mongoBuilder.Build();
         await _mongoContainer.StartAsync();
 
-        // Set static reference for configurators
-        _mongoContainerStatic = _mongoContainer;
+        var mongoUrl = $"mongodb://{_mongoContainer.Hostname}:{_mongoContainer.GetMappedPublicPort(27017)}/";
 
-        // Create test cluster with 2 silos
-        var builder = new TestClusterBuilder(2)
-            .AddSiloBuilderConfigurator<Silo1Configurator>()
-            .AddSiloBuilderConfigurator<Silo2Configurator>()
-            .AddClientBuilderConfigurator<ClientConfigurator>();
+        // Create Silo 1 (EventSequences only)
+        _silo1 = CreateSilo(
+            siloName: "silo1",
+            siloPort: 11111,
+            gatewayPort: 30000,
+            mongoUrl: mongoUrl,
+            eventSequences: true,
+            observers: false);
+        await _silo1.StartAsync();
 
-        _cluster = builder.Build();
-        await _cluster.DeployAsync();
+        // Create Silo 2 (EventSequences + Observers) 
+        _silo2 = CreateSilo(
+            siloName: "silo2",
+            siloPort: 11112,
+            gatewayPort: 30001,
+            mongoUrl: mongoUrl,
+            eventSequences: true,
+            observers: true);
+        await _silo2.StartAsync();
     }
 
     /// <inheritdoc/>
     public async Task DisposeAsync()
     {
-        _mongoContainerStatic = null;
-
-        if (_cluster is not null)
+        if (_silo1 is not null)
         {
-            await _cluster.StopAllSilosAsync();
-            await _cluster.DisposeAsync();
+            await _silo1.StopAsync();
+            _silo1.Dispose();
+        }
+
+        if (_silo2 is not null)
+        {
+            await _silo2.StopAsync();
+            _silo2.Dispose();
         }
 
         if (_mongoContainer is not null)
@@ -173,82 +179,51 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         readModelsDb.Dispose();
     }
 
-    /// <summary>
-    /// Silo 1 configurator - EventSequences only.
-    /// </summary>
-    class Silo1Configurator : ISiloConfigurator
+    IHost CreateSilo(string siloName, int siloPort, int gatewayPort, string mongoUrl, bool eventSequences, bool observers)
     {
-        public void Configure(ISiloBuilder siloBuilder)
-        {
-            siloBuilder.Services.AddTypeDiscovery();
-            siloBuilder.Services.AddBindingsByConvention();
-            siloBuilder.Services.AddSelfBindings();
+        var builder = Host.CreateDefaultBuilder();
 
-            // Register concept type converters after initial setup
-            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
-            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-            siloBuilder.ConfigureServices(services =>
+        builder.AddCratisMongoDB(
+            mongo =>
             {
+                mongo.Server = mongoUrl;
+                mongo.Database = "orleans";
+                mongo.DirectConnection = true;
+            },
+            _ => { });
+
+        builder
+            .ConfigureServices((ctx, services) =>
+            {
+                services.AddTypeDiscovery();
+                services.AddBindingsByConvention();
+                services.AddSelfBindings();
+                services.AddCratisArcMeter();
+
+                // Register concept type converters
+                ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+                ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
                 services.Configure<Configuration.ChronicleOptions>(options =>
                 {
-                    options.Clustering.Roles.EventSequences = true;
-                    options.Clustering.Roles.Observers = false;
+                    options.Clustering.Roles.EventSequences = eventSequences;
+                    options.Clustering.Roles.Observers = observers;
                 });
             });
 
-            if (_mongoContainerStatic is not null)
+        builder.UseOrleans((ctx, siloBuilder) =>
+        {
+            siloBuilder
+                .UseLocalhostClustering(siloPort, gatewayPort);
+
+            if (_mongoContainer is not null)
             {
-                var mongoUrl = $"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/";
                 KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
                     siloBuilder,
-                    builder => builder.WithMongoDB(mongoUrl, "integration-test"));
+                    chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, "integration-test"));
             }
-        }
-    }
+        });
 
-    /// <summary>
-    /// Silo 2 configurator - Observers only.
-    /// </summary>
-    class Silo2Configurator : ISiloConfigurator
-    {
-        public void Configure(ISiloBuilder siloBuilder)
-        {
-            siloBuilder.Services.AddTypeDiscovery();
-            siloBuilder.Services.AddBindingsByConvention();
-            siloBuilder.Services.AddSelfBindings();
-
-            // Register concept type converters after initial setup
-            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
-            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
-
-            siloBuilder.ConfigureServices(services =>
-            {
-                services.Configure<Configuration.ChronicleOptions>(options =>
-                {
-                    options.Clustering.Roles.EventSequences = false;
-                    options.Clustering.Roles.Observers = true;
-                });
-            });
-
-            if (_mongoContainerStatic is not null)
-            {
-                var mongoUrl = $"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/";
-                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
-                    siloBuilder,
-                    builder => builder.WithMongoDB(mongoUrl, "integration-test"));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Client configurator.
-    /// </summary>
-    class ClientConfigurator : IClientBuilderConfigurator
-    {
-        public void Configure(IConfiguration configuration, IClientBuilder clientBuilder)
-        {
-            // Client configuration if needed
-        }
+        return builder.Build();
     }
 }
