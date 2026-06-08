@@ -113,25 +113,20 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
-        System.Console.WriteLine($"[GetObservers] Called for {request.EventStore}/{request.Namespace}");
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-        System.Console.WriteLine($"[GetObservers] Got {observerDefinitions.Count()} definitions");
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
-        System.Console.WriteLine($"[GetObservers] Got {observerStates.Count()} states");
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
             from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
-        var result = observers.ToContract();
-        System.Console.WriteLine($"[GetObservers] Returning {result.Count()} observers");
-        return result;
+
+        return observers.ToContract();
     }
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
     {
-        System.Console.WriteLine($"[ObserveObservers] Called for {request.EventStore}/{request.Namespace}");
         return storage
             .GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace).Observers
@@ -139,18 +134,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
             .CompletedBy(context.CancellationToken)
             .SelectMany(async observerStates =>
             {
-                System.Console.WriteLine($"[ObserveObservers] SelectMany fired with {observerStates.Count()} states");
                 // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
                 var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
-                System.Console.WriteLine($"[ObserveObservers] Got {observerDefinitions.Count()} definitions");
                 var observers =
                     from definition in observerDefinitions
                     join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
                     from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
                     select (definition, state);
-                var result = observers.ToContract();
-                System.Console.WriteLine($"[ObserveObservers] Returning {result.Count()} observers");
-                return result;
+
+                return observers.ToContract();
             });
     }
 
@@ -160,11 +152,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+
+        // Inner join on purpose: only replayable observers that already have state are candidates for
+        // replay. Unlike the all-observers listing — where an observer should appear even before it has
+        // run — an observer with no state has nothing to replay and must not be returned here.
         var observers =
             from definition in observerDefinitions
-            join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
-            from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
+            join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
+
         return observers.ToContract();
     }
 }
