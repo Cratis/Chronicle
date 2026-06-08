@@ -113,34 +113,46 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
+        System.Console.WriteLine($"[GetObservers] Called for {request.EventStore}/{request.Namespace}");
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+        System.Console.WriteLine($"[GetObservers] Got {observerDefinitions.Count()} definitions");
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+        System.Console.WriteLine($"[GetObservers] Got {observerStates.Count()} states");
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
             from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
-        return observers.ToContract();
+        var result = observers.ToContract();
+        System.Console.WriteLine($"[GetObservers] Returning {result.Count()} observers");
+        return result;
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        storage
+    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
+    {
+        System.Console.WriteLine($"[ObserveObservers] Called for {request.EventStore}/{request.Namespace}");
+        return storage
             .GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace).Observers
             .ObserveAll()
             .CompletedBy(context.CancellationToken)
             .SelectMany(async observerStates =>
             {
+                System.Console.WriteLine($"[ObserveObservers] SelectMany fired with {observerStates.Count()} states");
                 // TODO: We will be formalizing these things in Grains, until then this is less than optimal.
                 var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
+                System.Console.WriteLine($"[ObserveObservers] Got {observerDefinitions.Count()} definitions");
                 var observers =
                     from definition in observerDefinitions
                     join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
                     from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
                     select (definition, state);
-                return observers.ToContract();
+                var result = observers.ToContract();
+                System.Console.WriteLine($"[ObserveObservers] Returning {result.Count()} observers");
+                return result;
             });
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
