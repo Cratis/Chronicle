@@ -30,6 +30,8 @@
   href: constraints.md
 - name: Event Metadata Tags
   href: event-metadata-tags.md
+- name: Geospatial Coordinates
+  href: geospatial.md
 - name: When to use event sourcing
   href: when-to-use-event-sourcing.md
 - name: Glossary
