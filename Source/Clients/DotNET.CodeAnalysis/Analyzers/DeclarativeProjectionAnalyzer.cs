@@ -90,7 +90,11 @@ public class DeclarativeProjectionAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        var typeName = containingType.ToDisplayString();
+        // Use the original generic definition to avoid false matches where an unrelated
+        // type appears only in a type argument (e.g. IReadModelPropertiesBuilder<T, E, IFromBuilder<T, E>>
+        // would contain "IFromBuilder" in its bound display string but is not itself a builder type
+        // that accepts event type arguments).
+        var typeName = containingType.OriginalDefinition.ToDisplayString();
 
         // Check for IProjectionBuilderFor<T> or related interfaces
         return typeName.Contains("IProjectionBuilderFor") ||
