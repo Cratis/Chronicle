@@ -16,7 +16,7 @@ public class when_binding_sql_from_configuration : Specification
     {
         var configuration = new Dictionary<string, string?>
         {
-            ["Chronicle:DefaultSinkTypeId"] = WellKnownSinkTypes.SQL.Value.ToString()
+            ["Chronicle:DefaultSinkTypeId"] = WellKnownSinkTypes.SQL.Value
         };
 
         var configurationRoot = new ConfigurationBuilder()
