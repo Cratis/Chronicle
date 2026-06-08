@@ -14,10 +14,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Webhooks;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IWebhookDefinitionsStorage, IDisposable
+public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IWebhookDefinitionsStorage
 {
-    readonly ReplaySubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> _subject = new(1);
-
     /// <inheritdoc/>
     public async Task<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> GetAll()
     {
@@ -27,7 +25,7 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> ObserveAll() => _subject;
+    public ISubject<IEnumerable<Concepts.Observation.Webhooks.WebhookDefinition>> ObserveAll() => LiveQuery.Observe(GetAll);
 
     /// <inheritdoc/>
     public async Task<bool> Has(WebhookId id)
@@ -53,7 +51,6 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
         {
             scope.DbContext.WebhookDefinitions.Remove(definition);
             await scope.DbContext.SaveChangesAsync();
-            await NotifyChange();
         }
     }
 
@@ -63,19 +60,5 @@ public class WebhookDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await using var scope = await database.EventStore(eventStore);
         await scope.DbContext.WebhookDefinitions.Upsert(definition.ToSql());
         await scope.DbContext.SaveChangesAsync();
-        await NotifyChange();
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _subject.Dispose();
-        GC.SuppressFinalize(this);
-    }
-
-    async Task NotifyChange()
-    {
-        var all = await GetAll();
-        _subject.OnNext(all);
     }
 }

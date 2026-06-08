@@ -17,9 +17,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
 /// </summary>
 /// <param name="eventStore">The name of the event store.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
-public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage, IDisposable
+public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : IEventTypesStorage
 {
-    readonly ReplaySubject<IEnumerable<EventTypeSchema>> _eventTypesSubject = new(1);
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
@@ -56,8 +55,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
-
-        _eventTypesSubject.OnNext(await GetLatestForAllEventTypes());
     }
 
     /// <inheritdoc/>
@@ -72,8 +69,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         await scope.DbContext.EventTypes.Upsert(eventType);
         await scope.DbContext.SaveChangesAsync();
-
-        _eventTypesSubject.OnNext(await GetLatestForAllEventTypes());
     }
 
     /// <inheritdoc/>
@@ -111,7 +106,7 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
     }
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => _eventTypesSubject;
+    public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => LiveQuery.Observe(GetLatestForAllEventTypes);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
@@ -188,13 +183,6 @@ public class EventTypesStorage(EventStoreName eventStore, IDatabase database) : 
 
         var eventType = await GetSpecificEventType(type);
         return eventType?.Schemas.ContainsKey(generation) ?? false;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        _eventTypesSubject.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)
