@@ -3,6 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- IDE0060: reducer/reactor methods follow a framework convention that requires the EventContext
+         parameter regardless of whether the specific handler uses it. -->
+    <NoWarn>$(NoWarn);IDE0060</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,5 +14,13 @@
                       ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../Source/Clients/DotNET/DotNET.csproj" />
     <ProjectReference Include="../../Source/Clients/Connections/Connections.csproj" />
+    <ProjectReference Include="../../Source/Infrastructure/Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 </Project>

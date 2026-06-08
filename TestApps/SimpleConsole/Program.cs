@@ -1,11 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+// Telemetry MUST be built first so the TracerProvider is active before
+// the Chronicle client creates its ActivitySource spans.
 using Cratis.Chronicle;
 using Cratis.Chronicle.Sinks;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using TestApp;
+
+using var telemetry = Telemetry.Build();
 
 using var loggerFactory = LoggerFactory
     .Create(static builder => builder
@@ -78,6 +82,12 @@ while (true)
         case ConsoleKey.T:
             await TransactionalUpdate(selectedIndex, random);
             break;
+        case ConsoleKey.C:
+            await ComplianceDemo.RegisterCustomerWithPii(store);
+            break;
+        case ConsoleKey.V:
+            await ComplianceDemo.ShowCustomerReadModel(store);
+            break;
         case ConsoleKey.H:
             WriteInstructions();
             break;
@@ -112,6 +122,7 @@ async Task SetEmail(int index)
     var email = EmployeeData.GetEmailFor(person);
     var @event = new EmployeeEmailSet(email);
     var result = await store.EventLog.Append(person.EventSourceId, @event);
+
     if (result.IsSuccess)
     {
         Console.WriteLine($"[{person.EventSourceId}] Set {person.FirstName} {person.LastName}'s email to {email} at sequence {result.SequenceNumber}");
@@ -129,6 +140,7 @@ async Task StealEmail(int index)
     var email = EmployeeData.GetEmailFor(victim);
     var @event = new EmployeeEmailSet(email);
     var result = await store.EventLog.Append(person.EventSourceId, @event);
+
     if (result.IsSuccess)
     {
         Console.WriteLine($"[{person.EventSourceId}] Unexpectedly took {email} at sequence {result.SequenceNumber}");
@@ -168,14 +180,20 @@ async Task TransactionalUpdate(int index, Random random)
 
 void WriteInstructions()
 {
-    Console.WriteLine("""
-Use 1-3 to select an employee. Then:
-  P = Promote          A = Move (change address)
-  E = Set email        U = Try to take the next employee's email (constraint violation)
-  R = Read model       T = Transactional update
-  I = Switch user (cycle through users)
-  H or ? = Show this menu          Q = Quit
-""");
+#pragma warning disable MA0136
+    Console.WriteLine(
+        """
+
+        Use 1-3 to select an employee. Then:
+          P = Promote          A = Move (change address)
+          E = Set email        U = Try to take the next employee's email (constraint violation)
+          R = Read model       T = Transactional update
+          C = Register customer with PII   V = View customer PII read model
+          I = Switch user (cycle: Alice Smith → Bob Jones → System)
+          H or ? = Show this menu          Q = Quit
+
+        """);
+#pragma warning restore MA0136
 }
 
 void WriteSelectedEmployee(int employeeIndex, int userIndex)
