@@ -5,6 +5,7 @@ using System.Collections;
 using System.Globalization;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Schemas;
+using Cratis.Geospatial;
 using Cratis.Reflection;
 using Cratis.Types;
 using MongoDB.Bson;
@@ -209,6 +210,13 @@ public static class BsonValueExtensions
         if (targetType == typeof(TimeSpan) && value is BsonString bsonTimeStampString)
         {
             return TimeSpan.Parse(bsonTimeStampString.Value);
+        }
+
+        if (targetType == typeof(Coordinate) && value is BsonDocument coordDoc)
+        {
+            var longitude = coordDoc.TryGetValue("longitude", out var lon) ? lon.AsDouble : 0d;
+            var latitude = coordDoc.TryGetValue("latitude", out var lat) ? lat.AsDouble : 0d;
+            return new Coordinate(longitude, latitude);
         }
 
         return null;
