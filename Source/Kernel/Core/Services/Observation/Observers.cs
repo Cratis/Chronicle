@@ -150,7 +150,8 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
         var observers =
             from definition in observerDefinitions
-            join state in observerStates on definition.Identifier equals state.Identifier
+            join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
+            from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
         return observers.ToContract();
     }
