@@ -117,14 +117,17 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
         var observers =
             from definition in observerDefinitions
-            join state in observerStates on definition.Identifier equals state.Identifier
+            join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
+            from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
             select (definition, state);
+
         return observers.ToContract();
     }
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        storage
+    public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default)
+    {
+        return storage
             .GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace).Observers
             .ObserveAll()
@@ -135,10 +138,13 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
                 var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
                 var observers =
                     from definition in observerDefinitions
-                    join state in observerStates on definition.Identifier equals state.Identifier
+                    join state in observerStates on definition.Identifier equals state.Identifier into stateGroup
+                    from state in stateGroup.DefaultIfEmpty(Storage.Observation.ObserverState.Empty)
                     select (definition, state);
+
                 return observers.ToContract();
             });
+    }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
@@ -146,10 +152,15 @@ internal sealed class Observers(IGrainFactory grainFactory, IStorage storage) : 
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStates = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetAll();
+
+        // Inner join on purpose: only replayable observers that already have state are candidates for
+        // replay. Unlike the all-observers listing — where an observer should appear even before it has
+        // run — an observer with no state has nothing to replay and must not be returned here.
         var observers =
             from definition in observerDefinitions
             join state in observerStates on definition.Identifier equals state.Identifier
             select (definition, state);
+
         return observers.ToContract();
     }
 }

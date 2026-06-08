@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Sinks;
 public class NullProjectionSinkFactory : ISinkFactory
 {
     /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.Null;
+    public SinkTypeId TypeId => WellKnownSinkTypes.NotSet;
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => NullSink.Instance;

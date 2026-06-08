@@ -32,4 +32,7 @@ public static class EmployeeData
         "Engineering Manager",
         "Architect"
     ];
+
+    public static string GetEmailFor(Person person) =>
+        $"{person.FirstName.ToLowerInvariant()}.{person.LastName.ToLowerInvariant()}@example.com";
 }

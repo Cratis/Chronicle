@@ -79,9 +79,6 @@ public class Sink : ISink
     }
 
     /// <inheritdoc/>
-    public SinkTypeName Name => "SQL";
-
-    /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
     /// <summary>

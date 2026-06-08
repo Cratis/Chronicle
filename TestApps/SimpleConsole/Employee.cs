@@ -7,10 +7,10 @@ using Cratis.Chronicle.Projections.ModelBound;
 namespace TestApp;
 
 [EventType]
-public record PersonHired(string FirstName, string LastName, string Title);
+public record EmployeeHired(string FirstName, string LastName, string Title);
 
 [EventType]
-public record EmployeePromoted(string Title);
+public record EmployeePromoted(string NewTitle);
 
 [EventType]
 public record EmployeeAddressSet(string Address, string City, string ZipCode, string Country);
@@ -18,15 +18,20 @@ public record EmployeeAddressSet(string Address, string City, string ZipCode, st
 [EventType]
 public record EmployeeMoved(string Address, string City, string ZipCode, string Country);
 
-[FromEvent<PersonHired>]
+[EventType]
+public record EmployeeEmailSet(string Email);
+
+[FromEvent<EmployeeHired>]
 [FromEvent<EmployeePromoted>]
 [FromEvent<EmployeeAddressSet>]
 [FromEvent<EmployeeMoved>]
-public record Employee(
-    string FirstName,
-    string LastName,
-    string Address,
-    string Title,
-    string City,
-    string ZipCode,
-    string Country);
+[FromEvent<EmployeeEmailSet>]
+public record EmployeeState(
+    string FirstName = "",
+    string LastName = "",
+    string Title = "",
+    string Email = "",
+    string Address = "",
+    string City = "",
+    string ZipCode = "",
+    string Country = "");

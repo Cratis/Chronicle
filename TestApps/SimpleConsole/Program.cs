@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle;
+using Cratis.Chronicle.Sinks;
 using Cratis.Execution;
 using Microsoft.Extensions.Logging;
 using TestApp;
@@ -10,17 +11,29 @@ using var loggerFactory = LoggerFactory
     .Create(static builder => builder
         .AddConsole());
 
-var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
+// Parse database argument (default: mongodb)
+var database = args.Length > 0 ? args[0].ToLowerInvariant() : "mongodb";
+var sinkType = database switch
+{
+    "postgresql" => WellKnownSinkTypes.SQL,
+    "mssql" => WellKnownSinkTypes.SQL,
+    "sqlite" => WellKnownSinkTypes.SQL,
+    "mongodb" or _ => WellKnownSinkTypes.MongoDB,
+};
 
-Console.WriteLine("Connecting to Chronicle...");
+var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
+options.DefaultSinkTypeId = sinkType;
+
+Console.WriteLine($"Connecting to Chronicle... (Database: {database}, Sink: {sinkType})");
 using var client = new ChronicleClient(options, loggerFactory: loggerFactory);
-var store = await client.GetEventStore("TestStore");
+var store = await client.GetEventStore("TestStoreCS");
 
 var random = new Random();
 var selectedIndex = 0;
+var userIndex = 0;
 
 WriteInstructions();
-WriteSelectedPerson(selectedIndex);
+WriteSelectedEmployee(selectedIndex, userIndex);
 
 while (true)
 {
@@ -31,29 +44,42 @@ while (true)
         case ConsoleKey.D1:
         case ConsoleKey.NumPad1:
             selectedIndex = 0;
-            WriteSelectedPerson(selectedIndex);
+            WriteSelectedEmployee(selectedIndex, userIndex);
             break;
         case ConsoleKey.D2:
         case ConsoleKey.NumPad2:
             selectedIndex = 1;
-            WriteSelectedPerson(selectedIndex);
+            WriteSelectedEmployee(selectedIndex, userIndex);
             break;
         case ConsoleKey.D3:
         case ConsoleKey.NumPad3:
             selectedIndex = 2;
-            WriteSelectedPerson(selectedIndex);
+            WriteSelectedEmployee(selectedIndex, userIndex);
+            break;
+        case ConsoleKey.I:
+            userIndex = (userIndex + 1) % 3;
+            WriteSelectedUser(userIndex);
             break;
         case ConsoleKey.P:
-            await Promote(selectedIndex, random, CorrelationId.New());
+            await Promote(selectedIndex, random);
             break;
         case ConsoleKey.A:
-            await Move(selectedIndex, random, CorrelationId.New());
+            await Move(selectedIndex, random);
             break;
-        case ConsoleKey.M:
-            await AppendMyEventV2(selectedIndex, CorrelationId.New());
+        case ConsoleKey.E:
+            await SetEmail(selectedIndex);
             break;
-        case ConsoleKey.N:
-            await AppendMyEventV1(selectedIndex, CorrelationId.New());
+        case ConsoleKey.U:
+            await StealEmail(selectedIndex);
+            break;
+        case ConsoleKey.R:
+            await DisplayReadModel(selectedIndex);
+            break;
+        case ConsoleKey.T:
+            await TransactionalUpdate(selectedIndex, random);
+            break;
+        case ConsoleKey.H:
+            WriteInstructions();
             break;
         case ConsoleKey.Q:
         case ConsoleKey.Escape:
@@ -62,53 +88,113 @@ while (true)
     }
 }
 
-// Promotes the selected employee to a random title and appends the event.
-async Task Promote(int index, Random random, CorrelationId correlationId)
+async Task Promote(int index, Random random)
 {
     var person = EmployeeData.Persons[index];
     var title = EmployeeData.Titles[random.Next(EmployeeData.Titles.Length)];
     var @event = new EmployeePromoted(title);
-    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
+    var result = await store.EventLog.Append(person.EventSourceId, @event);
     Console.WriteLine($"[{person.EventSourceId}] Promoted {person.FirstName} {person.LastName} to '{title}' at sequence {result.SequenceNumber}");
 }
 
-// Moves the selected employee to a random address and appends the event.
-async Task Move(int index, Random random, CorrelationId correlationId)
+async Task Move(int index, Random random)
 {
     var person = EmployeeData.Persons[index];
     var address = EmployeeData.Addresses[random.Next(EmployeeData.Addresses.Length)];
     var @event = new EmployeeMoved(address.Street, address.City, address.ZipCode, address.Country);
-    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
+    var result = await store.EventLog.Append(person.EventSourceId, @event);
     Console.WriteLine($"[{person.EventSourceId}] Moved {person.FirstName} {person.LastName} to {address.Street}, {address.City} at sequence {result.SequenceNumber}");
 }
 
-// Writes the currently selected employee to the console.
-void WriteSelectedPerson(int index)
+async Task SetEmail(int index)
 {
     var person = EmployeeData.Persons[index];
-    Console.WriteLine($"Selected [{index + 1}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
+    var email = EmployeeData.GetEmailFor(person);
+    var @event = new EmployeeEmailSet(email);
+    var result = await store.EventLog.Append(person.EventSourceId, @event);
+    if (result.IsSuccess)
+    {
+        Console.WriteLine($"[{person.EventSourceId}] Set {person.FirstName} {person.LastName}'s email to {email} at sequence {result.SequenceNumber}");
+    }
+    else
+    {
+        Console.WriteLine($"[{person.EventSourceId}] Could not set email: {string.Join("; ", result.ConstraintViolations.Select(v => v.Message))}");
+    }
 }
 
-// Appends a generation-2 MyEvent (Subject + Body) for the selected employee.
-async Task AppendMyEventV2(int index, CorrelationId correlationId)
+async Task StealEmail(int index)
 {
     var person = EmployeeData.Persons[index];
-    var @event = new MyEvent("Hello from gen 2", $"Subject and Body are now separate fields — employee {person.EventSourceId}");
-    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
-    Console.WriteLine($"[{person.EventSourceId}] Appended MyEvent gen 2 (Subject='{@event.Subject}', Body='{@event.Body}') at sequence {result.SequenceNumber}");
+    var victim = EmployeeData.Persons[(index + 1) % EmployeeData.Persons.Length];
+    var email = EmployeeData.GetEmailFor(victim);
+    var @event = new EmployeeEmailSet(email);
+    var result = await store.EventLog.Append(person.EventSourceId, @event);
+    if (result.IsSuccess)
+    {
+        Console.WriteLine($"[{person.EventSourceId}] Unexpectedly took {email} at sequence {result.SequenceNumber}");
+    }
+    else
+    {
+        Console.WriteLine($"[{person.EventSourceId}] Rejected taking {victim.FirstName}'s email ({email}): {string.Join("; ", result.ConstraintViolations.Select(v => v.Message))}");
+    }
 }
 
-// Appends a generation-1 MyEventV1 (single Message field) for the selected employee.
-async Task AppendMyEventV1(int index, CorrelationId correlationId)
+async Task DisplayReadModel(int index)
 {
     var person = EmployeeData.Persons[index];
-    var @event = new MyEventV1($"Hello from gen 1:Single Message field for employee {person.EventSourceId}");
-    var result = await store.EventLog.Append(person.EventSourceId, @event, correlationId: correlationId);
-    Console.WriteLine($"[{person.EventSourceId}] Appended MyEvent gen 1 (Message='{@event.Message}') at sequence {result.SequenceNumber} — Chronicle will upcast to gen 2");
+    var state = await store.ReadModels.GetInstanceById<EmployeeState>(person.EventSourceId);
+    Console.WriteLine($"[read-model] {person.FirstName} {person.LastName}: {state.Title} <{(string.IsNullOrEmpty(state.Email) ? "no email yet" : state.Email)}> @ {(string.IsNullOrEmpty(state.Address) ? "no address yet" : state.Address)}");
 }
 
-// Writes the available keyboard controls to the console.
+async Task TransactionalUpdate(int index, Random random)
+{
+    var selected = EmployeeData.Persons[index];
+    var alsoUpdate = EmployeeData.Persons[(index + 1) % EmployeeData.Persons.Length];
+
+    var selectedTitle = EmployeeData.Titles[random.Next(EmployeeData.Titles.Length)];
+    var selectedAddress = EmployeeData.Addresses[random.Next(EmployeeData.Addresses.Length)];
+    var secondTitle = EmployeeData.Titles[random.Next(EmployeeData.Titles.Length)];
+
+    var unitOfWork = store.UnitOfWorkManager.Begin(CorrelationId.New());
+    await store.EventLog.Transactional.Append(selected.EventSourceId, new EmployeePromoted(selectedTitle));
+    await store.EventLog.Transactional.AppendMany(selected.EventSourceId, [
+        new EmployeeMoved(selectedAddress.Street, selectedAddress.City, selectedAddress.ZipCode, selectedAddress.Country)
+    ]);
+    await store.EventLog.Transactional.Append(alsoUpdate.EventSourceId, new EmployeePromoted(secondTitle));
+    await unitOfWork.Commit();
+
+    Console.WriteLine($"[transaction] Committed staged events for {selected.FirstName} {selected.LastName} and {alsoUpdate.FirstName} {alsoUpdate.LastName}");
+}
+
 void WriteInstructions()
 {
-    Console.WriteLine("Use 1-3 to select employee. P=Promote, A=Move, M=MyEvent gen2, N=MyEvent gen1, Q=Quit.");
+    Console.WriteLine("""
+Use 1-3 to select an employee. Then:
+  P = Promote          A = Move (change address)
+  E = Set email        U = Try to take the next employee's email (constraint violation)
+  R = Read model       T = Transactional update
+  I = Switch user (cycle through users)
+  H or ? = Show this menu          Q = Quit
+""");
 }
+
+void WriteSelectedEmployee(int employeeIndex, int userIndex)
+{
+    var person = EmployeeData.Persons[employeeIndex];
+    var user = GetUserName(userIndex);
+    Console.WriteLine($"Selected  [{employeeIndex + 1}] {person.FirstName} {person.LastName} ({person.EventSourceId})");
+    Console.WriteLine($"Acting as [{userIndex + 1}] {user}");
+}
+
+void WriteSelectedUser(int userIndex)
+{
+    var user = GetUserName(userIndex);
+    Console.WriteLine($"\nSwitched to user [{userIndex + 1}] {user}");
+}
+
+string GetUserName(int index) => index switch
+{
+    0 => "Alice Smith (alice.smith)",
+    1 => "Bob Jones (bob.jones)",
+    _ => "System"
+};
