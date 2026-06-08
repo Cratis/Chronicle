@@ -3,6 +3,7 @@
 
 extern alias KernelCore;
 
+using System.Linq;
 using Cratis.Arc;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
@@ -84,15 +85,27 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 
         var mongoUrl = $"mongodb://{_mongoContainer.Hostname}:{_mongoContainer.GetMappedPublicPort(27017)}/";
 
-        // Create Silo 1 (EventSequences only)
+        // Create Silo 1 (EventSequences + Observers)
         _silo1 = CreateSilo(
             siloName: "silo1",
             siloPort: 11111,
             gatewayPort: 30000,
             mongoUrl: mongoUrl,
             eventSequences: true,
-            observers: false);
-        await _silo1.StartAsync();
+            observers: true);
+        
+        try
+        {
+            await _silo1.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to start Silo1: {ex}");
+            throw;
+        }
+
+        // Wait for Silo1 to fully stabilize before starting Silo2
+        await Task.Delay(2000);
 
         // Create Silo 2 (EventSequences + Observers) 
         _silo2 = CreateSilo(
@@ -102,7 +115,16 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
             mongoUrl: mongoUrl,
             eventSequences: true,
             observers: true);
-        await _silo2.StartAsync();
+        
+        try
+        {
+            await _silo2.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"Failed to start Silo2: {ex}");
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -214,7 +236,7 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         builder.UseOrleans((ctx, siloBuilder) =>
         {
             siloBuilder
-                .UseLocalhostClustering(siloPort, gatewayPort);
+                .UseLocalhostClustering(siloPort, gatewayPort, serviceId: "clustering-test", clusterId: "clustering-test");
 
             if (_mongoContainer is not null)
             {
@@ -222,6 +244,24 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
                     siloBuilder,
                     chronicleBuilder => chronicleBuilder.WithMongoDB(mongoUrl, "integration-test"));
             }
+
+            siloBuilder.AddActivityPropagation();
+
+            siloBuilder.ConfigureServices(services =>
+            {
+                // Disable ChronicleServerStartupTask during test silo startup to prevent deadlock
+                // during PatchManager grain activation when test infrastructure is initializing.
+                // Tests handle their own setup via the fixture.
+                var startupTaskType = typeof(KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions).Assembly
+                    .GetType("Orleans.Hosting.ChronicleServerStartupTask");
+                if (startupTaskType is not null)
+                {
+                    foreach (var descriptor in services.Where(d => d.ImplementationType == startupTaskType).ToList())
+                    {
+                        services.Remove(descriptor);
+                    }
+                }
+            });
         });
 
         return builder.Build();
