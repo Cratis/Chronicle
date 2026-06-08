@@ -56,9 +56,6 @@ public class Sink(
     volatile bool _isBulkMode;
 
     /// <inheritdoc/>
-    public SinkTypeName Name => "MongoDB";
-
-    /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>

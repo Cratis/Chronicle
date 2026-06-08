@@ -14,11 +14,13 @@ public class EmployeeSeeding : ICanSeedEvents
             var person = EmployeeData.Persons[i];
             var address = EmployeeData.Addresses[i % EmployeeData.Addresses.Length];
             var title = EmployeeData.Titles[i % EmployeeData.Titles.Length];
+            var email = EmployeeData.GetEmailFor(person);
 
             builder.ForEventSource(
                 person.EventSourceId,
                 [
-                    new PersonHired(person.FirstName, person.LastName, title),
+                    new EmployeeHired(person.FirstName, person.LastName, title),
+                    new EmployeeEmailSet(email),
                     new EmployeeAddressSet(address.Street, address.City, address.ZipCode, address.Country)
                 ]);
         }

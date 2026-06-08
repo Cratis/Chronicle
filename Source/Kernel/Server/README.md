@@ -1,7 +1,69 @@
 # Kernel
 
-There is a `docker-compose.yml` file in the folder for Kernel server.
-This sets up what is needed to work with Kernel development.
+The Chronicle Kernel is the event-sourcing engine that powers the entire stack. This folder contains the server implementation along with infrastructure setup for local development.
+
+## 🗄️ Database Backends
+
+The Kernel supports multiple storage backends. Choose one using the `run.sh` script. **MongoDB is the default** when no database is specified.
+
+| Database | Connection String |
+|----------|-------------------|
+| MongoDB | `mongodb://localhost:27017` |
+| PostgreSQL | `Host=localhost;Database=chronicle;Username=chronicle;Password=chronicle` |
+| Microsoft SQL Server | `Server=localhost;Database=chronicle;User Id=sa;Password=Chronicle_Str0ng!;TrustServerCertificate=true` |
+| SQLite | `Data Source=./data/chronicle.db` |
+
+## 🚀 Quick Start
+
+Use the `run.sh` script with a database parameter. It automatically:
+1. Starts the infrastructure (docker-compose)
+2. Sets the correct storage type and connection string
+3. Starts the Kernel server
+
+```bash
+# MongoDB (default)
+./run.sh
+
+# Or specify a database explicitly
+./run.sh mongodb
+./run.sh postgresql
+./run.sh mssql
+./run.sh sqlite
+```
+
+The Kernel starts on gRPC port 5000.
+
+### Start Infrastructure Only (with `--docker`)
+
+If you want to start only the infrastructure and run the Kernel manually, pass `--docker`:
+
+```bash
+./run.sh postgresql --docker
+```
+
+Then in another terminal, start the Kernel manually:
+
+```bash
+dotnet run
+```
+
+Or with hot reload:
+
+```bash
+dotnet watch run
+```
+
+> **Note:** When running manually, set the environment variables `Cratis__Chronicle__Storage__Type` and `Cratis__Chronicle__Storage__ConnectionDetails`, or the Kernel will use the defaults from `chronicle.json` (MongoDB on localhost:27017).
+>
+> Example:
+>
+> ```bash
+> export Cratis__Chronicle__Storage__Type=PostgreSql
+> export Cratis__Chronicle__Storage__ConnectionDetails="Host=localhost;Database=chronicle;Username=chronicle;Password=chronicle"
+> dotnet run
+> ```
+
+---
 
 ## Metrics
 
@@ -64,7 +126,7 @@ It leverages an Open Telemetry exporter that the Kernel connects to with the con
 ```
 
 Once the Kernel is running you can navigate to the following location:
-http://localhost:9090/graph?g0.expr=appended_events&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m
+<http://localhost:9090/graph?g0.expr=appended_events&g0.tab=0&g0.stacked=0&g0.show_exemplars=0&g0.range_input=15m>
 
 ### Zipkin
 
@@ -83,15 +145,15 @@ It leverages an Open Telemetry exporter that the Kernel connects to with the con
 ```
 
 Once the Kernel is running you can navigate to the following location:
-http://localhost:9411/zipkin/?lookback=15m&endTs=1681920441136&limit=10
+<http://localhost:9411/zipkin/?lookback=15m&endTs=1681920441136&limit=10>
 
 ## Resources
 
 For more details on how Open Telemetry, metrics & tracing works, the following resources are great:
 
-* https://www.meziantou.net/monitoring-a-dotnet-application-using-opentelemetry.htm
-* https://code-maze.com/tracking-dotnet-opentelemetry-metrics/
-* https://dev.to/jmourtada/how-to-setup-opentelemetry-instrumentation-in-aspnet-core-23p5
-* https://learn.microsoft.com/en-us/azure/azure-monitor/app/tutorial-asp-net-custom-metrics
-* https://github.com/open-telemetry/opentelemetry-dotnet/blob/1.0.0-rc9.7/src/OpenTelemetry/README.md
-* https://learn.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=net
+- <https://www.meziantou.net/monitoring-a-dotnet-application-using-opentelemetry.htm>
+- <https://code-maze.com/tracking-dotnet-opentelemetry-metrics/>
+- <https://dev.to/jmourtada/how-to-setup-opentelemetry-instrumentation-in-aspnet-core-23p5>
+- <https://learn.microsoft.com/en-us/azure/azure-monitor/app/tutorial-asp-net-custom-metrics>
+- <https://github.com/open-telemetry/opentelemetry-dotnet/blob/1.0.0-rc9.7/src/OpenTelemetry/README.md>
+- <https://learn.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-enable?tabs=net>

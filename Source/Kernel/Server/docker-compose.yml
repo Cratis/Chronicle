@@ -1,9 +1,33 @@
 services:
+  # ─── MongoDB (default profile) ────────────────────────────────────────────────
   mongo:
     image: cratis/mongodb
+    profiles: [mongodb, ""]
     ports:
       - 27017:27017
 
+  # ─── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    profiles: [postgresql]
+    environment:
+      - POSTGRES_DB=chronicle
+      - POSTGRES_USER=chronicle
+      - POSTGRES_PASSWORD=chronicle
+    ports:
+      - "5432:5432"
+
+  # ─── Microsoft SQL Server ──────────────────────────────────────────────────────
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: [mssql]
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Chronicle_Str0ng!
+    ports:
+      - "1433:1433"
+
+  # ─── Aspire dashboard (all profiles) ──────────────────────────────────────────
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
     environment:

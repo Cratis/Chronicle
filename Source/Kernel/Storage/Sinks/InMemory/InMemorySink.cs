@@ -40,9 +40,6 @@ public class InMemorySink(
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
-    /// <inheritdoc/>
-    public SinkTypeName Name => "InMemory";
-
     /// <summary>
     /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
     /// </summary>

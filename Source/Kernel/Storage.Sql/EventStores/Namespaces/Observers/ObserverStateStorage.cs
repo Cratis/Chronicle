@@ -17,7 +17,14 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverStateStorage, IDisposable
 {
-    readonly ReplaySubject<IEnumerable<Observation.ObserverState>> _subject = new(1);
+    readonly ReplaySubject<IEnumerable<Observation.ObserverState>> _subject = InitializeSubject();
+
+    static ReplaySubject<IEnumerable<Observation.ObserverState>> InitializeSubject()
+    {
+        var subject = new ReplaySubject<IEnumerable<Observation.ObserverState>>(1);
+        subject.OnNext([]);
+        return subject;
+    }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => _subject;

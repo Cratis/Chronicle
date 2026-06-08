@@ -24,11 +24,6 @@ public interface ISink
     SinkTypeId TypeId { get; }
 
     /// <summary>
-    /// Gets the display friendly <see cref="SinkTypeName"/>.
-    /// </summary>
-    SinkTypeName Name { get; }
-
-    /// <summary>
     /// Find a read model by key, or return an empty object if not found.
     /// </summary>
     /// <param name="key">Key of the read model to find.</param>

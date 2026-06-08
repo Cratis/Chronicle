@@ -38,7 +38,7 @@ public class ReducerDefinition
     /// <summary>
     /// Gets or sets the type of the sink for the projection.
     /// </summary>
-    public Guid SinkType { get; set; } = Guid.Empty;
+    public string SinkType { get; set; } = "None";
 
     /// <summary>
     /// Gets or sets the configuration identifier for the sink of the projection.

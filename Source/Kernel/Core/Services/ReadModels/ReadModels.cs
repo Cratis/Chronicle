@@ -214,7 +214,7 @@ internal sealed class ReadModels(
                 var sink = await namespaceStorage.Sinks.GetFor(definition);
 
                 // For passive projections the sink never has data; fall through to immediate projection.
-                if (sink.TypeId != WellKnownSinkTypes.Null)
+                if (sink.TypeId != WellKnownSinkTypes.NotSet)
                 {
                     var key = new Key(request.ReadModelKey, ArrayIndexers.NoIndexers);
                     var storedState = await sink.FindOrDefault(key);

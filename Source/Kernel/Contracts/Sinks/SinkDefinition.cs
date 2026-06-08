@@ -19,5 +19,5 @@ public class SinkDefinition
     /// Gets or sets the type of store.
     /// </summary>
     [ProtoMember(2)]
-    public Guid TypeId { get; set; }
+    public string TypeId { get; set; }
 }

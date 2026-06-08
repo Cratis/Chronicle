@@ -7,11 +7,11 @@ namespace Cratis.Chronicle.Sinks;
 /// Represents the unique identifier of a type of sink.
 /// </summary>
 /// <param name="Value">Underlying value.</param>
-public record SinkTypeId(Guid Value) : ConceptAs<Guid>(Value)
+public record SinkTypeId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
     /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="value">String value to convert from.</param>
-    public static implicit operator SinkTypeId(string value) => new(Guid.Parse(value));
+    public static implicit operator SinkTypeId(string value) => new(value);
 }
