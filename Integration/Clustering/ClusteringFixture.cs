@@ -6,6 +6,7 @@ extern alias KernelCore;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.XUnit.Integration;
+using Cratis.DependencyInjection;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -179,6 +180,15 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
+            // Register concept type converters
+            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
+            // Convention binding must run BEFORE AddChronicleToSilo so that Storage.MongoDB services are registered
+            siloBuilder.Services.AddTypeDiscovery();
+            siloBuilder.Services.AddBindingsByConvention();
+            siloBuilder.Services.AddSelfBindings();
+
             siloBuilder.ConfigureServices(services =>
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
@@ -204,6 +214,15 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
+            // Register concept type converters
+            ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
+            ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
+
+            // Convention binding must run BEFORE AddChronicleToSilo so that Storage.MongoDB services are registered
+            siloBuilder.Services.AddTypeDiscovery();
+            siloBuilder.Services.AddBindingsByConvention();
+            siloBuilder.Services.AddSelfBindings();
+
             siloBuilder.ConfigureServices(services =>
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
