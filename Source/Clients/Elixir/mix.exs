@@ -31,9 +31,9 @@ defmodule Cratis.Chronicle.Contracts.MixProject do
     [
       {:grpc, "~> 0.11"},
       {:mint, "~> 1.7"},
-      {:protobuf, "~> 0.16"},
+      {:protobuf, "~> 0.16.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:protobuf_generate, "~> 0.13", only: :dev, runtime: false}
+      {:protobuf_generate, "~> 0.1.3", only: :dev, runtime: false}
     ]
   end
 
