@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
+using Cratis.Geospatial;
 
 namespace Cratis.Chronicle.Integration.Projections.ReadModels;
 
@@ -24,6 +25,7 @@ public record ReadModel(
     FloatConcept FloatConceptValue,
     DoubleConcept DoubleConceptValue,
     GuidConcept GuidConceptValue,
+    Coordinate CoordinateValue,
     DateTimeOffset LastUpdated,
     EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
@@ -47,6 +49,7 @@ public record ReadModel(
             KnownValues.FloatConceptValue,
             KnownValues.DoubleConceptValue,
             KnownValues.GuidConceptValue,
+            KnownValues.CoordinateValue,
             DateTimeOffset.UtcNow);
 
     public static ReadModel CreateWithRandomValues() => new(
@@ -67,5 +70,6 @@ public record ReadModel(
         _random.NextSingle(),
         _random.NextDouble(),
         Guid.NewGuid(),
+        new Coordinate(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)),
         DateTimeOffset.UtcNow.AddDays(_random.Next(60)).RoundDownTicks());
 }

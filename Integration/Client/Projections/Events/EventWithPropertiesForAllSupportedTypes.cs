@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Integration.Projections.Concepts;
+using Cratis.Geospatial;
 
 namespace Cratis.Chronicle.Integration.Projections.Events;
 
@@ -24,7 +25,8 @@ public record EventWithPropertiesForAllSupportedTypes(
     IntConcept IntConceptValue,
     FloatConcept FloatConceptValue,
     DoubleConcept DoubleConceptValue,
-    GuidConcept GuidConceptValue)
+    GuidConcept GuidConceptValue,
+    Coordinate CoordinateValue)
 {
     static Random _random = new();
 
@@ -45,7 +47,8 @@ public record EventWithPropertiesForAllSupportedTypes(
             KnownValues.IntConceptValue,
             KnownValues.FloatConceptValue,
             KnownValues.DoubleConceptValue,
-            KnownValues.GuidConceptValue);
+            KnownValues.GuidConceptValue,
+            KnownValues.CoordinateValue);
 
     public static EventWithPropertiesForAllSupportedTypes CreateWithRandomValues() => new(
         _random.NextDouble().ToString(),
@@ -64,5 +67,6 @@ public record EventWithPropertiesForAllSupportedTypes(
         _random.Next(5000),
         (float)Math.Round(_random.NextSingle(), 3),
         _random.NextDouble(),
-        Guid.NewGuid());
+        Guid.NewGuid(),
+        new Coordinate(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)));
 }

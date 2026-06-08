@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.Projections.Concepts;
+using Cratis.Geospatial;
 
 namespace Cratis.Chronicle.Integration.Projections;
 
@@ -24,4 +25,5 @@ public static class KnownValues
     public static FloatConcept FloatConceptValue = 44.45f;
     public static DoubleConcept DoubleConceptValue = 43.43;
     public static GuidConcept GuidConceptValue = Guid.NewGuid();
+    public static Coordinate CoordinateValue = new(42.123, 10.456);
 }
