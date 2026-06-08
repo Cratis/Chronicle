@@ -40,7 +40,7 @@ public class when_appending_an_event_with_reactor_reducer_and_projection : IClas
         // Execute the scenario
         var startupTimeout = TimeSpanFactory.FromSeconds(30);
         var eventStore = _fixture.EventStore;
-        
+
         var reactorHandler = eventStore.Reactors.GetHandlerFor<ClusteredReactor>();
         var reducerHandler = eventStore.Reducers.GetHandlerFor<ClusteredReducer>();
         var projectionHandler = eventStore.Projections.GetHandlerFor<ClusteredProjection>();
@@ -89,7 +89,7 @@ public class when_appending_an_event_with_reactor_reducer_and_projection : IClas
     }
 
     [Fact]
-    public void should_have_projection_called_and_produce_desired_result() => 
+    public void should_have_projection_called_and_produce_desired_result() =>
         ProjectionState.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
 
     [Fact]
