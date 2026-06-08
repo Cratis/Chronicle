@@ -17,24 +17,30 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database) : IObserverStateStorage, IDisposable
 {
-    readonly ReplaySubject<IEnumerable<Observation.ObserverState>> _subject = InitializeSubject();
-
-    static ReplaySubject<IEnumerable<Observation.ObserverState>> InitializeSubject()
-    {
-        var subject = new ReplaySubject<IEnumerable<Observation.ObserverState>>(1);
-        subject.OnNext([]);
-        return subject;
-    }
-
-    /// <inheritdoc/>
-    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll() => _subject;
+    readonly ReplaySubject<IEnumerable<Observation.ObserverState>> _subject = new(1);
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Observation.ObserverState>> GetAll()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         var observers = await scope.DbContext.Observers.ToListAsync();
-        return observers.Select(observer => observer.ToKernel()).ToArray();
+        var result = observers.Select(observer => observer.ToKernel()).ToArray();
+
+        // Ensure the subject has initial data for first subscribers
+        if (!_subject.HasObservers)
+        {
+            _subject.OnNext(result);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<Observation.ObserverState>> ObserveAll()
+    {
+        // Trigger initial data load when first subscribed
+        _ = GetAll();
+        return _subject;
     }
 
     /// <inheritdoc/>
