@@ -2,21 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
-extern alias KernelConcepts;
 
-using Cratis.Arc.MongoDB;
-using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.XUnit.Integration;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
-using KernelCore::Cratis.Chronicle.Namespaces;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Orleans.TestingHost;
 using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
@@ -27,6 +21,11 @@ namespace Cratis.Chronicle.Integration.Clustering;
 /// </summary>
 public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 {
+    /// <summary>
+    /// Static reference to allow configurators to access mongo container during silo initialization.
+    /// </summary>
+    static IContainer? _mongoContainerStatic;
+
     readonly INetwork _network;
     IContainer? _mongoContainer;
     TestCluster? _cluster;
@@ -47,21 +46,14 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     /// <inheritdoc/>
     public IContainer MongoDBContainer => _mongoContainer!;
 
-    /// <summary>
-    /// Gets the MongoDB connection string.
-    /// </summary>
-    public string MongoConnectionString { get; private set; } = string.Empty;
+    /// <inheritdoc/>
+    MongoDBDatabase IChronicleFixture.EventStore => new(_mongoContainer!, "event-store");
 
     /// <inheritdoc/>
-    MongoDBDatabase IChronicleFixture.EventStore => _eventStoreDatabase;
+    public MongoDBDatabase EventStoreForNamespace => new(_mongoContainer!, "event-store-default");
 
     /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace { get; private set; } = null!;
-
-    /// <inheritdoc/>
-    public MongoDBDatabase ReadModels { get; private set; } = null!;
-
-    MongoDBDatabase _eventStoreDatabase = null!;
+    public MongoDBDatabase ReadModels => new(_mongoContainer!, "read-models");
 
     /// <summary>
     /// Gets the Orleans test cluster.
@@ -97,27 +89,14 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         _mongoContainer = mongoBuilder.Build();
         await _mongoContainer.StartAsync();
 
-        MongoConnectionString = $"mongodb://localhost:{_mongoContainer.GetMappedPublicPort(27017)}/?directConnection=true";
-
-        // Set up database helpers
-        _eventStoreDatabase = new MongoDBDatabase(MongoConnectionString, "event-store");
-        EventStoreForNamespace = new MongoDBDatabase(MongoConnectionString, $"event-store-{NamespaceId.Default}");
-        ReadModels = new MongoDBDatabase(MongoConnectionString, "read-models");
+        // Set static reference for configurators
+        _mongoContainerStatic = _mongoContainer;
 
         // Create test cluster with 2 silos
-        var builder = new TestClusterBuilder(2); // 2 silos
-        builder.AddSiloBuilderConfigurator<Silo1Configurator>();
-        builder.AddSiloBuilderConfigurator<Silo2Configurator>();
-        builder.AddClientBuilderConfigurator<ClientConfigurator>();
-
-        // Configure both silos with shared services
-        builder.ConfigureHostConfiguration(config =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["MongoConnectionString"] = MongoConnectionString
-            });
-        });
+        var builder = new TestClusterBuilder(2)
+            .AddSiloBuilderConfigurator<Silo1Configurator>()
+            .AddSiloBuilderConfigurator<Silo2Configurator>()
+            .AddClientBuilderConfigurator<ClientConfigurator>();
 
         _cluster = builder.Build();
         await _cluster.DeployAsync();
@@ -126,6 +105,8 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     /// <inheritdoc/>
     public async Task DisposeAsync()
     {
+        _mongoContainerStatic = null;
+
         if (_cluster is not null)
         {
             await _cluster.StopAllSilosAsync();
@@ -153,9 +134,42 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     /// <inheritdoc/>
     public async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
     {
-        await _eventStoreDatabase.Drop();
-        await EventStoreForNamespace.Drop();
-        await ReadModels.Drop();
+        if (_mongoContainer is null) return;
+
+        var eventStoreDb = new MongoDBDatabase(_mongoContainer, "event-store");
+        var eventStoreForNamespaceDb = new MongoDBDatabase(_mongoContainer, "event-store-default");
+        var readModelsDb = new MongoDBDatabase(_mongoContainer, "read-models");
+
+        try
+        {
+            await eventStoreDb.Database.Client.DropDatabaseAsync("event-store");
+        }
+        catch
+        {
+            // Ignore errors if database doesn't exist
+        }
+
+        try
+        {
+            await eventStoreForNamespaceDb.Database.Client.DropDatabaseAsync("event-store-default");
+        }
+        catch
+        {
+            // Ignore errors if database doesn't exist
+        }
+
+        try
+        {
+            await readModelsDb.Database.Client.DropDatabaseAsync("read-models");
+        }
+        catch
+        {
+            // Ignore errors if database doesn't exist
+        }
+
+        eventStoreDb.Dispose();
+        eventStoreForNamespaceDb.Dispose();
+        readModelsDb.Dispose();
     }
 
     /// <summary>
@@ -165,9 +179,6 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
-            var mongoConnectionString = siloBuilder.GetConfigurationValue<string>("MongoConnectionString")!;
-
-            siloBuilder.Services.AddCratisArcMeter();
             siloBuilder.ConfigureServices(services =>
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
@@ -177,9 +188,12 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
                 });
             });
 
-            KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
-                siloBuilder,
-                chronicleBuilder => chronicleBuilder.WithMongoDB(mongoConnectionString, "integration-test"));
+            if (_mongoContainerStatic is not null)
+            {
+                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                    siloBuilder,
+                    builder => builder.WithMongoDB($"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/", "integration-test"));
+            }
         }
     }
 
@@ -190,9 +204,6 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
-            var mongoConnectionString = siloBuilder.GetConfigurationValue<string>("MongoConnectionString")!;
-
-            siloBuilder.Services.AddCratisArcMeter();
             siloBuilder.ConfigureServices(services =>
             {
                 services.Configure<Configuration.ChronicleOptions>(options =>
@@ -202,9 +213,12 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
                 });
             });
 
-            KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
-                siloBuilder,
-                chronicleBuilder => chronicleBuilder.WithMongoDB(mongoConnectionString, "integration-test"));
+            if (_mongoContainerStatic is not null)
+            {
+                KernelCore::Orleans.Hosting.ChronicleServerSiloBuilderExtensions.AddChronicleToSilo(
+                    siloBuilder,
+                    builder => builder.WithMongoDB($"mongodb://{_mongoContainerStatic.Hostname}:{_mongoContainerStatic.GetMappedPublicPort(27017)}/", "integration-test"));
+            }
         }
     }
 
