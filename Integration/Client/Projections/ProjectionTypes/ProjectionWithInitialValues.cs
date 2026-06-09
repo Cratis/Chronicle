@@ -27,6 +27,9 @@ public class ProjectionWithInitialValues : IProjectionFor<ReadModel>
             KnownValues.FloatConceptValue,
             KnownValues.DoubleConceptValue,
             KnownValues.GuidConceptValue,
+            KnownValues.PointValue,
+            KnownValues.LineStringValue,
+            KnownValues.PolygonValue,
             DateTimeOffset.MinValue))
         .From<EmptyEvent>(_ => _.Set(m => m.LastUpdated).ToEventContextProperty(c => c.Occurred));
 }

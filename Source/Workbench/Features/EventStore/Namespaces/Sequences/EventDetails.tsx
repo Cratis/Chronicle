@@ -16,6 +16,7 @@ import type { Json } from '@cratis/components/types';
 import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 import strings from 'Strings';
+import { applyCoordinateFormatting } from 'Components/CoordinateFormatter/CoordinateFormatter';
 
 interface RevisionOption {
     label: string;
@@ -146,6 +147,13 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
         return { properties: {} };
     }, [effectiveEventType, currentContent]);
 
+    // Pre-process content: replace coordinate object values with formatted strings so the editor
+    // renders them as plain text instead of expanding sub-objects.
+    const [formattedContent, formattedSchema] = useMemo(
+        () => applyCoordinateFormatting(currentContent as Record<string, unknown>, schema),
+        [currentContent, schema]
+    );
+
     // Build context object for display - metadata reflects the current revision
     const contextObject = {
         eventType: item.context.eventType.id,
@@ -257,8 +265,8 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                 <TabPanel header="Content">
                     <div style={{ height: '100%', overflow: 'auto' }}>
                         <ObjectContentEditor
-                            object={currentContent}
-                            schema={schema}
+                            object={formattedContent as Json}
+                            schema={formattedSchema}
                         />
                     </div>
                 </TabPanel>

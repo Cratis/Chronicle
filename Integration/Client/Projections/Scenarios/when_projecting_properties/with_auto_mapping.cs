@@ -41,5 +41,8 @@ public class with_auto_mapping(context context) : Given<context>(context)
     [Fact] void should_set_the_float_concept_value() => Context.Result.FloatConceptValue.ShouldEqual(Context.EventAppended.FloatConceptValue);
     [Fact] void should_set_the_double_concept_value() => Context.Result.DoubleConceptValue.ShouldEqual(Context.EventAppended.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value() => Context.Result.GuidConceptValue.ShouldEqual(Context.EventAppended.GuidConceptValue);
+    [Fact] void should_set_the_point_value() => Context.Result.PointValue.ShouldEqual(Context.EventAppended.PointValue);
+    [Fact] void should_set_the_line_string_value() => Context.Result.LineStringValue.ShouldEqual(Context.EventAppended.LineStringValue);
+    [Fact] void should_set_the_polygon_value() => Context.Result.PolygonValue.ShouldEqual(Context.EventAppended.PolygonValue);
     [Fact] void should_set_the_event_sequence_number_to_last_event() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

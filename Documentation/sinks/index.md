@@ -41,7 +41,7 @@ Or in `appsettings.json`:
 {
   "Cratis": {
     "Chronicle": {
-      "DefaultSinkTypeId": "f7d3a1e2-4b5c-4d6e-8f9a-0b1c2d3e4f5a"
+      "DefaultSinkTypeId": "MongoDB"
     }
   }
 }

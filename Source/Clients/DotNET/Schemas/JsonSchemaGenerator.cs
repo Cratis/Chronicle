@@ -8,6 +8,7 @@ using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
+using Cratis.Geospatial;
 using Cratis.Json;
 using Cratis.Serialization;
 
@@ -176,6 +177,23 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         if (schema is not JsonObject schemaObj) return schema;
+
+        // Geospatial types: annotate with format so consumers (Workbench, sinks) can
+        // recognise the type without inspecting nested sub-properties.
+        if (formatType == typeof(Point))
+        {
+            schemaObj["format"] = "point";
+        }
+
+        if (formatType == typeof(LineString))
+        {
+            schemaObj["format"] = "linestring";
+        }
+
+        if (formatType == typeof(Polygon))
+        {
+            schemaObj["format"] = "polygon";
+        }
 
         // For enum types, embed the integer values and string names so that converters can
         // detect enum fields and map between integer BSON values and string enum names.
