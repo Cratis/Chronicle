@@ -77,7 +77,7 @@ jobs:
 
       - name: Publish to Maven Central
         working-directory: ./Source/Clients/Kotlin
-        run: gradle publishAllPublicationsToMavenCentral --no-configuration-cache -Pversion=${{ inputs.version }}
+        run: gradle publishAndReleaseToMavenCentral --no-configuration-cache -Pversion=${{ inputs.version }}
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
