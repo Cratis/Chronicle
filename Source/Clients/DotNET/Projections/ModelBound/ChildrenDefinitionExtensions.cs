@@ -9,6 +9,8 @@ using Cratis.Chronicle.Properties;
 using Cratis.Serialization;
 using EventType = Cratis.Chronicle.Contracts.Events.EventType;
 
+#pragma warning disable SA1313
+
 namespace Cratis.Chronicle.Projections.ModelBound;
 
 /// <summary>
@@ -357,10 +359,11 @@ static class ChildrenDefinitionExtensions
 
                     if (includeSelfReferencingEvents && shouldAutoMap && !hasExplicitMapping)
                     {
-                        foreach (var fromEventType in childType
+                        foreach (var (fromEventAttr, fromEventType) in childType
                             .GetAttributesOfGenericType<FromEventAttribute<object>>()
-                            .Select(_ => _.EventType)
-                            .Where(fromEventType => fromEventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null))
+                            .Where(pair =>
+                                ShouldPropagateChildClassLevelFromEventForSelfReference(pair.Attribute, childType, eventType, parentModelType, namingPolicy) &&
+                                pair.EventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null))
                         {
                             childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, fromEventType, paramPropertyName, parameter.Name!);
                         }
@@ -396,7 +399,9 @@ static class ChildrenDefinitionExtensions
             var childClassLevelFromEvents = childType.GetCustomAttributes()
                 .Where(attr => attr.GetType().IsGenericType &&
                               attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>) &&
-                              (includeSelfReferencingEvents || ShouldPropagateChildClassLevelFromEvent(attr, childType)))
+                              (includeSelfReferencingEvents
+                                  ? ShouldPropagateChildClassLevelFromEventForSelfReference(attr, childType, eventType, parentModelType, namingPolicy)
+                                  : ShouldPropagateChildClassLevelFromEvent(attr, childType)))
                 .ToList();
 
             // Process properties for attributes (this handles SetFromContext and other attributes on properties)
@@ -530,6 +535,40 @@ static class ChildrenDefinitionExtensions
 
         var eventType = fromEventAttribute.GetType().GetGenericArguments()[0];
         return !HasChildrenFromForEventType(childType, eventType);
+    }
+
+    static bool ShouldPropagateChildClassLevelFromEventForSelfReference(
+        Attribute fromEventAttribute,
+        Type _1,
+        Type childCreatingEventType,
+        Type? _2,
+        INamingPolicy _3)
+    {
+        var childLevelEventType = fromEventAttribute.GetType().GetGenericArguments()[0];
+
+        // Always propagate if it's the child-creating event itself
+        if (childLevelEventType == childCreatingEventType)
+        {
+            return true;
+        }
+
+        // For other events: check if they are keyed update events
+        var keyProperty = fromEventAttribute.GetType().GetProperty(nameof(FromEventAttribute<object>.Key));
+        var parentKeyProperty = fromEventAttribute.GetType().GetProperty(nameof(FromEventAttribute<object>.ParentKey));
+
+        var key = keyProperty?.GetValue(fromEventAttribute) as string;
+        var parentKey = parentKeyProperty?.GetValue(fromEventAttribute) as string;
+
+        // If it doesn't have an explicit key, it's not a keyed event, so propagate it
+        if (string.IsNullOrEmpty(key))
+        {
+            return true;
+        }
+
+        // It has an explicit key. Only propagate if it also has an EXPLICIT parent key.
+        // Keyed update events without explicit parent keys should not be propagated in self-referential cases,
+        // as they would be upserted as self-children when resolved via EventSourceId fallback.
+        return !string.IsNullOrEmpty(parentKey);
     }
 
     static bool ShouldPropagateChildMemberEvent(Type eventType, Type? childType, bool includeSelfReferencingEvents)
