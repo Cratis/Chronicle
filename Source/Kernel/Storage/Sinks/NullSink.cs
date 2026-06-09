@@ -25,7 +25,7 @@ public class NullSink : ISink
     public static readonly NullSink Instance = new();
 
     /// <inheritdoc/>
-    public SinkTypeId TypeId => WellKnownSinkTypes.NotSet;
+    public SinkTypeId TypeId => SinkTypeId.None;
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>

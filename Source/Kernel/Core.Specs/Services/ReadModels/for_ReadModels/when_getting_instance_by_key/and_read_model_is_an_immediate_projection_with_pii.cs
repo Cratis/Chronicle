@@ -37,7 +37,7 @@ public class and_read_model_is_an_immediate_projection_with_pii : given.all_depe
         _readModel.GetDefinition().Returns(_readModelDefinition);
 
         // Passive sink → the lookup falls through to the immediate projection.
-        _sink.TypeId.Returns(WellKnownSinkTypes.NotSet);
+        _sink.TypeId.Returns(SinkTypeId.None);
 
         var immediateProjection = Substitute.For<IImmediateProjection>();
         immediateProjection.GetModelInstance().Returns(new ProjectionResult(
