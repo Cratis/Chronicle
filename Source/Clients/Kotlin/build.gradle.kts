@@ -61,11 +61,11 @@ mavenPublishing {
     publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
-    coordinates("io.cratis", "chronicle-contracts", version.toString())
+    coordinates("io.cratis", "chronicle-client-kotlin", version.toString())
 
     pom {
-        name.set("Chronicle Contracts")
-        description.set("Generated gRPC Kotlin client for the Cratis Chronicle event sourcing platform")
+        name.set("Chronicle Kotlin Client")
+        description.set("Event sourcing Kotlin client for Chronicle")
         url.set("https://github.com/cratis/chronicle")
         licenses {
             license {
