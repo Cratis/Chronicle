@@ -10,7 +10,12 @@ namespace Cratis.Chronicle.Sinks;
 public record SinkTypeId(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Implicitly convert from <see cref="string"/> representation of a <see cref="Guid"/> to <see cref="SinkTypeId"/>.
+    /// Gets the none representation of <see cref="SinkTypeId"/>.
+    /// </summary>
+    public static readonly SinkTypeId None = "None";
+
+    /// <summary>
+    /// Implicitly convert from <see cref="string"/> to <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="value">String value to convert from.</param>
     public static implicit operator SinkTypeId(string value) => new(value);

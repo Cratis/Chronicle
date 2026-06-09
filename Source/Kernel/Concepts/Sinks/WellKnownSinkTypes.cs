@@ -14,11 +14,6 @@ public static class WellKnownSinkTypes
     public static readonly SinkTypeId InMemory = "InMemory";
 
     /// <summary>
-    /// Gets the identifier of the NotSet projection sink (no sink).
-    /// </summary>
-    public static readonly SinkTypeId NotSet = "NotSet";
-
-    /// <summary>
     /// Gets the identifier of the MongoDB projection sink.
     /// </summary>
     public static readonly SinkTypeId MongoDB = "MongoDB";
