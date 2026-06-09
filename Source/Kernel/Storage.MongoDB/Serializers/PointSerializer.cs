@@ -9,18 +9,18 @@ using MongoDB.Bson.Serialization.Serializers;
 namespace Cratis.Chronicle.Storage.MongoDB.Serializers;
 
 /// <summary>
-/// Represents a BSON serializer for <see cref="Coordinate"/>.
+/// Represents a BSON serializer for <see cref="Point"/>.
 /// </summary>
 /// <remarks>
-/// Stores the coordinate as a document: <c>{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }</c>.
+/// Stores the point as a document: <c>{ "longitude": &lt;double&gt;, "latitude": &lt;double&gt; }</c>.
 /// </remarks>
-public class CoordinateSerializer : SerializerBase<Coordinate>
+public class PointSerializer : SerializerBase<Point>
 {
     const string LongitudeField = "longitude";
     const string LatitudeField = "latitude";
 
     /// <inheritdoc/>
-    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, Coordinate value)
+    public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, Point value)
     {
         var document = new BsonDocument
         {
@@ -31,11 +31,11 @@ public class CoordinateSerializer : SerializerBase<Coordinate>
     }
 
     /// <inheritdoc/>
-    public override Coordinate Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
+    public override Point Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var document = BsonDocumentSerializer.Instance.Deserialize(context, args);
         var longitude = document.TryGetValue(LongitudeField, out var lon) ? lon.AsDouble : 0d;
         var latitude = document.TryGetValue(LatitudeField, out var lat) ? lat.AsDouble : 0d;
-        return new Coordinate(longitude, latitude);
+        return new Point(longitude, latitude);
     }
 }

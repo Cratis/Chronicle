@@ -178,11 +178,21 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
-        // Geospatial Coordinate: annotate with format so consumers (Workbench, sinks) can
-        // recognise the type without inspecting the nested longitude/latitude sub-properties.
-        if (formatType == typeof(Coordinate))
+        // Geospatial types: annotate with format so consumers (Workbench, sinks) can
+        // recognise the type without inspecting nested sub-properties.
+        if (formatType == typeof(Point))
         {
-            schemaObj["format"] = "coordinate";
+            schemaObj["format"] = "point";
+        }
+
+        if (formatType == typeof(LineString))
+        {
+            schemaObj["format"] = "linestring";
+        }
+
+        if (formatType == typeof(Polygon))
+        {
+            schemaObj["format"] = "polygon";
         }
 
         // For enum types, embed the integer values and string names so that converters can

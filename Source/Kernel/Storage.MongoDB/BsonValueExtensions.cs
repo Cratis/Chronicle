@@ -133,6 +133,39 @@ public static class BsonValueExtensions
 
             case Uri actualValue:
                 return new BsonString(actualValue.ToString());
+
+            case Point pointValue:
+                return new BsonDocument
+                {
+                    ["longitude"] = pointValue.Longitude,
+                    ["latitude"] = pointValue.Latitude
+                };
+
+            case LineString lineStringValue:
+                var array = new BsonArray();
+                foreach (var point in lineStringValue.Coordinates)
+                {
+                    array.Add(new BsonDocument
+                    {
+                        ["longitude"] = point.Longitude,
+                        ["latitude"] = point.Latitude
+                    });
+                }
+                return array;
+
+            case Polygon polygonValue:
+                var shellArray = SerializeRing(polygonValue.Shell.Coordinates);
+                var holesArray = new BsonArray();
+                foreach (var hole in polygonValue.Holes)
+                {
+                    holesArray.Add(SerializeRing(hole.Coordinates));
+                }
+
+                return new BsonDocument
+                {
+                    ["shell"] = shellArray,
+                    ["holes"] = holesArray
+                };
         }
 
         var document = new BsonDocument();
@@ -152,6 +185,7 @@ public static class BsonValueExtensions
     /// <param name="value"><see cref="BsonValue"/> to convert.</param>
     /// <param name="targetType">The target type to convert to.</param>
     /// <returns>Converted value.</returns>
+    /// <exception cref="InvalidOperationException">When the BSON structure does not match expectations for the target type.</exception>
     public static object? ToTargetType(this BsonValue value, Type targetType)
     {
         if (value is BsonNull && TryConvertNullPrimitive(targetType, out var result))
@@ -212,11 +246,44 @@ public static class BsonValueExtensions
             return TimeSpan.Parse(bsonTimeStampString.Value);
         }
 
-        if (targetType == typeof(Coordinate) && value is BsonDocument coordDoc)
+        if (targetType == typeof(Point) && value is BsonDocument pointDoc)
         {
-            var longitude = coordDoc.TryGetValue("longitude", out var lon) ? lon.AsDouble : 0d;
-            var latitude = coordDoc.TryGetValue("latitude", out var lat) ? lat.AsDouble : 0d;
-            return new Coordinate(longitude, latitude);
+            var longitude = pointDoc.TryGetValue("longitude", out var lon) ? lon.AsDouble : 0d;
+            var latitude = pointDoc.TryGetValue("latitude", out var lat) ? lat.AsDouble : 0d;
+            return new Point(longitude, latitude);
+        }
+
+        if (targetType == typeof(LineString) && value is BsonArray lineStringArray)
+        {
+            var points = new Point[lineStringArray.Count];
+            for (var i = 0; i < lineStringArray.Count; i++)
+            {
+                var coord = lineStringArray[i] as BsonDocument ?? throw new InvalidOperationException("Expected BsonDocument in LineString array");
+                var longitude = coord.TryGetValue("longitude", out var lon) ? lon.AsDouble : 0d;
+                var latitude = coord.TryGetValue("latitude", out var lat) ? lat.AsDouble : 0d;
+                points[i] = new Point(longitude, latitude);
+            }
+            return new LineString(points);
+        }
+
+        if (targetType == typeof(Polygon) && value is BsonDocument polygonDoc)
+        {
+            var shellArray = polygonDoc.TryGetValue("shell", out var shellValue)
+                ? shellValue as BsonArray ?? new BsonArray()
+                : new BsonArray();
+            var holesArray = polygonDoc.TryGetValue("holes", out var holesValue)
+                ? holesValue as BsonArray ?? new BsonArray()
+                : new BsonArray();
+
+            var shell = new LinearRing(DeserializeRing(shellArray));
+            var holes = new LinearRing[holesArray.Count];
+            for (var i = 0; i < holesArray.Count; i++)
+            {
+                var holeArray = holesArray[i] as BsonArray ?? new BsonArray();
+                holes[i] = new LinearRing(DeserializeRing(holeArray));
+            }
+
+            return new Polygon(shell, holes);
         }
 
         return null;
@@ -324,6 +391,33 @@ public static class BsonValueExtensions
         }
 
         return result is not null;
+    }
+
+    static BsonArray SerializeRing(Point[] coordinates)
+    {
+        var ringArray = new BsonArray();
+        foreach (var point in coordinates)
+        {
+            ringArray.Add(new BsonDocument
+            {
+                ["longitude"] = point.Longitude,
+                ["latitude"] = point.Latitude
+            });
+        }
+        return ringArray;
+    }
+
+    static Point[] DeserializeRing(BsonArray ringArray)
+    {
+        var points = new Point[ringArray.Count];
+        for (var i = 0; i < ringArray.Count; i++)
+        {
+            var document = ringArray[i] as BsonDocument ?? throw new InvalidOperationException("Expected BsonDocument in ring");
+            var longitude = document.TryGetValue("longitude", out var lon) ? lon.AsDouble : 0d;
+            var latitude = document.TryGetValue("latitude", out var lat) ? lat.AsDouble : 0d;
+            points[i] = new Point(longitude, latitude);
+        }
+        return points;
     }
 
     static bool TryConvertPrimitive(BsonValue value, Type targetType, out object? result)
