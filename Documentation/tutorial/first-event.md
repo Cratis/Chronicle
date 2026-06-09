@@ -28,6 +28,9 @@ A couple of things worth noticing here:
 Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. We'll identify a book with a strongly-typed id rather than a bare `Guid`, so the compiler stops us from ever mixing a book's id up with, say, a member's:
 
 ```csharp
+using Cratis.Concepts;
+using Cratis.Chronicle.Events;
+
 public record BookId(Guid Value) : ConceptAs<Guid>(Value)
 {
     public static BookId New() => new(Guid.NewGuid());

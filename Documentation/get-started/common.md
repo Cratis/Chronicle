@@ -47,7 +47,6 @@ Events are the **write** side — the source of truth. To *read* current state y
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
-[ReadModel]
 public record Book(
     [Key]
     Guid Id,
@@ -69,7 +68,7 @@ public record Book(
 
 Read the attributes as a sentence: a book's `Title` and `Isbn` come from `BookAdded`; `OnLoan` is `false` when it's added, `true` when borrowed, `false` again when returned; `BorrowedBy` is whoever borrowed it. You're *declaring* how facts map onto the view — Chronicle replays the events in order and applies the mapping.
 
-The projection writes `Book` to a store (MongoDB by default), so reading it is an ordinary query:
+By default Chronicle **materializes** every projection into the **sink** storage configured for the event store — MongoDB unless you change it — under a database named after the event store and a collection named after the read model. So the `Book` read model is an ordinary MongoDB collection; you read it with the driver:
 
 ```csharp
 public class Books(IMongoCollection<Book> collection)

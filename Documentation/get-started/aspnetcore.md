@@ -94,7 +94,7 @@ Then register the database and the collections you want to inject, so a type can
 ```csharp
 builder.Services.AddSingleton<IMongoClient>(new MongoClient("mongodb://localhost:27017"));
 builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase("Quickstart"));
-builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("book"));
+builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("Books"));
 ```
 
 Now the `Books` query from the read-model section above resolves its collection straight from the container.

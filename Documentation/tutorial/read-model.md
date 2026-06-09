@@ -38,7 +38,6 @@ Here's the shift. In a database you'd write code to keep a `Books` table in sync
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
-[ReadModel]
 public record Book(
     [Key]
     BookId Id,
@@ -66,7 +65,7 @@ For mappings like this — "events map onto fields" — the model-bound attribut
 
 ## Query it
 
-The projection writes the `Book` read model to a store (MongoDB by default), so reading it is just a query — exactly what you're used to:
+By default Chronicle **materializes** the projection into its configured **sink** storage — MongoDB unless you change it — so the `Book` read model is just a collection you query, exactly what you're used to:
 
 ```csharp
 public class Books(IMongoCollection<Book> collection)
