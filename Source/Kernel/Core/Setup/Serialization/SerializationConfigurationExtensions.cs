@@ -114,6 +114,14 @@ public static class SerializationConfigurationExtensions
 
     static void Configure(this IServiceCollection services)
     {
+        // Pre-warm the global JsonSerializerOptions on this single configuration thread. Its lazy
+        // initializer publishes the options instance before it has finished adding the derived-type
+        // converter, so two threads racing the first access can freeze it mid-configuration — which
+        // surfaces under clustering as "JsonSerializerOptions instance is read-only" when converters
+        // such as TypeWithObjectPropertiesJsonConverter serialize across a silo boundary. Touching it
+        // here, before any grain runs, makes the first (and only) initialization single-threaded.
+        _ = Globals.JsonSerializerOptions;
+
         var options = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -138,7 +146,13 @@ public static class SerializationConfigurationExtensions
                     current = current.BaseType;
                 }
 
-                return type == typeof(JsonObject) || type == typeof(JsonSchema) || (type.Namespace?.StartsWith("Cratis") ?? false);
+                // OneOf marker types (e.g. OneOf.Types.None, used as job acknowledgements) have no
+                // generated Orleans codec. They must be serializable for failed-partition recovery jobs
+                // to start across silo boundaries, so route them through the JSON serializer.
+                return type == typeof(JsonObject)
+                    || type == typeof(JsonSchema)
+                    || type.Namespace == "OneOf.Types"
+                    || (type.Namespace?.StartsWith("Cratis") ?? false);
             },
             options));
     }
