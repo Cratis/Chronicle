@@ -94,7 +94,7 @@ public class ReadModels(
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = _defaultSinkTypeId
+                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
                 },
                 Schema = schemaGenerator.Generate(readModel.ReadModelType).ToJson(),
                 Indexes = GetIndexesForType(readModel.ReadModelType, string.Empty),
@@ -150,7 +150,7 @@ public class ReadModels(
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = _defaultSinkTypeId
+                    TypeId = GetSinkTypeIdFor(typeof(TReadModel))
                 },
                 Schema = schemaGenerator.Generate(typeof(TReadModel)).ToJson(),
                 Indexes = GetIndexesForType(typeof(TReadModel), string.Empty),
@@ -460,6 +460,19 @@ public class ReadModels(
 
         return released;
     }
+
+    /// <summary>
+    /// Resolves the <see cref="SinkTypeId"/> for a read model type.
+    /// </summary>
+    /// <param name="readModelType">The read model type to resolve the sink for.</param>
+    /// <returns>The <see cref="SinkTypeId"/> to register the read model with.</returns>
+    /// <remarks>
+    /// Passive read models never have an observer writing to a materialized sink, so they register
+    /// with <see cref="SinkTypeId.None"/>. This lets the kernel fall through to immediate
+    /// projection when resolving the instance by key instead of reading an empty sink and returning null.
+    /// </remarks>
+    SinkTypeId GetSinkTypeIdFor(Type readModelType) =>
+        readModelType.IsPassive() ? SinkTypeId.None : _defaultSinkTypeId;
 
     List<IndexDefinition> GetIndexesForType(Type type, string prefix)
     {
