@@ -1,31 +1,48 @@
-# Geospatial Coordinates
+# Geospatial Types
 
-Chronicle has built-in support for the `Coordinate` type from Cratis.Fundamentals. You can use it directly in events, read models, reducers, and projections without any extra setup.
+Chronicle has built-in support for geospatial types from Cratis.Fundamentals: `Point`, `LineString`, and `Polygon`. You can use them directly in events, read models, reducers, and projections without any extra setup.
 
-## The Coordinate type
+## Geospatial Types
 
-`Coordinate` is a record defined in the `Cratis.Geospatial` namespace:
+The three geospatial types are records defined in the `Cratis.Geospatial` namespace:
 
 ```csharp
-public record Coordinate(double Longitude, double Latitude);
+public record Point(double Longitude, double Latitude);
+
+public record LineString(Point[] Coordinates);
+
+public record Polygon(LinearRing Shell, LinearRing[] Holes);
+
+public record LinearRing(Point[] Coordinates);
 ```
 
-It represents a geographic point in standard longitude-then-latitude order (the order used by GeoJSON and most geospatial standards).
+- **Point** represents a single geographic location in longitude-then-latitude order (GeoJSON standard).
+- **LineString** represents a connected series of points forming a line or path.
+- **Polygon** represents an enclosed area with a shell (outer boundary) and optional holes (inner boundaries).
+- **LinearRing** is an array of points that form a closed loop (used by Polygon).
 
-## Using Coordinate in events and read models
+## Using Geospatial Types in Events and Read Models
 
-Import the namespace and use `Coordinate` as any other property type:
+Import the namespace and use the geospatial types as any other property type:
 
 ```csharp
 using Cratis.Geospatial;
 
 [EventType]
-public record AssetLocationUpdated(AssetId AssetId, Coordinate Location);
+public record AssetLocationUpdated(AssetId AssetId, Point Location);
 
-public record AssetReadModel(AssetId AssetId, Coordinate Location);
+[EventType]
+public record RouteCreated(RouteId RouteId, LineString Path);
+
+[EventType]
+public record ZoneEstablished(ZoneId ZoneId, Polygon Boundaries);
+
+public record AssetReadModel(AssetId AssetId, Point Location);
+public record RouteReadModel(RouteId RouteId, LineString Path);
+public record ZoneReadModel(ZoneId ZoneId, Polygon Boundaries);
 ```
 
-Because `Coordinate` is a plain record, projections and reducers handle it like any other value type. AutoMap picks it up automatically:
+Projections and reducers handle geospatial types like any other value type. AutoMap picks them up automatically:
 
 ```csharp
 public class AssetProjection : IProjectionFor<AssetReadModel>
@@ -37,45 +54,117 @@ public class AssetProjection : IProjectionFor<AssetReadModel>
 }
 ```
 
-## JSON schema
+## JSON Schema
 
-When Chronicle generates the JSON schema for an event or read model that contains a `Coordinate` property, the property is annotated with `"format": "coordinate"`. This lets consumers inspect the schema and know the field is a geographic coordinate without inspecting the nested `longitude`/`latitude` sub-properties:
+When Chronicle generates the JSON schema, geospatial types are annotated with their GeoJSON-compatible formats:
 
+**Point**: Generates as an object with `longitude` and `latitude` properties, marked with `"format": "point"`
 ```json
 {
+  "type": "object",
+  "format": "point",
   "properties": {
-    "location": {
-      "type": "object",
-      "format": "coordinate",
-      "properties": {
-        "longitude": { "type": "number" },
-        "latitude":  { "type": "number" }
+    "longitude": { "type": "number" },
+    "latitude": { "type": "number" }
+  }
+}
+```
+
+**LineString**: Generates as an array of point objects, marked with `"format": "linestring"`
+```json
+{
+  "type": "array",
+  "format": "linestring",
+  "items": {
+    "type": "object",
+    "properties": {
+      "longitude": { "type": "number" },
+      "latitude": { "type": "number" }
+    }
+  }
+}
+```
+
+**Polygon**: Generates as an object with `shell` and `holes`, marked with `"format": "polygon"`
+```json
+{
+  "type": "object",
+  "format": "polygon",
+  "properties": {
+    "shell": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "longitude": { "type": "number" },
+          "latitude": { "type": "number" }
+        }
+      }
+    },
+    "holes": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "longitude": { "type": "number" },
+            "latitude": { "type": "number" }
+          }
+        }
       }
     }
   }
 }
 ```
 
+This lets consumers inspect the schema and know the field contains geographic data, and the format annotations make it possible for tools like the Workbench to recognize and properly display geographic values.
+
 ## Storage
 
-### MongoDB sink
+### MongoDB Sink
 
-Chronicle stores `Coordinate` values as a flat BSON document with `longitude` and `latitude` fields:
+Chronicle stores geospatial values in BSON format:
 
+**Point**: Flat document with `longitude` and `latitude`
 ```json
 { "longitude": 10.456, "latitude": 42.123 }
 ```
 
-The BSON serializer is registered automatically — no configuration required.
+**LineString**: Array of points
+```json
+[
+  { "longitude": 10.456, "latitude": 42.123 },
+  { "longitude": 11.789, "latitude": 43.456 }
+]
+```
 
-### SQL sink
+**Polygon**: Document with `shell` (outer ring) and `holes` (inner rings)
+```json
+{
+  "shell": [
+    { "longitude": 0, "latitude": 0 },
+    { "longitude": 10, "latitude": 0 },
+    { "longitude": 10, "latitude": 10 },
+    { "longitude": 0, "latitude": 10 },
+    { "longitude": 0, "latitude": 0 }
+  ],
+  "holes": []
+}
+```
 
-Because `Coordinate` generates as a JSON object in the schema, the SQL sink stores it as a JSON column. No migration or configuration changes are required.
+BSON serializers are registered automatically — no configuration required.
 
-## Workbench display
+### SQL Sink
 
-The Chronicle Workbench recognizes `"format": "coordinate"` in event schemas and renders coordinate fields as a human-readable string rather than expanding the nested object:
+Geospatial types generate as JSON objects in the schema, so the SQL sink stores them as JSON columns. No migration or configuration changes are required.
+
+## Workbench Display
+
+The Chronicle Workbench recognizes geospatial format markers in event schemas and renders them as human-readable strings rather than expanding nested structures:
 
 ```text
-lat: 42.123, long: 10.456
+Point: lat: 42.123, long: 10.456
+LineString: [lat: 42.123, long: 10.456], [lat: 43.456, long: 11.789]
+Polygon: shell with 5 points, 0 holes
 ```
