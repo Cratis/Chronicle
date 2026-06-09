@@ -24,8 +24,8 @@ on:
 
 env:
   DOTNET_VERSION: "10.0.x"
-  ELIXIR_VERSION: "1.17.3"
-  OTP_VERSION: "27.1"
+  ELIXIR_VERSION: "1.18.4"
+  OTP_VERSION: "27.3"
 
 jobs:
   publish-elixir-client:
