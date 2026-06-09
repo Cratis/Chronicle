@@ -61,7 +61,7 @@ mavenPublishing {
     publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 
-    coordinates("io.cratis", "chronicle-client-kotlin", version.toString())
+    coordinates("io.cratis", "chronicle-contracts", version.toString())
 
     pom {
         name.set("Chronicle Kotlin Client")
