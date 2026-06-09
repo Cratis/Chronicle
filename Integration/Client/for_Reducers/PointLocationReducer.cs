@@ -8,10 +8,10 @@ using Cratis.Geospatial;
 namespace Cratis.Chronicle.Integration.for_Reducers;
 
 /// <summary>
-/// Reducer that folds <see cref="CoordinateEvent"/> into <see cref="CoordinateReadModel"/>.
+/// Reducer that folds <see cref="PointLocationEvent"/> into <see cref="PointLocationReadModel"/>.
 /// </summary>
 [DependencyInjection.IgnoreConvention]
-public class CoordinateReducer : IReducerFor<CoordinateReadModel>
+public class PointLocationReducer : IReducerFor<PointLocationReadModel>
 {
     /// <summary>
     /// Gets the number of handled events.
@@ -19,22 +19,22 @@ public class CoordinateReducer : IReducerFor<CoordinateReadModel>
     public int HandledEvents;
 
     /// <summary>
-    /// Gets the last received <see cref="Coordinate"/>.
+    /// Gets the last received <see cref="Point"/>.
     /// </summary>
-    public Coordinate LastLocation;
+    public Point LastLocation;
 
     /// <summary>
-    /// Handles a <see cref="CoordinateEvent"/>.
+    /// Handles a <see cref="PointLocationEvent"/>.
     /// </summary>
     /// <param name="evt">The event.</param>
     /// <param name="input">The current read model.</param>
     /// <param name="ctx">The event context.</param>
     /// <returns>The updated read model.</returns>
-    public Task<CoordinateReadModel?> OnCoordinateEvent(CoordinateEvent evt, CoordinateReadModel? input, EventContext ctx)
+    public Task<PointLocationReadModel?> OnPointLocationEvent(PointLocationEvent evt, PointLocationReadModel? input, EventContext ctx)
     {
         Interlocked.Increment(ref HandledEvents);
         LastLocation = evt.Location;
-        return Task.FromResult<CoordinateReadModel?>(new CoordinateReadModel(evt.Location));
+        return Task.FromResult<PointLocationReadModel?>(new PointLocationReadModel(evt.Location));
     }
 
     /// <summary>

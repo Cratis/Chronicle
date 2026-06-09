@@ -6,10 +6,10 @@ using Cratis.Chronicle.Integration.Projections.ReadModels;
 
 namespace Cratis.Chronicle.Integration.Projections.ProjectionTypes;
 
-public class CoordinateProjection : IProjectionFor<CoordinateReadModel>
+public class PointLocationProjection : IProjectionFor<PointLocationReadModel>
 {
-    public void Define(IProjectionBuilderFor<CoordinateReadModel> builder) => builder
+    public void Define(IProjectionBuilderFor<PointLocationReadModel> builder) => builder
         .AutoMap()
-        .From<CoordinateEvent>(fb => fb
+        .From<PointLocationEvent>(fb => fb
             .Set(m => m.Location).To(e => e.Location));
 }

@@ -4,7 +4,7 @@
 using Cratis.Chronicle.Events;
 using Cratis.Geospatial;
 
-namespace Cratis.Chronicle.Integration.Projections.Events;
+namespace Cratis.Chronicle.Integration.for_Reducers;
 
 [EventType]
-public record CoordinateEvent(Coordinate Location);
+public record PointLocationEvent(Point Location);

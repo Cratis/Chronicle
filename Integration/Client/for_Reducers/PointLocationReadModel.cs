@@ -5,4 +5,4 @@ using Cratis.Geospatial;
 
 namespace Cratis.Chronicle.Integration.for_Reducers;
 
-public record CoordinateReadModel(Coordinate Location = default);
+public record PointLocationReadModel(Point Location = null!);

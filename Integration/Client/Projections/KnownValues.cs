@@ -25,5 +25,9 @@ public static class KnownValues
     public static FloatConcept FloatConceptValue = 44.45f;
     public static DoubleConcept DoubleConceptValue = 43.43;
     public static GuidConcept GuidConceptValue = Guid.NewGuid();
-    public static Coordinate CoordinateValue = new(42.123, 10.456);
+    public static Point PointValue = new(42.123, 10.456);
+    public static LineString LineStringValue = new(new[] { new Point(42.123, 10.456), new Point(43.456, 11.789) });
+    public static Polygon PolygonValue = new(
+        new LinearRing(new[] { new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0) }),
+        new LinearRing[] { });
 }

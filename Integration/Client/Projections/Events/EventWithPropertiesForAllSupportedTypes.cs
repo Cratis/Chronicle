@@ -26,7 +26,9 @@ public record EventWithPropertiesForAllSupportedTypes(
     FloatConcept FloatConceptValue,
     DoubleConcept DoubleConceptValue,
     GuidConcept GuidConceptValue,
-    Coordinate CoordinateValue)
+    Point PointValue,
+    LineString LineStringValue,
+    Polygon PolygonValue)
 {
     static Random _random = new();
 
@@ -48,7 +50,9 @@ public record EventWithPropertiesForAllSupportedTypes(
             KnownValues.FloatConceptValue,
             KnownValues.DoubleConceptValue,
             KnownValues.GuidConceptValue,
-            KnownValues.CoordinateValue);
+            KnownValues.PointValue,
+            KnownValues.LineStringValue,
+            KnownValues.PolygonValue);
 
     public static EventWithPropertiesForAllSupportedTypes CreateWithRandomValues() => new(
         _random.NextDouble().ToString(),
@@ -68,5 +72,7 @@ public record EventWithPropertiesForAllSupportedTypes(
         (float)Math.Round(_random.NextSingle(), 3),
         _random.NextDouble(),
         Guid.NewGuid(),
-        new Coordinate(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)));
+        new Point(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)),
+        new LineString(new[] { new Point(42.123, 10.456), new Point(43.456, 11.789) }),
+        new Polygon(new LinearRing(new[] { new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0) }), new LinearRing[] { }));
 }

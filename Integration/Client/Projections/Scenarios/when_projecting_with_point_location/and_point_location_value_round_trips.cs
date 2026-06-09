@@ -5,22 +5,22 @@ using Cratis.Chronicle.Integration.Projections.Events;
 using Cratis.Chronicle.Integration.Projections.ProjectionTypes;
 using Cratis.Chronicle.Integration.Projections.ReadModels;
 using Cratis.Geospatial;
-using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_coordinate.and_coordinate_value_round_trips.context;
+using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_point_location.and_point_location_value_round_trips.context;
 
-namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_coordinate;
+namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_projecting_with_point_location;
 
 [Collection(ChronicleCollection.Name)]
-public class and_coordinate_value_round_trips(context context) : Given<context>(context)
+public class and_point_location_value_round_trips(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<CoordinateProjection, CoordinateReadModel>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.a_projection_and_events_appended_to_it<PointLocationProjection, PointLocationReadModel>(chronicleFixture)
     {
-        public CoordinateEvent EventAppended;
+        public PointLocationEvent EventAppended;
 
-        public override IEnumerable<Type> EventTypes => [typeof(CoordinateEvent)];
+        public override IEnumerable<Type> EventTypes => [typeof(PointLocationEvent)];
 
         void Establish()
         {
-            EventAppended = new CoordinateEvent(new Coordinate(51.5074, -0.1278));
+            EventAppended = new PointLocationEvent(new Point(51.5074, -0.1278));
             EventsToAppend.Add(EventAppended);
         }
     }
