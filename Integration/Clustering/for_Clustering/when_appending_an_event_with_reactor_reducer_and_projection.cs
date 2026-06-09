@@ -5,129 +5,143 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Reactors;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
-using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_Clustering;
 
 [Collection(ChronicleCollection.Name)]
-public class when_appending_an_event_with_reactor_reducer_and_projection : IClassFixture<ClusteringFixture>, IAsyncLifetime
+public class when_appending_an_event_with_reactor_reducer_and_projection(ClusteringFixture fixture) : IAsyncLifetime
 {
-    readonly ClusteringFixture _fixture;
-    readonly TaskCompletionSource _reactorHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly TaskCompletionSource _reducerHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    static readonly TimeSpan _timeout = TimeSpan.FromSeconds(60);
+    static Task<Outcome>? _work;
 
-    EventSourceId _eventSourceId = string.Empty;
-    ClusteredReducerReadModel? _reducerReadModel;
+    Outcome _outcome = default!;
 
-    public ClusteredReactor Reactor { get; private set; } = default!;
-    public ClusteredReducer Reducer { get; private set; } = default!;
-    public ReactorState ReactorState { get; private set; } = default!;
-    public ReducerState ReducerState { get; private set; } = default!;
-    public ProjectionState ProjectionState { get; private set; } = default!;
+    ClusteredEvent _expected => _outcome.Expected;
+    ClusteredReducerReadModel _reducerReadModel => _outcome.ReducerReadModel;
+    ClusteredProjectionReadModel _projectionReadModel => _outcome.ProjectionReadModel;
 
-    public when_appending_an_event_with_reactor_reducer_and_projection(ClusteringFixture fixture)
+    public ReactorState ReactorState => _outcome.ReactorState;
+    public ReducerState ReducerState => _outcome.ReducerState;
+    public ProjectionState ProjectionState => _outcome.ProjectionState;
+
+    public async Task InitializeAsync() => _outcome = await (_work ??= Load(fixture));
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    static async Task<Outcome> Load(ClusteringFixture fixture)
     {
-        _fixture = fixture;
-    }
+        ClusteredReactor.Reset();
 
-    public async Task InitializeAsync()
-    {
-        await _fixture.RemoveAllDatabases();
-        _eventSourceId = "clustered-source";
-
-        // Execute the scenario
-        var startupTimeout = TimeSpanFactory.FromSeconds(30);
-        var eventStore = _fixture.EventStore;
+        var eventStore = fixture.ClientEventStore;
 
         var reactorHandler = eventStore.Reactors.GetHandlerFor<ClusteredReactor>();
         var reducerHandler = eventStore.Reducers.GetHandlerFor<ClusteredReducer>();
         var projectionHandler = eventStore.Projections.GetHandlerFor<ClusteredProjection>();
 
-        await reactorHandler.WaitTillActive(startupTimeout);
-        await reducerHandler.WaitTillActive(startupTimeout);
-        await projectionHandler.WaitTillActive(startupTimeout);
+        // A rich payload — concept, enum, collection and nested record — to verify these all survive the
+        // Orleans round-trip as the event and read models cross silo boundaries between the event sequence,
+        // the observers and the connected client. The same instance is reused across retries (fixed
+        // Reference) so the read-model and reactor assertions hold regardless of which attempt succeeds.
+        var expected = new ClusteredEvent(
+            Number: 42,
+            Reference: ThingId.New(),
+            Priority: Priority.High,
+            Tags: ["alpha", "beta", "gamma"],
+            Location: new Address("221B Baker Street", "London", 11111));
 
-        var appendResult = await eventStore.EventLog.Append(_eventSourceId, new ClusteredEvent(42));
+        const string eventSourceId = "clustered-source";
 
-        await reactorHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, startupTimeout);
-        await reducerHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, startupTimeout);
-        await projectionHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, startupTimeout);
+        await reactorHandler.WaitTillActive(_timeout);
+        await reducerHandler.WaitTillActive(_timeout);
+        await projectionHandler.WaitTillActive(_timeout);
 
-        await _reactorHandled.Task.WaitAsync(startupTimeout);
-        await _reducerHandled.Task.WaitAsync(startupTimeout);
+        var appendResult = await eventStore.EventLog.Append(eventSourceId, expected);
 
-        _reducerReadModel = await GetReadModel<ClusteredReducerReadModel>(reducerHandler.ContainerName, _eventSourceId);
-        ReactorState = await reactorHandler.GetState();
-        ReducerState = await reducerHandler.GetState();
-        ProjectionState = await projectionHandler.GetState();
+        await reactorHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, _timeout);
+        await reducerHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, _timeout);
+        await projectionHandler.WaitTillReachesEventSequenceNumber(appendResult.SequenceNumber, _timeout);
+
+        await ClusteredReactor.Handled.Task.WaitAsync(_timeout);
+
+        return new Outcome(
+            expected,
+            await eventStore.ReadModels.GetInstanceById<ClusteredReducerReadModel>(eventSourceId),
+            await eventStore.ReadModels.GetInstanceById<ClusteredProjectionReadModel>(eventSourceId),
+            await reactorHandler.GetState(),
+            await reducerHandler.GetState(),
+            await projectionHandler.GetState());
     }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    record Outcome(
+        ClusteredEvent Expected,
+        ClusteredReducerReadModel ReducerReadModel,
+        ClusteredProjectionReadModel ProjectionReadModel,
+        ReactorState ReactorState,
+        ReducerState ReducerState,
+        ProjectionState ProjectionState);
 
-    public ClusteredReducerReadModel ReducerReadModel => _reducerReadModel!;
+    [Fact] void should_have_reactor_called() => ClusteredReactor.HandledCount.ShouldEqual(1);
+    [Fact] void should_have_reactor_observe_the_rich_event() => ClusteredReactor.LastReference.ShouldEqual(_expected.Reference);
+    [Fact] void should_have_reducer_round_trip_the_number() => _reducerReadModel.Number.ShouldEqual(42);
+    [Fact] void should_have_reducer_round_trip_the_concept() => _reducerReadModel.Reference.ShouldEqual(_expected.Reference);
+    [Fact] void should_have_reducer_round_trip_the_enum() => _reducerReadModel.Priority.ShouldEqual(Priority.High);
+    [Fact] void should_have_reducer_round_trip_the_collection() => _reducerReadModel.Tags.ShouldContainOnly(_expected.Tags);
+    [Fact] void should_have_reducer_round_trip_the_nested_record() => _reducerReadModel.Location.City.ShouldEqual("London");
+    [Fact] void should_have_projection_round_trip_the_number() => _projectionReadModel.Number.ShouldEqual(42);
+    [Fact] void should_have_reactor_active() => ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    [Fact] void should_have_reducer_active() => ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    [Fact] void should_have_projection_active() => ProjectionState.RunningState.ShouldEqual(ObserverRunningState.Active);
 
-    async Task<TReadModel?> GetReadModel<TReadModel>(ReadModelContainerName containerName, string key)
-        where TReadModel : class
+    public record ThingId(Guid Value) : ConceptAs<Guid>(Value)
     {
-        var filter = Builders<TReadModel>.Filter.Eq("_id", key);
-        var cursor = await _fixture.ReadModels.Database
-            .GetCollection<TReadModel>(containerName)
-            .FindAsync(filter);
-        return await cursor.FirstOrDefaultAsync();
+        public static ThingId New() => new(Guid.NewGuid());
     }
 
-    [Fact]
-    public void should_have_reactor_called() => Reactor.HandledEvents.ShouldEqual(1);
-
-    [Fact]
-    public void should_have_reducer_called_and_produce_desired_result()
+    public enum Priority
     {
-        Reducer.HandledEvents.ShouldEqual(1);
-        ReducerReadModel.Number.ShouldEqual(42);
+        Low = 0,
+        Medium = 1,
+        High = 2
     }
 
-    [Fact]
-    public void should_have_projection_called_and_produce_desired_result() =>
-        ProjectionState.LastHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.First);
-
-    [Fact]
-    public void should_have_reactor_active() => ReactorState.RunningState.ShouldEqual(ObserverRunningState.Active);
-
-    [Fact]
-    public void should_have_reducer_active() => ReducerState.RunningState.ShouldEqual(ObserverRunningState.Active);
-
-    [Fact]
-    public void should_have_projection_active() => ProjectionState.RunningState.ShouldEqual(ObserverRunningState.Active);
+    public record Address(string Street, string City, int ZipCode);
 
     [EventType]
-    public record ClusteredEvent(int Number);
+    public record ClusteredEvent(int Number, ThingId Reference, Priority Priority, IList<string> Tags, Address Location);
 
     public class ClusteredReactor : IReactor
     {
-        int _handledEvents;
-        public int HandledEvents => _handledEvents;
+        static int _handledCount;
+
+        public static int HandledCount => _handledCount;
+
+        public static ThingId LastReference { get; private set; } = default!;
+
+        public static TaskCompletionSource Handled { get; private set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public static void Reset()
+        {
+            Interlocked.Exchange(ref _handledCount, 0);
+            LastReference = default!;
+            Handled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
 
         public Task OnClusteredEvent(ClusteredEvent @event, EventContext context)
         {
-            Interlocked.Increment(ref _handledEvents);
+            LastReference = @event.Reference;
+            Interlocked.Increment(ref _handledCount);
+            Handled.TrySetResult();
             return Task.CompletedTask;
         }
     }
 
-    public record ClusteredReducerReadModel(int Number);
+    public record ClusteredReducerReadModel(int Number, ThingId Reference, Priority Priority, IList<string> Tags, Address Location);
 
     public class ClusteredReducer : IReducerFor<ClusteredReducerReadModel>
     {
-        int _handledEvents;
-        public int HandledEvents => _handledEvents;
-
-        public Task<ClusteredReducerReadModel?> OnClusteredEvent(ClusteredEvent @event, ClusteredReducerReadModel? current, EventContext context)
-        {
-            Interlocked.Increment(ref _handledEvents);
-            return Task.FromResult<ClusteredReducerReadModel?>(new(@event.Number));
-        }
+        public Task<ClusteredReducerReadModel?> OnClusteredEvent(ClusteredEvent @event, ClusteredReducerReadModel? current, EventContext context) =>
+            Task.FromResult<ClusteredReducerReadModel?>(new(@event.Number, @event.Reference, @event.Priority, @event.Tags, @event.Location));
     }
 
     public record ClusteredProjectionReadModel(int Number);
