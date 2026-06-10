@@ -231,18 +231,9 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     }
 
     static bool IsEventHandledByDescendantProjection(IProjection projection, EventTypeId eventTypeId)
-    {
-        foreach (var child in projection.ChildProjections)
-        {
-            if (child.OwnEventTypes.Any(et => et.Id == eventTypeId) ||
-                IsEventHandledByDescendantProjection(child, eventTypeId))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+        => projection.ChildProjections.Any(child =>
+            child.OwnEventTypes.Any(et => et.Id == eventTypeId) ||
+            IsEventHandledByDescendantProjection(child, eventTypeId));
 
     static bool TargetsDeeperCollectionThan(ArrayIndexers arrayIndexers, PropertyPath childrenPropertyPath)
     {
