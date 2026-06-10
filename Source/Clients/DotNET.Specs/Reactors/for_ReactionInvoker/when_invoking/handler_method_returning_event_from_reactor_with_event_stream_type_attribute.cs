@@ -28,6 +28,8 @@ public class handler_method_returning_event_from_reactor_with_event_stream_type_
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventLog.Append(default!, default!, default, default, default, default, default, default, default, default)
+            .ReturnsForAnyArgs(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
 
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithEventStreamTypeAttribute(_outboundEvent);
