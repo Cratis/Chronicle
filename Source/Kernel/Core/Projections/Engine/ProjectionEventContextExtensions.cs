@@ -293,9 +293,8 @@ public static class ProjectionEventContextExtensions
     static bool KeyTargetsDeeperCollection(ArrayIndexers arrayIndexers, PropertyPath childrenProperty)
     {
         var childSegments = childrenProperty.Segments.ToArray();
-        foreach (var indexer in arrayIndexers.All)
+        foreach (var indexerSegments in arrayIndexers.All.Select(_ => _.ArrayProperty.Segments.ToArray()))
         {
-            var indexerSegments = indexer.ArrayProperty.Segments.ToArray();
             if (indexerSegments.Length <= childSegments.Length)
             {
                 continue;
