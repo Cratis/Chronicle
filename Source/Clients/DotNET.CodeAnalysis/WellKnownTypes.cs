@@ -47,6 +47,11 @@ public static class WellKnownTypes
     public const string ReducerAttributeName = "Cratis.Chronicle.Reducers.ReducerAttribute";
 
     /// <summary>
+    /// The full name of the OnceOnly attribute.
+    /// </summary>
+    public const string OnceOnlyAttributeName = "Cratis.Chronicle.Reactors.OnceOnlyAttribute";
+
+    /// <summary>
     /// The sentinel value representing the default event store.
     /// </summary>
     public const string DefaultEventStoreName = "";
