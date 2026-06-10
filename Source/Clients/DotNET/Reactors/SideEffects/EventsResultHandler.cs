@@ -23,13 +23,18 @@ public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHan
     {
         foreach (var @event in (IEnumerable<object>)value)
         {
-            await eventStore.EventLog.Append(
+            var result = await eventStore.EventLog.Append(
                 reactorContext.GetEventSourceId(),
                 @event,
                 reactorContext.GetEventStreamType(),
                 reactorContext.GetEventStreamId(),
                 reactorContext.GetEventSourceType(),
                 subject: reactorContext.GetSubject());
+
+            if (!result.IsSuccess)
+            {
+                throw new ReactorAppendFailedException(result);
+            }
         }
     }
 }

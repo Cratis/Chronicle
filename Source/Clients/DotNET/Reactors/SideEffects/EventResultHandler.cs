@@ -18,12 +18,19 @@ public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHand
         eventTypes.HasFor(value.GetType());
 
     /// <inheritdoc/>
-    public Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
-        eventStore.EventLog.Append(
+    public async Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    {
+        var result = await eventStore.EventLog.Append(
             reactorContext.GetEventSourceId(),
             value,
             reactorContext.GetEventStreamType(),
             reactorContext.GetEventStreamId(),
             reactorContext.GetEventSourceType(),
             subject: reactorContext.GetSubject());
+
+        if (!result.IsSuccess)
+        {
+            throw new ReactorAppendFailedException(result);
+        }
+    }
 }
