@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using System.Linq;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
@@ -246,9 +247,8 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     static bool TargetsDeeperCollectionThan(ArrayIndexers arrayIndexers, PropertyPath childrenPropertyPath)
     {
         var childSegments = childrenPropertyPath.Segments.ToArray();
-        foreach (var indexer in arrayIndexers.All)
+        foreach (var indexerSegments in arrayIndexers.All.Select(indexer => indexer.ArrayProperty.Segments.ToArray()))
         {
-            var indexerSegments = indexer.ArrayProperty.Segments.ToArray();
             if (indexerSegments.Length <= childSegments.Length)
             {
                 continue;
