@@ -317,6 +317,7 @@ jobs:
             git commit -m "Update coverage statistics [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push
+          fi
 
   benchmarks:
     runs-on: ubuntu-latest
