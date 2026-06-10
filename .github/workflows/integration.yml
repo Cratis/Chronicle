@@ -147,17 +147,17 @@ jobs:
             Integration/Client/Client.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
             -p:DisableDockerBuild=true \
-           -p:EnableDevelopmentSymbol=true \
-           --collect:"XPlat Code Coverage" \
-           --results-directory ./coverage-results
+            -p:EnableDevelopmentSymbol=true \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-results
 
       - name: Upload coverage results
-       if: always()
-       uses: actions/upload-artifact@v4
-       with:
-         name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.mode }}-${{ matrix.database }}
-         path: ./coverage-results/
-         retention-days: 1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.mode }}-${{ matrix.database }}
+          path: ./coverage-results/
+          retention-days: 1
 
   kernel-integration-specs:
     needs: [discover]
@@ -206,14 +206,14 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-           -p:EnableDevelopmentSymbol=true \
-           --collect:"XPlat Code Coverage" \
-           --results-directory ./coverage-results
+            -p:EnableDevelopmentSymbol=true \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-results
 
       - name: Upload coverage results
-       if: always()
-       uses: actions/upload-artifact@v4
-       with:
-         name: coverage-results-kernel-${{ matrix.namespace }}
-         path: ./coverage-results/
-         retention-days: 1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-kernel-${{ matrix.namespace }}
+          path: ./coverage-results/
+          retention-days: 1
