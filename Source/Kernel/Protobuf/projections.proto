@@ -217,7 +217,7 @@ message SerializableDateTimeOffset {
 }
 message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
-   .bcl.Guid TypeId = 2; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string TypeId = 2;
 }
 service Projections {
    rpc GenerateDeclarativeCode (GenerateDeclarativeCodeRequest) returns (OneOf_GeneratedCode_ProjectionDeclarationParsingErrors);

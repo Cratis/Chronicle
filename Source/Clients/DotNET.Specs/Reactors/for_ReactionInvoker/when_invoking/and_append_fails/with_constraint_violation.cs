@@ -69,9 +69,16 @@ public class with_constraint_violation : Specification
     }
 
     [Fact] void should_fail() => _result.TryGetException(out _).ShouldBeTrue();
-    [Fact] void should_have_reactor_append_failed_exception() => _caughtException.ShouldBeOfExactType<ReactorAppendFailedException>();
-    [Fact] void should_include_append_result() => ((ReactorAppendFailedException)_caughtException).AppendResult.ShouldEqual(_failedAppendResult);
-    [Fact] void should_include_constraint_violations_in_message() => _caughtException.Message.ShouldContain("Constraint violations");
+    [Fact] void should_have_reactor_side_effect_exception() => _caughtException.ShouldBeOfExactType<ReactorSideEffectException>();
+    [Fact] void should_include_side_effect_failure() => ((ReactorSideEffectException)_caughtException).Failure.ShouldNotBeNull();
+    [Fact] void should_have_append_failure() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.Count().ShouldEqual(1);
+    [Fact] void should_have_constraint_violation() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
+    [Fact] void should_include_constraint_violation_details()
+    {
+        var violation = ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.First();
+        violation.EventTypeId.ShouldEqual("MyOutboundEvent");
+        violation.Message.ShouldEqual("Constraint violated");
+    }
 
     class ReactorWithSyncEventReturnType(MyOutboundEvent outbound) : IReactor
     {

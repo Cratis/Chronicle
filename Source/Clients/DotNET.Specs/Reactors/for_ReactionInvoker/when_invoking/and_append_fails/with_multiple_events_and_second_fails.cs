@@ -75,9 +75,15 @@ public class with_multiple_events_and_second_fails : Specification
     }
 
     [Fact] void should_fail() => _result.TryGetException(out _).ShouldBeTrue();
-    [Fact] void should_have_reactor_append_failed_exception() => _caughtException.ShouldBeOfExactType<ReactorAppendFailedException>();
-    [Fact] void should_include_failed_append_result() => ((ReactorAppendFailedException)_caughtException).AppendResult.ShouldEqual(_failedAppendResult);
-    [Fact] void should_include_constraint_violations_in_message() => _caughtException.Message.ShouldContain("Constraint violated on second event");
+    [Fact] void should_have_reactor_side_effect_exception() => _caughtException.ShouldBeOfExactType<ReactorSideEffectException>();
+    [Fact] void should_include_side_effect_failure() => ((ReactorSideEffectException)_caughtException).Failure.ShouldNotBeNull();
+    [Fact] void should_have_single_append_failure() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.Count().ShouldEqual(1);
+    [Fact] void should_have_constraint_violation() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
+    [Fact] void should_include_second_event_failure_details()
+    {
+        var violation = ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.First();
+        violation.Message.ShouldEqual("Constraint violated on second event");
+    }
 
     class ReactorWithMultipleEventsReturnType(MyOutboundEvent firstEvent, MyOutboundEvent secondEvent) : IReactor
     {

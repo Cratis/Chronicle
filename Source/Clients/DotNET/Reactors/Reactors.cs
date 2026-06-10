@@ -408,6 +408,7 @@ public class Reactors : IReactors
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
+        Contracts.Observation.Reactors.SideEffectFailure[]? sideEffectFailures = null;
 
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
@@ -476,6 +477,22 @@ public class Reactors : IReactors
         void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
         {
             _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+
+            // Check if this is a ReactorSideEffectException and extract failure details
+            if (ex is ReactorSideEffectException sideEffectEx)
+            {
+                sideEffectFailures = sideEffectEx.Failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
+                {
+                    ConstraintViolations = af.ConstraintViolations.Select(cv => new Contracts.Observation.Reactors.ConstraintViolation
+                    {
+                        EventTypeId = cv.EventTypeId,
+                        Message = cv.Message
+                    }).ToArray(),
+                    HasConcurrencyViolation = af.HasConcurrencyViolation,
+                    Errors = af.Errors.ToArray()
+                }).ToArray();
+            }
+
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;
@@ -498,6 +515,11 @@ public class Reactors : IReactors
                 ExceptionMessages = exceptionMessages.ToList(),
                 ExceptionStackTrace = exceptionStackTrace
             };
+
+            if (sideEffectFailures is not null)
+            {
+                result.SideEffectFailures = sideEffectFailures;
+            }
 
             messages.OnNext(new(new(result)));
         }

@@ -2,7 +2,7 @@
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
-> **Important**: If an append operation fails (constraint violation, concurrency violation, or error), a `ReactorAppendFailedException` is thrown and the reactor partition is marked as failed. The partition will be retried according to the observer retry policy.
+> **Important**: If an append operation fails (constraint violation, concurrency violation, or error), the side-effect handler returns a `Result<ReactorSideEffectFailure>` containing the failure details. The reactor partition is marked as failed with structured error information. The partition will be retried according to the observer retry policy.
 
 ## Basic Usage
 
@@ -129,9 +129,12 @@ public class MyHandler : IReactorSideEffectHandler
     public bool CanHandle(ReactorContext reactorContext, object value) =>
         value is MySpecialResult;
 
-    public async Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
         // process value
+        // Return Result.Success<ReactorSideEffectFailure>() on success
+        // Return Result.Failed(failure) on error
+        return Result.Success<ReactorSideEffectFailure>();
     }
 }
 
@@ -151,17 +154,33 @@ services.AddSingleton<IReactorSideEffectHandler, MyHandler>();
 
 ## Error Handling
 
-When a reactor returns side-effect events, the framework checks the `AppendResult` of each append operation. If any append fails, a `ReactorAppendFailedException` is thrown containing:
+When a reactor returns side-effect events, the framework checks the `AppendResult` of each append operation using the `Result<>` monad pattern. If any append fails, the side-effect handler returns a `Result.Failed(ReactorSideEffectFailure)` containing:
 
-- **Constraint violations**: Unique constraint violations, or other validation failures
-- **Concurrency violations**: Version conflicts or concurrent modification errors
-- **Errors**: Database connection errors or other infrastructure failures
+- **Constraint violations**: Unique constraint violations with event type and message details
+- **Concurrency violations**: Flags indicating version conflicts
+- **Errors**: Structured error messages from infrastructure failures
 
-The exception propagates to the observer infrastructure, which:
-1. Marks the partition as failed
-2. Records the full exception details and stack trace
-3. Retries according to the observer retry policy
-4. Quarantines the observer if the retry limit is exceeded
+The `Result` propagates through the reactor pipeline as a `ReactorSideEffectException`, which is caught by the observer infrastructure:
 
-This ensures that append failures don't go unnoticed and the reactor partition can be recovered or debugged through the failed partitions API.
+1. The partition is marked as failed
+2. Full side-effect failure details are serialized into `ReactorResult.SideEffectFailures`
+3. Exception messages and stack trace are recorded separately
+4. The partition is retried according to the observer retry policy
+5. The observer is quarantined if the retry limit is exceeded
+
+This ensures that append failures don't go unnoticed and provides structured error information for debugging through the failed partitions API and kernel observability.
+
+### Architecture Flow
+
+```
+Side-Effect Handler → Result<ReactorSideEffectFailure>
+  ↓
+ReactorInvoker → Catch with ReactorSideEffectException
+  ↓
+ReactorHandler.OnNext → Failed Catch
+  ↓
+Reactors.ObserverMethod → ReactorResult with SideEffectFailures
+  ↓
+Kernel receives structured failure details
+```
 

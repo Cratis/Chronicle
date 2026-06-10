@@ -62,10 +62,11 @@ public class with_append_error : Specification
     }
 
     [Fact] void should_fail() => _result.TryGetException(out _).ShouldBeTrue();
-    [Fact] void should_have_reactor_append_failed_exception() => _caughtException.ShouldBeOfExactType<ReactorAppendFailedException>();
-    [Fact] void should_include_append_result() => ((ReactorAppendFailedException)_caughtException).AppendResult.ShouldEqual(_failedAppendResult);
-    [Fact] void should_include_errors_in_message() => _caughtException.Message.ShouldContain("Errors");
-    [Fact] void should_include_error_details_in_message() => _caughtException.Message.ShouldContain("Database connection failed");
+    [Fact] void should_have_reactor_side_effect_exception() => _caughtException.ShouldBeOfExactType<ReactorSideEffectException>();
+    [Fact] void should_include_side_effect_failure() => ((ReactorSideEffectException)_caughtException).Failure.ShouldNotBeNull();
+    [Fact] void should_have_append_failure() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.Count().ShouldEqual(1);
+    [Fact] void should_have_errors() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().Errors.Count().ShouldEqual(1);
+    [Fact] void should_include_error_details() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().Errors.First().ShouldEqual("Database connection failed");
 
     class ReactorWithTaskOfEventReturnType(MyOutboundEvent outbound) : IReactor
     {
