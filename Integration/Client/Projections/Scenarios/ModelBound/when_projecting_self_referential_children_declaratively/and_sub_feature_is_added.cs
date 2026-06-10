@@ -8,10 +8,12 @@ using context = Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.wh
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_projecting_self_referential_children_declaratively;
 
+#pragma warning disable RCS1181 // Convert comment to documentation comment
 // Isolates builder-vs-engine: the SAME self-referential shape as the model-bound scenarios, but defined
 // with a hand-written DECLARATIVE projection that specifies explicit keys/parent-keys at every level.
 // If the nested child gets its id + name here, the engine handles self-referential children correctly and
 // the corruption is in the model-bound projection-definition builder. If it fails the same way, it's the engine.
+#pragma warning restore RCS1181
 [Collection(ChronicleCollection.Name)]
 public class and_sub_feature_is_added(context context) : Given<context>(context)
 {

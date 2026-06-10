@@ -73,6 +73,6 @@ public record EventWithPropertiesForAllSupportedTypes(
         _random.NextDouble(),
         Guid.NewGuid(),
         new Point(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)),
-        new LineString(new[] { new Point(42.123, 10.456), new Point(43.456, 11.789) }),
-        new Polygon(new LinearRing(new[] { new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0) }), new LinearRing[] { }));
+        new LineString([new Point(42.123, 10.456), new Point(43.456, 11.789)]),
+        new Polygon(new LinearRing([new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0)]), []));
 }

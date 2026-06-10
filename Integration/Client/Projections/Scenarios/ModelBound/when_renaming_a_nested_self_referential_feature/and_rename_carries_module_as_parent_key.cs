@@ -6,11 +6,11 @@
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
-using Cratis.Chronicle.ReadModels;
 using context =Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_renaming_a_nested_self_referential_feature.and_rename_carries_module_as_parent_key.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_renaming_a_nested_self_referential_feature;
 
+#pragma warning disable RCS1181 // Convert comment to documentation comment
 // Model-bound mirror of Cratis Studio's Module/Feature read model (self-referential Feature with SubFeatures).
 // A sub-feature is added, then renamed. The sub-feature must stay nested under its parent (not promoted to a
 // second top-level feature) and receive the new name.
@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Integration.Projections.Scenarios.ModelBound.when_ren
 //      reached the real nested sub-feature. The engine now resolves a keyed event to the existing node via its
 //      creation event at whatever depth it lives, and a projection level skips a key that targets a deeper
 //      collection. The rename lands on the nested sub-feature, with no promotion and no parent rename.
+#pragma warning restore RCS1181
 [Collection(ChronicleCollection.Name)]
 public class and_rename_carries_module_as_parent_key(context context) : Given<context>(context)
 {

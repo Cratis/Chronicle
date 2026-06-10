@@ -18,6 +18,7 @@ public class using_constant_key_with_decrement(context context) : Given<context>
         void Establish()
         {
             ReadModelId = DecrementWithConstantKeyProjection.ConstantKeyValue;
+            WaitForEachEvent = true;
 
             // Append events from three different event source IDs - they should all accumulate into one read model
             EventsWithEventSourceIdToAppend.Add(new(Guid.NewGuid().ToString(), new EmptyEvent()));
