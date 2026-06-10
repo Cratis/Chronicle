@@ -16,12 +16,12 @@ flowchart TB
     subgraph ES["Event store"]
         direction LR
         subgraph NS1["Default namespace"]
-            S1["event sequences<br/>(the event log)"]
+            S1["event sequences (the event log)"]
         end
         subgraph NS2["tenant-a namespace"]
             S2["event sequences"]
         end
-        Meta["also tracks: event types ·<br/>observers · projections · …"]
+        Meta["also tracks: event types · observers · projections · …"]
     end
     ES --> Mongo[("MongoDB")]
 ```

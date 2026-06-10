@@ -5,8 +5,8 @@ Events are immutable facts that describe what happened in your system. Chronicle
 ```mermaid
 flowchart LR
     T["[EventType] record"] --> A[Append]
-    A --> S["Event sequence<br/>(immutable, ordered)"]
-    S --> O["Observers<br/>(projections · reducers · reactors)"]
+    A --> S["Event sequence (immutable, ordered)"]
+    S --> O["Observers (projections · reducers · reactors)"]
 ```
 
 ```csharp

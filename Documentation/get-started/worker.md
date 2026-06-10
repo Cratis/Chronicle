@@ -9,7 +9,7 @@ We'll build the same small library domain as the other host guides. If you're bu
 
 ## Before you start
 
-Have the Chronicle kernel running locally. [Run Chronicle locally](./running-chronicle.md) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
+Have the Chronicle kernel running locally. [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
 
 ## Set up the project
 
@@ -46,8 +46,8 @@ Like the [ASP.NET Core](./aspnetcore.md) host, `AddCratisChronicle` registers Ch
 
 ```mermaid
 flowchart LR
-    Host["Host.CreateApplicationBuilder"] -->|AddCratisChronicle| DI["DI container<br/>(auto-discovers artifacts)"]
-    DI --> Svcs["IEventStore · IEventLog ·<br/>IReactors · IReducers · IProjections"]
+    Host["Host.CreateApplicationBuilder"] -->|AddCratisChronicle| DI["DI container (auto-discovers artifacts)"]
+    DI --> Svcs["IEventStore · IEventLog · IReactors · IReducers · IProjections"]
     Svcs --> Worker["your BackgroundService"]
 ```
 
@@ -84,7 +84,7 @@ public class Worker(IEventStore eventStore) : BackgroundService
 }
 ```
 
-The projection and the `BookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
+The projections and the `BookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
 
 ## Configure the MongoDB client
 

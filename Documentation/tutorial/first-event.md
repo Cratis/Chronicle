@@ -28,17 +28,15 @@ A couple of things worth noticing here:
 Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. We'll identify a book with a strongly-typed id rather than a bare `Guid`, so the compiler stops us from ever mixing a book's id up with, say, a member's:
 
 ```csharp
-using Cratis.Concepts;
 using Cratis.Chronicle.Events;
 
-public record BookId(Guid Value) : ConceptAs<Guid>(Value)
+public record BookId(Guid Value) : EventSourceId<Guid>(Value)
 {
     public static BookId New() => new(Guid.NewGuid());
-    public static implicit operator EventSourceId(BookId id) => new(id.Value.ToString());
 }
 ```
 
-That last line — the conversion to `EventSourceId` — is what lets you hand a `BookId` straight to Chronicle as the stream key. No ceremony.
+By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
 
 ## Append it
 

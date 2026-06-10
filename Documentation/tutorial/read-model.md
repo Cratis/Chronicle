@@ -10,10 +10,10 @@ In [event-modeling](/event-modeling/) terms that's the **view pattern** — even
 ```mermaid
 eventmodeling
 
-tf 01 evt Library.BookAdded
-tf 02 evt Library.BookBorrowed
-tf 03 evt Library.BookReturned
-tf 04 rmo Library.Book ->> 01 ->> 02 ->> 03
+tf 01 event Library.BookAdded
+tf 02 event Library.BookBorrowed
+tf 03 event Library.BookReturned
+tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
 ```
 
 ## First, a couple more facts
@@ -38,14 +38,12 @@ Here's the shift. In a database you'd write code to keep a `Books` table in sync
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
+[FromEvent<BookAdded>]
 public record Book(
     [Key]
     BookId Id,
 
-    [SetFrom<BookAdded>(nameof(BookAdded.Title))]
     string Title,
-
-    [SetFrom<BookAdded>(nameof(BookAdded.Isbn))]
     string Isbn,
 
     [SetValue<BookAdded>(false)]
@@ -57,10 +55,14 @@ public record Book(
     string? BorrowedBy);
 ```
 
-Read the attributes as a sentence: a book's `Title` and `Isbn` are taken from `BookAdded`; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+Read the attributes as a sentence: a book is *made from* `BookAdded` — its `Title` and `Isbn` come straight off the event; `OnLoan` is `false` when the book is added, `true` when it's borrowed, and `false` again when it's returned; `BorrowedBy` is set to whoever borrowed it. You're *declaring* how each fact maps onto the view — not writing imperative updates, not worrying about ordering. Chronicle replays the events in order and applies your mapping.
+
+:::note[FromEvent maps by convention]
+The class-level `[FromEvent<BookAdded>]` maps event properties to read model properties **by naming convention** — `BookAdded.Title` lands in `Book.Title` and `BookAdded.Isbn` in `Book.Isbn` because the names match, with nothing else to write. You only reach for a property-level `[SetFrom<T>]` when the names *don't* line up — like `BookBorrowed.MemberName` feeding `BorrowedBy` above.
+:::
 
 :::tip[Reach for the declarative path first]
-For mappings like this — "events map onto fields" — the model-bound attributes (`[SetFrom<T>]`, `[SetValue<T>]`, and `[FromEvent<T>]` for whole-event AutoMap) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
+For mappings like this — "events map onto fields" — the model-bound attributes (`[FromEvent<T>]` for by-convention mapping, `[SetFrom<T>]` and `[SetValue<T>]` for the exceptions) express it with almost no code. Only when a view genuinely needs hand-written, imperative folding should you drop to a [reducer](/chronicle/reducers/). Try the projection first; you'll rarely need more.
 :::
 
 ## Query it
@@ -80,10 +82,38 @@ Now exercise it. Append a `BookBorrowed` for your book and query again — `OnLo
 The read model updates *just after* the event is appended, not in the same instant — it's [eventually consistent](/chronicle/read-models/). For a UI that's usually imperceptible (and you can subscribe to live updates). It only matters when you need to make a decision based on current state — which is what constraints and the next chapter's tools are for.
 :::
 
+## A view that removes itself
+
+The catalog answers "what books do we have?" — but the librarian's most common question at the desk is sharper: *what's out on loan right now?* You could filter `Book` on `OnLoan`, and we just did. But there's a more direct way to model it: a read model whose instances **exist only while the book is out**. A `BorrowedBook` appears when a book is borrowed, and disappears when it comes back:
+
+```csharp
+[FromEvent<BookBorrowed>]
+[RemovedWith<BookReturned>]
+public record BorrowedBook(
+    [Key]
+    BookId Id,
+
+    string MemberName);
+```
+
+And its own query, just as plain as the last one:
+
+```csharp
+public class BorrowedBooks(IMongoCollection<BorrowedBook> collection)
+{
+    public IEnumerable<BorrowedBook> All() => collection.Find(_ => true).ToList();
+}
+```
+
+Two attributes carry the whole lifecycle. `[FromEvent<BookBorrowed>]` creates the instance when the borrow happens — `MemberName` mapped by convention, keyed by the book's id. `[RemovedWith<BookReturned>]` is the new move: when a `BookReturned` arrives on that same book's stream, Chronicle **deletes the instance from the sink**. No `IsActive` flag, no soft-delete column, no cleanup job — the collection *is* the answer to "what's out right now", because instances that no longer apply simply aren't in it.
+
+Notice what just happened to your modeling instincts, too: instead of bending one `Books` table to answer every question, you built a second, purpose-shaped view over the *same events*. Read models are cheap in Chronicle — they're derived, so you can have as many as you have questions.
+
 ## What you did
 
 - Added the events that make up a book's life (`BookBorrowed`, `BookReturned`).
 - **Declared** a `Books` read model and how events map onto it — no update code anywhere.
 - **Queried** it like ordinary data, and watched it stay correct on its own.
+- Built a second view, `BorrowedBook`, whose instances are **removed** when the book comes back — two questions, two read models, one stream of facts.
 
 You can now see the catalog. The last piece is to make the library *do* something when the world changes — when a book comes back, tell the next person waiting for it. That's a job for a reactor, and it's the [final chapter](./reacting.md). [Let's finish the tour →](./reacting.md)

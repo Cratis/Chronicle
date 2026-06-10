@@ -21,7 +21,7 @@ an action:
 flowchart LR
     EV[(Event sequence)] --> P[Projection] --> RM1[(Read model)]
     EV --> R[Reducer] --> RM2[(Read model)]
-    EV --> RC[Reactor] --> SE[Side effect:<br/>email, API call, new event]
+    EV --> RC[Reactor] --> SE["Side effect: email, API call, new event"]
 ```
 
 ## State management

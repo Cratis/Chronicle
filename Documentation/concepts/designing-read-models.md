@@ -30,9 +30,37 @@ It's tempting to make one `Customer` read model serve every screen. Resist it. T
 ✅ CustomerListItem · CustomerDetail · CustomerBillingSummary — each from the same events
 ```
 
+## Reach for the declarative path first
+
+You rarely write code that *updates* a read model — you declare how events map onto it and let Chronicle do the folding. Start with [model-bound projections](../projections/model-bound/index.md), where attributes on the read model record describe the mapping. When the mapping needs logic the attributes can't express cleanly, step up to the fluent [declarative projection builder](../projections/declarative/index.md) (`IProjectionFor<T>`), and only reach for a [reducer](../reducers/) when the model is genuinely easier to express as code folding over previous state.
+
 ## Design for eventual consistency
 
-A read model updates *after* the event is appended, so it's [eventually consistent](../read-models/). Design with that in mind: don't read a model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query.md) so the UI reflects changes the moment the projection catches up.
+A *materialized* read model updates *after* the event is appended, so what's stored is [eventually consistent](../read-models/consistency.md). Design with that in mind: don't read a stored model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query.md) so the UI reflects changes the moment the projection catches up.
+
+Eventual is the default, though — not a law. The `IReadModels` API can also compute a read model on demand by replaying its events, giving you a strongly consistent read that includes an event you appended a millisecond ago:
+
+```csharp
+var detail = await eventStore.ReadModels.GetInstanceById<CustomerDetail>(customerId);
+```
+
+[Deep dive: consistency](./consistency.md) covers when each model is the right call.
+
+## Query it
+
+When it's time to read, Chronicle gives you a ladder — trade consistency for cost as you descend:
+
+```csharp
+// Strongly consistent — Chronicle replays the read model's events on demand
+var all = await eventStore.ReadModels.GetInstances<CustomerListItem>();
+
+// Eventually consistent — a page of materialized instances straight from storage
+var page = await eventStore.ReadModels.Materialized.GetInstances<CustomerListItem>(skip: 0, take: 20);
+```
+
+- **`GetInstances<T>()`** rebuilds every instance from the event log at call time, so the result reflects everything appended so far. You can cap the work with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Replay cost grows with history — great for [reporting and short histories](../read-models/getting-collection-instances.md), not necessarily your production list view.
+- **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination.md).
+- **Need filtering, sorting, or aggregation?** Go to the sink's native query tools — `IMongoCollection<T>` or your `DbContext` — because a materialized read model is just data in a [database](../sinks/index.md), shaped for exactly this.
 
 ## Keep the read side ignorant of the write side
 

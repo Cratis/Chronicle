@@ -12,14 +12,14 @@ Here's the whole system we're heading toward, drawn as an **[event model](/event
 ```mermaid
 eventmodeling
 
-tf 01 evt Library.BookAdded { title: string, isbn: string }
-tf 02 evt Library.BookBorrowed { memberName: string }
-tf 03 evt Library.BookReturned
-tf 04 rmo Library.Book ->> 01 ->> 02 ->> 03
-tf 05 pcr Library.WaitlistNotifier
+tf 01 event Library.BookAdded { title: string, isbn: string }
+tf 02 event Library.BookBorrowed { memberName: string }
+tf 03 event Library.BookReturned
+tf 04 readmodel Library.Book ->> 01 ->> 02 ->> 03
+tf 05 processor Library.WaitlistNotifier
 ```
 
-Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The `evt` blocks become `[EventType]` records, the `rmo` (built from all three events) becomes a **read model** projected from those events, and the `pcr` becomes an `IReactor`. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
+Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The three **events** become `[EventType]` records, the **read model** becomes a queryable `Book` projected from all three of them, and the **processor** becomes a **reactor** — an `IReactor` that acts when something happens. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
 
 ## What you'll need
 

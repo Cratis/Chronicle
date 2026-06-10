@@ -20,7 +20,7 @@ flowchart TB
         SAC["ShippingAddressChanged"]
     end
     SAC -->|subject| Cust["Subject = customerId"]
-    Cust --> Key["per-subject<br/>PII encryption key"]
+    Cust --> Key["per-subject PII encryption key"]
 ```
 
 ## Default — the `EventSourceId`

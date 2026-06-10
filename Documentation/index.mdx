@@ -1,6 +1,6 @@
 ---
 title: Chronicle
-description: The event sourcing platform with a gRPC boundary, first-class .NET client, TypeScript and Elixir clients/contracts, storage backends for MongoDB/PostgreSQL/SQL Server/SQLite, Orleans-powered processing, and rich tooling.
+description: The event sourcing platform with a gRPC boundary, first-class .NET client, TypeScript, Elixir, and Kotlin clients/contracts, storage backends for MongoDB/PostgreSQL/SQL Server/SQLite, and rich tooling.
 ---
 
 import { CardGrid } from '@astrojs/starlight/components';
@@ -8,7 +8,7 @@ import SimpleCard from '@components/SimpleCard.astro';
 import TopicHero from '@components/TopicHero.astro';
 
 <TopicHero icon="seti:db" eyebrow="Chronicle" title="Event sourcing, the productive way">
-For information systems, this is the default architecture we recommend: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, storage choice, Orleans-based processing, and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
+For information systems, this is the default architecture we recommend: store **every meaningful change as an immutable event** — the complete history of what happened — and turn those events into exactly the read models, reactions, and projections your application needs. Chronicle gives that event log a gRPC boundary, storage choice, and tools you can actually operate. [Get started →](/chronicle/get-started/) · [Architecture →](/chronicle/architecture/)
 </TopicHero>
 
 ## Start here
@@ -20,8 +20,8 @@ For information systems, this is the default architecture we recommend: store **
   <SimpleCard title="Get started" icon="rocket" link="/chronicle/get-started/">
     Scaffold a project from a template and watch one event flow through a projection and a reactor — in minutes.
   </SimpleCard>
-  <SimpleCard title="Choose a hosting model" icon="puzzle" link="/chronicle/get-started/choose-hosting-model/">
-    Compare console, worker, ASP.NET Core, Arc, Aspire, and production-managed kernel setups.
+  <SimpleCard title="Choose an application host model" icon="puzzle" link="/chronicle/get-started/choose-hosting-model/">
+    Compare console, worker, and ASP.NET Core hosts — with Arc as a layer on top — and run the kernel locally or under Aspire.
   </SimpleCard>
   <SimpleCard title="Build the library tutorial" icon="open-book" link="/chronicle/tutorial/">
     Learn the model by building a small event-sourced system one concept at a time.
@@ -32,13 +32,13 @@ For information systems, this is the default architecture we recommend: store **
 
 <CardGrid>
   <SimpleCard title="gRPC at the boundary" icon="puzzle" link="/chronicle/architecture/">
-    Chronicle is a client-server kernel with gRPC/protobuf contracts. The .NET client is first-class and most mature; TypeScript and Elixir clients/contracts are generated from the same protocol.
+    Chronicle is a client-server kernel with gRPC/protobuf contracts. The .NET client is first-class and most mature; TypeScript and Elixir clients/contracts and a gRPC-level Kotlin client are generated from the same protocol.
   </SimpleCard>
   <SimpleCard title="Storage agnostic" icon="seti:db" link="/chronicle/hosting/configuration/storage/">
     Run the event store over MongoDB, PostgreSQL, Microsoft SQL Server, or SQLite, with the same event model above it.
   </SimpleCard>
-  <SimpleCard title="Built on Orleans" icon="rocket" link="/chronicle/architecture/">
-    The kernel uses .NET Orleans for distributed, stateful processing: event sequences, observers, jobs, reminders, and recovery all live inside the runtime.
+  <SimpleCard title="Processing lives in the kernel" icon="rocket" link="/chronicle/architecture/">
+    Distributed, stateful processing is the kernel's job: event sequences, observers, jobs, and recovery run inside the runtime, not in your application code.
   </SimpleCard>
   <SimpleCard title="Observable and operable" icon="approve-check" link="/cli/chronicle/">
     Workbench, CLI, OpenTelemetry, recommendations, read-model inspection, failed partitions, jobs, and replay make the running store visible.
@@ -79,6 +79,9 @@ For information systems, this is the default architecture we recommend: store **
   </SimpleCard>
   <SimpleCard title="Reducers" icon="seti:folder" link="/chronicle/reducers/">
     Fold events into state imperatively when a projection isn't enough.
+  </SimpleCard>
+  <SimpleCard title="Data integrity" icon="approve-check" link="/chronicle/understanding-constraints/">
+    Enforce uniqueness with kernel-side constraints and guard racing appends with concurrency scopes — both checked before commit.
   </SimpleCard>
   <SimpleCard title="Scenarios" icon="heart" link="/chronicle/scenarios/">
     Task-oriented recipes — rebuild a read model, enforce uniqueness, react to an event.

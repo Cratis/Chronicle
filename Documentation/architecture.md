@@ -12,20 +12,20 @@ Understanding this shape makes the rest of the docs click into place: client lan
 ```mermaid
 flowchart TB
     subgraph App["Your application"]
-        SDK["Chronicle clients<br/>.NET · TypeScript · Elixir"]
+        SDK["Chronicle clients — .NET · TypeScript · Elixir"]
     end
     subgraph Kernel["Chronicle kernel"]
         ORL[".NET Orleans runtime"]
         ES[("Event store")]
-        OBS["Observers<br/>(projections · reducers · reactors)"]
-        JOBS["Jobs · recommendations<br/>replay · recovery"]
+        OBS["Observers (projections · reducers · reactors)"]
+        JOBS["Jobs · recommendations · replay · recovery"]
     end
-    Store[("Storage<br/>MongoDB · PostgreSQL · SQL Server · SQLite")]
-    RM[("Read models<br/>(sinks)")]
-    DB["Workbench + CLI<br/>(operate)"]
-    OTEL["OpenTelemetry<br/>(logs · traces · metrics)"]
+    Store[("Storage — MongoDB · PostgreSQL · SQL Server · SQLite")]
+    RM[("Read models (sinks)")]
+    DB["Workbench + CLI (operate)"]
+    OTEL["OpenTelemetry (logs · traces · metrics)"]
 
-    SDK -->|gRPC/protobuf<br/>append / query| Kernel
+    SDK -->|gRPC/protobuf — append / query| Kernel
     ORL --> ES
     ORL --> OBS
     ORL --> JOBS

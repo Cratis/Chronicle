@@ -9,7 +9,7 @@ We'll build a small library domain and expose an endpoint that borrows a book. I
 
 ## Before you start
 
-Have the Chronicle kernel running locally. [Run Chronicle locally](./running-chronicle.md) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
+Have the Chronicle kernel running locally. [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
 
 You can also find the [complete ASP.NET Core quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/AspNetCore) on GitHub.
 
@@ -43,7 +43,7 @@ app.UseCratisChronicle();
 
 ```mermaid
 flowchart LR
-    Builder["WebApplicationBuilder"] -->|AddCratisChronicle| DI["DI container<br/>(auto-discovers artifacts)"]
+    Builder["WebApplicationBuilder"] -->|AddCratisChronicle| DI["DI container (auto-discovers artifacts)"]
     App["app"] -->|UseCratisChronicle| Pipeline["request pipeline"]
     DI --> Endpoint["minimal API / controller"]
     Endpoint -->|IEventLog.Append| ES["event store"]
@@ -63,7 +63,7 @@ app.MapPost("/api/books/{bookId}/borrow", async (
         await eventLog.Append(bookId, new BookBorrowed(memberName)));
 ```
 
-The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projection and any reactors pick it up from there.
+The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projections pick it up from there — `Book` flips to on loan and a `BorrowedBook` instance appears — along with any reactors.
 
 ## Register your artifacts
 
@@ -97,7 +97,7 @@ builder.Services.AddSingleton(provider => provider.GetRequiredService<IMongoClie
 builder.Services.AddTransient(provider => provider.GetRequiredService<IMongoDatabase>().GetCollection<Book>("Books"));
 ```
 
-Now the `Books` query from the read-model section above resolves its collection straight from the container.
+Now the `Books` query from the querying section above resolves its collection straight from the container.
 
 ## Recap
 

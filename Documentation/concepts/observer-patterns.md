@@ -12,7 +12,7 @@ The one-line distinction:
 
 ```mermaid
 flowchart TD
-    Q{What do you need?} -->|A queryable view of state| State{How is it shaped?}
+    Q{What do you need?} -->|State you can query| State{How is it shaped?}
     Q -->|A side effect when something happens| R[Reactor]
     State -->|Like data: map and merge events| P[Projection]
     State -->|Needs custom folding logic| Red[Reducer]
@@ -24,9 +24,11 @@ flowchart TD
 |---|---|---|---|
 | **Purpose** | Build a read model | Build a read model | Do a side effect |
 | **How** | Declarative (`[ReadModel]` + model-bound attributes, AutoMap) | Imperative fold you write | A method per event type |
-| **Produces** | A document you query | A value you query | Nothing (acts on the outside world) |
+| **Produces** | A read model instance you query | A value you query | Nothing (acts on the outside world) |
 | **Reach for it when** | The read side is shaped like data | A projection can't express the logic cleanly | You must notify, integrate, or trigger a command |
 | **Must be idempotent** | Handled for you (rebuildable) | Handled for you (rebuildable) | **Yes — you own this** |
+
+Building state doesn't have to mean *materializing* it. Projections and reducers also compute state **on demand** — Chronicle replays the relevant events through them when you ask, which is how [reading a single instance](../read-models/getting-single-instance.md) serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/chronicle/aggregates/aggregate-root.md), or anything else that needs current state it can trust.
 
 ## Choosing
 
