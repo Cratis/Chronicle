@@ -2,6 +2,8 @@
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
+> **Important**: If an append operation fails (constraint violation, concurrency violation, or error), a `ReactorAppendFailedException` is thrown and the reactor partition is marked as failed. The partition will be retried according to the observer retry policy.
+
 ## Basic Usage
 
 Return a single event directly from a handler method — synchronously or as a `Task<T>`:
@@ -146,4 +148,20 @@ services.AddSingleton<IReactorSideEffectHandler, MyHandler>();
 | `IEnumerable<TEvent>` | `EventsResultHandler` — appends each event |
 | `Task<IEnumerable<TEvent>>` | `EventsResultHandler` |
 | `void` / `Task` | No side effects appended |
+
+## Error Handling
+
+When a reactor returns side-effect events, the framework checks the `AppendResult` of each append operation. If any append fails, a `ReactorAppendFailedException` is thrown containing:
+
+- **Constraint violations**: Unique constraint violations, or other validation failures
+- **Concurrency violations**: Version conflicts or concurrent modification errors
+- **Errors**: Database connection errors or other infrastructure failures
+
+The exception propagates to the observer infrastructure, which:
+1. Marks the partition as failed
+2. Records the full exception details and stack trace
+3. Retries according to the observer retry policy
+4. Quarantines the observer if the retry limit is exceeded
+
+This ensures that append failures don't go unnoticed and the reactor partition can be recovered or debugged through the failed partitions API.
 
