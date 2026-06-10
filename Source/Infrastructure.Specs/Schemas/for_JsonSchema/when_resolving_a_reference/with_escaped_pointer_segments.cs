@@ -3,7 +3,9 @@
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchema.when_resolving_a_reference;
 
-// JSON Pointer (RFC 6901) escapes '~' as '~0' and '/' as '~1'. The resolver must unescape segments.
+/// <summary>
+/// JSON Pointer (RFC 6901) escapes '~' as '~0' and '/' as '~1'. The resolver must unescape segments.
+/// </summary>
 public class with_escaped_pointer_segments : Specification
 {
     const string Json = """

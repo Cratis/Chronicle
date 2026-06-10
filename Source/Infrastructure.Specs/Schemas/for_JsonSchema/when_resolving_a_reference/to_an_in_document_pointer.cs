@@ -3,9 +3,11 @@
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchema.when_resolving_a_reference;
 
-// System.Text.Json emits recurring/self-referential types as in-document JSON Pointers that point at the
-// first occurrence of the type (e.g. "#/properties/features/items") rather than into "$defs". Resolving
-// such pointers is required for self-referential read models to project correctly.
+/// <summary>
+/// System.Text.Json emits recurring/self-referential types as in-document JSON Pointers that point at the
+/// first occurrence of the type (e.g. "#/properties/features/items") rather than into "$defs". Resolving
+/// such pointers is required for self-referential read models to project correctly.
+/// </summary>
 public class to_an_in_document_pointer : Specification
 {
     const string Json = """

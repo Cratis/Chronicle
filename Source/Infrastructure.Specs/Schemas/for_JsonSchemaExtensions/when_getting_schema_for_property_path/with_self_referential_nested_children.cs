@@ -5,10 +5,12 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaExtensions.when_getting_schema_for_property_path;
 
-// A self-referential type (Feature -> SubFeatures of Feature) is emitted by System.Text.Json with the nested
-// collection's item as an in-document JSON Pointer to the first occurrence. Resolving the schema for the nested
-// path must follow that pointer so the nested item schema (with its properties) is returned — otherwise the
-// child's identity/properties cannot be converted correctly when persisted.
+/// <summary>
+/// A self-referential type (Feature -> SubFeatures of Feature) is emitted by System.Text.Json with the nested
+/// collection's item as an in-document JSON Pointer to the first occurrence. Resolving the schema for the nested
+/// path must follow that pointer so the nested item schema (with its properties) is returned — otherwise the
+/// child's identity/properties cannot be converted correctly when persisted.
+/// </summary>
 public class with_self_referential_nested_children : Specification
 {
     const string Json = """
