@@ -19,7 +19,7 @@ tf 04 rmo Library.Book ->> 01 ->> 02 ->> 03
 tf 05 pcr Library.WaitlistNotifier
 ```
 
-Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The `evt` blocks become `[EventType]` records, the `rmo` (built from all three events) becomes a `[ReadModel]` with a projection, and the `pcr` becomes an `IReactor`. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
+Every block is a real Chronicle primitive — which is what makes an event model such a good plan. The `evt` blocks become `[EventType]` records, the `rmo` (built from all three events) becomes a **read model** projected from those events, and the `pcr` becomes an `IReactor`. You'll build them in that order. There's no screen or command here because Chronicle appends events directly — put a UI and commands on top with [Arc](/arc/) and the model gains those blocks too, as [the full-stack capstone](/build-a-full-app/) shows.
 
 ## What you'll need
 
