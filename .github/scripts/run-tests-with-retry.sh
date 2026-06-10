@@ -31,7 +31,11 @@ EXTRA_ARGS=("$@")
 
 MAX_ATTEMPTS="${TEST_MAX_ATTEMPTS:-3}"
 MAX_RETRY_TESTS="${TEST_MAX_RETRY_TESTS:-20}"
-RESULTS_DIR="$(mktemp -d)"
+# This script owns --results-directory (TRX files are read back to find failed tests on retry).
+# Callers that also want coverage collected into a known location set TEST_RESULTS_DIR so both the
+# TRX files and the coverage results land there — passing a second --results-directory as an extra
+# arg would make `dotnet test` fail with "expects a single argument but 2 were provided".
+RESULTS_DIR="${TEST_RESULTS_DIR:-$(mktemp -d)}"
 
 # Extracts the fully-qualified names of failed tests from a TRX result file.
 extract_failed() {
