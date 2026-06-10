@@ -21,9 +21,9 @@ public class and_method_returns_task_of_event_without_once_only : given.a_reacto
 
     public class Reactor : Cratis.Chronicle.Reactors.IReactor
     {
-        public async {|#0:Task<ResultEvent> On(SomeEvent @event)|}
+        public Task<ResultEvent> On(SomeEvent @event)
         {
-            return new ResultEvent();
+            return Task.FromResult(new ResultEvent());
         }
     }
     """;

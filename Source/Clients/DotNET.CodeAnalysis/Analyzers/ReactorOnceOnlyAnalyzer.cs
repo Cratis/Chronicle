@@ -147,8 +147,8 @@ public class ReactorOnceOnlyAnalyzer : DiagnosticAnalyzer
             namedType.IsGenericType &&
             SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, enumerableOfT))
         {
-            var elementType = namedType.TypeArguments.FirstOrDefault();
-            return elementType != null && WellKnownTypes.HasEventTypeAttribute(elementType);
+            var typeArgument = namedType.TypeArguments.FirstOrDefault();
+            return typeArgument != null && WellKnownTypes.HasEventTypeAttribute(typeArgument);
         }
 
         // Find IEnumerable<T> in the type's interfaces
@@ -163,7 +163,7 @@ public class ReactorOnceOnlyAnalyzer : DiagnosticAnalyzer
         }
 
         // Check if T (the element type) has EventType attribute
-        var elementType2 = enumerableInterface.TypeArguments.FirstOrDefault();
-        return elementType2 != null && WellKnownTypes.HasEventTypeAttribute(elementType2);
+        var elementType = enumerableInterface.TypeArguments.FirstOrDefault();
+        return elementType != null && WellKnownTypes.HasEventTypeAttribute(elementType);
     }
 }
