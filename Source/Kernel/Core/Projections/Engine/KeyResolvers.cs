@@ -149,6 +149,33 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         var key = (childKeyResult as ResolvedKey)!.Key;
 
+        // If the node identified by the child key was already created (by a different event known to this
+        // projection, including its descendant collections' creators), resolve to that node's actual location
+        // via its creation event. This routes keyed UPDATE events (e.g. a rename) to the existing node at
+        // whatever depth it lives. Genuine creators are the earliest event for their id, so they find no earlier
+        // sibling here and fall through to normal parent-based resolution.
+        // Only relevant when the same event is also handled by a descendant (self-referential) child projection —
+        // i.e. it can target a node at this level or deeper. For such events, resolve to the node's actual
+        // location via its creation event so a keyed UPDATE reaches the existing node at whatever depth it lives.
+        if (IsEventHandledByDescendantProjection(projection, @event.Context.EventType.Id))
+        {
+            var viaOwnCreationEvent = await TryResolveViaCreationEventSource(
+                @event,
+                key.Value!.ToString()!,
+                projection.EventTypes.Where(et => et.Id != @event.Context.EventType.Id),
+                projection,
+                eventSequenceStorage,
+                sink,
+                returnParentEvent: false);
+
+            // Only take over when the node lives in a collection strictly deeper than this projection's own.
+            if (viaOwnCreationEvent?.KeyResolverResult is ResolvedKey resolvedViaCreation &&
+                TargetsDeeperCollectionThan(resolvedViaCreation.Key.ArrayIndexers, projection.ChildrenPropertyPath))
+            {
+                return viaOwnCreationEvent.KeyResolverResult;
+            }
+        }
+
         var parentProjection = projection.Parent!;
         var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
         logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
@@ -200,6 +227,50 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
         arrayIndexers.Add(new ArrayIndexer(childrenPropertyPath, identifiedByProperty, keyValue!));
         return arrayIndexers;
+    }
+
+    static bool IsEventHandledByDescendantProjection(IProjection projection, EventTypeId eventTypeId)
+    {
+        foreach (var child in projection.ChildProjections)
+        {
+            if (child.OwnEventTypes.Any(et => et.Id == eventTypeId) ||
+                IsEventHandledByDescendantProjection(child, eventTypeId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool TargetsDeeperCollectionThan(ArrayIndexers arrayIndexers, PropertyPath childrenPropertyPath)
+    {
+        var childSegments = childrenPropertyPath.Segments.ToArray();
+        foreach (var indexer in arrayIndexers.All)
+        {
+            var indexerSegments = indexer.ArrayProperty.Segments.ToArray();
+            if (indexerSegments.Length <= childSegments.Length)
+            {
+                continue;
+            }
+
+            var isDescendant = true;
+            for (var index = 0; index < childSegments.Length; index++)
+            {
+                if (!Equals(indexerSegments[index].Value, childSegments[index].Value))
+                {
+                    isDescendant = false;
+                    break;
+                }
+            }
+
+            if (isDescendant)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
