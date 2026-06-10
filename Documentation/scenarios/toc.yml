@@ -6,9 +6,9 @@
   href: enforce-a-unique-value.md
 - name: React to an event
   href: react-to-an-event.md
-- name: Show data that updates live
+- name: Get read models
   href: real-time-query.md
-- name: Test a slice end to end
+- name: Test a slice
   href: test-a-slice.md
 - name: Evolve an event's shape
   href: evolve-an-event.md

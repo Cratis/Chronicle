@@ -43,4 +43,4 @@ builder.AddCratisChronicle(options => options.EventStore = "my-store");
 
 ## Configuring the server
 
-The kernel is configured separately from the client. See [Hosting Configuration](../hosting/configuration/index.md) for the `chronicle.json` file, environment variables, storage backends, and ports. To stand the kernel up locally, see [Run Chronicle locally](../get-started/running-chronicle.md).
+The kernel is configured separately from the client. See [Hosting Configuration](../hosting/configuration/index.md) for the `chronicle.json` file, environment variables, storage backends, and ports. To stand the kernel up locally, see [Run Chronicle locally](../get-started/choose-hosting-model#run-chronicle-locally).

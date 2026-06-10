@@ -25,15 +25,15 @@ The development image is ideal for:
 
 ## Production Mode
 
-For production or staging environments, use the configure callback. This switches to the production image (`cratis/chronicle:latest`) and lets you wire up an external database resource.
+For production or staging environments, use the configure callback. This switches to the slim image (`cratis/chronicle:latest-development-slim`) — no embedded MongoDB — and lets you wire up an external database resource.
 
 ### MongoDB
 
 ```csharp
 var mongo = builder.AddConnectionString("chronicle-mongo");
 
-var chronicle = builder.AddCratisChronicle(chronicle =>
-    chronicle.WithMongoDB(mongo));
+var chronicle = builder.AddCratisChronicle("chronicle", c =>
+    c.WithMongoDB(mongo));
 ```
 
 The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis__Chronicle__Storage__ConnectionDetails` environment variables on the Chronicle container using the connection string from the provided MongoDB resource.
@@ -49,8 +49,8 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 ```csharp
 var postgres = builder.AddConnectionString("chronicle-postgres");
 
-var chronicle = builder.AddCratisChronicle(chronicle =>
-    chronicle.WithPostgreSql(postgres));
+var chronicle = builder.AddCratisChronicle("chronicle", c =>
+    c.WithPostgreSql(postgres));
 ```
 
 `postgres` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
@@ -63,8 +63,8 @@ var chronicle = builder.AddCratisChronicle(chronicle =>
 ```csharp
 var sql = builder.AddConnectionString("chronicle-sql");
 
-var chronicle = builder.AddCratisChronicle(chronicle =>
-    chronicle.WithMsSql(sql));
+var chronicle = builder.AddCratisChronicle("chronicle", c =>
+    c.WithMsSql(sql));
 ```
 
 `sql` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
@@ -77,8 +77,8 @@ var chronicle = builder.AddCratisChronicle(chronicle =>
 For SQLite, provide the connection string directly (SQLite is file-based and does not require a network resource):
 
 ```csharp
-var chronicle = builder.AddCratisChronicle(chronicle =>
-    chronicle.WithSqlite("Data Source=/data/chronicle.db"));
+var chronicle = builder.AddCratisChronicle("chronicle", c =>
+    c.WithSqlite("Data Source=/data/chronicle.db"));
 ```
 
 ## Connecting a .NET Client
@@ -112,8 +112,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var mongo = builder.AddConnectionString("chronicle-mongo");
 
-var chronicle = builder.AddCratisChronicle(chronicle =>
-    chronicle.WithMongoDB(mongo));
+var chronicle = builder.AddCratisChronicle("chronicle", c =>
+    c.WithMongoDB(mongo));
 
 builder.AddProject<Projects.MyApi>("api")
     .WithReference(chronicle);

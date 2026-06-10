@@ -49,13 +49,13 @@ The four developer-facing surfaces of Chronicle all express the same underlying 
 ```mermaid
 graph TB
     subgraph Surfaces["Developer-facing surfaces"]
-        PDL["PDL:<br/>nested Command<br/>  from CommandSetForSlice<br/>  clear with CommandClearedForSlice"]
-        Declarative[".NET Declarative:<br/>.Nested(_ => _.Command, n =&gt; n<br/>  .From&lt;CommandSetForSlice&gt;()<br/>  .ClearWith&lt;CommandClearedForSlice&gt;())"]
-        ModelBound[".NET Model-Bound:<br/>[Nested] CommandItem? Command<br/>+ [FromEvent&lt;...&gt;] / [ClearWith&lt;...&gt;]"]
+        PDL["PDL: nested Command · from CommandSetForSlice · clear with CommandClearedForSlice"]
+        Declarative[".NET Declarative: .Nested(...) with .From&lt;CommandSetForSlice&gt;() and .ClearWith&lt;CommandClearedForSlice&gt;()"]
+        ModelBound[".NET Model-Bound: [Nested] CommandItem? Command + [FromEvent&lt;...&gt;] / [ClearWith&lt;...&gt;]"]
     end
 
     subgraph Core["Projection definition object model"]
-        ProjectionDefinition["ProjectionDefinition.Nested<br/>: Dictionary&lt;PropertyPath, ChildrenDefinition&gt;"]
+        ProjectionDefinition["ProjectionDefinition.Nested : Dictionary&lt;PropertyPath, ChildrenDefinition&gt;"]
     end
 
     subgraph Engine["Projection engine"]

@@ -11,8 +11,8 @@ fixed sequence number that never changes:
 
 ```mermaid
 flowchart LR
-    E0["#0<br/>BookAdded"] --> E1["#1<br/>BookBorrowed"] --> E2["#2<br/>BookReturned"] --> E3["#3<br/>BookBorrowed"]
-    O["Observer<br/>(offset: #2)"] -.->|reads next| E3
+    E0["#0 BookAdded"] --> E1["#1 BookBorrowed"] --> E2["#2 BookReturned"] --> E3["#3 BookBorrowed"]
+    O["Observer (offset: #2)"] -.->|reads next| E3
 ```
 
 The observer's offset is just a sequence number — it remembers how far it has read, and picks up from

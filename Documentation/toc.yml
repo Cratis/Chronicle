@@ -4,8 +4,10 @@
   href: why-event-sourcing.md
 - name: CRUD, EF Core, and Chronicle
   href: coming-from-crud.md
-- name: Understanding constraints and event evolution
-  href: understanding-constraints-and-evolution.md
+- name: Understanding constraints
+  href: understanding-constraints.md
+- name: Understanding event evolution
+  href: understanding-event-evolution.md
 - name: Getting started
   href: get-started/toc.yml
 - name: Tutorial

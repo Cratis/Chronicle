@@ -5,7 +5,7 @@ Reactors are observers that react to events and execute side effects. They are i
 ```mermaid
 flowchart LR
     E[Event appended] --> R[Reactor]
-    R --> S["Side effect<br/>(notify · call an API)"]
+    R --> S["Side effect (notify · call an API)"]
     R -.->|via command pipeline| C[New command]
 ```
 

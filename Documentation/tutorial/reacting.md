@@ -10,8 +10,8 @@ In [event-modeling](/event-modeling/) terms this is the **automation pattern** �
 ```mermaid
 eventmodeling
 
-tf 01 evt Library.BookReturned
-tf 02 pcr Library.WaitlistNotifier
+tf 01 event Library.BookReturned
+tf 02 processor Library.WaitlistNotifier
 ```
 
 ## A reactor is just a class that watches for an event
@@ -35,15 +35,61 @@ Chronicle discovers this by convention — no registration, no wiring. Drop the 
 
 Here's the rule that catches everyone once: **a reactor may run more than once for the same event.** During a replay, a recovery, or a redeploy, Chronicle might hand it `BookReturned` again. If your reactor naively emails the next member every time it runs, that member gets emailed twice. So design the side effect to be *idempotent* — for example, record that a notification was sent and skip it if it already was. Repeatable by design.
 
-:::caution[Two things a reactor must never do]
-**Don't read the read model to make a decision** — it may not have caught up yet ([eventual consistency](/chronicle/read-models/)). Everything you need is already in the event and its `EventContext`; use that.
+For side effects that genuinely must never repeat — a physical letter, a payment — Chronicle gives you `[OnceOnly]`. Put it on the reactor class, or on just one handler method, and that handler is **excluded from replay** entirely: redactions, revisions, and observer rewinds all skip it, so it runs only once per event.
 
-**Don't write to the event log directly.** If reacting should produce *new* facts, execute a command through the command pipeline — reactors cause effects, they don't author history.
+```csharp
+public class WaitlistNotifier(INotificationService notifications) : IReactor
+{
+    [OnceOnly]
+    public async Task BookReturned(BookReturned @event, EventContext context) =>
+        await notifications.NotifyNextInLine(context.EventSourceId);
+}
+```
+
+Use it deliberately, though — the same guarantee means a `[OnceOnly]` handler also *won't* run again when you replay on purpose. Idempotent-by-design stays the default; `[OnceOnly]` is for the effects where "again" is worse than "never".
+
+:::tip[Two things you can do — keep these in mind]
+**Read state — at the right consistency level.** `BookReturned` carries no title, so a friendlier notification ("*The Pragmatic Programmer* is back!") needs the `Book` read model. Just know your [consistency levels](../concepts/consistency.md): the materialized collection you queried last chapter is *eventually* consistent — it may not have caught up with the very event you're handling. When a decision needs current state — and it usually does — go through the strongly consistent `IReadModels` interface instead, which [re-derives the instance from the event log on demand](../read-models/getting-single-instance.md):
+
+```csharp
+public class WaitlistNotifier(IEventStore eventStore, INotificationService notifications) : IReactor
+{
+    public async Task BookReturned(BookReturned @event, EventContext context)
+    {
+        var book = await eventStore.ReadModels.GetInstanceById<Book>(context.EventSourceId);
+        await notifications.NotifyNextInLine(context.EventSourceId, book.Title);
+    }
+}
+```
+
+**Produce new facts.** Reacting often *is* a new fact — "we told the next member" deserves its own event:
+
+```csharp
+[EventType]
+public record WaitlistNotificationSent;
+```
+
+You can append it yourself — but then **handle the result**, and throw if it failed, so the failure surfaces (and the partition pauses for a retry) instead of the fact silently going missing:
+
+```csharp
+var result = await eventStore.EventLog.Append(context.EventSourceId, new WaitlistNotificationSent());
+if (!result.IsSuccess) throw new NotificationWasNotRecorded(context.EventSourceId);
+```
+
+Or skip the plumbing with **side effects**: return the event from the handler, and Chronicle appends it to the event log for you — against the same book's stream:
+
+```csharp
+public async Task<WaitlistNotificationSent> BookReturned(BookReturned @event, EventContext context)
+{
+    await notifications.NotifyNextInLine(context.EventSourceId);
+    return new WaitlistNotificationSent();
+}
+```
 :::
 
 ## Use the event, not a lookup
 
-Notice we didn't query anything to find out *which* book was returned — `context.EventSourceId` told us. That's deliberate. The event carries the truth of what happened; leaning on it (instead of querying back) is what makes reactors fast, order-independent, and safe to replay.
+Notice we didn't query anything to find out *which* book was returned — `context.EventSourceId` told us. That's deliberate. The event carries the truth of what happened; leaning on it (instead of querying back) is what makes reactors fast, order-independent, and safe to replay. And when an event genuinely doesn't carry enough — `BookReturned` has no title — reach for the strongly consistent read shown above, not the eventually consistent collection.
 
 ## You've built a library
 

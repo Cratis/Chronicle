@@ -7,9 +7,9 @@ by validating that the decision remains correct at append time.
 
 ```mermaid
 flowchart LR
-    E["Append event"] --> C{"Constraint check<br/>at append time, in the database"}
-    C -->|rule holds| OK["Appended to the<br/>event sequence"]
-    C -->|rule violated| NO["Rejected<br/>constraint violation"]
+    E["Append event"] --> C{"Constraint check at append time, in the database"}
+    C -->|rule holds| OK["Appended to the event sequence"]
+    C -->|rule violated| NO["Rejected — constraint violation"]
 ```
 
 ## Unique Constraint

@@ -32,7 +32,7 @@ In CRUD you **store the current state and overwrite it**; in Chronicle you **sto
 ## What changes (and why)
 
 - **You model verbs, not just nouns.** Instead of one mutable `Customer` row, you record `CustomerRegistered`, `AddressChanged`, `AccountClosed`. Each is an immutable fact. This is the part that feels new — and it's where the value (audit, history, replay) comes from.
-- **Reads are eventually consistent.** A projection updates the read model *after* the event is appended, so a read immediately after a write may lag by a moment. Usually fine; occasionally something to design around. See [Read Models](/chronicle/read-models/).
+- **Reads are eventually consistent — by default.** A projection materializes the read model *after* the event is appended, so a stored read immediately after a write may lag by a moment. Usually fine; occasionally something to design around. When read-after-write matters, Chronicle can also compute a read model on demand with strong consistency — see [Read model consistency](/chronicle/read-models/consistency.md).
 - **You don't write update statements.** A projection *declares* how events map onto a read model; Chronicle keeps it current. No `UPDATE`, no merge logic.
 - **You don't delete history.** "Delete" becomes an event. For real erasure obligations (GDPR), see [Compliance](/chronicle/compliance/).
 
@@ -47,12 +47,38 @@ await db.SaveChangesAsync();
 var current = await db.Customers.FindAsync(id);
 ```
 
-Chronicle: append the fact; the read model reflects it.
+Chronicle: the same change is a fact you append and a read side you declare. First, define the verbs as event types:
+
+```csharp
+[EventType]
+public record CustomerRegistered(string Name, string Address);
+
+[EventType]
+public record AddressChanged(string Address);
+```
+
+Then declare the read side. This is the [projection](/chronicle/concepts/projection.md) — and notice it is *not* a 1:1 copy of the CRUD `Customer` entity. It's shaped for the screen that reads it, and it answers something the overwritten row never could:
+
+```csharp
+[FromEvent<CustomerRegistered>]
+[FromEvent<AddressChanged>]
+public record CustomerCard(
+    [Key] Guid Id,
+    string Name,
+    string Address,
+    [Count<AddressChanged>] int TimesRelocated);
+```
+
+`[FromEvent<T>]` maps event properties onto the record by name — `Name` arrives with `CustomerRegistered`, and `Address` is kept current by every `AddressChanged`. `[Count<AddressChanged>]` counts the moves. There is no `UPDATE` statement anywhere: Chronicle derives the card from the facts.
+
+Now the write and the read-back:
 
 ```csharp
 await eventStore.EventLog.Append(customerId, new AddressChanged(newAddress));
-// A projection updates the `Customer` read model; query it like any collection.
+var card = await eventStore.ReadModels.GetInstanceById<CustomerCard>(customerId);
 ```
+
+`GetInstanceById` computes the card from its events on demand, so this read already reflects the append above — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran.
 
 ## Not sure it's worth it?
 

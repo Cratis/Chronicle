@@ -12,12 +12,12 @@ and also general maintainability of your code.
 flowchart LR
     E1["UserRegistered"] --> P
     E2["NameChanged"] --> P
-    E3["OrderPlaced"] --> P["Projection<br/>(declarative)"]
-    P --> RM["Read model document<br/>keyed by the event source"]
+    E3["OrderPlaced"] --> P["Projection (declarative)"]
+    P --> RM["Read model instance keyed by the event source"]
 ```
 
 Chronicle projections support relationships, one-to-one and one-to-many. It also supports functions that
-allow you to count, add or subtract values. The identifier of the projected document can also be
+allow you to count, add or subtract values. The identifier of the projected instance can also be
 configured. By default it will use the [event source identifier](./event-source.md), but you can
 point it to any other property or create a composite of multiple properties.
 

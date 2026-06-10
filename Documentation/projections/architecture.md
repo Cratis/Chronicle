@@ -7,9 +7,9 @@ Chronicle supports three distinct approaches for defining projections, each desi
 ```mermaid
 graph TB
     subgraph Input["Projection Declaration Approaches"]
-        PDL["Projection Declaration Language<br/>(Declaration)"]
-        ModelBound["Model-Bound<br/>(C# Attributes)"]
-        Declarative["Declarative<br/>(C# Fluent API)"]
+        PDL["Projection Declaration Language (Declaration)"]
+        ModelBound["Model-Bound (C# Attributes)"]
+        Declarative["Declarative (C# Fluent API)"]
     end
 
     subgraph Core["Core Processing"]
@@ -141,7 +141,7 @@ public class MyModelProjection : IProjectionFor<MyModel>
 graph LR
     subgraph Frontend["Frontend Layer"]
         Workbench["Workbench UI"]
-        MonacoEditor["Monaco Editor<br/>+ Language Service"]
+        MonacoEditor["Monaco Editor + Language Service"]
     end
 
     subgraph Compiler["Compilation Layer"]

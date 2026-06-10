@@ -9,7 +9,7 @@ We'll build a small, familiar domain — a library — and by the end you'll hav
 
 ## Before you start
 
-Have the Chronicle kernel running locally. [Run Chronicle locally](./running-chronicle.md) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
+Have the Chronicle kernel running locally. [Run Chronicle locally](./choose-hosting-model#run-chronicle-locally) brings it up with a single `docker run` and lists the prerequisites (.NET 8+, Docker); this guide assumes it's listening on `chronicle://localhost:35000`.
 
 You can also find the [complete Console quickstart sample](https://github.com/Cratis/Samples/tree/main/Chronicle/Quickstart/Console) on GitHub.
 
@@ -48,7 +48,7 @@ That single `eventStore` is your handle to everything that follows:
 flowchart LR
     Code["Your console code"] --> Client["ChronicleClient"]
     Client --> ES["event store 'Quickstart'"]
-    ES --> Kernel[("Chronicle kernel<br/>(Docker)")]
+    ES --> Kernel[("Chronicle kernel (Docker)")]
 ```
 
 [!INCLUDE [common](./common.md)]
@@ -63,7 +63,7 @@ With the conventions registered, the `Books` query reads the projection's docume
 
 ## Recap
 
-You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, projected them into a `Book` read model with model-bound attributes, and reacted to one with a reactor. Because there was no DI container, every connection was explicit and in plain sight.
+You wired Chronicle into a bare console app by hand: created a `ChronicleClient`, opened the `Quickstart` event store, appended events for a small library domain, projected them into the `Book` and `BorrowedBook` read models with model-bound attributes, queried them both on demand and from the materialized sink, and reacted to one with a reactor. Because there was no DI container, every connection was explicit and in plain sight.
 
 ## Where to go next
 

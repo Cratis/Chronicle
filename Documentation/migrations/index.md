@@ -4,7 +4,7 @@ Every system evolves. Business rules change, data models improve, and properties
 
 ```mermaid
 flowchart LR
-    V1["Event<br/>(as written, v1)"] -->|migration| V2["Event v2"]
+    V1["Event (as written, v1)"] -->|migration| V2["Event v2"]
     V2 -->|migration| V3["Event v3 (current)"]
     V3 --> P[Read / projected]
 ```

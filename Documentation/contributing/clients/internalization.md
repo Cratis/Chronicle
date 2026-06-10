@@ -30,8 +30,8 @@ The following diagram illustrates the packaging structure:
 flowchart TB
     subgraph NuGet["NuGet Package"]
         subgraph lib["lib/ (Compile-time)"]
-            SDK["Cratis.Chronicle.dll<br/>(SDK API)"]
-            InProcess["Cratis.Chronicle.InProcess.dll<br/>(InProcess API)"]
+            SDK["Cratis.Chronicle.dll (SDK API)"]
+            InProcess["Cratis.Chronicle.InProcess.dll (InProcess API)"]
         end
         subgraph runtimes["runtimes/ (Runtime-only)"]
             Connections["Cratis.Chronicle.Connections.dll"]

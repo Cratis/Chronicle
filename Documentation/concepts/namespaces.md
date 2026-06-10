@@ -27,7 +27,7 @@ flowchart TB
         A["tenant-a"]
         B["tenant-b"]
     end
-    D --> DBd[("database:<br/>Default")]
-    A --> DBa[("database:<br/>tenant-a")]
-    B --> DBb[("database:<br/>tenant-b")]
+    D --> DBd[("database: Default")]
+    A --> DBa[("database: tenant-a")]
+    B --> DBb[("database: tenant-b")]
 ```

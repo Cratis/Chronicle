@@ -4,7 +4,7 @@ Constraints define server-side rules that must be satisfied before events are co
 
 ```mermaid
 flowchart LR
-    A[Append event] --> C{Constraint<br/>checked in the kernel}
+    A[Append event] --> C{"Constraint checked in the kernel"}
     C -->|satisfied| K[(Committed to the log)]
     C -->|violated| R[Append rejected]
 ```
