@@ -94,6 +94,14 @@ static class ChildrenDefinitionExtensions
         var childType = GetChildType(memberType);
         var includeSelfReferencingEvents = childType is not null && visitedChildTypes?.Contains(childType) == true;
 
+        // Events that create children of an ancestor collection (everything in the visited chain) must not be
+        // propagated into this self-referential collection — only the current collection's own creator and
+        // genuine update events belong here.
+        var ancestorCreatorEventTypes = (visitedChildTypes ?? [])
+            .SelectMany(GetChildrenFromEventTypes)
+            .Where(type => type != eventType)
+            .ToHashSet();
+
         var childrenDef = ProcessChildrenFromAttributeCore(
             parentChildrenDef.Children,
             getOrCreateEventType,
@@ -105,7 +113,8 @@ static class ChildrenDefinitionExtensions
             processMember,
             definition,
             parentModelType,
-            includeSelfReferencingEvents);
+            includeSelfReferencingEvents,
+            ancestorCreatorEventTypes);
 
         // Recursively process nested children on the child type
         if (childType is not null)
@@ -125,7 +134,8 @@ static class ChildrenDefinitionExtensions
         Action<MemberInfo, ProjectionDefinition, List<Attribute>, bool, Type?, ChildrenDefinition?> processMember,
         ProjectionDefinition definition,
         Type? parentModelType = null,
-        bool includeSelfReferencingEvents = false)
+        bool includeSelfReferencingEvents = false,
+        IReadOnlySet<Type>? ancestorCreatorEventTypes = null)
     {
         var propertyPath = new PropertyPath(memberName);
         var propertyName = namingPolicy.GetPropertyName(propertyPath);
@@ -362,7 +372,7 @@ static class ChildrenDefinitionExtensions
                         foreach (var (fromEventAttr, fromEventType) in childType
                             .GetAttributesOfGenericType<FromEventAttribute<object>>()
                             .Where(pair =>
-                                ShouldPropagateChildClassLevelFromEventForSelfReference(pair.Attribute, childType, eventType, parentModelType, namingPolicy) &&
+                                ShouldPropagateChildClassLevelFromEventForSelfReference(pair.Attribute, eventType, ancestorCreatorEventTypes) &&
                                 pair.EventType.GetProperty(parameter.Name!, BindingFlags.Public | BindingFlags.Instance) is not null))
                         {
                             childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, fromEventType, paramPropertyName, parameter.Name!);
@@ -400,7 +410,7 @@ static class ChildrenDefinitionExtensions
                 .Where(attr => attr.GetType().IsGenericType &&
                               attr.GetType().GetGenericTypeDefinition() == typeof(FromEventAttribute<>) &&
                               (includeSelfReferencingEvents
-                                  ? ShouldPropagateChildClassLevelFromEventForSelfReference(attr, childType, eventType, parentModelType, namingPolicy)
+                                  ? ShouldPropagateChildClassLevelFromEventForSelfReference(attr, eventType, ancestorCreatorEventTypes)
                                   : ShouldPropagateChildClassLevelFromEvent(attr, childType)))
                 .ToList();
 
@@ -539,10 +549,8 @@ static class ChildrenDefinitionExtensions
 
     static bool ShouldPropagateChildClassLevelFromEventForSelfReference(
         Attribute fromEventAttribute,
-        Type _1,
         Type childCreatingEventType,
-        Type? _2,
-        INamingPolicy _3)
+        IReadOnlySet<Type>? ancestorCreatorEventTypes)
     {
         var childLevelEventType = fromEventAttribute.GetType().GetGenericArguments()[0];
 
@@ -550,6 +558,14 @@ static class ChildrenDefinitionExtensions
         if (childLevelEventType == childCreatingEventType)
         {
             return true;
+        }
+
+        // Never propagate an event that creates children of an ANCESTOR collection (e.g. the event that adds
+        // top-level features) into a descendant self-referential collection. Doing so would materialize the
+        // ancestor's instances as (self-)children of the descendant.
+        if (ancestorCreatorEventTypes?.Contains(childLevelEventType) == true)
+        {
+            return false;
         }
 
         // For other events: check if they are keyed update events
@@ -600,6 +616,22 @@ static class ChildrenDefinitionExtensions
         attribute.GetType().IsGenericType &&
         attribute.GetType().GetGenericTypeDefinition() == typeof(ChildrenFromAttribute<>) &&
         attribute.GetType().GetGenericArguments()[0] == eventType;
+
+    static IEnumerable<Type> GetChildrenFromEventTypes(Type type)
+    {
+        var primaryConstructor = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        var fromConstructor = primaryConstructor?.GetParameters()
+            .SelectMany(parameter => parameter.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Select(pair => pair.EventType))
+            ?? [];
+
+        var fromProperties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .SelectMany(property => property.GetAttributesOfGenericType<ChildrenFromAttribute<object>>().Select(pair => pair.EventType));
+
+        return fromConstructor.Concat(fromProperties);
+    }
 
     static Type? GetChildType(Type propertyType)
     {
