@@ -172,15 +172,11 @@ This ensures that append failures don't go unnoticed and provides structured err
 
 ### Architecture Flow
 
-```
-Side-Effect Handler → Result<ReactorSideEffectFailure>
-  ↓
-ReactorInvoker → Catch with ReactorSideEffectException
-  ↓
-ReactorHandler.OnNext → Failed Catch
-  ↓
-Reactors.ObserverMethod → ReactorResult with SideEffectFailures
-  ↓
-Kernel receives structured failure details
+```mermaid
+flowchart TD
+    A[Side-Effect Handler] -->|"Result&lt;ReactorSideEffectFailure&gt;"| B[ReactorInvoker]
+    B -->|"Catch with ReactorSideEffectException"| C[ReactorHandler.OnNext]
+    C -->|Failed Catch| D[Reactors.ObserverMethod]
+    D -->|"ReactorResult with SideEffectFailures"| E[Kernel receives structured failure details]
 ```
 

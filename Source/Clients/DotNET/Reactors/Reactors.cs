@@ -252,6 +252,18 @@ public class Reactors : IReactors
         }
     }
 
+    static Contracts.Observation.Reactors.SideEffectFailure[] MapSideEffectFailures(ReactorSideEffectException exception) =>
+        exception.Failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
+        {
+            ConstraintViolations = af.ConstraintViolations.Select(cv => new Contracts.Observation.Reactors.ConstraintViolation
+            {
+                EventTypeId = cv.EventTypeId,
+                Message = cv.Message
+            }).ToArray(),
+            HasConcurrencyViolation = af.HasConcurrencyViolation,
+            Errors = af.Errors.ToArray()
+        }).ToArray();
+
     IReactorHandler CreateHandlerFor(Type reactorType)
     {
         var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType);
@@ -481,16 +493,7 @@ public class Reactors : IReactors
             // Check if this is a ReactorSideEffectException and extract failure details
             if (ex is ReactorSideEffectException sideEffectEx)
             {
-                sideEffectFailures = sideEffectEx.Failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
-                {
-                    ConstraintViolations = af.ConstraintViolations.Select(cv => new Contracts.Observation.Reactors.ConstraintViolation
-                    {
-                        EventTypeId = cv.EventTypeId,
-                        Message = cv.Message
-                    }).ToArray(),
-                    HasConcurrencyViolation = af.HasConcurrencyViolation,
-                    Errors = af.Errors.ToArray()
-                }).ToArray();
+                sideEffectFailures = MapSideEffectFailures(sideEffectEx);
             }
 
             exceptionMessages = ex.GetAllMessages();

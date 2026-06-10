@@ -42,6 +42,6 @@ public class ReactorResult
     /// <summary>
     /// Gets or sets the side-effect failures.
     /// </summary>
-    [ProtoMember(6, IsRequired = true)]
+    [ProtoMember(6)]
     public IList<SideEffectFailure> SideEffectFailures { get; set; } = [];
 }

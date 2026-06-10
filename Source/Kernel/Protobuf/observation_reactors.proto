@@ -14,9 +14,11 @@ message Causation {
    string Type = 2;
    map<string,string> Properties = 3;
 }
+
+// Represents a constraint violation from a reactor side-effect append operation.
 message ConstraintViolation {
-   string EventTypeId = 1;
-   string Message = 2;
+   string EventTypeId = 1; // The event type ID that violated the constraint
+   string Message = 2; // The constraint violation message
 }
 message EventContext {
    EventType EventType = 1;
@@ -129,10 +131,12 @@ enum ReplayState {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
+
+// Represents a failure from an individual append operation in a reactor side-effect.
 message SideEffectFailure {
-   repeated ConstraintViolation ConstraintViolations = 1;
-   bool HasConcurrencyViolation = 2;
-   repeated string Errors = 3;
+   repeated ConstraintViolation ConstraintViolations = 1; // The constraint violations that occurred
+   bool HasConcurrencyViolation = 2; // Whether a concurrency violation occurred
+   repeated string Errors = 3; // The error messages from the append operation
 }
 service Reactors {
    rpc HasReactor (HasReactorRequest) returns (HasReactorResponse);

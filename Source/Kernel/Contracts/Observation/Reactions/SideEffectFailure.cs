@@ -12,7 +12,7 @@ public class SideEffectFailure
     /// <summary>
     /// Gets or sets the constraint violations.
     /// </summary>
-    [ProtoMember(1, IsRequired = true)]
+    [ProtoMember(1)]
     public IList<ConstraintViolation> ConstraintViolations { get; set; } = [];
 
     /// <summary>
@@ -24,6 +24,6 @@ public class SideEffectFailure
     /// <summary>
     /// Gets or sets the error messages.
     /// </summary>
-    [ProtoMember(3, IsRequired = true)]
+    [ProtoMember(3)]
     public IList<string> Errors { get; set; } = [];
 }

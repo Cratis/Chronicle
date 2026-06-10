@@ -16,9 +16,17 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
     /// </summary>
     /// <param name="appendResult">The failed <see cref="AppendResult"/>.</param>
     /// <returns>A <see cref="ReactorSideEffectFailure"/> containing the append failure details.</returns>
-    public static ReactorSideEffectFailure FromAppendResult(AppendResult appendResult) =>
-        new([new AppendFailure(
-            appendResult.ConstraintViolations.Select(cv => new ReactorConstraintViolation(cv.EventTypeId, cv.Message)),
+    public static ReactorSideEffectFailure FromAppendResult(AppendResult appendResult)
+    {
+        var constraintViolations = appendResult.ConstraintViolations.Select(cv =>
+            new ReactorConstraintViolation(cv.EventTypeId, cv.Message));
+        var errors = appendResult.Errors.Select(e => e.Value);
+
+        var failure = new AppendFailure(
+            constraintViolations,
             appendResult.HasConcurrencyViolations,
-            appendResult.Errors.Select(e => e.Value))]);
+            errors);
+
+        return new([failure]);
+    }
 }
