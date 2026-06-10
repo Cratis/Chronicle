@@ -112,4 +112,9 @@ public static class DiagnosticIds
     /// Event types should be declared as record types for immutability.
     /// </summary>
     public const string EventTypeShouldBeRecordType = "CHR0021";
+
+    /// <summary>
+    /// Reactor methods that return event side effects must be marked with [OnceOnly] attribute.
+    /// </summary>
+    public const string ReactorReturningEventsMustBeOnceOnly = "CHR0022";
 }
