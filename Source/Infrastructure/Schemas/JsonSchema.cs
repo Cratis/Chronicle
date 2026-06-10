@@ -605,19 +605,37 @@ public class JsonSchema
         var refValue = Node["$ref"]?.GetValue<string>();
         if (refValue?.StartsWith('#') != true) return null;
 
-        var parts = refValue.TrimStart('#').TrimStart('/').Split('/');
-        if (parts.Length < 2) return null;
-
         var root = Root;
-        var defsKey = parts[0]; // "$defs" or "definitions"
-        var typeName = string.Join('/', parts.Skip(1));
+        var fragment = refValue[1..];
 
-        if (root.Node[defsKey] is JsonObject defs && defs[typeName] is JsonObject defObj)
+        // A bare "#" (or "#/") references the whole root document.
+        if (fragment.Length == 0 || fragment == "/")
         {
-            return new JsonSchema((JsonObject)defObj.DeepClone(), root);
+            return root;
         }
 
-        return null;
+        // Resolve the fragment as a JSON Pointer (RFC 6901) into the root document. This covers both
+        // definition references (#/$defs/<name>, #/definitions/<name>) and the in-document pointers that
+        // System.Text.Json emits for recurring and self-referential types (e.g. #/properties/Features/items),
+        // which would otherwise fail to resolve and leave the referenced schema empty.
+        JsonNode? current = root.Node;
+        foreach (var rawSegment in fragment.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var segment = rawSegment.Replace("~1", "/").Replace("~0", "~");
+            switch (current)
+            {
+                case JsonObject obj when obj.TryGetPropertyValue(segment, out var next):
+                    current = next;
+                    break;
+                case JsonArray array when int.TryParse(segment, out var index) && index >= 0 && index < array.Count:
+                    current = array[index];
+                    break;
+                default:
+                    return null;
+            }
+        }
+
+        return current is JsonObject resolved ? new JsonSchema((JsonObject)resolved.DeepClone(), root) : null;
     }
 
     /// <summary>
