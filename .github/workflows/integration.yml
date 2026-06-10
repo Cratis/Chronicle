@@ -138,6 +138,9 @@ jobs:
           # to do and its anonymous Docker Hub manifest call at session
           # init is a frequent source of flakiness. Disable it on CI.
           TESTCONTAINERS_RYUK_DISABLED: true
+          # The retry script owns --results-directory; point it at ./coverage-results so the
+          # collected coverage and TRX files land where the upload step reads them.
+          TEST_RESULTS_DIR: ./coverage-results
         # On failure, only the failed tests are re-run (up to TEST_MAX_ATTEMPTS), so a
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
@@ -148,8 +151,7 @@ jobs:
             "FullyQualifiedName~${{ matrix.namespace }}" \
             -p:DisableDockerBuild=true \
             -p:EnableDevelopmentSymbol=true \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./coverage-results
+            --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results
         if: always()
@@ -200,6 +202,9 @@ jobs:
         env:
           # See client-integration-specs for the rationale.
           TESTCONTAINERS_RYUK_DISABLED: true
+          # The retry script owns --results-directory; point it at ./coverage-results so the
+          # collected coverage and TRX files land where the upload step reads them.
+          TEST_RESULTS_DIR: ./coverage-results
         # See client-integration-specs for the retry rationale. The kernel project
         # does not have Client's Docker build target.
         run: |
@@ -207,8 +212,7 @@ jobs:
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
             -p:EnableDevelopmentSymbol=true \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./coverage-results
+            --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results
         if: always()
