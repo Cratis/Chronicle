@@ -59,6 +59,7 @@ public class AssetProjection : IProjectionFor<AssetReadModel>
 When Chronicle generates the JSON schema, geospatial types are annotated with their GeoJSON-compatible formats:
 
 **Point**: Generates as an object with `longitude` and `latitude` properties, marked with `"format": "point"`
+
 ```json
 {
   "type": "object",
@@ -71,6 +72,7 @@ When Chronicle generates the JSON schema, geospatial types are annotated with th
 ```
 
 **LineString**: Generates as an array of point objects, marked with `"format": "linestring"`
+
 ```json
 {
   "type": "array",
@@ -86,6 +88,7 @@ When Chronicle generates the JSON schema, geospatial types are annotated with th
 ```
 
 **Polygon**: Generates as an object with `shell` and `holes`, marked with `"format": "polygon"`
+
 ```json
 {
   "type": "object",
@@ -127,11 +130,13 @@ This lets consumers inspect the schema and know the field contains geographic da
 Chronicle stores geospatial values in BSON format:
 
 **Point**: Flat document with `longitude` and `latitude`
+
 ```json
 { "longitude": 10.456, "latitude": 42.123 }
 ```
 
 **LineString**: Array of points
+
 ```json
 [
   { "longitude": 10.456, "latitude": 42.123 },
@@ -140,6 +145,7 @@ Chronicle stores geospatial values in BSON format:
 ```
 
 **Polygon**: Document with `shell` (outer ring) and `holes` (inner rings)
+
 ```json
 {
   "shell": [

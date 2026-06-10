@@ -85,6 +85,7 @@ public async Task<WaitlistNotificationSent> BookReturned(BookReturned @event, Ev
     return new WaitlistNotificationSent();
 }
 ```
+
 :::
 
 ## Use the event, not a lookup
