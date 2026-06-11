@@ -579,6 +579,12 @@ public class Sink : ISink
         var column = _columns.FirstOrDefault(c => string.Equals(c.Name, firstSegment, StringComparison.Ordinal));
         if (column is null)
         {
+            // The PropertyPath has no top-level column segment — it is leaf-relative (e.g. "FloatValue").
+            // When updating an existing child via SetProperties, property mappers produce leaf-only paths
+            // paired with collection-locating ArrayIndexers (e.g. {Children[StringValue=SecondKey]}).
+            // Fall back to locating the JSON column through the ArrayIndexers and applying the change
+            // within the correct element, matching MongoDB $set semantics for nested array updates.
+            TryApplyDifferenceViaArrayIndexers(entry, difference);
             return;
         }
 
@@ -607,6 +613,39 @@ public class Sink : ISink
         }
 
         entry.Property(column.Name).IsModified = true;
+    }
+
+    void TryApplyDifferenceViaArrayIndexers(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
+    {
+        var indexers = difference.ArrayIndexers;
+        if (indexers.IsEmpty)
+        {
+            return;
+        }
+
+        foreach (var indexer in indexers.All)
+        {
+            var columnName = indexer.ArrayProperty.Segments.FirstOrDefault()?.Value;
+            if (columnName is null)
+            {
+                continue;
+            }
+
+            var jsonColumn = _columns.FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.Ordinal) && c.IsJson);
+            if (jsonColumn is null)
+            {
+                continue;
+            }
+
+            // The difference's PropertyPath is already relative to the array element (e.g. "FloatValue").
+            // Pass it directly as the subPath — ApplyDifferenceToJsonRoot will locate the element via
+            // the ArrayIndexers and apply the leaf property change within it.
+            var current = LoadJsonColumnState(entry, jsonColumn);
+            var rebuilt = ApplyDifferenceToJsonRoot(current, jsonColumn, difference.PropertyPath, indexers, difference.Changed);
+            entry.Entity[jsonColumn.Name] = SerializeJsonColumn(rebuilt, jsonColumn);
+            entry.Property(jsonColumn.Name).IsModified = true;
+            return;
+        }
     }
 
     void ApplyChildAdded(EntityEntry<DynamicReadModelEntity> entry, ChildAdded childAdded)
