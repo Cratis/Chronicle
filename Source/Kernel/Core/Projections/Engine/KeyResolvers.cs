@@ -340,20 +340,28 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
             // When the current event type is shared between parent and child projections
             // (self-referential hierarchy), the event may target a CHILD node rather than a
-            // parent node. Try to resolve via the child's own creation event first: if an
-            // earlier creation event exists for this event source, this is an UPDATE to an
+            // parent node. Try to resolve via the child's OWN creation event: if an earlier
+            // creation event exists for this child's event source, this is an UPDATE to an
             // existing child — return the resolved key for that child.
-            // Only fall through to the "current event IS the parent" shortcut when no prior
-            // creation event is found, which is the genuine creation case.
-            return await TryResolveViaChildCreationEvent(
+            //
+            // Only the child's-own-creation resolution is used here (not the parent-creation
+            // fallback in TryResolveViaChildCreationEvent): for a flat projection that merely
+            // shares the event type between the root (From) and its direct children (AddChild),
+            // multiple children live under one event source and the child key is not itself an
+            // event source, so this resolution finds nothing and falls through to "the event IS
+            // the parent". Routing through the parent-creation fallback would instead anchor an
+            // update of one child to the earliest sibling's creation event, nesting the update
+            // under the wrong child.
+            var viaChildCreation = await TryResolveViaCreationEventSource(
                 @event,
-                parentKey,
-                childKey,
+                childKey.Value?.ToString()!,
+                projection.OwnEventTypes.Where(et => et.Id != @event.Context.EventType.Id),
                 parentProjection,
-                projection,
-                identifiedByProperty,
                 eventSequenceStorage,
-                sink) ?? new ParentEventResult(@event, null);
+                sink,
+                returnParentEvent: false);
+
+            return viaChildCreation ?? new ParentEventResult(@event, null);
         }
 
         logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
