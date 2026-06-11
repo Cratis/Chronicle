@@ -87,39 +87,13 @@ Children can be removed in two ways:
 
 Apply `RemovedWith` on the collection property alongside `ChildrenFrom`:
 
-```csharp
-public record Order(
-    [Key]
-    Guid OrderId,
-
-    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
-    [RemovedWith<LineItemRemoved>(key: nameof(LineItemRemoved.ItemId))]
-    IEnumerable<OrderLine> Lines);
-
-public record OrderLine(
-    [Key] Guid Id,
-    string Description);
-```
+[!INCLUDE [order lines property removal](../_snippets/model-bound/order-lines-property-removal.md)]
 
 ### Class-Level Removal on Child Types
 
 Apply `RemovedWith` directly on the child type. This is particularly useful when the same child model is used in multiple parents or when you want to keep removal logic with the child definition:
 
-```csharp
-public record Order(
-    [Key]
-    Guid OrderId,
-
-    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
-    IEnumerable<OrderLine> Lines);
-
-[RemovedWith<LineItemRemoved>(
-    key: nameof(LineItemRemoved.ItemId),
-    parentKey: nameof(LineItemRemoved.OrderId))]
-public record OrderLine(
-    [Key] Guid Id,
-    string Description);
-```
+[!INCLUDE [order lines class removal](../_snippets/model-bound/order-lines-class-removal.md)]
 
 Both approaches produce the same result. The class-level approach keeps the removal definition with the child type, while the property-level approach keeps it with the parent.
 

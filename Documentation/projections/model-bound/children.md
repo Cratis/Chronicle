@@ -136,23 +136,9 @@ When a `QuantityIncreased` event occurs later:
 
 Use a class-level `FromEvent` on the child type when later child events should auto-map into the existing child instance. If those events come from the child's own event source, specify `parentKey` so Chronicle can still resolve the parent document:
 
-```csharp
-public record Dashboard(
-    [Key] Guid Id,
+[!INCLUDE [configuration child updates](../_snippets/model-bound/configuration-child-updates.md)]
 
-    [ChildrenFrom<ConfigurationAdded>(
-        key: nameof(ConfigurationAdded.ConfigurationId),
-        identifiedBy: nameof(Configuration.Id),
-        parentKey: nameof(ConfigurationAdded.DashboardId))]
-    IEnumerable<Configuration> Configurations);
-
-[FromEvent<ConfigurationRenamed>(parentKey: nameof(ConfigurationRenamed.DashboardId))]
-public record Configuration(
-    [Key] Guid Id,
-    string Name);
-```
-
-`ChildrenFrom` handles how the child is first added to the collection. The child type's own `FromEvent` handles later updates, and `parentKey` is the equivalent of `.UsingParentKey(...)` in a fluent child projection.
+`ChildrenFrom` handles how the child is first added to the collection. The child type's own `FromEvent` handles later updates, and `parentKey` is the equivalent of `.UsingParentKey(...)` in a fluent child projection. You do not need `identifiedBy` here because `Configuration.Id` is marked with `[Key]`.
 
 ## Removing Children
 
@@ -160,39 +146,13 @@ Use `RemovedWith` to remove children from collections. You can apply it either o
 
 ### Property-Level Removal
 
-```csharp
-public record Order(
-    [Key]
-    Guid OrderId,
-
-    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
-    [RemovedWith<LineItemRemoved>(key: nameof(LineItemRemoved.ItemId))]
-    IEnumerable<OrderLine> Lines);
-
-public record OrderLine(
-    [Key] Guid Id,
-    string Description);
-```
+[!INCLUDE [order lines property removal](../_snippets/model-bound/order-lines-property-removal.md)]
 
 ### Class-Level Removal
 
 Apply `RemovedWith` directly on the child type for better separation of concerns:
 
-```csharp
-public record Order(
-    [Key]
-    Guid OrderId,
-
-    [ChildrenFrom<LineItemAdded>(key: nameof(LineItemAdded.ItemId))]
-    IEnumerable<OrderLine> Lines);
-
-[RemovedWith<LineItemRemoved>(
-    key: nameof(LineItemRemoved.ItemId),
-    parentKey: nameof(LineItemRemoved.OrderId))]
-public record OrderLine(
-    [Key] Guid Id,
-    string Description);
-```
+[!INCLUDE [order lines class removal](../_snippets/model-bound/order-lines-class-removal.md)]
 
 ### RemovedWithJoin
 

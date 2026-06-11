@@ -126,24 +126,9 @@ public record Order(
 
 When a child type has its own class-level `FromEvent` attribute, later child events can come from the child event source while still updating the correct parent document. Use `parentKey` to point Chronicle at the property on the event that identifies the parent:
 
-```csharp
-public record Dashboard(
-    [Key] Guid Id,
-    string Name,
+[!INCLUDE [configuration child updates](../_snippets/model-bound/configuration-child-updates.md)]
 
-    [ChildrenFrom<ConfigurationAdded>(
-        key: nameof(ConfigurationAdded.ConfigurationId),
-        identifiedBy: nameof(Configuration.Id),
-        parentKey: nameof(ConfigurationAdded.DashboardId))]
-    IEnumerable<Configuration> Configurations);
-
-[FromEvent<ConfigurationRenamed>(parentKey: nameof(ConfigurationRenamed.DashboardId))]
-public record Configuration(
-    [Key] Guid Id,
-    string Name);
-```
-
-This is the model-bound equivalent of using `.UsingParentKey(e => e.DashboardId)` in a fluent child projection. It is primarily useful on child types that are populated through `ChildrenFrom` and later updated by events from their own event source streams.
+This is the model-bound equivalent of using `.UsingParentKey(e => e.DashboardId)` in a fluent child projection. It is primarily useful on child types that are populated through `ChildrenFrom` and later updated by events from their own event source streams. The child key is discovered from `Configuration.Id`.
 
 ### Key Validation
 

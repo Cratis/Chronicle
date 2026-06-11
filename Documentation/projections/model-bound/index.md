@@ -1,22 +1,26 @@
 # Model-Bound Projections
 
-Model-bound projections allow you to define projections using C# attributes directly on your read model types, eliminating the need to implement `IProjectionFor<T>` and rather put in metadata directly into your read model.
+Model-bound projections let the read model describe how it is built. Instead of creating a separate `IProjectionFor<T>` class, you put the projection metadata directly on the read model type and Chronicle builds the projection definition from those attributes.
 
 ## Overview
 
-Instead of creating a separate projection class, you decorate your read model properties with attributes that describe how they should be populated from events. The projection system automatically discovers these attributes and builds the projection definition.
+Start with convention-based mapping and add explicit attributes only where the event and read model use different names. That keeps the common case small while still making the exceptions visible.
 
 ## Basic Example
 
 ```csharp
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
+[EventType]
+public record AccountOpened(string Name, decimal InitialBalance);
+
+[FromEvent<AccountOpened>]
 public record AccountInfo(
     [Key]
     Guid Id,
 
-    [SetFrom<AccountOpened>(nameof(AccountOpened.Name))]
     string Name,
 
     [SetFrom<AccountOpened>(nameof(AccountOpened.InitialBalance))]
@@ -25,8 +29,10 @@ public record AccountInfo(
 
 In this example:
 
-- `[Key]` marks the property as the key for the read model (using `KeyAttribute` from `Cratis.Chronicle.Keys`)
-- `[SetFrom<TEvent>]` maps properties from specific events
+- `[FromEvent<AccountOpened>]` creates or updates an `AccountInfo` instance when an `AccountOpened` event is processed
+- `[Key]` marks the read model identifier
+- `Name` maps by convention because both the event and the read model use the same property name
+- `Balance` uses `[SetFrom<TEvent>]` because the event property is called `InitialBalance`
 
 ## Discovery
 
