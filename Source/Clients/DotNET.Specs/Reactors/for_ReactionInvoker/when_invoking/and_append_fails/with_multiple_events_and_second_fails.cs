@@ -6,13 +6,12 @@ using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
-using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking.and_append_fails;
 
 public class with_multiple_events_and_second_fails : Specification
 {
-    CatchResult _result;
+    ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
     ReactorInvoker _invoker;
     IEventStore _eventStore;
@@ -22,7 +21,6 @@ public class with_multiple_events_and_second_fails : Specification
     MyOutboundEvent _secondEvent;
     AppendResult _successAppendResult;
     AppendResult _failedAppendResult;
-    Exception _caughtException;
 
     void Establish()
     {
@@ -71,17 +69,15 @@ public class with_multiple_events_and_second_fails : Specification
     async Task Because()
     {
         _result = await _invoker.Invoke(new MyEvent(), _eventContext);
-        _result.TryGetException(out _caughtException);
     }
 
-    [Fact] void should_fail() => _result.TryGetException(out _).ShouldBeTrue();
-    [Fact] void should_have_reactor_side_effect_exception() => _caughtException.ShouldBeOfExactType<ReactorSideEffectException>();
-    [Fact] void should_include_side_effect_failure() => ((ReactorSideEffectException)_caughtException).Failure.ShouldNotBeNull();
-    [Fact] void should_have_single_append_failure() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.Count().ShouldEqual(1);
-    [Fact] void should_have_constraint_violation() => ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
+    [Fact] void should_fail() => _result.IsFailed.ShouldBeTrue();
+    [Fact] void should_have_side_effect_failure() => _result.SideEffectFailure.ShouldNotBeNull();
+    [Fact] void should_have_single_append_failure() => _result.SideEffectFailure!.AppendFailures.Count().ShouldEqual(1);
+    [Fact] void should_have_constraint_violation() => _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
     [Fact] void should_include_second_event_failure_details()
     {
-        var violation = ((ReactorSideEffectException)_caughtException).Failure.AppendFailures.First().ConstraintViolations.First();
+        var violation = _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.First();
         violation.Message.ShouldEqual("Constraint violated on second event");
     }
 

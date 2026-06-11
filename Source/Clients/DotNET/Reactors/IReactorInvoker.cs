@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -16,6 +15,6 @@ public interface IReactorInvoker
     /// </summary>
     /// <param name="content">Event content to invoke with.</param>
     /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
-    /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<Catch> Invoke(object content, EventContext eventContext);
+    /// <returns>A <see cref="ReactorInvocationResult"/> containing any exceptions or side-effect failures.</returns>
+    Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext);
 }

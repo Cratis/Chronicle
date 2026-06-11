@@ -60,7 +60,7 @@ public class ReactorInvoker(
             .ToImmutableList();
 
     /// <inheritdoc/>
-    public async Task<Catch> Invoke(object content, EventContext eventContext)
+    public async Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext)
     {
         var reactorId = targetType.GetReactorId();
         var eventTypeName = content.GetType().Name;
@@ -87,8 +87,8 @@ public class ReactorInvoker(
                 var sideEffectResult = await HandleReturnValue(method, returnValue, eventContext);
                 if (sideEffectResult.TryGetError(out var sideEffectFailure))
                 {
-                    // Convert side-effect failure into an exception for the Catch monad
-                    return new ReactorSideEffectException(sideEffectFailure);
+                    // Return side-effect failure directly without using exceptions
+                    return ReactorInvocationResult.FromSideEffectFailure(sideEffectFailure);
                 }
             }
             else
@@ -96,12 +96,12 @@ public class ReactorInvoker(
                 logger.ReactorNoHandlerFound(reactorId, eventTypeName);
             }
 
-            return Catch.Success();
+            return ReactorInvocationResult.Success();
         }
         catch (Exception ex)
         {
             logger.ReactorFailed(reactorId, eventTypeName, ex);
-            return ex;
+            return ReactorInvocationResult.FromException(ex);
         }
         finally
         {

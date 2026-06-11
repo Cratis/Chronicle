@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -11,8 +10,8 @@ namespace Cratis.Chronicle.Reactors;
 /// </summary>
 public class NullReactorInvoker : IReactorInvoker
 {
-    static readonly Task<Catch> _successResult = Task.FromResult(Catch.Success());
+    static readonly Task<ReactorInvocationResult> _successResult = Task.FromResult(ReactorInvocationResult.Success());
 
     /// <inheritdoc/>
-    public Task<Catch> Invoke(object content, EventContext eventContext) => _successResult;
+    public Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext) => _successResult;
 }

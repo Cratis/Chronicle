@@ -252,8 +252,8 @@ public class Reactors : IReactors
         }
     }
 
-    static Contracts.Observation.Reactors.SideEffectFailure[] MapSideEffectFailures(ReactorSideEffectException exception) =>
-        exception.Failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
+    static Contracts.Observation.Reactors.SideEffectFailure[] MapSideEffectFailures(ReactorSideEffectFailure failure) =>
+        failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
         {
             ConstraintViolations = af.ConstraintViolations.Select(cv => new Contracts.Observation.Reactors.ConstraintViolation
             {
@@ -470,10 +470,29 @@ public class Reactors : IReactors
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.TryGetException(out var ex))
+                if (handleResult.IsFailed)
                 {
-                    FailedToHandleEvent(ex, @event.Context.EventType.Id);
-                    break;
+                    // Handle side-effect failures
+                    if (handleResult.SideEffectFailure is not null)
+                    {
+                        sideEffectFailures = MapSideEffectFailures(handleResult.SideEffectFailure);
+                    }
+
+                    // Handle exceptions
+                    if (handleResult.ExceptionResult.TryGetException(out var ex))
+                    {
+                        FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                        break;
+                    }
+
+                    // If we had a side-effect failure without an exception, still treat it as a failure
+                    if (handleResult.SideEffectFailure is not null)
+                    {
+                        FailedToHandleEvent(
+                            new InvalidOperationException("Reactor side-effect failed"),
+                            @event.Context.EventType.Id);
+                        break;
+                    }
                 }
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
@@ -489,12 +508,6 @@ public class Reactors : IReactors
         void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
         {
             _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
-
-            // Check if this is a ReactorSideEffectException and extract failure details
-            if (ex is ReactorSideEffectException sideEffectEx)
-            {
-                sideEffectFailures = MapSideEffectFailures(sideEffectEx);
-            }
 
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
