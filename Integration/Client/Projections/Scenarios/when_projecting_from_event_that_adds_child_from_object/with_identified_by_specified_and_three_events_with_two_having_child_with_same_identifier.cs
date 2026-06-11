@@ -59,9 +59,8 @@ public class with_identified_by_specified_and_three_events_with_two_having_child
 
         void Because()
         {
-            var children = Result.Children.ToArray();
-            FirstChild = children[0];
-            SecondChild = children[1];
+            FirstChild = Result.Children.First(c => c.StringValue == FirstEventAppended.Child.StringValue);
+            SecondChild = Result.Children.First(c => c.StringValue == ThirdEventAppended.Child.StringValue);
         }
     }
 
