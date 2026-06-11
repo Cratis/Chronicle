@@ -25,6 +25,7 @@ public static class SerializationConfigurationExtensions
     static readonly IEnumerable<JsonConverter> _converters = [
         new ComplexKeyDictionaryJsonConverterFactory(),
         new EnumConverterFactory(),
+        new ConceptDictionaryJsonConverterFactory(),
         new EnumerableConceptAsJsonConverterFactory(),
         new ConceptAsJsonConverterFactory(),
         new DateOnlyJsonConverter(),
@@ -35,7 +36,6 @@ public static class SerializationConfigurationExtensions
         new LineStringJsonConverter(),
         new PolygonJsonConverter(),
         new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
-        new ConceptDictionaryJsonConverterFactory(),
         new KeyJsonConverter(),
         new PropertyPathJsonConverter(),
         new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
