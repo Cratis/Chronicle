@@ -337,7 +337,23 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (eventTypeMatchesParent)
         {
             logger.FromParentHierarchyEventIsParentType(@event.Context.EventType.Id.ToString());
-            return new ParentEventResult(@event, null);
+
+            // When the current event type is shared between parent and child projections
+            // (self-referential hierarchy), the event may target a CHILD node rather than a
+            // parent node. Try to resolve via the child's own creation event first: if an
+            // earlier creation event exists for this event source, this is an UPDATE to an
+            // existing child — return the resolved key for that child.
+            // Only fall through to the "current event IS the parent" shortcut when no prior
+            // creation event is found, which is the genuine creation case.
+            return await TryResolveViaChildCreationEvent(
+                @event,
+                parentKey,
+                childKey,
+                parentProjection,
+                projection,
+                identifiedByProperty,
+                eventSequenceStorage,
+                sink) ?? new ParentEventResult(@event, null);
         }
 
         logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");
