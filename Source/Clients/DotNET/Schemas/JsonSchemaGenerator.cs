@@ -121,6 +121,25 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
+    static void ApplyGeoJsonSchema(JsonObject schema, string format, int coordinateDepth)
+    {
+        JsonNode coordinates = new JsonObject { ["type"] = "number" };
+        for (var depth = 0; depth < coordinateDepth; depth++)
+        {
+            coordinates = new JsonObject { ["type"] = "array", ["items"] = coordinates };
+        }
+
+        schema.Remove("required");
+        schema.Remove("additionalProperties");
+        schema["type"] = "object";
+        schema["properties"] = new JsonObject
+        {
+            ["type"] = new JsonObject { ["type"] = "string" },
+            ["coordinates"] = coordinates
+        };
+        schema["format"] = format;
+    }
+
     static bool IsNullableConceptProperty(JsonSchemaExporterContext context)
     {
         var nullabilityCtx = new NullabilityInfoContext();
@@ -178,21 +197,26 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
-        // Geospatial types: annotate with format so consumers (Workbench, sinks) can
-        // recognise the type without inspecting nested sub-properties.
+        // Geospatial types serialize as GeoJSON ({ "type": "...", "coordinates": [...] }) via the
+        // geospatial JSON converters, so the schema must describe that GeoJSON shape rather than the
+        // CLR property layout (Longitude/Latitude). The schema-guided ExpandoObject conversion uses
+        // the schema to map event and read-model content, so a mismatched (property-based) schema
+        // silently drops the coordinates. The format annotation still lets consumers (Workbench,
+        // sinks) recognise the geometry type. Coordinate nesting depth: Point [n,n], LineString
+        // [[n,n],...], Polygon [[[n,n],...],...].
         if (formatType == typeof(Point))
         {
-            schemaObj["format"] = "point";
+            ApplyGeoJsonSchema(schemaObj, "point", 1);
         }
 
         if (formatType == typeof(LineString))
         {
-            schemaObj["format"] = "linestring";
+            ApplyGeoJsonSchema(schemaObj, "linestring", 2);
         }
 
         if (formatType == typeof(Polygon))
         {
-            schemaObj["format"] = "polygon";
+            ApplyGeoJsonSchema(schemaObj, "polygon", 3);
         }
 
         // For enum types, embed the integer values and string names so that converters can
