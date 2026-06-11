@@ -36,16 +36,6 @@ public class ReducerDefinition
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the type of the sink for the projection.
-    /// </summary>
-    public string SinkType { get; set; } = "None";
-
-    /// <summary>
-    /// Gets or sets the configuration identifier for the sink of the projection.
-    /// </summary>
-    public Guid SinkConfigurationId { get; set; } = Guid.Empty;
-
-    /// <summary>
     /// Gets or sets the tags the reducer belongs to, stored as a JSON array string.
     /// </summary>
     public string Tags { get; set; } = "[]";

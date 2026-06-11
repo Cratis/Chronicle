@@ -49,6 +49,16 @@ public class ReadModelDefinition
     public ReadModelDisplayName DisplayName { get; set; } = ReadModelDisplayName.NotSet;
 
     /// <summary>
+    /// Gets or sets the type of the sink the read model is stored to.
+    /// </summary>
+    public string SinkType { get; set; } = Cratis.Chronicle.Concepts.Sinks.SinkTypeId.None;
+
+    /// <summary>
+    /// Gets or sets the configuration identifier for the sink of the read model.
+    /// </summary>
+    public Guid SinkConfigurationId { get; set; } = Guid.Empty;
+
+    /// <summary>
     /// Gets or sets the versioned schemas associated with the read model.
     /// </summary>
     [Json]

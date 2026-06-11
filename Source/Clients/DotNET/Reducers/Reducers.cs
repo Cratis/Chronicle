@@ -7,19 +7,16 @@ using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Chronicle.Contracts.Sinks;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Sinks;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Reducers;
 
@@ -46,7 +43,6 @@ public class Reducers : IReducers
     readonly IActivitySource<Reducers> _activitySource;
     readonly ILogger<Reducers> _logger;
     readonly IReducerObservers _reducerObservers;
-    readonly SinkTypeId _defaultSinkTypeId;
     Dictionary<Type, IReducerHandler> _handlersByType = new();
     Dictionary<Type, IReducerHandler> _handlersByModelType = new();
 
@@ -63,7 +59,6 @@ public class Reducers : IReducers
     /// <param name="eventTypes">Registered <see cref="IEventTypes"/>.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> for converting names during serialization.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for JSON serialization.</param>
-    /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
     /// <param name="identityProvider"><see cref="IIdentityProvider"/> for managing identity context.</param>
     /// <param name="reducerObservers"><see cref="IReducerObservers"/> for managing reducer observers.</param>
     /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reducer event handling.</param>
@@ -77,7 +72,6 @@ public class Reducers : IReducers
         IEventTypes eventTypes,
         INamingPolicy namingPolicy,
         JsonSerializerOptions jsonSerializerOptions,
-        IOptions<ChronicleOptions> options,
         IIdentityProvider identityProvider,
         IReducerObservers reducerObservers,
         IActivitySource<Reducers> activitySource,
@@ -102,7 +96,6 @@ public class Reducers : IReducers
         _eventTypes = eventTypes;
         _namingPolicy = namingPolicy;
         _jsonSerializerOptions = jsonSerializerOptions;
-        _defaultSinkTypeId = options.Value.DefaultSinkTypeId;
         _identityProvider = identityProvider;
         _reducerObservers = reducerObservers;
         _activitySource = activitySource;
@@ -428,10 +421,6 @@ public class Reducers : IReducers
                 EventTypes = handler.EventTypes.Select(et => new EventTypeWithKeyExpression { EventType = et.ToContract(), Key = WellKnownExpressions.EventSourceId }).ToArray(),
                 ReadModel = handler.ReadModelType.GetReadModelIdentifier(),
                 IsActive = handler.IsActive,
-                Sink = new SinkDefinition
-                {
-                    TypeId = _defaultSinkTypeId
-                },
                 Tags = handler.ReducerType.GetTags().ToArray(),
                 Filters = new()
                 {

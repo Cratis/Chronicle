@@ -10,7 +10,6 @@ using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Reducers.for_Reducers.given;
 
@@ -77,7 +76,6 @@ public class all_dependencies : Specification
             _eventTypes,
             _namingPolicy,
             _jsonSerializerOptions,
-            Options.Create(new ChronicleOptions()),
             _identityProvider,
             _reducerObservers,
             _activitySource,

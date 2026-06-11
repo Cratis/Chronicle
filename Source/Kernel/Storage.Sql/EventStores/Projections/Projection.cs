@@ -34,16 +34,6 @@ public class Projection
     public uint ReadModelGeneration { get; set; }
 
     /// <summary>
-    /// Gets or sets the type of the sink for the projection.
-    /// </summary>
-    public Guid SinkType { get; set; } = Guid.Empty;
-
-    /// <summary>
-    /// Gets or sets the configuration identifier for the sink of the projection.
-    /// </summary>
-    public Guid SinkConfigurationId { get; set; } = Guid.Empty;
-
-    /// <summary>
     /// Gets or sets the versioned definitions associated with the projection.
     /// </summary>
     [Json]

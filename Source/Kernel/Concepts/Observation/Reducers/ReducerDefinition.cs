@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 
@@ -15,7 +14,6 @@ namespace Cratis.Chronicle.Concepts.Observation.Reducers;
 /// <param name="EventTypes">The type of events the observer is interested in.</param>
 /// <param name="ReadModel">The read model to use.</param>
 /// <param name="IsActive">Whether or not the reducer is an actively observing reducer.</param>
-/// <param name="Sink">Target sink.</param>
 /// <param name="Tags">Collection of tags the reducer belongs to.</param>
 /// <param name="Filters">The <see cref="ObserverFilters"/> to apply when observing events.</param>
 public record ReducerDefinition(
@@ -24,6 +22,5 @@ public record ReducerDefinition(
     IEnumerable<EventTypeWithKeyExpression> EventTypes,
     ReadModelIdentifier ReadModel,
     bool IsActive,
-    SinkDefinition Sink,
     IEnumerable<string>? Tags = default,
     ObserverFilters? Filters = default);

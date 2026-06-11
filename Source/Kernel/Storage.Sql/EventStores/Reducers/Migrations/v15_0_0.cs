@@ -26,8 +26,6 @@ public class v15_0_0 : Migration
                 EventSequenceId = table.StringColumn(migrationBuilder),
                 EventTypes = table.JsonColumn<IEnumerable<EventTypeWithKeyExpression>>(migrationBuilder),
                 ReadModel = table.StringColumn(migrationBuilder),
-                SinkType = table.GuidColumn(migrationBuilder),
-                SinkConfigurationId = table.GuidColumn(migrationBuilder),
                 Tags = table.StringColumn(migrationBuilder, nullable: true),
                 Filters = table.StringColumn(migrationBuilder, nullable: true),
             },
