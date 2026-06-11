@@ -23,15 +23,19 @@ namespace Cratis.Chronicle.Setup.Serialization;
 public static class SerializationConfigurationExtensions
 {
     static readonly IEnumerable<JsonConverter> _converters = [
+        new ComplexKeyDictionaryJsonConverterFactory(),
         new EnumConverterFactory(),
-        new ConceptDictionaryJsonConverterFactory(),
         new EnumerableConceptAsJsonConverterFactory(),
         new ConceptAsJsonConverterFactory(),
         new DateOnlyJsonConverter(),
         new TimeOnlyJsonConverter(),
         new TypeJsonConverter(),
         new UriJsonConverter(),
+        new PointJsonConverter(),
+        new LineStringJsonConverter(),
+        new PolygonJsonConverter(),
         new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory(),
+        new ConceptDictionaryJsonConverterFactory(),
         new KeyJsonConverter(),
         new PropertyPathJsonConverter(),
         new PropertyPathChildrenDefinitionDictionaryJsonConverter(),
