@@ -348,6 +348,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = false
         };
+        Options.JsonSerializerOptions.Converters.Add(new ComplexKeyDictionaryJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EnumConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EventSourceIdJsonConverterFactory());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableConceptAsJsonConverterFactory());
@@ -356,6 +357,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
         Options.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new TypeJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new UriJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new PointJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new LineStringJsonConverter());
+        Options.JsonSerializerOptions.Converters.Add(new PolygonJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
     }
 
