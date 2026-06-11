@@ -602,7 +602,14 @@ public class Sink : ISink
         var current = LoadJsonColumnState(entry, column);
         var indexers = difference.ArrayIndexers ?? ArrayIndexers.NoIndexers;
         var subPath = BuildSubPath(difference.PropertyPath);
-        if (!subPath.Segments.Any())
+
+        // BuildSubPath returns an empty PropertyPath when the difference targets the JSON column
+        // itself (a single-segment path such as "PointValue"). An empty PropertyPath still yields a
+        // single empty-string segment, so checking Segments.Any() would wrongly route the whole
+        // value through ApplyDifferenceToJsonRoot and store it under an "" key (e.g.
+        // {"":{"Longitude":..}}), which then materializes back as a default value. IsSet is false
+        // for an empty path, so use it to detect "replace the entire column value".
+        if (!subPath.IsSet)
         {
             entry.Entity[column.Name] = SerializeJsonColumn(UnwrapForJson(difference.Changed), column);
         }
