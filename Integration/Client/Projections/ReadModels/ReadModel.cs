@@ -31,9 +31,6 @@ public record ReadModel(
     DateTimeOffset LastUpdated,
     EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
-    // LineString and Polygon are records containing Point[] / LinearRing[] arrays whose
-    // auto-generated record equality compares array references, not element values.
-    // Override Equals/GetHashCode here so comparison works correctly in tests.
     public virtual bool Equals(ReadModel? other) =>
         other is not null &&
         StringValue == other.StringValue &&

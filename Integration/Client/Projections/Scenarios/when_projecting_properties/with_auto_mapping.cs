@@ -42,8 +42,6 @@ public class with_auto_mapping(context context) : Given<context>(context)
     [Fact] void should_set_the_double_concept_value() => Context.Result.DoubleConceptValue.ShouldEqual(Context.EventAppended.DoubleConceptValue);
     [Fact] void should_set_the_guid_concept_value() => Context.Result.GuidConceptValue.ShouldEqual(Context.EventAppended.GuidConceptValue);
     [Fact] void should_set_the_point_value() => Context.Result.PointValue.ShouldEqual(Context.EventAppended.PointValue);
-
-    // LineString/Polygon record equality is based on array references; compare coordinates directly.
     [Fact] void should_set_the_line_string_value() =>
         Context.Result.LineStringValue.Coordinates.SequenceEqual(Context.EventAppended.LineStringValue.Coordinates).ShouldBeTrue();
     [Fact] void should_set_the_polygon_value() =>

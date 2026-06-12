@@ -62,9 +62,6 @@ public class and_sub_feature_is_added(context context) : Given<context>(context)
     [Fact] void should_set_the_top_level_feature_name() => RootFeature.Name.ShouldEqual("Feature 1");
     [Fact] void should_have_one_sub_feature_under_the_root() => RootFeature.SubFeatures.Count().ShouldEqual(1);
     [Fact] void should_give_the_nested_sub_feature_its_payload_id() => RootFeature.SubFeatures.Any(_ => _.Id == Context.SubFeatureId).ShouldBeTrue();
-
-    // A keyed UPDATE event (the rename) resolves to the existing nested node via its creation event and lands
-    // on the sub-feature at its actual depth.
     [Fact] void should_apply_the_rename_to_the_nested_sub_feature() => RootFeature.SubFeatures.Single().Name.ShouldEqual("Renamed");
 }
 
