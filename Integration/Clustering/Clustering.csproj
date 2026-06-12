@@ -25,6 +25,7 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
+        <PackageReference Include="EphemeralMongo" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="Microsoft.Orleans.Sdk" />
