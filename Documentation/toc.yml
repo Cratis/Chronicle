@@ -56,6 +56,8 @@
   href: testing/toc.yml
 - name: Troubleshooting
   href: troubleshooting/toc.yml
+- name: Workbench
+  href: workbench/toc.yml
 - name: Hosting
   href: hosting/toc.yml
 - name: Contributing
