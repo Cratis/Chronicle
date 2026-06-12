@@ -138,6 +138,14 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         schemaProperty = schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema;
 
+        // A complex BSON value carrying a complex known format identifies a typed CLR value (e.g. a
+        // geospatial type). Materialize it as the typed value rather than a generic nested structure.
+        // Scalar formats (and arrays of scalars) are left to the normal conversion paths below.
+        if (bsonValue is BsonDocument or BsonArray && typeFormats.IsComplexFormat(schemaProperty.Format))
+        {
+            return bsonValue.ToTargetType(typeFormats.GetTypeForFormat(schemaProperty.Format!));
+        }
+
         if (bsonValue is BsonDocument childDocument)
         {
             if (schemaProperty.IsDictionary)

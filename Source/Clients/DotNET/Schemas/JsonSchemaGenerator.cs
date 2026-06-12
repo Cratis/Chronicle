@@ -121,25 +121,6 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
     }
 
-    static void ApplyGeoJsonSchema(JsonObject schema, string format, int coordinateDepth)
-    {
-        JsonNode coordinates = new JsonObject { ["type"] = "number" };
-        for (var depth = 0; depth < coordinateDepth; depth++)
-        {
-            coordinates = new JsonObject { ["type"] = "array", ["items"] = coordinates };
-        }
-
-        schema.Remove("required");
-        schema.Remove("additionalProperties");
-        schema["type"] = "object";
-        schema["properties"] = new JsonObject
-        {
-            ["type"] = new JsonObject { ["type"] = "string" },
-            ["coordinates"] = coordinates
-        };
-        schema["format"] = format;
-    }
-
     static bool IsNullableConceptProperty(JsonSchemaExporterContext context)
     {
         var nullabilityCtx = new NullabilityInfoContext();
@@ -197,26 +178,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
-        // Geospatial types serialize as GeoJSON ({ "type": "...", "coordinates": [...] }) via the
-        // geospatial JSON converters, so the schema must describe that GeoJSON shape rather than the
-        // CLR property layout (Longitude/Latitude). The schema-guided ExpandoObject conversion uses
-        // the schema to map event and read-model content, so a mismatched (property-based) schema
-        // silently drops the coordinates. The format annotation still lets consumers (Workbench,
-        // sinks) recognise the geometry type. Coordinate nesting depth: Point [n,n], LineString
-        // [[n,n],...], Polygon [[[n,n],...],...].
-        if (formatType == typeof(Point))
+        // Geospatial types serialize as GeoJSON via their own converters and are materialized as the
+        // typed CLR value by the schema-aware ExpandoObject converters using the format metadata
+        // (set from the registered type formats in the "known types" block below). Emit a leaf schema
+        // carrying only that format so the value is treated as a single typed value and not flattened
+        // into sub-properties (which would drop the coordinates and surface as a JsonElement).
+        if (formatType == typeof(Point) || formatType == typeof(LineString) || formatType == typeof(Polygon))
         {
-            ApplyGeoJsonSchema(schemaObj, "point", 1);
-        }
-
-        if (formatType == typeof(LineString))
-        {
-            ApplyGeoJsonSchema(schemaObj, "linestring", 2);
-        }
-
-        if (formatType == typeof(Polygon))
-        {
-            ApplyGeoJsonSchema(schemaObj, "polygon", 3);
+            schemaObj.Remove("properties");
+            schemaObj.Remove("required");
+            schemaObj["type"] = "object";
         }
 
         // For enum types, embed the integer values and string names so that converters can

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -33,7 +34,16 @@ public class ReadModelDbContext(
 {
     static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Default)
     {
-        WriteIndented = false
+        WriteIndented = false,
+        Converters =
+        {
+            // Geospatial values are materialized as typed CLR values in the read model; round-trip
+            // them through their GeoJSON converters so the JSON column stores GeoJSON (not the CLR
+            // property layout) and reads back into the typed value.
+            new PointJsonConverter(),
+            new LineStringJsonConverter(),
+            new PolygonJsonConverter()
+        }
     };
 
     static readonly ValueConverter<Guid, string> _sqliteGuidConverter = new(

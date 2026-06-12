@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Geospatial;
+
 namespace Cratis.Chronicle.Schemas;
 
 /// <summary>
@@ -34,7 +36,10 @@ public class TypeFormats : ITypeFormats
         { typeof(DateOnly), "date" },
         { typeof(TimeOnly), "time" },
         { typeof(TimeSpan), "duration" },
-        { typeof(Guid), "guid" }
+        { typeof(Guid), "guid" },
+        { typeof(Point), "point" },
+        { typeof(LineString), "linestring" },
+        { typeof(Polygon), "polygon" }
     };
 
     /// <inheritdoc/>
@@ -49,6 +54,15 @@ public class TypeFormats : ITypeFormats
 
     /// <inheritdoc/>
     public string GetFormatForType(Type type) => _typesFormatInfo[type];
+
+    /// <summary>
+    /// Checks whether a format identifies a complex (object-shaped) type — e.g. a geospatial type —
+    /// as opposed to a scalar one (guid, int, date, …).
+    /// </summary>
+    /// <param name="format">The format to check.</param>
+    /// <returns>True when the format maps to a complex object type; otherwise false.</returns>
+    public bool IsComplexFormat(string? format) =>
+        !string.IsNullOrEmpty(format) && IsKnown(format) && GetJsonTypeForClrType(GetTypeForFormat(format)) == "object";
 
     /// <inheritdoc/>
     public Type GetTypeForFormat(string format)
@@ -107,6 +121,11 @@ public class TypeFormats : ITypeFormats
         if (type == typeof(bool))
         {
             return "boolean";
+        }
+
+        if (type == typeof(Point) || type == typeof(LineString) || type == typeof(Polygon))
+        {
+            return "object";
         }
 
         return "string";
