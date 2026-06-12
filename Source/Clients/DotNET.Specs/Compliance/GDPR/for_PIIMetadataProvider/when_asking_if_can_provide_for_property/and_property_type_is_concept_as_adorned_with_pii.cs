@@ -14,7 +14,7 @@ public class and_property_type_is_concept_as_adorned_with_pii : given.a_provider
     {
         public PersonName Name { get; set; }
 
-        public static readonly PropertyInfo NameProperty = typeof(MyEvent).GetProperty(nameof(Name), BindingFlags.Public | BindingFlags.Instance)!;
+        public static readonly PropertyInfo NameProperty = typeof(MyEvent).GetProperty(nameof(Name), BindingFlags.Public | BindingFlags.Instance);
     }
 
     bool _result;

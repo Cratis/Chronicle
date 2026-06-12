@@ -13,7 +13,7 @@ public class with_a_concept_wrapping_a_guid : Specification
 
     void Establish() => _options = new JsonSerializerOptions { Converters = { new EventSourceIdJsonConverterFactory() } };
 
-    void Because() => _result = JsonSerializer.Deserialize<EventSourceId<GuidConcept>>($"\"{_guid}\"", _options)!;
+    void Because() => _result = JsonSerializer.Deserialize<EventSourceId<GuidConcept>>($"\"{_guid}\"", _options);
 
     [Fact] void should_have_the_concept_with_the_parsed_guid_as_typed_value() => _result.TypedValue.ShouldEqual(new GuidConcept(_guid));
     [Fact] void should_have_the_guid_string_as_event_source_id_value() => ((EventSourceId)_result).Value.ShouldEqual(_guid.ToString());

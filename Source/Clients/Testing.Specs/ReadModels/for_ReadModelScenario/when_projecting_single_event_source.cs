@@ -24,5 +24,5 @@ public class when_projecting_single_event_source : Specification
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_map_name() => _scenario.Instance!.Name.ShouldEqual("My Module");
+    [Fact] void should_map_name() => _scenario.Instance.Name.ShouldEqual("My Module");
 }

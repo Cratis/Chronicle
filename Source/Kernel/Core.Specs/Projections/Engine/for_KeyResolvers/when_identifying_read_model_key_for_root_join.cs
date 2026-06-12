@@ -69,7 +69,7 @@ public class when_identifying_read_model_key_for_root_join : Specification
             _keyResolvers.FromEventSourceId,
             "groupId",
             "id")(_storage, _sink, _joinedEvent);
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact]

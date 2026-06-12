@@ -20,7 +20,7 @@ public class when_deactivating : Specification
         _timer = Substitute.For<IGrainTimer>();
 
         typeof(ConnectedClients)
-            .GetField("_reviseConnectedClientsTimer", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetField("_reviseConnectedClientsTimer", BindingFlags.Instance | BindingFlags.NonPublic)
             .SetValue(_connectedClients, _timer);
     }
 

@@ -39,7 +39,7 @@ public class and_child_creation_event_resolves_successfully : given.a_three_leve
             KeyResolvers.FromEventSourceId,
             KeyResolvers.FromEventSourceId,
             "sliceId")(Storage, Sink, NestedCommandEvent);
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact] void should_return_root_document_key() => _result.Value.ShouldEqual(RootKey);

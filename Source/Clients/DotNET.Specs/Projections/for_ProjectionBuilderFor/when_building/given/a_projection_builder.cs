@@ -18,7 +18,7 @@ public class a_projection_builder : Specification
     {
         event_types = new EventTypesForSpecifications(EventTypes);
         builder = new ProjectionBuilderFor<ProjectionReadModel>(
-            new ProjectionId(typeof(ProjectionReadModel).FullName!),
+            new ProjectionId(typeof(ProjectionReadModel).FullName),
             typeof(ProjectionReadModel),
             new DefaultNamingPolicy(),
             event_types,

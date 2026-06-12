@@ -17,7 +17,7 @@ public class setting_the_outer_nested_object_from_pdl : given.a_compiled_pdl_nes
 {
     [Fact] void should_compile_a_definition() => _projection.ShouldNotBeNull();
     [Fact] void should_have_a_top_level_nested_dictionary() => _projection.Nested.ShouldNotBeNull();
-    [Fact] void should_have_the_outer_nested_entry_keyed_by_command() => _projection.Nested!.ContainsKey((PropertyPath)"command").ShouldBeTrue();
+    [Fact] void should_have_the_outer_nested_entry_keyed_by_command() => _projection.Nested.ContainsKey((PropertyPath)"command").ShouldBeTrue();
     [Fact] void should_have_outer_nested_identified_by_not_set() => _outerNested.IdentifiedBy.IsSet.ShouldBeFalse();
     [Fact] void should_have_the_command_set_from_event() => _outerNested.From.ContainsKey((EventType)nameof(given.PdlDeepNestedCommandSet)).ShouldBeTrue();
     [Fact] void should_map_the_command_name_property() => _outerNested.From[(EventType)nameof(given.PdlDeepNestedCommandSet)].Properties[(PropertyPath)"name"].ShouldEqual("name");

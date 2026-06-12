@@ -11,21 +11,28 @@ namespace Cratis.Chronicle.Observation.Placement;
 /// Represents a placement director for observers that respects the Clustering configuration.
 /// </summary>
 /// <param name="options">Chronicle options containing clustering configuration.</param>
-public class ObserverPlacementDirector(IOptions<ChronicleOptions> options) : IPlacementDirector
+/// <param name="localSiloDetails">Details about the local silo used to exclude it from candidates when it does not support observers.</param>
+public class ObserverPlacementDirector(IOptions<ChronicleOptions> options, ILocalSiloDetails localSiloDetails) : IPlacementDirector
 {
     /// <inheritdoc/>
     public Task<SiloAddress> OnAddActivation(PlacementStrategy strategy, PlacementTarget target, IPlacementContext context)
     {
-        // Check if Observers are allowed on this silo
+        IEnumerable<SiloAddress> candidates = context.GetCompatibleSilos(target);
+
         if (!options.Value.Clustering.Roles.Observers)
         {
-            throw new InvalidOperationException(
-                "Observers placement is disabled in clustering configuration for this silo.");
+            // This silo is not configured to host observer grains. Exclude it from the candidate
+            // list so the grain is placed on a silo that is configured as an observer host.
+            // In a single-silo deployment every silo is also an observer host, so this path
+            // is never reached and no candidates are lost.
+            candidates = candidates.Where(s => s != localSiloDetails.SiloAddress);
         }
 
-        // Use random placement among available silos
-        // Orleans will filter to only silos where this director doesn't throw
-        var selectedSilo = context.GetCompatibleSilos(target).OrderBy(_ => Random.Shared.Next()).First();
-        return Task.FromResult(selectedSilo);
+        var selected = candidates.OrderBy(_ => Random.Shared.Next()).FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                "No observer-capable silos are available for observer grain placement. " +
+                "Ensure at least one silo has Observers enabled in its Clustering configuration.");
+
+        return Task.FromResult(selected);
     }
 }

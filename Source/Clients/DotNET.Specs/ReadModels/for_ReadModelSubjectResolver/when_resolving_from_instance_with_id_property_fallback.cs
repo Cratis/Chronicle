@@ -16,5 +16,5 @@ public class when_resolving_from_instance_with_id_property_fallback : Specificat
     void Because() => _result = ReadModelSubjectResolver.ResolveFrom(new ReadModelWithIdProperty { Id = "id-99", Name = "Bob" });
 
     [Fact] void should_resolve_a_subject() => _result.ShouldNotBeNull();
-    [Fact] void should_carry_the_id_value() => _result!.Value.ShouldEqual("id-99");
+    [Fact] void should_carry_the_id_value() => _result.Value.ShouldEqual("id-99");
 }

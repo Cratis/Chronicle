@@ -28,6 +28,6 @@ public class and_retrieving_by_that_revision(context ctx) : IClassFixture<contex
         }
     }
 
-    [Fact] void should_return_the_correct_public_key() => ctx.Result!.Public.ShouldEqual(ctx.Key.Public);
-    [Fact] void should_return_the_correct_private_key() => ctx.Result!.Private.ShouldEqual(ctx.Key.Private);
+    [Fact] void should_return_the_correct_public_key() => ctx.Result.Public.ShouldEqual(ctx.Key.Public);
+    [Fact] void should_return_the_correct_private_key() => ctx.Result.Private.ShouldEqual(ctx.Key.Private);
 }

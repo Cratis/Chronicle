@@ -37,12 +37,12 @@ public class with_inner_nested : given.a_language_service_compiling_nested<given
     void Because()
     {
         _result = Compile(Declaration);
-        _outer = _result.Nested![(PropertyPath)"command"];
-        _inner = _outer.Nested![(PropertyPath)"validation"];
+        _outer = _result.Nested[(PropertyPath)"command"];
+        _inner = _outer.Nested[(PropertyPath)"validation"];
     }
 
     [Fact] void should_have_the_outer_nested_entry() => _outer.ShouldNotBeNull();
-    [Fact] void should_have_the_inner_nested_entry_on_the_outer() => _outer.Nested!.ContainsKey((PropertyPath)"validation").ShouldBeTrue();
+    [Fact] void should_have_the_inner_nested_entry_on_the_outer() => _outer.Nested.ContainsKey((PropertyPath)"validation").ShouldBeTrue();
     [Fact] void should_have_the_inner_from_event() => _inner.From.ContainsKey((EventType)"ValidationAdded").ShouldBeTrue();
     [Fact] void should_have_the_inner_clear_with() => _inner.RemovedWith.ContainsKey((EventType)"ValidationRemoved").ShouldBeTrue();
     [Fact] void should_have_the_inner_identified_by_not_set() => _inner.IdentifiedBy.IsSet.ShouldBeFalse();

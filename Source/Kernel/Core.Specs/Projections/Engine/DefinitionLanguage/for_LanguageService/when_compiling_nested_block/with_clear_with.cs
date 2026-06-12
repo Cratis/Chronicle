@@ -29,7 +29,7 @@ public class with_clear_with : given.a_language_service_compiling_nested<given.S
     void Because()
     {
         _result = Compile(Declaration);
-        _nested = _result.Nested![(PropertyPath)"command"];
+        _nested = _result.Nested[(PropertyPath)"command"];
     }
 
     [Fact] void should_have_removed_with_for_clear_event() => _nested.RemovedWith.ContainsKey((EventType)"CommandClearedForSlice").ShouldBeTrue();
