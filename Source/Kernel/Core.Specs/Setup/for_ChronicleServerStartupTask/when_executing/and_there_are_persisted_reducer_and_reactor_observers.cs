@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
@@ -26,8 +25,8 @@ public class and_there_are_persisted_reducer_and_reactor_observers : given.a_sta
         ]));
 
         _reducerDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([
-            new ReducerDefinition(_reducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true, SinkDefinition.None),
-            new ReducerDefinition(_unknownReducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true, SinkDefinition.None)
+            new ReducerDefinition(_reducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true),
+            new ReducerDefinition(_unknownReducerObserverKey.ObserverId, EventSequenceId.Log, [], "read-model", true)
         ]));
 
         _reactorDefinitionsStorage.GetAll().Returns(Task.FromResult<IEnumerable<ReactorDefinition>>([

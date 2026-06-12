@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Dynamic;
 using System.Reflection;
+using System.Text.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
 using Cratis.Concepts;
@@ -51,6 +52,11 @@ public class ObjectComparer : IObjectComparer
     {
         foreach (var property in type.GetProperties())
         {
+            // Skip indexer properties (e.g. this[int]) — they cannot be read without index
+            // arguments, and GetValue without them throws a parameter-count mismatch. This surfaces
+            // for collection-shaped values such as GeoJSON coordinates arrays.
+            if (property.GetIndexParameters().Length > 0) continue;
+
             var leftValue = left != null ? property.GetValue(left) : null;
             var rightValue = right != null ? property.GetValue(right) : null;
             if (leftValue is null && rightValue is null) continue;
@@ -219,6 +225,16 @@ public class ObjectComparer : IObjectComparer
           (leftValue is not null && rightValue is null))
         {
             differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+        }
+        else if (leftValue is JsonElement leftElement && rightValue is JsonElement rightElement)
+        {
+            // JsonElement is raw, untyped JSON (e.g. GeoJSON coordinate arrays in a projected read
+            // model). Recursing into its CLR properties hits an indexer and compares nothing
+            // meaningful, so compare by raw JSON text instead.
+            if (!leftElement.GetRawText().Equals(rightElement.GetRawText(), StringComparison.Ordinal))
+            {
+                differences.Add(new PropertyDifference(propertyPath, leftValue, rightValue));
+            }
         }
         else if (type.IsAssignableTo(typeof(ExpandoObject)))
         {

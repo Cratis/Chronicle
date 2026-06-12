@@ -96,10 +96,15 @@ public class UniqueConstraintMigrator(
             },
             constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
 
-        migrationBuilder.CreateIndex(
-            name: "IX_" + tableName + "_Value",
-            table: tableName,
-            column: "Value");
+        // SQL Server does not allow indexes on NVARCHAR(MAX) / VARCHAR(MAX) columns.
+        // Omit the index for SQL Server; the WHERE Value = ? query remains correct without it.
+        if (!context.Database.IsSqlServer())
+        {
+            migrationBuilder.CreateIndex(
+                name: "IX_" + tableName + "_Value",
+                table: tableName,
+                column: "Value");
+        }
 
         await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
@@ -130,6 +135,12 @@ public class UniqueConstraintMigrator(
         }
         else if (context.Database.IsSqlServer())
         {
+            // SQL Server cannot ALTER a column to NVARCHAR(MAX) while an index references it,
+            // and cannot create indexes on MAX-type columns at all. Drop the index first, widen
+            // the column, and leave it un-indexed (the constraint check query is still correct).
+            migrationBuilder.Sql(
+                "IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_" + tableName + "_Value' AND object_id = OBJECT_ID('" + tableName + "')) " +
+                "DROP INDEX [IX_" + tableName + "_Value] ON [" + tableName + "]");
             migrationBuilder.Sql("ALTER TABLE [" + tableName + "] ALTER COLUMN [Value] NVARCHAR(MAX)");
         }
 

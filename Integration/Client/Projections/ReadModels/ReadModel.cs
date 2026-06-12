@@ -31,6 +31,46 @@ public record ReadModel(
     DateTimeOffset LastUpdated,
     EventSequenceNumber? __lastHandledEventSequenceNumber = default)
 {
+    public virtual bool Equals(ReadModel? other) =>
+        other is not null &&
+        StringValue == other.StringValue &&
+        BoolValue == other.BoolValue &&
+        IntValue == other.IntValue &&
+        FloatValue == other.FloatValue &&
+        AreDoublesEqual(DoubleValue, other.DoubleValue) &&
+        EnumValue == other.EnumValue &&
+        GuidValue == other.GuidValue &&
+        DateTimeValue == other.DateTimeValue &&
+        DateOnlyValue == other.DateOnlyValue &&
+        TimeOnlyValue == other.TimeOnlyValue &&
+        DateTimeOffsetValue == other.DateTimeOffsetValue &&
+        StringConceptValue == other.StringConceptValue &&
+        BoolConceptValue == other.BoolConceptValue &&
+        IntConceptValue == other.IntConceptValue &&
+        FloatConceptValue == other.FloatConceptValue &&
+        DoubleConceptValue == other.DoubleConceptValue &&
+        GuidConceptValue == other.GuidConceptValue &&
+        PointValue == other.PointValue &&
+        LineStringValue.Coordinates.SequenceEqual(other.LineStringValue.Coordinates) &&
+        PolygonValue.Shell.Coordinates.SequenceEqual(other.PolygonValue.Shell.Coordinates) &&
+        PolygonValue.Holes.Length == other.PolygonValue.Holes.Length &&
+        Enumerable.Range(0, PolygonValue.Holes.Length).All(i =>
+            PolygonValue.Holes[i].Coordinates.SequenceEqual(other.PolygonValue.Holes[i].Coordinates)) &&
+        LastUpdated == other.LastUpdated &&
+        __lastHandledEventSequenceNumber == other.__lastHandledEventSequenceNumber;
+
+    static bool AreDoublesEqual(double left, double right)
+    {
+        if (left == right) return true;
+        if (double.IsNaN(left) || double.IsNaN(right)) return false;
+
+        const double epsilon = 1e-9;
+        return Math.Abs(left - right) <= epsilon;
+    }
+
+    public override int GetHashCode() =>
+        HashCode.Combine(StringValue, BoolValue, IntValue, FloatValue, DoubleValue, EnumValue, GuidValue, DateTimeValue);
+
     static Random _random = new();
 
     public static ReadModel CreateWithKnownValues() => new(
@@ -75,7 +115,7 @@ public record ReadModel(
         _random.NextDouble(),
         Guid.NewGuid(),
         new Point(Math.Round((_random.NextDouble() * 180) - 90, 6), Math.Round((_random.NextDouble() * 360) - 180, 6)),
-        new LineString(new[] { new Point(42.123, 10.456), new Point(43.456, 11.789) }),
-        new Polygon(new LinearRing(new[] { new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0) }), new LinearRing[] { }),
+        new LineString([new Point(42.123, 10.456), new Point(43.456, 11.789)]),
+        new Polygon(new LinearRing([new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(0, 10), new Point(0, 0)]), []),
         DateTimeOffset.UtcNow.AddDays(_random.Next(60)).RoundDownTicks());
 }

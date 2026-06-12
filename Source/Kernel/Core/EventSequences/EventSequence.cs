@@ -28,6 +28,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Json;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -65,6 +66,21 @@ public class EventSequence(
     IEventHashCalculator eventHashCalculator,
     ILogger<EventSequence> logger) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
+    /// <summary>
+    /// Default serialization plus geospatial converters so that typed geospatial values in the event
+    /// content (held as their CLR type in the ExpandoObject) are written as GeoJSON — keeping the
+    /// stored/transport shape consistent with what the schema-guided converter reads back.
+    /// </summary>
+    static readonly JsonSerializerOptions _contentSerializerOptions = new()
+    {
+        Converters =
+        {
+            new PointJsonConverter(),
+            new LineStringJsonConverter(),
+            new PolygonJsonConverter()
+        }
+    };
+
     IEventSequenceStorage? _eventSequenceStorage;
     IEventTypesStorage? _eventTypesStorage;
     IIdentityStorage? _identityStorage;
@@ -532,7 +548,7 @@ public class EventSequence(
             var identity = await IdentityStorage.GetFor(causedBy.WithoutDuplicates());
 
             // Convert the compliant event to JsonObject for migration
-            var json = JsonSerializer.Serialize(compliantEvent);
+            var json = JsonSerializer.Serialize(compliantEvent, _contentSerializerOptions);
             var contentAsJson = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
 
             // Migrate the event to all generations

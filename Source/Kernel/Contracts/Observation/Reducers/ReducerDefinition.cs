@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Sinks;
-
 namespace Cratis.Chronicle.Contracts.Observation.Reducers;
 
 /// <summary>
@@ -40,12 +38,6 @@ public class ReducerDefinition
     /// </summary>
     [ProtoMember(5)]
     public bool IsActive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the projection sink definition.
-    /// </summary>
-    [ProtoMember(6)]
-    public SinkDefinition Sink { get; set; }
 
     /// <summary>
     /// Gets or sets the tags the reducer belongs to.

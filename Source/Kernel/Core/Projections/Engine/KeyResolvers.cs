@@ -149,6 +149,33 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         var key = (childKeyResult as ResolvedKey)!.Key;
 
+        // If the node identified by the child key was already created (by a different event known to this
+        // projection, including its descendant collections' creators), resolve to that node's actual location
+        // via its creation event. This routes keyed UPDATE events (e.g. a rename) to the existing node at
+        // whatever depth it lives. Genuine creators are the earliest event for their id, so they find no earlier
+        // sibling here and fall through to normal parent-based resolution.
+        // Only relevant when the same event is also handled by a descendant (self-referential) child projection —
+        // i.e. it can target a node at this level or deeper. For such events, resolve to the node's actual
+        // location via its creation event so a keyed UPDATE reaches the existing node at whatever depth it lives.
+        if (IsEventHandledByDescendantProjection(projection, @event.Context.EventType.Id))
+        {
+            var viaOwnCreationEvent = await TryResolveViaCreationEventSource(
+                @event,
+                key.Value!.ToString()!,
+                projection.EventTypes.Where(et => et.Id != @event.Context.EventType.Id),
+                projection,
+                eventSequenceStorage,
+                sink,
+                returnParentEvent: false);
+
+            // Only take over when the node lives in a collection strictly deeper than this projection's own.
+            if (viaOwnCreationEvent?.KeyResolverResult is ResolvedKey resolvedViaCreation &&
+                TargetsDeeperCollectionThan(resolvedViaCreation.Key.ArrayIndexers, projection.ChildrenPropertyPath))
+            {
+                return viaOwnCreationEvent.KeyResolverResult;
+            }
+        }
+
         var parentProjection = projection.Parent!;
         var parentEventTypeIds = parentProjection.OwnEventTypes.Select(_ => _.Id).ToArray();
         logger.FromParentHierarchyParentEventTypes(parentEventTypeIds.Length, string.Join(", ", (IEnumerable<EventTypeId>)parentEventTypeIds));
@@ -200,6 +227,40 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var arrayIndexers = resolvedParentKey.ArrayIndexers.All.ToList();
         arrayIndexers.Add(new ArrayIndexer(childrenPropertyPath, identifiedByProperty, keyValue!));
         return arrayIndexers;
+    }
+
+    static bool IsEventHandledByDescendantProjection(IProjection projection, EventTypeId eventTypeId)
+        => projection.ChildProjections.Any(child =>
+            child.OwnEventTypes.Any(et => et.Id == eventTypeId) ||
+            IsEventHandledByDescendantProjection(child, eventTypeId));
+
+    static bool TargetsDeeperCollectionThan(ArrayIndexers arrayIndexers, PropertyPath childrenPropertyPath)
+    {
+        var childSegments = childrenPropertyPath.Segments.ToArray();
+        foreach (var indexerSegments in arrayIndexers.All.Select(indexer => indexer.ArrayProperty.Segments.ToArray()))
+        {
+            if (indexerSegments.Length <= childSegments.Length)
+            {
+                continue;
+            }
+
+            var isDescendant = true;
+            for (var index = 0; index < childSegments.Length; index++)
+            {
+                if (!Equals(indexerSegments[index].Value, childSegments[index].Value))
+                {
+                    isDescendant = false;
+                    break;
+                }
+            }
+
+            if (isDescendant)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -276,7 +337,31 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (eventTypeMatchesParent)
         {
             logger.FromParentHierarchyEventIsParentType(@event.Context.EventType.Id.ToString());
-            return new ParentEventResult(@event, null);
+
+            // When the current event type is shared between parent and child projections
+            // (self-referential hierarchy), the event may target a CHILD node rather than a
+            // parent node. Try to resolve via the child's OWN creation event: if an earlier
+            // creation event exists for this child's event source, this is an UPDATE to an
+            // existing child — return the resolved key for that child.
+            //
+            // Only the child's-own-creation resolution is used here (not the parent-creation
+            // fallback in TryResolveViaChildCreationEvent): for a flat projection that merely
+            // shares the event type between the root (From) and its direct children (AddChild),
+            // multiple children live under one event source and the child key is not itself an
+            // event source, so this resolution finds nothing and falls through to "the event IS
+            // the parent". Routing through the parent-creation fallback would instead anchor an
+            // update of one child to the earliest sibling's creation event, nesting the update
+            // under the wrong child.
+            var viaChildCreation = await TryResolveViaCreationEventSource(
+                @event,
+                childKey.Value?.ToString()!,
+                projection.OwnEventTypes.Where(et => et.Id != @event.Context.EventType.Id),
+                parentProjection,
+                eventSequenceStorage,
+                sink,
+                returnParentEvent: false);
+
+            return viaChildCreation ?? new ParentEventResult(@event, null);
         }
 
         logger.FromParentHierarchyLookupParentEvent(parentKey.Value?.ToString() ?? "null");

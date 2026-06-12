@@ -155,6 +155,14 @@ public static class ProjectionEventContextExtensions
                     return;
                 }
 
+                // The resolved key may target a collection deeper than this one (e.g. an event referenced at
+                // multiple levels of a self-referential model that resolved to a nested node). In that case the
+                // deeper-level projection applies it; applying here would wrongly mutate an ancestor node.
+                if (KeyTargetsDeeperCollection(context.Key.ArrayIndexers, childrenProperty))
+                {
+                    return;
+                }
+
                 var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
                 var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
                 if (!context.IsJoin && (!identifiedByProperty.IsSet ||
@@ -274,4 +282,40 @@ public static class ProjectionEventContextExtensions
         this IObservable<ProjectionEventContext> observable,
         PropertyPath nestedProperty) =>
         observable.Do(_ => _.Changeset.ClearNested(nestedProperty, _.Key.ArrayIndexers));
+
+    /// <summary>
+    /// Determines whether the resolved key targets a collection strictly deeper than <paramref name="childrenProperty"/>,
+    /// meaning a deeper-level projection is responsible for applying the change.
+    /// </summary>
+    /// <param name="arrayIndexers">The <see cref="ArrayIndexers"/> from the resolved key.</param>
+    /// <param name="childrenProperty">The children property of the projection level being considered.</param>
+    /// <returns>True if a deeper collection is targeted; otherwise false.</returns>
+    static bool KeyTargetsDeeperCollection(ArrayIndexers arrayIndexers, PropertyPath childrenProperty)
+    {
+        var childSegments = childrenProperty.Segments.ToArray();
+        foreach (var indexerSegments in arrayIndexers.All.Select(_ => _.ArrayProperty.Segments.ToArray()))
+        {
+            if (indexerSegments.Length <= childSegments.Length)
+            {
+                continue;
+            }
+
+            var isDescendant = true;
+            for (var index = 0; index < childSegments.Length; index++)
+            {
+                if (!Equals(indexerSegments[index].Value, childSegments[index].Value))
+                {
+                    isDescendant = false;
+                    break;
+                }
+            }
+
+            if (isDescendant)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

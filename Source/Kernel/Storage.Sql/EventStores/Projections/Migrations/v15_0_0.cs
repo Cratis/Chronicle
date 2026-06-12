@@ -26,8 +26,6 @@ public class v15_0_0 : Migration
                 Owner = table.NumberColumn<int>(migrationBuilder),
                 ReadModelName = table.StringColumn(migrationBuilder),
                 ReadModelGeneration = table.NumberColumn<uint>(migrationBuilder),
-                SinkType = table.GuidColumn(migrationBuilder),
-                SinkConfigurationId = table.GuidColumn(migrationBuilder),
                 Definitions = table.JsonColumn<IDictionary<string, string>>(migrationBuilder),
             },
             constraints: table => table.PrimaryKey($"PK_{WellKnownTableNames.ProjectionDefinitions}", x => x.Id));

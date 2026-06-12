@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.Reducers;
 
@@ -37,11 +36,6 @@ public class ReducerDefinition
     /// Gets or sets whether or not the reducer is an actively observing reducer.
     /// </summary>
     public bool IsActive { get; set; }
-
-    /// <summary>
-    /// Gets or sets the <see cref="SinkDefinition"/> the reducer uses.
-    /// </summary>
-    public SinkDefinition Sink { get; set; } = SinkDefinition.None;
 
     /// <summary>
     /// Gets or sets the tags the reducer belongs to.

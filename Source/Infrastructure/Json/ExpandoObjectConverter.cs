@@ -168,6 +168,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (typeFormats.IsKnown(schemaProperty.Format!))
         {
+            // A complex formatted value (e.g. a geospatial type) serializes to a JSON object/array
+            // through its registered converter (GeoJSON); a scalar formatted value (guid, date, ...)
+            // serializes to a JSON value and goes through the scalar conversion path below.
+            var node = JsonSerializer.SerializeToNode(value, Globals.JsonSerializerOptions);
+            if (node is JsonObject or JsonArray)
+            {
+                return node;
+            }
+
             return ConvertToJsonValueBasedOnSchemaType(value, schemaProperty);
         }
 
@@ -188,6 +197,16 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
             if (schemaProperty.IsDictionary)
             {
                 return ToDictionary(childObject);
+            }
+
+            // A JSON object carrying a known format identifies a complex CLR type (e.g. a geospatial
+            // type serialized as GeoJSON). Deserialize the whole object into that type so the
+            // ExpandoObject holds the typed value rather than a generic nested structure.
+            if (typeFormats.IsKnown(schemaProperty.Format!))
+            {
+                return jsonNode.Deserialize(
+                    typeFormats.GetTypeForFormat(schemaProperty.Format!),
+                    Globals.JsonSerializerOptions);
             }
 
             return ToExpandoObject(

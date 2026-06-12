@@ -27,7 +27,6 @@ public static class ReducerDefinitionConverters
                 et => et.Key.ToString()),
             ReadModel = definition.ReadModel,
             IsActive = definition.IsActive,
-            Sink = definition.Sink,
             Tags = definition.Tags?.ToArray() ?? [],
             Filters = (definition.Filters ?? Concepts.Observation.ObserverFilters.None).ToMongoDB()
         };
@@ -44,7 +43,6 @@ public static class ReducerDefinitionConverters
             definition.EventTypes.Select(kvp => new EventTypeWithKeyExpression(EventType.Parse(kvp.Key), (PropertyExpression)kvp.Value)),
             definition.ReadModel,
             definition.IsActive,
-            definition.Sink,
             definition.Tags,
             definition.Filters.ToKernel());
 }

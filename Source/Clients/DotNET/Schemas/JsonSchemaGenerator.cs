@@ -178,21 +178,16 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (schema is not JsonObject schemaObj) return schema;
 
-        // Geospatial types: annotate with format so consumers (Workbench, sinks) can
-        // recognise the type without inspecting nested sub-properties.
-        if (formatType == typeof(Point))
+        // Geospatial types serialize as GeoJSON via their own converters and are materialized as the
+        // typed CLR value by the schema-aware ExpandoObject converters using the format metadata
+        // (set from the registered type formats in the "known types" block below). Emit a leaf schema
+        // carrying only that format so the value is treated as a single typed value and not flattened
+        // into sub-properties (which would drop the coordinates and surface as a JsonElement).
+        if (formatType == typeof(Point) || formatType == typeof(LineString) || formatType == typeof(Polygon))
         {
-            schemaObj["format"] = "point";
-        }
-
-        if (formatType == typeof(LineString))
-        {
-            schemaObj["format"] = "linestring";
-        }
-
-        if (formatType == typeof(Polygon))
-        {
-            schemaObj["format"] = "polygon";
+            schemaObj.Remove("properties");
+            schemaObj.Remove("required");
+            schemaObj["type"] = "object";
         }
 
         // For enum types, embed the integer values and string names so that converters can

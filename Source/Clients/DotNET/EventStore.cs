@@ -171,7 +171,6 @@ public class EventStore : IEventStore
             EventTypes,
             namingPolicy,
             jsonSerializerOptions,
-            options,
             identityProvider,
             reducerObservers,
             serviceProvider.GetRequiredKeyedService<IActivitySource<Reducers.Reducers>>(ClientActivity.SourceName),

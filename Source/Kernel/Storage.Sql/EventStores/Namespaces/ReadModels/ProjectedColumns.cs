@@ -122,10 +122,11 @@ public static class ProjectedColumns
         // A property with a known primitive format (guid, int32, date-time, …) is a leaf — even when
         // the JSON schema type happens to overlap with Object/None due to concept handling. The format
         // wins because Cratis's schema generator stamps the underlying primitive's format onto the
-        // concept schema.
+        // concept schema. Complex known formats (e.g. geospatial types) decompose into a nested JSON
+        // value, so they are stored as JSON columns rather than scalar typed columns.
         if (!string.IsNullOrEmpty(property.Format) && _typeFormats.IsKnown(property.Format))
         {
-            return false;
+            return _typeFormats.IsComplexFormat(property.Format);
         }
 
         // Anything that decomposes into nested fields (Type=Object, or a $ref to an object schema)

@@ -37,6 +37,14 @@ public interface ITypeFormats
     string GetFormatForType(Type type);
 
     /// <summary>
+    /// Checks whether a format identifies a complex (object-shaped) type — e.g. a geospatial type —
+    /// as opposed to a scalar one (guid, int, date, …).
+    /// </summary>
+    /// <param name="format">The format to check.</param>
+    /// <returns>True when the format maps to a complex object type; otherwise false.</returns>
+    bool IsComplexFormat(string? format);
+
+    /// <summary>
     /// Get all supported type formats.
     /// </summary>
     /// <returns>Dictionary of type to format mappings.</returns>

@@ -128,7 +128,6 @@ public class EventStoreForTesting : IEventStore
             _eventTypes,
             _namingPolicy,
             _jsonSerializerOptions,
-            Options.Create(new ChronicleOptions()),
             new BaseIdentityProvider(),
             reducerObservers,
             new ActivitySource<Reducers.Reducers>(),

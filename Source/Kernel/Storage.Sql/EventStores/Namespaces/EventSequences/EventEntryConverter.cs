@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.Identities;
+using Cratis.Json;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
@@ -19,7 +20,16 @@ public static class EventEntryConverter
     static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
+        Converters =
+        {
+            // Geospatial values live as typed CLR values in the event content (ExpandoObject); persist
+            // them as GeoJSON so the stored shape matches what is read back through the schema-guided
+            // converter, rather than the raw CLR property layout.
+            new PointJsonConverter(),
+            new LineStringJsonConverter(),
+            new PolygonJsonConverter()
+        }
     };
 
     /// <summary>

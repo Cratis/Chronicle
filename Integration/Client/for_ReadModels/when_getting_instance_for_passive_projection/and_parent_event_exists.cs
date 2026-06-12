@@ -41,11 +41,6 @@ public class and_parent_event_exists(context context) : Given<context>(context)
 
     [Fact] void should_return_the_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_set_the_application_name() => Context.Result.Name.ShouldEqual("Sample Application");
-
-    // The immediate projection replays only the parent event source, so the joined children
-    // collection is left unset (null) when no child events exist — the value the reactor reads
-    // back via a null-conditional access. The regression returned a null *model*, which is what
-    // this spec guards against.
     [Fact] void should_not_have_event_models_yet() => Context.Result.EventModels.ShouldBeNull();
 }
 
