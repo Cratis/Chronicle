@@ -35,7 +35,7 @@ That first argument is the [event source id](../concepts/event-source.md) — th
 > [!TIP]
 > We use a raw `Guid` here to keep the quickstart short. In real code you'd wrap it in a strongly-typed `BookId` so the compiler can't confuse a book's id with a member's — the [tutorial](/chronicle/tutorial/) shows exactly that.
 
-Run your app, then open the <a href="http://localhost:8080" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
+Run your app, then open the <a href="http://localhost:8080" target="_blank" rel="noopener">workbench</a>. Log in with the development credentials (username `Admin`, password `ChangeMeNow!`), pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
 
 ![Chronicle Workbench showing events](workbench.png)
 
