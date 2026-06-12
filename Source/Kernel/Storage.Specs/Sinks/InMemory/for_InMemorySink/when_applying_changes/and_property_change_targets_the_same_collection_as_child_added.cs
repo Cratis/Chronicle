@@ -57,7 +57,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
     [Fact] void should_apply_the_child_operation_once() => GetRoles().Length.ShouldEqual(1);
     [Fact] void should_keep_the_added_role() => GetValue<string>(GetRoles()[0], "role").ShouldEqual("Administrator");
 
-    T GetValue<T>(string property) => GetValue<T>(_result!, property);
+    T GetValue<T>(string property) => GetValue<T>(_result, property);
 
     static T GetValue<T>(ExpandoObject target, string property)
     {
@@ -67,7 +67,7 @@ public class and_property_change_targets_the_same_collection_as_child_added : Sp
 
     ExpandoObject[] GetRoles()
     {
-        var dictionary = (IDictionary<string, object?>)_result!;
+        var dictionary = (IDictionary<string, object?>)_result;
         return ((IEnumerable<object>)dictionary["roles"]).Cast<ExpandoObject>().ToArray();
     }
 

@@ -18,5 +18,5 @@ public class when_resolving_from_instance_with_subject_attribute_on_property : S
     void Because() => _result = ReadModelSubjectResolver.ResolveFrom(new ReadModelWithExplicitSubject { CustomerId = "cust-42", Name = "Alice" });
 
     [Fact] void should_resolve_a_subject() => _result.ShouldNotBeNull();
-    [Fact] void should_carry_the_annotated_property_value() => _result!.Value.ShouldEqual("cust-42");
+    [Fact] void should_carry_the_annotated_property_value() => _result.Value.ShouldEqual("cust-42");
 }

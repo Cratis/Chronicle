@@ -14,7 +14,7 @@ public class and_external_event_types_are_discovered : Specification
 {
     const string SourceEventStore = "StudioAdmin";
     static readonly MethodInfo _registerExternalSubscriptionsMethod =
-        typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        typeof(EventStore).GetMethod("RegisterExternalEventStoreSubscriptionsAsync", BindingFlags.Instance | BindingFlags.NonPublic);
 
     EventStore _eventStore;
     IEventStoreSubscriptions _subscriptions;
@@ -40,7 +40,7 @@ public class and_external_event_types_are_discovered : Specification
         SetAutoProperty("Subscriptions", _subscriptions);
     }
 
-    async Task Because() => await (Task)_registerExternalSubscriptionsMethod.Invoke(_eventStore, [])!;
+    async Task Because() => await (Task)_registerExternalSubscriptionsMethod.Invoke(_eventStore, []);
 
     [Fact] void should_use_source_event_store_name_as_subscription_id() =>
         _subscriptions.Received(1).Subscribe(
@@ -56,13 +56,13 @@ public class and_external_event_types_are_discovered : Specification
 
     void SetField(string fieldName, object value)
     {
-        var field = typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var field = typeof(EventStore).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
         field.SetValue(_eventStore, value);
     }
 
     void SetAutoProperty(string propertyName, object value)
     {
-        var field = typeof(EventStore).GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var field = typeof(EventStore).GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
         field.SetValue(_eventStore, value);
     }
 

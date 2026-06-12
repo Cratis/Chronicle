@@ -120,11 +120,11 @@ public class and_child_already_exists : Specification
 
     [Fact]
     void should_set_the_command_name() =>
-        GetValue<string>(GetCommand()!, "Name").ShouldEqual("Register");
+        GetValue<string>(GetCommand(), "Name").ShouldEqual("Register");
 
     [Fact]
     void should_set_the_command_schema() =>
-        GetValue<string>(GetCommand()!, "Schema").ShouldEqual("{}");
+        GetValue<string>(GetCommand(), "Schema").ShouldEqual("{}");
 
     async Task ApplyFeatureCreated()
     {
@@ -186,7 +186,7 @@ public class and_child_already_exists : Specification
         await _sink.ApplyChanges(_featureKey, changeset, 3UL);
     }
 
-    T GetValue<T>(string property) => GetValue<T>(_result!, property);
+    T GetValue<T>(string property) => GetValue<T>(_result, property);
 
     static T GetValue<T>(IDictionary<string, object?> target, string property) => (T)target[property]!;
 
@@ -194,8 +194,8 @@ public class and_child_already_exists : Specification
 
     ExpandoObject[] GetSlices()
     {
-        var dictionary = (IDictionary<string, object?>)_result!;
-        return ((IEnumerable<object>)dictionary["Slices"]!).Cast<ExpandoObject>().ToArray();
+        var dictionary = (IDictionary<string, object?>)_result;
+        return ((IEnumerable<object>)dictionary["Slices"]).Cast<ExpandoObject>().ToArray();
     }
 
     ExpandoObject? GetCommand()

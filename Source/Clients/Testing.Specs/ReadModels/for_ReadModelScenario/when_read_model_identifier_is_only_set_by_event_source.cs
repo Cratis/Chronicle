@@ -41,6 +41,6 @@ public class when_read_model_identifier_is_only_set_by_event_source : Specificat
             .Events(new KeyedSampleCreated("Example"));
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_populate_keyed_identifier_from_event_source() => _scenario.Instance!.Id.ShouldEqual(_sampleGuid);
-    [Fact] void should_still_populate_event_mapped_properties() => _scenario.Instance!.Name.ShouldEqual("Example");
+    [Fact] void should_populate_keyed_identifier_from_event_source() => _scenario.Instance.Id.ShouldEqual(_sampleGuid);
+    [Fact] void should_still_populate_event_mapped_properties() => _scenario.Instance.Name.ShouldEqual("Example");
 }

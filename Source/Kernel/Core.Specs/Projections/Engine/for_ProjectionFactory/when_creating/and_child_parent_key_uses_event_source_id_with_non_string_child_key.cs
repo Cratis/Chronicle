@@ -101,7 +101,7 @@ public class and_child_parent_key_uses_event_source_id_with_non_string_child_key
             NullSink.Instance,
             roleGrantedEvent);
 
-        _result = (keyResult as ResolvedKey)!.Key;
+        _result = (keyResult as ResolvedKey).Key;
     }
 
     [Fact] void should_resolve_the_parent_key_from_the_event_source_id() => _result.Value.ShouldEqual(_userId.Value);

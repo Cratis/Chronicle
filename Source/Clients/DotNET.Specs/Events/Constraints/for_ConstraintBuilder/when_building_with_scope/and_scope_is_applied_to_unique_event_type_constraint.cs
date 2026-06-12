@@ -24,6 +24,6 @@ public class and_scope_is_applied_to_unique_event_type_constraint : given.a_cons
 
     [Fact] void should_have_one_constraint() => _result.Count.ShouldEqual(1);
     [Fact] void should_be_unique_event_type_constraint() => _result[0].ShouldBeOfExactType<UniqueEventTypeConstraintDefinition>();
-    [Fact] void should_have_scope_on_constraint() => (_result[0] as UniqueEventTypeConstraintDefinition)!.Scope.ShouldNotBeNull();
-    [Fact] void should_have_event_source_type_in_scope() => (_result[0] as UniqueEventTypeConstraintDefinition)!.Scope!.EventSourceType.ShouldNotBeNull();
+    [Fact] void should_have_scope_on_constraint() => (_result[0] as UniqueEventTypeConstraintDefinition).Scope.ShouldNotBeNull();
+    [Fact] void should_have_event_source_type_in_scope() => (_result[0] as UniqueEventTypeConstraintDefinition).Scope.EventSourceType.ShouldNotBeNull();
 }

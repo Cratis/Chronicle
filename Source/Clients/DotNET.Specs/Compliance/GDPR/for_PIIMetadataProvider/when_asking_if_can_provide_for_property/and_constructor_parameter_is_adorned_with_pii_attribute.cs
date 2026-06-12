@@ -12,7 +12,7 @@ public class and_constructor_parameter_is_adorned_with_pii_attribute : given.a_p
     bool _result;
 
     void Because() => _result = provider.CanProvide(
-        typeof(MyRecord).GetProperty(nameof(MyRecord.Name), BindingFlags.Public | BindingFlags.Instance)!);
+        typeof(MyRecord).GetProperty(nameof(MyRecord.Name), BindingFlags.Public | BindingFlags.Instance));
 
     [Fact] void should_be_able_to_provide() => _result.ShouldBeTrue();
 }

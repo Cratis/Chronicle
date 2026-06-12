@@ -12,5 +12,5 @@ public class when_event_has_subject_on_constructor_parameter : Specification
     void Because() => _result = SubjectResolver.ResolveFrom(new EventWithParameterSubject("customer-77", "Alice"));
 
     [Fact] void should_resolve_subject() => _result.ShouldNotBeNull();
-    [Fact] void should_carry_the_parameter_value() => _result!.Value.ShouldEqual("customer-77");
+    [Fact] void should_carry_the_parameter_value() => _result.Value.ShouldEqual("customer-77");
 }

@@ -95,8 +95,8 @@ public abstract class a_compiled_pdl_nested_projection : Specifications.Specific
             errors => throw new InvalidOperationException(
                 $"PDL compilation failed: {string.Join(", ", errors.Errors.Select(e => e.Message))}"));
 
-        _outerNested = _projection.Nested![(Properties.PropertyPath)"command"];
-        _innerNested = _outerNested.Nested![(Properties.PropertyPath)"validation"];
+        _outerNested = _projection.Nested[(Properties.PropertyPath)"command"];
+        _innerNested = _outerNested.Nested[(Properties.PropertyPath)"validation"];
     }
 
     static ReadModelDefinition CreateReadModelDefinition<T>()

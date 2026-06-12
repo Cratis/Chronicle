@@ -20,7 +20,7 @@ public class to_the_root_document : Specification
 
     void Establish() => _schema = JsonSchema.FromJson(Json);
 
-    void Because() => _resolved = _schema.ActualProperties["self"].Reference!;
+    void Because() => _resolved = _schema.ActualProperties["self"].Reference;
 
     [Fact] void should_resolve_to_the_root() => _resolved.ShouldNotBeNull();
     [Fact] void should_expose_the_root_properties() => _resolved.ActualProperties.Keys.ShouldContainOnly("name", "self");

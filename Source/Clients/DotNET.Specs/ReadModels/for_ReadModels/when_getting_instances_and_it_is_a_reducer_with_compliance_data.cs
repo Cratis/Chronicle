@@ -29,7 +29,7 @@ public class when_getting_instances_and_it_is_a_reducer_with_compliance_data : g
         ]);
 
         var schema = new JsonSchema();
-        schema.ExtensionData![ComplianceJsonSchemaExtensions.ComplianceKey] = new List<ComplianceSchemaMetadata> { new("pii", "{}") };
+        schema.ExtensionData[ComplianceJsonSchemaExtensions.ComplianceKey] = new List<ComplianceSchemaMetadata> { new("pii", "{}") };
         _schemaGenerator.Generate(Arg.Any<Type>()).Returns(schema);
 
         _compliance = Substitute.For<ICompliance>();

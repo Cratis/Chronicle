@@ -58,7 +58,7 @@ public class a_three_level_hierarchy : Specification
 
         RootProjection = Substitute.For<IProjection>();
         RootProjection.HasParent.Returns(false);
-        RootProjection.Parent.Returns((IProjection)null!);
+        RootProjection.Parent.Returns((IProjection)null);
         RootProjection.ChildrenPropertyPath.Returns(PropertyPath.NotSet);
         RootProjection.IdentifiedByProperty.Returns((PropertyPath)"id");
         RootProjection.Path.Returns((ProjectionPath)"root");

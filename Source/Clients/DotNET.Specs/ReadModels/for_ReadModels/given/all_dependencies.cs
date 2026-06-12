@@ -58,7 +58,7 @@ public class all_dependencies : Specification
             _projections,
             _reducers,
             _schemaGenerator,
-            _servicesAccessor!,
+            _servicesAccessor,
             _jsonSerializerOptions,
             Substitute.For<ILogger<MaterializedReadModels>>());
 

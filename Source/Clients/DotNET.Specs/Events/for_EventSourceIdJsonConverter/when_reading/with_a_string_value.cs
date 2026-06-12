@@ -13,7 +13,7 @@ public class with_a_string_value : Specification
 
     void Establish() => _options = new JsonSerializerOptions { Converters = { new EventSourceIdJsonConverterFactory() } };
 
-    void Because() => _result = JsonSerializer.Deserialize<EventSourceId<string>>($"\"{Input}\"", _options)!;
+    void Because() => _result = JsonSerializer.Deserialize<EventSourceId<string>>($"\"{Input}\"", _options);
 
     [Fact] void should_have_the_string_as_typed_value() => _result.TypedValue.ShouldEqual(Input);
     [Fact] void should_have_the_string_as_event_source_id_value() => ((EventSourceId)_result).Value.ShouldEqual(Input);

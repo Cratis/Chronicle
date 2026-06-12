@@ -12,5 +12,5 @@ public class when_event_has_string_subject_property : Specification
     void Because() => _result = SubjectResolver.ResolveFrom(new EventWithStringSubject("customer-99", "Alice"));
 
     [Fact] void should_resolve_subject() => _result.ShouldNotBeNull();
-    [Fact] void should_carry_the_property_value() => _result!.Value.ShouldEqual("customer-99");
+    [Fact] void should_carry_the_property_value() => _result.Value.ShouldEqual("customer-99");
 }

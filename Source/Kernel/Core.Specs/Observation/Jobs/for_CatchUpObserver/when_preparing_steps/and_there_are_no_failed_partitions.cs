@@ -22,6 +22,6 @@ public class and_there_are_no_failed_partitions : given.a_catch_up_observer_job
     async Task Because() => await _job.Start(_request);
 
     [Fact] void should_register_all_keys_for_catching_up() => _capturedKeys.ShouldNotBeNull();
-    [Fact] void should_include_first_partition() => _capturedKeys!.ShouldContain(_key1);
-    [Fact] void should_include_second_partition() => _capturedKeys!.ShouldContain(_key2);
+    [Fact] void should_include_first_partition() => _capturedKeys.ShouldContain(_key1);
+    [Fact] void should_include_second_partition() => _capturedKeys.ShouldContain(_key2);
 }

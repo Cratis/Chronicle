@@ -30,9 +30,9 @@ public class when_event_is_used_at_class_property_and_nested_level : Specificati
     }
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
-    [Fact] void should_map_module_name_from_event() => _scenario.Instance!.Name.ShouldEqual("Reporting");
-    [Fact] void should_populate_nested_customer() => _scenario.Instance!.Customer.ShouldNotBeNull();
-    [Fact] void should_map_nested_customer_name_from_same_event() => _scenario.Instance!.Customer!.Name.ShouldEqual("Equinor ASA");
-    [Fact] void should_map_nested_customer_email_from_same_event() => _scenario.Instance!.Customer!.Email.ShouldEqual("billing@equinor.com");
-    [Fact] void should_capture_opened_at_from_event_context() => _scenario.Instance!.OpenedAt.ShouldNotBeNull();
+    [Fact] void should_map_module_name_from_event() => _scenario.Instance.Name.ShouldEqual("Reporting");
+    [Fact] void should_populate_nested_customer() => _scenario.Instance.Customer.ShouldNotBeNull();
+    [Fact] void should_map_nested_customer_name_from_same_event() => _scenario.Instance.Customer.Name.ShouldEqual("Equinor ASA");
+    [Fact] void should_map_nested_customer_email_from_same_event() => _scenario.Instance.Customer.Email.ShouldEqual("billing@equinor.com");
+    [Fact] void should_capture_opened_at_from_event_context() => _scenario.Instance.OpenedAt.ShouldNotBeNull();
 }
