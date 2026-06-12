@@ -37,7 +37,7 @@ public record ReadModel(
         BoolValue == other.BoolValue &&
         IntValue == other.IntValue &&
         FloatValue == other.FloatValue &&
-        DoubleValue == other.DoubleValue &&
+        AreDoublesEqual(DoubleValue, other.DoubleValue) &&
         EnumValue == other.EnumValue &&
         GuidValue == other.GuidValue &&
         DateTimeValue == other.DateTimeValue &&
@@ -58,6 +58,15 @@ public record ReadModel(
             PolygonValue.Holes[i].Coordinates.SequenceEqual(other.PolygonValue.Holes[i].Coordinates)) &&
         LastUpdated == other.LastUpdated &&
         __lastHandledEventSequenceNumber == other.__lastHandledEventSequenceNumber;
+
+    static bool AreDoublesEqual(double left, double right)
+    {
+        if (left == right) return true;
+        if (double.IsNaN(left) || double.IsNaN(right)) return false;
+
+        const double epsilon = 1e-9;
+        return Math.Abs(left - right) <= epsilon;
+    }
 
     public override int GetHashCode() =>
         HashCode.Combine(StringValue, BoolValue, IntValue, FloatValue, DoubleValue, EnumValue, GuidValue, DateTimeValue);
