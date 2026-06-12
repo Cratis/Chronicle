@@ -2,18 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 extern alias KernelCore;
+extern alias KernelConcepts;
 
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using Cratis.Arc;
+using Cratis.Chronicle.Integration.Clustering.for_Clustering;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Setup;
 using Cratis.DependencyInjection;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
-using DotNet.Testcontainers.Containers;
-using DotNet.Testcontainers.Networks;
+using EphemeralMongo;
 using MongoDB.Driver;
 using Configuration = KernelCore::Cratis.Chronicle.Configuration;
 
@@ -28,66 +27,56 @@ namespace Cratis.Chronicle.Integration.Clustering;
 /// observers, reducers and projections) are placed across both silos, every event and read model crosses
 /// the silo boundary — exercising Orleans serialization end-to-end, which is the primary concern for clustering.
 /// </remarks>
-public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
+public class ClusteringFixture : IAsyncLifetime
 {
-    IContainer? _mongoContainer;
+    IMongoRunner? _mongoRunner;
     IHost? _silo1;
     IHost? _silo2;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ClusteringFixture"/> class.
-    /// </summary>
-    public ClusteringFixture()
-    {
-        Network = new NetworkBuilder()
-            .WithName(Guid.NewGuid().ToString("D"))
-            .Build();
-    }
-
-    /// <inheritdoc/>
-    public INetwork Network { get; }
-
-    /// <inheritdoc/>
-    public IContainer MongoDBContainer => _mongoContainer!;
-
-    /// <inheritdoc/>
-    public MongoDBDatabase EventStore => new(_mongoContainer!, Constants.EventStoreDatabaseName);
-
-    /// <inheritdoc/>
-    public MongoDBDatabase EventStoreForNamespace => new(_mongoContainer!, Constants.EventStoreNamespaceDatabaseName);
-
-    /// <inheritdoc/>
-    public MongoDBDatabase ReadModels => new(_mongoContainer!, Constants.ReadModelsDatabaseName);
+    ClusteredReactorSignal _reactorSignal = new();
 
     /// <summary>
     /// Gets the <see cref="IEventStore"/> from the client co-hosted on the primary silo.
     /// </summary>
-    public IEventStore ClientEventStore => _silo1!.Services.GetRequiredService<IEventStore>();
+    public IEventStore ClientEventStore => _silo1.Services.GetRequiredService<IEventStore>();
 
     /// <summary>
     /// Gets the <see cref="IChronicleClient"/> from the primary silo.
     /// </summary>
-    public IChronicleClient ChronicleClient => _silo1!.Services.GetRequiredService<IChronicleClient>();
+    public IChronicleClient ChronicleClient => _silo1.Services.GetRequiredService<IChronicleClient>();
+
+    /// <summary>
+    /// Gets the service provider of the primary silo, allowing specs to resolve silo-registered services.
+    /// </summary>
+    public IServiceProvider SiloServices => _silo1.Services;
+
+    /// <summary>
+    /// Gets the <see cref="SiloAddress"/> of the primary silo, which is configured to host EventSequences grains.
+    /// </summary>
+    public SiloAddress EventSequencesSiloAddress => _silo1.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
+
+    /// <summary>
+    /// Gets the <see cref="SiloAddress"/> of the secondary silo, which is configured to host observer grains.
+    /// </summary>
+    public SiloAddress ObserversSiloAddress => _silo2.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
+
+    /// <summary>
+    /// Gets the shared <see cref="ClusteredReactorSignal"/> instance used by the reactor on whichever silo it runs.
+    /// </summary>
+    /// <remarks>
+    /// Both silos share the same object reference so that a reactor placed on silo2 and the test code
+    /// reading from this fixture both see the same in-memory state.
+    /// </remarks>
+    public ClusteredReactorSignal ReactorSignal => _reactorSignal;
 
     /// <inheritdoc/>
     public async Task InitializeAsync()
     {
-        await Network.CreateAsync();
+        _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions
+        {
+            UseSingleNodeReplicaSet = true
+        });
 
-        var mongoBuilder = new ContainerBuilder("mongo")
-            .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
-            .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
-            .WithPortBinding(27017, assignRandomHostPort: true)
-            .WithHostname("mongo")
-            .WithNetwork(Network)
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilInternalTcpPortIsAvailable(27017)
-                .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"));
-
-        _mongoContainer = mongoBuilder.Build();
-        await _mongoContainer.StartAsync();
-
-        var mongoUrl = $"mongodb://{_mongoContainer.Hostname}:{_mongoContainer.GetMappedPublicPort(27017)}/";
+        var mongoUrl = _mongoRunner.ConnectionString;
 
         // Localhost multi-silo clustering is inherently racy: occasionally a freshly-formed cluster lands
         // grains in a state where cross-silo observer activation never completes. Rather than fight every
@@ -133,8 +122,26 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         // afterwards would produce a divergent manifest and cross-silo deserialization would fail
         // with "well-known type id not present". Building both back-to-back keeps the manifests
         // identical across the cluster.
-        _silo1 = CreateSilo(silo1Port, silo1Gateway, primaryEndpoint, mongoUrl, hostClient: true);
-        _silo2 = CreateSilo(silo2Port, silo2Gateway, primaryEndpoint, mongoUrl, hostClient: false);
+        //
+        // Role split: silo1 owns EventSequences (the event log grain), silo2 owns Observers
+        // (reactors, reducers, projections). This forces every event and read model to cross
+        // the silo boundary — exercising Orleans serialization end-to-end.
+        _silo1 = CreateSilo(
+            silo1Port,
+            silo1Gateway,
+            primaryEndpoint,
+            mongoUrl,
+            hostClient: true,
+            eventSequences: true,
+            observers: false);
+        _silo2 = CreateSilo(
+            silo2Port,
+            silo2Gateway,
+            primaryEndpoint,
+            mongoUrl,
+            hostClient: false,
+            eventSequences: false,
+            observers: true);
 
         // Silo1 is the primary and must be up and visible in membership before the secondary joins,
         // otherwise the secondary can fail to gossip and the cluster never converges.
@@ -146,14 +153,49 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         // Wait for membership to actually converge to two active silos rather than relying on a fixed
         // delay — localhost multi-silo clustering is otherwise racy and grain placement can hang.
         await WaitForActiveSilos(_silo1, expectedSilos: 2);
+
+        // Manually perform the kernel bootstrap that ChronicleServerStartupTask normally handles.
+        // That task is removed because it deadlocks during in-process silo startup (it tries to
+        // activate grains before the cluster is fully formed). Now that both silos are up and the
+        // cluster has converged, all grain activations succeed.
+        await BootstrapKernelAsync();
     }
 
     /// <summary>
-    /// Stops and disposes both silos so a fresh cluster can be brought up. The shared MongoDB container is left running.
+    /// Manually bootstraps the Chronicle kernel after the cluster is fully formed.
+    /// </summary>
+    /// <remarks>
+    /// Equivalent to the subset of <c>ChronicleServerStartupTask</c> that the warmup requires:
+    /// system namespace creation, system reactor registration (so <c>EventStoreAdded</c> events are
+    /// handled), and user event store namespace creation + reactor registration.
+    /// </remarks>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    async Task BootstrapKernelAsync()
+    {
+        var grainFactory = _silo1.Services.GetRequiredService<IGrainFactory>();
+        var kernelReactors = _silo1.Services.GetRequiredService<KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel.IReactors>();
+
+        var systemEventStore = (string)KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System;
+        var userEventStore = (string)(KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore;
+
+        await grainFactory.GetGrain<KernelCore::Cratis.Chronicle.Namespaces.INamespaces>(systemEventStore).EnsureDefault();
+        await kernelReactors.DiscoverAndRegister(
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName.System,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        await grainFactory.GetGrain<KernelCore::Cratis.Chronicle.Namespaces.INamespaces>(userEventStore).EnsureDefault();
+        await kernelReactors.DiscoverAndRegister(
+            (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
+            KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+    }
+
+    /// <summary>
+    /// Stops and disposes both silos so a fresh cluster can be brought up. The shared MongoDB instance is left running.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task TearDownSilosAsync()
     {
+        _reactorSignal = new();
         foreach (var silo in new[] { _silo2, _silo1 })
         {
             if (silo is null)
@@ -250,40 +292,7 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
             _silo1.Dispose();
         }
 
-        if (_mongoContainer is not null)
-        {
-            await _mongoContainer.DisposeAsync();
-        }
-
-        await Network.DisposeAsync();
-    }
-
-    /// <inheritdoc/>
-    ValueTask IAsyncDisposable.DisposeAsync() => new(DisposeAsync());
-
-    /// <inheritdoc/>
-    public Task PerformBackupAsync(string? prefix = null) => Task.CompletedTask;
-
-    /// <inheritdoc/>
-    public async Task RemoveAllDatabases(IEnumerable<string>? excludePrefixes = null)
-    {
-        if (_mongoContainer is null) return;
-
-        var urlBuilder = new MongoUrlBuilder($"mongodb://localhost:{_mongoContainer.GetMappedPublicPort(27017)}")
-        {
-            DirectConnection = true
-        };
-        var settings = MongoClientSettings.FromUrl(urlBuilder.ToMongoUrl());
-        using var mongoClient = new MongoClient(settings);
-        var namesCursor = await mongoClient.ListDatabaseNamesAsync();
-        var names = await namesCursor.ToListAsync<string>();
-        var systemNames = new[] { "admin", "config", "local", "orleans" };
-        foreach (var name in names.Where(name =>
-            !systemNames.Contains(name) &&
-            excludePrefixes?.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) != true))
-        {
-            await mongoClient.DropDatabaseAsync(name);
-        }
+        _mongoRunner?.Dispose();
     }
 
     static async Task StartSilo(IHost silo, string name)
@@ -306,7 +315,14 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
         return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 
-    IHost CreateSilo(int siloPort, int gatewayPort, IPEndPoint primaryEndpoint, string mongoUrl, bool hostClient)
+    IHost CreateSilo(
+        int siloPort,
+        int gatewayPort,
+        IPEndPoint primaryEndpoint,
+        string mongoUrl,
+        bool hostClient,
+        bool eventSequences,
+        bool observers)
     {
         var builder = Host.CreateDefaultBuilder();
 
@@ -315,7 +331,6 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
             {
                 mongo.Server = mongoUrl;
                 mongo.Database = "orleans";
-                mongo.DirectConnection = true;
             },
             _ => { });
 
@@ -340,8 +355,8 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 
                 services.Configure<Configuration.ChronicleOptions>(options =>
                 {
-                    options.Clustering.Roles.EventSequences = true;
-                    options.Clustering.Roles.Observers = true;
+                    options.Clustering.Roles.EventSequences = eventSequences;
+                    options.Clustering.Roles.Observers = observers;
                 });
             });
 
@@ -366,6 +381,7 @@ public class ClusteringFixture : IChronicleFixture, IAsyncLifetime
 
             siloBuilder.ConfigureServices(services =>
             {
+                services.AddSingleton(_reactorSignal);
                 RemoveChronicleServerStartupTask(services);
                 if (hostClient)
                 {

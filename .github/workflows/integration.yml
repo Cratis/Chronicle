@@ -267,20 +267,7 @@ jobs:
      - name: Restore Clustering project
        run: dotnet restore Integration/Clustering/Clustering.csproj
 
-     # Clustering tests use Orleans TestCluster which runs silos in-process
-     # but still need MongoDB for persistence. No Testcontainers involved.
-     - name: Pre-pull Docker Hub images
-       uses: nick-fields/retry@v3
-       with:
-         timeout_minutes: 5
-         max_attempts: 5
-         retry_wait_seconds: 15
-         command: docker pull mongo
-
      - name: Run Clustering integration tests (${{ matrix.namespace }})
-       env:
-         # See client-integration-specs for the rationale.
-         TESTCONTAINERS_RYUK_DISABLED: true
        # See client-integration-specs for the retry rationale.
        run: |
          .github/scripts/run-tests-with-retry.sh \
