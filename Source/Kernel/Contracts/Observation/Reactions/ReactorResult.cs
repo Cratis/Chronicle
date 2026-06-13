@@ -38,4 +38,10 @@ public class ReactorResult
     /// </summary>
     [ProtoMember(5)]
     public string ExceptionStackTrace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the side-effect failures.
+    /// </summary>
+    [ProtoMember(6)]
+    public IList<SideEffectFailure> SideEffectFailures { get; set; } = [];
 }

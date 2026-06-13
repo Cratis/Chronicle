@@ -2,13 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
+namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking.and_append_fails;
 
-public class sync_handler_method_returning_event : Specification
+public class with_constraint_violation : Specification
 {
     ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
@@ -17,6 +18,7 @@ public class sync_handler_method_returning_event : Specification
     IEventLog _eventLog;
     EventContext _eventContext;
     MyOutboundEvent _outboundEvent;
+    AppendResult _failedAppendResult;
 
     void Establish()
     {
@@ -27,8 +29,20 @@ public class sync_handler_method_returning_event : Specification
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+
+        // Create a failed AppendResult with constraint violations
+        _failedAppendResult = AppendResult.Failed(
+            CorrelationId.New(),
+            [new ConstraintViolation(
+                new EventTypeId("MyOutboundEvent"),
+                EventSequenceNumber.Unavailable,
+                ConstraintType.Unique,
+                "TestConstraint",
+                "Constraint violated",
+                new ConstraintViolationDetails())]);
+
         _eventLog.Append(default!, default!, default, default, default, default, default, default, default, default)
-            .ReturnsForAnyArgs(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
+            .ReturnsForAnyArgs(_failedAppendResult);
 
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithSyncEventReturnType(_outboundEvent);
@@ -46,10 +60,21 @@ public class sync_handler_method_returning_event : Specification
         _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
     }
 
-    async Task Because() => _result = await _invoker.Invoke(new MyEvent(), _eventContext);
+    async Task Because()
+    {
+        _result = await _invoker.Invoke(new MyEvent(), _eventContext);
+    }
 
-    [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
-    [Fact] void should_append_to_event_log() => _eventLog.Received(1).Append(_eventContext.EventSourceId, _outboundEvent, default, default, default, default, default, default, default, default);
+    [Fact] void should_fail() => _result.IsFailed.ShouldBeTrue();
+    [Fact] void should_have_side_effect_failure() => _result.SideEffectFailure.ShouldNotBeNull();
+    [Fact] void should_have_append_failure() => _result.SideEffectFailure!.AppendFailures.Count().ShouldEqual(1);
+    [Fact] void should_have_constraint_violation() => _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
+    [Fact] void should_include_constraint_violation_details()
+    {
+        var violation = _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.First();
+        violation.EventTypeId.ShouldEqual("MyOutboundEvent");
+        violation.Message.ShouldEqual("Constraint violated");
+    }
 
     class ReactorWithSyncEventReturnType(MyOutboundEvent outbound) : IReactor
     {

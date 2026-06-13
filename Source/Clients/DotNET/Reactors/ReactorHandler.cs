@@ -7,7 +7,6 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Observation;
-using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -81,7 +80,7 @@ public class ReactorHandler(
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
     /// <inheritdoc/>
-    public async Task<Catch> OnNext(EventContext context, object content, IReactorInvoker reactorInvoker)
+    public async Task<ReactorInvocationResult> OnNext(EventContext context, object content, IReactorInvoker reactorInvoker)
     {
         try
         {
@@ -102,7 +101,7 @@ public class ReactorHandler(
         }
         catch (Exception ex)
         {
-            return ex;
+            return ReactorInvocationResult.FromException(ex);
         }
     }
 

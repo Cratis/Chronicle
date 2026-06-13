@@ -60,7 +60,7 @@ public class ReactorInvoker(
             .ToImmutableList();
 
     /// <inheritdoc/>
-    public async Task<Catch> Invoke(object content, EventContext eventContext)
+    public async Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext)
     {
         var reactorId = targetType.GetReactorId();
         var eventTypeName = content.GetType().Name;
@@ -84,19 +84,24 @@ public class ReactorInvoker(
                     returnValue = method.Invoke(activatedReactor.Instance, [content]);
                 }
 
-                await HandleReturnValue(method, returnValue, eventContext);
+                var sideEffectResult = await HandleReturnValue(method, returnValue, eventContext);
+                if (sideEffectResult.TryGetError(out var sideEffectFailure))
+                {
+                    // Return side-effect failure directly without using exceptions
+                    return ReactorInvocationResult.FromSideEffectFailure(sideEffectFailure);
+                }
             }
             else
             {
                 logger.ReactorNoHandlerFound(reactorId, eventTypeName);
             }
 
-            return Catch.Success();
+            return ReactorInvocationResult.Success();
         }
         catch (Exception ex)
         {
             logger.ReactorFailed(reactorId, eventTypeName, ex);
-            return ex;
+            return ReactorInvocationResult.FromException(ex);
         }
         finally
         {
@@ -113,11 +118,11 @@ public class ReactorInvoker(
         }
     }
 
-    async Task HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
+    async Task<Result<SideEffects.ReactorSideEffectFailure>> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
     {
         if (method.ReturnType == typeof(void))
         {
-            return;
+            return Result.Success<SideEffects.ReactorSideEffectFailure>();
         }
 
         if (returnValue is Task task)
@@ -126,41 +131,43 @@ public class ReactorInvoker(
 
             if (!method.ReturnType.IsGenericType)
             {
-                return;
+                return Result.Success<SideEffects.ReactorSideEffectFailure>();
             }
 
             if (sideEffectHandlers is null || eventStore is null)
             {
-                return;
+                return Result.Success<SideEffects.ReactorSideEffectFailure>();
             }
 
             var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
             var result = resultProperty?.GetValue(task);
             if (result is null)
             {
-                return;
+                return Result.Success<SideEffects.ReactorSideEffectFailure>();
             }
 
             var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
             if (sideEffectHandlers.CanHandle(reactorContext, result))
             {
-                await sideEffectHandlers.Handle(reactorContext, eventStore, result);
+                return await sideEffectHandlers.Handle(reactorContext, eventStore, result);
             }
 
-            return;
+            return Result.Success<SideEffects.ReactorSideEffectFailure>();
         }
 
         // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
         if (sideEffectHandlers is null || eventStore is null || returnValue is null)
         {
-            return;
+            return Result.Success<SideEffects.ReactorSideEffectFailure>();
         }
 
         var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
         if (sideEffectHandlers.CanHandle(syncReactorContext, returnValue))
         {
-            await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
+            return await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
         }
+
+        return Result.Success<SideEffects.ReactorSideEffectFailure>();
     }
 
     ReactorContextValues BuildValues(EventContext eventContext) =>

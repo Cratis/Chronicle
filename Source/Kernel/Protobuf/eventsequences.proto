@@ -57,6 +57,22 @@ message Causation {
    string Type = 2;
    map<string,string> Properties = 3;
 }
+enum CompleteStreamError {
+   AlreadyCompleted = 0;
+   DefaultStreamCannotBeCompleted = 1;
+}
+message CompleteStreamRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string EventStreamType = 4;
+   string EventStreamId = 5;
+}
+message CompleteStreamResponse {
+   bool IsSuccess = 1;
+   uint64 SequenceNumber = 2;
+   CompleteStreamError Error = 3;
+}
 message ConcurrencyScope {
    uint64 SequenceNumber = 1;
    bool EventSourceId = 2;
@@ -75,6 +91,7 @@ enum ConstraintType {
    Unique = 1;
    UniqueEventType = 2;
    Schema = 3;
+   StreamClosed = 4;
 }
 message ConstraintViolation {
    string EventTypeId = 1;
@@ -226,6 +243,7 @@ message SerializableDateTimeOffset {
 service EventSequences {
    rpc Append (AppendRequest) returns (AppendResponse);
    rpc AppendMany (AppendManyRequest) returns (AppendManyResponse);
+   rpc CompleteStream (CompleteStreamRequest) returns (CompleteStreamResponse);
    rpc GetEventsFromEventSequenceNumber (GetFromEventSequenceNumberRequest) returns (GetFromEventSequenceNumberResponse);
    rpc GetForEventSourceIdAndEventTypes (GetForEventSourceIdAndEventTypesRequest) returns (GetForEventSourceIdAndEventTypesResponse);
    rpc GetTailSequenceNumber (GetTailSequenceNumberRequest) returns (GetTailSequenceNumberResponse);

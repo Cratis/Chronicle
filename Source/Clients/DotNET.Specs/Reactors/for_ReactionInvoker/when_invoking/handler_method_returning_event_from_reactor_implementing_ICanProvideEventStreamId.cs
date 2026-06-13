@@ -5,13 +5,12 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
-using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
 
 public class handler_method_returning_event_from_reactor_implementing_ICanProvideEventStreamId : Specification
 {
-    CatchResult _result;
+    ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
     ReactorInvoker _invoker;
     IEventStore _eventStore;
@@ -30,6 +29,8 @@ public class handler_method_returning_event_from_reactor_implementing_ICanProvid
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
+        _eventLog.Append(default!, default!, default, default, default, default, default, default, default, default)
+            .ReturnsForAnyArgs(AppendResult.Success(CorrelationId.New(), EventSequenceNumber.First));
 
         var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventResultHandler(eventTypes)]));
         var reactor = new ReactorWithCustomEventStreamId(_outboundEvent, _reactorEventStreamId);
@@ -49,7 +50,7 @@ public class handler_method_returning_event_from_reactor_implementing_ICanProvid
 
     async Task Because() => _result = await _invoker.Invoke(new MyEvent(), _eventContext);
 
-    [Fact] void should_succeed() => _result.TryGetException(out _).ShouldBeFalse();
+    [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_append_to_event_log_with_reactor_event_stream_id() =>
         _eventLog.Received(1).Append(_eventContext.EventSourceId, _outboundEvent, default, _reactorEventStreamId, default, default, default, default, default, default);
 

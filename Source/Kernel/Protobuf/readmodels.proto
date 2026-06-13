@@ -131,11 +131,26 @@ message Identity {
 message IndexDefinition {
    string PropertyPath = 1;
 }
+message ObserveInstancesRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string ReadModel = 3;
+   int32 Page = 4;
+   int32 PageSize = 5;
+   string Occurrence = 6;
+}
+message ObserveInstancesResponse {
+   repeated string Instances = 1;
+   int32 TotalCount = 2;
+   int32 Page = 3;
+   int32 PageSize = 4;
+}
 message ReadModelChangeset {
    string Namespace = 1;
    string ModelKey = 2;
    string ReadModel = 3;
    bool Removed = 4;
+   bool Subscribed = 5;
 }
 message ReadModelDefinition {
    ReadModelType Type = 1;
@@ -210,6 +225,10 @@ message WatchRequest {
    string Namespace = 2;
    string ReadModelIdentifier = 3;
    string EventSequenceId = 4;
+}
+service MaterializedReadModels {
+   rpc GetInstances (GetInstancesRequest) returns (GetInstancesResponse);
+   rpc ObserveInstances (ObserveInstancesRequest) returns (stream ObserveInstancesResponse);
 }
 service ReadModels {
    rpc DehydrateSession (DehydrateSessionRequest) returns (.google.protobuf.Empty);

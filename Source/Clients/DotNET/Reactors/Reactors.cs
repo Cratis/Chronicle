@@ -252,6 +252,18 @@ public class Reactors : IReactors
         }
     }
 
+    static Contracts.Observation.Reactors.SideEffectFailure[] MapSideEffectFailures(ReactorSideEffectFailure failure) =>
+        failure.AppendFailures.Select(af => new Contracts.Observation.Reactors.SideEffectFailure
+        {
+            ConstraintViolations = af.ConstraintViolations.Select(cv => new Contracts.Observation.Reactors.ConstraintViolation
+            {
+                EventTypeId = cv.EventTypeId,
+                Message = cv.Message
+            }).ToArray(),
+            HasConcurrencyViolation = af.HasConcurrencyViolation,
+            Errors = af.Errors.ToArray()
+        }).ToArray();
+
     IReactorHandler CreateHandlerFor(Type reactorType)
     {
         var eventTypes = ReactorInvoker.GetEventTypesFor(_eventStore.EventTypes, reactorType);
@@ -408,6 +420,7 @@ public class Reactors : IReactors
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
         var state = ObservationState.Success;
+        Contracts.Observation.Reactors.SideEffectFailure[]? sideEffectFailures = null;
 
         await using var serviceProviderScope = _serviceProvider.CreateAsyncScope();
         var activatedReactorResult = _artifactActivator.Activate(serviceProviderScope.ServiceProvider, handler.ReactorType);
@@ -457,10 +470,29 @@ public class Reactors : IReactors
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.TryGetException(out var ex))
+                if (handleResult.IsFailed)
                 {
-                    FailedToHandleEvent(ex, @event.Context.EventType.Id);
-                    break;
+                    // Handle side-effect failures
+                    if (handleResult.SideEffectFailure is not null)
+                    {
+                        sideEffectFailures = MapSideEffectFailures(handleResult.SideEffectFailure);
+                    }
+
+                    // Handle exceptions
+                    if (handleResult.ExceptionResult.TryGetException(out var ex))
+                    {
+                        FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                        break;
+                    }
+
+                    // If we had a side-effect failure without an exception, still treat it as a failure
+                    if (handleResult.SideEffectFailure is not null)
+                    {
+                        FailedToHandleEvent(
+                            new InvalidOperationException("Reactor side-effect failed"),
+                            @event.Context.EventType.Id);
+                        break;
+                    }
                 }
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
@@ -476,6 +508,7 @@ public class Reactors : IReactors
         void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
         {
             _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+
             exceptionMessages = ex.GetAllMessages();
             exceptionStackTrace = ex.StackTrace ?? string.Empty;
             state = ObservationState.Failed;
@@ -498,6 +531,11 @@ public class Reactors : IReactors
                 ExceptionMessages = exceptionMessages.ToList(),
                 ExceptionStackTrace = exceptionStackTrace
             };
+
+            if (sideEffectFailures is not null)
+            {
+                result.SideEffectFailures = sideEffectFailures;
+            }
 
             messages.OnNext(new(new(result)));
         }

@@ -3,13 +3,12 @@
 
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
-using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
 
 public class void_handler_method : Specification
 {
-    CatchResult _result;
+    ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
     ReactorInvoker _invoker;
 
@@ -29,7 +28,7 @@ public class void_handler_method : Specification
 
     async Task Because() => _result = await _invoker.Invoke(new MyEvent(), EventContext.Empty);
 
-    [Fact] void should_succeed() => _result.TryGetException(out _).ShouldBeFalse();
+    [Fact] void should_succeed() => _result.IsSuccess.ShouldBeTrue();
     [Fact] void should_call_before_invoke() => _middlewares.Received(1).BeforeInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
     [Fact] void should_call_after_invoke() => _middlewares.Received(1).AfterInvoke(Arg.Any<EventContext>(), Arg.Any<object>());
 

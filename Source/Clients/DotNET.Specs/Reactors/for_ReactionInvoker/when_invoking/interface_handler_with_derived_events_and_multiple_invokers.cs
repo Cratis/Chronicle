@@ -3,14 +3,13 @@
 
 using Cratis.Chronicle.Events;
 using Microsoft.Extensions.Logging;
-using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
 
 public class interface_handler_with_derived_events_and_multiple_invokers : Specification
 {
-    CatchResult _firstResult;
-    CatchResult _secondResult;
+    ReactorInvocationResult _firstResult;
+    ReactorInvocationResult _secondResult;
     TrackingReactor _firstReactor;
     TrackingReactor _secondReactor;
     IReactorMiddlewares _middlewares;
@@ -45,8 +44,8 @@ public class interface_handler_with_derived_events_and_multiple_invokers : Speci
         _secondResult = await _secondInvoker.Invoke(new MySecondDerivedEventFromInterface(), EventContext.Empty);
     }
 
-    [Fact] void should_succeed_for_the_first_invocation() => _firstResult.TryGetException(out _).ShouldBeFalse();
-    [Fact] void should_succeed_for_the_second_invocation() => _secondResult.TryGetException(out _).ShouldBeFalse();
+    [Fact] void should_succeed_for_the_first_invocation() => _firstResult.IsSuccess.ShouldBeTrue();
+    [Fact] void should_succeed_for_the_second_invocation() => _secondResult.IsSuccess.ShouldBeTrue();
     [Fact] void should_invoke_the_interface_handler_for_the_first_derived_event() => _firstReactor.HandledEventTypes.ShouldContainOnly(typeof(MyFirstDerivedEventFromInterface));
     [Fact] void should_invoke_the_interface_handler_for_the_second_derived_event() => _secondReactor.HandledEventTypes.ShouldContainOnly(typeof(MySecondDerivedEventFromInterface));
     [Fact] void should_call_before_invoke_for_each_event() => _middlewares.Received(2).BeforeInvoke(Arg.Any<EventContext>(), Arg.Any<object>());

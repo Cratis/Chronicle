@@ -14,6 +14,12 @@ message Causation {
    string Type = 2;
    map<string,string> Properties = 3;
 }
+
+// Represents a constraint violation from a reactor side-effect append operation.
+message ConstraintViolation {
+   string EventTypeId = 1; // The event type ID that violated the constraint
+   string Message = 2; // The constraint violation message
+}
 message EventContext {
    EventType EventType = 1;
    string EventSourceType = 2;
@@ -58,6 +64,7 @@ message EventTypeWithKeyExpression {
 message EventsToObserve {
    string Partition = 1;
    repeated AppendedEvent Events = 2;
+   ReplayState ReplayState = 3;
 }
 message HasReactorRequest {
    string EventStore = 1;
@@ -105,6 +112,7 @@ message ReactorResult {
    uint64 LastSuccessfulObservation = 3;
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
+   repeated SideEffectFailure SideEffectFailures = 6;
 }
 message RegisterReactor {
    string ConnectionId = 1;
@@ -112,9 +120,23 @@ message RegisterReactor {
    string Namespace = 3;
    ReactorDefinition Reactor = 4;
 }
+enum ReplayState {
+   REPLAY_STATE_None = 0;
+   BeginReplay = 1;
+   EndReplay = 2;
+   BeginReplayPartition = 3;
+   EndReplayPartition = 4;
+}
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+
+// Represents a failure from an individual append operation in a reactor side-effect.
+message SideEffectFailure {
+   repeated ConstraintViolation ConstraintViolations = 1; // The constraint violations that occurred
+   bool HasConcurrencyViolation = 2; // Whether a concurrency violation occurred
+   repeated string Errors = 3; // The error messages from the append operation
 }
 service Reactors {
    rpc HasReactor (HasReactorRequest) returns (HasReactorResponse);
