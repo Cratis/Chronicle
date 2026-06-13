@@ -22,6 +22,6 @@ public class and_root_subject_appears_again_in_chain : Specification
     void Because() => _result = _root.WithoutDuplicates();
 
     [Fact] void should_keep_root_identity() => _result.Subject.ShouldEqual("subject-a");
-    [Fact] void should_keep_unique_on_behalf_of_identity() => _result.OnBehalfOf!.Subject.ShouldEqual("subject-b");
-    [Fact] void should_have_no_further_chain() => _result.OnBehalfOf!.OnBehalfOf.ShouldBeNull();
+    [Fact] void should_keep_unique_on_behalf_of_identity() => _result.OnBehalfOf.Subject.ShouldEqual("subject-b");
+    [Fact] void should_have_no_further_chain() => _result.OnBehalfOf.OnBehalfOf.ShouldBeNull();
 }

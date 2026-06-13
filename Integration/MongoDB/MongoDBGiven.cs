@@ -22,7 +22,7 @@ public class MongoDBGiven<TSetup> : IClassFixture<TSetup>
         Context = context;
         if (context is MongoDBSpecification spec)
         {
-            spec.SetName(GetType().FullName!);
+            spec.SetName(GetType().FullName);
         }
     }
 

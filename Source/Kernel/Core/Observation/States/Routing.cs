@@ -66,7 +66,10 @@ public class Routing(
 
         // First-time subscription after state reset: start from beginning so existing events are not skipped.
         // NextEventSequenceNumber is Unavailable when the observer grain reloaded state from an empty DB.
-        if (!state.NextEventSequenceNumber.IsActualValue && _tailEventSequenceNumber.IsActualValue)
+        // When the event log is also empty, we still need to prime NextEventSequenceNumber to First so that
+        // Handle() does not discard the very first event (sequence 0 >= ulong.MaxValue is false, so the
+        // event would be silently dropped if we left the value as Unavailable).
+        if (!state.NextEventSequenceNumber.IsActualValue)
         {
             state = state with { NextEventSequenceNumber = EventSequenceNumber.First };
         }

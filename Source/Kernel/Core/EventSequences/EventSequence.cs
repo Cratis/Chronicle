@@ -19,6 +19,7 @@ using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events.Constraints;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
@@ -54,6 +55,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="eventHashCalculator"><see cref="IEventHashCalculator"/> for calculating event content hashes.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
+[EventSequencePlacement]
 public class EventSequence(
     IStorage storage,
     IConstraintValidationFactory constraintValidatorSetFactory,

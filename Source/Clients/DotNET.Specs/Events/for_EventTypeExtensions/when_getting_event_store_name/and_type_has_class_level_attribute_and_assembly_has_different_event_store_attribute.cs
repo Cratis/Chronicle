@@ -20,7 +20,7 @@ public class and_type_has_class_level_attribute_and_assembly_has_different_event
             new AssemblyName("TestAssemblyWithDifferentEventStoreAttribute"),
             AssemblyBuilderAccess.Run);
 
-        var eventStoreAttributeConstructor = typeof(EventStoreAttribute).GetConstructor([typeof(string)])!;
+        var eventStoreAttributeConstructor = typeof(EventStoreAttribute).GetConstructor([typeof(string)]);
         assembly.SetCustomAttribute(
             new CustomAttributeBuilder(eventStoreAttributeConstructor, [AssemblyLevelEventStore]));
 
@@ -28,7 +28,7 @@ public class and_type_has_class_level_attribute_and_assembly_has_different_event
         var typeBuilder = module.DefineType("EventWithClassLevelOverride");
         typeBuilder.SetCustomAttribute(
             new CustomAttributeBuilder(eventStoreAttributeConstructor, [ClassLevelEventStore]));
-        _typeFromAssemblyWithAttribute = typeBuilder.CreateType()!;
+        _typeFromAssemblyWithAttribute = typeBuilder.CreateType();
     }
 
     void Because() => _result = _typeFromAssemblyWithAttribute.GetEventStoreName();

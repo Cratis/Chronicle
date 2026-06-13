@@ -31,9 +31,9 @@ public class TestableHandleEventsForPartition(
     ILogger<HandleEventsForPartition> logger)
     : HandleEventsForPartition(state, throttle, storage, eventCompliance, logger), IGrainType
 {
-    static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance)!;
-    static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance)!;
-    static readonly FieldInfo _eventSourceIdField = typeof(HandleEventsForPartition).GetField("_eventSourceId", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    static readonly FieldInfo _observerField = typeof(HandleEventsForPartition).GetField("_observer", BindingFlags.NonPublic | BindingFlags.Instance);
+    static readonly FieldInfo _subscriberField = typeof(HandleEventsForPartition).GetField("_subscriber", BindingFlags.NonPublic | BindingFlags.Instance);
+    static readonly FieldInfo _eventSourceIdField = typeof(HandleEventsForPartition).GetField("_eventSourceId", BindingFlags.NonPublic | BindingFlags.Instance);
 
     /// <inheritdoc/>
     public Type GrainType => typeof(IHandleEventsForPartition);

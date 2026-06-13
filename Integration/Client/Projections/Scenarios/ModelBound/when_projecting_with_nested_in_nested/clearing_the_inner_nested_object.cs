@@ -50,6 +50,6 @@ public class clearing_the_inner_nested_object(context context) : Given<context>(
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_preserve_the_slice_name() => Context.Result.Name.ShouldEqual("Model-Bound Slice");
     [Fact] void should_preserve_the_nested_command() => Context.Result.Command.ShouldNotBeNull();
-    [Fact] void should_preserve_the_command_name() => Context.Result.Command!.Name.ShouldEqual("Register");
-    [Fact] void should_have_cleared_the_nested_validation() => Context.Result.Command!.Validation.ShouldBeNull();
+    [Fact] void should_preserve_the_command_name() => Context.Result.Command.Name.ShouldEqual("Register");
+    [Fact] void should_have_cleared_the_nested_validation() => Context.Result.Command.Validation.ShouldBeNull();
 }

@@ -4,7 +4,6 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
-using System.Diagnostics;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
@@ -29,6 +28,12 @@ internal class ChronicleConnection(
     IGrainFactory grainFactory,
     ILoggerFactory loggerFactory) : IChronicleConnection, IChronicleServicesAccessor
 {
+    /// <summary>
+    /// In-process test clients share the silo process and cannot network-drop, so they are flagged as
+    /// keep-alive-exempt to stop the kernel disconnecting them on the (cross-silo) keep-alive timeout.
+    /// </summary>
+    const bool KeepAliveExempt = true;
+
     IServices? _services;
     ConnectionService? _connectionService;
 
@@ -90,20 +95,46 @@ internal class ChronicleConnection(
         await connectedClients.OnClientConnected(
             (KernelConnectionId)lifecycle.ConnectionId.Value,
             string.Empty,
-            Debugger.IsAttached);
+            KeepAliveExempt);
 
         _connectionService = new ConnectionService(grainFactory, loggerFactory.CreateLogger<ConnectionService>());
         _connectionService.Connect(new()
         {
             ConnectionId = lifecycle.ConnectionId,
-            IsRunningWithDebugger = Debugger.IsAttached,
+            IsRunningWithDebugger = KeepAliveExempt,
         }).Subscribe(HandleConnection);
 
         await lifecycle.Connected();
     }
 
-    void HandleConnection(ConnectionKeepAlive keepAlive)
+    void HandleConnection(ConnectionKeepAlive keepAlive) => _ = SendKeepAlive();
+
+    async Task SendKeepAlive()
     {
-        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
+        // Fire-and-forget and swallow transient failures. The kernel emits keep-alives on a 1s loop and
+        // terminates that loop — disconnecting the client — if delivering one throws. Each ping is a
+        // cross-silo grain call here, so a single transient rejection or slow call must not propagate back
+        // into the emission loop (which the previous synchronous GetResult() did) nor block it.
+        try
+        {
+            var connectionId = (KernelConnectionId)lifecycle.ConnectionId.Value;
+            var connectedClients = grainFactory.GetGrain<IConnectedClients>(0);
+            var stillConnected = await connectedClients.OnClientPing(connectionId);
+
+            // The ConnectedClients grain keeps its registry in memory only. In a cluster it can reactivate
+            // (or migrate silos) and lose that registry, after which OnClientPing reports the client as
+            // unknown and observers start failing with "Subscriber is disconnected". Re-register so the
+            // grain learns about this still-alive client again and observers stay subscribed. The
+            // lifecycle.IsConnected guard is essential: a test that explicitly disconnects via
+            // Lifecycle.Disconnected() must stay disconnected — without it this heartbeat would silently
+            // resurrect the connection and break reconnect specs.
+            if (!stillConnected && lifecycle.IsConnected)
+            {
+                await connectedClients.OnClientConnected(connectionId, string.Empty, KeepAliveExempt);
+            }
+        }
+        catch
+        {
+        }
     }
 }

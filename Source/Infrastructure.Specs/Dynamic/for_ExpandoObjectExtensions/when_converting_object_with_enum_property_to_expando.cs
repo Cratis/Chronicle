@@ -25,7 +25,7 @@ public class when_converting_object_with_enum_property_to_expando : Specificatio
     void Because()
     {
         _result = _source.AsExpandoObject();
-        _statusValue = ((IDictionary<string, object?>)_result)["Status"]!;
+        _statusValue = ((IDictionary<string, object?>)_result)["Status"];
     }
 
     [Fact] void should_store_enum_value_as_the_enum_type_not_a_nested_expando() =>

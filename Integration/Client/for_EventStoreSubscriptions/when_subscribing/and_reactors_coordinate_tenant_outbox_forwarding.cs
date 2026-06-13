@@ -58,7 +58,7 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
                 sourceEventStore.EventTypes.Register(),
                 targetEventStore.EventTypes.Register());
 
-            var connectionServices = (targetTenantA.Connection as IChronicleServicesAccessor)!;
+            var connectionServices = (targetTenantA.Connection as IChronicleServicesAccessor);
             await Task.WhenAll(
                 connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantANamespace }),
                 connectionServices.Services.Namespaces.Ensure(new EnsureNamespace { EventStore = SourceEventStoreName, Name = TenantBNamespace }),

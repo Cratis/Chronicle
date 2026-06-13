@@ -72,7 +72,7 @@ public class with_set_value_operations : given.a_model_bound_code_generator
         var setValueAttr = statusParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("SetValue"));
-        setValueAttr.ArgumentList!.Arguments.Count.ShouldEqual(1);
+        setValueAttr.ArgumentList.Arguments.Count.ShouldEqual(1);
         setValueAttr.ArgumentList.Arguments[0].ToString().ShouldContain("active");
     }
 
@@ -93,7 +93,7 @@ public class with_set_value_operations : given.a_model_bound_code_generator
         var setValueAttr = priorityParam.AttributeLists
             .SelectMany(al => al.Attributes)
             .First(a => a.Name.ToString().Contains("SetValue"));
-        setValueAttr.ArgumentList!.Arguments.Count.ShouldEqual(1);
+        setValueAttr.ArgumentList.Arguments.Count.ShouldEqual(1);
         setValueAttr.ArgumentList.Arguments[0].ToString().ShouldEqual("1");
     }
 }

@@ -17,5 +17,5 @@ public class with_pascal_case_property_in_camel_case_schema : Specification
     void Because() => _result = _schema.GetSchemaPropertyForPropertyPath(new PropertyPath("Name"));
 
     [Fact] void should_find_the_property() => _result.ShouldNotBeNull();
-    [Fact] void should_return_correct_property() => _result!.Name.ShouldEqual("name");
+    [Fact] void should_return_correct_property() => _result.Name.ShouldEqual("name");
 }

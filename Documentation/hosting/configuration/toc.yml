@@ -10,6 +10,8 @@
   href: storage.md
 - name: Compliance Storage
   href: compliance-storage.md
+- name: Clustering
+  href: clustering.md
 - name: Observers
   href: observers.md
 - name: Read Models

@@ -20,7 +20,7 @@ public class with_nested_object : Specification
     {
         _eventTypes = new EventTypesForSpecifications([typeof(NestedItemSet), typeof(NestedItemCleared)]);
         _builder = new ProjectionBuilderFor<NestedParentReadModel>(
-            new ProjectionId(typeof(NestedParentReadModel).FullName!),
+            new ProjectionId(typeof(NestedParentReadModel).FullName),
             typeof(NestedParentReadModel),
             new DefaultNamingPolicy(),
             _eventTypes,
