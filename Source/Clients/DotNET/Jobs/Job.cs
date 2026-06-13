@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Jobs;
 /// <summary>
 /// Represents the state of a job.
 /// </summary>
-/// <param name="eventStore">The <see cref="IEventStore"/>.</param>
+/// <param name="eventStore">The <see cref="IEventStore"/> this job belongs to.</param>
 public class Job(IEventStore eventStore)
 {
     /// <summary>
@@ -47,21 +47,19 @@ public class Job(IEventStore eventStore)
     public JobProgress Progress { get; set; } = new();
 
     /// <summary>
-    /// Get the job steps for the job.
+    /// Gets the job steps for this job.
     /// </summary>
-    /// <param name="statuses">The <see cref="JobStepStatus"/> to filter by. If no statuses are specified, it will return for all statuses.</param>
     /// <returns>Collection of <see cref="JobStep"/>.</returns>
-    public async Task<IEnumerable<JobStep>> GetJobSteps(params JobStepStatus[] statuses)
+    public async Task<IEnumerable<JobStep>> GetJobSteps()
     {
         var servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
         var result = await servicesAccessor.Services.Jobs.GetJobSteps(new()
         {
             EventStore = eventStore.Name,
             Namespace = eventStore.Namespace,
-            JobId = Id,
-            Statuses = statuses.Select(status => (Contracts.Jobs.JobStepStatus)(int)status).ToArray()
+            JobId = Id
         });
 
-        return result.ToClient();
+        return (result ?? []).ToClient();
     }
 }

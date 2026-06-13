@@ -13,7 +13,7 @@ internal static class UserConverters
     /// </summary>
     /// <param name="user">Contract user.</param>
     /// <returns>API user.</returns>
-    public static User ToApi(this Contracts.Security.User user) => new(
+    public static User ToApi(this Contracts.Security.UserResponse user) => new(
         user.Id,
         user.Username,
         user.Email,
@@ -26,6 +26,6 @@ internal static class UserConverters
     /// </summary>
     /// <param name="users">Contract users.</param>
     /// <returns>API users.</returns>
-    public static IEnumerable<User> ToApi(this IEnumerable<Contracts.Security.User> users) =>
+    public static IEnumerable<User> ToApi(this IEnumerable<Contracts.Security.UserResponse> users) =>
         users.Select(ToApi);
 }

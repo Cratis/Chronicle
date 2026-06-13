@@ -18,8 +18,8 @@ public record RemoveApplication(Guid Id)
     /// <param name="applications">The <see cref="IApplications"/> contract.</param>
     /// <returns>Awaitable task.</returns>
     internal Task Handle(IApplications applications) =>
-        applications.Remove(new()
+        applications.RemoveApplication(new()
         {
-            Id = Id,
+            Id = Id
         });
 }

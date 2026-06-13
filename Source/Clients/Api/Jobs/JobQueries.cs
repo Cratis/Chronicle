@@ -35,6 +35,6 @@ public class JobQueries : ControllerBase
         [FromRoute] string eventStore,
         [FromRoute] string @namespace) =>
         _jobs.InvokeAndWrapWithTransformSubject(
-            token => _jobs.ObserveJobs(new() { EventStore = eventStore, Namespace = @namespace }, token),
+            token => _jobs.AllJobs(new AllJobsRequest { EventStore = eventStore, Namespace = @namespace }, token),
             jobs => jobs.ToApi());
 }

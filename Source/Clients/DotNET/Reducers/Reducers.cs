@@ -238,7 +238,7 @@ public class Reducers : IReducers
     /// <inheritdoc/>
     public async Task<JobId> Replay(ReducerId reducerId)
     {
-        var response = await _servicesAccessor.Services.Observers.Replay(new()
+        var response = await _servicesAccessor.Services.Observers.Replay(new Replay
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
