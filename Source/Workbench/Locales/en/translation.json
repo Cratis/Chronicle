@@ -44,6 +44,7 @@
             "namespaces": "Namespaces",
             "sequences": "Sequences",
             "projections": "Projections",
+            "captures": "Captures",
             "reducers": "Reducers",
             "reactors": "Reactors",
             "sinks": "Sinks",
@@ -227,6 +228,23 @@
                         "message": "This projection has no read model type specified. Enter a name to create one automatically from the event properties.",
                         "readModelNameLabel": "Read Model Name"
                     }
+                }
+            },
+            "captures": {
+                "title": "Captures",
+                "empty": "No captures",
+                "emptyEditor": "No captures. Press New to create one",
+                "columns": {
+                    "name": "Name"
+                },
+                "actions": {
+                    "new": "New",
+                    "save": "Save"
+                },
+                "saveDisabledReasons": {
+                    "emptyContent": "Editor is empty",
+                    "noChanges": "No changes to save",
+                    "validationErrors": "Fix validation errors first"
                 }
             }
         },
@@ -531,6 +549,12 @@
                 "eventProperty": "Event Property",
                 "type": "Type"
             }
+        },
+        "captureEditor": {
+            "tooltips": {
+                "help": "Show Capture Declaration Language help panel"
+            },
+            "languageReference": "Capture Declaration Language Reference"
         },
         "schemaEditor": {
             "columns": {

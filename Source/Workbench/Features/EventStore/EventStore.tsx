@@ -31,6 +31,7 @@ import { Users } from './System/Users/Users';
 import { Applications } from './System/Applications/Applications';
 import { EventsSeeding } from './General/Seeding/EventsSeeding';
 import { EventsSeeding as NamespacedEventsSeeding } from './Namespaces/Seeding/EventsSeeding';
+import { Captures } from './General/Captures/Captures';
 // import { Dashboard } from './Dashboard/Dashboard';
 
 export const EventStore = () => {
@@ -55,6 +56,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
+                { label: strings.mainMenu.general.captures, url: 'captures', icon: mdIcons.MdCameraAlt },
                 { label: strings.mainMenu.general.projections, url: ':namespace/projections', icon: mdIcons.MdTransform },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
                 { label: strings.mainMenu.general.seedData, url: 'seed-data', icon: mdIcons.MdGrain },
@@ -86,6 +88,7 @@ export const EventStore = () => {
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'webhooks'} element={<Webhooks />} />
+                <Route path={'captures'} element={<Captures />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'seed-data'} element={<EventsSeeding />} />
                 <Route path={'sequences'} element={<GeneralSequences />} />
