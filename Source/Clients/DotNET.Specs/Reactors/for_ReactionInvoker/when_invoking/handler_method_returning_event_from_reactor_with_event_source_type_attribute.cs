@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +26,7 @@ public class handler_method_returning_event_from_reactor_with_event_source_type_
         _outboundEvent = new MyOutboundEvent();
 
         _eventLog = Substitute.For<IEventLog>();
+        _eventLog.Append(Arg.Any<EventSourceId>(), Arg.Any<object>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<EventSourceType?>(), Arg.Any<CorrelationId?>(), Arg.Any<IEnumerable<string>>(), Arg.Any<ConcurrencyScope?>(), Arg.Any<DateTimeOffset?>(), Arg.Any<Subject?>()).Returns(x => Task.FromResult(AppendResult.Success(CorrelationId.NotSet, EventSequenceNumber.First)));
         _eventStore = Substitute.For<IEventStore>();
         _eventStore.EventLog.Returns(_eventLog);
 
