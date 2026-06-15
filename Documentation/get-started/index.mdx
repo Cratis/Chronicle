@@ -129,7 +129,7 @@ Append a fact → a projection builds state from it → a reactor acts on it. **
 
 ## See it in the workbench
 
-The Docker image includes the **Chronicle workbench** — a web UI for poking at your event store. Open [http://localhost:8080](http://localhost:8080) and log in with the development credentials (username `Admin`, password `ChangeMeNow!`). Choose the `ChronicleConsole` event store and look at **Sequences**: there's your `TestEvent`, sitting at sequence number `0`, permanent and in order. Append more and watch the log grow. This is the source of truth your projection and reactor were both reading from.
+The Docker image includes the **Chronicle workbench** — a web UI for poking at your event store. Open [http://localhost:8080](http://localhost:8080), choose the `ChronicleConsole` event store, and look at **Sequences**: there's your `TestEvent`, sitting at sequence number `0`, permanent and in order. Append more and watch the log grow. This is the source of truth your projection and reactor were both reading from.
 
 ## Where to go next
 

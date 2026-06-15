@@ -37,9 +37,6 @@ That first argument is the [event source id](../concepts/event-source.md) — th
 
 Run your app, then open the <a href="http://localhost:8080" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
 
-> [!NOTE]
-> If you are using the Development or Development-slim image, log in with username **Admin** and password **ChangeMeNow!**. See [Workbench — Development](../workbench/development.md) for details.
-
 ![Chronicle Workbench showing events](workbench.png)
 
 ## Turn events into a read model
