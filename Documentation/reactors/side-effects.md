@@ -45,9 +45,16 @@ public IEnumerable<object> BookReserved(BookReserved @event, EventContext contex
 
 ## Targeting a Specific Event Source Id
 
-The return types above append to the `EventSourceId` of the *triggering* event (optionally overridden once for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid)). But automation and translation reactors often need to write to a *different* entity — or several — than the one that triggered them. A `BookReserved` on a book has to record activity on the *member's* stream, and decrement stock on the *book's* stream.
+Everything above lands the returned event on the *triggering* event's `EventSourceId` — optionally redirected once for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). That covers most reactors. But automation and translation reactors often need to write to a *different* entity than the one that triggered them — or to several at once.
 
-Return an `EventForEventSourceId` to append an event to an explicit `EventSourceId` you choose per event:
+Picture a library. A member reserves a book, and that reservation is a fact about the *book*:
+
+```csharp
+[EventType]
+public record BookReserved(MemberId MemberId, Isbn Isbn);
+```
+
+When it happens you want to record activity on the *member* — a different event source altogether. Return an `EventForEventSourceId` and pick the target `EventSourceId` yourself:
 
 ```csharp
 using Cratis.Chronicle.Events;
@@ -57,34 +64,36 @@ using Cratis.Chronicle.Reactors;
 public class ReservationReactor : IReactor
 {
     public EventForEventSourceId BookReserved(BookReserved @event, EventContext context) =>
-        new(@event.MemberId, new MemberReservedBook(@event.Isbn));
+        new(@event.MemberId, new MemberActivityRecorded(@event.Isbn));
 }
 ```
 
-The side effect is appended to `@event.MemberId`, not to the book that triggered the reactor.
+`MemberActivityRecorded` is appended to `@event.MemberId`, **not** to the book that triggered the reactor — so it shows up on the member's stream, ready for a member-activity projection to pick up.
 
-To target several event source ids from one handler, return `IEnumerable<EventForEventSourceId>`. All events are appended as a single transaction:
+A single reservation usually ripples to more than one entity: the member gains activity, and the book loses stock. Return `IEnumerable<EventForEventSourceId>` to fan out to several event source ids in one go — they are appended together as a single transaction:
 
 ```csharp
 public IEnumerable<EventForEventSourceId> BookReserved(BookReserved @event, EventContext context) =>
 [
-    new(@event.MemberId, new MemberReservedBook(@event.Isbn)),
-    new(@event.Isbn, new StockDecreased(@event.Isbn, 1)),
+    new(@event.MemberId, new MemberActivityRecorded(@event.Isbn)),  // → the member
+    new(@event.Isbn, new StockDecreased(@event.Isbn, 1)),           // → the book
 ];
 ```
 
-Each `EventForEventSourceId` carries its own append-metadata, so you set the stream, subject, occurred time and causation per event rather than for the whole reactor:
+Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time and causation. Set only the ones you need — the rest fall back to sensible defaults:
 
 ```csharp
 public EventForEventSourceId BookReserved(BookReserved @event, EventContext context) =>
-    new(@event.MemberId, new MemberReservedBook(@event.Isbn))
+    new(@event.MemberId, new MemberActivityRecorded(@event.Isbn))
     {
-        Subject = new Subject(@event.MemberId),
         EventStreamType = new EventStreamType("members"),
+        Subject = new Subject(@event.MemberId),
     };
 ```
 
-> **Note**: Because each `EventForEventSourceId` is self-describing, the reactor-level metadata resolution below (`ICanProvideEventSourceId`, `ICanProvideSubject`, `[EventStreamType]`, …) does **not** apply to these returns — the values on the record are used directly. Properties left unset fall back to their defaults (for example `EventStreamType.All`), and an omitted `Subject` is resolved from the event itself.
+> **Important**: An `EventForEventSourceId` is fully self-describing, so it **bypasses the reactor-level metadata resolution** below. The reactor's `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces apply only to *bare event* returns — never to these. A field you leave unset takes its own default (for example `EventStreamType.All`, **not** the reactor's `[EventStreamType]`), and an omitted `Subject` is resolved from the event itself. So if you switch a handler from returning a bare event to an `EventForEventSourceId`, re-specify any metadata the reactor was contributing — otherwise it silently reverts to defaults.
+>
+> **Tip**: Declare the return type as `EventForEventSourceId` or `IEnumerable<EventForEventSourceId>` precisely. If you widen it to `IEnumerable<object>` and mix `EventForEventSourceId` with plain events in the same list, the framework can no longer tell which append model you mean, and those entries are skipped.
 
 ## Reactor-Level Metadata Resolution
 
