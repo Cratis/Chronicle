@@ -278,9 +278,9 @@ public class EventSequence(
             var eventClrType = @event.Event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
 
-            // Merge static tags from the event type with dynamic tags
+            // Merge static tags from the event type with the event's own tags and the call-level dynamic tags
             var staticTags = eventClrType.GetTags();
-            var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+            var allTags = staticTags.Concat(@event.Tags).Concat(tags ?? []).Distinct().ToList();
 
             eventsToAppend.Add(new Contracts.Events.EventToAppend
             {

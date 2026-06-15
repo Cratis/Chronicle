@@ -80,7 +80,7 @@ public IEnumerable<EventForEventSourceId> BookReserved(BookReserved @event, Even
 ];
 ```
 
-Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time and causation. Set only the ones you need — the rest fall back to sensible defaults:
+Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time, tags and causation. Set only the ones you need — the rest fall back to sensible defaults:
 
 ```csharp
 public EventForEventSourceId BookReserved(BookReserved @event, EventContext context) =>

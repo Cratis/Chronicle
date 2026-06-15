@@ -54,7 +54,7 @@ public Task<IEnumerable<object>> Handle(AnEvent @event, EventContext context) =>
 
 ### Target a specific event source id via `EventForEventSourceId`
 
-Return an `EventForEventSourceId` to append to an explicit `EventSourceId` — for example a different entity than the one that triggered the reactor. It also carries the `EventStreamType`, `EventStreamId`, `EventSourceType`, `Subject`, `Occurred` time and `Causation` per event:
+Return an `EventForEventSourceId` to append to an explicit `EventSourceId` — for example a different entity than the one that triggered the reactor. It also carries the `EventStreamType`, `EventStreamId`, `EventSourceType`, `Subject`, `Occurred` time, `Tags` and `Causation` per event:
 
 ```csharp
 public Task<EventForEventSourceId> Handle(AnEvent @event, EventContext context) =>

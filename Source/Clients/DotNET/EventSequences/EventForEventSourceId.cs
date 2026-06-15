@@ -39,4 +39,10 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
     /// </summary>
     public DateTimeOffset? Occurred { get; init; }
+
+    /// <summary>
+    /// Gets or inits the tags to associate with the event. These are combined with any static tags declared on the
+    /// event type and any tags supplied at append time.
+    /// </summary>
+    public IEnumerable<string> Tags { get; init; } = [];
 }
