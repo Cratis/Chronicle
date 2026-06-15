@@ -79,7 +79,7 @@ public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventCont
     ]);
 ```
 
-> Reactor-level metadata (`ICanProvideEventSourceId`, `ICanProvideSubject`, `[EventStreamType]`, …) applies to bare `TEvent` returns. An `EventForEventSourceId` is self-describing, so its own values are used instead.
+> Reactor-level metadata (`ICanProvideEventSourceId`, `ICanProvideSubject`, `[EventStreamType]`, …) applies to bare `TEvent` returns. An `EventForEventSourceId` is self-describing, so its own values are used instead. You can mix bare events and `EventForEventSourceId` in a single `IEnumerable<object>` return — each is appended with its respective metadata, all in one transaction.
 
 ## Critical Rules
 

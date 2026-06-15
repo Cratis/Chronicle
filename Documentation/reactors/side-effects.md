@@ -91,9 +91,17 @@ public EventForEventSourceId BookReserved(BookReserved @event, EventContext cont
     };
 ```
 
-> **Important**: An `EventForEventSourceId` is fully self-describing, so it **bypasses the reactor-level metadata resolution** below. The reactor's `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces apply only to *bare event* returns — never to these. A field you leave unset takes its own default (for example `EventStreamType.All`, **not** the reactor's `[EventStreamType]`), and an omitted `Subject` is resolved from the event itself. So if you switch a handler from returning a bare event to an `EventForEventSourceId`, re-specify any metadata the reactor was contributing — otherwise it silently reverts to defaults.
->
-> **Tip**: Declare the return type as `EventForEventSourceId` or `IEnumerable<EventForEventSourceId>` precisely. If you widen it to `IEnumerable<object>` and mix `EventForEventSourceId` with plain events in the same list, the framework can no longer tell which append model you mean, and those entries are skipped.
+> **Two modes**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
+
+You can also **mix** the two in a single `IEnumerable<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
+
+```csharp
+public IEnumerable<object> BookReserved(BookReserved @event, EventContext context) =>
+[
+    new ActivityLogged(@event.Isbn),                                               // bare → reactor metadata, triggering source id
+    new EventForEventSourceId(@event.MemberId, new MemberActivityRecorded(@event.Isbn)),  // → the member, explicit
+];
+```
 
 ## Reactor-Level Metadata Resolution
 
@@ -206,6 +214,7 @@ services.AddSingleton<IReactorSideEffectHandler, MyHandler>();
 | `Task<EventForEventSourceId>` | `EventForEventSourceIdResultHandler` |
 | `IEnumerable<EventForEventSourceId>` | `EventsForEventSourceIdResultHandler` — appends all as one transaction |
 | `Task<IEnumerable<EventForEventSourceId>>` | `EventsForEventSourceIdResultHandler` |
+| `IEnumerable<object>` mixing events and `EventForEventSourceId` | `MixedSideEffectsResultHandler` — bare events use reactor metadata, each `EventForEventSourceId` keeps its own; all appended as one transaction |
 | `void` / `Task` | No side effects appended |
 
 ## Error Handling
