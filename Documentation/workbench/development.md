@@ -6,7 +6,7 @@ The Development and Development-slim Docker images include a built-in administra
 
 When Chronicle is running via the Development or Development-slim image, the Workbench is served on port **8080**. Open your browser and navigate to:
 
-```
+```text
 http://localhost:8080
 ```
 
