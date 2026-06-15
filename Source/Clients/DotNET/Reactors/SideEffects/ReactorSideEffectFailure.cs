@@ -12,11 +12,11 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures)
 {
     /// <summary>
-    /// Creates a <see cref="ReactorSideEffectFailure"/> from a single <see cref="AppendResult"/>.
+    /// Creates a <see cref="ReactorSideEffectFailure"/> from a failed append operation.
     /// </summary>
-    /// <param name="appendResult">The failed <see cref="AppendResult"/>.</param>
+    /// <param name="appendResult">The failed <see cref="IAppendResult"/> (e.g. <see cref="AppendResult"/> or <see cref="AppendManyResult"/>).</param>
     /// <returns>A <see cref="ReactorSideEffectFailure"/> containing the append failure details.</returns>
-    public static ReactorSideEffectFailure FromAppendResult(AppendResult appendResult)
+    public static ReactorSideEffectFailure FromAppendResult(IAppendResult appendResult)
     {
         var constraintViolations = appendResult.ConstraintViolations.Select(cv =>
             new ReactorConstraintViolation(cv.EventTypeId, cv.Message));

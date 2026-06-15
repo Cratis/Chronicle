@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -51,17 +52,21 @@ public static class EventHandlerMethods
 
     /// <summary>
     /// Check whether a <see cref="Type"/> is a valid synchronous side-effect return type for a reactor handler method.
-    /// Valid types are: a registered event type, or <see cref="IEnumerable{T}"/> of a registered event type.
+    /// Valid types are: a registered event type, <see cref="EventForEventSourceId"/>, or <see cref="IEnumerable{T}"/> of
+    /// either a registered event type or <see cref="EventForEventSourceId"/>.
     /// </summary>
     /// <param name="returnType">The return <see cref="Type"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a valid sync side-effect return type, false if not.</returns>
     public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes)
     {
+        if (returnType == typeof(EventForEventSourceId)) return true;
+
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
             var elementType = returnType.GetGenericArguments()[0];
             if (elementType == typeof(object)) return true;
+            if (elementType == typeof(EventForEventSourceId)) return true;
             if (eventTypes.Contains(elementType)) return true;
         }
 
