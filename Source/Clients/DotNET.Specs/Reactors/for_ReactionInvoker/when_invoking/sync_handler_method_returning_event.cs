@@ -5,13 +5,12 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Microsoft.Extensions.Logging;
-using CatchResult = Cratis.Monads.Catch;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking;
 
 public class sync_handler_method_returning_event : Specification
 {
-    CatchResult _result;
+    ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
     ReactorInvoker _invoker;
     IEventStore _eventStore;
@@ -47,7 +46,7 @@ public class sync_handler_method_returning_event : Specification
 
     async Task Because() => _result = await _invoker.Invoke(new MyEvent(), _eventContext);
 
-    [Fact] void should_succeed() => _result.TryGetException(out _).ShouldBeFalse();
+    [Fact] void should_succeed() => _result.ExceptionResult.TryGetException(out _).ShouldBeFalse();
     [Fact] void should_append_to_event_log() => _eventLog.Received(1).Append(_eventContext.EventSourceId, _outboundEvent, default, default, default, default, default, default, default, default);
 
     class ReactorWithSyncEventReturnType(MyOutboundEvent outbound) : IReactor

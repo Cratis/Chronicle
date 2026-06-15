@@ -457,7 +457,7 @@ public class Reactors : IReactors
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.TryGetException(out var ex))
+                if (handleResult.ExceptionResult.TryGetException(out var ex))
                 {
                     FailedToHandleEvent(ex, @event.Context.EventType.Id);
                     break;

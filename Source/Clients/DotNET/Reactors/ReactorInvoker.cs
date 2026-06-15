@@ -6,7 +6,6 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors.SideEffects;
-using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors;
@@ -60,7 +59,7 @@ public class ReactorInvoker(
             .ToImmutableList();
 
     /// <inheritdoc/>
-    public async Task<Catch> Invoke(object content, EventContext eventContext)
+    public async Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext)
     {
         var reactorId = targetType.GetReactorId();
         var eventTypeName = content.GetType().Name;
@@ -84,19 +83,23 @@ public class ReactorInvoker(
                     returnValue = method.Invoke(activatedReactor.Instance, [content]);
                 }
 
-                await HandleReturnValue(method, returnValue, eventContext);
+                var sideEffectFailure = await HandleReturnValue(method, returnValue, eventContext);
+                if (sideEffectFailure is not null)
+                {
+                    return ReactorInvocationResult.FromSideEffectFailure(sideEffectFailure);
+                }
             }
             else
             {
                 logger.ReactorNoHandlerFound(reactorId, eventTypeName);
             }
 
-            return Catch.Success();
+            return ReactorInvocationResult.Success();
         }
         catch (Exception ex)
         {
             logger.ReactorFailed(reactorId, eventTypeName, ex);
-            return ex;
+            return ReactorInvocationResult.FromException(ex);
         }
         finally
         {
@@ -113,11 +116,11 @@ public class ReactorInvoker(
         }
     }
 
-    async Task HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
+    async Task<ReactorSideEffectFailure?> HandleReturnValue(MethodInfo method, object? returnValue, EventContext eventContext)
     {
         if (method.ReturnType == typeof(void))
         {
-            return;
+            return null;
         }
 
         if (returnValue is Task task)
@@ -126,41 +129,51 @@ public class ReactorInvoker(
 
             if (!method.ReturnType.IsGenericType)
             {
-                return;
+                return null;
             }
 
             if (sideEffectHandlers is null || eventStore is null)
             {
-                return;
+                return null;
             }
 
             var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
             var result = resultProperty?.GetValue(task);
             if (result is null)
             {
-                return;
+                return null;
             }
 
             var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
             if (sideEffectHandlers.CanHandle(reactorContext, result))
             {
-                await sideEffectHandlers.Handle(reactorContext, eventStore, result);
+                var handleResult = await sideEffectHandlers.Handle(reactorContext, eventStore, result);
+                if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
+                {
+                    return failure;
+                }
             }
 
-            return;
+            return null;
         }
 
         // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
         if (sideEffectHandlers is null || eventStore is null || returnValue is null)
         {
-            return;
+            return null;
         }
 
         var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext));
         if (sideEffectHandlers.CanHandle(syncReactorContext, returnValue))
         {
-            await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
+            var handleResult = await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
+            if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
+            {
+                return failure;
+            }
         }
+
+        return null;
     }
 
     ReactorContextValues BuildValues(EventContext eventContext) =>
