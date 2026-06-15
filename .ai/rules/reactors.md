@@ -52,40 +52,42 @@ public Task<IEnumerable<object>> Handle(AnEvent @event, EventContext context) =>
     Task.FromResult<IEnumerable<object>>([new SomeEvent(), new AnotherEvent()]);
 ```
 
-### Return with full control via `ReactorSideEffect`
+### Target a specific event source id via `EventForEventSourceId`
 
-Use `ReactorSideEffect` to specify the EventSourceId, EventSequenceId, EventStreamType, EventStreamId, EventSourceType, or Subject:
+Return an `EventForEventSourceId` to append to an explicit `EventSourceId` — for example a different entity than the one that triggered the reactor. It also carries the `EventStreamType`, `EventStreamId`, `EventSourceType`, `Subject`, `Occurred` time and `Causation` per event:
 
 ```csharp
-public Task<ReactorSideEffect> Handle(AnEvent @event, EventContext context) =>
-    Task.FromResult(new ReactorSideEffect
+public Task<EventForEventSourceId> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult(new EventForEventSourceId(@event.RelatedId, new SomeEvent(@event.Name))
     {
-        Event = new SomeEvent(@event.Name),
-        EventSourceId = EventSourceId.New(),             // optional — defaults to context EventSourceId
-        EventSequenceId = EventSequenceId.Log,           // optional — defaults to event log
         EventStreamType = new EventStreamType("custom"), // optional
         EventSourceType = new EventSourceType("order"),  // optional
+        Subject = new Subject(@event.RelatedId),         // optional
     });
 ```
 
-### Return multiple side effects with metadata
+### Return events for multiple event source ids
+
+Return `IEnumerable<EventForEventSourceId>` to append to several event source ids in one transaction:
 
 ```csharp
-public Task<IEnumerable<ReactorSideEffect>> Handle(AnEvent @event, EventContext context) =>
-    Task.FromResult<IEnumerable<ReactorSideEffect>>(
+public Task<IEnumerable<EventForEventSourceId>> Handle(AnEvent @event, EventContext context) =>
+    Task.FromResult<IEnumerable<EventForEventSourceId>>(
     [
-        ReactorSideEffect.For(new SomeEvent()),
-        new ReactorSideEffect { Event = new AnotherEvent(), EventSourceId = @event.RelatedId }
+        new(@event.RelatedId, new SomeEvent()),
+        new(@event.OtherId, new AnotherEvent())
     ]);
 ```
+
+> Reactor-level metadata (`ICanProvideEventSourceId`, `ICanProvideSubject`, `[EventStreamType]`, …) applies to bare `TEvent` returns. An `EventForEventSourceId` is self-describing, so its own values are used instead.
 
 ## Critical Rules
 
 1. **Idempotent** — Reactors may be called more than once for the same event (e.g. during replay or recovery). Design accordingly.
 2. **Use event data directly** — Never query the read model back inside a reactor. The event contains all the information you need.
-3. **Return events instead of injecting IEventLog** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<ReactorSideEffect>`, or a collection thereof. For commands in other slices, inject `ICommandPipeline` and execute a command. Avoid injecting `IEventLog` directly into a reactor.
+3. **Return events instead of injecting IEventLog** — If the reactor needs to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For commands in other slices, inject `ICommandPipeline` and execute a command. Avoid injecting `IEventLog` directly into a reactor.
 4. **Single responsibility** — Each reactor class should have a focused purpose. Multiple handler methods in one reactor are fine if they serve the same automation concern.
-5. **Failure behavior** — If a reactor throws, the failing event source partition pauses until the issue is resolved. Design for resilience.
+5. **Failure behavior** — If a reactor throws, *or* a returned side-effect event fails to append (constraint violation, concurrency violation, or error), the failing event source partition pauses until the issue is resolved. Design for resilience.
 6. **No state** — Reactors should be stateless. Inject dependencies via primary constructor, but do not store mutable state on the class.
 
 ## Slice Types That Use Reactors
