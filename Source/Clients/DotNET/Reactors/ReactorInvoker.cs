@@ -153,6 +153,10 @@ public class ReactorInvoker(
                     return failure;
                 }
             }
+            else
+            {
+                logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), result.GetType().Name);
+            }
 
             return null;
         }
@@ -171,6 +175,10 @@ public class ReactorInvoker(
             {
                 return failure;
             }
+        }
+        else
+        {
+            logger.ReactorReturnValueNotHandled(targetType.GetReactorId(), returnValue.GetType().Name);
         }
 
         return null;

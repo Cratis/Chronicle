@@ -18,4 +18,7 @@ internal static partial class LogMessages
 
     [LoggerMessage(LogLevel.Warning, "Could not find a reactor handler method in reactor {ReactorId} for {EventTypeName}.")]
     internal static partial void ReactorNoHandlerFound(this ILogger<ReactorInvoker> logger, ReactorId reactorId, string eventTypeName);
+
+    [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} returned a value of type {ReturnTypeName} that no side-effect handler could process; the value was discarded.")]
+    internal static partial void ReactorReturnValueNotHandled(this ILogger<ReactorInvoker> logger, ReactorId reactorId, string returnTypeName);
 }
