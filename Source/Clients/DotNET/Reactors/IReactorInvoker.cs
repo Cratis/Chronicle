@@ -17,5 +17,5 @@ public interface IReactorInvoker
     /// <param name="content">Event content to invoke with.</param>
     /// <param name="eventContext"><see cref="EventContext"/> for the event.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
-    Task<Catch> Invoke(object content, EventContext eventContext);
+    Task<ReactorInvocationResult> Invoke(object content, EventContext eventContext);
 }

@@ -34,7 +34,7 @@ public record ReactorInvocationResult(Catch ExceptionResult, ReactorSideEffectFa
     /// </summary>
     /// <param name="exception">The exception that occurred.</param>
     /// <returns>A <see cref="ReactorInvocationResult"/> containing the exception.</returns>
-    public static ReactorInvocationResult FromException(Exception exception) => new(exception);
+    public static ReactorInvocationResult FromException(Exception exception) => new((Catch)exception);
 
     /// <summary>
     /// Creates an invocation result from a side-effect failure.
