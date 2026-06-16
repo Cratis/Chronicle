@@ -25,6 +25,7 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     readonly JsonSerializerOptions _serializerOptions;
     readonly JsonSchemaExporterOptions _exporterOptions;
     readonly IComplianceMetadataResolver _metadataResolver;
+    readonly IDerivedTypes _derivedTypes;
     readonly TypeFormats _typeFormats;
 
     /// <summary>
@@ -32,9 +33,11 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
     /// </summary>
     /// <param name="metadataResolver"><see cref="IComplianceMetadataResolver"/> for resolving metadata.</param>
     /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy)
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> used to recognize polymorphic base types adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the global <see cref="DerivedTypes.Instance"/>.</param>
+    public JsonSchemaGenerator(IComplianceMetadataResolver metadataResolver, INamingPolicy namingPolicy, IDerivedTypes? derivedTypes = null)
     {
         _metadataResolver = metadataResolver;
+        _derivedTypes = derivedTypes ?? DerivedTypes.Instance;
         _typeFormats = new TypeFormats();
 
         var resolver = new DefaultJsonTypeInfoResolver();
@@ -177,6 +180,24 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         if (schema is not JsonObject schemaObj) return schema;
+
+        // Polymorphic base types (those that have registered derived types via [DerivedType]) are
+        // stored verbatim. System.Text.Json's schema exporter only describes the abstract base's
+        // own properties, which would make the schema-driven storage conversion strip the derived
+        // type discriminator (_derivedTypeId) together with every concrete subtype property. Emitting
+        // an open object schema (no fixed properties) makes the ExpandoObject converter preserve the
+        // full polymorphic payload so the discriminator and concrete properties round-trip intact.
+        if (!schemaObj.ContainsKey("$ref") && _derivedTypes.HasDerivatives(formatType))
+        {
+            schemaObj.Remove("properties");
+            schemaObj.Remove("required");
+            schemaObj.Remove("allOf");
+            schemaObj.Remove("anyOf");
+            schemaObj.Remove("oneOf");
+            schemaObj.Remove("additionalProperties");
+            schemaObj["type"] = "object";
+            return schemaObj;
+        }
 
         // Geospatial types serialize as GeoJSON via their own converters and are materialized as the
         // typed CLR value by the schema-aware ExpandoObject converters using the format metadata
