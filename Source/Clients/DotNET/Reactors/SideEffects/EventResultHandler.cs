@@ -34,16 +34,6 @@ public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHand
             return Result.Success<ReactorSideEffectFailure>();
         }
 
-        var constraintViolations = result.ConstraintViolations.Select(cv =>
-            new ReactorConstraintViolation(
-                cv.EventTypeId.Value,
-                cv.Message)).ToList();
-
-        var errors = result.Errors.Select(e => e.Value).ToList();
-
-        var failure = new ReactorSideEffectFailure(
-            [new AppendFailure(constraintViolations, result.ConcurrencyViolation is not null, errors)]);
-
-        return Result.Failed(failure);
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
     }
 }

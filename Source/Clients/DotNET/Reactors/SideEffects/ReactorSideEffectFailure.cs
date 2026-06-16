@@ -12,6 +12,44 @@ namespace Cratis.Chronicle.Reactors.SideEffects;
 public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures)
 {
     /// <summary>
+    /// Gets messages describing the side-effect append failures.
+    /// </summary>
+    /// <returns>A collection of failure messages.</returns>
+    public IEnumerable<string> GetMessages()
+    {
+        var appendFailures = AppendFailures.ToList();
+        for (var failureIndex = 0; failureIndex < appendFailures.Count; failureIndex++)
+        {
+            var failure = appendFailures[failureIndex];
+            var failureNumber = failureIndex + 1;
+            var hasDetails = false;
+
+            foreach (var constraintViolation in failure.ConstraintViolations)
+            {
+                hasDetails = true;
+                yield return $"Append failure {failureNumber}: Constraint violation for event type '{constraintViolation.EventTypeId}': {constraintViolation.Message}";
+            }
+
+            if (failure.HasConcurrencyViolation)
+            {
+                hasDetails = true;
+                yield return $"Append failure {failureNumber}: Concurrency violation";
+            }
+
+            foreach (var error in failure.Errors)
+            {
+                hasDetails = true;
+                yield return $"Append failure {failureNumber}: {error}";
+            }
+
+            if (!hasDetails)
+            {
+                yield return $"Append failure {failureNumber}: Unknown append failure";
+            }
+        }
+    }
+
+    /// <summary>
     /// Creates a <see cref="ReactorSideEffectFailure"/> from a failed append operation.
     /// </summary>
     /// <param name="appendResult">The failed <see cref="IAppendResult"/> (e.g. <see cref="AppendResult"/> or <see cref="AppendManyResult"/>).</param>

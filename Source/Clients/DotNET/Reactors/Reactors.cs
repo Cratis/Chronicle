@@ -457,23 +457,40 @@ public class Reactors : IReactors
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.ExceptionResult.TryGetException(out var ex))
+                if (handleResult.IsFailed)
                 {
-                    FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                    FailedToHandleEvent(handleResult, @event.Context.EventType.Id);
                     break;
                 }
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)
             {
-                FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
                 break;
             }
         }
 
         PublishResult();
 
-        void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
+        void FailedToHandleEvent(ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
+        {
+            var failureDetails = invocationResult.GetFailureDetails();
+            exceptionMessages = failureDetails.Messages.ToArray();
+            exceptionStackTrace = failureDetails.StackTrace;
+            state = ObservationState.Failed;
+
+            if (invocationResult.ExceptionResult.TryGetException(out var ex))
+            {
+                _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+            }
+            else
+            {
+                _logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, string.Join(Environment.NewLine, exceptionMessages));
+            }
+        }
+
+        void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
         {
             _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
             exceptionMessages = ex.GetAllMessages();

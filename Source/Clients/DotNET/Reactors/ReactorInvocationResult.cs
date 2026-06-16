@@ -24,6 +24,25 @@ public record ReactorInvocationResult(Catch ExceptionResult, ReactorSideEffectFa
     public bool IsFailed => !IsSuccess;
 
     /// <summary>
+    /// Gets failure details suitable for publishing back to the kernel.
+    /// </summary>
+    /// <returns>Failure messages and stack trace.</returns>
+    public (IEnumerable<string> Messages, string StackTrace) GetFailureDetails()
+    {
+        if (ExceptionResult.TryGetException(out var exception))
+        {
+            return (exception.GetAllMessages(), exception.StackTrace ?? string.Empty);
+        }
+
+        if (SideEffectFailure is not null)
+        {
+            return (SideEffectFailure.GetMessages(), string.Empty);
+        }
+
+        return ([], string.Empty);
+    }
+
+    /// <summary>
     /// Creates a successful invocation result.
     /// </summary>
     /// <returns>A <see cref="ReactorInvocationResult"/> representing success.</returns>
