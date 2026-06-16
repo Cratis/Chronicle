@@ -14,7 +14,7 @@ public class with_exception : Specification
         {
             throw new InvalidOperationException("outer failure", new Exception("inner failure"));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _exception = ex;
         }
