@@ -8,5 +8,6 @@ namespace Cratis.Chronicle.Integration.for_Reactors;
 public class UniqueReactorSideEffectConstraint : IConstraint
 {
     public void Define(IConstraintBuilder builder) => builder
-        .Unique<UniqueReactorSideEffect>("Reactor side-effect value must be unique");
+        .Unique(_ => _.On<UniqueReactorSideEffect>(e => e.Value)
+            .WithMessage("Reactor side-effect value must be unique"));
 }
