@@ -35,10 +35,13 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        ConcurrencyScope? concurrencyScope = default)
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         var causation = GetCausation();
-        UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType);
+        UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
         return Task.CompletedTask;
     }
 
@@ -49,12 +52,15 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
         EventStreamType? eventStreamType = null,
         EventStreamId? eventStreamId = null,
         EventSourceType? eventSourceType = null,
-        ConcurrencyScope? concurrencyScope = default)
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         var causation = GetCausation();
         foreach (var @event in events)
         {
-            UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType);
+            UnitOfWork.AddEvent(eventSequence.Id, eventSourceId, @event, causation, eventStreamType, eventStreamId, eventSourceType, concurrencyScope, tags, occurred, subject);
         }
         return Task.CompletedTask;
     }

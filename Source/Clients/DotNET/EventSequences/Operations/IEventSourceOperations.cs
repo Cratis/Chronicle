@@ -44,13 +44,19 @@ public interface IEventSourceOperations
     /// <param name="eventStreamType">Optional The type of event stream.</param>
     /// <param name="eventStreamId">Optional The identifier for the event stream.</param>
     /// <param name="eventSourceType">Optional The type of event source.</param>
+    /// <param name="tags">Optional dynamic tags to associate with the event.</param>
+    /// <param name="occurred">Optional timestamp for when the event occurred.</param>
+    /// <param name="subject">Optional subject identifying what the event is about.</param>
     /// <returns>The current instance of <see cref="EventSourceOperations"/>.</returns>
     EventSourceOperations Append(
         object @event,
         Causation? causation = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default);
+        EventSourceType? eventSourceType = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Gets the operations of a specific type.

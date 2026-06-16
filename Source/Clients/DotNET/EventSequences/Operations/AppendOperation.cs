@@ -14,9 +14,15 @@ namespace Cratis.Chronicle.EventSequences.Operations;
 /// <param name="EventStreamType">Optional The type of event stream.</param>
 /// <param name="EventStreamId">Optional The identifier for the event stream.</param>
 /// <param name="EventSourceType">Optional The type of event source.</param>
+/// <param name="Tags">Optional dynamic tags to associate with the event.</param>
+/// <param name="Occurred">Optional timestamp for when the event occurred.</param>
+/// <param name="Subject">Optional subject identifying what the event is about.</param>
 public record AppendOperation(
     object Event,
     Causation? Causation = default,
     EventStreamType? EventStreamType = default,
     EventStreamId? EventStreamId = default,
-    EventSourceType? EventSourceType = default) : IEventSequenceOperation;
+    EventSourceType? EventSourceType = default,
+    IEnumerable<string>? Tags = default,
+    DateTimeOffset? Occurred = default,
+    Subject? Subject = default) : IEventSequenceOperation;

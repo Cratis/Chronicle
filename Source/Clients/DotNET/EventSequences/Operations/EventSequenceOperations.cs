@@ -60,7 +60,10 @@ public class EventSequenceOperations(IEventSequence eventSequence) : IEventSeque
                 {
                     EventStreamType = op.EventStreamType ?? EventStreamType.All,
                     EventStreamId = op.EventStreamId ?? EventStreamId.Default,
-                    EventSourceType = op.EventSourceType ?? EventSourceType.Default
+                    EventSourceType = op.EventSourceType ?? EventSourceType.Default,
+                    Tags = op.Tags ?? [],
+                    Occurred = op.Occurred,
+                    Subject = op.Subject
                 }));
             }
         }

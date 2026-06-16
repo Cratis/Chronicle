@@ -44,6 +44,9 @@ public interface IUnitOfWork : IDisposable
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> for the event, will default to Default is not set.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> for the event, will default to Default is not set.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> for the event, will default to NotSet if not set.</param>
+    /// <param name="tags">Optional dynamic tags to associate with the event.</param>
+    /// <param name="occurred">Optional timestamp for when the event occurred.</param>
+    /// <param name="subject">Optional subject identifying what the event is about.</param>
     void AddEvent(
         EventSequenceId eventSequenceId,
         EventSourceId eventSourceId,
@@ -52,7 +55,10 @@ public interface IUnitOfWork : IDisposable
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        ConcurrencyScope? concurrencyScope = default);
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Get the events that have occurred in the <see cref="IUnitOfWork"/>.
