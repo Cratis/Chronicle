@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Integration.for_Reactors;
 
 public class ReactorWithFailingSideEffect : IReactor
 {
-    public FailingAppendSideEffect OnSomeEvent(SomeEvent evt) => new();
+    public Task<FailingAppendSideEffect> OnSomeEvent(SomeEvent evt) => Task.FromResult(new FailingAppendSideEffect());
 }
