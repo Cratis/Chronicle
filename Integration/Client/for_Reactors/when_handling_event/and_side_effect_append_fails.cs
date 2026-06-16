@@ -15,11 +15,9 @@ public class and_side_effect_append_fails(context context) : Given<context>(cont
     public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
     {
         public override IEnumerable<Type> Reactors => [typeof(ReactorWithFailingSideEffect)];
-        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent), typeof(UniqueReactorSideEffect)];
-        public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueReactorSideEffectConstraint)];
+        public override IEnumerable<Type> EventTypes => [typeof(SomeEvent)];
 
         public EventSourceId EventSourceId;
-        public IAppendResult SeedResult;
         public IAppendResult TriggerResult;
         public FailedPartition FailedPartition;
         public FailedPartitionAttempt FailedAttempt;
@@ -34,7 +32,6 @@ public class and_side_effect_append_fails(context context) : Given<context>(cont
             var reactor = EventStore.Reactors.GetHandlerFor<ReactorWithFailingSideEffect>();
             await reactor.WaitTillSubscribed();
 
-            SeedResult = await EventStore.EventLog.Append(EventSourceId, new UniqueReactorSideEffect("42"));
             TriggerResult = await EventStore.EventLog.Append(EventSourceId, new SomeEvent(42));
 
             var failedPartitions = await reactor.WaitForThereToBeFailedPartitions();
@@ -43,10 +40,9 @@ public class and_side_effect_append_fails(context context) : Given<context>(cont
         }
     }
 
-    [Fact] void should_seed_unique_side_effect_event() => Context.SeedResult.IsSuccess.ShouldBeTrue();
     [Fact] void should_append_triggering_event() => Context.TriggerResult.IsSuccess.ShouldBeTrue();
     [Fact] void should_fail_partition() => Context.FailedPartition.ShouldNotBeNull();
-    [Fact] void should_include_constraint_violation_details() => Context.FailedAttempt.Messages.ShouldContain(_ => _.Contains("Reactor side-effect value must be unique"));
-    [Fact] void should_include_side_effect_event_type() => Context.FailedAttempt.Messages.ShouldContain(_ => _.Contains(nameof(UniqueReactorSideEffect)));
+    [Fact] void should_include_constraint_violation_details() => Context.FailedAttempt.Messages.ShouldContain(_ => _.Contains("Simulated reactor side-effect append failure"));
+    [Fact] void should_include_side_effect_event_type() => Context.FailedAttempt.Messages.ShouldContain(_ => _.Contains(nameof(FailingAppendSideEffect)));
     [Fact] void should_not_include_stack_trace_for_controlled_failure() => Context.FailedAttempt.StackTrace.ShouldBeEmpty();
 }

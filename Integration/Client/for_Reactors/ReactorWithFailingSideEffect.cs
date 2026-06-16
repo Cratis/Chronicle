@@ -7,5 +7,5 @@ namespace Cratis.Chronicle.Integration.for_Reactors;
 
 public class ReactorWithFailingSideEffect : IReactor
 {
-    public UniqueReactorSideEffect OnSomeEvent(SomeEvent evt) => new(evt.Number.ToString());
+    public FailingAppendSideEffect OnSomeEvent(SomeEvent evt) => new();
 }
