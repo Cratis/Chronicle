@@ -29,6 +29,15 @@ public class DefaultServiceProvider : IServiceProvider, IServiceProviderIsServic
         if (serviceType == typeof(IServiceProviderIsKeyedService)) return this;
         if (serviceType == typeof(IKeyedServiceProvider)) return this;
         if (serviceType == typeof(IServiceScopeFactory)) return this;
+
+        // Honor the Microsoft.Extensions.DependencyInjection contract for collection resolution:
+        // a request for IEnumerable<T> (the shape GetServices<T>() uses) returns an empty array
+        // when nothing is registered, rather than attempting to activate the interface itself.
+        if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            return Array.CreateInstance(serviceType.GetGenericArguments()[0], 0);
+        }
+
         return Activator.CreateInstance(serviceType);
     }
 
