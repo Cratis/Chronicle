@@ -12,7 +12,7 @@ import { Page } from 'Components/Common/Page';
 import { TypeDetails } from './TypeDetails';
 import * as faIcons from 'react-icons/fa6';
 import { EventTypeOwner, EventTypeRegistration, EventTypeSource } from 'Api/Events';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Dropdown } from 'primereact/dropdown';
 import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { AddEventTypeDialog } from './AddEventTypeDialog';
@@ -96,22 +96,44 @@ export const EventTypes = () => {
     };
 
     // Use the non-paging query to load all event types
+    // Note: refreshTrigger is used as a dependency to force refetch
     const [result] = AllEventTypesWithSchemas.use(queryArgs);
 
-    const handleAddEventType = async () => {
+    const handleAddEventType = useCallback(async () => {
         const [result] = await showAddEventTypeDialog();
         if (result === DialogResult.Ok) {
             setTimeout(() => setRefreshTrigger(prev => prev + 1), 200);
         }
-    };
+    }, [showAddEventTypeDialog]);
 
-    const menuItems = [
+    const menuItems = useMemo(() => [
         {
             label: strings.eventStore.general.eventTypes.actions.create,
             icon: <faIcons.FaPlus className='mr-2' />,
             command: handleAddEventType
         }
-    ];
+    ], [handleAddEventType]);
+
+    // Show loading or error state
+    if (result.isPerforming) {
+        return (
+            <Page title={strings.eventStore.general.eventTypes.title}>
+                <div className="flex items-center justify-center h-full">
+                    <div>Loading event types...</div>
+                </div>
+            </Page>
+        );
+    }
+
+    if (result.hasExceptions) {
+        return (
+            <Page title={strings.eventStore.general.eventTypes.title}>
+                <div className="flex items-center justify-center h-full">
+                    <div className="text-red-500">Error loading event types: {result.exceptionMessages.join(', ')}</div>
+                </div>
+            </Page>
+        );
+    }
 
     return (
         <Page title={strings.eventStore.general.eventTypes.title}>
@@ -123,15 +145,8 @@ export const EventTypes = () => {
                             model={menuItems}
                         />
                     </div>
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: 'calc(100% - 60px)',
-                        border: '1px solid var(--cratis-surface-border)',
-                        borderRadius: 'var(--cratis-border-radius)',
-                        overflow: 'hidden',
-                        margin: '0 16px 16px 16px'
-                    }}>
+                    <div className="flex flex-col border border-cratis-surface-border rounded mx-4 mb-4 overflow-hidden"
+                         style={{ height: 'calc(100% - 76px)' }}>
                         <DataTable
                             key={refreshTrigger}
                             value={result.data}
