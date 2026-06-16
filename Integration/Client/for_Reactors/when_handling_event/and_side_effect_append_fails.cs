@@ -5,6 +5,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.Reactors.SideEffects;
 using context = Cratis.Chronicle.Integration.for_Reactors.when_handling_event.and_side_effect_append_fails.context;
 
 namespace Cratis.Chronicle.Integration.for_Reactors.when_handling_event;
@@ -21,6 +22,11 @@ public class and_side_effect_append_fails(context context) : Given<context>(cont
         public IAppendResult TriggerResult;
         public FailedPartition FailedPartition;
         public FailedPartitionAttempt FailedAttempt;
+
+        protected override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddSingleton<IReactorSideEffectHandler, FailingAppendSideEffectHandler>();
+        }
 
         void Establish()
         {
