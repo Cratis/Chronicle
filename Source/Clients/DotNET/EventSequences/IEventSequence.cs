@@ -22,7 +22,7 @@ public interface IEventSequence
     /// Gets an observable that emits a collection of <see cref="AppendedEventWithResult"/> after each append operation.
     /// </summary>
     /// <remarks>
-    /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, Events.EventStreamType?, Events.EventStreamId?, Events.EventSourceType?, CorrelationId?, System.Collections.Generic.IEnumerable{string}?, Concurrency.ConcurrencyScope?, System.DateTimeOffset?)"/>
+    /// Both <see cref="Append"/> and <see cref="AppendMany(EventSourceId, IEnumerable{object}, EventStreamType?, EventStreamId?, EventSourceType?, CorrelationId?, IEnumerable{string}?, ConcurrencyScope?, DateTimeOffset?, Subject?)"/>
     /// emit through this observable. A single-event append emits a collection of one element;
     /// a batch append emits the full batch. Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
     /// This observable does not fire for transactional appends through <see cref="ITransactionalEventSequence"/>.
@@ -136,6 +136,7 @@ public interface IEventSequence
     /// <param name="tags">Optional collection of tags to associate with all events. Will be combined with any static tags from the event types.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
     /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the events occurred. If not set, the server will set it to approximately the time of append.</param>
+    /// <param name="subject">Optional <see cref="Subject"/> identifying the target the events are about. Used as the identity for compliance concerns such as PII encryption keys.</param>
     /// <returns><see cref="AppendManyResult"/> with details about whether or not it succeeded and more.</returns>
     /// <remarks>
     /// All events will be committed as one operation for the underlying data store.
@@ -149,7 +150,8 @@ public interface IEventSequence
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
-        DateTimeOffset? occurred = default);
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Append a collection of events to the event store as a transaction.

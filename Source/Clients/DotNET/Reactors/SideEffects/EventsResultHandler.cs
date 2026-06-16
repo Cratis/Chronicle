@@ -22,41 +22,19 @@ public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHan
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
-        var appendFailures = new List<AppendFailure>();
+        var result = await eventStore.EventLog.AppendMany(
+            reactorContext.GetEventSourceId(),
+            (IEnumerable<object>)value,
+            reactorContext.GetEventStreamType(),
+            reactorContext.GetEventStreamId(),
+            reactorContext.GetEventSourceType(),
+            subject: reactorContext.GetSubject());
 
-        foreach (var @event in (IEnumerable<object>)value)
-        {
-            var result = await eventStore.EventLog.Append(
-                reactorContext.GetEventSourceId(),
-                @event,
-                reactorContext.GetEventStreamType(),
-                reactorContext.GetEventStreamId(),
-                reactorContext.GetEventSourceType(),
-                subject: reactorContext.GetSubject());
-
-            if (!result.IsSuccess)
-            {
-                var constraintViolations = result.ConstraintViolations.Select(cv =>
-                    new ReactorConstraintViolation(
-                        cv.EventTypeId.Value,
-                        cv.Message)).ToList();
-
-                var errors = result.Errors.Select(e => e.Value).ToList();
-
-                var failure = new AppendFailure(
-                    constraintViolations,
-                    result.ConcurrencyViolation is not null,
-                    errors);
-                appendFailures.Add(failure);
-            }
-        }
-
-        if (appendFailures.Count == 0)
+        if (result.IsSuccess)
         {
             return Result.Success<ReactorSideEffectFailure>();
         }
 
-        var sideEffectFailure = new ReactorSideEffectFailure(appendFailures);
-        return Result.Failed(sideEffectFailure);
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
     }
 }
