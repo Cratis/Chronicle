@@ -73,7 +73,13 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
 
             foreach (var property in properties)
             {
-                expandoObject[property.Name] = Convert(property, expandoObject[property.Name]);
+                // A value does not necessarily carry every property declared by the schema. Only convert
+                // properties that are actually present on the value; absent ones are simply not part of
+                // this concrete shape and must not be accessed by indexer (which would throw).
+                if (expandoObject.TryGetValue(property.Name, out var propertyValue))
+                {
+                    expandoObject[property.Name] = Convert(property, propertyValue);
+                }
             }
             return expandoObject;
         }
