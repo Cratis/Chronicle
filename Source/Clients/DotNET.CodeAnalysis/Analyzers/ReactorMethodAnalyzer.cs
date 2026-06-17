@@ -74,23 +74,20 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check if this could be an event handler method based on return type.
-        // Valid return types: void, Task, Task<T>, or any reference type (sync side-effect returns such as
-        // event types or IEnumerable of event types).
-        // Value types (int, bool, struct, etc.) are not valid reactor return types.
-        var taskType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
-        var taskOfTType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
-        var isGenericTask = taskOfTType != null &&
-            methodSymbol.ReturnType is INamedTypeSymbol namedReturn &&
-            namedReturn.IsGenericType &&
-            SymbolEqualityComparer.Default.Equals(namedReturn.OriginalDefinition, taskOfTType);
-        var validReturnType = methodSymbol.ReturnsVoid ||
-            (taskType != null && SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, taskType)) ||
-            isGenericTask ||
-            (!methodSymbol.ReturnType.IsValueType && methodSymbol.ReturnType.SpecialType == SpecialType.None);
-
-        if (!validReturnType)
+        // A method whose return type is not a supported reactor return shape is only a handler mistake when
+        // its first parameter is unambiguously an event type. Chronicle silently skips such methods at
+        // discovery, so flag them here. For any other first-parameter type the method is treated as an
+        // ordinary helper and ignored.
+        if (!IsSupportedReturnType(methodSymbol, context.Compilation))
         {
+            if (WellKnownTypes.HasEventTypeAttribute(firstParamType))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    SignatureRule,
+                    methodSymbol.Locations.FirstOrDefault(),
+                    methodSymbol.Name));
+            }
+
             return;
         }
 
@@ -119,5 +116,59 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                 methodSymbol.Name);
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    static bool IsSupportedReturnType(IMethodSymbol method, Compilation compilation)
+    {
+        if (method.ReturnsVoid)
+        {
+            return true;
+        }
+
+        var returnType = method.ReturnType;
+
+        var taskType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
+        if (taskType != null && SymbolEqualityComparer.Default.Equals(returnType, taskType))
+        {
+            return true;
+        }
+
+        // Any Task<T> is accepted — the returned value is dispatched to a side-effect handler at runtime.
+        var taskOfTType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
+        if (taskOfTType != null &&
+            returnType is INamedTypeSymbol task &&
+            task.IsGenericType &&
+            SymbolEqualityComparer.Default.Equals(task.OriginalDefinition, taskOfTType))
+        {
+            return true;
+        }
+
+        return IsSupportedSyncSideEffectReturnType(returnType, compilation);
+    }
+
+    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation)
+    {
+        if (WellKnownTypes.HasEventTypeAttribute(returnType))
+        {
+            return true;
+        }
+
+        var eventForEventSourceId = compilation.GetTypeByMetadataName(WellKnownTypes.EventForEventSourceIdName);
+        if (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(returnType, eventForEventSourceId))
+        {
+            return true;
+        }
+
+        if (returnType is INamedTypeSymbol named &&
+            named.IsGenericType &&
+            named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+        {
+            var element = named.TypeArguments[0];
+            return element.SpecialType == SpecialType.System_Object ||
+                   WellKnownTypes.HasEventTypeAttribute(element) ||
+                   (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
+        }
+
+        return false;
     }
 }
