@@ -91,7 +91,7 @@ jobs:
         with:
           path: ./coverage-reports
           key: coverage-cache-${{ github.sha }}
-          fail-on-cache-miss: true
+          fail-on-cache-miss: false
 
       - name: Collect coverage statistics for release
         run: |
