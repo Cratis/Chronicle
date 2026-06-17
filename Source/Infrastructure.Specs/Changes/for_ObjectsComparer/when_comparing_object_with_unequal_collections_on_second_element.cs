@@ -23,5 +23,7 @@ public class when_comparing_object_with_unequal_collections_on_second_element : 
 
     [Fact] void should_not_be_equal() => _result.ShouldBeFalse();
     [Fact] void should_have_one_property_difference() => _differences.Count().ShouldEqual(1);
-    [Fact] void should_have_concept_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection));
+    [Fact] void should_have_collection_property_as_difference() => _differences.First().PropertyPath.Path.ShouldEqual(nameof(TheType.Collection));
+    [Fact] void should_hold_original_element_as_difference() => _differences.First().Original.ShouldEqual(2);
+    [Fact] void should_hold_changed_element_as_difference() => _differences.First().Changed.ShouldEqual(5);
 }
