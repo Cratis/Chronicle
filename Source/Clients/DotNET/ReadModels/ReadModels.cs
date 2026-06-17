@@ -401,7 +401,7 @@ public class ReadModels(
     /// <inheritdoc/>
     public async Task<TReadModel> Release<TReadModel>(TReadModel instance)
     {
-        var subject = ReadModelSubjectResolver.ResolveFrom(instance!);
+        var subject = ReadModelSubjectResolver.ResolveFrom(instance);
         if (subject is null)
         {
             return instance;
