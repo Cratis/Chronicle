@@ -16,6 +16,6 @@ public class with_children_having_class_level_removed_with : given.a_model_bound
     [Fact] void should_have_child_with_correct_name() => _result.Children.ContainsKey(nameof(ParentWithRemovableChildren.Items)).ShouldBeTrue();
     [Fact] void should_have_removed_with_on_children() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Count.ShouldEqual(1);
     [Fact] void should_have_removed_with_for_correct_event_type() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Keys.First().Id.ShouldEqual(event_types.GetEventTypeFor(typeof(ChildItemRemoved)).Id.ToString());
-    [Fact] void should_use_specified_key_on_removed_with() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Values.First().Key.ShouldEqual(nameof(ChildItemRemoved.ItemId));
-    [Fact] void should_use_specified_parent_key_on_removed_with() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Values.First().ParentKey.ShouldEqual(nameof(ChildItemRemoved.ParentId));
+    [Fact] void should_use_specified_key_on_removed_with() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Values.First().Key.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ChildItemRemoved.ItemId))));
+    [Fact] void should_use_specified_parent_key_on_removed_with() => _result.Children[nameof(ParentWithRemovableChildren.Items)].RemovedWith.Values.First().ParentKey.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ChildItemRemoved.ParentId))));
 }

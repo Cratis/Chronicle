@@ -239,6 +239,16 @@ public class InMemorySink(
                     collection.Add(childAdded.State);
                     break;
 
+                case ChildRemoved childRemoved:
+                    var childCollection = state.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, key.ArrayIndexers);
+                    var childToRemove = childCollection.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
+                    if (childToRemove is not null)
+                    {
+                        childCollection.Remove(childToRemove);
+                    }
+
+                    break;
+
                 case NestedCleared nestedCleared:
                     var stateDict = (IDictionary<string, object?>)state;
                     stateDict[nestedCleared.NestedProperty.LastSegment.Value] = null;
