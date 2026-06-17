@@ -388,13 +388,13 @@ static class ChildrenDefinitionExtensions
                     // Process RemovedWith attributes on constructor parameters
                     foreach (var (removedAttr, removedEventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
                     {
-                        childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, removedAttr, removedEventType);
+                        childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, namingPolicy, removedAttr, removedEventType);
                     }
 
                     // Process RemovedWithJoin attributes on constructor parameters
                     foreach (var (removedJoinAttr, removedJoinEventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
                     {
-                        childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, removedJoinAttr, removedJoinEventType);
+                        childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, removedJoinAttr, removedJoinEventType);
                     }
                 }
             }
@@ -403,7 +403,7 @@ static class ChildrenDefinitionExtensions
             // No need to explicitly map properties here
 
             // Process class-level RemovedWith attributes on the child type
-            ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, childrenDef);
+            ProcessChildTypeLevelRemovedWith(childType, getOrCreateEventType, namingPolicy, childrenDef);
 
             // Collect class-level FromEvent attributes on the child type
             var childClassLevelFromEvents = childType.GetCustomAttributes()
@@ -521,16 +521,17 @@ static class ChildrenDefinitionExtensions
     static void ProcessChildTypeLevelRemovedWith(
         Type childType,
         Func<Type, EventType> getOrCreateEventType,
+        INamingPolicy namingPolicy,
         ChildrenDefinition childrenDef)
     {
         foreach (var (attr, eventType) in childType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, attr, eventType);
+            childrenDef.RemovedWith.ProcessRemovedWithAttribute(getOrCreateEventType, namingPolicy, attr, eventType);
         }
 
         foreach (var (attr, eventType) in childType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, attr, eventType);
+            childrenDef.RemovedWithJoin.ProcessRemovedWithJoinAttribute(getOrCreateEventType, namingPolicy, attr, eventType);
         }
     }
 

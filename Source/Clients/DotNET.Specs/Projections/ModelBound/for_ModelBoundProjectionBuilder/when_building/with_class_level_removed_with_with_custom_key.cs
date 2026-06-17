@@ -14,5 +14,5 @@ public class with_class_level_removed_with_with_custom_key : given.a_model_bound
     [Fact] void should_return_definition() => _result.ShouldNotBeNull();
     [Fact] void should_have_one_removed_with_entry() => _result.RemovedWith.Count.ShouldEqual(1);
     [Fact] void should_have_removed_with_for_correct_event_type() => _result.RemovedWith.Keys.First().Id.ShouldEqual(event_types.GetEventTypeFor(typeof(ReadModelRemoved)).Id.ToString());
-    [Fact] void should_use_specified_key_expression() => _result.RemovedWith.Values.First().Key.ShouldEqual(nameof(ReadModelRemoved.Id));
+    [Fact] void should_use_specified_key_expression() => _result.RemovedWith.Values.First().Key.ShouldEqual(naming_policy.GetPropertyName(new Properties.PropertyPath(nameof(ReadModelRemoved.Id))));
 }
