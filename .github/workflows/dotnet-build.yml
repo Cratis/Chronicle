@@ -116,18 +116,10 @@ jobs:
           path: ./**/bin
           key: ${{ env.DOTNET_CACHE }}
 
-      - name: Run tests with coverage
+      - name: Run tests
         # Integration tests are executed by .github/workflows/integration.yml.
         # Keep regular specs focused on non-integration test suites.
-        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration" --collect:"XPlat Code Coverage" --results-directory ./coverage-results
-
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-specs
-          path: ./coverage-results/
-          retention-days: 1
+        run: dotnet test --no-build --configuration Release --settings specs.runsettings --filter "FullyQualifiedName!~Cratis.Chronicle.Integration&FullyQualifiedName!~Cratis.Chronicle.Kernel.Integration"
 
   integration:
     needs: [dotnet-build]
@@ -172,19 +164,12 @@ jobs:
           cp -r Source/Kernel/Server/bin/Release/net10.0/. Source/Kernel/Server/out/
           docker build -t "${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" -f Docker/Local/Dockerfile .
 
-      - name: Run API integration tests with coverage
+      - name: Run API integration tests
         working-directory: ./Integration/Api
         # Keep build enabled for .NET 10 test projects. `--no-build` causes an
         # invalid test assembly argument failure in this workflow context.
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true --collect:"XPlat Code Coverage" --results-directory ./coverage-results
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release -p:DisableDockerBuild=true
 
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-integration-api
-          path: ./Integration/Api/coverage-results/
-          retention-days: 1
 
   mongodb:
     runs-on: ubuntu-latest
@@ -214,110 +199,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run MongoDB integration tests with coverage
+      - name: Run MongoDB integration tests
         working-directory: ./Integration/MongoDB
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage-results
-
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-mongodb
-          path: ./Integration/MongoDB/coverage-results/
-          retention-days: 1
-
-  coverage-merge-and-cache:
-    if: github.event_name != 'pull_request_target'
-    runs-on: ubuntu-latest
-    needs: [specs, integration, integration-api, mongodb]
-    permissions:
-      contents: write
-    outputs:
-      coverage-cache-key: ${{ steps.export-coverage-key.outputs.key }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT_WORKFLOWS }}
-
-      - name: Setup .Net
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./all-coverage-results
-          # Download all coverage artifacts using wildcard pattern
-          pattern: coverage-results-*
-
-      - name: Merge coverage results
-        run: |
-          # Create directories for merged coverage
-          mkdir -p ./coverage-results
-          mkdir -p ./coverage-reports
-          
-          # Find all coverage.cobertura.xml files from artifacts and copy them
-          find ./all-coverage-results -name "coverage.cobertura.xml" -type f | while read file; do
-            echo "Found coverage file: $file"
-            # Create unique directory for each coverage file
-            dirname_hash=$(echo "$file" | md5sum | cut -d' ' -f1)
-            mkdir -p "./coverage-results/$dirname_hash"
-            cp "$file" "./coverage-results/$dirname_hash/coverage.cobertura.xml"
-          done
-          
-          echo "Merged coverage results:"
-          find ./coverage-results -name "coverage.cobertura.xml" | head -20
-
-      - name: Install coverage tools
-        run: dotnet tool install --global dotnet-reportgenerator-globaltool
-
-      - name: Generate merged coverage report
-        run: |
-          reportgenerator \
-            -reports:"./coverage-results/**/coverage.cobertura.xml" \
-            -targetdir:"./coverage-reports" \
-            -reporttypes:"Cobertura;JsonSummary" \
-            -assemblyfilters:"-*.Specs;-xunit*;-NSubstitute*"
-          
-          echo "Generated coverage report:"
-          ls -la ./coverage-reports/
-
-      - name: Cache merged coverage
-        uses: actions/cache@v4
-        with:
-          path: ./coverage-reports
-          key: coverage-cache-${{ github.sha }}
-
-      - name: Export coverage cache key
-        id: export-coverage-key
-        run: |
-          echo "key=coverage-cache-${{ github.sha }}" >> "$GITHUB_OUTPUT"
-
-      - name: Collect coverage statistics
-        run: |
-          .github/scripts/collect-coverage.sh \
-            "./coverage-reports" \
-            "./Documentation/statistics/coverage-data.js" \
-            "${{ github.ref_name }}" \
-            "${{ github.sha }}" \
-            "${{ github.event.head_commit.message || format('Coverage update for {0}', github.ref_name) }}"
-
-      - name: Commit coverage statistics
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add Documentation/statistics/coverage-data.js
-          if git diff --staged --quiet; then
-            echo "No coverage statistics changes to commit"
-          else
-            git commit -m "Update coverage statistics [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
-          fi
+        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
 
   benchmarks:
     runs-on: ubuntu-latest
