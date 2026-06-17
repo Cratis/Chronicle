@@ -2,7 +2,7 @@
 
 Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
 
-> **Important**: If an append operation fails (constraint violation, concurrency violation, or error), the side-effect handler returns a `Result<ReactorSideEffectFailure>` containing the failure details. The reactor partition is marked as failed with structured error information. The partition will be retried according to the observer retry policy.
+> **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
 
 ## Basic Usage
 
@@ -217,31 +217,15 @@ services.AddSingleton<IReactorSideEffectHandler, MyHandler>();
 | `IEnumerable<object>` mixing events and `EventForEventSourceId` | `MixedSideEffectsResultHandler` — bare events use reactor metadata, each `EventForEventSourceId` keeps its own; all appended as one transaction |
 | `void` / `Task` | No side effects appended |
 
-## Error Handling
+## Error handling
 
-When a reactor returns side-effect events, the framework checks the `AppendResult` of each append operation using the `Result<>` monad pattern. If any append fails, the side-effect handler returns a `Result.Failed(ReactorSideEffectFailure)` containing:
+A side-effect append is not fire-and-forget — its result is honored. If an append fails, the reactor's partition fails and stops advancing, so the failure cannot pass unnoticed. The failure is one of:
 
-- **Constraint violations**: Unique constraint violations with event type and message details
-- **Concurrency violations**: Flags indicating version conflicts
-- **Errors**: Structured error messages from infrastructure failures
+- **Constraint violation** — a unique constraint rejected the event.
+- **Concurrency conflict** — the event source moved on since the reactor observed its triggering event.
+- **Append error** — the event could not be written.
 
-The `ReactorSideEffectFailure` propagates explicitly through the reactor pipeline in the `ReactorInvocationResult`, which is processed by the observer infrastructure:
+The failing partition records the details — the violating constraint, the event type, and a message — which you can inspect through the failed-partitions API. The partition is then retried according to the observer's retry policy, and quarantined if the retries are exhausted, exactly like any other reactor failure.
 
-1. The partition is marked as failed
-2. Full side-effect failure details are serialized into `ReactorResult.SideEffectFailures`
-3. Exception messages and stack trace are recorded separately (if any unexpected exceptions occurred)
-4. The partition is retried according to the observer retry policy
-5. The observer is quarantined if the retry limit is exceeded
-
-This ensures that append failures don't go unnoticed and provides structured error information for debugging through the failed partitions API and kernel observability.
-
-### Architecture Flow
-
-```mermaid
-flowchart TD
-    A[Side-Effect Handler] -->|"Result&lt;ReactorSideEffectFailure&gt;"| B[ReactorInvoker]
-    B -->|"ReactorInvocationResult"| C[ReactorHandler.OnNext]
-    C -->|"ReactorInvocationResult"| D[Reactors.ObserverMethod]
-    D -->|"ReactorResult with SideEffectFailures"| E[Kernel receives structured failure details]
-```
+Because a side effect can be applied more than once across retries, design reactors to be idempotent.
 
