@@ -138,8 +138,8 @@ jobs:
           # to do and its anonymous Docker Hub manifest call at session
           # init is a frequent source of flakiness. Disable it on CI.
           TESTCONTAINERS_RYUK_DISABLED: true
-          # The retry script owns --results-directory; point it at ./coverage-results to store TRX files.
-          TEST_RESULTS_DIR: ./coverage-results
+          # The retry script owns --results-directory; point it at ./test-results to store TRX files.
+          TEST_RESULTS_DIR: ./test-results
         # On failure, only the failed tests are re-run (up to TEST_MAX_ATTEMPTS), so a
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
@@ -192,8 +192,8 @@ jobs:
         env:
           # See client-integration-specs for the rationale.
           TESTCONTAINERS_RYUK_DISABLED: true
-          # The retry script owns --results-directory; point it at ./coverage-results to store TRX files.
-          TEST_RESULTS_DIR: ./coverage-results
+          # The retry script owns --results-directory; point it at ./test-results to store TRX files.
+          TEST_RESULTS_DIR: ./test-results
         # See client-integration-specs for the retry rationale. The kernel project
         # does not have Client's Docker build target.
         run: |
