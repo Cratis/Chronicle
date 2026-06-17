@@ -1,1 +1,0 @@
-../.ai/rules/general.md

@@ -1,1 +1,0 @@
-../../.ai/rules/specs.typescript.md

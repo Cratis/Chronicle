@@ -1,1 +1,0 @@
-../../.ai/rules/specs.csharp.md
