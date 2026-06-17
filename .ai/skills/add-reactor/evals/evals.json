@@ -1,0 +1,28 @@
+{
+  "skill_name": "add-reactor",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a reactor that sends a notification when a Project is registered.",
+      "expected_output": "An IReactor class with a method (ProjectRegistered @event, EventContext context) that calls an injected notification service. Stateless and idempotent; primary-constructor injection.",
+      "files": [],
+      "assertions": [
+        "Class implements IReactor; the handler dispatches by its first parameter (the event type)",
+        "Dependencies are injected via primary constructor; the class is stateless",
+        "Does not query the read model back inside the reactor",
+        "Non-idempotent side effects are marked [OnceOnly]"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a translation reactor that, when a Book is reserved, decreases stock by executing a DecreaseStock command.",
+      "expected_output": "An IReactor injecting ICommandPipeline and executing DecreaseStock (scopeless overload) in response to BookReserved. Does not inject IEventLog.",
+      "files": [],
+      "assertions": [
+        "Triggers the other slice via ICommandPipeline.Execute (not by instantiating its handler)",
+        "Does not inject IEventLog to change state in another slice",
+        "Reactor is stateless and focused on one automation concern"
+      ]
+    }
+  ]
+}

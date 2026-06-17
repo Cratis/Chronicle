@@ -1,0 +1,28 @@
+{
+  "skill_name": "ship-changes",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Ship my staged changes: a new authors-registration slice. Commit, push, open a PR, and merge it.",
+      "expected_output": "Branch off main, logical commit(s) staging only the relevant files (git add <specific files>, never git add .), a PR description following the template, wait for CI checks to pass (get_check_runs) BEFORE merging, merge, then delete the branch locally and on origin.",
+      "files": [],
+      "assertions": [
+        "Creates a feature branch off main (does not commit on main)",
+        "Stages specific files (never git add . or git add -A)",
+        "Waits for CI / get_check_runs to be green BEFORE merging",
+        "Deletes the branch locally and on origin after merge"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Ship this one-line bug fix as a patch and label the PR accordingly.",
+      "expected_output": "A single logical commit with an imperative subject, a PR labeled 'patch', CI checked before merge, and branch cleanup afterward.",
+      "files": [],
+      "assertions": [
+        "Commit subject is imperative and scoped to one logical change",
+        "PR is labeled patch for a bug fix",
+        "CI is verified green before the merge"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "skill_name": "write-specs",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write specs for a RegisterAuthor command that appends AuthorRegistered and has a validator requiring a non-empty name. Cover the happy path and the validation failure.",
+      "expected_output": "In-process specs using CommandScenario<RegisterAuthor>: a happy-path class asserting ShouldBeSuccessful() and ShouldHaveAppendedEvent<RegisterAuthor, AuthorRegistered>(...), and a failure class asserting BOTH ShouldNotBeSuccessful() and ShouldHaveValidationErrors(). Files wrapped in #if DEBUG, under when_registering/.",
+      "files": [],
+      "assertions": [
+        "Uses CommandScenario<TCommand> (not ChronicleOutOfProcessFixture or an HTTP client)",
+        "Happy path asserts ShouldBeSuccessful() and an appended-event assertion",
+        "Validation failure asserts BOTH ShouldNotBeSuccessful() and ShouldHaveValidationErrors()",
+        "No assertions on validation message strings",
+        "Spec files are wrapped in #if DEBUG ... #endif",
+        "Folder is when_<verb>, files are and_<condition>.cs, methods are should_<result>"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write a spec proving a duplicate author name is rejected by the uniqueness constraint.",
+      "expected_output": "An EventScenario spec: Establish appends an existing AuthorRegistered, Because appends a second with the same name, assertions use ShouldBeFailed() and ShouldHaveConstraintViolationFor(<constraint name>).",
+      "files": [],
+      "assertions": [
+        "Uses EventScenario for the constraint (not CommandScenario)",
+        "Asserts ShouldBeFailed() and ShouldHaveConstraintViolationFor(name)",
+        "Asserts the constraint NAME, not a message string"
+      ]
+    }
+  ]
+}
