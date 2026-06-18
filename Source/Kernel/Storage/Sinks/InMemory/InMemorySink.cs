@@ -231,7 +231,7 @@ public class InMemorySink(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = state.MergeWith(propertiesChanged.ToStateWithoutChildOperationConflicts(collectionPathsWithChildOperations));
+                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations);
                     break;
 
                 case ChildAdded childAdded:
