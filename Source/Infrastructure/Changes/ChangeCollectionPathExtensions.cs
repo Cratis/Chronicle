@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Changes;
@@ -47,8 +48,31 @@ public static class ChangeCollectionPathExtensions
     /// <param name="difference">The property difference.</param>
     /// <param name="collectionPathsWithChildOperations">Collection paths with child operations.</param>
     /// <returns>True if the property difference conflicts with a child operation; false otherwise.</returns>
-    public static bool ConflictsWithChildOperation(this PropertyDifference difference, ISet<PropertyPath> collectionPathsWithChildOperations) =>
-        collectionPathsWithChildOperations.Contains(difference.PropertyPath.NormalizeCollectionPath());
+    public static bool ConflictsWithChildOperation(this PropertyDifference difference, ISet<PropertyPath> collectionPathsWithChildOperations)
+    {
+        var normalizedPropertyPath = difference.PropertyPath.NormalizeCollectionPath();
+
+        return collectionPathsWithChildOperations.Any(normalizedPropertyPath.IsSameAsOrDescendantOf);
+    }
+
+    /// <summary>
+    /// Applies property differences to an existing state object while excluding properties that conflict with child operations.
+    /// </summary>
+    /// <param name="propertiesChanged">The property change to apply.</param>
+    /// <param name="state">The state to apply the changes to.</param>
+    /// <param name="collectionPathsWithChildOperations">Collection paths with child operations.</param>
+    /// <returns>A state object with non-conflicting property differences applied.</returns>
+    public static ExpandoObject ApplyToStateWithoutChildOperationConflicts(this PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject state, ISet<PropertyPath> collectionPathsWithChildOperations)
+    {
+        var result = state.Clone();
+
+        foreach (var difference in propertiesChanged.Differences.Where(_ => !_.ConflictsWithChildOperation(collectionPathsWithChildOperations)))
+        {
+            difference.PropertyPath.SetValue(result, difference.Changed!, difference.ArrayIndexers);
+        }
+
+        return result;
+    }
 
     /// <summary>
     /// Creates a state object from differences that do not conflict with child operations.
@@ -78,4 +102,8 @@ public static class ChangeCollectionPathExtensions
         var segments = propertyPath.Segments.Select(_ => _.Value);
         return new PropertyPath(string.Join('.', segments));
     }
+
+    static bool IsSameAsOrDescendantOf(this PropertyPath propertyPath, PropertyPath candidateParentPath) =>
+        propertyPath == candidateParentPath ||
+        (candidateParentPath.IsSet && propertyPath.Path.StartsWith($"{candidateParentPath.Path}.", StringComparison.Ordinal));
 }
