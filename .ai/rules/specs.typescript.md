@@ -1,10 +1,15 @@
 ---
 applyTo: "**/for_*/**/*.ts, **/when_*/**/*.ts"
+paths:
+  - "**/for_*/**/*.ts"
+  - "**/when_*/**/*.ts"
 ---
 
 # How to Write TypeScript Specs
 
-Extends the base [Specs Instructions](./specs.instructions.md) with TypeScript-specific conventions.
+Extends the base [specs.md](./specs.md) with TypeScript-specific conventions.
+
+> **Which TS spec guide?** For **application frontend** specs — view models, React components, helpers in a Cratis application — use [frontend-testing.md](./frontend-testing.md) (plain `describe`/`beforeEach`, view models constructible without React). This file covers the **`given()`-helper** style used inside Cratis framework TypeScript packages (`@cratis/*`). Use it when contributing to the framework packages themselves.
 
 TypeScript specs follow the same BDD philosophy as C# specs — they describe behaviors, not implementations. The `given()` helper and context classes mirror the Cratis.Specifications pattern on the C# side: setup is separated from the action, and each `it()` assertion verifies a single outcome.
 

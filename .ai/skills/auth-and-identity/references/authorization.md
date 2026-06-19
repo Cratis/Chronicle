@@ -157,3 +157,23 @@ public record UpdateOrder(OrderId Id, string Data)
 |----------|-------------|
 | Not authenticated | 401 Unauthorized |
 | Authenticated but wrong role | 403 Forbidden |
+
+## Cross-cutting authorization — `ICommandFilter`
+
+When the same authorization rule must span many commands (e.g. every command under a namespace), don't repeat it per handler — implement an `ICommandFilter` (auto-discovered, runs before the handler):
+
+```csharp
+public class AdminAreaFilter : ICommandFilter
+{
+    public Task<CommandResult> OnExecution(CommandContext context) =>
+        Task.FromResult(context.Type.Namespace?.Contains(".Admin.") == true && !IsAdmin(context)
+            ? CommandResult.Unauthorized(context.CorrelationId)
+            : CommandResult.Success(context.CorrelationId));
+}
+```
+
+Reserve attributes for per-command roles; use `ICommandFilter` for the cross-cutting rule. Command-specific *scope* rejection ("may only act on your own organization") still belongs in the `CommandValidator<T>`.
+
+## ⚠️ Adding `[Roles]` breaks existing specs
+
+Adding `[Roles]` to an existing command **breaks all its `.Execute()` specs** — both happy-path and validation-failure. An unauthorized result has `IsSuccess == false`, so `ShouldNotBeSuccessful()` still passes but the result carries **no** validation errors, so `ShouldHaveValidationErrors()` silently flips to failing. Register the identity the authorization evaluator reads into the command scenario's `Services`, and assert auth failures with `ShouldNotBeAuthorized()` — never `ShouldNotBeSuccessful()` alone.

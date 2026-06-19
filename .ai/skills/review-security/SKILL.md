@@ -8,14 +8,14 @@ Perform a structured security review of changed code.
 ## Input Validation & Injection
 
 - [ ] All command properties validated before use (null, empty, range, format)
-- [ ] No raw SQL concatenation — parameterised queries or EF Core only
+- [ ] No raw SQL concatenation — parameterized queries or EF Core only
 - [ ] No user-supplied values passed to `Path.Combine`, `File.*`, shell commands, or process args
-- [ ] No user-supplied values used as event-store keys without sanitisation
+- [ ] No user-supplied values used as event-store keys without sanitization
 
-## Authentication & Authorisation
+## Authentication & Authorization
 
 - [ ] All HTTP endpoints decorated with `[Authorize]` or explicitly `[AllowAnonymous]` with justification
-- [ ] Tenant isolation enforced — no cross-tenant data accessible without authorisation
+- [ ] Tenant isolation enforced — no cross-tenant data accessible without authorization
 - [ ] Claims verified before acting on identity-dependent command data
 
 ## Sensitive Data Exposure

@@ -26,10 +26,10 @@ For a standard page action menu (Create / Edit / Delete over a data table), use 
 | `ToolbarContext` | Named set of buttons inside a `ToolbarSection` |
 | `ToolbarFanOutItem` | Button that slides out a horizontal sub-panel on click |
 
-All components import from `@cratis/components`:
+All components import from the `@cratis/components/Toolbar` subpath (never the root barrel — see components.md):
 
 ```tsx
-import { Toolbar, ToolbarButton, ToolbarSeparator, ToolbarSection, ToolbarContext, ToolbarFanOutItem } from '@cratis/components';
+import { Toolbar, ToolbarButton, ToolbarSeparator, ToolbarSection, ToolbarContext, ToolbarFanOutItem } from '@cratis/components/Toolbar';
 ```
 
 ---
@@ -39,7 +39,7 @@ import { Toolbar, ToolbarButton, ToolbarSeparator, ToolbarSection, ToolbarContex
 Place `ToolbarButton` elements inside `Toolbar`. The default orientation is vertical.
 
 ```tsx
-import { Toolbar, ToolbarButton } from '@cratis/components';
+import { Toolbar, ToolbarButton } from '@cratis/components/Toolbar';
 
 export const DrawingToolbar = () => (
     <Toolbar>
@@ -58,7 +58,7 @@ Use the `active` prop to highlight the currently selected tool. Drive it from st
 
 ```tsx
 import { useState } from 'react';
-import { Toolbar, ToolbarButton } from '@cratis/components';
+import { Toolbar, ToolbarButton } from '@cratis/components/Toolbar';
 
 export const DrawingToolbar = () => {
     const [activeTool, setActiveTool] = useState('select');
@@ -112,7 +112,7 @@ Pass `orientation='horizontal'` for a horizontal layout. Use `text` for buttons 
 
 ```tsx
 import { useState } from 'react';
-import { Toolbar, ToolbarButton, ToolbarSeparator } from '@cratis/components';
+import { Toolbar, ToolbarButton, ToolbarSeparator } from '@cratis/components/Toolbar';
 
 export const ZoomToolbar = () => {
     const [zoom, setZoom] = useState(100);
@@ -139,7 +139,7 @@ export const ZoomToolbar = () => {
 
 ```tsx
 import { useState } from 'react';
-import { Toolbar, ToolbarButton, ToolbarSection, ToolbarContext } from '@cratis/components';
+import { Toolbar, ToolbarButton, ToolbarSection, ToolbarContext } from '@cratis/components/Toolbar';
 
 export const ContextualToolbar = () => {
     const [mode, setMode] = useState<'drawing' | 'text'>('drawing');
@@ -174,7 +174,7 @@ Only the `ToolbarSection` transitions. Buttons outside the section are unaffecte
 `ToolbarFanOutItem` replaces a regular button with one that fans out a horizontal panel of additional tools. Clicking the button again or anywhere outside closes the panel.
 
 ```tsx
-import { Toolbar, ToolbarButton, ToolbarFanOutItem } from '@cratis/components';
+import { Toolbar, ToolbarButton, ToolbarFanOutItem } from '@cratis/components/Toolbar';
 
 export const ShapesToolbar = () => (
     <Toolbar>
@@ -256,7 +256,7 @@ When the toolbar is on the **right side** of the screen, fan out to the left:
 Render separate `Toolbar` instances to create distinct groups:
 
 ```tsx
-<div className='flex flex-col gap-2'>
+<div className='flex flex-column gap-2'>
     <Toolbar>
         <ToolbarButton icon='pi pi-arrow-up-left' tooltip='Select' />
         <ToolbarButton icon='pi pi-pencil' tooltip='Draw' />

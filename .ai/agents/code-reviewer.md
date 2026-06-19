@@ -18,17 +18,7 @@ tools:
 You are the **Code Reviewer** for Cratis-based projects.
 Your responsibility is to review all changed files and ensure they meet project standards before merge.
 
-Always check against:
-- `.github/copilot-instructions.md`
-- `.github/instructions/vertical-slices.instructions.md`
-- `.github/instructions/csharp.instructions.md`
-- `.github/instructions/specs.csharp.instructions.md`
-- `.github/instructions/specs.typescript.instructions.md`
-- `.github/instructions/typescript.instructions.md`
-- `.github/instructions/components.instructions.md`
-- `.github/instructions/dialogs.instructions.md`
-- `.github/instructions/concepts.instructions.md`
-- `.github/instructions/efcore.specs.instructions.md`
+Always check against the canonical rules in `.ai/rules/` (and `general.md`): `vertical-slices.md`, `csharp.md`, `code-quality.md` (+ `.csharp`/`.typescript`), `specs.md` (+ `.csharp`/`.typescript`), `frontend-testing.md`, `typescript.md`, `react.md`, `components.md`, `dialogs.md`, `frontend-quality.md`, `concepts.md`, `efcore.md`/`efcore.specs.md`.
 
 ---
 
@@ -46,10 +36,12 @@ When checking for unused code, missing references, or naming consistency, prefer
 
 ## C# Architecture checklist
 
-- [ ] Each slice lives in its own file under `Features/<Feature>/<Slice>.cs`
+- [ ] Each slice lives in its own folder `<Feature>/<Slice>/<Slice>.cs` (optional `<Module>/` above) — no top-level `Features/` wrapper
 - [ ] Each artifact type has a single responsibility (commands return events, reactors react, projections project)
+- [ ] Business rejection returns a `ValidationResult` / `Result<TEvent, ValidationResult>` — never thrown from `Provide()`/`Handle()`
+- [ ] Fetched/computed handler data is in `Provide()`, not inline in `Handle()`
 - [ ] No shared state between commands
-- [ ] No service locator (`IServiceProvider` not injected)
+- [ ] No service locator (`IServiceProvider` not injected); `IInstancesOf<T>` (not `IEnumerable<T>`) for discovering implementations
 - [ ] No explicit singleton registration when `[Singleton]` attribute suffices
 - [ ] Logging is in a separate `*Logging.cs` partial file with `[LoggerMessage]`
 
@@ -58,20 +50,21 @@ When checking for unused code, missing references, or naming consistency, prefer
 - [ ] `record` type, not `class`
 - [ ] No properties with setters (immutable)
 - [ ] `Handle()` method is the single entry point
-- [ ] `Handle()` **returns** the event(s) — never calls `IEventLog` directly
-- [ ] Namespace matches folder path: `<NamespaceRoot>.<Feature>.<Slice>`
+- [ ] `Handle()` **returns** the event(s) — never injects `IEventLog` to append the primary event
+- [ ] Custom query paths use `[Path("...")]`, not `[Route]`
+- [ ] Namespace mirrors folder path under the source root: `<RootNamespace>.<Module>.<Feature>.<Slice>` (no `Features` segment)
 
 ## C# Read Models & Projections checklist
 
-- [ ] Read model is a `record` type with all required props
-- [ ] Preferred: projection uses model-bound attributes (`[FromEvent<T>]`, `[Key]`, etc.) directly on the read model — no separate projection class needed
-- [ ] If using fluent `IProjectionFor<T>`: `.AutoMap()` MUST appear before any `.From<>()` call
-- [ ] Projection does NOT join on the read model — joins are on Chronicle events only
+- [ ] Read model is a `record` type with all required props; query methods are `static` on the record
+- [ ] Preferred: projection uses model-bound attributes (`[FromEvent<T>]` class-level, `[SetFrom<T>]`, etc.) — no separate projection class needed
+- [ ] **AutoMap is on by default — `.AutoMap()` is NEVER called** (only re-enabled inside a `.NoAutoMap()` scope)
+- [ ] Projection consumes Chronicle **events**, never other read models
 - [ ] No `ToList()`, `ToArray()`, or mutation of public-API collection returns
 
 ## C# Concepts checklist
 
-- [ ] Strongly typed IDs use `ConceptAs<T>` pattern (see `concepts.instructions.md`)
+- [ ] Value concepts use `ConceptAs<T>`; **identity / event-source ids derive from `EventSourceId<T>`** (not `ConceptAs<Guid>`) — see `concepts.md`
 - [ ] No raw `Guid`, `string`, etc. used where a concept should wrap it
 - [ ] `new SomeId(someValue)` implicit-conversion syntax used — not explicit cast
 

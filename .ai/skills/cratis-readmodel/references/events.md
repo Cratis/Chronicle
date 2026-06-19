@@ -62,16 +62,24 @@ await eventLog.Append(
 
 ## Constraints (uniqueness)
 
-Enforce uniqueness at append time without application-level checks:
+Enforce uniqueness at append time without application-level checks. For the common single-event case, mark the property `[Unique]`:
 
 ```csharp
-public class UniqueOrderNumberConstraint : IUniqueConstraintFor<OrderPlaced>
+[EventType]
+public record OrderPlaced([Unique(name: "UniqueOrderNumber", message: "Order number already used.")] OrderNumber OrderNumber);
+```
+
+For multi-event or `RemovedWith` rules, implement `IConstraint` (declarative `Define`, member-access lambdas only):
+
+```csharp
+public class UniqueOrderNumber : IConstraint
 {
-    public string GetConstraintValue(OrderPlaced @event) => @event.OrderNumber;
+    public void Define(IConstraintBuilder builder) =>
+        builder.Unique(unique => unique.On<OrderPlaced>(e => e.OrderNumber));
 }
 ```
 
-Violation surfaces in `AppendResult.HasConstraintViolations`.
+Violations surface on the `AppendResult`/`CommandResult` as a constraint violation (assert the constraint **name**, never the message). See the **add-business-rule** skill.
 
 ---
 

@@ -6,10 +6,14 @@ on:
     paths:
       - ".ai/**"
       - ".claude/**"
+      - ".agents/**"
+      - "AGENTS.md"
       - ".github/copilot-instructions.md"
       - ".github/instructions/**"
       - ".github/agents/**"
+      - ".github/skills"
       - ".github/skills/**"
+      - ".github/prompts"
       - ".github/prompts/**"
       - ".github/hooks/**"
   workflow_dispatch:

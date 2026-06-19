@@ -1,0 +1,33 @@
+{
+  "skill_name": "new-vertical-slice",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Implement a new vertical slice to register an author with a name. Author names must be unique. Do the full backend slice, specs, and a React page to list and add authors.",
+      "expected_output": "Backend: a single <Slice>.cs with AuthorId (EventSourceId<Guid>), [EventType] AuthorRegistered, a uniqueness IConstraint, RegisterAuthor [Command] with Handle() returning the event, and a [ReadModel] with a model-bound projection plus static query. In-process CommandScenario specs in when_registering/. A React page using DataPage and a CommandDialog. Backend before frontend; build Debug and Release before specs/frontend.",
+      "files": [],
+      "assertions": [
+        "Backend artifacts are in a single slice .cs file under <Feature>/<Slice>/",
+        "Command is a record with Handle() directly on it (no separate handler class)",
+        "[EventType] attribute has no arguments",
+        "Identity uses EventSourceId<T> (not ConceptAs<Guid> or raw Guid)",
+        "Specs use the in-process CommandScenario (not out-of-process ChronicleOutOfProcessFixture by default)",
+        "Workflow builds in both Debug and Release before writing the frontend",
+        "Specs are treated as mandatory for the slice (not 'State Change slices only')",
+        "Frontend imports DataPage and CommandDialog from @cratis/components subpaths"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a State View slice that lists all active projects from existing ProjectRegistered and ProjectArchived events. Include the read model, query, and a React list page.",
+      "expected_output": "A [ReadModel] record with a model-bound projection over ProjectRegistered/ProjectArchived (AutoMap on by default — never an explicit .AutoMap() call), a static query method, ReadModelScenario specs, and a DataPage list page bound to the generated query proxy.",
+      "files": [],
+      "assertions": [
+        "Read model is a record with [ReadModel] and static query method(s)",
+        "Projection prefers model-bound attributes and never calls .AutoMap()",
+        "Specs for the read model use ReadModelScenario",
+        "React page uses DataPage with the generated query proxy"
+      ]
+    }
+  ]
+}

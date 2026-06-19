@@ -5,7 +5,7 @@ description: Use this skill when asked to write tests or specs for read model pr
 
 # Writing Read Model Specs with ReadModelScenario
 
-Use `ReadModelScenario<TReadModel>` to test read model projections and reducers entirely in-process — no Chronicle server, database, or network required.
+Use `ReadModelScenario<TReadModel>` to test read model projections and reducers entirely in-process — no Chronicle server, database, or network required. **Wrap every spec file in `#if DEBUG … #endif`** so spec code ships only in Debug.
 
 ## When to use this skill
 

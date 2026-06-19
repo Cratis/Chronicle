@@ -5,7 +5,7 @@ description: Use this skill when asked to add a Chronicle reactor (automation or
 
 Add a Chronicle **reactor** that triggers automation or translation logic in response to events.
 
-> **Always read `.github/instructions/reactors.instructions.md` first.** It is the source of truth for reactor conventions, rules, and patterns.
+> **Always read the [reactors.md](../../rules/reactors.md) rule first.** It is the source of truth for reactor conventions, rules, and patterns.
 
 ## Step 1 — Identify the event(s)
 

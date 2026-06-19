@@ -1,5 +1,8 @@
 ---
 applyTo: "**/for_*/**/*.*, **/when_*/**/*.*"
+paths:
+  - "**/for_*/**/*.*"
+  - "**/when_*/**/*.*"
 ---
 
 # How to Write Specs
@@ -118,3 +121,12 @@ Contexts capture the "given" part of a specification — the world as it exists 
 
 - Keep assertions concise — prefer single-line assertions where the logic is readable.
 - Don't add blank lines between related assertions for the same behavior.
+
+## Language-specific guides
+
+This file is the shared base. For the concrete patterns:
+
+- [specs.csharp.md](./specs.csharp.md) — C#: the universal `Cratis.Specifications` base + NSubstitute (both profiles; this is what framework/library specs use).
+- [specs.scenarios.csharp.md](./specs.scenarios.csharp.md) — C# **application** profile: the in-process scenario family (`CommandScenario`, `EventScenario`, `ReadModelScenario`, `ReactorScenario`) + out-of-process Chronicle integration.
+- [specs.typescript.md](./specs.typescript.md) — TypeScript framework-package specs (`given()` helper).
+- [frontend-testing.md](./frontend-testing.md) — application frontend specs (view models, React components).

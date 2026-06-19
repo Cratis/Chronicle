@@ -1,8 +1,52 @@
 ---
 applyTo: "**/*.tsx"
+paths:
+  - "**/*.tsx"
+profile: application
 ---
 
 # Building React Components
+
+## Cratis Components — pick the wrapper, import from subpaths
+
+Reach PrimeReact almost exclusively through Cratis Components wrappers. Import from **subpaths**, not the root barrel (the barrel pulls optional-peer-heavy exports):
+
+| Need | Use | Subpath |
+|---|---|---|
+| Page chrome | `Page` | `@cratis/components/Common` |
+| Query list page | `DataPage` | `@cratis/components/DataPage` |
+| Standalone query table | `DataTableForQuery` / `DataTableForObservableQuery` | `@cratis/components/DataTables` |
+| Form section | `FormElement` | `@cratis/components/Common` |
+| Icon | `Icon` / `IconDisplay` | `@cratis/components/Common` |
+| Dropdown | `Dropdown` | `@cratis/components/Dropdown` |
+| Command dialog | `CommandDialog` / `StepperCommandDialog` | `@cratis/components/CommandDialog` |
+| Data/confirmation dialog | `Dialog` / `ConfirmationDialog` / `BusyIndicatorDialog` | `@cratis/components/Dialogs` |
+| Command form fields | `InputTextField`, … | `@cratis/components/CommandForm` |
+| Canvas tool palette | `Toolbar` | `@cratis/components/Toolbar` |
+
+Use `Dropdown` from `@cratis/components/Dropdown` (not raw `primereact/dropdown`) — it appends to the document body and stacks correctly above overlays, avoiding the z-index issues raw PrimeReact dropdowns have inside dialogs.
+
+### `DataPage` — query list pages
+
+`DataPage` (from `@cratis/components/DataPage`) owns the data table's subscription, paging, selection, action menubar, and details split — **do not pre-fetch rows and pass an `items` array**. Required props: `title`, `query` (`Constructor<TQuery>`; snapshot and observable queries are auto-detected), `emptyMessage`, and `children`. Other props: `queryArguments`, `dataKey` (pass whenever the read model has an identity), `selection` / `onSelectionChange`, `globalFilterFields` / `defaultFilters` / `clientFiltering`, `detailsComponent` (`React.FC<IDetailsComponentProps<T>>` = `{ item, onRefresh? }`), `onRefresh`, and PrimeReact pass-through `tablePt`/`tableClassName`/`menubarPt`/`menubarClassName`.
+
+Columns and toolbar actions are compositional children:
+
+```tsx
+import { DataPage, MenuItem } from '@cratis/components/DataPage';
+import { Column } from 'primereact/column';
+
+<DataPage title="Accounts" query={AllAccounts} emptyMessage="No accounts yet.">
+    <DataPage.Columns>
+        <Column field="name" header="Name" />
+    </DataPage.Columns>
+    <DataPage.MenuItems>
+        <MenuItem label="Add" command={() => showAdd()} disableOnUnselected={false} />
+    </DataPage.MenuItems>
+</DataPage>
+```
+
+`MenuItem` is a PrimeReact menu item (use `command`, not `onClick`); `disableOnUnselected` greys it out until a row is selected. See the **cratis-react-page** skill for the full page workflow.
 
 ## Composition over Monoliths
 
@@ -53,7 +97,7 @@ Props are a component's public API. They should be clear, minimal, and well-docu
 
 ## Dialogs
 
-See [dialogs.instructions.md](./dialogs.instructions.md) for the full dialog guide.
+See [dialogs.md](./dialogs.md) for the full dialog guide.
 
 **Summary:** Never import `Dialog` from `primereact/dialog`. Use `CommandDialog` from `@cratis/components/CommandDialog` for command-executing dialogs and `Dialog` from `@cratis/components/Dialogs` for data-collection dialogs. Do not render manual `<Button>` components for dialog actions — the dialog components handle footers.
 

@@ -31,19 +31,7 @@ These rules exist so that every file in the codebase reads the same way. When fo
 
 ## Language — American English Only
 
-All identifiers, comments, XML docs, and string literals must use **American English** spelling. This applies to class names, method names, properties, parameters, variables, namespaces, and documentation. Common mistakes to avoid:
-
-| Wrong (UK) | Correct (US) |
-|---|---|
-| Initialise, Serialise, Normalise | Initialize, Serialize, Normalize |
-| Behaviour, Colour, Favour, Honour | Behavior, Color, Favor, Honor |
-| Organisation, Authorisation | Organization, Authorization |
-| Centre, Fibre | Center, Fiber |
-| Modelling, Signalling, Cancelling | Modeling, Signaling, Canceling |
-| Dialogue, Catalogue | Dialog, Catalog |
-| Licence, Defence | License, Defense |
-| Judgement, Acknowledgement | Judgment, Acknowledgment |
-| Grey | Gray |
+All identifiers, comments, XML docs, and string literals must use **American English** spelling (initialize, serialize, behavior, color, organization, center, modeling, dialog, license, judgment, gray). See [general.md](./general.md) for the full guidance.
 
 ## Naming
 
@@ -189,24 +177,25 @@ These are the building blocks. Each type has a specific role in the vertical sli
 
 | Type | Purpose |
 |---|---|
-| `ConceptAs<T>` | Strongly-typed domain value wrapper (see concepts instructions) |
-| `[EventType]` | Marks a record as a Chronicle event — **never** pass arguments to the attribute |
+| `ConceptAs<T>` | Strongly-typed domain *value* wrapper (see [concepts.md](./concepts.md)) |
+| `EventSourceId<T>` | Strongly-typed *identity* base — derive event-source ids from this, not `ConceptAs<T>` |
+| `[EventType]` | Marks a record as a Chronicle event — **never** pass arguments for a new event |
 | `[Command]` | Marks a record as a model-bound command — define `Handle()` directly on the record |
 | `[ReadModel]` | Marks a record as a model-bound query — define static query methods on the record |
 | `CommandValidator<T>` | FluentValidation validator for commands |
-| `IProjectionFor<T>` | Fluent projection definition — AutoMap is on by default |
+| `IProjectionFor<T>` | Fluent projection definition — AutoMap is on by default, never call `.AutoMap()` |
 | `IReducerFor<T>` | Imperative reducer — receives current state, returns new state |
 | `IReactor` | Marker interface for side-effect observers — method dispatch by event type parameter |
 | `IConstraint` | Constraint definition — enforced server-side by Chronicle at append time |
 | `AggregateRoot` | Chronicle aggregate root with `Apply()` and `Commit()` |
 | `ICommandPipeline` | Programmatic command execution from reactors or other code |
-| `EventSourceId` | Primary identity binding — all events for an entity share the same event source ID |
 | `EventContext` | Event metadata: `Occurred`, `SequenceNumber`, `CorrelationId`, `EventSourceId`, etc. |
-| `ISubject<T>` | Observable query return type — enables real-time WebSocket push |
+| `ISubject<T>` | Observable query return type — enables real-time push |
 | `IMongoCollection<T>` | MongoDB collection — use `.Observe()` for reactive queries |
 
 **Key conventions:**
-- Prefer `ConceptAs<T>` over raw primitives in all domain models, commands, events, and queries — prevents accidental mix-ups and makes APIs self-documenting. See [concepts.instructions.md](./concepts.instructions.md) for details.
+- Prefer `ConceptAs<T>` over raw primitives in all domain models, commands, events, and queries; derive identity concepts from `EventSourceId<T>`. See [concepts.md](./concepts.md) for details.
 - Projections join **events**, never read models — projections rebuild state from the event stream, not from other projections.
-- For fluent projections, AutoMap is on by default — just call `.From<EventType>()` without manually mapping every property.
+- For fluent projections, AutoMap is on by default — call `.From<EventType>()` without `.AutoMap()` and without manually mapping every matching property.
 - Use model-bound projection attributes (`[FromEvent<T>]`, `[SetFrom<T>]`, etc.) when possible; fall back to `IProjectionFor<T>` for complex cases.
+- Full slice anatomy lives in [vertical-slices.md](./vertical-slices.md).

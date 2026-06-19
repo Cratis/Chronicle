@@ -1,0 +1,27 @@
+{
+  "skill_name": "add-business-rule",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a rule to the existing RegisterAuthor command that the name must be at least 2 characters.",
+      "expected_output": "A rule added to the RegisterAuthor CommandValidator<RegisterAuthor> (FluentValidation), not thrown from Handle(). No new command or handler created.",
+      "files": [],
+      "assertions": [
+        "Rule is added in CommandValidator<T> (FluentValidation), not inside Handle()",
+        "Does not throw for business rejection (returns a validation result)",
+        "Does not create a new command or handler class"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a rule that an author cannot be registered if one with the same name already exists, enforced correctly under concurrency.",
+      "expected_output": "Either an event-store IConstraint for the uniqueness guarantee, or a state-dependent rule that injects the read model into Handle() and returns Result<AuthorRegistered, ValidationResult> with a typed error (DCB pattern). Never a thrown exception.",
+      "files": [],
+      "assertions": [
+        "Concurrency-safe rule uses an IConstraint, or the read model in Handle() returning Result<TEvent, ValidationResult>",
+        "Business rejection is a typed ValidationResult, never a thrown exception",
+        "Fetched/computed data is provided via Provide() where appropriate"
+      ]
+    }
+  ]
+}

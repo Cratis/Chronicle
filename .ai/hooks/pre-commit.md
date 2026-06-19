@@ -1,26 +1,26 @@
 ---
-on:
-  preToolUse:
-    tool: runInTerminal
+lifecycle: pre-commit
 ---
 
 # Pre-commit — Run Specs
+
+> **This is lifecycle guidance, not a wired tool hook.** To *enforce* it, wire it per tool — Claude Code: a `PreToolUse` hook in `.claude/settings.json` with a matcher on `Bash` (or your terminal tool) gating `git commit`; GitHub Copilot: a hook in a `.github/hooks/*.json` file. The steps below are what that hook (or the agent) should do.
 
 Before executing any `git commit` terminal command, automatically run the specs for every affected project to ensure nothing is broken before changes are recorded in version control.
 
 ## When this hook applies
 
-This hook fires before **every** `runInTerminal` call. Check whether the command being run is a `git commit` (including `git commit -m`, `git commit --amend`, etc.) or an `rtk git commit` variant. If it is not a commit command, do nothing and let the tool proceed.
+This guidance applies before any `git commit` (including `git commit -m`, `git commit --amend`, etc.). If the command being run is not a commit, do nothing and proceed.
 
 ## Steps
 
-1. **Detect a git commit command** — inspect the terminal command string. Treat both `git commit ...` and `rtk git commit ...` as commit commands. If neither pattern matches, skip all steps below and proceed normally.
+1. **Detect a git commit command** — inspect the terminal command string for `git commit ...`. If it does not match, skip all steps below and proceed normally.
 
 2. **Identify affected projects** from the staged changes:
    ```
    git diff --name-only --cached
    ```
-   Collect unique project roots using the same rules as the `agentStop` hook:
+   Collect unique project roots using the same rules as the agent-stop guidance:
    - `.cs` files → walk up to the nearest `.csproj`.
    - `.ts` / `.tsx` files → walk up to the nearest `package.json` with a `"test"` script.
 

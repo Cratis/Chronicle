@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Events;
 
@@ -22,11 +23,13 @@ public class EventSerializer : IEventSerializer
     /// <param name="artifactActivator"><see cref="IServiceProvider"/> for resolving instances.</param>
     /// <param name="eventTypes"><see cref="IEventTypes"/> for resolving event types.</param>
     /// <param name="serializerOptions">The common <see creF="JsonSerializerOptions"/>.</param>
+    /// <param name="derivedTypes"><see cref="IDerivedTypes"/> for serializing polymorphic event content adorned with <see cref="DerivedTypeAttribute"/>. Defaults to the global <see cref="DerivedTypes.Instance"/>.</param>
     public EventSerializer(
         IClientArtifactsProvider clientArtifacts,
         IClientArtifactsActivator artifactActivator,
         IEventTypes eventTypes,
-        JsonSerializerOptions serializerOptions)
+        JsonSerializerOptions serializerOptions,
+        IDerivedTypes? derivedTypes = null)
     {
         _serializerOptions = new JsonSerializerOptions(serializerOptions)
         {
@@ -36,6 +39,15 @@ public class EventSerializer : IEventSerializer
                 new EventRedactedConverters(eventTypes)
             }
         };
+
+        // Ensure polymorphic event content (properties typed as a base/abstract type with [DerivedType]
+        // subtypes) round-trips with its discriminator. The common options may not carry the derived-type
+        // converter depending on when they were configured, so add it here when missing — otherwise the
+        // discriminator and concrete subtype properties are dropped and the value serializes as its base type.
+        if (!_serializerOptions.Converters.Any(converter => converter is DerivedTypeJsonConverterFactory))
+        {
+            _serializerOptions.Converters.Add(new DerivedTypeJsonConverterFactory(derivedTypes ?? DerivedTypes.Instance));
+        }
 
         var providers = new List<ICanProvideAdditionalEventInformation>();
         foreach (var providerType in clientArtifacts.AdditionalEventInformationProviders)

@@ -70,6 +70,6 @@ import { FullStackTabs, TopicHero, SimpleCard, StackDiagram, YouWillLearn, Recap
 - `npm run check` is green (0 errors · 0 broken links); the page sits in the right nav bucket.
 - For a visual page, screenshot it in light **and** dark — see the `qa-cratis-docs` skill.
 
-**Study the masters (cloned locally):** `~/src/repos/aspire.dev` (Starlight — great CLI docs + tour writing), `~/src/repos/marten`, `~/src/repos/wolverine`. Mine their *patterns*; never copy their text.
+**Study the masters:** the **aspire.dev** docs (Astro Starlight — great CLI docs + tour writing)
 
 → The mechanical format a page must follow (frontmatter, headings, asides, code fences, file layout): [Documentation Structure & Formatting](./documentation-structure-and-formatting.md). The edit→sync→verify loop and where pages live: [Editing Cratis Documentation](./editing-cratis-docs.md). Site build internals live in the Documentation repo.

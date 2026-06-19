@@ -1,5 +1,8 @@
 ---
 applyTo: "**/*.cs"
+paths:
+  - "**/*.cs"
+profile: application
 ---
 
 # Entity Framework Core Instructions
@@ -120,7 +123,7 @@ Configure the database provider using `UseDatabaseFromConnectionString`, which a
 options.UseDatabaseFromConnectionString(connectionString);
 ```
 
-Centralise all DbContext setup in a single `AddApplicationDbContexts` extension method per layer.
+Centralize all DbContext setup in a single `AddApplicationDbContexts` extension method per layer.
 
 ## Multiple Database Support
 
@@ -132,7 +135,7 @@ Never hardcode a provider (e.g. `UseSqlite` or `UseNpgsql`) in application code.
 
 Migrations live exclusively in the **`Database`** project, never in `Core` or `Infrastructure`.
 
-### Organisation
+### Organization
 
 Each entity category has its own folder with versioned migration files:
 
@@ -225,8 +228,8 @@ The runner discovers all `Migration` subclasses from the `Database` assembly, ch
 
 ## Auto-Discovery
 
-The Cratis Arc `IImplementationsOf<T>` mechanism discovers types at runtime:
+The Cratis Arc `IImplementationsOf<T>` mechanism discovers DbContext types at runtime:
 
-- `IImplementationsOf<BaseDbContext>` — all DbContext subtypes across all loaded assemblies
-- `.NotReadonly()` extension — filters out `ReadOnlyDbContext` subtypes to isolate writable contexts
-- `IReadModelDbContexts.GetAll()` — returns all registered `ReadOnlyDbContext` instances
+- `IImplementationsOf<BaseDbContext>` — all `DbContext` subtypes across all loaded assemblies.
+- `DiscoverAndFilterDbContextTypes<ReadOnlyDbContext>(assemblies)` — discovers the read-model contexts; the registration helpers (`AddReadModelDbContextsWithConnectionStringFromAssemblies` / `AddReadModelDbContextsFromAssemblies`) build on it.
+- To isolate **writable** contexts, filter the discovered set on assignability — `types.Where(t => !typeof(ReadOnlyDbContext).IsAssignableFrom(t))` — rather than a dedicated extension.

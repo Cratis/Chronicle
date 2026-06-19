@@ -18,7 +18,7 @@ export const CreateAccountDialog = ({ closeDialog }: DialogProps) => {
             title="Create Account"
             okLabel="Create"
         >
-            <InputTextField<CreateAccount> value={c => c.name} label="Account Name" />
+            <InputTextField<CreateAccount> value={c => c.name} title="Account Name" />
         </CommandDialog>
     );
 };
@@ -85,7 +85,7 @@ export const EditAccountDialog = ({ closeDialog, accountId, name }: EditAccountD
             initialValues={{ accountId }}
             currentValues={{ name }}
         >
-            <InputTextField<EditAccount> value={c => c.name} label="Account Name" />
+            <InputTextField<EditAccount> value={c => c.name} title="Account Name" />
         </CommandDialog>
     );
 };
@@ -140,24 +140,26 @@ import {
     InputTextField,  // text input
     NumberField,     // number input
     CheckboxField,   // boolean toggle
-    DateField,       // date picker
+    CalendarField,   // date picker
     DropdownField,   // select from options list
     TextAreaField,   // multi-line text
 } from '@cratis/components/CommandForm';
 
-<InputTextField<MyCommand> value={c => c.title} label="Title" />
-<NumberField<MyCommand> value={c => c.quantity} label="Qty" min={1} />
+<InputTextField<MyCommand> value={c => c.title} title="Title" />
+<NumberField<MyCommand> value={c => c.quantity} title="Qty" min={1} />
 <CheckboxField<MyCommand> value={c => c.isActive} label="Active" />
-<DateField<MyCommand> value={c => c.dueDate} label="Due date" />
+<CalendarField<MyCommand> value={c => c.dueDate} title="Due date" />
 <DropdownField<MyCommand>
     value={c => c.status}
-    label="Status"
+    title="Status"
     options={statusOptions}
     optionLabel="label"
     optionValue="value"
 />
-<TextAreaField<MyCommand> value={c => c.notes} label="Notes" rows={3} />
+<TextAreaField<MyCommand> value={c => c.notes} title="Notes" rows={3} />
 ```
+
+> The shared field label prop is **`title`** (from the base field props), not `label`. `CheckboxField` and `RadioButtonField` additionally accept their own `label` prop.
 
 The `value` prop takes a function `(commandInstance) => property`. This drives both reading the value and writing it back on change.
 

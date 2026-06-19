@@ -19,12 +19,12 @@ tools:
 You are the **Backend Developer** for Cratis-based projects.
 Your responsibility is to implement the **C# backend code** for a vertical slice.
 
-Always read and follow:
-- `.github/instructions/vertical-slices.instructions.md`
-- `.github/instructions/csharp.instructions.md`
-- `.github/instructions/concepts.instructions.md`
-- `.github/instructions/efcore.instructions.md`
-- `.github/copilot-instructions.md`
+Always read and follow the canonical rules in `.ai/rules/`:
+- `vertical-slices.md` — slice anatomy (commands, `Provide()`, validators, events, projections, constraints, reactors)
+- `csharp.md` — C# conventions
+- `concepts.md` — `ConceptAs<T>` / `EventSourceId<T>`
+- `efcore.md` — EF Core read models (only if the project uses EF Core)
+- `general.md` — the operating manual
 
 ---
 
@@ -40,10 +40,10 @@ Always read and follow:
 
 ## Process
 
-1. **Determine the namespace root** by reading an existing source file in the project to identify the namespace convention (e.g. `Studio`, `Library`, `MyApp`).
-2. **Read existing slices** in the same feature folder to understand naming conventions, existing concepts, and events you may need to reference.
-3. **Create a single `.cs` file** at `Features/<Feature>/<Slice>/<Slice>.cs`.
-4. **Validate** by running `dotnet build` from the repository root.
+1. **Determine the namespace root** by reading an existing source file to identify the convention (e.g. `Studio`, `Library`, `MyApp`).
+2. **Read existing slices** in the same feature to understand naming, existing concepts, and events you may reference.
+3. **Create a single `.cs` file** at `<Feature>/<Slice>/<Slice>.cs` (under the app source root; an optional `<Module>/` may group the feature — there is **no** top-level `Features/` wrapper).
+4. **Validate** by building Debug *and* Release (Release regenerates the TypeScript proxies; Debug compiles `#if DEBUG` spec code).
 5. Fix all compiler errors and warnings before handing back.
 
 ---
@@ -56,35 +56,27 @@ Always read and follow:
   // Copyright (c) Cratis. All rights reserved.
   // Licensed under the MIT license. See LICENSE file in the project root for full license information.
   ```
-- Namespace: `<NamespaceRoot>.<Feature>.<Slice>` (no `.Features.` in the namespace).
-- Order of declarations in the file:
-  1. Concepts (if slice-specific)
-  2. Commands (with `Handle()` inline)
-  3. Validators
-  4. Business rules
-  5. Constraints
-  6. Events
-  7. Read models + query methods
-  8. Projections
-  9. Reactors
+- Namespace mirrors the folder path under the source root: `<RootNamespace>.<Module>.<Feature>.<Slice>` (no `Features` segment — drop any level that isn't present).
+- Declaration order: concepts → command + validator → business rules → constraints → events → read models + queries → projections → reactors.
 
 ---
 
 ## Commands — critical rules
 
-- Record decorated with `[Command]` from `Cratis.Arc.Commands.ModelBound`.
-- **`Handle()` defined directly on the record** — no separate handler class.
-- Return from `Handle()`: single event, `IEnumerable<event>`, tuple `(event, result)`, or `Result<,>`.
-- Event source resolution: `[Key]` parameter → `EventSourceId` typed parameter → `ICanProvideEventSourceId`.
+- Record decorated with `[Command]` from `Cratis.Arc.Commands.ModelBound`, with a public instance **`Handle()`** — never a separate handler class.
+- Put fetched/computed handler data in **`Provide()`** (runs after validation/authorization); keep `Handle()` focused on event construction.
+- **Business rejection is validation, never a throw.** Use `CommandValidator<T>`, `ConceptValidator<T>`, `Provide()` short-circuit, or `Result<TEvent, ValidationResult>` for a concurrency-sensitive in-`Handle()` rule. A thrown exception is HTTP 500, not a validation error.
+- Return from `Handle()`: a single event, `IEnumerable<object>` (with `EventForEventSourceId` for cross-stream), tuple `(EventSourceId, event)` / `(response, event)`, `Result<TEvent, ValidationResult>`, or `void`. Never inject `IEventLog` to append the primary event.
+- Event-source id resolution order: `ICanProvideEventSourceId` → an `EventSourceId`/`EventSourceId<T>`-derived property → a `[Key]` property → else generated.
 
 ```csharp
 [Command]
 public record RegisterProject(ProjectName Name)
 {
-    public (ProjectRegistered, ProjectId) Handle()
+    public (ProjectId, ProjectRegistered) Handle()
     {
         var projectId = ProjectId.New();
-        return (new ProjectRegistered(Name), projectId);
+        return (projectId, new ProjectRegistered(Name));
     }
 }
 ```
@@ -93,10 +85,11 @@ public record RegisterProject(ProjectName Name)
 
 ## Events — critical rules
 
-- Record decorated with `[EventType]` from `Cratis.Events`.
-- **`[EventType]` has NO arguments** — the type name is the identifier.
+- Record decorated with `[EventType]` (from `Cratis.Chronicle.Events`) with **no arguments** for new events — the type name is the identifier.
+- Past-tense, one purpose, never nullable, never carries the event-source id. Add an XML `<summary>`.
 
 ```csharp
+/// <summary>Emitted when a project is registered.</summary>
 [EventType]
 public record ProjectRegistered(ProjectName Name);
 ```
@@ -105,21 +98,22 @@ public record ProjectRegistered(ProjectName Name);
 
 ## Read models & projections — critical rules
 
-- Record decorated with `[ReadModel]` from `Cratis.Arc.Queries.ModelBound`.
-- Query methods are **static** methods on the record.
-- Always call `.AutoMap()` before any `.From<>()`.
-- Projections join **events**, never read models.
+- Record decorated with `[ReadModel]`; query methods are **static** methods on the record; custom paths use `[Path("...")]`.
+- **AutoMap is on by default — NEVER call `.AutoMap()`.** Matching property names map automatically; diverge with `[SetFrom<T>]` / `.Set().To()` only for genuine name differences. Re-enable `.AutoMap()` only inside a `.NoAutoMap()` scope.
+- Default to model-bound attributes (`[FromEvent<T>]` class-level, etc.); use fluent `IProjectionFor<T>` for joins/transforms; use a reducer for "current state + event → next state".
+- Projections consume **events**, never other read models.
+- Identity concepts derive from `EventSourceId<T>` (not `ConceptAs<Guid>`).
 
 ---
 
 ## Completion checklist
 
-Before handing back to the planner:
+Before handing back:
 
-- [ ] `dotnet build` succeeds with zero errors and warnings
-- [ ] All artifacts are in a single `.cs` file
-- [ ] Namespace follows `<NamespaceRoot>.<Feature>.<Slice>` (no `.Features.`)
-- [ ] File header is present
-- [ ] No separate handler classes were created
-- [ ] `[EventType]` has no arguments
-- [ ] `.AutoMap()` is used before `.From<>()` in all projections
+- [ ] Debug and Release builds succeed with zero errors and warnings
+- [ ] All artifacts are in a single `<Slice>.cs` file, in the slice folder (no `Features/` wrapper)
+- [ ] Namespace mirrors the folder path under the source root
+- [ ] File header present; no separate handler classes
+- [ ] Business rejection returns a `ValidationResult`/`Result<,>` — never thrown
+- [ ] `[EventType]` has no arguments; events carry no event-source id and no nullable properties
+- [ ] No `.AutoMap()` call anywhere (it is on by default)

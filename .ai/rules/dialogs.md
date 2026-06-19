@@ -1,6 +1,8 @@
-````instructions
 ---
 applyTo: "**/*.tsx"
+profile: application
+paths:
+  - "**/*.tsx"
 ---
 
 # Using Dialogs
@@ -62,9 +64,35 @@ if (result === DialogResult.Ok) {
 }
 ```
 
+### `onSuccess` vs `onConfirm`
+
+- **`onSuccess(response)`** fires only after the command succeeds and receives the typed command response — use it for `closeDialog(DialogResult.Ok, response)`, refreshing a query, or a toast.
+- **`onConfirm()`** receives **no** command result. It is a close gate after successful execution: return `true` to let the wrapper close, `false`/`undefined` to keep it open. **Do not use `onConfirm` as a command-result handler.**
+
+### `onBeforeExecute` is a transformer
+
+It receives the current command values and **must return them** (mutated or not). **Returning `void` executes the command with `undefined` values.** It runs only on submit — never use it to seed *required* values (validation runs against pre-transform state, so a value seeded here never makes the form valid and the submit button stays permanently disabled). Seed required values via `initialValues`; reserve `onBeforeExecute` for transforms that don't affect validity (e.g. a generated id).
+
+### CommandForm fields
+
+Use built-in `CommandForm` fields (from `@cratis/components/CommandForm`) for every user-input value — a raw PrimeReact control inside a command dialog bypasses `CommandFormFieldWrapper`, so validation never re-runs and the submit button stays **permanently disabled**. Catalog: `InputTextField`, `NumberField`, `DropdownField`, `CheckboxField`, `TextAreaField`, `CalendarField`, `RadioButtonField`, `RadioGroupField`, `ChipsField`, `MultiSelectField`, `ColorPickerField`, `SliderField`.
+
+- The `value={c => c.name}` **accessor lambda doubles as the binding and type-checked field selection** — renaming a command property surfaces a compile error at every binding.
+- **`RadioGroupField<T>`** renders a whole group from data (`options`/`optionLabel`/`optionValue`, `layout='horizontal'|'vertical'`); **`RadioButtonField<T>`** is one component per option (each takes a `buttonValue`). Both infer the value type from the accessor — no `as string` casts.
+- **`asCommandFormField(Component, opts)`** (`asCommandFormField`, `WrappedFieldProps` from `@cratis/arc.react/commands`) wraps a custom input so it participates in `CommandForm` like a built-in. `WrappedFieldProps<T>` gives `{ value, onChange, invalid, required, errors }` (`errors` is `string[]` → `errors.join(', ')`); options are `{ defaultValue, extractValue: e => ... }`.
+- **`useCommandInstance(Command)`** (`@cratis/arc.react/commands`) returns the live reactive instance the form is bound to — **read** it to drive dependent fields (e.g. read `command.country` to choose a `DropdownField`'s options); never mutate (mutations go through field bindings).
+
+### Opening dialogs — `useDialog` / `useDialogContext`
+
+`useDialog<TResponse, TInput>(Component)` returns `[Wrapper, showFn]`: render `<Wrapper />` in JSX and call `showFn(input)` to open it; it resolves to `[DialogResult, TResponse?]` when the dialog closes. For a new dialog, prefer reading input as **plain typed props** (`<Name>Input`) and obtaining `closeDialog` from **`useDialogContext<TResponse>()`** — rather than declaring a props interface that extends `DialogProps` to thread both input and `closeDialog`. (Existing dialogs that destructure `closeDialog` from `DialogProps` remain valid.) Signal the outcome with `closeDialog(DialogResult.Ok | Cancelled, response?)`.
+
+### Multi-step wizards — `StepperCommandDialog`
+
+For a command split across named steps use `StepperCommandDialog` (`@cratis/components/CommandDialog`) — see the **stepper-command-dialog** skill. ⚠️ It **cannot handle conditional steps**, because `React.Children.count` counts falsy children. When steps are conditional, a step needs non-CommandForm inputs, or cross-step state is complex, fall back to a manual `Dialog` + PrimeReact `Stepper`.
+
 ## When Using `Dialog`
 
-Use this for dialogs that collect data and return it without executing a command (e.g. confirmation prompts, pure data-entry dialogs). `Dialog` defaults to OK + Cancel buttons. Use `isValid` to control confirm button state, `okLabel`/`cancelLabel` to customise button text.
+Use this for dialogs that collect data and return it without executing a command (e.g. confirmation prompts, pure data-entry dialogs). `Dialog` defaults to OK + Cancel buttons. Use `isValid` to control confirm button state, `okLabel`/`cancelLabel` to customize button text.
 
 ```tsx
 import { useState } from 'react';
@@ -112,7 +140,7 @@ import { DialogButtons, DialogResult, useDialogContext } from '@cratis/arc.react
 | `DialogButtons.Ok` | Ok only |
 | `null` | No buttons (content-only dialog) |
 
-## Customising Built-in Buttons
+## Customizing Built-in Buttons
 
 Use `okLabel`/`cancelLabel` to rename the buttons, and `isValid` to disable the confirm button:
 
@@ -196,5 +224,3 @@ Use `buttons={null}` for dialogs that contain their own internal actions (e.g. a
 | `resizable` | `boolean` | Default `false` |
 
 PrimeReact-specific props (`style`, `contentStyle`, `modal`, `dismissableMask`, `draggable`, `footer`, `onHide`) are **not** available — do not use them.
-
-````

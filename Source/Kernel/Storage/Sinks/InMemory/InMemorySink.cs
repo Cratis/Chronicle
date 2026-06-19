@@ -231,12 +231,22 @@ public class InMemorySink(
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = state.MergeWith(propertiesChanged.ToStateWithoutChildOperationConflicts(collectionPathsWithChildOperations));
+                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations);
                     break;
 
                 case ChildAdded childAdded:
                     var collection = state.EnsureCollection<ExpandoObject, object>(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
                     collection.Add(childAdded.State);
+                    break;
+
+                case ChildRemoved childRemoved:
+                    var childCollection = state.EnsureCollection<ExpandoObject, object>(childRemoved.ChildrenProperty, key.ArrayIndexers);
+                    var childToRemove = childCollection.FindByKey(childRemoved.IdentifiedByProperty, childRemoved.Key);
+                    if (childToRemove is not null)
+                    {
+                        childCollection.Remove(childToRemove);
+                    }
+
                     break;
 
                 case NestedCleared nestedCleared:
