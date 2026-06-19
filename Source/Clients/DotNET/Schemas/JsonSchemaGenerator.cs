@@ -10,6 +10,7 @@ using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Events;
 using Cratis.Geospatial;
 using Cratis.Json;
+using Cratis.Reflection;
 using Cratis.Serialization;
 
 namespace Cratis.Chronicle.Schemas;
@@ -177,6 +178,28 @@ public class JsonSchemaGenerator : IJsonSchemaGenerator
             }
 
             return conceptSchema;
+        }
+
+        // Handle enumerables whose element type is a concept (e.g. IReadOnlyList<Requirement>).
+        // System.Text.Json's schema exporter cannot introspect the EnumerableConceptAsJsonConverter,
+        // so it emits a permissive boolean schema (`true`) for the property. A non-object schema is
+        // not a JsonObject, so it is excluded from the read model's flattened properties — which
+        // silently drops the property from the persisted document (it never reaches the storage sink).
+        // Emit a proper array schema whose items are the concept's underlying primitive schema, the
+        // same primitive mapping a scalar concept gets, so the value round-trips through the sink.
+        if (type != typeof(string) && type.IsEnumerable() && !type.IsDictionary())
+        {
+            var elementType = type.GetEnumerableElementType();
+            if (elementType?.IsConcept() == true)
+            {
+                var underlyingItemType = elementType.GetConceptValueType();
+                var itemSchema = context.TypeInfo.Options.GetJsonSchemaAsNode(underlyingItemType, _exporterOptions);
+                return new JsonObject
+                {
+                    ["type"] = "array",
+                    ["items"] = itemSchema
+                };
+            }
         }
 
         if (schema is not JsonObject schemaObj) return schema;
