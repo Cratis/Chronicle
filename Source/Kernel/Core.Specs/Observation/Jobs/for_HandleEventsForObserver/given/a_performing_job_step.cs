@@ -31,6 +31,7 @@ public class a_performing_job_step : Specification
     protected IEventSequenceStorage _eventSequenceStorage;
     protected HandleEventsForObserverState _performState;
     protected EventSourceId? _eventSourceIdFilter;
+    protected EventSequenceNumber _startSequenceNumber = EventSequenceNumber.Unavailable;
     protected readonly List<HandledBatch> _handledBatches = [];
 
     protected static AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId) =>
@@ -68,7 +69,7 @@ public class a_performing_job_step : Specification
         _eventCursor.MoveNext().Returns(_ => Task.FromResult(moveNextCount++ == 0));
 
         _eventSequenceStorage.GetRange(
-            Arg.Any<EventSequenceNumber>(),
+            Arg.Do<EventSequenceNumber>(value => _startSequenceNumber = value),
             Arg.Any<EventSequenceNumber>(),
             Arg.Do<EventSourceId?>(value => _eventSourceIdFilter = value),
             Arg.Any<IEnumerable<EventType>>(),
