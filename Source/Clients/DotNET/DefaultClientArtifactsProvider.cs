@@ -8,6 +8,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.ModelBound;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Seeding;
 using Cratis.Reflection;
@@ -43,6 +44,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
     IEnumerable<Type> _projections = [];
     IEnumerable<Type> _modelBoundProjections = [];
     IEnumerable<Type> _reactors = [];
+    IEnumerable<Type> _readModelReactors = [];
     IEnumerable<Type> _reducers = [];
     IEnumerable<Type> _reactorMiddlewares = [];
     IEnumerable<Type> _complianceForTypesProviders = [];
@@ -92,6 +94,16 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
         {
             EnsureInitialized();
             return _reactors;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual IEnumerable<Type> ReadModelReactors
+    {
+        get
+        {
+            EnsureInitialized();
+            return _readModelReactors;
         }
     }
 
@@ -221,6 +233,7 @@ public class DefaultClientArtifactsProvider(ICanProvideAssembliesForDiscovery as
             _projections = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IProjectionFor<>))).ToArray();
             _modelBoundProjections = assembliesProvider.DefinedTypes.Where(_ => _.HasModelBoundProjectionAttributes()).ToArray();
             _reactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactor>() && !_.IsGenericType).ToArray();
+            _readModelReactors = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReadModelReactor>() && !_.IsGenericType).ToArray();
             _reactorMiddlewares = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<IReactorMiddleware>()).ToArray();
             _reducers = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface(typeof(IReducerFor<>)) && !_.IsGenericType).ToArray();
             _additionalEventInformationProviders = assembliesProvider.DefinedTypes.Where(_ => _.HasInterface<ICanProvideAdditionalEventInformation>()).ToArray();
