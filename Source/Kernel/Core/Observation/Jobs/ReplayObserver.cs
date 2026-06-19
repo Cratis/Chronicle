@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Jobs;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,21 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task<IImmutableList<JobStepDetails>> PrepareSteps(ReplayObserverRequest request)
     {
+        if (request.ObserverType == ObserverType.Projection)
+        {
+            return
+            [
+                CreateStep<IHandleEventsForObserver>(
+                    new HandleEventsForObserverArguments(
+                        request.ObserverKey,
+                        request.ObserverType,
+                        EventSequenceNumber.First,
+                        EventSequenceNumber.Max,
+                        EventObservationState.Replay,
+                        request.EventTypes))
+            ];
+        }
+
         var observerKeyIndexes = storage.GetEventStore(JobKey.EventStore).GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
         var index = await observerKeyIndexes.GetFor(request.ObserverKey);
 
