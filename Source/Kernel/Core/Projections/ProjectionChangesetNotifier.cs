@@ -66,11 +66,11 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     }
 
     /// <inheritdoc/>
-    public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel)
+    public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change)
     {
         // The observer count is the decisive signal: zero here while a client is watching means
         // the registration was lost (deactivation/wiring) rather than the gRPC push dropping it.
         logger.Notifying(this.GetPrimaryKeyString(), _observers.Count, namespaceName, readModelKey);
-        await _observers.Notify(o => o.OnChangeset(namespaceName, readModelKey, readModel));
+        await _observers.Notify(o => o.OnChangeset(namespaceName, readModelKey, readModel, change));
     }
 }

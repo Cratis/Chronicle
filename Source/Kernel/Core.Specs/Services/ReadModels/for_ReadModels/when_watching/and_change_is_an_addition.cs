@@ -2,50 +2,25 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching;
 
-public class and_read_model_has_pii_property : given.all_dependencies
+public class and_change_is_an_addition : given.all_dependencies
 {
     IProjectionChangesetNotifier _notifier;
     TaskCompletionSource<IProjectionChangesetObserver> _observerCaptured;
-    string? _releasedSubject;
+    readonly List<ReadModelChangeset> _emitted = [];
 
     void Establish()
     {
-        // Snapshot the subject the observable path stamps before it hands the document to ReleaseJson —
-        // the document is stamped, decrypted, then the marker is stripped from the same instance, so a
-        // post-hoc matcher on the captured argument would no longer see it.
-        _complianceHelper
-            .ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>())
-            .Returns(callInfo =>
-            {
-                var released = callInfo.ArgAt<JsonObject>(3);
-                _releasedSubject = released[WellKnownProperties.Subject]?.GetValue<string>();
-                return Task.FromResult(released);
-            });
-
-        var property = new JsonSchemaProperty
-        {
-            ExtensionData = new Dictionary<string, object?>
-            {
-                { ComplianceJsonSchemaExtensions.ComplianceKey, new[] { new ComplianceSchemaMetadata("PII", string.Empty) } }
-            }
-        };
-
         _readModelDefinition = _readModelDefinition with
         {
             Schemas = new Dictionary<Concepts.ReadModels.ReadModelGeneration, JsonSchema>
             {
-                {
-                    (Concepts.ReadModels.ReadModelGeneration)1,
-                    new JsonSchema { Properties = { ["name"] = property } }
-                }
+                { (Concepts.ReadModels.ReadModelGeneration)1, new JsonSchema() }
             }
         };
         _readModel.GetDefinition().Returns(Task.FromResult(_readModelDefinition));
@@ -67,27 +42,22 @@ public class and_read_model_has_pii_property : given.all_dependencies
     {
         _service.Watch(
             new WatchRequest { EventStore = "test-store", ReadModelIdentifier = "test-read-model" },
-            default).Subscribe(_ => { });
+            default).Subscribe(_emitted.Add);
 
         var observer = await _observerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
-        var model = new JsonObject
-        {
-            [WellKnownProperties.Subject] = "some-subject",
-            ["name"] = "encrypted-name"
-        };
 
         await observer.OnChangeset(
             "test-namespace",
             "key-1",
-            model,
+            new JsonObject { ["name"] = "the-name" },
             new Concepts.ReadModels.ReadModelChangeContext(
                 Concepts.ReadModels.ReadModelChangeType.Added,
-                Concepts.Events.EventSequenceNumber.First,
+                (Concepts.Events.EventSequenceNumber)5UL,
                 DateTimeOffset.UtcNow,
                 Cratis.Execution.CorrelationId.NotSet));
     }
 
-    [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<JsonObject>());
-    [Fact] void should_release_using_the_document_subject() => _releasedSubject.ShouldEqual("some-subject");
+    [Fact] void should_emit_a_changeset_with_added_change_type() => _emitted.Single(_ => !_.Subscribed).ChangeType.ShouldEqual(ReadModelChangeType.Added);
+    [Fact] void should_emit_the_causing_event_sequence_number() => _emitted.Single(_ => !_.Subscribed).EventSequenceNumber.ShouldEqual(5UL);
+    [Fact] void should_not_mark_the_changeset_as_removed() => _emitted.Single(_ => !_.Subscribed).Removed.ShouldBeFalse();
 }
