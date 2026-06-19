@@ -123,9 +123,13 @@ Use `mcp_github_github_create_pull_request` with:
 
 ### PR description format
 
-Follow `.github/pull_request_template.md`. Include only non-empty sections.
+Follow `.github/pull_request_template.md` exactly, and write the body as
+release notes. Include only non-empty sections.
 
 ```markdown
+# Summary
+<optional short overview>
+
 ## Added
 - <release-note bullet> (#<actual-issue-number>)
 
@@ -138,9 +142,11 @@ Follow `.github/pull_request_template.md`. Include only non-empty sections.
 
 Rules:
 - Bullets are short, release-note ready, written for a user reading the changelog.
+- Use `# Summary` when the release-note bullets need context. The summary should
+  explain what was fixed from the consumer's point of view and why the fix matters
+  when that context is useful, instead of listing implementation details.
 - End every bullet with `(#<N>)` using the **real** GitHub issue number. Search issues first. If there is no issue, omit the reference entirely — never write `(#issue)` or reuse an example number.
 - Remove any empty sections — no blank headings.
-- Include a `# Summary` paragraph only when the bullets alone don't tell the full story.
 - Never include any Copilot prompt transcript or "Original prompt" block.
 
 ### Searching for a related issue
