@@ -173,9 +173,7 @@ An adapter's target (the symlink target, or the path-reference file's body) uses
 
 ## Propagation and adapters
 
-The cross-repository propagation workflow reads `.github/instructions/` and `.github/copilot-instructions.md` via the GitHub API. A symlink's blob (Git mode `120000`) and a path-reference file's body both contain the raw relative target path, so a naïve copy would push that path string rather than the real rule content to target repositories. The propagation script resolves Git symlinks (mode `120000`) to the target file's content before propagating.
-
-**Note:** the `.github/instructions/` adapters in this repo are path-reference files (mode `100644`), not symlinks. Ensuring the propagation script resolves *that* form to real content too — not just symlinks — is part of the separately-managed propagation mechanism; confirm it before relying on org-wide propagation. (The corpus content itself is independent of how propagation is wired.)
+The cross-repository propagation workflow is a broadcast sync: any Cratis repository can be the source, and changes propagate to the other repositories, including `Cratis/AI` when the source is not `Cratis/AI`. Propagation normalizes known adapter paths before broadcasting them. When the matching canonical `.ai` file exists in the source tree, an adapter path is written as the expected symlink or path-reference file, even if the source repository currently contains copied content at that adapter path. Do not materialize adapter targets into copied `.ai` content in tool-specific files; that breaks the `.ai/` source-of-truth model and causes drift between adapters and canonical corpus files.
 
 ## Shared workflows
 
