@@ -358,7 +358,9 @@ public class ReadModels(
                     changeset.Namespace,
                     changeset.ModelKey,
                     changeset.ReadModel,
-                    changeset.Removed));
+                    changeset.Removed,
+                    changeset.Removed ? ReadModelChangeType.Removed : ReadModelChangeType.Modified,
+                    EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
         }
 
         if (!projections.HasFor<TReadModel>())

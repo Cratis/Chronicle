@@ -257,6 +257,9 @@ public class EventStoreForTesting : IEventStore
     public IReadModels ReadModels { get; }
 
     /// <inheritdoc/>
+    public IReadModelReactors ReadModelReactors { get; } = new NullReadModelReactors();
+
+    /// <inheritdoc/>
     public IEventSeeding Seeding => _seeding.Value;
 
     /// <inheritdoc/>
