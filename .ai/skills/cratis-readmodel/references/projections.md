@@ -37,7 +37,7 @@ public record LineItem(
 | Attribute | Equivalent builder |
 | --------- | ------------------ |
 | `[Key]` | Default key (event source ID) |
-| `[FromEvent<T>]` | `.AutoMap()` for event T |
+| `[FromEvent<T>]` | `.From<T>()` — maps event T (AutoMap is on by default) |
 | `[FromEvent<T>(key: nameof(T.Prop))]` | `.UsingKey(e => e.Prop)` |
 | `[FromEvent<T>(parentKey: nameof(T.Prop))]` | `.UsingParentKey(e => e.Prop)` on child projections |
 | `[SetFrom<T>(nameof(...))]` | `.Set(...).To(...)` |
@@ -58,7 +58,7 @@ public record LineItem(
 public class InvoiceProjection : IProjectionFor<Invoice>
 {
     public void Define(IProjectionBuilderFor<Invoice> builder) => builder
-        .From<InvoiceCreated>(from => from.AutoMap())        // map all matching property names
+        .From<InvoiceCreated>()                              // AutoMap is on by default — matching names map automatically
         .From<InvoicePaid>(from => from
             .Set(m => m.PaidAt).ToEventContextProperty(c => c.Occurred)
             .Set(m => m.Status).WithValue(InvoiceStatus.Paid))
@@ -70,7 +70,7 @@ public class InvoiceProjection : IProjectionFor<Invoice>
         .RemovedWith<InvoiceDeleted>()
         .Children<LineItem>(m => m.Lines, cb => cb
             .IdentifiedBy(li => li.LineItemId)
-            .From<LineItemAdded>(from => from.AutoMap())
+            .From<LineItemAdded>()
             .RemovedWith<LineItemRemoved>());
 }
 ```
@@ -80,7 +80,7 @@ public class InvoiceProjection : IProjectionFor<Invoice>
 | Method | Purpose |
 | ------ | ------- |
 | `.From<TEvent>(cb)` | Handle an event type |
-| `.AutoMap()` | Map all event properties with matching names to the read model |
+| `.AutoMap()` | On by default for every `.From<T>()` — **do not call it**; only re-enable inside a `.NoAutoMap()` scope |
 | `.Set(m => m.Prop).To(e => e.Prop)` | Explicit property mapping |
 | `.Set(m => m.Prop).WithValue(val)` | Set a constant |
 | `.Set(m => m.Prop).ToEventContextProperty(c => c.X)` | Map from event metadata |

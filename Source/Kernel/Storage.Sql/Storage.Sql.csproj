@@ -23,6 +23,8 @@
       <PackageReference Include="Cratis.Arc.EntityFrameworkCore" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+      <!-- Override the vulnerable native SQLite library (GHSA-2m69-gcr7-jv3q) pulled in transitively by EF Core Sqlite. -->
+      <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
       <PackageReference Include="Microsoft.Data.SqlClient" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />

@@ -1,10 +1,12 @@
 ---
 applyTo: "**/*.cs"
+paths:
+  - "**/*.cs"
 ---
 
 # Code Quality — C#
 
-C#-specific applications of the general [Code Quality](./code-quality.instructions.md) principles.
+C#-specific applications of the general [Code Quality](./code-quality.md) principles.
 
 ## Composition over Inheritance
 

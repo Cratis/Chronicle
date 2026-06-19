@@ -12,8 +12,7 @@ import { DataPage, MenuItemGroup, MenuItem, Column } from '@cratis/components';
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `query` | Query class | Proxy-generated query class (standard) |
-| `observableQuery` | Observable query class | Proxy-generated observable query class (real-time) |
+| `query` | Query or observable query class | Proxy-generated query — standard *or* observable; `DataPage` auto-detects and goes real-time for an observable query |
 | `columns` | `Column<T>[]` | Column definitions (see below) |
 | `menuItems` | `ReactNode` | Toolbar content (usually `<MenuItemGroup>`) |
 | `detailPanel` | `(row: T) => ReactNode` | Renders to the right when a row is selected |
@@ -21,7 +20,7 @@ import { DataPage, MenuItemGroup, MenuItem, Column } from '@cratis/components';
 | `noDataMessage` | `string` | Message when the query returns no rows |
 | `queryArgs` | `object` | Arguments forwarded to the query proxy |
 
-Use either `query` or `observableQuery` — not both.
+Pass either a standard or observable query to the single `query` prop — `DataPage` auto-detects which; there is no separate `observableQuery` prop.
 
 ## Column definition
 

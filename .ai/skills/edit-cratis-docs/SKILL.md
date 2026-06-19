@@ -1,6 +1,6 @@
 ---
 name: edit-cratis-docs
-description: Use this skill when changing, fixing, or improving Cratis documentation whose source file is under `Documentation/**` in a product or contributing repo. The content is split across repos (each product owns its docs in its own `Documentation/` folder; the `Documentation` repo aggregates them), so this skill finds the real source file, edits it, syncs, and verifies. Trigger whenever someone asks to edit/update/fix/reword a docs page, fix a broken link, correct a code example, update a guide or tutorial or reference page, or says a docs page is wrong/outdated — for Chronicle, Arc, Components, CLI, Fundamentals, or the contributing docs.
+description: Use this skill to change, fix, or improve Cratis documentation whose source is under `Documentation/**` in a product or contributing repo. Docs are split across repos (each product owns its `Documentation/` folder; the `Documentation` repo aggregates), so it finds the real source file, edits, syncs, and verifies. Trigger on edit/fix/reword a docs page, fix a broken link, or correct a code example/outdated page — for any Cratis product.
 ---
 
 # Editing a Cratis documentation page

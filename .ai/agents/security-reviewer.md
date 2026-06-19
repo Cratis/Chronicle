@@ -25,14 +25,14 @@ Your responsibility is to perform a structured **security review** of all change
 ### Input Validation & Injection
 
 - [ ] All command properties are validated before use (null, empty, range, format)
-- [ ] No raw SQL concatenation — parameterised queries or EF Core only
+- [ ] No raw SQL concatenation — parameterized queries or EF Core only
 - [ ] No user-supplied values passed to `Path.Combine`, `File.*`, shell commands, or process arguments
-- [ ] No user-supplied values used as event store keys without sanitisation
+- [ ] No user-supplied values used as event store keys without sanitization
 
-### Authentication & Authorisation
+### Authentication & Authorization
 
 - [ ] All HTTP endpoints are decorated with `[Authorize]` or explicitly marked `[AllowAnonymous]` with justification
-- [ ] Tenant isolation enforced — no cross-tenant data accessible without explicit authorisation
+- [ ] Tenant isolation enforced — no cross-tenant data accessible without explicit authorization
 - [ ] Claims are verified before acting on command data that depends on identity
 
 ### Sensitive Data Exposure
@@ -47,7 +47,7 @@ Your responsibility is to perform a structured **security review** of all change
 - [ ] Secrets are loaded from environment variables or a secrets manager (Azure Key Vault, etc.)
 - [ ] No connection strings hard-coded in non-test code
 
-### Dependency & Serialisation Safety
+### Dependency & Serialization Safety
 
 - [ ] No use of `BinaryFormatter`, `XmlSerializer` with untrusted input, or `JsonConvert.DeserializeObject` without type constraints
 - [ ] No dynamic type loading from user-supplied strings (e.g. `Type.GetType(userInput)`)
@@ -77,7 +77,7 @@ Assign each finding one of:
 |-------|---------|
 | 🔴 Critical | Must be fixed before merge — exploitable without significant effort |
 | 🟡 Medium | Should be fixed soon — exploitable under specific conditions |
-| 🟢 Low | Improvement or defence-in-depth — fix when convenient |
+| 🟢 Low | Improvement or defense-in-depth — fix when convenient |
 
 ---
 
@@ -91,7 +91,7 @@ Then list findings grouped by category:
 ```
 ### Input Validation & Injection
 
-🔴 **Critical** — `Features/Projects/Registration/RegisterProject.cs`
+🔴 **Critical** — `Projects/Registration/RegisterProject.cs`
 > Line 14: `var path = Path.Combine(root, command.FileName);`
 > A path traversal attack is possible if `FileName` contains `../` sequences.
 > Fix: Validate that the resolved path stays within the expected root directory.

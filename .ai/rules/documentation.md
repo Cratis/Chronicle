@@ -1,5 +1,7 @@
 ---
-applyTo: "Documentation/**/*.md"
+applyTo: "**/Documentation/**/*.{md,mdx}"
+paths:
+  - "**/Documentation/**/*.{md,mdx}"
 ---
 
 # How to Write Documentation
@@ -8,7 +10,7 @@ Documentation exists for one audience: **developers who need to use the framewor
 
 Every page should answer: "If I were a developer encountering this concept for the first time, what would I need to understand to use it correctly?"
 
-The site is built with [DocFX](https://dotnet.github.io/docfx/) using [GitHub Flavored Markdown](https://github.github.com/gfm/). Documentation lives in the `Documentation/` folder of each product repository and is aggregated into one published site. Readers experience it as a single place — write for that whole, not for one repo in isolation.
+The site is built with [Astro Starlight](https://starlight.astro.build/). Documentation lives in the `Documentation/` folder of each product repository as [GitHub Flavored Markdown](https://github.github.com/gfm/); a converter syncs that product `.md`/`.mdx` into the Starlight site, and all repos are aggregated into one published site. Readers experience it as a single place — write for that whole, not for one repo in isolation. (For the mechanical conventions a page must follow to slot into Starlight, see [documentation-structure-and-formatting.md](./documentation-structure-and-formatting.md).)
 
 ## Every Page Is Exactly One Diátaxis Type
 
@@ -21,7 +23,7 @@ We organize documentation with the [Diátaxis framework](https://diataxis.fr/). 
 | **Reference** | looking something up | a dictionary | Exhaustive and terse. Tables, signatures, attributes, configuration. No narrative. |
 | **Explanation** | trying to understand | a discussion | Concepts, trade-offs, architecture, *why*. No steps. Lean on diagrams. |
 
-The top-level navigation of **every product** mirrors these types in the same order, so the whole set feels like one product: **Get started** (tutorials) → **Guides** (how-to) → **Concepts** (explanation) → **Reference**. Use this structure for Chronicle, Arc, Components, and every other product — never invent a per-product layout or organize a section purely around internal technical concepts.
+The top-level navigation of **every product** mirrors these types in the same order, so the whole set feels like one product: **Get started** (tutorials) → **Guides** (how-to) → **Understand** (explanation) → **Reference**. Use this structure for Chronicle, Arc, Components, and every other product — never invent a per-product layout or organize a section purely around internal technical concepts.
 
 → For authoring a single page step by step, use the **write-documentation** skill.
 
@@ -86,4 +88,4 @@ The project's voice is **direct, practical, and opinionated**. Write like an exp
 - Every folder has a `toc.yml` for navigation and an `index.md` landing page. In `toc.yml`, link to a subfolder's `toc.yml`, not its `index.md`.
 - End every markdown file with a single trailing newline.
 - Never use shell commands to modify files after writing them.
-- Run `verify-markdown.sh` in the `Documentation/` folder to validate links and formatting before considering a page done.
+- Run `npm run check` in `Documentation/web` to validate links and formatting before considering a page done.

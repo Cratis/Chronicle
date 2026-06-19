@@ -243,12 +243,12 @@ internal class ModelBoundProjectionBuilder(
     {
         foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            definition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+            definition.RemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
 
         foreach (var (attr, eventType) in modelType.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            definition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+            definition.RemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
     }
 
@@ -364,12 +364,12 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
 
         foreach (var (attr, eventType) in parameter.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
 
         // Only process ChildrenFromAttribute when at root level.
@@ -488,12 +488,12 @@ internal class ModelBoundProjectionBuilder(
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithAttribute<object>>())
         {
-            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, attr, eventType);
+            targetRemovedWith.ProcessRemovedWithAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
 
         foreach (var (attr, eventType) in property.GetAttributesOfGenericType<RemovedWithJoinAttribute<object>>())
         {
-            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, attr, eventType);
+            targetRemovedWithJoin.ProcessRemovedWithJoinAttribute(GetOrCreateEventType, _namingPolicy, attr, eventType);
         }
 
         // Only process ChildrenFromAttribute when at root level.

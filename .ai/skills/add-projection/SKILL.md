@@ -26,7 +26,7 @@ public record <ReadModelName>(
 **Attribute reference:**
 | Attribute | Purpose |
 |-----------|---------|
-| `[FromEvent<T>]` | Auto-maps all matching property names (equivalent to `.AutoMap().From<T>()`) |
+| `[FromEvent<T>]` | Maps event `T` onto the read model; matching property names map automatically (AutoMap is on by default — never call `.AutoMap()`) |
 | `[FromEvent<T>(key: nameof(T.Prop))]` | Same, but uses `Prop` as the read model key instead of EventSourceId |
 | `[Key]` | Marks the primary key property |
 | `[SetFrom<T>(nameof(T.Prop))]` | Explicitly maps one property from event T |
@@ -60,6 +60,17 @@ public class <Name>Projection : IProjectionFor<<ReadModel>>
 - AutoMap is on by default — just call `.From<>()` directly. Only call `.AutoMap()` if you previously used `.NoAutoMap()`.
 - Joins are on Chronicle **events** only — NEVER join on the read model
 - There is NO `Identifier` / `ProjectionId` property — do not add one
+
+## Advanced patterns & startup-crash gotchas
+
+- **`[Nested]`** projects a single child object onto a nested type. Put `[FromEvent<T>]` on the **nested type** (or use property-level `[SetFrom<T>]` on the parent when the parent already declares the event). `[NoAutoMap]` and explicit `[SetFrom<T>]` work inside the nested type; `[Nested]` can recurse inside a `[ChildrenFrom]` item.
+  - ⚠️ **Duplicate-`[FromEvent<T>]` crash:** declaring class-level `[FromEvent<T>]` (no `key:`) on **both** the parent and a nested/child type for the **same** event throws a `Key: <Event>+N` duplicate-key exception at startup. Fix: keep `[FromEvent<T>]` on the nested type only, or switch the nested type to property-level `[SetFrom<T>]`.
+  - ⚠️ **Duplicate-`[SetFromContext<T>]` crash:** two properties with `[SetFromContext<SameEvent>]` on the same read model crash at startup (`Key: <Event>+1`). Merge them or use `[FromEvery]`.
+- **`[FromAll]` vs `[FromEvery]`:** `[FromAll]` (class-level) subscribes to **every** event type system-wide (audit/log models — pair with `[NotRewindable]`). `[FromEvery]` is a property-level capture across the events the model **already** declares via `[FromEvent<T>]` (e.g. to stamp `EventContext` data) — it does *not* subscribe to new event types.
+- **Constant-key counters:** `[Count<T>(ConstantKey="metrics")]` / `[Increment<T>(ConstantKey=...)]` route all matching events into **one** aggregating document at the constant key (distinct from `.UsingConstantKey("...")` on the fluent builder).
+- **Children with different key names:** when child events use different key properties, use the fluent form — `.From<Assigned>(b => b.UsingKey(e => e.Email)).From<Updated>(b => b.UsingKey(e => e.OriginalEmail))` — which model-bound `[ChildrenFrom<T>]` (single key) can't express.
+- **Source selection:** class-level `[EventSequence("name")]`, `[EventLog]`, or `[EventStore("name")]` choose where the projection reads from. ⚠️ `[FromEventSequence]` is **removed** — use `[EventSequence("name")]`.
+- **Cross-stream specs:** in `ReadModelScenario<T>`, seed each contributing stream with its own `Given.ForEventSource(...)`. Don't pre-emptively `[Fact(Skip=...)]` a cross-stream assertion — only skip on a reproduced harness gap, with the reason in the skip message.
 
 ## After creating
 

@@ -1,71 +1,22 @@
 ---
 agent: agent
-description: Write comprehensive BDD specs for an existing vertical slice command or query.
+description: Write comprehensive BDD specs for an existing vertical slice command, query, projection, or reactor.
 ---
 
 # Write Specs
 
-I need you to write **comprehensive specs** for an existing vertical slice.
+Write **comprehensive specs** for an existing slice. Invoke the **write-specs** skill (and `write-specs-events` / `write-specs-readmodels` for constraints and projections); follow `.ai/rules/specs.md` and `.ai/rules/specs.csharp.md`.
 
 ## What to provide
 
-Paste or reference the slice file (`.cs`) you want covered.
+The slice file (`.cs`) to cover.
 
-## Instructions
+## Coverage (every slice type)
 
-Follow `.github/instructions/specs.csharp.instructions.md` and `.github/instructions/specs.instructions.md`.
+Lead with the in-process scenario family — `CommandScenario<T>` (state change), `EventScenario` (constraints), `ReadModelScenario<T>` (projections/reducers), `ReactorScenario<T>` (reactors). Reserve out-of-process Chronicle integration specs for host/transport boundaries.
 
-### For a State Change slice (command)
+- Happy path with each appended event asserted.
+- One spec per validator rule, asserting **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`.
+- One spec per constraint (`ShouldHaveConstraintViolationFor(name)`); authorization via `ShouldNotBeAuthorized()`.
 
-Write a spec class for **each meaningful outcome**:
-
-1. **Happy path** — command succeeds, expected event is appended, sequence number advanced.
-2. **Each validation failure** — one spec per validation rule.
-3. **Each business rule violation** — one spec per condition in `Handle()` that inspects a ReadModel argument (DCB pattern).
-4. **Each constraint violation** — one spec per `IConstraint` (e.g. uniqueness).
-
-### Structure
-
-```
-Features/<Feature>/<Slice>/
-└── when_<verb_phrase>/
-    ├── and_<happy_scenario>.cs
-    ├── and_<failure_scenario>.cs
-    └── and_<other_scenario>.cs
-```
-
-### C# spec shape
-
-```csharp
-using context = <NamespaceRoot>.<Feature>.<Slice>.when_<behavior>.and_<scenario>.context;
-
-namespace <NamespaceRoot>.<Feature>.<Slice>.when_<behavior>;
-
-[Collection(ChronicleCollection.Name)]
-public class and_<scenario>(context context) : Given<context>(context)
-{
-    public class context(ChronicleOutOfProcessFixture fixture) : given.an_http_client(fixture)
-    {
-        public CommandResult<object>? Result;
-
-        async Task Establish() { /* optional: seed events */ }
-
-        async Task Because()
-        {
-            Result = await Client.ExecuteCommand<<Command>>(
-                "/api/<feature>/<action>",
-                new <Command>(...));
-        }
-    }
-
-    [Fact] void should_<expected_result>() => ...;
-}
-```
-
-### Assertions
-
-Use `ShouldBeFalse()`, `ShouldBeTrue()`, `ShouldEqual()`, `ShouldHaveTailSequenceNumber()` — never raw `Assert.*`.
-
-## Validation
-
-Run `dotnet test` after writing specs. Fix any failures before completing.
+Spec files are wrapped in `#if DEBUG`. Run the specs and fix failures before completing. The skill carries the detail; don't duplicate it here.

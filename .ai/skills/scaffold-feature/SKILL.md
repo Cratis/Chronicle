@@ -10,7 +10,7 @@ Scaffold a brand-new feature folder with routing and navigation — ready for sl
 ### 1 — Feature folder
 
 ```
-Features/<Feature>/
+<Feature>/          ← directly under the app source root (or under an optional <Module>/) — no Features/ wrapper
 ├── <Feature>.tsx    ← composition page
 ├── <Feature>.css    ← feature-level styles (can be empty initially)
 └── index.ts         ← re-exports the composition page
@@ -22,7 +22,7 @@ Features/<Feature>/
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Page } from '../../Core/Page';
+import { Page } from '@cratis/components/Common';
 
 export const <Feature> = () => {
     return (
@@ -47,7 +47,7 @@ export { <Feature> } from './<Feature>';
 Locate the app router (typically `App.tsx` or a `routes.ts` file) and add:
 
 ```tsx
-import { <Feature> } from './Features/<Feature>';
+import { <Feature> } from './<Feature>';
 
 { path: '<route-path>', element: <<Feature> /> }
 ```

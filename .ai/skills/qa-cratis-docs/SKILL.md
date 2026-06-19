@@ -1,6 +1,6 @@
 ---
 name: qa-cratis-docs
-description: Use this skill to visually QA rendered docs site pages after changes to source files under `Documentation/**` — screenshot pages headless in light AND dark, evaluate how they look against the aspire.dev bar, check diagrams/tables/code blocks render, and diagnose layout-shift ("flicker"/"twitch"/"pop") bugs. Trigger when someone asks to screenshot the docs, check how a docs page looks, review the docs visually, verify a diagram or table renders, compare the docs to aspire.dev, or investigate a flicker/jump/layout-shift on the docs site.
+description: Use this skill to visually QA rendered Cratis docs pages after changes under `Documentation/**` — screenshot headless in light AND dark, check diagrams/tables/code blocks render, and diagnose layout-shift ("flicker"/"jump"/"pop") bugs. Trigger on screenshot the docs, check how a page looks, review the docs visually, verify a diagram or table renders, or investigate a flicker/layout-shift on the docs site.
 ---
 
 # Visual & layout QA for the docs site
@@ -23,7 +23,7 @@ Then **Read the PNG** to evaluate it. Crop/zoom with the `sharp` already in `nod
 node -e "require('sharp')('/tmp/es-dark.png').extract({left:300,top:600,width:900,height:500}).resize({width:1400}).toFile('/tmp/crop.png')"
 ```
 
-Build the page list from `web/src/generated/topics.json` + the site-level slugs. **The bar is aspire.dev** (`~/src/repos/aspire.dev/src/frontend`) — study its `site.css`/`mermaid.css` for the depth cues (gradient glows, framed diagrams, lifted cards) that `cratis.css` is built from.
+Build the page list from `web/src/generated/topics.json` + the site-level slugs. **The bar is aspire.dev** — study its frontend `site.css`/`mermaid.css` for the depth cues (gradient glows, framed diagrams, lifted cards) that `cratis.css` is built from.
 
 ## What to check on each page
 

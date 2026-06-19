@@ -8,22 +8,21 @@ A `ConceptAs<T>` wraps a primitive (`Guid`, `string`, `int`, etc.) in a named do
 
 ---
 
-## Full canonical pattern — Guid identity
+## Full canonical pattern — identity (event-source id)
+
+An **identity** concept (the event-source id of an entity) derives from **`EventSourceId<T>`**, not `ConceptAs<Guid>`. The base already supplies the conversions to/from `T`, to/from the untyped `EventSourceId`, and to `string`, so Chronicle resolves the key automatically — never hand-write an `EventSourceId` operator.
 
 ```csharp
-public record AuthorId(Guid Value) : ConceptAs<Guid>(Value)
+public record AuthorId(Guid Value) : EventSourceId<Guid>(Value)
 {
     public static readonly AuthorId NotSet = new(Guid.Empty);
 
-    public static implicit operator Guid(AuthorId id) => id.Value;
-    public static implicit operator AuthorId(Guid value) => new(value);
-    public static implicit operator EventSourceId(AuthorId id) => new(id.Value.ToString());
-
     public static AuthorId New() => new(Guid.NewGuid());
+    public static implicit operator AuthorId(Guid value) => new(value);
 }
 ```
 
-Include the `EventSourceId` implicit conversion on every **identity** concept that is used as a Chronicle event source key.
+Use `ConceptAs<T>` only for **value** concepts (names, amounts, codes) — see below.
 
 ---
 
@@ -73,8 +72,8 @@ public record PageNumber(int Value) : ConceptAs<int>(Value)
 | Scope | Location |
 | --- | --- |
 | Used only within one slice | Inside the slice folder |
-| Shared between slices of a feature | Feature root folder (`Features/Authors/AuthorId.cs`) |
-| Shared between features | `Features/` root (`Features/TenantId.cs`) |
+| Shared between slices of a feature | Feature root folder (`Authors/AuthorId.cs`) |
+| Shared between features | `Common/` (`Common/TenantId.cs`) |
 
 Never create a standalone `Concepts/` folder — concepts belong near the code that uses them.
 

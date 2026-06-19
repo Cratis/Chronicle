@@ -28,8 +28,8 @@ export const CreateProductDialog = ({ closeDialog }: DialogProps) => {
             title="Create product"
             okLabel="Create"
         >
-            <InputTextField<CreateProduct> value={c => c.name} label="Name" />
-            <NumberField<CreateProduct> value={c => c.price} label="Price" />
+            <InputTextField<CreateProduct> value={c => c.name} title="Name" />
+            <NumberField<CreateProduct> value={c => c.price} title="Price" />
         </CommandDialog>
     );
 };
@@ -72,8 +72,8 @@ export const EditProductDialog = ({ closeDialog, product }: EditProductDialogPro
             currentValues={{ name: product.name, price: product.price }}
             initialValues={{ productId: product.id }}
         >
-            <InputTextField<UpdateProduct> value={c => c.name} label="Name" />
-            <NumberField<UpdateProduct> value={c => c.price} label="Price" />
+            <InputTextField<UpdateProduct> value={c => c.name} title="Name" />
+            <NumberField<UpdateProduct> value={c => c.price} title="Price" />
         </CommandDialog>
     );
 };
@@ -97,23 +97,23 @@ import {
     InputTextField,    // text input
     NumberField,       // number input
     CheckboxField,     // boolean toggle
-    DateField,         // date picker
+    CalendarField,     // date picker
     DropdownField,     // select from options list
     TextAreaField,     // multi-line text
 } from '@cratis/components/CommandForm';
 
-<InputTextField<MyCommand> value={c => c.title} label="Title" />
-<NumberField<MyCommand> value={c => c.quantity} label="Qty" min={1} />
+<InputTextField<MyCommand> value={c => c.title} title="Title" />
+<NumberField<MyCommand> value={c => c.quantity} title="Qty" min={1} />
 <CheckboxField<MyCommand> value={c => c.isActive} label="Active" />
-<DateField<MyCommand> value={c => c.dueDate} label="Due date" />
+<CalendarField<MyCommand> value={c => c.dueDate} title="Due date" />
 <DropdownField<MyCommand>
     value={c => c.status}
-    label="Status"
+    title="Status"
     options={statusOptions}
     optionLabel="label"
     optionValue="value"
 />
-<TextAreaField<MyCommand> value={c => c.notes} label="Notes" rows={3} />
+<TextAreaField<MyCommand> value={c => c.notes} title="Notes" rows={3} />
 ```
 
 The `value` prop takes a function `(commandInstance) => property`. This drives both reading the value and writing it back on change.

@@ -9,8 +9,8 @@ Apply attributes directly to read model types. No separate projection class need
 ### Class-level attributes
 
 #### `[FromEvent<T>]`
-Auto-maps all properties with matching names from event `T` to the read model.
-Equivalent to `.AutoMap().From<T>()` in the fluent API.
+Maps all properties with matching names from event `T` to the read model.
+Equivalent to `.From<T>()` in the fluent API — AutoMap is on by default, so you never call `.AutoMap()` explicitly.
 
 ```csharp
 [ReadModel]

@@ -9,7 +9,12 @@ Create a strongly-typed Concept that wraps a primitive domain value.
 
 Replace `Guid`, `string`, `int`, etc. with a `ConceptAs<T>` record whenever the value has domain meaning.
 
-## Template
+## Pick the base: value vs identity
+
+- **Value concept** (name, amount, code) → derive from `ConceptAs<T>`.
+- **Identity concept** (an entity's event-source id) → derive from `EventSourceId<T>`. **Never** use `ConceptAs<Guid>` for an event-source id — `EventSourceId<T>` already supplies the conversions to/from `T`, to/from `EventSourceId`, and to `string`, so Chronicle resolves the key automatically.
+
+## Value concept template
 
 ```csharp
 // Copyright (c) Cratis. All rights reserved.
@@ -20,7 +25,7 @@ using Cratis.Concepts;
 namespace <NamespaceRoot>.<Feature>;
 
 /// <summary>
-/// Represents the identity of a <description>.
+/// Represents the <description>.
 /// </summary>
 /// <param name="Value">The underlying <type> value.</param>
 public record <ConceptName>(<UnderlyingType> Value) : ConceptAs<<UnderlyingType>>(Value)
@@ -37,25 +42,26 @@ public record <ConceptName>(<UnderlyingType> Value) : ConceptAs<<UnderlyingType>
 }
 ```
 
-## Add when backed by Guid
+## Identity concept template (event-source id)
 
 ```csharp
-    /// <summary>
-    /// Creates a new <ConceptName> with a unique value.
-    /// </summary>
-    /// <returns>A new <ConceptName>.</returns>
-    public static <ConceptName> New() => new(Guid.NewGuid());
+using Cratis.Chronicle.Events;
+
+namespace <NamespaceRoot>.<Feature>;
+
+/// <summary>
+/// Represents the identity of a <description>.
+/// </summary>
+/// <param name="Value">The underlying <type> value.</param>
+public record <ConceptName>(<UnderlyingType> Value) : EventSourceId<<UnderlyingType>>(Value)
+{
+    public static readonly <ConceptName> NotSet = new(<emptyValue>);
+    public static <ConceptName> New() => new(Guid.NewGuid());   // when backed by Guid
+    public static implicit operator <ConceptName>(<UnderlyingType> value) => new(value);
+}
 ```
 
-## Add when used as an event-source ID
-
-```csharp
-    /// <summary>
-    /// Implicitly converts a <ConceptName> to an <see cref="EventSourceId"/>.
-    /// </summary>
-    /// <param name="id">The <ConceptName> to convert.</param>
-    public static implicit operator EventSourceId(<ConceptName> id) => new(id.Value.ToString());
-```
+Don't redeclare the `EventSourceId` / `T` / `string` conversions — the base provides them.
 
 ## Empty/sentinel values
 
@@ -70,15 +76,15 @@ public record <ConceptName>(<UnderlyingType> Value) : ConceptAs<<UnderlyingType>
 
 - Do NOT create a `Concepts/` folder
 - Place the file in the folder that **semantically owns** the concept
-  - `ProjectId` → `Features/Projects/`
-  - Shared cross-feature concepts → project source root
+  - `ProjectId` → `Projects/` (the feature folder, directly under the source root — no `Features/` wrapper)
+  - Shared cross-feature concepts → `Common/`
 
 ## Checklist
 
-- [ ] Inherits `ConceptAs<T>`
+- [ ] Inherits `ConceptAs<T>` (value) or `EventSourceId<T>` (identity / event-source id)
 - [ ] Has a `static readonly NotSet` (or `Empty`) sentinel
 - [ ] Has implicit conversion **from** the primitive
-- [ ] Has implicit conversion **to** `EventSourceId` if used as event-source key
+- [ ] Identity concept: does **not** redeclare the `EventSourceId`/`T`/`string` conversions (the base provides them)
 - [ ] Has `New()` factory if `Guid`-backed
 - [ ] Copyright header present
 - [ ] `dotnet build` passes

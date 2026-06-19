@@ -21,7 +21,7 @@
     {
       "id": 2,
       "prompt": "Review this C# code and rewrite it following Cratis coding standards:\n\n```csharp\npublic class OrderService\n{\n    private IOrderRepository _repo;\n    private ILogger _logger;\n    \n    public OrderService(IOrderRepository repo, ILogger logger)\n    {\n        _repo = repo;\n        _logger = logger;\n    }\n    \n    public async Task<List<Order>> GetAllOrdersAsync()\n    {\n        _logger.LogInformation(\"Getting all orders\");\n        var orders = await _repo.GetAllAsync();\n        return orders;\n    }\n    \n    public void ProcessOrder(Guid orderId)\n    {\n        if (orderId == null)\n            throw new InvalidOperationException(\"OrderId cannot be null\");\n    }\n}\n```",
-      "expected_output": "Rewritten with primary constructor, file-scoped namespace, IEnumerable<Order> return type, [LoggerMessage] logging, ConceptAs<Guid> for OrderId, custom exception, 'is null' check, Async suffix removed, no redundant 'Async' postfix.",
+      "expected_output": "Rewritten with primary constructor, file-scoped namespace, IEnumerable<Order> return type, [LoggerMessage] logging, EventSourceId<Guid> for the OrderId identity (ConceptAs<T> for value concepts), custom exception, 'is null' check, Async suffix removed, no redundant 'Async' postfix.",
       "files": [],
       "assertions": [
         "Primary constructor used (field declarations removed)",
@@ -30,7 +30,7 @@
         "Custom exception replaces InvalidOperationException",
         "Async method does not have Async postfix",
         "Uses [LoggerMessage] or mentions it should be moved to logging partial class",
-        "OrderId converted to ConceptAs<Guid> or at minimum flagged as a raw primitive"
+        "OrderId converted to a strongly-typed identity (EventSourceId<Guid>) or at minimum flagged as a raw primitive"
       ]
     }
   ]

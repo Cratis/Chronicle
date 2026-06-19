@@ -2,14 +2,14 @@
 
 ## C# Architecture
 
-- [ ] Each slice lives in a single file at `Features/<Feature>/<Slice>.cs`
+- [ ] Each slice lives in its own folder `<Feature>/<Slice>/<Slice>.cs` (under the source root, optional `<Module>/` above) — no top-level `Features/` wrapper
 - [ ] ALL backend artifacts in one file: command, validator, business rules, event, read model, projection, slice class
 - [ ] No separate handler classes — `Handle()` is on the command `record` directly
 - [ ] No shared mutable state between commands
 - [ ] No service locator (`IServiceProvider` not injected as a dependency)
 - [ ] No explicit singleton registration when `[Singleton]` attribute suffices
 - [ ] Logging in a separate `*Logging.cs` partial file using `[LoggerMessage]`
-- [ ] Namespace: `<NamespaceRoot>.<Feature>.<Slice>` (no `.Features.` segment)
+- [ ] Namespace mirrors the folder path under the source root: `<RootNamespace>.<Module>.<Feature>.<Slice>` (no `Features` segment)
 
 ## C# Commands
 
@@ -22,9 +22,9 @@
 
 ## C# Events
 
-- [ ] `record` type with no mutable properties
-- [ ] Decorated with `[EventType("stable-guid-string")]`
-- [ ] No behaviour — data only
+- [ ] `record` type with no mutable (or nullable) properties; past tense; never carries the event-source id
+- [ ] Decorated with `[EventType]` — **no arguments** for new events (the type name is the identifier; `generation:` only when evolving an existing contract)
+- [ ] Has an XML `<summary>`; no behavior — data only
 - [ ] Properties are domain types (Concepts), not raw primitives like `Guid` or `string`
 
 ## C# Read Models & Projections
@@ -63,7 +63,7 @@
 
 ## TypeScript Architecture
 
-- [ ] Components placed in the slice folder (`Features/<Feature>/<Slice>/`)
+- [ ] Components placed in the slice folder (`<Feature>/<Slice>/`)
 - [ ] No `index.ts` barrel just to re-export a single component
 - [ ] No technical folder groupings (`hooks/`, `utils/`, `types/`) at feature level
 - [ ] Feature folder structure is functional, not technical

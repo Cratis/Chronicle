@@ -317,13 +317,13 @@ public class IdentityDetailsProvider(IMongoCollection<UserPreferences> preferenc
 
 ## Modifying Identity at Runtime
 
-`IIdentityProviderResultHandler` allows modifying identity details during requests — useful for stateless applications tracking user selections without a database round-trip:
+`IIdentityProvider` allows modifying identity details during requests — useful for stateless applications tracking user selections without a database round-trip:
 
 ```csharp
-public class SetActiveWorkspace(IIdentityProviderResultHandler identityHandler)
+public class SetActiveWorkspace(IIdentityProvider identityProvider)
 {
     public async Task Handle(WorkspaceId workspaceId) =>
-        await identityHandler.ModifyDetails<UserDetails>(
+        await identityProvider.ModifyDetails<UserDetails>(
             details => details with { ActiveWorkspace = workspaceId });
 }
 ```
@@ -332,9 +332,9 @@ This re-generates the identity from the current context, applies the modifier fu
 
 | Method | Description |
 |--------|-------------|
-| `GenerateFromCurrentContext()` | Build `IdentityProviderResult` from current HTTP context |
-| `Write(result)` | Write result as JSON response + update cookie |
-| `ModifyDetails<T>(modifier)` | Read current cookie, apply modifier, write updated cookie |
+| `Get()` / `Get<TDetails>()` | Build the `IdentityProviderResult` from the current HTTP context |
+| `SetCookieForHttpResponse(result)` | Write the result to the response as the `.cratis-identity` cookie |
+| `ModifyDetails<TDetails>(modifier)` | Read current details, apply modifier, write updated cookie |
 
 ### When to Use `ModifyDetails` vs. Database Updates
 

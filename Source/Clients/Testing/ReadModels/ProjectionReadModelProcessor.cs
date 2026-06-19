@@ -421,6 +421,10 @@ internal static class ProjectionReadModelProcessor
                     items.Add(childAdded.Child);
                     break;
 
+                case ChildRemoved childRemoved:
+                    ApplyChildRemoved(state, childRemoved);
+                    break;
+
                 case Joined joined:
                     state = ApplyActualChanges(key, joined.Changes, state);
                     break;
@@ -432,6 +436,45 @@ internal static class ProjectionReadModelProcessor
         }
 
         return state;
+    }
+
+    /// <summary>
+    /// Removes a child from its collection in the projection state, mirroring how the production sinks
+    /// apply a <see cref="ChildRemoved"/> change. Walks the children property path and removes from every
+    /// matching leaf collection the item whose identifier property equals the removed key.
+    /// </summary>
+    /// <param name="state">The projection state to mutate.</param>
+    /// <param name="childRemoved">The <see cref="ChildRemoved"/> change to apply.</param>
+    static void ApplyChildRemoved(ExpandoObject state, ChildRemoved childRemoved)
+    {
+        var segments = childRemoved.ChildrenProperty.Segments.Select(s => s.Value).ToArray();
+        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty.Path, childRemoved.Key);
+    }
+
+    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, string identifiedByProperty, object key)
+    {
+        if (index >= segments.Length || !current.TryGetValue(segments[index], out var value) || value is not System.Collections.IEnumerable enumerable)
+        {
+            return;
+        }
+
+        var items = enumerable.Cast<object>().ToList();
+
+        if (index == segments.Length - 1)
+        {
+            items.RemoveAll(item =>
+                item is ExpandoObject expando &&
+                ((IDictionary<string, object?>)expando).TryGetValue(identifiedByProperty, out var idValue) &&
+                Equals(NormalizeStateValue(idValue), NormalizeStateValue(key)));
+            current[segments[index]] = items;
+            return;
+        }
+
+        // Intermediate collection — recurse into each element to reach the leaf collection.
+        foreach (var item in items.OfType<ExpandoObject>())
+        {
+            RemoveFromCollection(item, segments, index + 1, identifiedByProperty, key);
+        }
     }
 
     static void ApplyPropertyDifferences(IEnumerable<PropertyDifference> differences, ExpandoObject state)

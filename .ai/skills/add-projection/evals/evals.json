@@ -1,0 +1,27 @@
+{
+  "skill_name": "add-projection",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a projection to the Author read model that sets Name from AuthorRegistered and marks IsArchived true on AuthorArchived.",
+      "expected_output": "Model-bound projection attributes on the [ReadModel] ([FromEvent<AuthorRegistered>], [SetValue]/[SetFrom] as needed) relying on AutoMap (on by default); never an explicit .AutoMap() call; no separate projection class unless required.",
+      "files": [],
+      "assertions": [
+        "Prefers model-bound attributes ([FromEvent<T>], [SetFrom<T>], etc.)",
+        "Never calls .AutoMap() (AutoMap is on by default)",
+        "Projection consumes events, never other read models"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Add a projection that joins author name onto a Book read model from a separate AuthorRenamed event stream.",
+      "expected_output": "A fluent IProjectionFor<Book> using a join/child relationship keyed appropriately (model-bound cannot express the join); consumes events only.",
+      "files": [],
+      "assertions": [
+        "Uses fluent IProjectionFor<T> for the join (model-bound cannot express it)",
+        "Join is on events/event context, not on another read model",
+        "Does not call .AutoMap() outside a .NoAutoMap() scope"
+      ]
+    }
+  ]
+}

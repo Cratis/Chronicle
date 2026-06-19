@@ -20,35 +20,39 @@ The command record **owns its own handler** — no separate controller class req
 A command is a **record decorated with `[Command]`** that contains its own `Handle()` method. No separate controller is needed.
 
 ```csharp
-// API/Accounts/OpenDebitAccount.cs
-namespace MyApp.API.Accounts;
+// Accounts/OpenDebitAccount/OpenDebitAccount.cs — the slice file
+namespace MyApp.Accounts.OpenDebitAccount;
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Events;
 
 [Command]
-public record OpenDebitAccount(AccountId AccountId, string Name, OwnerId OwnerId)
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, OwnerId OwnerId)
 {
     public DebitAccountOpened Handle() =>
         new(Name, OwnerId); // Arc appends the returned event; AccountId is the event source
 }
 
+/// <summary>Emitted when a debit account is opened.</summary>
 [EventType]  // NO arguments — never [EventType("some-guid")]
-public record DebitAccountOpened(string Name, OwnerId OwnerId);
+public record DebitAccountOpened(AccountName Name, OwnerId OwnerId);
 ```
 
 **Rules:**
 - `[Command]` attribute is **required** — it makes the type discoverable and the analyzer will warn without it
-- `Handle()` returns the event (or events) to append — Arc's Chronicle integration automatically appends them
+- `Handle()` returns the event (or events) to append — Arc's Chronicle integration automatically appends them; **never inject `IEventLog` to append the primary event**
 - `[EventType]` takes **no arguments** — the identifier is generated from the type name
 - Name the command as an imperative action — `OpenDebitAccount`, not `OpenDebitAccountCommand`
-- Use `ConceptAs<T>` wrappers for all identity types — never raw `Guid` or `string`
+- All backend artifacts for the slice live in this one file; place it in the slice folder, not an `API/` or `Commands/` folder (see [vertical-slices.md](../../rules/vertical-slices.md))
+- Use concept wrappers for every domain value — **identity** concepts derive from `EventSourceId<T>`, **value** concepts from `ConceptAs<T>`; never raw `Guid`/`string`
 
 ```csharp
-// Concepts/AccountId.cs
-using Cratis.Concepts;
-
-public record AccountId(Guid Value) : ConceptAs<Guid>(Value);
+// Accounts/AccountId.cs — identity concept derives from EventSourceId<T>
+public record AccountId(Guid Value) : EventSourceId<Guid>(Value)
+{
+    public static AccountId New() => new(Guid.NewGuid());
+    public static implicit operator AccountId(Guid value) => new(value);
+}
 ```
 
 ### Generating a new ID and returning it
@@ -69,36 +73,45 @@ public record RegisterEmployee(string FirstName, string LastName, string Departm
 
 ### Appending multiple events
 
+Return `IEnumerable<object>`. Events never carry the event-source id — for events that belong to **different** streams, wrap each in `EventForEventSourceId(id, @event)`:
+
 ```csharp
 [Command]
-public record TransferFunds(AccountId FromId, AccountId ToId, decimal Amount)
+public record TransferFunds(AccountId FromId, AccountId ToId, Money Amount)
 {
     public IEnumerable<object> Handle() =>
     [
-        new FundsWithdrawn(FromId, Amount),
-        new FundsDeposited(ToId, Amount),
+        new EventForEventSourceId(FromId, new FundsWithdrawn(Amount)),
+        new EventForEventSourceId(ToId, new FundsDeposited(Amount)),
     ];
 }
 ```
 
+For multiple events on the **same** event source, return the bare event records.
+
 ---
 
-## Step 2 — Inject dependencies into Handle (when needed)
+## Step 2 — Fetch data the handler needs with `Provide()`
 
-Handle() parameters are injected by DI — use this for constraints or external services:
+When `Handle()` needs fetched or computed data before it can build the event, add a `Provide()` method. It runs after authorization and validation, resolves its parameters from DI, and binds its return value to `Handle(...)` parameters by type. It may short-circuit with a `ValidationResult.Error(...)` when the data is missing or unusable — **do not throw for that**.
 
 ```csharp
 [Command]
-public record OpenDebitAccount(AccountId AccountId, string Name, OwnerId OwnerId)
+public record OpenDebitAccount(AccountId AccountId, AccountName Name, OwnerId OwnerId)
 {
-    public async Task<DebitAccountOpened> Handle(
-        IUniqueAccountConstraint constraint)
+    public async Task<Result<Owner, ValidationResult>> Provide(IReadModels readModels)
     {
-        await constraint.Validate(Name);
-        return new(Name, OwnerId);
+        var owner = await readModels.GetInstanceById<Owner>((EventSourceId)OwnerId);
+        return owner is null ? ValidationResult.Error("Owner must exist.") : owner;
     }
+
+    public DebitAccountOpened Handle(Owner owner) => new(Name, owner.Id);
 }
 ```
+
+- Keep IO in `Provide()` and event construction in `Handle()`.
+- For **uniqueness**, use `[Unique]` / `IConstraint` (race-safe) — not a read-model pre-check or a throwing service. See the `add-business-rule` skill.
+- For a concurrency-sensitive state rule, inject the read model into `Handle()` and return `Result<TEvent, ValidationResult>` (see `add-business-rule`).
 
 Arc automatically wraps the return in `CommandResult` / `CommandResult<T>`. See `references/command-result.md`.
 
@@ -106,10 +119,9 @@ Arc automatically wraps the return in `CommandResult` / `CommandResult<T>`. See 
 
 ## Step 3 — Add validation (optional but recommended)
 
-FluentValidation rules are extracted by the proxy generator and run **client-side** before the request is sent:
+FluentValidation rules run **on the server** as part of the command pipeline; the proxy generator also extracts them so the same rules run **client-side as pre-flight** validation in `CommandForm`. Put the validator beside the command in the slice file:
 
 ```csharp
-// API/Accounts/OpenDebitAccountValidator.cs
 public class OpenDebitAccountValidator : CommandValidator<OpenDebitAccount>
 {
     public OpenDebitAccountValidator()
@@ -124,17 +136,9 @@ public class OpenDebitAccountValidator : CommandValidator<OpenDebitAccount>
 ```
 
 - Extends `CommandValidator<T>` (not `AbstractValidator<T>`) — this makes it discoverable automatically
-- No registration needed
+- No registration needed; **omit the validator entirely when there are no rules**
 - Arc also creates a `/validate` endpoint automatically; the frontend `command.validate()` calls it without executing the handler
-
-For simple cases, Data Annotations on the record work too:
-
-```csharp
-public record OpenDebitAccount(
-    [Required] Guid AccountId,
-    [Required, MaxLength(100)] string Name,
-    [Required] Guid OwnerId);
-```
+- Single-property intrinsic rules (format, range, required) belong on a `ConceptValidator<T>` for the value concept, so they travel with the value everywhere
 
 ---
 

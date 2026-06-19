@@ -7,116 +7,84 @@ Add a business rule or event-store constraint to an existing command.
 
 ## Choose the right mechanism
 
-| Scenario                                           | Use                                           |
-|----------------------------------------------------|-----------------------------------------------|
-| Single-event uniqueness (most cases)               | `[Unique]` attribute on the event type        |
-| Multi-event uniqueness or needs `RemovedWith`      | `IConstraint`                                 |
-| Rule requiring Chronicle event-sourced state       | ReadModel as `Handle()` parameter (DCB)       |
-| Simple sync invariant (format, range, required)    | `CommandValidator<T>`                         |
+Pick by what the decision *is* — see [vertical-slices.md](../../rules/vertical-slices.md) "The decision matrix":
 
-## Business Rules via DCB (ReadModel as argument)
+| Scenario | Use |
+|---|---|
+| Reusable value invariant (length, format, range) | `ConceptValidator<T>` on the concept type |
+| Command-input / cross-field / pre-handler rule (incl. injected read-model/service checks) | `CommandValidator<TCommand>` with `RuleFor(...)` |
+| Handler needs fetched/computed data before it can build the event | `Provide()` — fetch the data; short-circuit with `ValidationResult.Error(...)` if unusable |
+| State-dependent rule that must hold **under concurrency** | inject the read model into `Handle()`, return `Result<TEvent, ValidationResult>` |
+| Single-event uniqueness (most cases) | `[Unique]` attribute on the event type |
+| Multi-event uniqueness or needs `RemovedWith` | `IConstraint` |
+| Genuinely exceptional failure (bug, missing infra) | `throw` a custom domain exception |
 
-Use when the rule depends on **Chronicle event-sourced state** (e.g. current count, accumulated value).
-This is the DCB (Dynamic Consistency Boundary) pattern: add a **read model parameter** to the `Handle()` method.
-The framework fetches and injects the current read model snapshot before `Handle()` runs.
+> **Never throw for normal business rejection.** A thrown exception from `Provide()`/`Handle()` surfaces as `HasExceptions` / HTTP 500 — **not** a validation result. Recoverable, user-facing rejections are validation: return them via a validator, `Provide()`, or `Result<TEvent, ValidationResult>`.
 
-The read model must already exist in the slice (decorated with `[ReadModel]` and a model-bound projection).
-If it doesn't, add it first — see the `new-vertical-slice` skill.
+## Business rules via DCB (read model as `Handle()` argument)
 
-```csharp
-[Command]
-public record <Command>(<KeyProperty> <Key>, ...)
-{
-    /// <summary>
-    /// Handles the command.
-    /// </summary>
-    /// <param name="readModelParam">The current state.</param>
-    /// <returns>The resulting event.</returns>
-    public <Event> Handle(<ReadModel> <readModelParam>)
-    {
-        if (<readModelParam>.<StateProperty> <violatesRule>)
-            throw new <ViolationException>(<meaningful message>);
+Use when the rule depends on **Chronicle event-sourced state** (current count, accumulated value) and must hold **under concurrency**. The framework injects the current read-model snapshot, resolved by the command's event-source id, before `Handle()` runs. Return a `Result<TEvent, ValidationResult>` — success carries the event, failure carries a typed validation error.
 
-        return new <Event>(...);
-    }
-}
-```
-
-**Example — limit items in cart to 3:**
+The read model must already exist in the slice (`[ReadModel]` + a model-bound projection). If it doesn't, add it first — see the `add-projection` / `cratis-readmodel` skills.
 
 ```csharp
 [Command]
 public record AddItemToCart(CartId CartId, ItemId ItemId)
 {
-    /// <summary>
-    /// Adds the item; throws if the cart already holds 3 items.
-    /// </summary>
-    /// <param name="cart">The current cart summary.</param>
-    /// <returns>The <see cref="ItemAddedToCart"/> event.</returns>
-    /// <exception cref="CartIsFull">Thrown when the cart already contains the maximum number of items.</exception>
-    public ItemAddedToCart Handle(CartSummary cart)
-    {
-        if (cart.ItemCount >= 3)
-            throw new CartIsFullException(CartId);
-
-        return new ItemAddedToCart(ItemId);
-    }
+    /// <summary>Adds the item; rejects when the cart already holds the maximum.</summary>
+    /// <param name="cart">The current cart summary (injected by event-source id).</param>
+    /// <returns>The event on success, or a validation error.</returns>
+    public Result<ItemAddedToCart, ValidationResult> Handle(CartSummary cart) =>
+        cart.ItemCount >= 3
+            ? ValidationResult.Error("A cart can hold at most 3 items.")
+            : new ItemAddedToCart(ItemId);
 }
 ```
 
 **Key rules:**
-- The read model parameter type must match a `[ReadModel]`-decorated type in the same feature.
-- The framework resolves the instance using the same event-source key as the command.
-- Throw a **custom exception** (never a built-in one) to signal violation — the framework converts it to an error result.
-- One parameter per logical read model; if you need multiple reads, use multiple parameters.
+- The read-model parameter type must be a `[ReadModel]` in the same slice/feature; the framework resolves the instance by the command's event-source key. To read a read model keyed differently, use `Provide()` with `IReadModels.GetInstanceById<T>((EventSourceId)key)`.
+- Return `Result<TEvent, ValidationResult>` — never throw for the rejection.
+- One parameter per logical read model; multiple reads → multiple parameters.
 
-## Event-Store Constraints — `[Unique]` attribute (preferred)
+## Pre-handler rules — `CommandValidator<T>`
 
-For the common case of enforcing uniqueness on a single event type, adorn the event type class or one of its properties with `[Unique]`. No separate constraint class is needed.
-
-**Event-type uniqueness** — only one event of this type per event source:
+For rules that don't depend on race-sensitive state, put them in the validator that sits beside the command. Constructor dependencies (read models, services) are injected and resolved by the command's event-source id.
 
 ```csharp
-[EventType]
-[Unique(message: "A project with this name already exists.")]
-public record ProjectCreated(string Name, string Description);
-```
-
-**Property uniqueness** — the value of a specific property must be unique:
-
-```csharp
-[EventType]
-public record UserRegistered([Unique(name: "UniqueEmail", message: "Email already registered.")] string Email, string DisplayName);
-```
-
-**Releasing a constraint** — apply `[RemoveConstraint]` to the event that deletes the domain object:
-
-```csharp
-[EventType]
-[RemoveConstraint("UniqueEmail")]
-public record UserRemoved(UserId UserId);
-```
-
-Multiple attributes can be stacked to release more than one constraint from the same event type.
-
-Constraints are discovered and enforced automatically — no registration or attribute on the command needed.
-
-## Event-Store Constraints — `IConstraint` (advanced)
-
-Use `IConstraint` when the uniqueness rule spans event types with different property names, or when a `RemovedWith` event must release the constraint.
-
-```csharp
-public class Unique<PropertyName> : IConstraint
+public class TransferFundsValidator : CommandValidator<TransferFunds>
 {
-    public void Define(IConstraintBuilder builder) =>
-        builder.Unique(unique =>
-            unique
-                .On<<EventType>>(e => e.<UniqueProperty>)
-                .RemovedWith<<RemovedEventType>>());  // omit if there is no remove event
+    public TransferFundsValidator() =>
+        RuleFor(c => c.Amount).GreaterThan(0).WithMessage("Amount must be positive.");
 }
 ```
 
-**Example — unique project name with removal:**
+Single-property intrinsic rules belong on `ConceptValidator<T>` instead, so they travel with the value everywhere.
+
+## Event-store constraints — `[Unique]` (preferred)
+
+For uniqueness on a single event type, adorn the event type or one of its properties with `[Unique]`. No separate constraint class is needed; constraints are discovered automatically.
+
+```csharp
+// Event-type uniqueness — only one of this event per event source
+[EventType]
+[Unique(message: "A project with this name already exists.")]
+public record ProjectRegistered(ProjectName Name);
+
+// Property uniqueness — the value must be unique across event sources
+[EventType]
+public record UserRegistered([Unique(name: "UniqueEmail", message: "Email already registered.")] EmailAddress Email, DisplayName Name);
+
+// Release a claimed value on removal — the name must match the [Unique] name exactly
+[EventType]
+[RemoveConstraint("UniqueEmail")]
+public record UserRemoved;
+```
+
+Stack multiple `[RemoveConstraint("...")]` attributes on one removal event to release several claimed values at once. To enforce the same property across **multiple** event types, give each its `[Unique(name: "UniqueEmail")]` with the **same name**.
+
+## Event-store constraints — `IConstraint` (advanced)
+
+Use `IConstraint` when uniqueness spans event types with different property names, needs `.IgnoreCasing()`, or a `RemovedWith` event must release it. `Define` is **declarative** — member-access lambdas only, no DI or side effects.
 
 ```csharp
 public class UniqueProjectName : IConstraint
@@ -125,14 +93,19 @@ public class UniqueProjectName : IConstraint
         builder.Unique(unique =>
             unique
                 .On<ProjectRegistered>(e => e.Name)
-                .RemovedWith<ProjectRemoved>());
+                .IgnoreCasing()                    // case-insensitive — do NOT lowercase inside the lambda
+                .RemovedWith<ProjectRemoved>());   // omit if there is no remove event
 }
 ```
 
-Constraints are discovered and enforced automatically — no registration or attribute on the command needed.
+- The `.On<TEvent>(e => e.Prop)` lambda is parsed for **member access only** — `e => e.Email.ToLower()` is a pitfall; use `.IgnoreCasing()`.
+- `builder.Unique<TEvent>(name:, message:)` enforces "one event of this type per event source" via the fluent builder (distinct from class-level `[Unique]`).
+- Treat a constraint violation as a validation result on the command append — never as a thrown exception.
+
+**Spec the constraint** with `EventScenario`: seed the conflicting state, append again, and assert `ShouldHaveConstraintViolationFor(<Module>ConstraintNames.UniqueX)` — **the constraint name, never the message**. Use per-test unique values (`$"{Guid.NewGuid():N}"`) so specs aren't order-dependent. For a release, append the removal event then assert the value can be re-claimed.
 
 ## After adding
 
-1. Add a spec for the failure case — see `write-specs` skill
-2. Run `dotnet build` and `dotnet test`
-3. Fix all failures before completing
+1. Add a spec for the failure case — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()` (or `ShouldHaveConstraintViolationFor(name)` for constraints). See the `write-specs` / `write-specs-events` skills.
+2. Build clean (Debug and Release) and run the specs.
+3. Fix all failures before completing.
