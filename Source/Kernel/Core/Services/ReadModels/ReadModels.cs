@@ -788,7 +788,7 @@ internal sealed class ReadModels(
         IReadModelsCompliance complianceHelper,
         JsonSerializerOptions jsonSerializerOptions) : IProjectionChangesetObserver
     {
-        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel)
+        public async Task OnChangeset(Concepts.EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change)
         {
             var decrypted = await complianceHelper.ReleaseJson(
                 eventStore,
@@ -801,9 +801,20 @@ internal sealed class ReadModels(
                 Namespace = namespaceName,
                 ModelKey = readModelKey,
                 ReadModel = decrypted.ToJsonString(jsonSerializerOptions),
-                Removed = false
+                Removed = change.ChangeType == Concepts.ReadModels.ReadModelChangeType.Removed,
+                ChangeType = ToContractChangeType(change.ChangeType),
+                EventSequenceNumber = change.EventSequenceNumber.Value,
+                Occurred = change.Occurred,
+                CorrelationId = change.CorrelationId.Value
             });
         }
+
+        static Contracts.ReadModels.ReadModelChangeType ToContractChangeType(Concepts.ReadModels.ReadModelChangeType changeType) => changeType switch
+        {
+            Concepts.ReadModels.ReadModelChangeType.Added => Contracts.ReadModels.ReadModelChangeType.Added,
+            Concepts.ReadModels.ReadModelChangeType.Removed => Contracts.ReadModels.ReadModelChangeType.Removed,
+            _ => Contracts.ReadModels.ReadModelChangeType.Modified
+        };
     }
 
     record ConnectedReducerContext(ReducerId ReducerId, ConnectionId ConnectionId, IEnumerable<EventType> EventTypes);

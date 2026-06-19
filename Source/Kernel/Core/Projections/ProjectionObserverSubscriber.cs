@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
@@ -121,11 +122,13 @@ public class ProjectionObserverSubscriber(
         try
         {
             IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            var isNewInstance = false;
 
             foreach (var @event in events)
             {
                 var pipelineContext = await _pipeline.Handle(@event);
                 changeset = pipelineContext.Changeset;
+                isNewInstance = pipelineContext.IsNewInstance;
 
                 // Check if there are any failed partitions from bulk operations
                 if (pipelineContext.FailedPartitions.Any())
@@ -161,7 +164,20 @@ public class ProjectionObserverSubscriber(
                     model[WellKnownProperties.Subject] = JsonValue.Create(subject);
                 }
 
-                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model);
+                var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
+                {
+                    (true, _) => ReadModelChangeType.Removed,
+                    (false, true) => ReadModelChangeType.Added,
+                    _ => ReadModelChangeType.Modified
+                };
+
+                var change = new ReadModelChangeContext(
+                    changeType,
+                    lastSuccessfullyObservedEvent!.Context.SequenceNumber,
+                    lastSuccessfullyObservedEvent.Context.Occurred,
+                    lastSuccessfullyObservedEvent.Context.CorrelationId);
+
+                await _changesetNotifier!.Notify(_key.Namespace, partition.ToString(), model, change);
             }
 
             logger.SuccessfullyHandledAllEvents(_key);

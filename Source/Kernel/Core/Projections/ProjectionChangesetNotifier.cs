@@ -39,6 +39,6 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     }
 
     /// <inheritdoc/>
-    public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel) =>
-        await _observers.Notify(o => o.OnChangeset(namespaceName, readModelKey, readModel));
+    public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change) =>
+        await _observers.Notify(o => o.OnChangeset(namespaceName, readModelKey, readModel, change));
 }
