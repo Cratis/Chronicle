@@ -4,10 +4,10 @@
     {
       "id": 1,
       "prompt": "I'm building an invoicing feature for my app (namespace: MyBillingApp). The feature needs: (1) creating an invoice, (2) listing all invoices, (3) marking an invoice as paid. Show me the complete folder structure and the content of each .cs and .tsx file, following vertical slice architecture.",
-      "expected_output": "Features/Invoices/ folder with: Invoices.tsx composition page, InvoiceId.cs and InvoiceNumber.cs concepts, and three slice subdirs: Creation/Creation.cs, Listing/Listing.cs+Listing.tsx, MarkingAsPaid/MarkingAsPaid.cs. All .cs files have all backend artifacts in one file. No Commands/ Events/ Handlers/ folders.",
+      "expected_output": "Invoices/ feature folder (directly under the source root, no Features/ wrapper) with: Invoices.tsx composition page, InvoiceId.cs and InvoiceNumber.cs concepts, and three slice subdirs: Creation/Creation.cs, Listing/Listing.cs+Listing.tsx, MarkingAsPaid/MarkingAsPaid.cs. All .cs files have all backend artifacts in one file. No Commands/ Events/ Handlers/ folders.",
       "files": [],
       "assertions": [
-        "Output shows a Features/Invoices/ root folder (pluralized feature name)",
+        "Output shows an Invoices/ feature folder (pluralized feature name) directly under the source root, with no top-level Features/ wrapper",
         "Output contains concept files at the feature root (InvoiceId.cs etc.)",
         "Each slice has a subfolder with a single .cs file containing ALL backend artifacts",
         "No Commands/, Events/, Handlers/, or Projections/ subfolders within the feature",

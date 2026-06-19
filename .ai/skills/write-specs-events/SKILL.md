@@ -2,11 +2,10 @@
 name: write-specs-events
 description: Use this skill when asked to write tests or specs for event appending, event log behavior, constraint violations, or concurrency violations using EventScenario in a Cratis-based project. Produces infrastructure-free in-process specs using EventScenario and AppendResult Should* extensions.
 ---
----
 
 # Writing Event Sequence Specs with EventScenario
 
-Use `EventScenario` to test event-appending behavior in-process — no Chronicle server, database, or network required.
+Use `EventScenario` to test event-appending behavior in-process — no Chronicle server, database, or network required. **Wrap every spec file in `#if DEBUG … #endif`** so spec code ships only in Debug. Assert the constraint **name** (`ShouldHaveConstraintViolationFor(name)`), never the message.
 
 ## When to use this skill
 

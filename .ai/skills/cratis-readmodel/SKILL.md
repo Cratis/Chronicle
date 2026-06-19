@@ -18,26 +18,30 @@ A read model is derived state built from events. The path is:
 Events are the source of truth. Define each as a `record` decorated with `[EventType]`. Name them in **past tense**.
 
 ```csharp
-// Domain/Events/AccountEvents.cs
+// Accounts/AccountSummary/AccountSummary.cs — events live in the slice file they belong to
 using Cratis.Chronicle.Events;
 
+/// <summary>Emitted when a debit account is opened.</summary>
 [EventType]
-public record DebitAccountOpened(string Name, Guid OwnerId);
+public record DebitAccountOpened(AccountName Name, OwnerId OwnerId);
 
+/// <summary>Emitted when a debit account is closed.</summary>
 [EventType]
-public record DebitAccountClosed();
+public record DebitAccountClosed;
 
+/// <summary>Emitted when funds are deposited.</summary>
 [EventType]
-public record FundsDeposited(decimal Amount);
+public record FundsDeposited(Money Amount);
 
+/// <summary>Emitted when funds are withdrawn.</summary>
 [EventType]
-public record FundsWithdrawn(decimal Amount);
+public record FundsWithdrawn(Money Amount);
 ```
 
 Good event design:
-- One clear purpose per event — do not mix concerns
-- No nullables unless genuinely optional
-- Properties represent facts, not intent
+- One clear purpose per event — do not mix concerns.
+- **Avoid nullable properties** — Chronicle's analyzer warns on them; model an optional fact as a separate event.
+- Properties are concept-typed facts (never raw `Guid`/`string`), and never carry the event-source id.
 
 ---
 
@@ -94,16 +98,14 @@ For the `AccountSummary` above: use a **projection** for name/owner fields and a
 ## Step 4A — Implement a projection
 
 ```csharp
-// Domain/Projections/AccountSummaryProjection.cs
+// In the slice file — fluent projection (drop to this only when model-bound can't express the shape)
 using Cratis.Chronicle.Projections;
 
 public class AccountSummaryProjection : IProjectionFor<AccountSummary>
 {
     public void Define(IProjectionBuilderFor<AccountSummary> builder) => builder
         .From<DebitAccountOpened>(from => from
-            .Set(m => m.Name).To(e => e.Name)
-            .Set(m => m.OwnerId).To(e => e.OwnerId)
-            .Set(m => m.Balance).WithValue(0m))
+            .Set(m => m.Balance).WithValue(0m))    // Name/OwnerId map by AutoMap (matching names)
         .From<FundsDeposited>(from => from
             .Add(m => m.Balance).With(e => e.Amount))
         .From<FundsWithdrawn>(from => from
@@ -113,23 +115,30 @@ public class AccountSummaryProjection : IProjectionFor<AccountSummary>
 }
 ```
 
-- Discovered automatically — no registration needed
-- `IProjectionFor<T>` is keyed by **event source ID** by default (the `Id` passed to `IEventLog.Append`)
+- **AutoMap is on by default — never call `.AutoMap()`.** Matching property names (e.g. `Name`, `OwnerId`) map automatically from `.From<DebitAccountOpened>()`; only `.Set().To()` the ones whose names differ.
+- Discovered automatically — no registration needed.
+- `IProjectionFor<T>` is keyed by **event source ID** by default (the `Id` passed when appending the event).
 - Appended `tags`, `eventSourceType`, and `eventStreamType` do not filter projections directly; use reducers or reactors alongside the projection when you need metadata-based filtering
 - See `references/projections.md` for joins, auto-mapping, children, composite keys
 
-### Model-bound shorthand (for simple cases)
+### Model-bound shorthand (preferred for simple cases)
+
+`[FromEvent<T>]` is a **class-level** attribute declaring which event populates the model; property mapping is implicit via AutoMap (matching names) or explicit per-property with `[SetFrom<T>]`. The model needs `[ReadModel]`, and the key is the event-source id (no `[Key]` needed when the id property is the `EventSourceId<T>` identity).
 
 ```csharp
-using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
+[ReadModel]
+[FromEvent<DebitAccountOpened>]          // class-level: this event populates the model
 public record AccountInfo(
-    [Key] Guid Id,
-    [FromEvent<DebitAccountOpened>] string Name,   // auto-maps matching property
-    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.OwnerId))] Guid OwnerId
+    AccountId Id,                        // event-source id — no [Key] needed
+    AccountName Name,                    // AutoMap wires DebitAccountOpened.Name (matching name)
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.OwnerName))] OwnerName Owner  // only when names differ
 );
 ```
+
+- `[FromEvent<T>]` goes on the **class**, not a property. Property-level mapping uses `[SetFrom<T>]`, and only for genuine name differences — **never call `.AutoMap()`**; matching names map automatically.
+- Add more `[FromEvent<T>]` attributes to fold in additional events.
 
 ---
 
@@ -207,7 +216,7 @@ public record AccountSummary(AccountId Id, string Name, decimal Balance)
 }
 ```
 
-When the frontend uses an observable query, the query proxy type changes from `QueryFor` to `ObservableQueryFor`, and `DataPage` uses the `observableQuery` prop instead of `query`.
+When the frontend uses an observable query, the query proxy type changes from `QueryFor` to `ObservableQueryFor`. The **same `query` prop** accepts a standard or observable query — there is no separate `observableQuery` prop; `DataPage` auto-detects it and subscribes to live updates.
 
 ---
 
@@ -244,6 +253,6 @@ For building full pages with filtering, sorting, and command actions — see the
 | File | What's in it |
 | ---- | ------------ |
 | `references/projections.md` | Full builder API: `Set`, `Add`, `Join`, `Children`, `AutoMap`, composite keys |
-| `references/reducers.md` | Reducer signatures, async, passive, snapshot behaviour |
+| `references/reducers.md` | Reducer signatures, async, passive, snapshot behavior |
 | `references/events.md` | `[EventType]`, appending, `AppendResult`, tags, constraints |
 | `references/queries.md` | Query result shape, observable queries, paging |

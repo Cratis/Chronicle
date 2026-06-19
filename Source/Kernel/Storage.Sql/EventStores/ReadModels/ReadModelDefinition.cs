@@ -51,7 +51,7 @@ public class ReadModelDefinition
     /// <summary>
     /// Gets or sets the type of the sink the read model is stored to.
     /// </summary>
-    public string SinkType { get; set; } = Cratis.Chronicle.Concepts.Sinks.SinkTypeId.None;
+    public string SinkType { get; set; } = Concepts.Sinks.SinkTypeId.None;
 
     /// <summary>
     /// Gets or sets the configuration identifier for the sink of the read model.

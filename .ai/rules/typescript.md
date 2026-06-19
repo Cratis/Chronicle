@@ -48,63 +48,16 @@ Each type gets its own file because it makes the codebase navigable — finding 
 - Prefer `value as unknown as TargetType` over `value as any`.
 - Use `unknown` as default generic parameter instead of `any`.
 - React synthetic events (`React.MouseEvent<Element, MouseEvent>`) and DOM events (`MouseEvent`) are different types — don't mix them.
+- **`int64`/`uint64` Chronicle fields generate as `bigint`** in the TypeScript proxies (not `number`, which silently truncated past `Number.MAX_SAFE_INTEGER`). Sequence numbers, large counters, and 64-bit ids surface as `bigint` — use `bigint` arithmetic, never `Number()`.
 
-## Localised Strings
+## User-facing strings (localization)
 
-All user-visible text **must** come from translation files — never hard-code UI strings directly in component code. This is not optional even for English-only deployments — it centralizes copy, enables future localization, and makes it possible to audit all user-facing text in one place.
+How user-visible text is handled is **product policy, not a Cratis framework rule** (see [general.md](./general.md) — locales belong in a downstream app's own `.ai/`). Cratis itself has no mandatory i18n layer or `Strings` alias.
 
-### Structure
+- If the app has a localization convention (e.g. a translation object behind a `strings`/`Strings` import, or any i18n library), follow it consistently and keep raw string literals to constant, non-user-facing values (CSS class names, `key` props, internal identifiers).
+- If the app ships literal text, literal labels in JSX are fine.
 
-```
-Source/Core/
-  Strings.ts                    ← re-exports the default (English) JSON
-  Locales/
-    en/
-      translation.json          ← all English strings, organized by feature/component
-```
-
-`translation.json` is a nested JSON object whose top-level keys group strings by feature or component (e.g. `projects`, `eventModeling`, `chat`). Add new keys under the appropriate existing group, or add a new top-level group if the feature is new.
-
-### Importing
-
-Import the strings object using the `Strings` path alias (configured in `tsconfig.json`):
-
-```ts
-import strings from 'Strings';
-```
-
-Do **not** use relative paths such as `'../../Strings'` or `'../Strings'`.
-
-### Usage
-
-Access strings directly through the nested object — TypeScript infers the full type from the JSON file:
-
-```tsx
-import strings from 'Strings';
-
-export const MyComponent = () => (
-    <Button label={strings.projects.addProject} />
-);
-```
-
-For attribute strings (e.g. `title`, `placeholder`, `aria-label`):
-
-```tsx
-<div title={strings.eventModeling.grid.detailPanel.event}>
-    ...
-</div>
-```
-
-### Adding New Strings
-
-1. Add the key to `Source/Core/Locales/en/translation.json` under the appropriate group.
-2. TypeScript picks up the new key automatically from `Strings.ts` (no regeneration step).
-3. Use the key via `strings.<group>.<key>` in the component.
-
-### Rules
-
-- **Never** use plain string literals for user-visible text in JSX or attribute props. This includes `label`, `header`, `placeholder`, `title`, `aria-label`, `emptyMessage`, and any visible text nodes.
-- Only constant, non-localised values are allowed as raw strings (CSS class names, `key` props, internal identifiers).
+Either way, the Cratis-generic rule is only that strings are handled consistently within the app — not a specific file layout or import alias.
 
 ## Arc Frontend Patterns
 
@@ -149,19 +102,7 @@ Declarative form component with built-in field types, validation timing (`valida
 
 ## Language — American English Only
 
-All identifiers, comments, JSDoc, and string literals must use **American English** spelling. This applies to variable names, function names, type names, enum members, and documentation. Common mistakes to avoid:
-
-| Wrong (UK) | Correct (US) |
-|---|---|
-| initialise, serialise, normalise | initialize, serialize, normalize |
-| behaviour, colour, favour, honour | behavior, color, favor, honor |
-| organisation, authorisation | organization, authorization |
-| centre, fibre | center, fiber |
-| modelling, signalling, cancelling | modeling, signaling, canceling |
-| dialogue, catalogue | dialog, catalog |
-| licence, defence | license, defense |
-| judgement, acknowledgement | judgment, acknowledgment |
-| grey | gray |
+All identifiers, comments, JSDoc, and string literals must use **American English** spelling (initialize, serialize, behavior, color, organization, center, modeling, dialog, license, judgment, gray). See [general.md](./general.md) for the full guidance.
 
 ## Variables and Naming
 

@@ -1,6 +1,6 @@
 ---
 name: cratis-vertical-slice
-description: Explains how vertical feature slices are structured in a Cratis Chronicle + Arc application — folder layout, what goes in the single backend .cs file, the four slice types (State Change/View/Automation/Translation), and how features compose slices. Use when asking how vertical slices work, where to put files, how to organize a feature folder, which slice type to choose, or how the workflow from C# to TypeScript proxies to React looks. For actively building a new slice end-to-end right now, use new-vertical-slice instead.
+description: Explains how vertical feature slices are structured in a Cratis Chronicle + Arc application — folder layout, the single backend .cs file, the four slice types (State Change/View/Automation/Translation), and how features compose slices. Use when asking how slices work, where files go, or which slice type to choose. To actually build a new slice end-to-end, use new-vertical-slice instead.
 ---
 
 ## Core principle
@@ -27,21 +27,22 @@ First, name the feature (a domain noun, pluralized) and identify the slice type:
 
 ## Step 2 — Create the folder structure
 
+The feature folder lives directly under the app source root (or under an optional `<Module>/` grouping) — there is **no** top-level `Features/` wrapper.
+
 ```
-Features/
-└── <Feature>/                      ← feature root (pluralized domain noun)
-    ├── <Feature>.tsx               ← composition page
-    ├── <ConceptName>.cs            ← shared ConceptAs<T> types for the feature
-    └── <SliceName>/                ← slice (action or view name)
-        ├── <SliceName>.cs          ← ALL backend artifacts in ONE file
-        ├── <Component>.tsx         ← React component
-        └── when_<behavior>/        ← integration specs (state-change slices)
-            └── and_<scenario>.cs
+<Feature>/                          ← feature root (pluralized domain noun)
+├── <Feature>.tsx                   ← composition page
+├── <ConceptName>.cs                ← shared ConceptAs<T> / EventSourceId<T> types for the feature
+└── <SliceName>/                    ← slice (action or view name) — the invariant unit
+    ├── <SliceName>.cs              ← ALL backend artifacts in ONE file
+    ├── <Component>.tsx             ← React component
+    └── when_<behavior>/            ← specs
+        └── and_<scenario>.cs
 ```
 
 ✅ Correct:
 ```
-Features/Authors/
+Authors/
 ├── Authors.tsx
 ├── AuthorId.cs
 ├── AuthorName.cs
@@ -57,14 +58,14 @@ Features/Authors/
 
 ❌ Wrong — never split by artifact type:
 ```
-Features/Authors/
+Authors/
 ├── Commands/RegisterAuthor.cs
 ├── Handlers/RegisterAuthorHandler.cs
 ├── Events/AuthorRegistered.cs
 ```
 
-**Namespace rule**: Drop the `.Features.` segment.  
-`MyApp.Authors.Registration` — not `MyApp.Features.Authors.Registration`.
+**Namespace rule**: the namespace mirrors the folder path under the source root — there is no `Features` segment.  
+`MyApp.Authors.Registration` (or `MyApp.<Module>.Authors.Registration` when a module groups the feature).
 
 ---
 
@@ -116,18 +117,18 @@ See `references/slice-anatomy.md` for all artifact patterns.
 
 ## Step 4 — Define domain concepts
 
-For every identity or domain value, create a `ConceptAs<T>` type — one file per concept, in the feature folder (or `Features/` root if shared across features).
+For every domain value create a concept — one file per concept, in the feature folder (or `Common/` if shared across features). **Identity** concepts derive from `EventSourceId<T>`; **value** concepts from `ConceptAs<T>`.
 
 ```csharp
-public record AuthorId(Guid Value) : ConceptAs<Guid>(Value)
+public record AuthorId(Guid Value) : EventSourceId<Guid>(Value)
 {
     public static readonly AuthorId NotSet = new(Guid.Empty);
-    public static implicit operator Guid(AuthorId id) => id.Value;
-    public static implicit operator AuthorId(Guid value) => new(value);
-    public static implicit operator EventSourceId(AuthorId id) => new(id.Value.ToString());
     public static AuthorId New() => new(Guid.NewGuid());
+    public static implicit operator AuthorId(Guid value) => new(value);
 }
 ```
+
+`EventSourceId<T>` already supplies the conversions to `Guid`, `EventSourceId`, and `string` — don't redeclare them.
 
 See `references/concepts.md` for all concept patterns.
 

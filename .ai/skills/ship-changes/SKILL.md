@@ -115,8 +115,7 @@ git push -u origin <branch-name>
 
 Use `mcp_github_github_create_pull_request` with:
 
-- `owner`: `Cratis`
-- `repo`: `Chronicle`
+- `owner` / `repo`: **the current repository** — derive it from the `origin` remote (`git remote get-url origin`); never hardcode a specific repo
 - `head`: the branch name
 - `base`: `main`
 - `title`: short imperative sentence describing the overall change
@@ -147,8 +146,10 @@ Rules:
 ### Searching for a related issue
 
 ```
-mcp_github_github_search_issues  query="<keywords> repo:Cratis/Chronicle"
+mcp_github_github_search_issues  query="<keywords> repo:<owner>/<repo>"
 ```
+
+(Use the current repository's `<owner>/<repo>`, derived from the `origin` remote.)
 
 If nothing relevant is found, omit the issue reference from affected bullets.
 
@@ -164,16 +165,23 @@ Otherwise use `gh pr edit <number> --add-label "<label>"` with one of:
 | `minor` | new features, new slices, non-breaking additions |
 | `major` | breaking changes to public APIs |
 
-## Step 7 — Merge the PR
+## Step 7 — Wait for CI to pass
+
+Before merging, poll the PR checks with `pull_request_read`:
+
+- Use `method: get_check_runs` (and `get_job_logs` on any failure).
+- Merge **only** when all required checks are green. If a check fails, investigate, fix, and push again.
+- Do not merge while red unless the user explicitly accepts confirmed pre-existing flakes unrelated to the change.
+
+## Step 8 — Merge the PR
 
 Use `mcp_github_github_merge_pull_request` with:
 
 - `merge_method`: `merge`
-- `owner`: `Cratis`
-- `repo`: `Chronicle`
+- `owner` / `repo`: the current repository (same as step 5)
 - `pullNumber`: the PR number returned in step 5
 
-## Step 8 — Clean up the branch
+## Step 9 — Clean up the branch
 
 ```
 git checkout main && git pull && git branch -d <branch-name> && git push origin --delete <branch-name>
@@ -184,8 +192,7 @@ After this completes, `main` is fully up to date locally.
 
 ## Full example sequence
 
-Below is the exact sequence used when embedding Orleans assemblies in the
-Testing package — use this as a reference for what a correct execution looks like:
+An illustrative end-to-end run for a new slice (paths and numbers are placeholders — use the current repo's):
 
 ```
 # 1. Review
@@ -193,34 +200,33 @@ git status
 git diff
 
 # 2. Branch
-git checkout -b fix/testing-package-orleans-runtime-assemblies
+git checkout -b feat/authors-registration
 
-# 3a. First commit — infrastructure
-git add Source/Clients/Directory.Build.props
+# 3a. First commit — backend slice
+git add Authors/Registration/Registration.cs
 git diff --cached
-git commit -m "Add _PackPrivateAssemblyGlobs target for runtime-only NuGet package embedding
+git commit -m "Add author registration slice
 
-Extend the shared client build infrastructure with a new MSBuild target
-_PackPrivateAssemblyGlobs registered via TargetsForTfmSpecificContentInPackage.
-..."
+Register command + AuthorRegistered event + uniqueness constraint."
 
-# 3b. Second commit — consumer usage
-git add Source/Clients/Testing/Testing.csproj
-git commit -m "Embed Orleans assemblies in Testing package as runtime-only
-..."
+# 3b. Second commit — specs
+git add Authors/Registration/when_registering_an_author/
+git commit -m "Add specs for author registration"
 
 # 4. Push
-git push -u origin fix/testing-package-orleans-runtime-assemblies
+git push -u origin feat/authors-registration
 
-# 5. PR (via mcp_github_github_create_pull_request)
+# 5. PR (via mcp_github_github_create_pull_request) — owner/repo from the origin remote
 
-# 6. Label
-gh pr edit 2994 --add-label "patch"
+# 6. Label (optional)
+gh pr edit <pr-number> --add-label "minor"
 
-# 7. Merge (via mcp_github_github_merge_pull_request)
+# 7. Wait for CI — pull_request_read get_check_runs until green
 
-# 8. Clean up (pulls main as part of the same command)
-git checkout main && git pull && git branch -d fix/testing-package-orleans-runtime-assemblies && git push origin --delete fix/testing-package-orleans-runtime-assemblies
+# 8. Merge (via mcp_github_github_merge_pull_request)
+
+# 9. Clean up (pulls main as part of the same command)
+git checkout main && git pull && git branch -d feat/authors-registration && git push origin --delete feat/authors-registration
 ```
 
 ## Common mistakes to avoid

@@ -33,15 +33,14 @@ Events/
 **Do** group by feature — everything that changes together lives together:
 
 ```
-✅ Feature-cohesive (Cratis style)
-Features/
-  Authors/
-    Registration/
-      Registration.cs   ← command + event + validator
-      AddAuthor.tsx
-    Listing/
-      Listing.cs        ← read model + projection + query
-      Listing.tsx
+✅ Feature-cohesive (Cratis style) — feature folders live directly under the source root, no Features/ wrapper
+Authors/
+  Registration/
+    Registration.cs   ← command + event + validator
+    AddAuthor.tsx
+  Listing/
+    Listing.cs        ← read model + projection + query
+    Listing.tsx
 ```
 
 For different technical concerns (frontend vs backend), naturally separate into different projects, but maintain the cohesive feature structure within each project.

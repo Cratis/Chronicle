@@ -1,6 +1,8 @@
-````instructions
 ---
 applyTo: "**/*.cs"
+profile: framework
+paths:
+  - "**/*.cs"
 ---
 
 # Orleans Conventions
@@ -18,7 +20,7 @@ These conventions apply to projects that use Microsoft Orleans for distributed g
 
 ## Storage Providers
 
-- Centralise all storage provider names in a single `WellKnownStorageProviders` static class at the root of the project.
+- Centralize all storage provider names in a single `WellKnownStorageProviders` static class at the root of the project.
 - Reference provider names via the constants in `WellKnownStorageProviders` — never use magic strings.
 - Use `WellKnownStorageProviders.Default` as the name for the primary MongoDB-backed storage provider.
 
@@ -46,5 +48,3 @@ builder.Host.UseOrleans(siloBuilder =>
             sp.GetRequiredService<IMongoCollection<MyState>>()));
 });
 ```
-
-````

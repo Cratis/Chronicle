@@ -1,6 +1,6 @@
 ---
 name: add-cratis-docs-page
-description: Use this skill when creating a NEW Cratis documentation page under `Documentation/**` in a product or contributing repo — a new tutorial chapter, how-to/guide, explanation/concept page, reference page, or scenario/recipe. Handles where the file goes (which product repo), wiring it into the sidebar nav (toc.yml + Diátaxis bucket), and verifying it renders. Trigger when someone asks to add/create/write a new docs page, document a new feature, add a guide/tutorial/recipe/concept to the docs, or add a new section to a product's documentation.
+description: Use this skill when creating a NEW Cratis documentation page under `Documentation/**` (tutorial, how-to, explanation, reference, or recipe). Handles where the file goes (which product repo), sidebar wiring (toc.yml + Diátaxis bucket), and verifying it renders. Trigger on add/create/write a new docs page, document a new feature, or add a new section to a product's docs.
 ---
 
 # Adding a new Cratis documentation page

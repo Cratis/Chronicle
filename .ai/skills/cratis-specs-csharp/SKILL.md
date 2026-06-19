@@ -1,6 +1,6 @@
 ---
 name: cratis-specs-csharp
-description: Step-by-step guidance for writing C# specs in Cratis using BDD-style Specification by Example — the Establish/Because/should_ pattern, for_/when_/and_ folder hierarchy, reusable given/ contexts, NSubstitute mocking, and Chronicle integration specs. Use when writing C# unit or integration specs, creating spec files or folders, structuring the for_<Type>/when_<behavior>/and_<condition> hierarchy, mocking with NSubstitute, writing given/ reusable contexts, or using ShouldEqual/ShouldBeTrue assertions. For integration specs specifically tied to a vertical slice command, write-specs offers a more focused workflow.
+description: Step-by-step guidance for writing C# specs in Cratis with BDD Specification by Example — the Establish/Because/should_ pattern, for_/when_/and_ folder hierarchy, reusable given/ contexts, NSubstitute mocking, and the in-process scenario family. Use when writing C# unit or integration specs or structuring the for_/when_/and_ hierarchy. For specs tied to a specific vertical-slice command, write-specs is the focused workflow.
 ---
 
 ## Core philosophy
@@ -14,10 +14,16 @@ Specs are **executable documentation** — the folder tree reads like a spec she
 
 ## Step 1 — Choose the spec type
 
+Lead with the in-process **scenario family** (fast, infrastructure-free — the default for slice behavior); reserve out-of-process Chronicle integration specs for host/transport boundaries they can't reach. **Every spec file is wrapped in `#if DEBUG … #endif`.** Full reference: the universal base in [specs.csharp.md](../../rules/specs.csharp.md) and the application `*Scenario` family in [specs.scenarios.csharp.md](../../rules/specs.scenarios.csharp.md).
+
 | Scenario | Spec type |
 | --- | --- |
+| State Change slice (command → events) | `CommandScenario<TCommand>` — runs validators + `Provide()` + `Handle()` + appended events |
+| State View slice (projection / reducer) | `ReadModelScenario<TReadModel>` |
+| Constraints / raw append & concurrency semantics | `EventScenario` |
+| Automation / Translation (reactor) | `ReactorScenario<TReactor>` |
 | Isolated unit logic (no I/O) | Unit spec in `for_<ClassName>/` |
-| A full vertical slice (command → event) | Chronicle integration spec in slice folder |
+| Host / transport / real-infra boundary (advanced) | out-of-process Chronicle integration spec |
 | Complex setup shared across many specs | Reusable context in `given/` |
 
 ---
@@ -121,9 +127,35 @@ See `references/csharp-patterns.md` for full NSubstitute patterns and assertion 
 
 ---
 
-## Step 5 — Write a Chronicle integration spec
+## Step 5 — In-process scenario specs (the default)
 
-Integration specs live directly inside the slice's `when_<behavior>/` folder and test the full stack against a real Chronicle event store.
+For slice behavior, use the scenario family — it runs the real Arc/Chronicle pipeline in-process. Wrap every file in `#if DEBUG`.
+
+```csharp
+// Authors/Registration/when_registering_an_author/and_all_information_is_valid.cs
+#if DEBUG
+namespace MyApp.Authors.Registration.when_registering_an_author;
+
+public class and_all_information_is_valid : Specification
+{
+    readonly CommandScenario<RegisterAuthor> _scenario = new();
+    readonly AuthorId _id = AuthorId.New();
+    CommandResult _result;
+
+    async Task Because() => _result = await _scenario.Execute(new RegisterAuthor(_id, new AuthorName("Jane Austen")));
+
+    [Fact] void should_succeed() => _result.ShouldBeSuccessful();
+    [Fact] async Task should_have_appended_registered_event() =>
+        await _scenario.ShouldHaveAppendedEvent<RegisterAuthor, AuthorRegistered>(_id, e => e.Name == "Jane Austen");
+}
+#endif
+```
+
+`CommandScenario<TCommand>` exposes only `Services`, `Context`, `Execute`, and `Validate` — event assertions are the extension methods `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])` and `ShouldHaveTailSequenceNumber<TCommand>(...)`. Unhappy-path specs assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()` (authorization uses `ShouldNotBeAuthorized()`). Seed DCB read-model state by registering it into `_scenario.Services` (substitute `IReadModels`/`GetInstanceById`, or `AddReadModels(...)`) — there is no `Given`/`Events` on a command scenario. See [specs.scenarios.csharp.md](../../rules/specs.scenarios.csharp.md) for `EventScenario`, `ReadModelScenario<T>`, and `ReactorScenario<T>` (which *do* use `Given.ForEventSource(...).Events(...)`).
+
+## Step 6 — Out-of-process Chronicle integration spec (advanced)
+
+Reserve this for the host/transport boundary the scenario helpers can't reach. Integration specs live directly inside the slice's `when_<behavior>/` folder and test the full stack against a real Chronicle event store.
 
 ```csharp
 // Authors/Registration/when_registering/and_there_are_no_authors.cs

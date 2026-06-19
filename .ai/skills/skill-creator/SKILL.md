@@ -5,6 +5,8 @@ description: Create new skills, modify and improve existing skills, and measure 
 
 # Skill Creator
 
+> **Cratis note:** this is a vendored upstream skill (its `LICENSE.txt` is Apache-2.0, unlike the MIT headers elsewhere in this repo). In Cratis, skills are the canonical source at `.ai/skills/<name>/SKILL.md`, surfaced to each tool via folder symlinks — see [managing-ai-rules.md](../../rules/managing-ai-rules.md). When you finish authoring a skill here, make sure it lives at `.ai/skills/<name>/SKILL.md` and run `.ai/hooks/scripts/validate-ai-setup.sh`. (This skill's name collides with the tools' built-in `skill-creator` — invoke the one you intend. We deliberately keep the upstream name rather than rename: its `scripts/` self-reference `skill-creator`, so renaming would break the vendored tooling and diverge from upstream.)
+
 A skill for creating new skills and iteratively improving them.
 
 At a high level, the process of creating a skill goes like this:

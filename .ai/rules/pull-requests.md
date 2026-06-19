@@ -8,7 +8,7 @@ PR descriptions serve two purposes: they help reviewers understand the change *n
 
 ## Description
 
-- Follow the [pull request template](../pull_request_template.md).
+- Follow the repository's pull request template (`.github/pull_request_template.md`).
 - Focus on the **Added**, **Changed**, **Fixed**, **Removed**, **Security**, and **Deprecated** sections. Remove sections that are empty — don't leave blank headings.
 - Each bullet should be short, self-contained, and release-note ready.
 - **Write for users of the framework, not for internal developers.** Only include changes that have an impact on anyone using what we build — new APIs, changed behavior, fixed bugs, removed features. Do not list internal implementation details like storage changes, converter updates, gRPC contract internals, or spec additions. If a change is purely internal plumbing, it does not belong in the PR description.
@@ -18,7 +18,7 @@ PR descriptions serve two purposes: they help reviewers understand the change *n
 
 ## Commits
 
-See the full [Git Commits guide](./git-commits.instructions.md) for rules on logical grouping, message format, and staging discipline.
+See the full [Git Commits guide](./git-commits.md) for rules on logical grouping, message format, and staging discipline.
 
 Quick reminders:
 - Imperative mood: "Add author registration" not "Added author registration".

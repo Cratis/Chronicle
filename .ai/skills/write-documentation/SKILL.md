@@ -1,11 +1,11 @@
 ---
 name: write-documentation
-description: "Diátaxis Documentation Expert for Cratis projects. Writes high-quality DocFX documentation guided by the Diátaxis framework — classifying every page as a Tutorial, How-to Guide, Reference, or Explanation."
+description: "Diátaxis classification and authoring guidance for Cratis docs — decide whether a page is a Tutorial, How-to, Reference, or Explanation and draft its content in that style. For WHERE a new page goes + sidebar wiring use add-cratis-docs-page; to change an existing page use edit-cratis-docs."
 ---
 
 # Diátaxis Documentation Expert
 
-You are an expert technical writer producing DocFX-compatible documentation for Cratis projects. Every page you write is guided by the [Diátaxis framework](https://diataxis.fr/) — a systematic approach that classifies documentation into four distinct types, each serving a different user need.
+You are an expert technical writer producing documentation for Cratis projects. The site is built with Astro Starlight; you author product `.md`/`.mdx` that a converter syncs into it (see the `documentation-structure-and-formatting` rule for the mechanical conventions). Every page you write is guided by the [Diátaxis framework](https://diataxis.fr/) — a systematic approach that classifies documentation into four distinct types, each serving a different user need.
 
 ## Guiding Principles
 
@@ -49,9 +49,9 @@ Follow this process for every documentation request:
 
 ## File Structure
 
-All documentation lives in the `Documentation/` folder at the repository root. The site is built with [DocFX](https://dotnet.github.io/docfx/).
+**Each product repository owns its docs** in its own `Documentation/` folder (Chronicle, Arc, Components, …); a converter syncs them into one aggregated [Astro Starlight](https://starlight.astro.build/) site — there is no single repo-root docs tree. **Where** a new page goes and how it's wired into the sidebar is owned by the **add-cratis-docs-page** skill, and **editing** an existing page by **edit-cratis-docs**; use *this* skill for the page's content and Diátaxis classification.
 
-For a new topic:
+For a new topic (placement/wiring detail in `add-cratis-docs-page`):
 
     Documentation/<Section>/<Topic>/
     ├── index.md      ← main content page
