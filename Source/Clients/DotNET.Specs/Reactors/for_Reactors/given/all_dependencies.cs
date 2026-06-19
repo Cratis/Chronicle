@@ -89,6 +89,7 @@ public class all_dependencies : Specification
             _activitySource,
             _sideEffectHandlers,
             _reactorContextValuesBuilder,
+            new ReactorMethodArgumentsResolver(),
             _logger,
             _loggerFactory);
 

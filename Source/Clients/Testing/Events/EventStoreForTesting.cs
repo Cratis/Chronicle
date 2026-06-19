@@ -185,6 +185,7 @@ public class EventStoreForTesting : IEventStore
                 new EventSourceTypeValuesProvider(),
                 new SubjectValuesProvider()
             ])),
+            new ReactorMethodArgumentsResolver(),
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
