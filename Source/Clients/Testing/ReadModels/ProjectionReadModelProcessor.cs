@@ -211,7 +211,12 @@ internal static class ProjectionReadModelProcessor
 
         InjectIdentifierFromKey<TReadModel>(state, rootKey);
 
-        var json = JsonSerializer.Serialize(state);
+        // Serialize with the same options used to deserialize so concept values — both scalar and the
+        // elements of a concept collection (e.g. IReadOnlyList<MyConcept>) — are written in their
+        // unwrapped primitive form. Without these options a concept CLR object serializes as an object
+        // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
+        // underlying primitive.
+        var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
         return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
     }
 
