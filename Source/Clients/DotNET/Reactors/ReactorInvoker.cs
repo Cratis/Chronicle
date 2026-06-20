@@ -33,6 +33,14 @@ namespace Cratis.Chronicle.Reactors;
 /// Optional <see cref="IReactorContextValuesBuilder"/> used to resolve append-metadata for side-effect events.
 /// When <see langword="null"/>, no values are resolved and append-metadata falls back to the triggering event.
 /// </param>
+/// <param name="argumentsResolver">
+/// Optional <see cref="IReactorMethodArgumentsResolver"/> used to resolve handler method arguments. When
+/// <see langword="null"/>, a default <see cref="ReactorMethodArgumentsResolver"/> is used.
+/// </param>
+/// <param name="serviceProvider">
+/// Optional <see cref="IServiceProvider"/> used to resolve handler method dependencies that are neither the
+/// <see cref="EventContext"/> nor a read model.
+/// </param>
 public class ReactorInvoker(
     IEventTypes eventTypes,
     IReactorMiddlewares middlewares,
@@ -41,10 +49,13 @@ public class ReactorInvoker(
     ILogger<ReactorInvoker> logger,
     IReactorSideEffectHandlers? sideEffectHandlers = null,
     IEventStore? eventStore = null,
-    IReactorContextValuesBuilder? reactorContextValuesBuilder = null) : IReactorInvoker
+    IReactorContextValuesBuilder? reactorContextValuesBuilder = null,
+    IReactorMethodArgumentsResolver? argumentsResolver = null,
+    IServiceProvider? serviceProvider = null) : IReactorInvoker
 {
     static readonly ConcurrentDictionary<Type, Dictionary<Type, MethodInfo>> _methodsByEventTypeCache = [];
     readonly Dictionary<Type, MethodInfo> _methodsByEventType = MethodsByEventType.Get(targetType, eventTypes.AllClrTypes);
+    readonly IReactorMethodArgumentsResolver _argumentsResolver = argumentsResolver ?? new ReactorMethodArgumentsResolver();
 
     /// <summary>
     /// Gets all <see cref="EventType"/> for a specific reactor type.
@@ -69,19 +80,17 @@ public class ReactorInvoker(
 
             if (_methodsByEventType.TryGetValue(eventType, out var method))
             {
-                object? returnValue;
-                var parameters = method.GetParameters();
-
                 await middlewares.BeforeInvoke(eventContext, content);
 
-                if (parameters.Length == 2)
-                {
-                    returnValue = method.Invoke(activatedReactor.Instance, [content, eventContext]);
-                }
-                else
-                {
-                    returnValue = method.Invoke(activatedReactor.Instance, [content]);
-                }
+                var arguments = await _argumentsResolver.Resolve(
+                    method,
+                    activatedReactor.Instance,
+                    content,
+                    eventContext,
+                    eventStore,
+                    serviceProvider);
+
+                var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
                 var sideEffectFailure = await HandleReturnValue(method, returnValue, eventContext);
                 if (sideEffectFailure is not null)

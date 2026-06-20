@@ -38,4 +38,10 @@
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="All" />
         <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" PrivateAssets="All" />
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- SQLitePCLRaw.lib.e_sqlite3 2.1.11 carries advisory GHSA-2m69-gcr7-jv3q with no non-major patched
+             version available. Suppress the NuGet audit warning so it is not treated as a build error. -->
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+    </ItemGroup>
 </Project>

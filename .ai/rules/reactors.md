@@ -37,6 +37,48 @@ public Task MethodName(TEvent @event, EventContext context)
 - **Return type** — `Task` or `void`, or a side-effect type (`TEvent`, `ReactorSideEffect`, or a collection of either) returned directly (sync) or wrapped in `Task<...>` (async). Prefer `Task`/async for real side effects, but synchronous returns are fully supported — there is no "always async" requirement.
 - **Method name** — can be anything descriptive. The name is for readability, not dispatch.
 
+## Taking Dependencies
+
+Beyond the event and `EventContext`, a handler method can take any number of additional parameters as dependencies. Only the first parameter is fixed (it is the event that drives dispatch); every parameter after it is resolved when the method is invoked.
+
+```csharp
+public class OrderProcessing(IShippingService shipping) : IReactor
+{
+    public async Task OrderPlaced(OrderPlaced @event, EventContext context, Order order, IPricingService pricing)
+    {
+        // 'order' is the read model, materialized strongly consistent for this event.
+        // 'pricing' is resolved from the service provider.
+        await shipping.Schedule(order, pricing.PriceFor(order));
+    }
+}
+```
+
+How each parameter is resolved:
+
+- **`EventContext`** — receives the event context (position independent).
+- **A read model** — a type that has a reducer or a projection (declarative or model-bound). It is materialized on demand from that reducer or projection, making it **strongly consistent** at the point the reactor runs. Read models are resolved directly by Chronicle — they never go through the service provider.
+- **Any other type** — resolved from the service provider (constructor injection on the reactor itself is still preferred for collaborators used by every method).
+
+### Resolving the read model key
+
+By default the read model is materialized using the `EventSourceId` from the event context. When the key differs from the event source — for example the event carries the id of a related entity — implement `ICanResolveReadModelKey` on the reactor:
+
+```csharp
+public class OrderProcessing : IReactor, ICanResolveReadModelKey
+{
+    public ReadModelKey Resolve(object @event, EventContext context) =>
+        ((OrderLineAdded)@event).OrderId;
+
+    public Task OrderLineAdded(OrderLineAdded @event, Order order)
+    {
+        // 'order' was materialized using OrderId rather than the triggering event's source id.
+        return Task.CompletedTask;
+    }
+}
+```
+
+The resolved key applies to every read model parameter across all of the reactor's handler methods.
+
 ## Returning Side-Effect Events
 
 Instead of taking a dependency on `IEventLog`, reactor handler methods can return events that should be appended automatically. The default target is the event log; the EventSourceId defaults to the one from the triggering event.
