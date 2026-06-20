@@ -165,6 +165,13 @@ public class HandleEventsForObserver(
                     .ToArray();
                 eventsToHandle = FilterRedactedEventsForUnsubscribedTypes(eventsToHandle, nonRedactionEventTypeIds);
 
+                // Dispatch consecutive same-partition batches sequentially, in global sequence order, and return
+                // immediately on the first failure instead of continuing to later partitions. This is intentional:
+                // a projection that resolves keys, joins, or child collections across event sources depends on
+                // earlier partitions already being materialized in the sink, so processing past a failed partition
+                // would layer state onto a parent that never materialized and silently produce an inconsistent read
+                // model. Halting preserves the same global-order contract live observation relies on and surfaces
+                // the failure through PartitionFailed so it can be recovered before more state is built on top of it.
                 foreach (var partitionEvents in GetConsecutivePartitionBatches(eventsToHandle))
                 {
                     if (cancellationToken.IsCancellationRequested)
