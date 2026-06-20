@@ -55,3 +55,5 @@ public class EmailNotificationsReactor : IReactor
 - [Once-Only Processing](once-only.md)
 - [Filtering by appended event metadata](../events/filtering/index.md)
 - [Tagging Reactors](../concepts/tagging-reactors.md)
+
+> Reactors react to **events**. To react instead to a **read model** being added, modified or removed — with the same convention-based methods, dependencies and side effects — see [Reacting to Read Model Changes](../read-models/reacting-to-changes.md).

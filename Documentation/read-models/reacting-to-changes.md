@@ -57,7 +57,7 @@ public class AccountNotifier(INotificationService notifications) : IReadModelRea
 
 ## Returning side effects
 
-Just like reactors, a handler method can return events to be appended. Return a single event, a collection, an `EventForEventSourceId`, or a mix. The `[EventStreamType]` and `[EventSourceType]` attributes on the reactor are honored when appending.
+Just like [reactors](../reactors/side-effects.md), a handler method can return events to be appended. Return a single event, a collection, an `EventForEventSourceId`, or a mix. The `[EventStreamType]` and `[EventSourceType]` attributes on the reactor are honored when appending.
 
 ```csharp
 public Task<AccountFlagged> Modified(Account account) =>
