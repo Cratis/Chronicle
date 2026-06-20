@@ -6773,6 +6773,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ts-deepmerge@npm:8.0.0":
+  version: 8.0.0
+  resolution: "ts-deepmerge@npm:8.0.0"
+  checksum: 10/27f342a8f43ddba97bd9ea84733cd6e1019ae5a67a07ce1d9720dec3068a781f47d8c34599e66301548cd398cfb5db4a0d275625c279a1eb81e5a70ed7e7a112
+  languageName: node
+  linkType: hard
+
 "ts-node@npm:10.9.2":
   version: 10.9.2
   resolution: "ts-node@npm:10.9.2"
@@ -7484,7 +7491,7 @@ __metadata:
     sinon-chai: "npm:4.0.1"
     storybook: "npm:^10.3.5"
     tailwindcss: "npm:4.2.4"
-    ts-deepmerge: "npm:7.0.3"
+    ts-deepmerge: "npm:8.0.0"
     ts-node: "npm:10.9.2"
     tsconfig-paths: "npm:4.2.0"
     typescript: "npm:6.0.3"
