@@ -47,7 +47,10 @@ public class UnitOfWork(
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        ConcurrencyScope? concurrencyScope = default)
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         var eventSequence = eventStore.GetEventSequence(eventSequenceId);
         _eventSequenceOperations ??= new EventSequenceOperations(eventSequence);
@@ -59,7 +62,10 @@ public class UnitOfWork(
                 causation,
                 eventStreamType,
                 eventStreamId,
-                eventSourceType));
+                eventSourceType,
+                tags,
+                occurred,
+                subject));
     }
 
     /// <inheritdoc/>

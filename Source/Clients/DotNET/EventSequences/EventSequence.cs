@@ -191,7 +191,8 @@ public class EventSequence(
         CorrelationId? correlationId = default,
         IEnumerable<string>? tags = default,
         ConcurrencyScope? concurrencyScope = default,
-        DateTimeOffset? occurred = default)
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         using var span = _activitySource.AppendMany(eventStoreName.Value, @namespace.Value, eventSequenceId.Value);
 
@@ -218,7 +219,7 @@ public class EventSequence(
                 Content = eventSerializer.Serialize(@event).GetAwaiter().GetResult().ToString(),
                 Tags = allTags,
                 Occurred = occurred,
-                Subject = SubjectResolver.ResolveFrom(@event)?.Value
+                Subject = (subject ?? SubjectResolver.ResolveFrom(@event))?.Value
             };
         });
 
@@ -278,9 +279,9 @@ public class EventSequence(
             var eventClrType = @event.Event.GetType();
             var eventType = eventTypes.GetEventTypeFor(eventClrType);
 
-            // Merge static tags from the event type with dynamic tags
+            // Merge static tags from the event type with the event's own tags and the call-level dynamic tags
             var staticTags = eventClrType.GetTags();
-            var allTags = staticTags.Concat(tags ?? []).Distinct().ToList();
+            var allTags = staticTags.Concat(@event.Tags).Concat(tags ?? []).Distinct().ToList();
 
             eventsToAppend.Add(new Contracts.Events.EventToAppend
             {

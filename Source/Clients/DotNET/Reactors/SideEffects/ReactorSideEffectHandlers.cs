@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Monads;
 using Cratis.Types;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
@@ -18,11 +19,25 @@ public class ReactorSideEffectHandlers(IInstancesOf<IReactorSideEffectHandler> h
         handlers.Any(h => h.CanHandle(reactorContext, value));
 
     /// <inheritdoc/>
-    public async Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
+        var allFailures = new List<AppendFailure>();
+
         foreach (var handler in handlers.Where(h => h.CanHandle(reactorContext, value)))
         {
-            await handler.Handle(reactorContext, eventStore, value);
+            var result = await handler.Handle(reactorContext, eventStore, value);
+            if (!result.IsSuccess && result.TryGetError(out var failure) && failure is not null)
+            {
+                allFailures.AddRange(failure.AppendFailures);
+            }
         }
+
+        if (allFailures.Count == 0)
+        {
+            return Result.Success<ReactorSideEffectFailure>();
+        }
+
+        var sideEffectFailure = new ReactorSideEffectFailure(allFailures);
+        return Result.Failed(sideEffectFailure);
     }
 }

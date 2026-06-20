@@ -7,7 +7,7 @@ This guide explains how reactors discover methods, which signatures are supporte
 Reactors use convention-based method discovery. Chronicle finds and invokes public methods that:
 
 - Accept the event type as the first parameter
-- Optionally accept `EventContext` as the second parameter
+- Optionally accept further dependency parameters (the `EventContext`, read models, or services)
 - Return `void`, `Task`, `Task<T>`, or a synchronous side-effect type (see below)
 
 Event parameter types must be marked with `[EventType]`.
@@ -57,6 +57,47 @@ public class AuditReactor : IReactor
     void WriteAudit(Guid accountId, DateTimeOffset occurred, EventSourceId eventSourceId) { }
 }
 ```
+
+## Taking Dependencies
+
+Beyond the event and `EventContext`, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed (it is the event that drives dispatch).
+
+```csharp
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Reactors;
+
+public class OrderProcessing(IShippingService shipping) : IReactor
+{
+    public async Task OrderPlaced(OrderPlaced @event, EventContext context, Order order, IPricingService pricing)
+    {
+        // 'order' is the read model, materialized strongly consistent for this event.
+        // 'pricing' is resolved from the service provider.
+        await shipping.Schedule(order, pricing.PriceFor(order));
+    }
+}
+```
+
+Each parameter after the event resolves as follows:
+
+- An `EventContext` parameter receives the event context (its position does not matter).
+- A read model — a type with a reducer or projection — is materialized on demand from that reducer or projection, making it **strongly consistent** when the reactor runs. Read models are resolved directly by Chronicle, never through the service provider.
+- Any other type is resolved from the service provider.
+
+### Resolving the read model key
+
+By default the read model is materialized using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
+
+```csharp
+public class OrderProcessing : IReactor, ICanResolveReadModelKey
+{
+    public ReadModelKey Resolve(object @event, EventContext context) =>
+        ((OrderLineAdded)@event).OrderId;
+
+    public Task OrderLineAdded(OrderLineAdded @event, Order order) => Task.CompletedTask;
+}
+```
+
+The resolved key applies to every read model parameter across all of the reactor's handler methods.
 
 ## Event Source Isolation
 

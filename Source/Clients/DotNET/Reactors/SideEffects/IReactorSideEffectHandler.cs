@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Monads;
+
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
 /// <summary>
@@ -29,5 +31,5 @@ public interface IReactorSideEffectHandler
     /// <param name="eventStore">The <see cref="IEventStore"/> to use for appending events.</param>
     /// <param name="value">The value returned by the reactor handler method.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value);
+    Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value);
 }

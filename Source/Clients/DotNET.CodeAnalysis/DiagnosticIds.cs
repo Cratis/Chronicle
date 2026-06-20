@@ -24,7 +24,7 @@ public static class DiagnosticIds
     public const string ModelBoundProjectionEventTypeMustHaveAttribute = "CHR0003";
 
     /// <summary>
-    /// Reactor method signature must match allowed signatures.
+    /// Reactor method parameters after the event must be the EventContext, a read model, or a service.
     /// </summary>
     public const string ReactorMethodSignatureMustMatchAllowed = "CHR0004";
 

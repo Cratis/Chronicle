@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Reactors;
 
@@ -17,6 +18,11 @@ public static class EventHandlerMethods
     /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is, false if not.</returns>
+    /// <remarks>
+    /// A handler method is identified solely by its first parameter being a known event type. Any further
+    /// parameters are treated as dependencies (the <see cref="EventContext"/>, read models, or services) and
+    /// are resolved when the method is invoked.
+    /// </remarks>
     public static bool IsEventHandlerMethod(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
     {
         if (methodInfo.IsSpecialName)
@@ -26,42 +32,66 @@ public static class EventHandlerMethods
 
         var eventTypesList = eventTypes as IList<Type> ?? [.. eventTypes];
 
-        var isEventHandlerMethod = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
+        var hasValidReturnType = methodInfo.ReturnType.IsAssignableTo(typeof(Task)) ||
                                     methodInfo.ReturnType == typeof(void) ||
                                     IsValidSyncSideEffectReturnType(methodInfo.ReturnType, eventTypesList);
 
-        if (!isEventHandlerMethod) return false;
-        var parameters = methodInfo.GetParameters();
-        if (parameters.Length >= 1)
+        if (!hasValidReturnType)
         {
-            isEventHandlerMethod = parameters[0].ParameterType.IsEventType(eventTypesList);
-            if (parameters.Length == 2)
-            {
-                isEventHandlerMethod &= parameters[1].ParameterType == typeof(EventContext);
-            }
-            else if (parameters.Length > 2)
-            {
-                isEventHandlerMethod = false;
-            }
-            return isEventHandlerMethod;
+            return false;
         }
 
-        return false;
+        var parameters = methodInfo.GetParameters();
+        return parameters.Length >= 1 && parameters[0].ParameterType.IsEventType(eventTypesList);
+    }
+
+    /// <summary>
+    /// Check whether a <see cref="MethodInfo"/> has the shape of an event handler method — a first parameter
+    /// that is a known event type, with an optional <see cref="EventContext"/> as the second parameter —
+    /// regardless of whether its return type is a supported side-effect return type.
+    /// </summary>
+    /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <returns>True if the method is shaped like an event handler, false if not.</returns>
+    public static bool HasEventHandlerShape(this MethodInfo methodInfo, IEnumerable<Type> eventTypes)
+    {
+        if (methodInfo.IsSpecialName)
+        {
+            return false;
+        }
+
+        var parameters = methodInfo.GetParameters();
+        if (parameters.Length is < 1 or > 2)
+        {
+            return false;
+        }
+
+        var eventTypesList = eventTypes as IList<Type> ?? [.. eventTypes];
+        if (!parameters[0].ParameterType.IsEventType(eventTypesList))
+        {
+            return false;
+        }
+
+        return parameters.Length == 1 || parameters[1].ParameterType == typeof(EventContext);
     }
 
     /// <summary>
     /// Check whether a <see cref="Type"/> is a valid synchronous side-effect return type for a reactor handler method.
-    /// Valid types are: a registered event type, or <see cref="IEnumerable{T}"/> of a registered event type.
+    /// Valid types are: a registered event type, <see cref="EventForEventSourceId"/>, or <see cref="IEnumerable{T}"/> of
+    /// either a registered event type or <see cref="EventForEventSourceId"/>.
     /// </summary>
     /// <param name="returnType">The return <see cref="Type"/> to check.</param>
     /// <param name="eventTypes">Known event types in the process.</param>
     /// <returns>True if it is a valid sync side-effect return type, false if not.</returns>
     public static bool IsValidSyncSideEffectReturnType(Type returnType, IEnumerable<Type> eventTypes)
     {
+        if (returnType == typeof(EventForEventSourceId)) return true;
+
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
             var elementType = returnType.GetGenericArguments()[0];
             if (elementType == typeof(object)) return true;
+            if (elementType == typeof(EventForEventSourceId)) return true;
             if (eventTypes.Contains(elementType)) return true;
         }
 

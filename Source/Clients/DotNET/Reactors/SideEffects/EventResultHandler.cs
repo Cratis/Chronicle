@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Monads;
 
 namespace Cratis.Chronicle.Reactors.SideEffects;
 
@@ -18,12 +19,21 @@ public class EventResultHandler(IEventTypes eventTypes) : IReactorSideEffectHand
         eventTypes.HasFor(value.GetType());
 
     /// <inheritdoc/>
-    public Task Handle(ReactorContext reactorContext, IEventStore eventStore, object value) =>
-        eventStore.EventLog.Append(
+    public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
+    {
+        var result = await eventStore.EventLog.Append(
             reactorContext.GetEventSourceId(),
             value,
             reactorContext.GetEventStreamType(),
             reactorContext.GetEventStreamId(),
             reactorContext.GetEventSourceType(),
             subject: reactorContext.GetSubject());
+
+        if (result.IsSuccess)
+        {
+            return Result.Success<ReactorSideEffectFailure>();
+        }
+
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
+    }
 }

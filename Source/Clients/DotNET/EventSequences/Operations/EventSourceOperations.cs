@@ -42,14 +42,20 @@ public class EventSourceOperations : IEventSourceOperations
         Causation? causation = default,
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
-        EventSourceType? eventSourceType = default)
+        EventSourceType? eventSourceType = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default)
     {
         _operations.Add(new AppendOperation(
             @event,
             causation,
             eventStreamType ?? EventStreamType.All,
             eventStreamId ?? EventStreamId.Default,
-            eventSourceType ?? EventSourceType.Default));
+            eventSourceType ?? EventSourceType.Default,
+            tags,
+            occurred,
+            subject));
         return this;
     }
 

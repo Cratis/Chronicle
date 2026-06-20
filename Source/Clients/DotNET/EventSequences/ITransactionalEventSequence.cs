@@ -26,6 +26,9 @@ public interface ITransactionalEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
+    /// <param name="tags">Optional dynamic tags to associate with the event.</param>
+    /// <param name="occurred">Optional timestamp for when the event occurred.</param>
+    /// <param name="subject">Optional subject identifying what the event is about.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Append(
         EventSourceId eventSourceId,
@@ -33,7 +36,10 @@ public interface ITransactionalEventSequence
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        ConcurrencyScope? concurrencyScope = default);
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 
     /// <summary>
     /// Append a collection of events to the event store.
@@ -44,6 +50,9 @@ public interface ITransactionalEventSequence
     /// <param name="eventStreamId">Optional <see cref="EventStreamId"/> to append to. Defaults to <see cref="EventStreamId.Default"/>.</param>
     /// <param name="eventSourceType">Optional <see cref="EventSourceType"/> to append to. Defaults to <see cref="EventSourceType.Default"/>.</param>
     /// <param name="concurrencyScope">Optional <see cref="ConcurrencyScope"/> to use for concurrency control. Defaults to <see cref="ConcurrencyScope.None"/>.</param>
+    /// <param name="tags">Optional dynamic tags to associate with the events.</param>
+    /// <param name="occurred">Optional timestamp for when the events occurred.</param>
+    /// <param name="subject">Optional subject identifying what the events are about.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task AppendMany(
         EventSourceId eventSourceId,
@@ -51,5 +60,8 @@ public interface ITransactionalEventSequence
         EventStreamType? eventStreamType = default,
         EventStreamId? eventStreamId = default,
         EventSourceType? eventSourceType = default,
-        ConcurrencyScope? concurrencyScope = default);
+        ConcurrencyScope? concurrencyScope = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default,
+        Subject? subject = default);
 }

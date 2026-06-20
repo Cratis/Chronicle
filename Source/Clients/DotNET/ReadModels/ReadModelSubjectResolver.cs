@@ -23,10 +23,15 @@ public static class ReadModelSubjectResolver
     ///   <item><description>Property named <c>Id</c> (case-insensitive).</description></item>
     /// </list>
     /// </summary>
-    /// <param name="instance">The read model instance to inspect.</param>
-    /// <returns>The resolved <see cref="Subject"/>, or <see langword="null"/> when no subject can be derived.</returns>
-    public static Subject? ResolveFrom(object instance)
+    /// <param name="instance">The read model instance to inspect, or <see langword="null"/> for a read model that does not exist (never created or removed).</param>
+    /// <returns>The resolved <see cref="Subject"/>, or <see langword="null"/> when no subject can be derived (including when <paramref name="instance"/> is <see langword="null"/>).</returns>
+    public static Subject? ResolveFrom(object? instance)
     {
+        if (instance is null)
+        {
+            return null;
+        }
+
         var property = _cache.GetOrAdd(instance.GetType(), FindSubjectProperty);
 
         if (property is null)

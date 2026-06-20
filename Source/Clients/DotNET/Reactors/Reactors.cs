@@ -42,6 +42,7 @@ public class Reactors : IReactors
     readonly IActivitySource<Reactors> _activitySource;
     readonly IReactorSideEffectHandlers _sideEffectHandlers;
     readonly IReactorContextValuesBuilder _reactorContextValuesBuilder;
+    readonly IReactorMethodArgumentsResolver _argumentsResolver;
     readonly ILogger<Reactors> _logger;
     readonly ILoggerFactory _loggerFactory;
     readonly IDictionary<Type, IReactorHandler> _handlers = new Dictionary<Type, IReactorHandler>();
@@ -64,6 +65,7 @@ public class Reactors : IReactors
     /// <param name="activitySource"><see cref="IActivitySource{T}"/> for tracing reactor event handling.</param>
     /// <param name="sideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for processing return values as side effects.</param>
     /// <param name="reactorContextValuesBuilder"><see cref="IReactorContextValuesBuilder"/> for resolving append-metadata for side-effect events.</param>
+    /// <param name="argumentsResolver"><see cref="IReactorMethodArgumentsResolver"/> for resolving handler method arguments.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
     public Reactors(
@@ -79,6 +81,7 @@ public class Reactors : IReactors
         IActivitySource<Reactors> activitySource,
         IReactorSideEffectHandlers sideEffectHandlers,
         IReactorContextValuesBuilder reactorContextValuesBuilder,
+        IReactorMethodArgumentsResolver argumentsResolver,
         ILogger<Reactors> logger,
         ILoggerFactory loggerFactory)
     {
@@ -95,6 +98,7 @@ public class Reactors : IReactors
         _activitySource = activitySource;
         _sideEffectHandlers = sideEffectHandlers;
         _reactorContextValuesBuilder = reactorContextValuesBuilder;
+        _argumentsResolver = argumentsResolver;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _eventStore.Connection.Lifecycle.OnDisconnected += () =>
@@ -428,7 +432,9 @@ public class Reactors : IReactors
             _loggerFactory.CreateLogger<ReactorInvoker>(),
             _sideEffectHandlers,
             _eventStore,
-            _reactorContextValuesBuilder);
+            _reactorContextValuesBuilder,
+            _argumentsResolver,
+            serviceProviderScope.ServiceProvider);
 
         foreach (var @event in events.Events)
         {
@@ -457,23 +463,40 @@ public class Reactors : IReactors
                 var content = await _eventSerializer.Deserialize(eventType, JsonNode.Parse(contentJson)!.AsObject());
 
                 var handleResult = await handler.OnNext(context, content, reactorInvoker);
-                if (handleResult.TryGetException(out var ex))
+                if (handleResult.IsFailed)
                 {
-                    FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                    FailedToHandleEvent(handleResult, @event.Context.EventType.Id);
                     break;
                 }
                 lastSuccessfullyObservedEvent = @event.Context.SequenceNumber;
             }
             catch (Exception ex)
             {
-                FailedToHandleEvent(ex, @event.Context.EventType.Id);
+                FailedToHandleEventWithException(ex, @event.Context.EventType.Id);
                 break;
             }
         }
 
         PublishResult();
 
-        void FailedToHandleEvent(Exception ex, EventTypeId eventTypeId)
+        void FailedToHandleEvent(ReactorInvocationResult invocationResult, EventTypeId eventTypeId)
+        {
+            var failureDetails = invocationResult.GetFailureDetails();
+            exceptionMessages = failureDetails.Messages.ToArray();
+            exceptionStackTrace = failureDetails.StackTrace;
+            state = ObservationState.Failed;
+
+            if (invocationResult.ExceptionResult.TryGetException(out var ex))
+            {
+                _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
+            }
+            else
+            {
+                _logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, string.Join(Environment.NewLine, exceptionMessages));
+            }
+        }
+
+        void FailedToHandleEventWithException(Exception ex, EventTypeId eventTypeId)
         {
             _logger.ErrorWhileHandlingEvent(ex, eventTypeId, handler.Id);
             exceptionMessages = ex.GetAllMessages();

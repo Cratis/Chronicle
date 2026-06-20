@@ -21,6 +21,9 @@ internal static partial class ReactorsLogMessages
     [LoggerMessage(LogLevel.Warning, "An error occurred while handling event of type {EventTypeId} was for Reactor {ReactorId}")]
     internal static partial void ErrorWhileHandlingEvent(this ILogger<Reactors> logger, Exception ex, EventTypeId eventTypeId, ReactorId reactorId);
 
+    [LoggerMessage(LogLevel.Warning, "Reactor {ReactorId} side-effect append failed while handling event of type {EventTypeId}: {Details}")]
+    internal static partial void ReactorSideEffectAppendFailed(this ILogger<Reactors> logger, EventTypeId eventTypeId, ReactorId reactorId, string details);
+
     [LoggerMessage(LogLevel.Trace, "Handling of events received for Reactor {ReactorId} completed")]
     internal static partial void EventHandlingCompleted(this ILogger<Reactors> logger, ReactorId reactorId);
 

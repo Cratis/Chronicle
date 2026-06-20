@@ -15,12 +15,12 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
 {
     static readonly DiagnosticDescriptor SignatureRule = new(
         id: DiagnosticIds.ReactorMethodSignatureMustMatchAllowed,
-        title: "Reactor method signature must match allowed signatures",
-        messageFormat: "Reactor method '{0}' must have signature: Task MethodName(TEvent event) or Task MethodName(TEvent event, EventContext context) or Task<TResult> MethodName(TEvent event) or Task<TResult> MethodName(TEvent event, EventContext context) or void MethodName(TEvent event) or void MethodName(TEvent event, EventContext context) or TResult MethodName(TEvent event) or TResult MethodName(TEvent event, EventContext context)",
+        title: "Reactor method has a parameter that cannot be resolved",
+        messageFormat: "Reactor method '{0}' has a parameter that cannot be resolved. After the event, a reactor method may take the EventContext, a read model, or a service - not a primitive, value type, or string.",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Chronicle dispatches events to reactor methods by matching event types. Methods with unsupported signatures are silently skipped. Change the method to one of the allowed forms: 'void MethodName(TEvent event)', 'void MethodName(TEvent event, EventContext context)', 'Task MethodName(TEvent event)', 'Task MethodName(TEvent event, EventContext context)', 'Task<TResult> MethodName(TEvent event)', or 'Task<TResult> MethodName(TEvent event, EventContext context)', or the synchronous side-effect forms 'TResult MethodName(TEvent event)' / 'TResult MethodName(TEvent event, EventContext context)'. TResult must be an event type or IEnumerable of event types.");
+        description: "A reactor handler method takes the event it reacts to as its first parameter. Any further parameters are resolved as dependencies: the EventContext, a read model (materialized from its reducer or projection), or a service from the service provider. A parameter that is a primitive, value type, or string is almost certainly a mistake and would fail to resolve at runtime.");
 
     static readonly DiagnosticDescriptor EventTypeRule = new(
         id: DiagnosticIds.ReactorEventParameterMustHaveAttribute,
@@ -58,9 +58,9 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check if this looks like an event handler method
+        // A handler method takes the event as its first parameter; any further parameters are dependencies.
         var parameters = methodSymbol.Parameters;
-        if (parameters.Length == 0 || parameters.Length > 2)
+        if (parameters.Length == 0)
         {
             return;
         }
@@ -74,38 +74,43 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Check if this could be an event handler method based on return type.
-        // Valid return types: void, Task, Task<T>, or any reference type (sync side-effect returns such as
-        // event types or IEnumerable of event types).
-        // Value types (int, bool, struct, etc.) are not valid reactor return types.
-        var taskType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
-        var taskOfTType = context.Compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
-        var isGenericTask = taskOfTType != null &&
-            methodSymbol.ReturnType is INamedTypeSymbol namedReturn &&
-            namedReturn.IsGenericType &&
-            SymbolEqualityComparer.Default.Equals(namedReturn.OriginalDefinition, taskOfTType);
-        var validReturnType = methodSymbol.ReturnsVoid ||
-            (taskType != null && SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, taskType)) ||
-            isGenericTask ||
-            (!methodSymbol.ReturnType.IsValueType && methodSymbol.ReturnType.SpecialType == SpecialType.None);
-
-        if (!validReturnType)
+        // A method whose return type is not a supported reactor return shape is only a handler mistake when
+        // its first parameter is unambiguously an event type. Chronicle silently skips such methods at
+        // discovery, so flag them here. For any other first-parameter type the method is treated as an
+        // ordinary helper and ignored.
+        if (!IsSupportedReturnType(methodSymbol, context.Compilation))
         {
+            if (WellKnownTypes.HasEventTypeAttribute(firstParamType))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    SignatureRule,
+                    methodSymbol.Locations.FirstOrDefault(),
+                    methodSymbol.Name));
+            }
+
             return;
         }
 
-        // If it has two parameters, second must be EventContext
-        if (parameters.Length == 2)
+        // Parameters after the event are dependencies: the EventContext, a read model, or a service.
+        // A primitive, value type, or string can never be a read model and is almost never a service, so it
+        // is reported as an unresolvable parameter.
+        var eventContextType = context.Compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName);
+        for (var index = 1; index < parameters.Length; index++)
         {
-            var eventContextType = context.Compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName);
-            if (eventContextType == null || !SymbolEqualityComparer.Default.Equals(parameters[1].Type, eventContextType))
+            var parameterType = parameters[index].Type;
+            if (eventContextType != null && SymbolEqualityComparer.Default.Equals(parameterType, eventContextType))
+            {
+                continue;
+            }
+
+            if (parameterType.IsValueType || parameterType.SpecialType == SpecialType.System_String)
             {
                 var diagnostic = Diagnostic.Create(
                     SignatureRule,
                     methodSymbol.Locations.FirstOrDefault(),
                     methodSymbol.Name);
                 context.ReportDiagnostic(diagnostic);
-                return;
+                break;
             }
         }
 
@@ -119,5 +124,59 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                 methodSymbol.Name);
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    static bool IsSupportedReturnType(IMethodSymbol method, Compilation compilation)
+    {
+        if (method.ReturnsVoid)
+        {
+            return true;
+        }
+
+        var returnType = method.ReturnType;
+
+        var taskType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
+        if (taskType != null && SymbolEqualityComparer.Default.Equals(returnType, taskType))
+        {
+            return true;
+        }
+
+        // Any Task<T> is accepted — the returned value is dispatched to a side-effect handler at runtime.
+        var taskOfTType = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1");
+        if (taskOfTType != null &&
+            returnType is INamedTypeSymbol task &&
+            task.IsGenericType &&
+            SymbolEqualityComparer.Default.Equals(task.OriginalDefinition, taskOfTType))
+        {
+            return true;
+        }
+
+        return IsSupportedSyncSideEffectReturnType(returnType, compilation);
+    }
+
+    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation)
+    {
+        if (WellKnownTypes.HasEventTypeAttribute(returnType))
+        {
+            return true;
+        }
+
+        var eventForEventSourceId = compilation.GetTypeByMetadataName(WellKnownTypes.EventForEventSourceIdName);
+        if (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(returnType, eventForEventSourceId))
+        {
+            return true;
+        }
+
+        if (returnType is INamedTypeSymbol named &&
+            named.IsGenericType &&
+            named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+        {
+            var element = named.TypeArguments[0];
+            return element.SpecialType == SpecialType.System_Object ||
+                   WellKnownTypes.HasEventTypeAttribute(element) ||
+                   (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(element, eventForEventSourceId));
+        }
+
+        return false;
     }
 }

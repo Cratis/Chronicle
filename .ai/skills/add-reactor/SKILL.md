@@ -44,7 +44,7 @@ public class ProjectRegisteredNotifier(INotificationService notifications) : IRe
 - **`EventContext`** — optional second parameter. Omit if event metadata is not needed.
 - **Idempotent** — reactors may be called more than once for the same event. Design accordingly.
 - **Use event data directly** — never query the read model back inside the reactor.
-- **Return events instead of injecting IEventLog** — to produce new events, return them directly as `Task<TEvent>`, `Task<ReactorSideEffect>`, or `Task<IEnumerable<ReactorSideEffect>>`. For commands in other slices, inject `ICommandPipeline`. Avoid injecting `IEventLog` directly.
+- **Return events instead of injecting IEventLog** — to produce new events, return them directly as `Task<TEvent>`, `Task<EventForEventSourceId>`, or a collection thereof. For commands in other slices, inject `ICommandPipeline`. Avoid injecting `IEventLog` directly.
 
 ## Step 3b — Return side-effect events (alternative to IEventLog)
 
@@ -59,22 +59,24 @@ public Task<StockDecreased> BookReserved(BookReserved @event, EventContext conte
 public Task<IEnumerable<object>> BookReserved(BookReserved @event, EventContext context) =>
     Task.FromResult<IEnumerable<object>>([new StockDecreased(@event.Isbn, 1), new StockLow(@event.Isbn)]);
 
-// Return with explicit metadata (EventSourceId, EventSequenceId, EventStreamType, etc.)
-public Task<ReactorSideEffect> BookReserved(BookReserved @event, EventContext context) =>
-    Task.FromResult(new ReactorSideEffect
+// Target a specific event source id with explicit metadata
+// (EventSourceId, EventStreamType, EventStreamId, EventSourceType, Subject, Occurred, Causation)
+public Task<EventForEventSourceId> BookReserved(BookReserved @event, EventContext context) =>
+    Task.FromResult(new EventForEventSourceId(@event.WarehouseId, new StockDecreased(@event.Isbn, 1))
     {
-        Event = new StockDecreased(@event.Isbn, 1),
-        EventSourceId = @event.WarehouseId,   // override EventSourceId if needed
+        EventStreamType = new("warehouse"),   // optional — others default sensibly
     });
 
-// Return multiple side effects with metadata
-public Task<IEnumerable<ReactorSideEffect>> BookReserved(BookReserved @event, EventContext context) =>
-    Task.FromResult<IEnumerable<ReactorSideEffect>>(
+// Target multiple event source ids in one transaction
+public Task<IEnumerable<EventForEventSourceId>> BookReserved(BookReserved @event, EventContext context) =>
+    Task.FromResult<IEnumerable<EventForEventSourceId>>(
     [
-        ReactorSideEffect.For(new StockDecreased(@event.Isbn, 1)),
-        new ReactorSideEffect { Event = new StockLow(@event.Isbn), EventSourceId = @event.WarehouseId },
+        new(@event.WarehouseId, new StockDecreased(@event.Isbn, 1)),
+        new(@event.Isbn, new StockLow(@event.Isbn)),
     ]);
 ```
+
+For **bare event** returns, the append-metadata is resolved from the reactor itself: `[EventStreamType]`, `[EventSourceType]`, `[EventStreamId]` attributes and the `ICanProvideEventSourceId`, `ICanProvideEventStreamId`, `ICanProvideSubject` interfaces. Return an `EventForEventSourceId` only when you need explicit per-event control or to target several event source ids at once.
 
 ## Step 4 — Translation pattern (if applicable)
 

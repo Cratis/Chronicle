@@ -12,6 +12,5 @@ namespace Cratis.Chronicle.Reactors;
 public class InvalidReactorHandlerReturnType(Type reactorType, string methodName, Type actualReturnType)
     : Exception(
         $"Reactor '{reactorType.FullName}' handler method '{methodName}' has unsupported return type '{actualReturnType.FullName}'. " +
-        $"Expected 'void', '{typeof(Task).FullName}', '{typeof(Task<>).FullName}' returning an event, " +
-        $"or '{typeof(Task<>).FullName}' returning '{typeof(IEnumerable<>).FullName}' of events. " +
-        $"Synchronous equivalents are also supported: an event type, or '{typeof(IEnumerable<>).FullName}' of events.");
+        "A handler method must return 'void', 'Task', an event type, 'EventForEventSourceId', an 'IEnumerable' of those, " +
+        "or any of these wrapped in a 'Task'. A custom side-effect type processed by an 'IReactorSideEffectHandler' must be returned as 'Task<T>'.");
