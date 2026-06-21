@@ -79,21 +79,8 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
-    public static bool HasComplianceMetadata(this JsonSchema schema)
-    {
-        var hasMetadata = schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
-
-        if (!hasMetadata && schema.Properties.Count > 0)
-        {
-            foreach (var property in schema.GetFlattenedProperties())
-            {
-                hasMetadata = property.HasComplianceMetadata();
-                if (hasMetadata) break;
-            }
-        }
-
-        return hasMetadata;
-    }
+    public static bool HasComplianceMetadata(this JsonSchema schema) =>
+        HasComplianceMetadata(schema, []);
 
     /// <summary>
     /// Check if the property has compliance metadata.
@@ -102,6 +89,38 @@ public static class ComplianceJsonSchemaExtensions
     /// <returns>True if it has, false if not.</returns>
     public static bool HasComplianceMetadata(this JsonSchemaProperty property) =>
         HasComplianceMetadata((JsonSchema)property);
+
+    static bool HasComplianceMetadata(JsonSchema schema, HashSet<JsonSchema> visited)
+    {
+        // Guard against self-referencing / recursive schemas (e.g. a tree node with a
+        // child collection of its own type) which would otherwise recurse forever.
+        if (!visited.Add(schema))
+        {
+            return false;
+        }
+
+        var hasMetadata = schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
+
+        if (!hasMetadata && schema.Properties.Count > 0)
+        {
+            foreach (var property in schema.GetFlattenedProperties())
+            {
+                hasMetadata = HasComplianceMetadata(property, visited);
+                if (hasMetadata) break;
+            }
+        }
+
+        // Compliance metadata can live on an array's element type — e.g. IReadOnlyList<Email>
+        // where Email is a [PII] concept, or a list of objects carrying [PII] members. Without
+        // descending into the item schema, list-valued PII is missed entirely and stored in the
+        // clear.
+        if (!hasMetadata && schema.Item is not null)
+        {
+            hasMetadata = HasComplianceMetadata(schema.Item.ActualSchema, visited);
+        }
+
+        return hasMetadata;
+    }
 
     static void ConvertComplianceIfNeeded(JsonSchema schema)
     {
