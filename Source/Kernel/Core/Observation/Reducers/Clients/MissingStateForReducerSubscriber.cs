@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// Initializes a new instance of the <see cref="MissingStateForReducerSubscriber"/> class.
 /// </remarks>
 /// <param name="observerId"><see cref="ObserverId"/> that has missing state.</param>
-public class MissingStateForReducerSubscriber(ObserverId observerId) : Exception($"Missing state for reducer observer subscriber with id {observerId}")
-{
-}
+public class MissingStateForReducerSubscriber(ObserverId observerId) : Exception($"Missing state for reducer observer subscriber with id {observerId}");

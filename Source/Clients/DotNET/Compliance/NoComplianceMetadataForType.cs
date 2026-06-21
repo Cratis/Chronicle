@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Compliance;
 /// Initializes a new instance of the <see cref="NoComplianceMetadataForProperty"/> class.
 /// </remarks>
 /// <param name="type"><see cref="Type"/> that does not have compliance metadata.</param>
-public class NoComplianceMetadataForType(Type type) : Exception($"Types '{type.FullName}'  does not have any compliance metadata.")
-{
-}
+public class NoComplianceMetadataForType(Type type) : Exception($"Types '{type.FullName}'  does not have any compliance metadata.");

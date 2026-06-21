@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Concepts.Recommendations;
 /// Initializes a new instance of the <see cref="UnknownClrTypeForRecommendationType"/> class.
 /// </remarks>
 /// <param name="type"><see cref="RecommendationType"/> that has an invalid type identifier.</param>
-public class UnknownClrTypeForRecommendationType(RecommendationType type) : Exception($"Unknown operation type '{type}'")
-{
-}
+public class UnknownClrTypeForRecommendationType(RecommendationType type) : Exception($"Unknown operation type '{type}'");

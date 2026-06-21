@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 /// </remarks>
 /// <param name="property">The property that has unsupported expression.</param>
 /// <param name="expression">The unsupported expression.</param>
-public class UnsupportedEventValueExpression(JsonSchemaProperty property, string expression) : Exception($"Unknown event value expression '{expression}' for property '{property.Name}'")
-{
-}
+public class UnsupportedEventValueExpression(JsonSchemaProperty property, string expression) : Exception($"Unknown event value expression '{expression}' for property '{property.Name}'");

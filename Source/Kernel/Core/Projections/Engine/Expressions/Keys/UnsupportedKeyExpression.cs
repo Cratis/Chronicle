@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 /// Initializes a new instance of the <see cref="UnsupportedReadModelPropertyExpression"/> class.
 /// </remarks>
 /// <param name="expression">The unsupported expression.</param>
-public class UnsupportedKeyExpression(string expression) : Exception($"Unknown key expression '{expression}'")
-{
-}
+public class UnsupportedKeyExpression(string expression) : Exception($"Unknown key expression '{expression}'");

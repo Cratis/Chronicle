@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Concepts.Jobs;
 /// Initializes a new instance of the <see cref="UnknownClrTypeForJobStepType"/> class.
 /// </remarks>
 /// <param name="type"><see cref="JobType"/> that has an invalid type identifier.</param>
-public class UnknownClrTypeForJobStepType(JobStepType type) : Exception($"Unknown job step type '{type}'")
-{
-}
+public class UnknownClrTypeForJobStepType(JobStepType type) : Exception($"Unknown job step type '{type}'");

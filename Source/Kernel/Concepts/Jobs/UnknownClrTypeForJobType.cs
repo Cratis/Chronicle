@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Concepts.Jobs;
 /// Initializes a new instance of the <see cref="UnknownClrTypeForJobType"/> class.
 /// </remarks>
 /// <param name="type"><see cref="JobType"/> that has an invalid type identifier.</param>
-public class UnknownClrTypeForJobType(JobType type) : Exception($"Unknown job type '{type}'")
-{
-}
+public class UnknownClrTypeForJobType(JobType type) : Exception($"Unknown job type '{type}'");

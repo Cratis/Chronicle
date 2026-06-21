@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.EventSequences;
 /// Initializes a new instance of the <see cref="UnknownEventType"/> class.
 /// </remarks>
 /// <param name="type">Type missing the <see cref="EventTypeAttribute"/>.</param>
-public class UnknownEventType(Type type) : Exception($"Type '{type.FullName}' is unknown. Have you remembered to mark it with the `[EventType]` attribute?")
-{
-}
+public class UnknownEventType(Type type) : Exception($"Type '{type.FullName}' is unknown. Have you remembered to mark it with the `[EventType]` attribute?");

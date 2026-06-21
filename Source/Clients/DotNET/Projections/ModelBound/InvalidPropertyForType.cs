@@ -8,6 +8,4 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// </summary>
 /// <param name="type">The type the property was expected to be on.</param>
 /// <param name="propertyName">The property name that was not found.</param>
-public class InvalidPropertyForType(Type type, string propertyName) : Exception($"Property '{propertyName}' does not exist on type '{type.FullName}'")
-{
-}
+public class InvalidPropertyForType(Type type, string propertyName) : Exception($"Property '{propertyName}' does not exist on type '{type.FullName}'");
