@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// Initializes a new instance of the <see cref="MissingEncryptionKey"/> class.
 /// </remarks>
 /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> that is missing.</param>
-public class MissingEncryptionKey(EncryptionKeyIdentifier identifier) : Exception($"Missing encryption key for identifier '{identifier}'")
-{
-}
+public class MissingEncryptionKey(EncryptionKeyIdentifier identifier) : Exception($"Missing encryption key for identifier '{identifier}'");

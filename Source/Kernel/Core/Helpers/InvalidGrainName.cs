@@ -10,6 +10,4 @@ namespace Orleans;
 /// Initializes a new instance of the <see cref="InvalidGrainName"/> class.
 /// </remarks>
 /// <param name="grainType">Violating grain type.</param>
-public class InvalidGrainName(Type grainType) : Exception($"Grain type '{grainType.Name}' is invalid. No interface for the grain was matched. It should follow the convention of `IFoo` -> `Foo`.")
-{
-}
+public class InvalidGrainName(Type grainType) : Exception($"Grain type '{grainType.Name}' is invalid. No interface for the grain was matched. It should follow the convention of `IFoo` -> `Foo`.");

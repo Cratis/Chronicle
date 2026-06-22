@@ -7,6 +7,4 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// Exception that gets thrown when an unknown constraint type is encountered.
 /// </summary>
 /// <param name="definition">The unknown <see cref="IConstraintDefinition"/>.</param>
-public class UnknownConstraintType(IConstraintDefinition definition) : Exception($"Unknown constraint type '{definition.GetType().Name}'")
-{
-}
+public class UnknownConstraintType(IConstraintDefinition definition) : Exception($"Unknown constraint type '{definition.GetType().Name}'");

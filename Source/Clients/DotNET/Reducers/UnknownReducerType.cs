@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Reducers;
 /// Initializes a new instance of <see cref="UnknownReducerType"/>.
 /// </remarks>
 /// <param name="type">The Type that is not an reducer.</param>
-public class UnknownReducerType(Type type) : Exception($"Type '{type}' is not a known reducer")
-{
-}
+public class UnknownReducerType(Type type) : Exception($"Type '{type}' is not a known reducer");

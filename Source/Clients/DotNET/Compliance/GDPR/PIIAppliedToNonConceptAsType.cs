@@ -11,6 +11,4 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// </remarks>
 /// <param name="type">The <see cref="Type"/> that has the attribute applied incorrectly.</param>
 public class PIIAppliedToNonConceptAsType(Type type)
-    : Exception($"The [PII] attribute is applied to '{type.FullName}', which does not inherit from ConceptAs<T>. The [PII] attribute is only supported on ConceptAs<T> types.")
-{
-}
+    : Exception($"The [PII] attribute is applied to '{type.FullName}', which does not inherit from ConceptAs<T>. The [PII] attribute is only supported on ConceptAs<T> types.");

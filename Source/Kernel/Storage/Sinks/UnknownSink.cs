@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// Initializes a new instance of the <see cref="UnknownSink"/> class.
 /// </remarks>
 /// <param name="typeId">The unknown <see cref="SinkTypeId"/>.</param>
-public class UnknownSink(SinkTypeId typeId) : Exception($"Projection sink type of '{typeId}' is unknown.")
-{
-}
+public class UnknownSink(SinkTypeId typeId) : Exception($"Projection sink type of '{typeId}' is unknown.");

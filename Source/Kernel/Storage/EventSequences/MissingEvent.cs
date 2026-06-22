@@ -18,6 +18,4 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 public class MissingEvent(
     EventSequenceId eventSequenceId,
     EventTypeId eventTypeId,
-    EventSourceId eventSourceId) : Exception($"Missing event {eventTypeId} for {eventSourceId} in {eventSequenceId}")
-{
-}
+    EventSourceId eventSourceId) : Exception($"Missing event {eventTypeId} for {eventSourceId} in {eventSequenceId}");

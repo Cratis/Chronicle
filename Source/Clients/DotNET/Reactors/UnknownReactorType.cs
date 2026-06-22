@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Reactors;
 /// Initializes a new instance of <see cref="UnknownReactorType"/>.
 /// </remarks>
 /// <param name="type">The Type that is not an Reactor.</param>
-public class UnknownReactorType(Type type) : Exception($"Type '{type}' is not a known Reactor")
-{
-}
+public class UnknownReactorType(Type type) : Exception($"Type '{type}' is not a known Reactor");

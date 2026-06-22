@@ -14,6 +14,4 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="httpStatusCode">The <see cref="HttpStatusCode"/> for the response.</param>
 /// <param name="reason">The reason for failing.</param>
 /// <param name="content">The invalid content.</param>
-public class InvalidReturnContentFromReducer(HttpStatusCode httpStatusCode, string reason, string content) : Exception($"Invalid content returned from reducer, status code '{httpStatusCode}', with reason phrase '{reason}' and content: '{content}'")
-{
-}
+public class InvalidReturnContentFromReducer(HttpStatusCode httpStatusCode, string reason, string content) : Exception($"Invalid content returned from reducer, status code '{httpStatusCode}', with reason phrase '{reason}' and content: '{content}'");

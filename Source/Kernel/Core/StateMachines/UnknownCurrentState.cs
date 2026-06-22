@@ -11,6 +11,4 @@ namespace Cratis.Chronicle.StateMachines;
 /// </remarks>
 /// <param name="currentState">Current state that is unknown.</param>
 /// <param name="stateMachineType">The state machine that the current state is unknown for.</param>
-public class UnknownCurrentState(string currentState, Type stateMachineType) : Exception($"Current state '{currentState}' is unknown for the state machine '{stateMachineType.FullName}'")
-{
-}
+public class UnknownCurrentState(string currentState, Type stateMachineType) : Exception($"Current state '{currentState}' is unknown for the state machine '{stateMachineType.FullName}'");

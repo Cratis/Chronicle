@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Reactors;
 /// Initializes a new instance of <see cref="UnknownReactorId"/>.
 /// </remarks>
 /// <param name="reactorId">The identifier of the unknown reducer.</param>
-public class UnknownReactorId(ReactorId reactorId) : Exception($"Reactor with identifier '{reactorId}' is not a known Reactor")
-{
-}
+public class UnknownReactorId(ReactorId reactorId) : Exception($"Reactor with identifier '{reactorId}' is not a known Reactor");

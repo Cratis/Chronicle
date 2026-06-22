@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Events;
 /// <param name="observerType">The type of the observer.</param>
 /// <param name="eventStores">The collection of event store names found.</param>
 public class MultipleEventStoresDefined(Type observerType, IEnumerable<string> eventStores)
-    : Exception($"Observer '{observerType.FullName}' handles event types from multiple event stores: {string.Join(", ", eventStores.Select(s => $"'{s}'"))}. An observer can only observe events from a single event store.")
-{
-}
+    : Exception($"Observer '{observerType.FullName}' handles event types from multiple event stores: {string.Join(", ", eventStores.Select(s => $"'{s}'"))}. An observer can only observe events from a single event store.");

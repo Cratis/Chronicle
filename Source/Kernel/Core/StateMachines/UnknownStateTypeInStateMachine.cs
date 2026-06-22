@@ -11,6 +11,4 @@ namespace Cratis.Chronicle.StateMachines;
 /// </remarks>
 /// <param name="type">State type that is unknown.</param>
 /// <param name="stateMachineType">The state machine that the type is unknown for.</param>
-public class UnknownStateTypeInStateMachine(Type type, Type stateMachineType) : Exception($"Type '{type.FullName}' is unknown in the state machine '{stateMachineType.FullName}'")
-{
-}
+public class UnknownStateTypeInStateMachine(Type type, Type stateMachineType) : Exception($"Type '{type.FullName}' is unknown in the state machine '{stateMachineType.FullName}'");

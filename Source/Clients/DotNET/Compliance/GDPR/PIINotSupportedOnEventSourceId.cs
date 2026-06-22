@@ -14,6 +14,4 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// </remarks>
 /// <param name="type">The <see cref="Type"/> that has the attribute applied incorrectly.</param>
 public class PIINotSupportedOnEventSourceId(Type type)
-    : Exception($"The [PII] attribute cannot be applied to '{type.FullName}' because it inherits from EventSourceId or EventSourceId<T>. Event source identifiers cannot be encrypted as they are required for event correlation.")
-{
-}
+    : Exception($"The [PII] attribute cannot be applied to '{type.FullName}' because it inherits from EventSourceId or EventSourceId<T>. Event source identifiers cannot be encrypted as they are required for event correlation.");

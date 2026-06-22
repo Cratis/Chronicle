@@ -15,6 +15,8 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     public const string ComplianceKey = "compliance";
 
+    const int MaxComplianceTraversalDepth = 64;
+
     /// <summary>
     /// Ensure the compliance metadata is correct with correct types.
     /// </summary>
@@ -79,21 +81,8 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
-    public static bool HasComplianceMetadata(this JsonSchema schema)
-    {
-        var hasMetadata = schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
-
-        if (!hasMetadata && schema.Properties.Count > 0)
-        {
-            foreach (var property in schema.GetFlattenedProperties())
-            {
-                hasMetadata = property.HasComplianceMetadata();
-                if (hasMetadata) break;
-            }
-        }
-
-        return hasMetadata;
-    }
+    public static bool HasComplianceMetadata(this JsonSchema schema) =>
+        HasComplianceMetadata(schema, [], 0);
 
     /// <summary>
     /// Check if the property has compliance metadata.
@@ -102,6 +91,46 @@ public static class ComplianceJsonSchemaExtensions
     /// <returns>True if it has, false if not.</returns>
     public static bool HasComplianceMetadata(this JsonSchemaProperty property) =>
         HasComplianceMetadata((JsonSchema)property);
+
+    static bool HasComplianceMetadata(JsonSchema schema, HashSet<JsonSchema> visited, int depth)
+    {
+        // Walking a schema graph to look for compliance metadata has to contend with recursive
+        // read models (e.g. a child collection of the model's own type). Two termination guards:
+        //   1. A visited set keyed on the resolved ActualSchema, which recognises a cycle whenever
+        //      references resolve back to one shared definition object.
+        //   2. A depth bound, because NJsonSchema does not guarantee a stable identity for schemas
+        //      reached through $ref/Item — its accessors can hand back a fresh wrapper on each
+        //      access, so (1) alone is not enough for every shape. The bound guarantees termination
+        //      regardless of identity, and does not cause false negatives: compliance metadata is
+        //      shallow, so anything real is found long before this depth.
+        var actual = schema.ActualSchema;
+        if (depth > MaxComplianceTraversalDepth || !visited.Add(actual))
+        {
+            return false;
+        }
+
+        var hasMetadata = actual.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
+
+        if (!hasMetadata && actual.Properties.Count > 0)
+        {
+            foreach (var property in actual.GetFlattenedProperties())
+            {
+                hasMetadata = HasComplianceMetadata(property, visited, depth + 1);
+                if (hasMetadata) break;
+            }
+        }
+
+        // Compliance metadata can live on an array's element type — e.g. IReadOnlyList<Email>
+        // where Email is a [PII] concept, or a list of objects carrying [PII] members. Without
+        // descending into the item schema, list-valued PII is missed entirely and stored in the
+        // clear.
+        if (!hasMetadata && actual.Item is not null)
+        {
+            hasMetadata = HasComplianceMetadata(actual.Item, visited, depth + 1);
+        }
+
+        return hasMetadata;
+    }
 
     static void ConvertComplianceIfNeeded(JsonSchema schema)
     {
