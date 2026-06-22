@@ -15,6 +15,8 @@ public static class ComplianceJsonSchemaExtensions
     /// </summary>
     public const string ComplianceKey = "compliance";
 
+    const int MaxComplianceTraversalDepth = 64;
+
     /// <summary>
     /// Ensure the compliance metadata is correct with correct types.
     /// </summary>
@@ -80,7 +82,7 @@ public static class ComplianceJsonSchemaExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <returns>True if it has, false if not.</returns>
     public static bool HasComplianceMetadata(this JsonSchema schema) =>
-        HasComplianceMetadata(schema, []);
+        HasComplianceMetadata(schema, [], 0);
 
     /// <summary>
     /// Check if the property has compliance metadata.
@@ -90,16 +92,19 @@ public static class ComplianceJsonSchemaExtensions
     public static bool HasComplianceMetadata(this JsonSchemaProperty property) =>
         HasComplianceMetadata((JsonSchema)property);
 
-    static bool HasComplianceMetadata(JsonSchema schema, HashSet<JsonSchema> visited)
+    static bool HasComplianceMetadata(JsonSchema schema, HashSet<JsonSchema> visited, int depth)
     {
-        // Resolve $ref / allOf to the underlying schema and key the visited set on THAT. A
-        // recursive read model (e.g. a child collection of the model's own type) expresses every
-        // reference as a pointer to one shared definition, so resolving to the actual schema gives
-        // a stable identity that recognises the cycle and terminates. Keying on the wrapper object
-        // does not work: NJsonSchema's Properties/Item accessors hand back a fresh wrapper on each
-        // access, so the same logical schema is never seen twice and the traversal recurses forever.
+        // Walking a schema graph to look for compliance metadata has to contend with recursive
+        // read models (e.g. a child collection of the model's own type). Two termination guards:
+        //   1. A visited set keyed on the resolved ActualSchema, which recognises a cycle whenever
+        //      references resolve back to one shared definition object.
+        //   2. A depth bound, because NJsonSchema does not guarantee a stable identity for schemas
+        //      reached through $ref/Item — its accessors can hand back a fresh wrapper on each
+        //      access, so (1) alone is not enough for every shape. The bound guarantees termination
+        //      regardless of identity, and does not cause false negatives: compliance metadata is
+        //      shallow, so anything real is found long before this depth.
         var actual = schema.ActualSchema;
-        if (!visited.Add(actual))
+        if (depth > MaxComplianceTraversalDepth || !visited.Add(actual))
         {
             return false;
         }
@@ -110,7 +115,7 @@ public static class ComplianceJsonSchemaExtensions
         {
             foreach (var property in actual.GetFlattenedProperties())
             {
-                hasMetadata = HasComplianceMetadata(property, visited);
+                hasMetadata = HasComplianceMetadata(property, visited, depth + 1);
                 if (hasMetadata) break;
             }
         }
@@ -121,7 +126,7 @@ public static class ComplianceJsonSchemaExtensions
         // clear.
         if (!hasMetadata && actual.Item is not null)
         {
-            hasMetadata = HasComplianceMetadata(actual.Item, visited);
+            hasMetadata = HasComplianceMetadata(actual.Item, visited, depth + 1);
         }
 
         return hasMetadata;
