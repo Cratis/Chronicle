@@ -129,18 +129,22 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                     break;
 
                 default:
-                    foreach (var metadata in itemComplianceMetadata.DistinctBy(_ => _.metadataType))
-                    {
-                        if (_propertyValueHandlers.TryGetValue(metadata.metadataType, out var handler))
+                    foreach (var metadata in itemComplianceMetadata
+                        .DistinctBy(_ => _.metadataType)
+                        .Select(_ =>
                         {
-                            try
-                            {
-                                array[i] = await action(handler, identifier, element);
-                            }
-                            catch (Exception ex)
-                            {
-                                throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{elementPath}'.", ex);
-                            }
+                            var found = _propertyValueHandlers.TryGetValue(_.metadataType, out var handler);
+                            return (metadataType: _.metadataType, handler, found);
+                        })
+                        .Where(_ => _.found))
+                    {
+                        try
+                        {
+                            array[i] = await action(metadata.handler!, identifier, element);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{elementPath}'.", ex);
                         }
                     }
 
