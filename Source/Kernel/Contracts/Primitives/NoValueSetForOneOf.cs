@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Contracts.Primitives;
 /// Initializes a new instance of the <see cref="NoValueSetForOneOf"/> class.
 /// </remarks>
 /// <param name="types">Types for the one of.</param>
-public class NoValueSetForOneOf(params Type[] types) : Exception($"No value set for OneOf<{string.Join(", ", types.Select(_ => _.Name))}>")
-{
-}
+public class NoValueSetForOneOf(params Type[] types) : Exception($"No value set for OneOf<{string.Join(", ", types.Select(_ => _.Name))}>");

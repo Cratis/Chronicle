@@ -11,6 +11,4 @@ namespace Cratis.Chronicle.Properties;
 /// </remarks>
 /// <param name="type">Type that does not hold the property path.</param>
 /// <param name="path">The <see cref="PropertyPath"/> that is not possible to resolve.</param>
-public class UnableToResolvePropertyPathOnType(Type type, PropertyPath path) : Exception($"Unable to resolve property path '${path}' on type '${type.FullName}'")
-{
-}
+public class UnableToResolvePropertyPathOnType(Type type, PropertyPath path) : Exception($"Unable to resolve property path '${path}' on type '${type.FullName}'");
