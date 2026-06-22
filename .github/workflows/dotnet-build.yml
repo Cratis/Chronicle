@@ -240,6 +240,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.PAT_WORKFLOWS }}
 
       - name: Setup .Net
@@ -302,9 +303,9 @@ jobs:
           .github/scripts/collect-coverage.sh \
             "./coverage-reports" \
             "./Documentation/statistics/coverage-data.js" \
-            "${{ github.ref_name }}" \
+            "${{ github.head_ref || github.ref_name }}" \
             "${{ github.sha }}" \
-            "${{ github.event.head_commit.message || format('Coverage update for {0}', github.ref_name) }}"
+            "${{ github.event.head_commit.message || format('Coverage update for {0}', github.head_ref || github.ref_name) }}"
 
       - name: Commit coverage statistics
         run: |
@@ -315,8 +316,9 @@ jobs:
             echo "No coverage statistics changes to commit"
           else
             git commit -m "Update coverage statistics [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
+            branch="${{ github.head_ref || github.ref_name }}"
+            git pull --rebase origin "$branch"
+            git push origin HEAD:"$branch"
           fi
 
   benchmarks:
