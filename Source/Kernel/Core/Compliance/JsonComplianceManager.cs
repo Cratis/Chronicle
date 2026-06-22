@@ -62,6 +62,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
             {
                 var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
                 var propertySchema = schema.GetFlattenedProperties().Single(_ => _.Name == property);
+                var handlerApplied = false;
                 foreach (var metadata in propertySchema.GetComplianceMetadata().Concat(complianceMetadataForContainer).DistinctBy(_ => _.metadataType))
                 {
                     if (_propertyValueHandlers.TryGetValue(metadata.metadataType, out var handler))
@@ -69,6 +70,7 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                         try
                         {
                             json[property] = await action(handler, identifier, value);
+                            handlerApplied = true;
                         }
                         catch (Exception ex)
                         {
@@ -81,6 +83,68 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                 {
                     await HandleActionFor(propertySchema.ActualTypeSchema, identifier, jsonObjectValue, actionName, action, propertyPath);
                 }
+                else if (!handlerApplied && value is JsonArray jsonArrayValue)
+                {
+                    // The property itself was not encrypted as a whole, so descend into the array
+                    // and handle compliance metadata that lives on the element type — [PII] scalar
+                    // concepts (e.g. IReadOnlyList<Email>) or [PII] members inside element objects.
+                    await HandleActionForArray(propertySchema.ActualTypeSchema, identifier, jsonArrayValue, actionName, action, propertyPath);
+                }
+            }
+        }
+    }
+
+    async Task HandleActionForArray(
+        JsonSchema arraySchema,
+        string identifier,
+        JsonArray array,
+        string actionName,
+        Func<IJsonCompliancePropertyValueHandler, string, JsonNode, Task<JsonNode>> action,
+        string path)
+    {
+        var itemSchema = arraySchema.Item?.ActualSchema;
+        if (itemSchema is null)
+        {
+            return;
+        }
+
+        var itemComplianceMetadata = itemSchema.GetComplianceMetadata().ToArray();
+        for (var i = 0; i < array.Count; i++)
+        {
+            var element = array[i];
+            if (element is null)
+            {
+                continue;
+            }
+
+            var elementPath = $"{path}[{i}]";
+            switch (element)
+            {
+                case JsonObject elementObject:
+                    await HandleActionFor(itemSchema, identifier, elementObject, actionName, action, elementPath);
+                    break;
+
+                case JsonArray elementArray:
+                    await HandleActionForArray(itemSchema, identifier, elementArray, actionName, action, elementPath);
+                    break;
+
+                default:
+                    foreach (var metadata in itemComplianceMetadata.DistinctBy(_ => _.metadataType))
+                    {
+                        if (_propertyValueHandlers.TryGetValue(metadata.metadataType, out var handler))
+                        {
+                            try
+                            {
+                                array[i] = await action(handler, identifier, element);
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException($"Failed to {actionName} compliance metadata for property '{elementPath}'.", ex);
+                            }
+                        }
+                    }
+
+                    break;
             }
         }
     }

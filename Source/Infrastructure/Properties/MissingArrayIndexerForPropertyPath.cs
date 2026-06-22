@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Properties;
 /// Initializes a new instance of the <see cref="MissingArrayIndexerForPropertyPath"/> class.
 /// </remarks>
 /// <param name="propertyPath"><see cref="PropertyPath"/> it is missing for.</param>
-public class MissingArrayIndexerForPropertyPath(PropertyPath propertyPath) : Exception($"Missing array indexer for '{propertyPath}'")
-{
-}
+public class MissingArrayIndexerForPropertyPath(PropertyPath propertyPath) : Exception($"Missing array indexer for '{propertyPath}'");

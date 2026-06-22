@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// Initializes a new instance of the <see cref="UnableToResolveInstanceForProjection"/> class.
 /// </remarks>
 /// <param name="projectionPath">Path within the projection.</param>
-public class UnableToResolveInstanceForProjection(ProjectionPath projectionPath) : Exception($"Projection with path '{projectionPath.Value}' can't resolve the instance to project to.")
-{
-}
+public class UnableToResolveInstanceForProjection(ProjectionPath projectionPath) : Exception($"Projection with path '{projectionPath.Value}' can't resolve the instance to project to.");

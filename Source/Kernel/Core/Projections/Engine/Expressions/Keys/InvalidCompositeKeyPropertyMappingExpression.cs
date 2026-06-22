@@ -15,6 +15,4 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 /// <param name="projectionId">Identifier of the projection.</param>
 /// <param name="identifiedByProperty">The property used as identifier for the key.</param>
 /// <param name="expression">Key/value expression.</param>
-public class InvalidCompositeKeyPropertyMappingExpression(ProjectionId projectionId, PropertyPath identifiedByProperty, string expression) : Exception($"Expression '{expression}' in projection '{projectionId}' for property '{identifiedByProperty}' is invalid. Expecting a key/value of property=expression")
-{
-}
+public class InvalidCompositeKeyPropertyMappingExpression(ProjectionId projectionId, PropertyPath identifiedByProperty, string expression) : Exception($"Expression '{expression}' in projection '{projectionId}' for property '{identifiedByProperty}' is invalid. Expecting a key/value of property=expression");

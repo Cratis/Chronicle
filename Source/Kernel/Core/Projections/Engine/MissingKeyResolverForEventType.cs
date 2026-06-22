@@ -13,6 +13,4 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// Initializes a new instance of the <see cref="MissingKeyResolverForEventType"/>.
 /// </remarks>
 /// <param name="eventType">The <see cref="EventType"/>.</param>
-public class MissingKeyResolverForEventType(EventType eventType) : Exception($"Missing key resolver for '{eventType}'")
-{
-}
+public class MissingKeyResolverForEventType(EventType eventType) : Exception($"Missing key resolver for '{eventType}'");

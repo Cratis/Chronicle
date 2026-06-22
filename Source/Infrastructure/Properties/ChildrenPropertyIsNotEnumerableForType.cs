@@ -11,6 +11,4 @@ namespace Cratis.Chronicle.Properties;
 /// </remarks>
 /// <param name="type">Type that is the root of the <see cref="PropertyPath"/>.</param>
 /// <param name="property"><see cref="PropertyPath"/> that is wrong type.</param>
-public class ChildrenPropertyIsNotEnumerableForType(Type type, PropertyPath property) : Exception($"Property at '{property.Path}' on '{type.FullName}' is not of enumerable type.")
-{
-}
+public class ChildrenPropertyIsNotEnumerableForType(Type type, PropertyPath property) : Exception($"Property at '{property.Path}' on '{type.FullName}' is not of enumerable type.");

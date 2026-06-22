@@ -15,7 +15,4 @@ public class NamespaceMismatchException(
     string expectedNamespace,
     string actualNamespace,
     string typeName)
-    : Exception($"Service '{serviceName}' has namespace mismatch. Expected '{expectedNamespace}' but type '{typeName}' is in '{actualNamespace}'.")
-{
-}
-
+    : Exception($"Service '{serviceName}' has namespace mismatch. Expected '{expectedNamespace}' but type '{typeName}' is in '{actualNamespace}'.");

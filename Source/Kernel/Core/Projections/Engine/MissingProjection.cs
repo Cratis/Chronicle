@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// Initializes a new instance of the <see cref="MissingProjection"/> class.
 /// </remarks>
 /// <param name="id">The <see cref="ProjectionId"/> for the missing projection.</param>
-public class MissingProjection(ProjectionId id) : Exception($"Missing projection with id {id.Value}")
-{
-}
+public class MissingProjection(ProjectionId id) : Exception($"Missing projection with id {id.Value}");

@@ -10,6 +10,4 @@ namespace Cratis.Chronicle.Events;
 /// Initializes a new instance of <see cref="MultipleEventTypesWithSameIdFound"/>.
 /// </remarks>
 /// <param name="types">The CLR types.</param>
-public class MultipleEventTypesWithSameIdFound(IEnumerable<Type> types) : Exception($"Multiple event types with the same id found: {string.Join(", ", types.Select(_ => _.FullName))}")
-{
-}
+public class MultipleEventTypesWithSameIdFound(IEnumerable<Type> types) : Exception($"Multiple event types with the same id found: {string.Join(", ", types.Select(_ => _.FullName))}");

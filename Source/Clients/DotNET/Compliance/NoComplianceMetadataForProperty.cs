@@ -12,6 +12,4 @@ namespace Cratis.Chronicle.Compliance;
 /// Initializes a new instance of the <see cref="NoComplianceMetadataForProperty"/> class.
 /// </remarks>
 /// <param name="property"><see cref="PropertyInfo"/> that does not have compliance metadata.</param>
-public class NoComplianceMetadataForProperty(PropertyInfo property) : Exception($"Property '{property.Name}' on type '{property.DeclaringType?.FullName}' does not have any compliance metadata.")
-{
-}
+public class NoComplianceMetadataForProperty(PropertyInfo property) : Exception($"Property '{property.Name}' on type '{property.DeclaringType?.FullName}' does not have any compliance metadata.");
