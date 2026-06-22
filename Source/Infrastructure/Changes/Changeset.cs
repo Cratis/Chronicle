@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections;
+using System.Dynamic;
 using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
 using Cratis.Collections;
@@ -309,10 +311,109 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         resolvesToRemove.ForEach(_ => changes.Remove(_));
     }
 
+    static PropertyDifference CreateUpdatedDifferenceFor(PropertyDifference ancestor, PropertyDifference descendant, object state)
+    {
+        if (ancestor.PropertyPath == descendant.PropertyPath)
+        {
+            return new PropertyDifference(ancestor.PropertyPath, ancestor.Original, descendant.Changed, ancestor.ArrayIndexers);
+        }
+
+        if (!TryGetValueAtPath(state, ancestor.PropertyPath, ancestor.ArrayIndexers, out var changed))
+        {
+            changed = ancestor.Changed;
+        }
+
+        return new PropertyDifference(ancestor.PropertyPath, ancestor.Original, changed, ancestor.ArrayIndexers);
+    }
+
+    static bool TryGetValueAtPath(object? instance, PropertyPath propertyPath, ArrayIndexers arrayIndexers, out object? value)
+    {
+        value = instance;
+        var currentPath = PropertyPath.Root;
+
+        foreach (var segment in propertyPath.Segments)
+        {
+            if (value is ExpandoObject expandoObject)
+            {
+                var dictionary = (IDictionary<string, object?>)expandoObject;
+                if (!dictionary.TryGetValue(segment.Value, out value))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                var propertyInfo = value?.GetType().GetProperties().SingleOrDefault(_ => _.Name.Equals(segment.Value, StringComparison.OrdinalIgnoreCase));
+                if (propertyInfo is null)
+                {
+                    return false;
+                }
+
+                value = propertyInfo.GetValue(value);
+            }
+
+            currentPath += segment;
+            if (segment is ArrayProperty && arrayIndexers.HasFor(currentPath))
+            {
+                value = GetElementForIndexer(value, arrayIndexers.GetFor(currentPath));
+                if (value is null)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    static object? GetElementForIndexer(object? collection, ArrayIndexer indexer)
+    {
+        if (collection is not IEnumerable enumerable)
+        {
+            return null;
+        }
+
+        if (!indexer.IdentifierProperty.IsSet && indexer.Identifier is int index)
+        {
+            var elements = enumerable.Cast<object>().ToArray();
+            return elements.Length > index ? elements[index] : null;
+        }
+
+        return enumerable.Cast<object>()
+            .OfType<ExpandoObject>()
+            .Cast<IDictionary<string, object?>>()
+            .SingleOrDefault(_ =>
+                _.TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
+                Equals(identifier, indexer.Identifier));
+    }
+
+    static bool HasSameArrayIndexers(PropertyDifference left, PropertyDifference right) =>
+        left.ArrayIndexers.Equals(right.ArrayIndexers);
+
+    static bool IsSameAsOrDescendantOf(PropertyPath propertyPath, PropertyPath candidateParentPath)
+    {
+        if (!candidateParentPath.IsSet)
+        {
+            return false;
+        }
+
+        var pathSegments = propertyPath.Segments.Select(_ => _.Value).ToArray();
+        var candidateParentPathSegments = candidateParentPath.Segments.Select(_ => _.Value).ToArray();
+        if (candidateParentPathSegments.Length > pathSegments.Length)
+        {
+            return false;
+        }
+
+        return candidateParentPathSegments
+            .Select((segment, index) => segment.Equals(pathSegments[index], StringComparison.OrdinalIgnoreCase))
+            .All(_ => _);
+    }
+
     void Consolidate()
     {
         ConsolidateJoinsAgainstChildrenAdded(parent);
         ConsolidatePropertiesChangedIntoChildAdded();
+        ConsolidateOverlappingPropertiesChanged();
         ConsolidateConflictingOperations();
     }
 
@@ -370,6 +471,67 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
         foreach (var index in changesToRemove.OrderDescending())
         {
             _changes.RemoveAt(index);
+        }
+    }
+
+    void ConsolidateOverlappingPropertiesChanged()
+    {
+        var propertyChanges = _changes
+            .Select((change, index) => (Index: index, Change: change as PropertiesChanged<TTarget>))
+            .Where(_ => _.Change is not null)
+            .ToArray();
+
+        if (propertyChanges.Length == 0)
+        {
+            return;
+        }
+
+        var retainedDifferences = new List<PropertyDifferenceInChange>();
+
+        foreach (var (index, propertiesChanged) in propertyChanges)
+        {
+            foreach (var difference in propertiesChanged!.Differences)
+            {
+                var ancestorIndex = retainedDifferences.FindIndex(_ =>
+                    HasSameArrayIndexers(_.Difference, difference) &&
+                    IsSameAsOrDescendantOf(difference.PropertyPath, _.Difference.PropertyPath));
+
+                if (ancestorIndex >= 0)
+                {
+                    var ancestor = retainedDifferences[ancestorIndex];
+                    retainedDifferences[ancestorIndex] = ancestor with
+                    {
+                        Difference = CreateUpdatedDifferenceFor(ancestor.Difference, difference, propertiesChanged.State)
+                    };
+                    continue;
+                }
+
+                retainedDifferences.RemoveAll(_ =>
+                    HasSameArrayIndexers(_.Difference, difference) &&
+                    IsSameAsOrDescendantOf(_.Difference.PropertyPath, difference.PropertyPath));
+
+                retainedDifferences.Add(new(index, difference));
+            }
+        }
+
+        var retainedByChange = retainedDifferences
+            .GroupBy(_ => _.ChangeIndex)
+            .ToDictionary(_ => _.Key, _ => _.Select(difference => difference.Difference).ToArray());
+
+        foreach (var (index, propertiesChanged) in propertyChanges.OrderByDescending(_ => _.Index))
+        {
+            if (!retainedByChange.TryGetValue(index, out var differences) || differences.Length == 0)
+            {
+                _changes.RemoveAt(index);
+                continue;
+            }
+
+            if (differences.SequenceEqual(propertiesChanged!.Differences))
+            {
+                continue;
+            }
+
+            _changes[index] = new PropertiesChanged<TTarget>(propertiesChanged!.State, differences);
         }
     }
 
@@ -477,4 +639,6 @@ public class Changeset<TSource, TTarget>(IObjectComparer comparer, TSource incom
             }
         }
     }
+
+    sealed record PropertyDifferenceInChange(int ChangeIndex, PropertyDifference Difference);
 }
