@@ -127,12 +127,17 @@ jobs:
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
         # without retrying, and a deterministic failure stays red on every attempt.
+        #
+        # --no-build: the restored cache is the DEVELOPMENT-symbol build from
+        # dotnet-build-development, so the shard runs it directly instead of
+        # recompiling the kernel from source. The restore step above still
+        # regenerates project.assets.json and the package cache for the test host.
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
             -p:DisableDockerBuild=true \
-            -p:EnableDevelopmentSymbol=true \
+            --no-build \
             --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results
@@ -194,7 +199,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            -p:EnableDevelopmentSymbol=true \
+            --no-build \
             --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results
