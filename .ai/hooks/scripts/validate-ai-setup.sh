@@ -142,9 +142,6 @@ fi
 if grep -rniE 'custom exception to signal|framework converts it to (an? )?(error|failed)' .ai/rules .ai/skills .ai/prompts 2>/dev/null | grep -q .; then
     warn "stale business-rule guidance — return ValidationResult/Result<,>, not a thrown exception"
 fi
-if grep -rniE '\brtk\b' .ai/rules .ai/skills .ai/agents .ai/prompts 2>/dev/null | grep -q .; then
-    warn "rtk reference found — rtk was dropped from this corpus"
-fi
 
 if [[ "$failed" -ne 0 ]]; then
     printf 'AI corpus validation FAILED.\n' >&2
