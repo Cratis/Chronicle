@@ -26,7 +26,7 @@ public class and_intermediate_subject_is_duplicated : Specification
     void Because() => _result = _root.WithoutDuplicates();
 
     [Fact] void should_keep_root_identity() => _result.Subject.ShouldEqual("subject-a");
-    [Fact] void should_keep_first_occurrence_of_duplicate() => _result.OnBehalfOf!.Subject.ShouldEqual("subject-b");
-    [Fact] void should_keep_tail_identity() => _result.OnBehalfOf!.OnBehalfOf!.Subject.ShouldEqual("subject-c");
-    [Fact] void should_have_no_further_chain() => _result.OnBehalfOf!.OnBehalfOf!.OnBehalfOf.ShouldBeNull();
+    [Fact] void should_keep_first_occurrence_of_duplicate() => _result.OnBehalfOf.Subject.ShouldEqual("subject-b");
+    [Fact] void should_keep_tail_identity() => _result.OnBehalfOf.OnBehalfOf.Subject.ShouldEqual("subject-c");
+    [Fact] void should_have_no_further_chain() => _result.OnBehalfOf.OnBehalfOf.OnBehalfOf.ShouldBeNull();
 }

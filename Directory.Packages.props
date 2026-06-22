@@ -91,6 +91,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Cratis.Specifications" Version="3.0.5" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.5" />
+    <PackageVersion Include="EphemeralMongo" Version="3.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

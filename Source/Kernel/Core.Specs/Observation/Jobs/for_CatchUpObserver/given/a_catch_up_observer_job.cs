@@ -98,7 +98,7 @@ public class a_catch_up_observer_job : Specification
         _silo.AddProbe(_ => _observer);
 
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
-            typeof(TestableCatchUpObserver).FullName!);
+            typeof(TestableCatchUpObserver).FullName);
 
         _job = await _silo.CreateGrainAsync<TestableCatchUpObserver>(_jobId, _jobKey);
     }

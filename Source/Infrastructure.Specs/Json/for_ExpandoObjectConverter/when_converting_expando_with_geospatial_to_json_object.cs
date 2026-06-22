@@ -22,9 +22,9 @@ public class when_converting_expando_with_geospatial_to_json_object : given.an_e
 
     void Because() => _result = converter.ToJsonObject(_source, schema);
 
-    [Fact] void should_write_point_as_geojson_type() => _result["pointValue"]!["type"]!.GetValue<string>().ShouldEqual("Point");
-    [Fact] void should_write_point_longitude() => _result["pointValue"]!["coordinates"]![0]!.GetValue<double>().ShouldEqual(1.5);
-    [Fact] void should_write_point_latitude() => _result["pointValue"]!["coordinates"]![1]!.GetValue<double>().ShouldEqual(2.5);
-    [Fact] void should_write_linestring_as_geojson_type() => _result["lineStringValue"]!["type"]!.GetValue<string>().ShouldEqual("LineString");
-    [Fact] void should_write_linestring_first_coordinate_longitude() => _result["lineStringValue"]!["coordinates"]![0]![0]!.GetValue<double>().ShouldEqual(1.0);
+    [Fact] void should_write_point_as_geojson_type() => _result["pointValue"]["type"].GetValue<string>().ShouldEqual("Point");
+    [Fact] void should_write_point_longitude() => _result["pointValue"]["coordinates"][0].GetValue<double>().ShouldEqual(1.5);
+    [Fact] void should_write_point_latitude() => _result["pointValue"]["coordinates"][1].GetValue<double>().ShouldEqual(2.5);
+    [Fact] void should_write_linestring_as_geojson_type() => _result["lineStringValue"]["type"].GetValue<string>().ShouldEqual("LineString");
+    [Fact] void should_write_linestring_first_coordinate_longitude() => _result["lineStringValue"]["coordinates"][0][0].GetValue<double>().ShouldEqual(1.0);
 }

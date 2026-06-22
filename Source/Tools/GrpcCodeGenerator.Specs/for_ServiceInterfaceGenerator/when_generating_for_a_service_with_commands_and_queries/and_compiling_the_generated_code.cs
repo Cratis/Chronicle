@@ -70,7 +70,7 @@ public class and_compiling_the_generated_code : given.a_generated_service_interf
 
             // Construct the type name from the generator's baseNamespace + service namespace + service name
             _interfaceTypeName = $"Generated.{_serviceDefinition.Namespace}.I{_serviceDefinition.ServiceName}";
-            _serviceInterface = _compiledAssembly.GetType(_interfaceTypeName)!;
+            _serviceInterface = _compiledAssembly.GetType(_interfaceTypeName);
         }
     }
 

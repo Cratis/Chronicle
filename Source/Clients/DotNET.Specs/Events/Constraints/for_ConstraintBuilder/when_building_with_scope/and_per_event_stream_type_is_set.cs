@@ -24,8 +24,8 @@ public class and_per_event_stream_type_is_set : given.a_constraint_builder_with_
     void Because() => _result = _constraintBuilder.Build();
 
     [Fact] void should_have_one_constraint() => _result.Count.ShouldEqual(1);
-    [Fact] void should_have_scope_on_constraint() => (_result[0] as UniqueConstraintDefinition)!.Scope.ShouldNotBeNull();
-    [Fact] void should_not_have_event_source_type_in_scope() => (_result[0] as UniqueConstraintDefinition)!.Scope!.EventSourceType.ShouldBeNull();
-    [Fact] void should_have_event_stream_type_in_scope() => (_result[0] as UniqueConstraintDefinition)!.Scope!.EventStreamType.ShouldNotBeNull();
-    [Fact] void should_not_have_event_stream_id_in_scope() => (_result[0] as UniqueConstraintDefinition)!.Scope!.EventStreamId.ShouldBeNull();
+    [Fact] void should_have_scope_on_constraint() => (_result[0] as UniqueConstraintDefinition).Scope.ShouldNotBeNull();
+    [Fact] void should_not_have_event_source_type_in_scope() => (_result[0] as UniqueConstraintDefinition).Scope.EventSourceType.ShouldBeNull();
+    [Fact] void should_have_event_stream_type_in_scope() => (_result[0] as UniqueConstraintDefinition).Scope.EventStreamType.ShouldNotBeNull();
+    [Fact] void should_not_have_event_stream_id_in_scope() => (_result[0] as UniqueConstraintDefinition).Scope.EventStreamId.ShouldBeNull();
 }

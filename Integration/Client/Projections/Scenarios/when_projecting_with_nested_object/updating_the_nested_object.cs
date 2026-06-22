@@ -22,7 +22,7 @@ public class updating_the_nested_object(context context) : Given<context>(contex
 
     [Fact] void should_return_model() => Context.Result.ShouldNotBeNull();
     [Fact] void should_have_a_nested_command() => Context.Result.Command.ShouldNotBeNull();
-    [Fact] void should_update_the_command_name() => Context.Result.Command!.Name.ShouldEqual("Create");
-    [Fact] void should_preserve_the_command_schema() => Context.Result.Command!.Schema.ShouldEqual("{}");
+    [Fact] void should_update_the_command_name() => Context.Result.Command.Name.ShouldEqual("Create");
+    [Fact] void should_preserve_the_command_schema() => Context.Result.Command.Schema.ShouldEqual("{}");
     [Fact] void should_set_the_last_handled_event_sequence_number() => Context.Result.__lastHandledEventSequenceNumber.ShouldEqual(Context.LastEventSequenceNumber);
 }

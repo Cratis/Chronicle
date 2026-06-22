@@ -15,6 +15,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.StateMachines;
 using Cratis.Chronicle.Storage;
@@ -41,6 +42,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
+[ObserverPlacement]
 public partial class Observer(
     [PersistentState(nameof(ObserverDefinition), WellKnownGrainStorageProviders.ObserverDefinitions)]
     IPersistentState<ObserverDefinition> observerDefinition,

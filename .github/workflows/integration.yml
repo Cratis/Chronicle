@@ -18,6 +18,7 @@ jobs:
     outputs:
       client-matrix: ${{ steps.client.outputs.matrix }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
+      clustering-matrix: ${{ steps.clustering.outputs.matrix }}
 
     steps:
       - name: Checkout code
@@ -66,6 +67,21 @@ jobs:
           for ns in $namespaces; do
             [ -z "$ns" ] && continue
             matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
+          done
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Discover Clustering integration namespaces
+        id: clustering
+        run: |
+          namespaces=$(find Integration/Clustering -mindepth 1 -maxdepth 1 -type d \
+            ! -name 'bin' ! -name 'obj' \
+            -exec basename {} \; | sort)
+
+          matrix='{"include":['
+          for ns in $namespaces; do
+            [ -z "$ns" ] && continue
+            matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.Clustering.${ns}\"},"
           done
           matrix="${matrix%,}]}"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
@@ -151,7 +167,8 @@ jobs:
             "FullyQualifiedName~${{ matrix.namespace }}" \
             -p:DisableDockerBuild=true \
             -p:EnableDevelopmentSymbol=true \
-            --collect:"XPlat Code Coverage"
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-results
 
       - name: Upload coverage results
         if: always()
@@ -221,3 +238,49 @@ jobs:
           name: coverage-results-kernel-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+  clustering-integration-specs:
+   needs: [discover]
+   runs-on: ubuntu-latest
+   strategy:
+     fail-fast: false
+     matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}
+
+   steps:
+     - name: Checkout code
+       uses: actions/checkout@v4
+
+     - name: Setup .Net
+       uses: actions/setup-dotnet@v4
+       with:
+         dotnet-version: |
+           8.0.410
+           9.0.x
+           10.0.x
+
+     - name: Restore build output
+       uses: actions/cache@v4
+       with:
+         path: ./**/bin
+         key: ${{ inputs.dotnet-cache-key }}
+
+     - name: Restore Clustering project
+       run: dotnet restore Integration/Clustering/Clustering.csproj
+
+     - name: Run Clustering integration tests (${{ matrix.namespace }})
+       # See client-integration-specs for the retry rationale.
+       run: |
+         .github/scripts/run-tests-with-retry.sh \
+           Integration/Clustering/Clustering.csproj \
+           "FullyQualifiedName~${{ matrix.namespace }}" \
+           -p:EnableDevelopmentSymbol=true \
+           --collect:"XPlat Code Coverage" \
+           --results-directory ./coverage-results
+
+     - name: Upload coverage results
+       if: always()
+       uses: actions/upload-artifact@v4
+       with:
+         name: coverage-results-clustering-${{ matrix.namespace }}
+         path: ./coverage-results/
+         retention-days: 1

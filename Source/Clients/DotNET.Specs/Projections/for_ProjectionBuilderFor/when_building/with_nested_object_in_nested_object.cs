@@ -20,7 +20,7 @@ public class with_nested_object_in_nested_object : Specification
     {
         _eventTypes = new EventTypesForSpecifications([typeof(RecursiveNestedItemSet), typeof(RecursiveNestedItemCleared), typeof(RecursiveNestedValidationConfigured), typeof(RecursiveNestedValidationCleared)]);
         _builder = new ProjectionBuilderFor<RecursiveNestedParentReadModel>(
-            new ProjectionId(typeof(RecursiveNestedParentReadModel).FullName!),
+            new ProjectionId(typeof(RecursiveNestedParentReadModel).FullName),
             typeof(RecursiveNestedParentReadModel),
             new DefaultNamingPolicy(),
             _eventTypes,

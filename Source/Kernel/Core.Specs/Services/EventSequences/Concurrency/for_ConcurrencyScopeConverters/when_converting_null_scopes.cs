@@ -9,7 +9,7 @@ public class when_converting_null_scopes : Specification
 
     void Because()
     {
-        IDictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes = null!;
+        IDictionary<string, Contracts.EventSequences.Concurrency.ConcurrencyScope> scopes = null;
         _result = scopes.ToChronicle();
     }
 
