@@ -92,18 +92,23 @@ public static class ComplianceJsonSchemaExtensions
 
     static bool HasComplianceMetadata(JsonSchema schema, HashSet<JsonSchema> visited)
     {
-        // Guard against self-referencing / recursive schemas (e.g. a tree node with a
-        // child collection of its own type) which would otherwise recurse forever.
-        if (!visited.Add(schema))
+        // Resolve $ref / allOf to the underlying schema and key the visited set on THAT. A
+        // recursive read model (e.g. a child collection of the model's own type) expresses every
+        // reference as a pointer to one shared definition, so resolving to the actual schema gives
+        // a stable identity that recognises the cycle and terminates. Keying on the wrapper object
+        // does not work: NJsonSchema's Properties/Item accessors hand back a fresh wrapper on each
+        // access, so the same logical schema is never seen twice and the traversal recurses forever.
+        var actual = schema.ActualSchema;
+        if (!visited.Add(actual))
         {
             return false;
         }
 
-        var hasMetadata = schema.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
+        var hasMetadata = actual.ExtensionData?.ContainsKey(ComplianceKey) ?? false;
 
-        if (!hasMetadata && schema.Properties.Count > 0)
+        if (!hasMetadata && actual.Properties.Count > 0)
         {
-            foreach (var property in schema.GetFlattenedProperties())
+            foreach (var property in actual.GetFlattenedProperties())
             {
                 hasMetadata = HasComplianceMetadata(property, visited);
                 if (hasMetadata) break;
@@ -114,9 +119,9 @@ public static class ComplianceJsonSchemaExtensions
         // where Email is a [PII] concept, or a list of objects carrying [PII] members. Without
         // descending into the item schema, list-valued PII is missed entirely and stored in the
         // clear.
-        if (!hasMetadata && schema.Item is not null)
+        if (!hasMetadata && actual.Item is not null)
         {
-            hasMetadata = HasComplianceMetadata(schema.Item.ActualSchema, visited);
+            hasMetadata = HasComplianceMetadata(actual.Item, visited);
         }
 
         return hasMetadata;
