@@ -401,7 +401,8 @@ public class DeclarativeCodeGenerator
         {
             var eventTypeName = removed.Key.Id.Value;
             var removedDef = removed.Value;
-            lines.Add($".RemovedWith<{eventTypeName}>(e => e.{removedDef.Key})");
+            var keyExpression = ConvertExpression(removedDef.Key);
+            lines.Add($".RemovedWith<{eventTypeName}>({keyExpression})");
         }
     }
 }

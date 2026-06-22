@@ -49,5 +49,8 @@ public record ChildItemRemoved(Guid ParentId, Guid ItemId);
 [EventType]
 public record ChildItemRemovedJoin(Guid ItemId);
 
+[EventType]
+public record ReadModelRemovedEmpty;
+
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name
