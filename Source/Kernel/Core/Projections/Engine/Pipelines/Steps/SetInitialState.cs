@@ -47,6 +47,9 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // for those properties that does not have a value. We then set the __initialized to true.
         var initialState = await sink.FindOrDefault(context.Key);
 
+        // When the sink has no instance for the key yet, this event creates the read model instance.
+        context.IsNewInstance = initialState is null;
+
         var needsInitialState = false;
         if (initialState is null)
         {

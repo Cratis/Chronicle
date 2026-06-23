@@ -64,7 +64,15 @@ public class and_read_model_has_pii_property : given.all_dependencies
             ["name"] = "encrypted-name"
         };
 
-        await observer.OnChangeset("test-namespace", "key-1", model);
+        await observer.OnChangeset(
+            "test-namespace",
+            "key-1",
+            model,
+            new Concepts.ReadModels.ReadModelChangeContext(
+                Concepts.ReadModels.ReadModelChangeType.Added,
+                Concepts.Events.EventSequenceNumber.First,
+                DateTimeOffset.UtcNow,
+                Cratis.Execution.CorrelationId.NotSet));
     }
 
     [Fact] void should_release_compliance_metadata() => _complianceHelper.Received(1).ReleaseJson(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Is<JsonObject>(o => o[WellKnownProperties.Subject]!.GetValue<string>() == "some-subject"));

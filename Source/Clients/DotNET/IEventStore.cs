@@ -99,6 +99,11 @@ public interface IEventStore
     IReadModels ReadModels { get; }
 
     /// <summary>
+    /// Gets the <see cref="IReadModelReactors"/> for the event store.
+    /// </summary>
+    IReadModelReactors ReadModelReactors { get; }
+
+    /// <summary>
     /// Gets the <see cref="IEventSeeding"/> for the event store.
     /// </summary>
     IEventSeeding Seeding { get; }

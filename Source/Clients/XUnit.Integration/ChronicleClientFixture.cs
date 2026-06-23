@@ -120,6 +120,9 @@ public abstract class ChronicleClientFixture<TChronicleFixture> : IDisposable, I
     public virtual IEnumerable<Type> Reactors => GetArtifactTypes(provider => provider.Reactors);
 
     /// <inheritdoc/>
+    public virtual IEnumerable<Type> ReadModelReactors => GetArtifactTypes(provider => provider.ReadModelReactors);
+
+    /// <inheritdoc/>
     public virtual IEnumerable<Type> Reducers => GetArtifactTypes(provider => provider.Reducers);
 
     /// <inheritdoc/>

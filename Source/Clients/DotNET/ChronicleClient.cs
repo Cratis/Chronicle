@@ -17,7 +17,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle;
@@ -210,6 +209,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return;
         }
 
+        foreach (var eventStore in _eventStores.Values)
+        {
+            eventStore.ReadModelReactors.Dispose();
+        }
+
         try
         {
             _ownedConnectionCancellation?.Cancel();
@@ -233,7 +237,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return eventStore;
         }
 
-        var reactorSideEffectHandlers = CreateReactorSideEffectHandlers();
+        var reactorSideEffectHandlers = new ReactorSideEffectHandlers(
+            new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider));
 
         eventStore = new EventStore(
             name,
@@ -286,17 +291,6 @@ public class ChronicleClient : IChronicleClient, IDisposable
             eventStore.Connection.Lifecycle.OnConnected -= eventStore.RegisterAll;
         }
         _eventStores.Clear();
-    }
-
-    ReactorSideEffectHandlers CreateReactorSideEffectHandlers()
-    {
-        var discoveredHandlers = new InstancesOf<IReactorSideEffectHandler>(Types.Types.Instance, _serviceProvider);
-        var registeredHandlers = _serviceProvider.GetServices<IReactorSideEffectHandler>();
-        var handlers = discoveredHandlers
-            .Concat(registeredHandlers)
-            .DistinctBy(_ => _.GetType());
-
-        return new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>(handlers));
     }
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()

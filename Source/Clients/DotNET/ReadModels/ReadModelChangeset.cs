@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Events;
+
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
@@ -11,4 +13,12 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="ModelKey">The <see cref="ModelKey"/> for the model.</param>
 /// <param name="ReadModel">The instance of the read model.</param>
 /// <param name="Removed">Whether the read model was removed.</param>
-public record ReadModelChangeset<TReadModel>(EventStoreNamespaceName Namespace, ReadModelKey ModelKey, TReadModel? ReadModel, bool Removed);
+/// <param name="ChangeType">The <see cref="ReadModelChangeType"/> that occurred.</param>
+/// <param name="ChangeContext">The <see cref="EventContext"/> of the event that caused the change, when available.</param>
+public record ReadModelChangeset<TReadModel>(
+    EventStoreNamespaceName Namespace,
+    ReadModelKey ModelKey,
+    TReadModel? ReadModel,
+    bool Removed,
+    ReadModelChangeType ChangeType = ReadModelChangeType.Modified,
+    EventContext? ChangeContext = null);
