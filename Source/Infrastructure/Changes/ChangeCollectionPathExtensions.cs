@@ -56,17 +56,65 @@ public static class ChangeCollectionPathExtensions
     }
 
     /// <summary>
+    /// Gets the normalized paths of collections that are replaced as a whole by a single property difference.
+    /// </summary>
+    /// <param name="changes">The changes to inspect.</param>
+    /// <returns>A set of normalized collection paths replaced wholesale.</returns>
+    /// <remarks>
+    /// A difference whose property path ends in an array segment (e.g. the collapsed compliance difference
+    /// for <c>contacts</c>) replaces the entire collection in one <c>$set</c>. Any element-level difference
+    /// under that same collection must then be dropped — a sink cannot apply both a whole-collection
+    /// replacement and a positional update to the same path in one operation.
+    /// </remarks>
+    public static ISet<PropertyPath> GetWholeCollectionReplacementPaths(this IEnumerable<Change> changes)
+    {
+        var paths = new HashSet<PropertyPath>();
+
+        foreach (var propertiesChanged in changes.OfType<PropertiesChanged<ExpandoObject>>())
+        {
+            foreach (var difference in propertiesChanged.Differences)
+            {
+                if (difference.PropertyPath.LastSegment is ArrayProperty)
+                {
+                    paths.Add(difference.PropertyPath.NormalizeCollectionPath());
+                }
+            }
+        }
+
+        return paths;
+    }
+
+    /// <summary>
+    /// Check whether a property difference targets an element inside a collection that is replaced as a whole.
+    /// </summary>
+    /// <param name="difference">The property difference.</param>
+    /// <param name="wholeCollectionReplacementPaths">Collection paths replaced wholesale.</param>
+    /// <returns>True if the property difference is a strict descendant of a wholesale replacement; false otherwise.</returns>
+    public static bool ConflictsWithWholeCollectionReplacement(this PropertyDifference difference, ISet<PropertyPath> wholeCollectionReplacementPaths)
+    {
+        var normalizedPropertyPath = difference.PropertyPath.NormalizeCollectionPath();
+
+        return wholeCollectionReplacementPaths.Any(replacement =>
+            normalizedPropertyPath != replacement &&
+            replacement.IsSet &&
+            normalizedPropertyPath.Path.StartsWith($"{replacement.Path}.", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Applies property differences to an existing state object while excluding properties that conflict with child operations.
     /// </summary>
     /// <param name="propertiesChanged">The property change to apply.</param>
     /// <param name="state">The state to apply the changes to.</param>
     /// <param name="collectionPathsWithChildOperations">Collection paths with child operations.</param>
+    /// <param name="wholeCollectionReplacementPaths">Optional collection paths replaced wholesale; element-level differences under them are dropped.</param>
     /// <returns>A state object with non-conflicting property differences applied.</returns>
-    public static ExpandoObject ApplyToStateWithoutChildOperationConflicts(this PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject state, ISet<PropertyPath> collectionPathsWithChildOperations)
+    public static ExpandoObject ApplyToStateWithoutChildOperationConflicts(this PropertiesChanged<ExpandoObject> propertiesChanged, ExpandoObject state, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath>? wholeCollectionReplacementPaths = null)
     {
         var result = state.Clone();
 
-        foreach (var difference in propertiesChanged.Differences.Where(_ => !_.ConflictsWithChildOperation(collectionPathsWithChildOperations)))
+        foreach (var difference in propertiesChanged.Differences.Where(_ =>
+            !_.ConflictsWithChildOperation(collectionPathsWithChildOperations) &&
+            (wholeCollectionReplacementPaths is null || !_.ConflictsWithWholeCollectionReplacement(wholeCollectionReplacementPaths))))
         {
             difference.PropertyPath.SetValue(result, difference.Changed!, difference.ArrayIndexers);
         }

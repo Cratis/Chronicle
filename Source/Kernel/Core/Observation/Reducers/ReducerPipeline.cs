@@ -1,13 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections;
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -96,7 +94,7 @@ public class ReducerPipeline(
                 // unindexed array path cannot be applied safely by sinks, so replace that collection.
                 changeset.Add(new PropertiesChanged<ExpandoObject>(
                     null!,
-                    CollapseUnindexedCollectionDifferences(initial, encryptedState, differences)));
+                    differences.Collapse(initial, encryptedState)));
             }
         }
 
@@ -110,113 +108,5 @@ public class ReducerPipeline(
                 throw new InvalidOperationException($"Bulk operation failed for partition {firstFailure.EventSourceId} at sequence number {firstFailure.EventSequenceNumber}");
             }
         }
-    }
-
-    static List<PropertyDifference> CollapseUnindexedCollectionDifferences(
-        ExpandoObject? initial,
-        ExpandoObject changed,
-        IEnumerable<PropertyDifference> differences)
-    {
-        var result = new List<PropertyDifference>();
-        if (differences is null)
-        {
-            return result;
-        }
-
-        var collapsed = new HashSet<(PropertyPath PropertyPath, ArrayIndexers ArrayIndexers)>();
-
-        foreach (var difference in differences)
-        {
-            if (!TryGetUnindexedCollectionPath(difference, out var collectionPath))
-            {
-                result.Add(difference);
-                continue;
-            }
-
-            var collapsedKey = (collectionPath, difference.ArrayIndexers);
-            if (!collapsed.Add(collapsedKey))
-            {
-                continue;
-            }
-
-            result.Add(new PropertyDifference(
-                collectionPath,
-                GetValueAtPath(initial, collectionPath, difference.ArrayIndexers),
-                GetValueAtPath(changed, collectionPath, difference.ArrayIndexers),
-                difference.ArrayIndexers));
-        }
-
-        return result;
-    }
-
-    static bool TryGetUnindexedCollectionPath(PropertyDifference difference, out PropertyPath collectionPath)
-    {
-        collectionPath = PropertyPath.NotSet;
-
-        var currentPath = PropertyPath.Root;
-        var segments = difference.PropertyPath.Segments.ToArray();
-
-        for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
-        {
-            var segment = segments[segmentIndex];
-            currentPath += segment;
-
-            if (segment is ArrayProperty && !difference.ArrayIndexers.HasFor(currentPath))
-            {
-                collectionPath = currentPath;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static object? GetValueAtPath(ExpandoObject? instance, PropertyPath propertyPath, ArrayIndexers arrayIndexers)
-    {
-        object? current = instance;
-        var currentPath = PropertyPath.Root;
-
-        foreach (var segment in propertyPath.Segments)
-        {
-            if (current is not ExpandoObject expandoObject)
-            {
-                return null;
-            }
-
-            if (!(expandoObject as IDictionary<string, object?>).TryGetValue(segment.Value, out current))
-            {
-                return null;
-            }
-
-            currentPath += segment;
-
-            if (segment is ArrayProperty && arrayIndexers.HasFor(currentPath))
-            {
-                current = GetElementForIndexer(current, arrayIndexers.GetFor(currentPath));
-            }
-        }
-
-        return current;
-    }
-
-    static object? GetElementForIndexer(object? collection, ArrayIndexer indexer)
-    {
-        if (collection is not IEnumerable enumerable)
-        {
-            return null;
-        }
-
-        var elements = enumerable.Cast<object>().ToArray();
-        if (!indexer.IdentifierProperty.IsSet && indexer.Identifier is int index)
-        {
-            return elements.Length > index ? elements[index] : null;
-        }
-
-        return elements
-            .OfType<ExpandoObject>()
-            .Cast<IDictionary<string, object?>>()
-            .SingleOrDefault(_ =>
-                _.TryGetValue(indexer.IdentifierProperty.Path, out var identifier) &&
-                Equals(identifier, indexer.Identifier));
     }
 }

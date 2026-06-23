@@ -117,13 +117,14 @@ public class ChangesetConverter(
         var joinTasks = new List<Task>();
         var changesToApply = changes.ToList();
         var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
+        var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
 
         foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, propertiesChanged);
+                    hasChanges |= BuildPropertiesChanged(updateDefinitionBuilder, ref updateBuilder, arrayFiltersForDocument, collectionPathsWithChildOperations, wholeCollectionReplacementPaths, propertiesChanged);
                     break;
 
                 case ChildAdded childAdded:
@@ -174,18 +175,22 @@ public class ChangesetConverter(
         }
     }
 
-    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, PropertiesChanged<ExpandoObject> propertiesChanged)
+    bool BuildPropertiesChanged(UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ISet<PropertyPath> collectionPathsWithChildOperations, ISet<PropertyPath> wholeCollectionReplacementPaths, PropertiesChanged<ExpandoObject> propertiesChanged)
     {
         var allArrayFilters = new List<BsonDocumentArrayFilterDefinition<BsonDocument>>();
 
         // Sink-owned system properties (e.g. __lastHandledEventSequenceNumber) are written via a
         // dedicated $max operator in BuildLastHandledEventSequenceNumber. Including them in the
         // generic $set path here produces two operators targeting the same field, which MongoDB
-        // rejects with "Updating the path 'X' would create a conflict at 'X'".
+        // rejects with "Updating the path 'X' would create a conflict at 'X'". The same conflict
+        // arises between a whole-collection $set (e.g. the collapsed compliance difference) and a
+        // positional $set on an element of that collection, so element-level differences under a
+        // wholesale replacement are dropped here — the whole-collection value already carries them.
         var applicableDifferences = propertiesChanged.Differences
             .Where(_ => !_.PropertyPath.IsMongoDBKey()
                 && !_.PropertyPath.IsSinkOwnedSystemProperty()
-                && !_.ConflictsWithChildOperation(collectionPathsWithChildOperations))
+                && !_.ConflictsWithChildOperation(collectionPathsWithChildOperations)
+                && !_.ConflictsWithWholeCollectionReplacement(wholeCollectionReplacementPaths))
             .ToArray();
 
         foreach (var propertyDifference in applicableDifferences)
