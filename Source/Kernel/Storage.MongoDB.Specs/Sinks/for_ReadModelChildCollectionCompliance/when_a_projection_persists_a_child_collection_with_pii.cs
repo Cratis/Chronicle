@@ -141,28 +141,22 @@ public class when_a_projection_persists_a_child_collection_with_pii(when_a_proje
             StoredChildNameIsBase64 = IsBase64(StoredChildName);
 
             // Release the stored child element through the compliance manager using the child element schema,
-            // mirroring the per-array-element decryption the read path performs. With the child written in the
-            // clear (the regression) this throws trying to base64-decode plaintext, leaving the released name empty.
-            try
-            {
-                var childSchema = schema.GetSchemaForPropertyPath("contacts");
-                var releasedChild = await complianceManager.Release(
-                    EventStore,
-                    EventStoreNamespace,
-                    childSchema,
-                    Identifier,
-                    new JsonObject
-                    {
-                        ["contactId"] = storedChild["contactId"].AsString,
-                        ["name"] = storedChild["name"].AsString,
-                        ["status"] = storedChild["status"].AsString
-                    });
-                ReleasedChildName = releasedChild["name"]!.GetValue<string>();
-            }
-            catch
-            {
-                ReleasedChildName = string.Empty;
-            }
+            // mirroring the per-array-element decryption the read path performs. With the child encrypted at
+            // rest this round-trips to the original plaintext; were it persisted in the clear, this release
+            // would throw trying to base64-decode plaintext and fail the spec.
+            var childSchema = schema.GetSchemaForPropertyPath("contacts");
+            var releasedChild = await complianceManager.Release(
+                EventStore,
+                EventStoreNamespace,
+                childSchema,
+                Identifier,
+                new JsonObject
+                {
+                    ["contactId"] = storedChild["contactId"].AsString,
+                    ["name"] = storedChild["name"].AsString,
+                    ["status"] = storedChild["status"].AsString
+                });
+            ReleasedChildName = releasedChild["name"]!.GetValue<string>();
         }
 
         public async Task DisposeAsync()
