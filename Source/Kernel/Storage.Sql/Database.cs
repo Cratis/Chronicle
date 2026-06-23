@@ -476,6 +476,15 @@ public class Database(IServiceProvider serviceProvider, IOptions<ChronicleOption
         builder
             .UseApplicationServiceProvider(serviceProvider)
             .AddConceptAsSupport();
+
+        // SQLite serializes writers on a database-wide lock; the kernel writes from many grains at
+        // once, so without WAL + a busy timeout concurrent writes fail with SQLITE_BUSY and stall
+        // observer catch-up. The interceptor applies those pragmas on every SQLite connection.
+        if (connectionString.GetDatabaseType() == DatabaseType.Sqlite)
+        {
+            builder.AddInterceptors(SqlitePragmaConnectionInterceptor.Instance);
+        }
+
         return builder.Options;
     }
 

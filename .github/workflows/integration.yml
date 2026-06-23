@@ -23,37 +23,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Each client namespace runs against all five infrastructure configs;
+      # large namespaces are additionally split into parallel shards so the
+      # slowest single job no longer gates the whole run. The shard set covers
+      # exactly the same tests as the un-sharded namespace -- see the script.
       - name: Discover Client integration namespaces
         id: client
         run: |
-          namespaces=""
-          while IFS= read -r dir; do
-            if grep -R -q '\[Fact\]' "$dir" --include='*.cs'; then
-              namespaces+="$(basename "$dir")"$'\n'
-            fi
-          done < <(find Integration/Client -mindepth 1 -maxdepth 1 -type d ! -name 'bin' ! -name 'obj' | sort)
-
-          namespaces=$(echo "$namespaces" | sed '/^$/d' | sort -u)
-
-          # mode|database|needs-docker
-          declare -a configs=(
-            "inprocess|mongodb|false"
-            "outofprocess|mongodb|true"
-            "outofprocess|sqlite|true"
-            "outofprocess|postgresql|true"
-            "outofprocess|mssql|true"
-          )
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            for config in "${configs[@]}"; do
-              IFS='|' read -r mode database needs_docker <<< "$config"
-              matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.${ns}\",\"mode\":\"${mode}\",\"database\":\"${database}\",\"needs-docker\":${needs_docker}},"
-            done
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py)" >> "$GITHUB_OUTPUT"
 
       - name: Discover Kernel integration namespaces
         id: kernel
@@ -81,13 +58,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # The integration test projects target net10.0 only (Directory.Build.props),
+      # and these jobs only run already-built net10.0 assemblies, so installing the
+      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.410
-            9.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore build output
         uses: actions/cache@v4
@@ -126,12 +104,16 @@ jobs:
               docker pull mcr.microsoft.com/mssql/server:2025-latest
             fi
 
-      - name: Run Client integration tests (${{ matrix.namespace }} | ${{ matrix.mode }} | ${{ matrix.database }})
+      - name: Run Client integration tests (${{ matrix.namespace }} ${{ matrix.shard }} | ${{ matrix.mode }} | ${{ matrix.database }})
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
-          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '600' }}
+          # A genuine eventual-consistency wait settles in seconds; a wait that
+          # runs for minutes is a flake, not slow progress. Cap the non-Mongo
+          # backends well below the old 600s so a stuck poll costs ~150s, not 10
+          # minutes, before the retry script re-runs only the failed test(s).
+          CHRONICLE_TEST_TIMEOUT_SECONDS: ${{ matrix.database == 'mongodb' && '120' || '150' }}
           # Ryuk is the Testcontainers reaper sidecar. It exists to clean
           # up containers when the host process dies unexpectedly. GitHub-
           # hosted runners are destroyed after the job, so Ryuk has nothing
@@ -145,19 +127,24 @@ jobs:
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
         # without retrying, and a deterministic failure stays red on every attempt.
+        #
+        # --no-build: the restored cache is the DEVELOPMENT-symbol build from
+        # dotnet-build-development, so the shard runs it directly instead of
+        # recompiling the kernel from source. The restore step above still
+        # regenerates project.assets.json and the package cache for the test host.
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             -p:DisableDockerBuild=true \
-            -p:EnableDevelopmentSymbol=true \
+            --no-build \
             --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.mode }}-${{ matrix.database }}
+          name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ./coverage-results/
           retention-days: 1
 
@@ -172,13 +159,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # The integration test projects target net10.0 only (Directory.Build.props),
+      # and these jobs only run already-built net10.0 assemblies, so installing the
+      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            8.0.410
-            9.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore build output
         uses: actions/cache@v4
@@ -211,7 +199,7 @@ jobs:
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "FullyQualifiedName~${{ matrix.namespace }}" \
-            -p:EnableDevelopmentSymbol=true \
+            --no-build \
             --collect:"XPlat Code Coverage"
 
       - name: Upload coverage results

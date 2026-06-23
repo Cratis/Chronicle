@@ -10,6 +10,9 @@ env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
   DOTNET_OBJ_CACHE: "dotnet-obj-cache-${{ github.sha }}"
+  # Separate cache for the DEVELOPMENT-symbol build the integration tests consume.
+  DOTNET_DEV_CACHE: "dotnet-dev-cache-${{ github.sha }}"
+  DOTNET_DEV_OBJ_CACHE: "dotnet-dev-obj-cache-${{ github.sha }}"
   CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:${{ github.sha }}"
 
 on:
@@ -95,6 +98,65 @@ jobs:
           echo "key=${{ env.DOTNET_CACHE }}" >> "$GITHUB_OUTPUT"
           echo "image=${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}" >> "$GITHUB_OUTPUT"
 
+  # The integration tests run with the DEVELOPMENT compile symbol, which the
+  # Release build above does not define, so every integration shard would
+  # otherwise recompile ~15-20 projects from source before its first test.
+  # Build that variant once here -- in parallel with dotnet-build, so it does
+  # not extend the critical path -- and cache it under its own key for the
+  # shards to restore and run with --no-build. The non-DEVELOPMENT cache stays
+  # for the specs/mongodb/integration-api jobs, which must exercise production
+  # (non-DEVELOPMENT) behavior.
+  dotnet-build-development:
+    runs-on: ubuntu-latest
+    outputs:
+      dotnet-cache-key: ${{ steps.export-dev-cache-key.outputs.key }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore obj cache
+        uses: actions/cache@v4
+        with:
+          path: ./**/obj
+          key: ${{ env.DOTNET_DEV_OBJ_CACHE }}
+          restore-keys: |
+            dotnet-dev-obj-cache-
+
+      - uses: actions/cache@v4
+        id: dotnet-dev-output
+        with:
+          path: ./**/bin
+          key: ${{ env.DOTNET_DEV_CACHE }}
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Build with DEVELOPMENT symbol
+        run: dotnet build --configuration Release -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
+
+      - name: Export dev cache key
+        id: export-dev-cache-key
+        run: echo "key=${{ env.DOTNET_DEV_CACHE }}" >> "$GITHUB_OUTPUT"
+
   specs:
     runs-on: ubuntu-latest
     needs: [dotnet-build]
@@ -130,11 +192,13 @@ jobs:
           retention-days: 1
 
   integration:
-    needs: [dotnet-build]
+    needs: [dotnet-build, dotnet-build-development]
     uses: ./.github/workflows/integration.yml
     secrets: inherit
     with:
-      dotnet-cache-key: ${{ needs.dotnet-build.outputs.dotnet-cache-key }}
+      # Integration shards restore the DEVELOPMENT-symbol build and run --no-build;
+      # the Docker image still comes from dotnet-build.
+      dotnet-cache-key: ${{ needs.dotnet-build-development.outputs.dotnet-cache-key }}
       chronicle-image: ${{ needs.dotnet-build.outputs.chronicle-image }}
 
   integration-api:

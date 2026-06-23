@@ -204,5 +204,13 @@ public record AccountInfoWithConstantKeyOnDecrement(
     [Decrement<WithdrawalFromDebitAccountPerformed>(ConstantKey = "fixed-key")]
     double Balance);
 
+[RemovedWith<ReadModelRemovedEmpty>]
+public record RemovableReadModelWithEmptyEvent(
+    [Key]
+    Guid Id,
+
+    [SetFrom<DebitAccountOpened>(nameof(DebitAccountOpened.Name))]
+    string Name);
+
 #pragma warning restore SA1402 // File may only contain a single type
 #pragma warning restore SA1649 // File name should match first type name
