@@ -153,6 +153,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
                 schemaProperty.IsArray ? schemaProperty.Item!.Reference ?? schemaProperty.Item : schemaProperty.ActualTypeSchema);
         }
 
+        // A coarse [PII] value on a whole list/array is blob-encrypted to a single ciphertext string,
+        // even though the schema type stays Array. Serialize it as that scalar string rather than letting
+        // the array branch below treat the string as an enumerable of characters — which would shred the
+        // ciphertext into per-character elements and break the encrypt -> store -> read -> release round trip.
+        if (value is string ciphertext && schemaProperty.Type.HasFlag(JsonObjectType.Array))
+        {
+            return JsonValue.Create(ciphertext);
+        }
+
         if (schemaProperty.Type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {
             var items = new List<JsonNode?>();
