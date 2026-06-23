@@ -108,6 +108,9 @@ jobs:
   # (non-DEVELOPMENT) behavior.
   dotnet-build-development:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     outputs:
       dotnet-cache-key: ${{ steps.export-dev-cache-key.outputs.key }}
 
@@ -193,6 +196,9 @@ jobs:
 
   integration:
     needs: [dotnet-build, dotnet-build-development]
+    permissions:
+      contents: read
+      packages: read
     uses: ./.github/workflows/integration.yml
     secrets: inherit
     with:
