@@ -1,9 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -64,9 +67,62 @@ public class EncryptChangeset(
 
         if (propertyDifferences.Count != 0)
         {
-            context.Changeset.Add(new PropertiesChanged<System.Dynamic.ExpandoObject>(encrypted, propertyDifferences));
+            context.Changeset.Add(new PropertiesChanged<ExpandoObject>(encrypted, propertyDifferences));
         }
 
+        // Child-collection changes (ChildAdded, and children carried through Joined/ResolvedJoin) hold the
+        // materialized child built from the decrypted event and bypass the root-snapshot encryption above.
+        // The read path descends into arrays and decrypts per element, so these child payloads must be
+        // encrypted symmetrically on write — otherwise child-element PII is persisted in the clear and then
+        // fails to release on read.
+        await EncryptComplianceForChildren(schema, identifier, context.Changeset.Changes);
+
         return context;
+    }
+
+    async Task EncryptComplianceForChildren(JsonSchema schema, string identifier, IEnumerable<Change> changes)
+    {
+        foreach (var change in changes)
+        {
+            switch (change)
+            {
+                case ChildAdded { Child: ExpandoObject child } childAdded:
+                    await EncryptComplianceForChild(schema, childAdded.ChildrenProperty, identifier, child);
+                    break;
+
+                case Joined joined:
+                    await EncryptComplianceForChildren(schema, identifier, joined.Changes);
+                    break;
+
+                case ResolvedJoin resolvedJoin:
+                    await EncryptComplianceForChildren(schema, identifier, resolvedJoin.Changes);
+                    break;
+            }
+        }
+    }
+
+    async Task EncryptComplianceForChild(JsonSchema schema, PropertyPath childrenProperty, string identifier, ExpandoObject child)
+    {
+        var childSchema = schema.GetSchemaForPropertyPath(childrenProperty);
+        if (childSchema?.HasComplianceMetadata() != true)
+        {
+            return;
+        }
+
+        var encryptedChild = await readModelsCompliance.Apply(eventStore, eventStoreNamespace, childSchema, identifier, child);
+
+        // Apply writes the document compliance subject (__subject) into the result; a child element lives
+        // under the root document's subject and must not carry its own, so strip it before merging back.
+        var encryptedValues = (IDictionary<string, object?>)encryptedChild;
+        encryptedValues.Remove(WellKnownProperties.Subject);
+
+        // The MongoDB sink reads the child object directly when building the $push, so overwrite the child
+        // in place with its encrypted values rather than replacing the change in the changeset.
+        var childValues = (IDictionary<string, object?>)child;
+        childValues.Clear();
+        foreach (var (key, value) in encryptedValues)
+        {
+            childValues[key] = value;
+        }
     }
 }
