@@ -225,13 +225,14 @@ public class InMemorySink(
     {
         var changesToApply = changes.ToList();
         var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
+        var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
 
         foreach (var change in changesToApply)
         {
             switch (change)
             {
                 case PropertiesChanged<ExpandoObject> propertiesChanged:
-                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations);
+                    state = propertiesChanged.ApplyToStateWithoutChildOperationConflicts(state, collectionPathsWithChildOperations, wholeCollectionReplacementPaths);
                     break;
 
                 case ChildAdded childAdded:

@@ -51,8 +51,14 @@ public class EncryptChangeset(
             currentState);
 
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
+
+        // Apply re-encrypts the whole snapshot, so the comparer reports a difference for every PII member —
+        // including members inside child collections (e.g. contacts.contactEmail). Those nested differences
+        // carry no array indexers, so collapse them into a single whole-collection replacement; otherwise the
+        // sink emits a non-positional dotted $set that MongoDB rejects with WriteError Code 28. This mirrors
+        // the guarantee the reducer pipeline already relies on for reducer-owned collections.
         var propertyDifferences = hasDifferences && differences is not null
-            ? differences.ToList()
+            ? differences.Collapse(currentState, encrypted).ToList()
             : [];
 
         var encryptedStateAsDictionary = (IDictionary<string, object?>)encrypted;
