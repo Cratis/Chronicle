@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity.given;
 /// are compared so that any divergence in how the two sinks apply a changeset fails the spec.
 /// </summary>
 /// <param name="fixture">The shared <see cref="MongoDBFixture"/> providing a MongoDB container.</param>
-public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
+public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
 {
     readonly ObjectComparer _objectComparer = new();
 
@@ -36,17 +36,29 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
     Sink _mongoSink = default!;
     ReducerPipeline _inMemoryPipeline = default!;
     ReducerPipeline _mongoPipeline = default!;
+    IReadModelsCompliance _compliance = default!;
     JsonSchema _schema = default!;
     Key _key = default!;
 
-    /// <summary>Gets the read-model type whose schema drives the sinks.</summary>
-    protected abstract Type ReadModelType { get; }
+    /// <summary>Gets the read-model type whose schema drives the sinks (when <see cref="CreateSchema"/> is not overridden).</summary>
+    protected virtual Type ReadModelType => typeof(object);
 
     /// <summary>Gets the key value the read model is stored under.</summary>
     protected virtual object KeyValue => "root-1";
 
     /// <summary>Gets the ordered projected states applied (each factory produces a fresh instance per sink).</summary>
     protected abstract IReadOnlyList<Func<ExpandoObject>> States { get; }
+
+    /// <summary>Creates the read-model schema. Override to build from JSON (e.g. to carry compliance metadata).</summary>
+    /// <returns>The read-model <see cref="JsonSchema"/>.</returns>
+    protected virtual JsonSchema CreateSchema() => JsonSchema.FromType(ReadModelType);
+
+    /// <summary>Creates the compliance used by both pipelines. Override to drive real encrypt-at-rest.</summary>
+    /// <returns>The <see cref="IReadModelsCompliance"/> shared by both sinks.</returns>
+    protected virtual IReadModelsCompliance CreateCompliance() => new PassthroughReadModelsCompliance();
+
+    /// <summary>Gets a value indicating whether stored state is released (decrypted) before the cross-sink comparison.</summary>
+    protected virtual bool ReleaseBeforeComparing => false;
 
     public ExpandoObject? InMemoryResult { get; private set; }
 
@@ -57,12 +69,12 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
     /// <summary>Gets a human-readable description of any divergence, or empty when the sinks match.</summary>
     public string ParityReport { get; private set; } = string.Empty;
 
-    public async Task InitializeAsync()
+    async Task Establish()
     {
         _databaseName = $"chronicle_sink_parity_{Guid.NewGuid():N}";
         _client = new MongoClient(fixture.ConnectionString);
         var database = _client.GetDatabase(_databaseName);
-        _schema = JsonSchema.FromType(ReadModelType);
+        _schema = CreateSchema();
         _key = new Key(KeyValue, ArrayIndexers.NoIndexers);
 
         var typeFormats = new TypeFormats();
@@ -76,9 +88,9 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
         var changesetConverter = new ChangesetConverter(readModel, mongoDBConverter, collections, expandoObjectConverter);
         _mongoSink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter);
 
-        var compliance = new PassthroughReadModelsCompliance();
-        _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, compliance, "test-store", "test-namespace");
-        _mongoPipeline = new ReducerPipeline(readModel, _mongoSink, _objectComparer, compliance, "test-store", "test-namespace");
+        _compliance = CreateCompliance();
+        _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, _compliance, "test-store", "test-namespace");
+        _mongoPipeline = new ReducerPipeline(readModel, _mongoSink, _objectComparer, _compliance, "test-store", "test-namespace");
 
         foreach (var state in States)
         {
@@ -90,10 +102,15 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
 
         if (InMemoryResult is not null && MongoResult is not null)
         {
+            // With real encryption the two sinks store non-deterministic ciphertext, so a meaningful
+            // cross-sink comparison is of the released (decrypted) read models, not the bytes at rest.
+            var inMemory = ReleaseBeforeComparing ? await _compliance.Release("test-store", "test-namespace", _schema, InMemoryResult) : InMemoryResult;
+            var mongo = ReleaseBeforeComparing ? await _compliance.Release("test-store", "test-namespace", _schema, MongoResult) : MongoResult;
+
             // Compare the read-model data only. Sink-internal metadata (the '__'-prefixed
             // last-handled-sequence-number and friends) is not part of the projected read model
             // and is legitimately tracked differently by each sink.
-            _objectComparer.Compare(WithoutMetadata(InMemoryResult), WithoutMetadata(MongoResult), out var differences);
+            _objectComparer.Compare(WithoutMetadata(inMemory), WithoutMetadata(mongo), out var differences);
             ParityDifferences = differences.ToArray();
             ParityReport = string.Join(
                 " || ",
@@ -116,7 +133,7 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : IAsyncLifetime
         return clone;
     }
 
-    public async Task DisposeAsync()
+    async Task Destroy()
     {
         _inMemorySink?.Dispose();
         if (_databaseName is not null)

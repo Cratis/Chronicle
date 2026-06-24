@@ -6,26 +6,23 @@ using System.Dynamic;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity;
 
 [Collection(MongoDBCollection.Name)]
-public class when_a_reducer_updates_a_nested_object(when_a_reducer_updates_a_nested_object.context ctx) : IClassFixture<when_a_reducer_updates_a_nested_object.context>
+public class when_a_reducer_updates_a_nested_object(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
 {
-    public class context(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
-    {
-        protected override Type ReadModelType => typeof(Profile);
+    protected override Type ReadModelType => typeof(Profile);
 
-        protected override IReadOnlyList<Func<ExpandoObject>> States =>
-        [
-            () => CreateProfile("Oslo", "Norway"),
-            () => CreateProfile("Bergen", "Norway")
-        ];
+    protected override IReadOnlyList<Func<ExpandoObject>> States =>
+    [
+        () => CreateProfile("Oslo", "Norway"),
+        () => CreateProfile("Bergen", "Norway")
+    ];
 
-        static ExpandoObject CreateProfile(string city, string country) =>
-            Expando(
-                ("id", "root-1"),
-                ("home", Expando(("city", city), ("country", country))));
+    [Fact] void should_apply_identically_across_sinks() => ParityReport.ShouldEqual(string.Empty);
 
-        record Address(string City, string Country);
-        record Profile(string Id, Address Home);
-    }
+    static ExpandoObject CreateProfile(string city, string country) =>
+        Expando(
+            ("id", "root-1"),
+            ("home", Expando(("city", city), ("country", country))));
 
-    [Fact] void should_apply_identically_across_sinks() => ctx.ParityReport.ShouldEqual(string.Empty);
+    record Address(string City, string Country);
+    record Profile(string Id, Address Home);
 }

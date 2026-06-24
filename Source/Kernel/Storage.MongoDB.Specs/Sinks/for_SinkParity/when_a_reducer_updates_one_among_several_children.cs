@@ -6,26 +6,23 @@ using System.Dynamic;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity;
 
 [Collection(MongoDBCollection.Name)]
-public class when_a_reducer_updates_one_among_several_children(when_a_reducer_updates_one_among_several_children.context ctx) : IClassFixture<when_a_reducer_updates_one_among_several_children.context>
+public class when_a_reducer_updates_one_among_several_children(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
 {
-    public class context(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
-    {
-        protected override Type ReadModelType => typeof(Team);
+    protected override Type ReadModelType => typeof(Team);
 
-        protected override IReadOnlyList<Func<ExpandoObject>> States =>
-        [
-            () => CreateTeam(("member-1", "active"), ("member-2", "active"), ("member-3", "active")),
-            () => CreateTeam(("member-1", "active"), ("member-2", "promoted"), ("member-3", "active"))
-        ];
+    protected override IReadOnlyList<Func<ExpandoObject>> States =>
+    [
+        () => CreateTeam(("member-1", "active"), ("member-2", "active"), ("member-3", "active")),
+        () => CreateTeam(("member-1", "active"), ("member-2", "promoted"), ("member-3", "active"))
+    ];
 
-        static ExpandoObject CreateTeam(params (string Id, string Status)[] members) =>
-            Expando(
-                ("id", "root-1"),
-                ("members", members.Select(m => (object)Expando(("memberId", m.Id), ("status", m.Status))).ToArray()));
+    [Fact] void should_apply_identically_across_sinks() => ParityReport.ShouldEqual(string.Empty);
 
-        record Member(string MemberId, string Status);
-        record Team(string Id, IEnumerable<Member> Members);
-    }
+    static ExpandoObject CreateTeam(params (string Id, string Status)[] members) =>
+        Expando(
+            ("id", "root-1"),
+            ("members", members.Select(m => (object)Expando(("memberId", m.Id), ("status", m.Status))).ToArray()));
 
-    [Fact] void should_apply_identically_across_sinks() => ctx.ParityReport.ShouldEqual(string.Empty);
+    record Member(string MemberId, string Status);
+    record Team(string Id, IEnumerable<Member> Members);
 }
