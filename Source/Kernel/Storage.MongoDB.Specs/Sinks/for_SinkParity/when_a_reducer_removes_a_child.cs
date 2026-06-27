@@ -6,26 +6,23 @@ using System.Dynamic;
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_SinkParity;
 
 [Collection(MongoDBCollection.Name)]
-public class when_a_reducer_removes_a_child(when_a_reducer_removes_a_child.context ctx) : IClassFixture<when_a_reducer_removes_a_child.context>
+public class when_a_reducer_removes_a_child(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
 {
-    public class context(MongoDBFixture fixture) : given.a_parity_scenario(fixture)
-    {
-        protected override Type ReadModelType => typeof(Team);
+    protected override Type ReadModelType => typeof(Team);
 
-        protected override IReadOnlyList<Func<ExpandoObject>> States =>
-        [
-            () => CreateTeam("member-1", "member-2", "member-3"),
-            () => CreateTeam("member-1", "member-3")
-        ];
+    protected override IReadOnlyList<Func<ExpandoObject>> States =>
+    [
+        () => CreateTeam("member-1", "member-2", "member-3"),
+        () => CreateTeam("member-1", "member-3")
+    ];
 
-        static ExpandoObject CreateTeam(params string[] memberIds) =>
-            Expando(
-                ("id", "root-1"),
-                ("members", memberIds.Select(id => (object)Expando(("memberId", id), ("status", "active"))).ToArray()));
+    [Fact] void should_apply_identically_across_sinks() => ParityReport.ShouldEqual(string.Empty);
 
-        record Member(string MemberId, string Status);
-        record Team(string Id, IEnumerable<Member> Members);
-    }
+    static ExpandoObject CreateTeam(params string[] memberIds) =>
+        Expando(
+            ("id", "root-1"),
+            ("members", memberIds.Select(id => (object)Expando(("memberId", id), ("status", "active"))).ToArray()));
 
-    [Fact] void should_apply_identically_across_sinks() => ctx.ParityReport.ShouldEqual(string.Empty);
+    record Member(string MemberId, string Status);
+    record Team(string Id, IEnumerable<Member> Members);
 }

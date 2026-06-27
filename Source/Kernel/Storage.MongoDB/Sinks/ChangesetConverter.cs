@@ -182,15 +182,12 @@ public class ChangesetConverter(
         // Sink-owned system properties (e.g. __lastHandledEventSequenceNumber) are written via a
         // dedicated $max operator in BuildLastHandledEventSequenceNumber. Including them in the
         // generic $set path here produces two operators targeting the same field, which MongoDB
-        // rejects with "Updating the path 'X' would create a conflict at 'X'". The same conflict
-        // arises between a whole-collection $set (e.g. the collapsed compliance difference) and a
-        // positional $set on an element of that collection, so element-level differences under a
-        // wholesale replacement are dropped here — the whole-collection value already carries them.
+        // rejects with "Updating the path 'X' would create a conflict at 'X'". WithoutCollectionConflicts
+        // applies the same rule to element-level differences that collide with a child operation or a
+        // whole-collection replacement on the same collection.
         var applicableDifferences = propertiesChanged.Differences
-            .Where(_ => !_.PropertyPath.IsMongoDBKey()
-                && !_.PropertyPath.IsSinkOwnedSystemProperty()
-                && !_.ConflictsWithChildOperation(collectionPathsWithChildOperations)
-                && !_.ConflictsWithWholeCollectionReplacement(wholeCollectionReplacementPaths))
+            .Where(_ => !_.PropertyPath.IsMongoDBKey() && !_.PropertyPath.IsSinkOwnedSystemProperty())
+            .WithoutCollectionConflicts(collectionPathsWithChildOperations, wholeCollectionReplacementPaths)
             .ToArray();
 
         foreach (var propertyDifference in applicableDifferences)

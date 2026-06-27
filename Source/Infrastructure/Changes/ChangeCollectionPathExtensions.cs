@@ -101,6 +101,27 @@ public static class ChangeCollectionPathExtensions
     }
 
     /// <summary>
+    /// Filters property differences, dropping those that target an element inside a collection that is
+    /// concurrently modified by a child operation (push/pull) or replaced wholesale by a single $set.
+    /// </summary>
+    /// <param name="differences">The property differences to filter.</param>
+    /// <param name="collectionPathsWithChildOperations">Collection paths with child operations.</param>
+    /// <param name="wholeCollectionReplacementPaths">Optional collection paths replaced wholesale; element-level differences under them are dropped.</param>
+    /// <returns>The non-conflicting property differences.</returns>
+    /// <remarks>
+    /// A sink cannot apply both a collection-level operation and an element-level update to the same path in
+    /// one operation — MongoDB rejects it as a path conflict — so the element-level difference is dropped;
+    /// the child operation or whole-collection replacement already carries the latest element value.
+    /// </remarks>
+    public static IEnumerable<PropertyDifference> WithoutCollectionConflicts(
+        this IEnumerable<PropertyDifference> differences,
+        ISet<PropertyPath> collectionPathsWithChildOperations,
+        ISet<PropertyPath>? wholeCollectionReplacementPaths = null) =>
+        differences.Where(_ =>
+            !_.ConflictsWithChildOperation(collectionPathsWithChildOperations) &&
+            (wholeCollectionReplacementPaths is null || !_.ConflictsWithWholeCollectionReplacement(wholeCollectionReplacementPaths)));
+
+    /// <summary>
     /// Applies property differences to an existing state object while excluding properties that conflict with child operations.
     /// </summary>
     /// <param name="propertiesChanged">The property change to apply.</param>
@@ -112,9 +133,7 @@ public static class ChangeCollectionPathExtensions
     {
         var result = state.Clone();
 
-        foreach (var difference in propertiesChanged.Differences.Where(_ =>
-            !_.ConflictsWithChildOperation(collectionPathsWithChildOperations) &&
-            (wholeCollectionReplacementPaths is null || !_.ConflictsWithWholeCollectionReplacement(wholeCollectionReplacementPaths))))
+        foreach (var difference in propertiesChanged.Differences.WithoutCollectionConflicts(collectionPathsWithChildOperations, wholeCollectionReplacementPaths))
         {
             difference.PropertyPath.SetValue(result, difference.Changed!, difference.ArrayIndexers);
         }
