@@ -201,7 +201,8 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 _eventTypes,
                 _artifactsActivator,
                 _serviceProvider,
-                _namingPolicy);
+                _namingPolicy,
+                _initialState);
         }
 
         var projectionDefinition = FindProjectionDefinition(readModelType);
