@@ -169,6 +169,7 @@ internal static class ProjectionReadModelProcessor
         // we mirror that mapping ourselves before serializing the state — otherwise identifier
         // properties whose only source is the event-source ID surface as null in _scenario.Instance.
         KernelKey? rootKey = null;
+        var removed = false;
 
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
 
@@ -176,9 +177,10 @@ internal static class ProjectionReadModelProcessor
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            var (newState, eventKey) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents);
+            var (newState, eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents);
             state = newState;
             rootKey ??= eventKey;
+            removed = eventRemoved;
         }
 
         // Retry deferred events once; if still deferred, throw a descriptive exception.
@@ -205,8 +207,24 @@ internal static class ProjectionReadModelProcessor
                 false);
 
             HandleEventFor(engineProjection, context);
-            state = ApplyActualChanges(key, changeset.Changes, state);
+            if (changeset.Changes.Any(change => change is Removed))
+            {
+                state = new ExpandoObject();
+                removed = true;
+            }
+            else
+            {
+                state = ApplyActualChanges(key, changeset.Changes, state);
+            }
+
             await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
+        }
+
+        // A root-level removal (a class-level [RemovedWith]) deletes the read model document in the real
+        // sink; mirror that here by returning null rather than the stale pre-removal state.
+        if (removed)
+        {
+            return null;
         }
 
         InjectIdentifierFromKey<TReadModel>(state, rootKey);
@@ -336,7 +354,7 @@ internal static class ProjectionReadModelProcessor
         return schemas;
     }
 
-    static async Task<(ExpandoObject State, KernelKey? Key)> ProcessSingleEvent(
+    static async Task<(ExpandoObject State, KernelKey? Key, bool Removed)> ProcessSingleEvent(
         KernelProjectionEngine::IProjection projection,
         InMemoryEventSequenceStorage eventSequenceStorage,
         InMemorySink sink,
@@ -350,7 +368,7 @@ internal static class ProjectionReadModelProcessor
         if (keyResult is KernelProjectionEngine::DeferredKey)
         {
             deferredEvents.Enqueue(@event);
-            return (state, null);
+            return (state, null, false);
         }
 
         var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
@@ -362,9 +380,13 @@ internal static class ProjectionReadModelProcessor
             false);
 
         HandleEventFor(projection, context);
-        var updatedState = ApplyActualChanges(key, changeset.Changes, state);
+
+        // A root-level removal yields a Removed change, which the real sink applies by deleting the
+        // document. Mirror that by resetting the threaded state so any subsequent re-create starts clean.
+        var removed = changeset.Changes.Any(change => change is Removed);
+        var updatedState = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
         await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
-        return (updatedState, key);
+        return (updatedState, key, removed);
     }
 
     static KernelReadModels::ReadModelDefinition BuildKernelReadModelDefinition(Type readModelType, JsonSchema schema)
@@ -428,6 +450,10 @@ internal static class ProjectionReadModelProcessor
 
                 case ChildRemoved childRemoved:
                     ApplyChildRemoved(state, childRemoved);
+                    break;
+
+                case NestedCleared nestedCleared:
+                    ((IDictionary<string, object?>)state)[nestedCleared.NestedProperty.LastSegment.Value] = null;
                     break;
 
                 case Joined joined:
