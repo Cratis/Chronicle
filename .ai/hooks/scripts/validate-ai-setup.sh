@@ -50,31 +50,28 @@ for p in .ai/prompts/*.md; do
     grep -Eq '^description:' "$p" || fail "$p: prompt missing description frontmatter"
 done
 
-# ── Adapter integrity: every rule resolves to its canonical .ai/rules/<name>.md through both
-#    a GitHub adapter (.github/instructions/<name>.instructions.md) and a Claude adapter
-#    (.claude/rules/<name>.md). Each may be a symlink OR a path-reference file — both encode the
-#    same relative target; the check is that it *resolves* to the right rule, not its file type. ──
+# ── Adapter integrity ──
+#    GitHub: .github/instructions is a single FOLDER symlink → ../.ai/rules, so rules are
+#      maintained in one place (no per-file adapter). Caveat: Copilot's applyTo discovery expects
+#      the .instructions.md suffix, which a folder symlink does not provide — documented in
+#      managing-ai-rules.md. The structural check here is that the folder symlink resolves to .ai/rules.
+#    Claude: every rule still resolves through a per-file adapter (.claude/rules/<name>.md), which
+#      may be a symlink OR a path-reference file — both encode the same relative target; the check is
+#      that it *resolves* to the right rule, not its file type. ──
 adapter_target() {  # prints the relative target encoded by an adapter (symlink target or file body)
     local p="$1"
     if [[ -L "$p" ]]; then readlink "$p"; else cat "$p"; fi
 }
+if [[ ! -L .github/instructions ]]; then fail ".github/instructions: expected folder symlink → ../.ai/rules"
+elif [[ "$(readlink .github/instructions)" != "../.ai/rules" ]]; then fail ".github/instructions: expected target '../.ai/rules'"
+elif [[ ! -d .github/instructions ]]; then fail ".github/instructions: symlink does not resolve to .ai/rules"; fi
 for rule in .ai/rules/*.md; do
     [[ -e "$rule" ]] || continue
     name="$(basename "$rule" .md)"; [[ "$name" == general ]] && continue
     expected="../../.ai/rules/$name.md"
-    gh=".github/instructions/$name.instructions.md"
     cl=".claude/rules/$name.md"
-    if [[ ! -e "$gh" ]]; then fail "$gh: missing GitHub instruction adapter"
-    elif [[ "$(adapter_target "$gh")" != "$expected" ]]; then fail "$gh: expected target '$expected'"; fi
     if [[ ! -e "$cl" ]]; then fail "$cl: missing Claude rule adapter"
     elif [[ "$(adapter_target "$cl")" != "$expected" ]]; then fail "$cl: expected target '$expected'"; fi
-done
-
-# ── Adapter targets resolve (catches dangling adapters) ──
-for gh in .github/instructions/*.instructions.md; do
-    [[ -e "$gh" ]] || continue
-    target=".ai/rules/$(basename "$gh" .instructions.md).md"
-    [[ -f "$target" ]] || fail "$gh: adapter points at missing rule $target"
 done
 
 # ── Folder-level symlinks each tool consumes directly (same convention both sides) ──

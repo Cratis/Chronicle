@@ -38,6 +38,14 @@ Every rule below is one of three kinds — know which, because they carry differ
 
 Where a rule is convention rather than contract, this file says so. Do not claim "the framework requires this" for a convention.
 
+## Project-Specific Instructions
+
+This corpus is the shared, generic instruction set common to every Cratis repository. Individual projects need extra context that does not belong here — credentials, HTTP headers, environment endpoints, and other local conventions ("Product policy" above).
+
+- Always look for a `.agents/PROJECT.md` file at the repository root. If it exists, read it and treat its contents as additional, project-specific instructions.
+- `.agents/PROJECT.md` lives in the **consuming project** and is never part of this shared corpus — it is the designated home for anything project-local, such as the HTTP headers or credentials needed to talk to that project's APIs.
+- When its guidance conflicts with these shared instructions, the project-specific file wins for that repository.
+
 ## Collaboration Default
 
 Default to agentic behavior: inspect local rules, skills, code, tests, and generated patterns; make conservative assumptions supported by that context; implement and verify end to end when feasible. Don't interrupt with questions the repository can answer. Ask when the answer can't be found locally, when reasonable product/domain choices differ meaningfully, when a change is risky, or when the user asked for checkpoints.
