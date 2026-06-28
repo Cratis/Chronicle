@@ -25,21 +25,24 @@ internal static class ReducerReadModelProcessor
     /// <param name="artifactsActivator"><see cref="IClientArtifactsActivator"/> for instantiating the reducer.</param>
     /// <param name="serviceProvider"><see cref="IServiceProvider"/> used when invoking the reducer.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> for deriving the read model container name.</param>
+    /// <param name="initialState">Optional initial read model state the reducer reduces on top of.</param>
     /// <returns>The projected read model, or <see langword="null"/> if the reducer removed the instance.</returns>
+    /// <exception cref="ReducerFailed">Thrown when the reducer raises an error while processing the events.</exception>
     public static async Task<TReadModel?> Process<TReadModel>(
         Type reducerType,
         IEnumerable<EventForEventSourceId> events,
         IEventTypes eventTypes,
         IClientArtifactsActivator artifactsActivator,
         IServiceProvider serviceProvider,
-        INamingPolicy namingPolicy)
+        INamingPolicy namingPolicy,
+        TReadModel? initialState = null)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
         var containerName = (ReadModelContainerName)namingPolicy.GetReadModelName(readModelType);
         var invoker = new ReducerInvoker(eventTypes, artifactsActivator, reducerType, readModelType, containerName);
 
-        var eventsAndContexts = events.Select(@event =>
+        var eventsAndContexts = events.Select((@event, index) =>
         {
             var context = EventContext.From(
                 EventStoreName.NotSet,
@@ -49,13 +52,22 @@ internal static class ReducerReadModelProcessor
                 @event.EventSourceId,
                 @event.EventStreamType,
                 @event.EventStreamId,
-                EventSequenceNumber.First,
+                (EventSequenceNumber)(ulong)index,
                 CorrelationId.NotSet);
 
             return new EventAndContext(@event.Event, context);
         });
 
-        var result = await invoker.Invoke(serviceProvider, eventsAndContexts, null);
+        var result = await invoker.Invoke(serviceProvider, eventsAndContexts, initialState);
+
+        // A reducer that raised an error must not surface its partial state as a successful projection —
+        // the real reducer pipeline discards the result and pauses the partition. Fail loud instead so the
+        // reducer bug is visible in the spec rather than masquerading as a (wrong) read model.
+        if (!result.IsSuccess)
+        {
+            throw new ReducerFailed(readModelType, result.ErrorMessages, result.StackTrace);
+        }
+
         return result.ReadModelState as TReadModel;
     }
 }

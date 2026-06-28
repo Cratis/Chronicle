@@ -1,0 +1,13 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Events;
+
+namespace Cratis.Chronicle.Testing.ReadModels;
+
+/// <summary>
+/// Test event that creates a <see cref="RemovableWidget"/>.
+/// </summary>
+/// <param name="Name">Widget name.</param>
+[EventType]
+public record RemovableWidgetCreated(string Name);
