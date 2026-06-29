@@ -14,6 +14,12 @@ public static class StorageType
     public const string MongoDB = "mongodb";
 
     /// <summary>
+    /// In-memory storage type. All state is kept in process memory and lost on exit — intended for
+    /// tests, samples, and ephemeral environments rather than durable production use.
+    /// </summary>
+    public const string InMemory = "inmemory";
+
+    /// <summary>
     /// SQLite storage type.
     /// </summary>
     public const string Sqlite = "sqlite";
