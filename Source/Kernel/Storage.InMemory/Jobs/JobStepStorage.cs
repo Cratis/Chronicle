@@ -166,23 +166,23 @@ public sealed class JobStepStorage : IJobStepStorage
     }
 
     /// <inheritdoc/>
-    public async Task<Catch<None, JobStepError>> MoveToFailed<TJobStepState>(JobId jobId, JobStepId jobStepId, TJobStepState jobStepState)
+    public Task<Catch<None, JobStepError>> MoveToFailed<TJobStepState>(JobId jobId, JobStepId jobStepId, TJobStepState jobStepState)
     {
         try
         {
             if (JobStepStateType.Verify(typeof(TJobStepState)).TryGetError(out var error))
             {
-                return error;
+                return Task.FromResult<Catch<None, JobStepError>>(error);
             }
 
             var key = new JobStepIdentifier(jobId, jobStepId);
             _failedSteps[key] = (jobStepState as JobStepState)!;
             _steps.TryRemove(key, out _);
-            return default(None);
+            return Task.FromResult<Catch<None, JobStepError>>(default(None));
         }
         catch (Exception ex)
         {
-            return ex;
+            return Task.FromResult<Catch<None, JobStepError>>(ex);
         }
     }
 
