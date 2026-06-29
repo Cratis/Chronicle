@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Identities;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Execution;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.InMemory.EventSequences;

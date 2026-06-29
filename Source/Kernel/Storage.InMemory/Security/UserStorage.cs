@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Security;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IUserStorage"/>.
 /// </summary>
-public sealed class UserStorage : IUserStorage
+public sealed class UserStorage : IUserStorage, IDisposable
 {
     readonly ConcurrentDictionary<UserId, User> _users = new();
     readonly ReplaySubject<IEnumerable<User>> _subject = new(1);
@@ -74,6 +74,9 @@ public sealed class UserStorage : IUserStorage
 
     /// <inheritdoc/>
     public Task<IEnumerable<User>> GetAll() => Task.FromResult<IEnumerable<User>>([.. _users.Values]);
+
+    /// <inheritdoc/>
+    public void Dispose() => _subject.Dispose();
 
     void Publish() => _subject.OnNext([.. _users.Values]);
 }

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Namespaces;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="INamespaceStorage"/>.
 /// </summary>
-public sealed class NamespaceStorage : INamespaceStorage
+public sealed class NamespaceStorage : INamespaceStorage, IDisposable
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, NamespaceState> _namespaces = new();
     readonly ReplaySubject<IEnumerable<NamespaceState>> _subject = new(1);
@@ -53,6 +53,9 @@ public sealed class NamespaceStorage : INamespaceStorage
         Publish();
         return _subject;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _subject.Dispose();
 
     void Publish() => _subject.OnNext([.. _namespaces.Values]);
 }

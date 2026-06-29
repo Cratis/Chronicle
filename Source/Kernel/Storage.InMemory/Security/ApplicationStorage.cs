@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Security;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IApplicationStorage"/>.
 /// </summary>
-public sealed class ApplicationStorage : IApplicationStorage
+public sealed class ApplicationStorage : IApplicationStorage, IDisposable
 {
     readonly ConcurrentDictionary<ApplicationId, Application> _applications = new();
     readonly ReplaySubject<IEnumerable<Application>> _subject = new(1);
@@ -88,6 +88,9 @@ public sealed class ApplicationStorage : IApplicationStorage
     /// <inheritdoc/>
     public Task<IEnumerable<Application>> FindByPostLogoutRedirectUri(string postLogoutRedirectUri, CancellationToken cancellationToken = default) =>
         Task.FromResult<IEnumerable<Application>>([.. _applications.Values.Where(_ => _.PostLogoutRedirectUris.Contains(postLogoutRedirectUri))]);
+
+    /// <inheritdoc/>
+    public void Dispose() => _subject.Dispose();
 
     void Publish() => _subject.OnNext([.. _applications.Values]);
 }
