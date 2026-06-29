@@ -44,6 +44,7 @@ var chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.Section
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
+var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks();
 
@@ -141,7 +142,7 @@ var hostBuilder = builder.Host
 .AddCratisMongoDB(
    configureOptions: mongo =>
    {
-       if (!isSqlStorage)
+       if (!isSqlStorage && !isInMemoryStorage)
        {
            mongo.Server = chronicleOptions.Storage.ConnectionDetails;
            mongo.Database = Cratis.Chronicle.Storage.MongoDB.WellKnownDatabaseNames.Chronicle;
@@ -149,7 +150,7 @@ var hostBuilder = builder.Host
        else
        {
            // Placeholder values required to pass MongoDBOptions validation.
-           // MongoDB services are removed from the DI container in SQL mode and will not connect.
+           // MongoDB services are removed from the DI container in SQL and in-memory modes and will not connect.
            mongo.Server = "mongodb://localhost:27017";
            mongo.Database = "chronicle_placeholder";
        }
@@ -161,7 +162,9 @@ hostBuilder
         .UseLocalhostClustering()
         .AddChronicleToSilo(chronicleBuilder =>
         {
-            if (isSqlStorage)
+            if (isInMemoryStorage)
+                chronicleBuilder.WithInMemory(chronicleOptions);
+            else if (isSqlStorage)
                 chronicleBuilder.WithSql(chronicleOptions);
             else
                 chronicleBuilder.WithMongoDB(chronicleOptions);
@@ -183,29 +186,35 @@ hostBuilder
        // Add authentication services
        services.AddChronicleAuthentication(chronicleOptions);
 
-       if (isSqlStorage)
-       {
-           // Convention binding and authentication setup auto-register MongoDB storage implementations
-           // alongside SQL ones. Orleans resolves IEnumerable<T> returning all, so MongoDB implementations
-           // must be removed to prevent DI failures (they require MongoDB infrastructure not available
-           // in SQL mode). This removal runs last to catch any MongoDB types added by all extensions.
-           var mongoStorageDescriptors = services
-               .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.MongoDB") == true)
-               .ToList();
-           foreach (var descriptor in mongoStorageDescriptors)
-               services.Remove(descriptor);
-       }
-       else
-       {
-           // Convention binding auto-registers SQL storage implementations alongside MongoDB ones.
-           // In MongoDB mode, SQL implementations must be removed to prevent DI failures (they
-           // require SQL infrastructure such as ITableMigrator<> that is not registered in MongoDB mode).
-           var sqlStorageDescriptors = services
-               .Where(sd => sd.ImplementationType?.Namespace?.StartsWith("Cratis.Chronicle.Storage.Sql") == true)
-               .ToList();
-           foreach (var descriptor in sqlStorageDescriptors)
-               services.Remove(descriptor);
-       }
+       // Convention binding and authentication setup auto-register the storage implementations of every
+       // referenced backend (MongoDB, SQL, and in-memory) alongside each other. Orleans resolves
+       // IEnumerable<T> returning all, so the implementations of the backends that are NOT active must be
+       // removed to prevent DI failures (e.g. MongoDB types require a MongoDB connection, SQL types require
+       // ITableMigrator<>). This removal runs last to catch any backend types added by all extensions.
+       var activeBackendNamespace = "Cratis.Chronicle.Storage.MongoDB";
+       if (isInMemoryStorage)
+           activeBackendNamespace = "Cratis.Chronicle.Storage.InMemory";
+       else if (isSqlStorage)
+           activeBackendNamespace = "Cratis.Chronicle.Storage.Sql";
+
+       string[] backendNamespaces =
+       [
+           "Cratis.Chronicle.Storage.InMemory",
+           "Cratis.Chronicle.Storage.Sql",
+           "Cratis.Chronicle.Storage.MongoDB"
+       ];
+
+       var inactiveStorageDescriptors = services
+           .Where(sd =>
+           {
+               var ns = sd.ImplementationType?.Namespace;
+               return ns is not null
+                   && Array.Exists(backendNamespaces, ns.StartsWith)
+                   && !ns.StartsWith(activeBackendNamespace);
+           })
+           .ToList();
+       foreach (var descriptor in inactiveStorageDescriptors)
+           services.Remove(descriptor);
    });
 
 var app = builder.Build();
