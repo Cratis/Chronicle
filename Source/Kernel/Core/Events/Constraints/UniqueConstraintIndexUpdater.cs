@@ -34,7 +34,7 @@ public class UniqueConstraintIndexUpdater(
                 return;
             }
 
-            var value = definition.GetPropertiesAndValues(context).GetValue();
+            var value = definition.GetPropertiesAndValues(context).GetValue(definition.IgnoreCasing);
             if (value is not null)
             {
                 await storage.Save(context.EventSourceId, definition.Name, eventSequenceNumber, value, scopeKey);
