@@ -5,8 +5,9 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Sinks;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory;
+namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISinkFactory"/> for <see cref="InMemorySink"/>.

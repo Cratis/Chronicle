@@ -9,12 +9,12 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Sinks;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory.for_InMemorySink.when_applying_changes;
+namespace Cratis.Chronicle.Storage.InMemory.Sinks.for_InMemorySink.when_applying_changes;
 
-public class and_indexed_child_property_changes : Specification
+public class and_property_change_targets_the_same_collection_as_child_added : Specification
 {
-    Guid _candidateId;
     InMemorySink _sink;
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
     Key _key;
@@ -23,36 +23,27 @@ public class and_indexed_child_property_changes : Specification
 
     void Establish()
     {
-        _candidateId = Guid.NewGuid();
-        _key = new Key("contract-1", ArrayIndexers.NoIndexers);
+        _key = new Key("user-1", ArrayIndexers.NoIndexers);
         _sink = new InMemorySink(CreateReadModelDefinition(), new TypeFormats());
 
-        dynamic candidate = new ExpandoObject();
-        candidate.candidateId = _candidateId;
-        candidate.name = "Ada";
-        candidate.isCustomerSigned = false;
-        candidate.isPartnerSigned = false;
+        var role = CreateRole("Administrator");
+        var rolesProperty = new PropertyPath("roles");
+        var childAdded = new ChildAdded(role, rolesProperty, new PropertyPath("role"), "Administrator", ArrayIndexers.NoIndexers);
 
         dynamic state = new ExpandoObject();
-        state.candidates = new List<object> { candidate };
-
-        var arrayIndexers = new ArrayIndexers(
-        [
-            new ArrayIndexer(
-                new PropertyPath("[candidates]"),
-                new PropertyPath("candidateId"),
-                _candidateId)
-        ]);
+        state.name = "Ada Lovelace";
+        state.roles = new[] { role };
 
         PropertyDifference[] differences =
         [
-            new PropertyDifference(new PropertyPath("[candidates].isCustomerSigned"), false, true, arrayIndexers)
+            new PropertyDifference(new PropertyPath("name"), null, "Ada Lovelace"),
+            new PropertyDifference(rolesProperty, Array.Empty<object>(), new[] { role })
         ];
         var propertiesChanged = new PropertiesChanged<ExpandoObject>(state, differences);
 
         _changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
-        _changeset.InitialState.Returns((ExpandoObject)state);
-        Change[] changes = [propertiesChanged];
+        _changeset.InitialState.Returns(new ExpandoObject());
+        Change[] changes = [propertiesChanged, childAdded];
         _changeset.Changes.Returns(changes);
     }
 
@@ -63,14 +54,30 @@ public class and_indexed_child_property_changes : Specification
     }
 
     [Fact] void should_not_fail() => _failedPartitions.ShouldBeEmpty();
-    [Fact] void should_keep_one_candidate() => Candidates.Length.ShouldEqual(1);
-    [Fact] void should_preserve_child_identifier() => Candidate["candidateId"].ShouldEqual(_candidateId);
-    [Fact] void should_preserve_existing_child_field() => Candidate["name"].ShouldEqual("Ada");
-    [Fact] void should_apply_changed_child_field() => Candidate["isCustomerSigned"].ShouldEqual(true);
-    [Fact] void should_preserve_unrelated_child_field() => Candidate["isPartnerSigned"].ShouldEqual(false);
+    [Fact] void should_keep_non_conflicting_property_changes() => GetValue<string>("name").ShouldEqual("Ada Lovelace");
+    [Fact] void should_apply_the_child_operation_once() => GetRoles().Length.ShouldEqual(1);
+    [Fact] void should_keep_the_added_role() => GetValue<string>(GetRoles()[0], "role").ShouldEqual("Administrator");
 
-    ExpandoObject[] Candidates => ((IEnumerable<object>)((IDictionary<string, object?>)_result!)["candidates"]!).Cast<ExpandoObject>().ToArray();
-    IDictionary<string, object?> Candidate => Candidates[0];
+    T GetValue<T>(string property) => GetValue<T>(_result!, property);
+
+    static T GetValue<T>(ExpandoObject target, string property)
+    {
+        var dictionary = (IDictionary<string, object?>)target;
+        return (T)dictionary[property]!;
+    }
+
+    ExpandoObject[] GetRoles()
+    {
+        var dictionary = (IDictionary<string, object?>)_result!;
+        return ((IEnumerable<object>)dictionary["roles"]).Cast<ExpandoObject>().ToArray();
+    }
+
+    static ExpandoObject CreateRole(string role)
+    {
+        dynamic item = new ExpandoObject();
+        item.role = role;
+        return item;
+    }
 
     static ReadModelDefinition CreateReadModelDefinition() =>
         new(

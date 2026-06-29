@@ -14,7 +14,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
+using Cratis.Chronicle.Storage.InMemory.Sinks;
 using Cratis.Chronicle.Testing.EventSequences;
 using Cratis.Json;
 using Cratis.Serialization;

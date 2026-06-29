@@ -23,6 +23,8 @@
         <Project Path="Source/Kernel/Core.Specs/Core.Specs.csproj" />
         <Project Path="Source/Kernel/Server/Server.csproj" />
         <Project Path="Source/Kernel/Storage/Storage.csproj" />
+        <Project Path="Source/Kernel/Storage.InMemory/Storage.InMemory.csproj" />
+        <Project Path="Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <Project Path="Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj" />
         <Project Path="Source/Kernel/Storage.Specs/Storage.Specs.csproj" />
@@ -48,6 +50,9 @@
         <Project Path="Integration/Client/Client.csproj" />
         <Project Path="Integration/Kernel/Kernel.csproj" />
         <Project Path="Integration/MongoDB/MongoDB.csproj" />
+    </Folder>
+    <Folder Name="/TestApps/">
+        <Project Path="TestApps/SimpleConsole/SimpleConsole.csproj" />
     </Folder>
     <Configurations>
         <BuildType Name="Debug" />

@@ -4,7 +4,9 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory.for_InMemorySink.when_trying_to_find_root_key_by_child_value;
+using DomainChanges = Cratis.Chronicle.Changes;
+
+namespace Cratis.Chronicle.Storage.InMemory.Sinks.for_InMemorySink.when_trying_to_find_root_key_by_child_value;
 
 public class and_child_is_in_single_level_array : given.an_in_memory_sink
 {
@@ -18,13 +20,13 @@ public class and_child_is_in_single_level_array : given.an_in_memory_sink
         _childKey = Guid.NewGuid();
 
         // Insert a document with a child in a single-level array
-        await _sink.ApplyChanges(new Key(_rootKey, ArrayIndexers.NoIndexers), new Changes.Changeset(
+        await _sink.ApplyChanges(new Key(_rootKey, ArrayIndexers.NoIndexers), new DomainChanges.Changeset(
             [
-                new Changes.PropertiesChanged<object>(new Dictionary<PropertyPath, object>
+                new DomainChanges.PropertiesChanged<object>(new Dictionary<PropertyPath, object>
                 {
                     [new PropertyPath("name")] = "Root Document"
                 }),
-                new Changes.ChildAdded(
+                new DomainChanges.ChildAdded(
                     new PropertyPath("children"),
                     new Key(_childKey, ArrayIndexers.NoIndexers),
                     new Dictionary<PropertyPath, object>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Storage.InMemory.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Storage.InMemory</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- These specs were authored against a now-removed changeset construction API and are excluded pending a rewrite against the current API. -->
+        <Compile Remove="Sinks/for_InMemorySink/when_trying_to_find_root_key_by_child_value/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
+        <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Core/Core.csproj" />
+        <ProjectReference Include="../Concepts/Concepts.csproj" />
+    </ItemGroup>
+</Project>
