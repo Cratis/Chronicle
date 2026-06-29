@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IFailedPartitionsStorage"/>.
 /// </summary>
-public sealed class FailedPartitionStorage : IFailedPartitionsStorage
+public sealed class FailedPartitionStorage : IFailedPartitionsStorage, IDisposable
 {
     readonly ConcurrentDictionary<FailedPartitionId, FailedPartition> _partitions = new();
     readonly ReplaySubject<IEnumerable<FailedPartition>> _allSubject = new(1);
@@ -75,8 +75,11 @@ public sealed class FailedPartitionStorage : IFailedPartitionsStorage
         return Task.FromResult(new FailedPartitions { Partitions = partitions });
     }
 
-    IEnumerable<FailedPartition> Snapshot() => _partitions.Values.ToArray();
+    /// <inheritdoc/>
+    public void Dispose() => _allSubject.Dispose();
 
-    IEnumerable<FailedPartition> SnapshotFor(ObserverId observerId) =>
+    FailedPartition[] Snapshot() => _partitions.Values.ToArray();
+
+    FailedPartition[] SnapshotFor(ObserverId observerId) =>
         _partitions.Values.Where(_ => _.ObserverId == observerId).ToArray();
 }

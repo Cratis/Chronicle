@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation.Webhooks;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IWebhookDefinitionsStorage"/>.
 /// </summary>
-public sealed class WebhookDefinitionsStorage : IWebhookDefinitionsStorage
+public sealed class WebhookDefinitionsStorage : IWebhookDefinitionsStorage, IDisposable
 {
     readonly ConcurrentDictionary<WebhookId, WebhookDefinition> _definitions = new();
     readonly ReplaySubject<IEnumerable<WebhookDefinition>> _allSubject = new(1);
@@ -22,7 +22,7 @@ public sealed class WebhookDefinitionsStorage : IWebhookDefinitionsStorage
     public WebhookDefinitionsStorage() => _allSubject.OnNext(Snapshot());
 
     /// <inheritdoc/>
-    public Task<IEnumerable<WebhookDefinition>> GetAll() => Task.FromResult(Snapshot());
+    public Task<IEnumerable<WebhookDefinition>> GetAll() => Task.FromResult<IEnumerable<WebhookDefinition>>(Snapshot());
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<WebhookDefinition>> ObserveAll() => _allSubject;
@@ -51,5 +51,8 @@ public sealed class WebhookDefinitionsStorage : IWebhookDefinitionsStorage
         return Task.CompletedTask;
     }
 
-    IEnumerable<WebhookDefinition> Snapshot() => _definitions.Values.ToArray();
+    /// <inheritdoc/>
+    public void Dispose() => _allSubject.Dispose();
+
+    WebhookDefinition[] Snapshot() => _definitions.Values.ToArray();
 }

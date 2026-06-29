@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Recommendations;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IRecommendationStorage"/>.
 /// </summary>
-public sealed class RecommendationStorage : IRecommendationStorage
+public sealed class RecommendationStorage : IRecommendationStorage, IDisposable
 {
     readonly ConcurrentDictionary<RecommendationId, RecommendationState> _recommendations = new();
     readonly ReplaySubject<IEnumerable<RecommendationState>> _subject = new(1);
@@ -49,5 +49,8 @@ public sealed class RecommendationStorage : IRecommendationStorage
     /// <inheritdoc/>
     public ISubject<IEnumerable<RecommendationState>> ObserveRecommendations() => _subject;
 
-    IEnumerable<RecommendationState> Snapshot() => _recommendations.Values.ToArray();
+    /// <inheritdoc/>
+    public void Dispose() => _subject.Dispose();
+
+    RecommendationState[] Snapshot() => _recommendations.Values.ToArray();
 }

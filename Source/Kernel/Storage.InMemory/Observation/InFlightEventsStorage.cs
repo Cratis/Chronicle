@@ -57,6 +57,6 @@ public sealed class InFlightEventsStorage : IInFlightEventsStorage
     public Task<IEnumerable<InFlightEvent>> GetFor(ObserverId observerId) =>
         Task.FromResult<IEnumerable<InFlightEvent>>(_entries.Values.Where(_ => _.ObserverId == observerId).ToArray());
 
-    IEnumerable<InFlightEvent> Matching(ObserverId observerId, Key partition) =>
+    InFlightEvent[] Matching(ObserverId observerId, Key partition) =>
         _entries.Values.Where(_ => _.ObserverId == observerId && _.Partition == partition).ToArray();
 }

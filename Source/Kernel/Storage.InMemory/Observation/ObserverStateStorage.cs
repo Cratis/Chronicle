@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Observation;
 /// <summary>
 /// Represents an in-memory implementation of <see cref="IObserverStateStorage"/>.
 /// </summary>
-public sealed class ObserverStateStorage : IObserverStateStorage
+public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
 {
     readonly ConcurrentDictionary<ObserverId, ObserverState> _states = new();
     readonly ReplaySubject<IEnumerable<ObserverState>> _allSubject = new(1);
@@ -29,7 +29,7 @@ public sealed class ObserverStateStorage : IObserverStateStorage
         Task.FromResult(_states.TryGetValue(observerId, out var state) ? state : ObserverState.Empty);
 
     /// <inheritdoc/>
-    public Task<IEnumerable<ObserverState>> GetAll() => Task.FromResult(Snapshot());
+    public Task<IEnumerable<ObserverState>> GetAll() => Task.FromResult<IEnumerable<ObserverState>>(Snapshot());
 
     /// <inheritdoc/>
     public Task Save(ObserverState state)
@@ -51,5 +51,8 @@ public sealed class ObserverStateStorage : IObserverStateStorage
         return Task.CompletedTask;
     }
 
-    IEnumerable<ObserverState> Snapshot() => _states.Values.ToArray();
+    /// <inheritdoc/>
+    public void Dispose() => _allSubject.Dispose();
+
+    ObserverState[] Snapshot() => _states.Values.ToArray();
 }

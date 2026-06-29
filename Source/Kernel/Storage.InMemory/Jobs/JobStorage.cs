@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Jobs;
 /// Represents an in-memory implementation of <see cref="IJobStorage"/>.
 /// </summary>
 /// <param name="jobTypes"><see cref="IJobTypes"/> that knows about <see cref="JobType"/>.</param>
-public sealed class JobStorage(IJobTypes jobTypes) : IJobStorage
+public sealed class JobStorage(IJobTypes jobTypes) : IJobStorage, IDisposable
 {
     readonly ConcurrentDictionary<JobId, JobState> _jobs = new();
     readonly ReplaySubject<IEnumerable<JobState>> _subject = new(1);
@@ -146,6 +146,9 @@ public sealed class JobStorage(IJobTypes jobTypes) : IJobStorage
             return Task.FromResult<Catch<IImmutableList<TJobState>, JobError>>(ex);
         }
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _subject.Dispose();
 
     static IEnumerable<JobState> FilterByStatus(IEnumerable<JobState> jobs, JobStatus[] statuses) =>
         statuses.Length == 0 ? jobs : jobs.Where(_ => statuses.Contains(_.Status));
