@@ -15,7 +15,7 @@ public class and_event_in_context_is_part_of_definition_with_scope : Specificati
     IUniqueConstraintsStorage _storage;
     ConstraintValidationContext _context;
     EventSequenceNumber _eventSequenceNumber;
-    UniqueConstraintValue _value;
+    UniqueConstraintValue _expectedHashedValue;
 
     void Establish()
     {
@@ -25,7 +25,9 @@ public class and_event_in_context_is_part_of_definition_with_scope : Specificati
         var contentAsExpando = new ExpandoObject();
         dynamic content = contentAsExpando;
         content.SomeProperty = "SomeValue";
-        _value = (UniqueConstraintValue)content.SomeProperty;
+
+        // The value is now hashed with SHA-256
+        _expectedHashedValue = "4f7aa54b8d9a8f5e7b06bf38217a84dfd7272bd50f5aebe97ae321f24eceb291";
 
         _context = new([], EventSourceId.New(), "SomeEvent", contentAsExpando, eventSourceType: "MySourceType");
         _updater = new(_definition, _context, _storage);
@@ -35,5 +37,5 @@ public class and_event_in_context_is_part_of_definition_with_scope : Specificati
 
     async Task Because() => await _updater.Update(_eventSequenceNumber);
 
-    [Fact] void should_save_to_storage_with_scope_key() => _storage.Received(1).Save(_context.EventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _value, "est:MySourceType");
+    [Fact] void should_save_to_storage_with_scope_key() => _storage.Received(1).Save(_context.EventSourceId, _definition.Name, Arg.Any<EventSequenceNumber>(), _expectedHashedValue, "est:MySourceType");
 }
