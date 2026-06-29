@@ -83,6 +83,19 @@ Like the attributes, `IConstraint` implementations are **discovered automaticall
 
 A violated constraint surfaces as a **failed append** — the result tells you which constraint fired and carries the message you declared. A command turns that into a friendly "that email's taken" on the form, instead of a 500. The step-by-step recipe, including handling the failure, is [Enforce a unique value](/chronicle/scenarios/enforce-a-unique-value/).
 
+## Privacy and PII protection
+
+Chronicle protects sensitive information in constraint indexes by **hashing all constraint values** before storage. When you declare a unique constraint on an email address, phone number, or other potentially sensitive data, Chronicle:
+
+1. Concatenates the property values (if the constraint spans multiple properties).
+2. Normalizes the value (lowercases it if `IgnoreCasing()` is enabled).
+3. Computes a **SHA-256 hash** of the result.
+4. Stores only the hash in the constraint index, never the raw value.
+
+This means the kernel can still enforce uniqueness — two identical values produce the same hash — but the constraint index itself contains no PII. The actual property values remain visible only in the events themselves, where Chronicle's encryption and compliance features already protect them.
+
+**Note:** The hash transformation is transparent to your code. You declare constraints on plain properties, violation messages show the readable values (so the user sees "email@example.com already exists"), but storage uses hashes under the hood. This design keeps PII out of constraint indexes without sacrificing developer experience or user-facing clarity.
+
 ## Constraints and concurrency
 
 Constraints are one half of data integrity; the other half is **concurrency**. They guard against different things:
