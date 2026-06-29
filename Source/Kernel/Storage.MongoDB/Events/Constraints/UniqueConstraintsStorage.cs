@@ -20,14 +20,10 @@ public class UniqueConstraintsStorage(IEventStoreNamespaceDatabase eventStoreNam
     public async Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, string scopeKey = "")
     {
         var collection = GetCollectionFor(definition.Name, scopeKey);
-        var options = new FindOptions<UniqueConstraintIndex, UniqueConstraintIndex>();
 
-        if (definition.IgnoreCasing)
-        {
-            options.Collation = new Collation("en", caseLevel: false, strength: CollationStrength.Secondary);
-        }
-
-        using var result = await collection.FindAsync(_ => _.Value == value, options);
+        // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
+        // before it reaches the storage layer, so we can use a simple equality check here.
+        using var result = await collection.FindAsync(_ => _.Value == value);
         var existing = await result.FirstOrDefaultAsync();
         if (existing is not null)
         {

@@ -30,14 +30,10 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, tableName);
 
         var constraintValue = value.Value;
-        var query = scope.DbContext.Entries.Where(u => u.Value == constraintValue);
 
-        // Apply case-insensitive comparison if needed
-        if (definition.IgnoreCasing)
-        {
-            // Note: For case-insensitive comparison in SQL, we rely on the database collation
-            // This can be configured at the database level or by using specific collation in queries
-        }
+        // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
+        // before it reaches the storage layer, so we can use a simple equality check here.
+        var query = scope.DbContext.Entries.Where(u => u.Value == constraintValue);
 
         var eventSourceIdValue = eventSourceId.Value;
         var existing = await query.FirstOrDefaultAsync();
