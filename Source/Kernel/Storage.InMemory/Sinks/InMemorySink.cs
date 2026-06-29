@@ -14,11 +14,12 @@ using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Monads;
 using Cratis.Reflection;
 using Cratis.Types;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory;
+namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 
 /// <summary>
 /// Represents an implementation of <see cref="ISink"/> for working with projections in memory.

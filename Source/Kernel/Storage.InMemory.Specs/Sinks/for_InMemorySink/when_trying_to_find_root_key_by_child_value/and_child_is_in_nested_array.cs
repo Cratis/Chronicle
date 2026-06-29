@@ -4,7 +4,9 @@
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory.for_InMemorySink.when_trying_to_find_root_key_by_child_value;
+using DomainChanges = Cratis.Chronicle.Changes;
+
+namespace Cratis.Chronicle.Storage.InMemory.Sinks.for_InMemorySink.when_trying_to_find_root_key_by_child_value;
 
 public class and_child_is_in_nested_array : given.an_in_memory_sink
 {
@@ -20,13 +22,13 @@ public class and_child_is_in_nested_array : given.an_in_memory_sink
         _hubId = Guid.NewGuid();
 
         // Insert a document with nested arrays (configurations -> hubs)
-        await _sink.ApplyChanges(new Key(_rootKey, ArrayIndexers.NoIndexers), new Changes.Changeset(
+        await _sink.ApplyChanges(new Key(_rootKey, ArrayIndexers.NoIndexers), new DomainChanges.Changeset(
             [
-                new Changes.PropertiesChanged<object>(new Dictionary<PropertyPath, object>
+                new DomainChanges.PropertiesChanged<object>(new Dictionary<PropertyPath, object>
                 {
                     [new PropertyPath("name")] = "Simulation Dashboard"
                 }),
-                new Changes.ChildAdded(
+                new DomainChanges.ChildAdded(
                     new PropertyPath("configurations"),
                     new Key(_configurationId, ArrayIndexers.NoIndexers),
                     new Dictionary<PropertyPath, object>
@@ -34,7 +36,7 @@ public class and_child_is_in_nested_array : given.an_in_memory_sink
                         [new PropertyPath("configurationId")] = _configurationId,
                         [new PropertyPath("name")] = "Config 1"
                     }),
-                new Changes.ChildAdded(
+                new DomainChanges.ChildAdded(
                     new PropertyPath("configurations[0].hubs"),
                     new Key(_hubId, new ArrayIndexers([new ArrayIndexer(new PropertyPath("configurations"), new PropertyPath("configurationId"), _configurationId)])),
                     new Dictionary<PropertyPath, object>

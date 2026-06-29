@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Schemas;
-using Cratis.Chronicle.Storage.Sinks.InMemory;
+using Cratis.Chronicle.Storage.InMemory.Sinks;
 
-namespace Cratis.Chronicle.Storage.Sinks.InMemory.for_InMemorySink.when_trying_to_find_root_key_by_child_value.given;
+namespace Cratis.Chronicle.Storage.InMemory.Sinks.for_InMemorySink.when_trying_to_find_root_key_by_child_value.given;
 
 public class an_in_memory_sink : Specification
 {
