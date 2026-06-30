@@ -47,6 +47,11 @@ permissions:
   contents: write
   deployments: write
   id-token: write
+  # Required so cache-saving build jobs (dotnet-x64/arm64, workbench) can write to
+  # the GitHub Actions cache service, which enforces the `actions` write scope. The
+  # publish-docker-* jobs consume those caches with fail-on-cache-miss, so without
+  # this they fail with "cache write denied: token has no writable scopes".
+  actions: write
 
 jobs:
   release:
