@@ -117,4 +117,9 @@ public static class DiagnosticIds
     /// Reactor methods that return event side effects must be marked with [OnceOnly] attribute.
     /// </summary>
     public const string ReactorReturningEventsMustBeOnceOnly = "CHR0022";
+
+    /// <summary>
+    /// A [ChildrenFrom] collection that omits parentKey has an ambiguous parent key inference.
+    /// </summary>
+    public const string AmbiguousChildrenParentKey = "CHR0023";
 }
