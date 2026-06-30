@@ -147,7 +147,7 @@ static class ChildrenDefinitionExtensions
 
         var key = keyProperty?.GetValue(attr) as string ?? WellKnownExpressions.EventSourceId;
         var explicitParentKey = parentKeyProperty?.GetValue(attr) as string;
-        var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, namingPolicy) : null;
+        var discoveredParentKey = explicitParentKey is null ? DiscoverEventPropertyForParentId(eventType, parentModelType, key, namingPolicy) : null;
         var parentKey = explicitParentKey ?? discoveredParentKey ?? WellKnownExpressions.EventSourceId;
 
         var childType = GetChildType(memberType);
@@ -687,51 +687,62 @@ static class ChildrenDefinitionExtensions
         return WellKnownExpressions.EventSourceId;
     }
 
-    static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, INamingPolicy namingPolicy)
+    /// <summary>
+    /// Infers the event property to use as the parent key for a <c>[ChildrenFrom]</c> collection when no
+    /// explicit <c>parentKey</c> is supplied, by matching the parent read model's identifier type.
+    /// </summary>
+    /// <param name="eventType">The event type the children are built from.</param>
+    /// <param name="parentModelType">The parent read model type, or <see langword="null"/> when unavailable.</param>
+    /// <param name="childKey">The child key property name, excluded from the candidates.</param>
+    /// <param name="namingPolicy">The <see cref="INamingPolicy"/> used to shape the resolved property name.</param>
+    /// <returns>
+    /// The inferred parent-key property name, or <see langword="null"/> when no candidate matches (the caller
+    /// then falls back to <see cref="WellKnownExpressions.EventSourceId"/> for the same-event-source case).
+    /// </returns>
+    /// <remarks>
+    /// The child <paramref name="childKey"/> property is excluded from the candidates — a property is the
+    /// child's own key or the parent reference, never both. When more than one property still matches the
+    /// parent identifier type the inference is ambiguous and the first by declaration order is used; supply
+    /// an explicit <c>parentKey</c> to disambiguate.
+    /// </remarks>
+    static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, string childKey, INamingPolicy namingPolicy)
     {
         if (parentModelType is null)
         {
             return null;
         }
 
-        // First, find the parent model's Id property and its type
-        var parentIdProperty = parentModelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
-
-        if (parentIdProperty is null)
+        var parentIdType = GetIdentifierType(parentModelType);
+        if (parentIdType is null)
         {
-            // Check constructor parameters for record types
-            var constructor = parentModelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                .OrderByDescending(c => c.GetParameters().Length)
-                .FirstOrDefault();
-
-            var idParameter = constructor?.GetParameters()
-                .FirstOrDefault(p => p.Name?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true);
-
-            if (idParameter is null)
-            {
-                return null;
-            }
-
-            // Get the type from constructor parameter
-            var parentIdType = idParameter.ParameterType;
-
-            // Search event for a property with matching type
-            var matchingEventProperty = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(p => p.PropertyType == parentIdType);
-
-            return matchingEventProperty is not null
-                ? namingPolicy.GetPropertyName(new PropertyPath(matchingEventProperty.Name))
-                : null;
+            return null;
         }
 
-        // Search event for a property with matching type
-        var eventProperty = eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .FirstOrDefault(p => p.PropertyType == parentIdProperty.PropertyType);
+        var match = Array.Find(
+            eventType.GetProperties(BindingFlags.Public | BindingFlags.Instance),
+            p => p.PropertyType == parentIdType && !p.Name.Equals(childKey, StringComparison.OrdinalIgnoreCase));
 
-        return eventProperty is not null
-            ? namingPolicy.GetPropertyName(new PropertyPath(eventProperty.Name))
+        return match is not null
+            ? namingPolicy.GetPropertyName(new PropertyPath(match.Name))
             : null;
+    }
+
+    static Type? GetIdentifierType(Type modelType)
+    {
+        var idProperty = modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase));
+        if (idProperty is not null)
+        {
+            return idProperty.PropertyType;
+        }
+
+        var constructor = modelType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(c => c.GetParameters().Length)
+            .FirstOrDefault();
+
+        return constructor?.GetParameters()
+            .FirstOrDefault(p => p.Name?.Equals("Id", StringComparison.OrdinalIgnoreCase) == true)
+            ?.ParameterType;
     }
 
     static string ConvertValueToInvariantString(object value)
