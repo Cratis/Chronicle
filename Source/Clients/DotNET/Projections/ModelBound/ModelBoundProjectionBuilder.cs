@@ -256,12 +256,21 @@ internal class ModelBoundProjectionBuilder(
     {
         foreach (var property in modelType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (primaryConstructor?.GetParameters().Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true)
-            {
-                continue;
-            }
+            var isConstructorParameter = primaryConstructor?.GetParameters()
+                .Any(p => p.Name?.Equals(property.Name, StringComparison.OrdinalIgnoreCase) == true) == true;
 
-            ProcessMember(property, definition, classLevelFromEvents, isRoot: true, modelType: modelType);
+            // A positional record's properties are also constructor parameters, already handled by
+            // ProcessRecord. But an attribute applied to the generated PROPERTY via `[property:]` — the
+            // only way to place a property-only attribute such as [FromAll] on a positional parameter — is
+            // not visible on the parameter, so it must still be processed here. Parameter-targeted and
+            // property-targeted attributes are disjoint, so this does not double-process. Class-level
+            // FromEvent wiring was already applied by the parameter pass, so pass none for those members.
+            ProcessMember(
+                property,
+                definition,
+                isConstructorParameter ? [] : classLevelFromEvents,
+                isRoot: true,
+                modelType: modelType);
         }
     }
 
@@ -403,7 +412,7 @@ internal class ModelBoundProjectionBuilder(
         var fromAllAttr = parameter.GetCustomAttribute<FromAllAttribute>();
         if (fromAllAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(fromAllAttr.ContextProperty, fromAllAttr.Property)));
+            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
         }
     }
 
@@ -529,7 +538,7 @@ internal class ModelBoundProjectionBuilder(
         var fromAllAttr = property.GetCustomAttribute<FromAllAttribute>();
         if (fromAllAttr is not null)
         {
-            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(fromAllAttr.ContextProperty, fromAllAttr.Property)));
+            _fromEveryAttributes.Add((propertyName, new FromEveryAttribute(property: fromAllAttr.Property, contextProperty: fromAllAttr.ContextProperty)));
         }
     }
 }

@@ -111,7 +111,13 @@ internal static class ProjectionReadModelProcessor
                 {
                     EventType = kernelEventType,
                     EventSourceId = eventSourceId,
-                    SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index
+                    SequenceNumber = (KernelConceptsNs::Events.EventSequenceNumber)(uint)index,
+
+                    // Give each event a distinct, monotonically increasing occurred time so time-based
+                    // projections (e.g. a [FromAll] "last updated" mapped from EventContext.Occurred)
+                    // reflect append order the same way the real runtime does — rather than every event
+                    // sharing one timestamp.
+                    Occurred = KernelConceptsNs::Events.EventContext.Empty.Occurred.AddTicks(index)
                 };
                 return new KernelAppendedEvent(context, content);
             })
