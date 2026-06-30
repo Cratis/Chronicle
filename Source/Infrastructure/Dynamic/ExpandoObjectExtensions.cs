@@ -329,10 +329,12 @@ public static class ExpandoObjectExtensions
             !valueType.IsEnum &&
             valueType != typeof(string) &&
             valueType != typeof(Guid) &&
+            valueType != typeof(decimal) &&
             valueType != typeof(DateOnly) &&
             valueType != typeof(DateTime) &&
             valueType != typeof(DateTimeOffset) &&
             valueType != typeof(TimeOnly) &&
+            valueType != typeof(TimeSpan) &&
             !valueType.IsConcept())
         {
             if (value is IEnumerable enumerableValue)
