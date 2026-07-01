@@ -336,7 +336,12 @@ public static class BsonValueExtensions
                 return new BsonDouble(value is double actualDouble ? actualDouble : double.Parse(value.ToString()!));
         }
 
-        return BsonNull.Value;
+        // The schema type gives no usable primitive mapping — for example a concept whose reference schema
+        // resolves to no primitive type, or any other value the switch does not recognize. Convert by the
+        // value's runtime type instead of silently dropping it to null: ToBsonValue unwraps concepts and
+        // handles primitives, enums, GUIDs and dates. Losing the value here is how a bare-concept collection
+        // (e.g. IReadOnlyList<ConceptAs<string>>) previously persisted empty to MongoDB.
+        return value.ToBsonValue();
     }
 
     static bool TryConvertNullPrimitive(Type targetType, out object? result)
