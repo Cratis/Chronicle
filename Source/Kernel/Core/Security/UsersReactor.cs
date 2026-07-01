@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Storage.Security;
 using Microsoft.Extensions.Logging;
+using StorageUser = Cratis.Chronicle.Storage.Security.User;
 
 namespace Cratis.Chronicle.Security;
 
@@ -27,7 +28,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
     {
         logger.AddingUser(eventContext.EventSourceId, @event.Username);
 
-        var user = new User
+        var user = new StorageUser
         {
             Id = eventContext.EventSourceId,
             Username = @event.Username,
@@ -56,7 +57,7 @@ public class UsersReactor(IUserStorage userStorage, ILogger<UsersReactor> logger
     {
         logger.AddingInitialAdminUser(eventContext.EventSourceId, @event.Username ?? "[not set]");
 
-        var user = new User
+        var user = new StorageUser
         {
             Id = eventContext.EventSourceId,
             Username = @event.Username ?? string.Empty,

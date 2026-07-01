@@ -19,7 +19,7 @@ import { useState, useCallback } from 'react';
 import { Page } from 'Components/Common/Page';
 import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
 import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
-import { GetReplayableObserversForEventTypes } from 'Api/Observation';
+import { GetObservers } from 'Api/Observation';
 import { ObserverType } from 'Api/Observation/ObserverType';
 import * as faIcons from 'react-icons/fa6';
 
@@ -90,14 +90,16 @@ export const Sequences = () => {
 
     const handleReviseEvent = async () => {
         if (selectedEvent) {
-            const query = new GetReplayableObserversForEventTypes();
+            const query = new GetObservers();
             const queryResult = await query.perform({
                 eventStore: params.eventStore!,
-                namespace: params.namespace!,
-                eventTypeIds: selectedEvent.context.eventType.id
+                namespace: params.namespace!
             });
 
-            const observers = queryResult.data;
+            const eventTypeId = selectedEvent.context.eventType.id;
+            const observers = queryResult.data.filter(o =>
+                o.isReplayable && o.eventTypes.some(et => et.id === eventTypeId)
+            );
             const reviseStrings = strings.eventStore.namespaces.sequences.dialogs.revise;
             let confirmMessage: string;
 

@@ -32,6 +32,6 @@ public record User(
     /// <returns>An observable for observing a collection of users.</returns>
     public static ISubject<IEnumerable<User>> AllUsers(IUsers users) =>
         users.InvokeAndWrapWithTransformSubject(
-            token => users.ObserveAll(token),
+            token => users.AllUsers(token),
             response => response.ToApi());
 }

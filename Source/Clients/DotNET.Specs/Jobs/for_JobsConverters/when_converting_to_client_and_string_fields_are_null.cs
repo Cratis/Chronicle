@@ -5,14 +5,14 @@ namespace Cratis.Chronicle.Jobs.for_JobsConverters;
 
 public class when_converting_to_client_and_string_fields_are_null : Specification
 {
-    Contracts.Jobs.Job _contract;
+    Contracts.Jobs.JobSummaryResponse _contract;
     Job _result;
     IEventStore _eventStore;
 
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
-        _contract = new Contracts.Jobs.Job
+        _contract = new Contracts.Jobs.JobSummaryResponse
         {
             Id = Guid.NewGuid(),
             Details = null!,

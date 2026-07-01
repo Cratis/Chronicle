@@ -13,7 +13,7 @@ internal static class ApplicationConverters
     /// </summary>
     /// <param name="client">Contract application.</param>
     /// <returns>API application.</returns>
-    public static Application ToApi(this Contracts.Security.Application client) => new(
+    public static Application ToApi(this Contracts.Security.ApplicationResponse client) => new(
         client.Id,
         client.ClientId,
         client.IsActive,
@@ -25,6 +25,6 @@ internal static class ApplicationConverters
     /// </summary>
     /// <param name="clients">Contract application.</param>
     /// <returns>API application.</returns>
-    public static IEnumerable<Application> ToApi(this IEnumerable<Contracts.Security.Application> clients) =>
+    public static IEnumerable<Application> ToApi(this IEnumerable<Contracts.Security.ApplicationResponse> clients) =>
         clients.Select(ToApi);
 }

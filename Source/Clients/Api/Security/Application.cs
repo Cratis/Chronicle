@@ -30,6 +30,6 @@ public record Application(
     /// <returns>An observable for observing a collection of applications.</returns>
     public static ISubject<IEnumerable<Application>> AllApplications(IApplications applications) =>
         applications.InvokeAndWrapWithTransformSubject(
-            token => applications.ObserveAll(token),
+            token => applications.AllApplications(token),
             response => response.ToApi());
 }
