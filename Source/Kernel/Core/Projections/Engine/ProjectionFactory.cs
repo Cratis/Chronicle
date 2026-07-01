@@ -61,7 +61,7 @@ public class ProjectionFactory(
             eventTypeSchemas);
     }
 
-    static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap)
+    static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, HashSet<string> explicitlyMappedProperties)
     {
         var merged = fromDefinition.Properties.ToList();
 
@@ -82,17 +82,34 @@ public class ProjectionFactory(
             var matchingReadModelProperty = currentReadModelSchema.Properties.Values
                 .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
 
-            if (matchingReadModelProperty is not null)
+            if (matchingReadModelProperty is null)
             {
-                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existing.Add(matchingReadModelProperty.Name);
+                continue;
             }
+
+            // Explicit beats implicit: when a read-model property is explicitly mapped anywhere in the same
+            // projection scope — a From mapping (SetFrom, Count, SetValue, …) or a Join — do not auto-map it
+            // from this event. Otherwise another subscribed event (or the entity's own event) that happens
+            // to carry a same-named property would bleed its value in and overwrite the explicit source.
+            if (explicitlyMappedProperties.Contains(matchingReadModelProperty.Name))
+            {
+                continue;
+            }
+
+            merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
+            existing.Add(matchingReadModelProperty.Name);
         }
 
         return merged;
     }
 
-    static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap)
+    static HashSet<string> GetExplicitlyMappedProperties(IEnumerable<FromDefinition> fromDefinitions, IEnumerable<JoinDefinition> joinDefinitions) =>
+        new(
+            fromDefinitions.SelectMany(fromDefinition => fromDefinition.Properties.Select(property => property.Key.LastSegment.Value))
+                .Concat(joinDefinitions.SelectMany(joinDefinition => joinDefinition.Properties.Select(property => property.Key.LastSegment.Value))),
+            StringComparer.OrdinalIgnoreCase);
+
+    static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, HashSet<string> explicitlyMappedProperties)
     {
         var merged = joinDefinition.Properties.ToList();
 
@@ -114,12 +131,22 @@ public class ProjectionFactory(
             var matchingReadModelProperty = currentReadModelSchema.Properties.Values
                 .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
 
-            if (matchingReadModelProperty is not null)
+            if (matchingReadModelProperty is null)
             {
-                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existingReadModelProperties.Add(matchingReadModelProperty.Name);
-                existingEventProperties.Add(eventProperty.Name);
+                continue;
             }
+
+            // Explicit beats implicit (same invariant as the From merge): a read-model property with an
+            // explicit source elsewhere in the projection — a From mapping or another join — must not be
+            // silently auto-mapped from this joined event, which would overwrite the explicit value.
+            if (explicitlyMappedProperties.Contains(matchingReadModelProperty.Name))
+            {
+                continue;
+            }
+
+            merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
+            existingReadModelProperties.Add(matchingReadModelProperty.Name);
+            existingEventProperties.Add(eventProperty.Name);
         }
 
         return merged;
@@ -276,13 +303,14 @@ public class ProjectionFactory(
             var nestedDefinition = kvp.Value;
             var propertyMappersForEveryEventType = nestedDefinition.FromEvery.Properties.Select(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
 
+            var nestedExplicitlyMappedProperties = GetExplicitlyMappedProperties(nestedDefinition.From.Values, nestedDefinition.Join.Values);
             foreach (var (eventType, fromDefinition) in nestedDefinition.From)
             {
                 var matchingSchema = eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType);
                 var nestedSchema = currentReadModelSchema.Properties.TryGetValue(kvp.Key.LastSegment.Value, out var schemaProp)
                     ? schemaProp.ActualSchema ?? currentReadModelSchema
                     : currentReadModelSchema;
-                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, projection.AutoMap);
+                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, projection.AutoMap, nestedExplicitlyMappedProperties);
                 var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
 
@@ -412,6 +440,7 @@ public class ProjectionFactory(
         }
 
         var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
+        var explicitlyMappedProperties = GetExplicitlyMappedProperties(projectionDefinition.From.Values, projectionDefinition.Join.Values);
         foreach (var (eventType, fromDefinition) in projectionDefinition.From)
         {
             var fromObservable = SetupFromDefinition(
@@ -422,7 +451,8 @@ public class ProjectionFactory(
                 actualIdentifiedByProperty,
                 propertyMappersForEveryEventType,
                 currentReadModelSchema,
-                eventTypeSchemas);
+                eventTypeSchemas,
+                explicitlyMappedProperties);
 
             SetupJoinsForFromDefinition(
                 fromObservable,
@@ -466,7 +496,8 @@ public class ProjectionFactory(
                         actualIdentifiedByProperty,
                         propertyMappersForEveryEventType,
                         currentReadModelSchema,
-                        eventTypeSchemas);
+                        eventTypeSchemas,
+                        explicitlyMappedProperties);
 
                     SetupJoinsForFromDefinition(
                         fromObservable,
@@ -485,7 +516,7 @@ public class ProjectionFactory(
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap);
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap, explicitlyMappedProperties);
             var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
             propertyMappers.AddRange(propertyMappersForEveryEventType);
             var joinObservable = projection.Event
@@ -516,11 +547,12 @@ public class ProjectionFactory(
         PropertyPath actualIdentifiedByProperty,
         IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes,
         JsonSchema currentReadModelSchema,
-        IEnumerable<EventTypeSchema> eventTypeSchemas)
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        HashSet<string> explicitlyMappedProperties)
     {
         var schemaList = eventTypeSchemas.ToList();
         var matchingSchema = schemaList.FirstOrDefault(ets => ets.Type == eventType);
-        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap);
+        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap, explicitlyMappedProperties);
         var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event
@@ -561,9 +593,10 @@ public class ProjectionFactory(
             return;
         }
 
+        var explicitlyMappedProperties = GetExplicitlyMappedProperties(projectionDefinition.From.Values, projectionDefinition.Join.Values);
         foreach (var (joinEventType, joinDefinition) in joinExpressions)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema, projection.AutoMap);
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema, projection.AutoMap, explicitlyMappedProperties);
             var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
             fromObservable
                 .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger)
