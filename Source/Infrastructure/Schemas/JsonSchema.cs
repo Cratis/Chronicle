@@ -23,13 +23,22 @@ public class JsonSchema
     static readonly TypeFormats _typeFormats = new();
     readonly JsonSchema? _root;
 
-    /// <summary>Lazy caches for parsed schema components.</summary>
-    SyncedPropertiesDictionary? _propertiesCache;
-    List<JsonSchema>? _allOfCache;
-    List<JsonSchema>? _anyOfCache;
-    List<JsonSchema>? _oneOfCache;
-    Dictionary<string, JsonSchema>? _definitionsCache;
-    ExtensionDataDictionary? _extensionDataCache;
+    /// <summary>
+    /// Lazy caches for parsed schema components.
+    /// </summary>
+    /// <remarks>
+    /// A single <see cref="JsonSchema"/> instance is cached and shared (for example the event-type schemas held by the
+    /// client <c>EventTypes</c>) and read concurrently — projections, reducers, key resolvers, the MongoDB converter,
+    /// and constraint registration all flatten the same instance. The caches are therefore published with release
+    /// semantics: each is built fully into a local before the <c>volatile</c> field is assigned, so a concurrent reader
+    /// never observes a half-populated dictionary or list (which previously surfaced as a property "not existing").
+    /// </remarks>
+    volatile SyncedPropertiesDictionary? _propertiesCache;
+    volatile List<JsonSchema>? _allOfCache;
+    volatile List<JsonSchema>? _anyOfCache;
+    volatile List<JsonSchema>? _oneOfCache;
+    volatile Dictionary<string, JsonSchema>? _definitionsCache;
+    volatile ExtensionDataDictionary? _extensionDataCache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonSchema"/> class (empty schema).
@@ -124,23 +133,29 @@ public class JsonSchema
     {
         get
         {
-            if (_propertiesCache is null)
+            var cached = _propertiesCache;
+            if (cached is not null)
             {
-                _propertiesCache = new SyncedPropertiesDictionary(Node);
-                if (Node["properties"] is JsonObject propsNode)
+                return cached;
+            }
+
+            // Build the dictionary fully into a local before publishing it, so a concurrent reader never sees a
+            // partially-populated cache (which would make a present property appear to be missing).
+            var properties = new SyncedPropertiesDictionary(Node);
+            if (Node["properties"] is JsonObject propsNode)
+            {
+                foreach (var (key, value) in propsNode)
                 {
-                    foreach (var (key, value) in propsNode)
+                    if (value is JsonObject propObj)
                     {
-                        if (value is JsonObject propObj)
-                        {
-                            var propNode = (JsonObject)propObj.DeepClone();
-                            var prop = new JsonSchemaProperty(key, propNode, Root);
-                            _propertiesCache.LoadWithoutSync(key, prop);
-                        }
+                        var propNode = (JsonObject)propObj.DeepClone();
+                        var prop = new JsonSchemaProperty(key, propNode, Root);
+                        properties.LoadWithoutSync(key, prop);
                     }
                 }
             }
-            return _propertiesCache;
+
+            return _propertiesCache = properties;
         }
     }
 
@@ -214,22 +229,28 @@ public class JsonSchema
     {
         get
         {
-            if (_definitionsCache is null)
+            var cached = _definitionsCache;
+            if (cached is not null)
             {
-                _definitionsCache = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);
-                var defsNode = (Node["$defs"] ?? Node["definitions"]) as JsonObject;
-                if (defsNode is not null)
+                return cached;
+            }
+
+            // Build the dictionary fully into a local before publishing it, so a concurrent reader never sees a
+            // partially-populated cache.
+            var definitions = new Dictionary<string, JsonSchema>(StringComparer.Ordinal);
+            var defsNode = (Node["$defs"] ?? Node["definitions"]) as JsonObject;
+            if (defsNode is not null)
+            {
+                foreach (var (key, value) in defsNode)
                 {
-                    foreach (var (key, value) in defsNode)
+                    if (value is JsonObject defObj)
                     {
-                        if (value is JsonObject defObj)
-                        {
-                            _definitionsCache[key] = new JsonSchema((JsonObject)defObj.DeepClone(), this);
-                        }
+                        definitions[key] = new JsonSchema((JsonObject)defObj.DeepClone(), this);
                     }
                 }
             }
-            return _definitionsCache;
+
+            return _definitionsCache = definitions;
         }
     }
 
