@@ -260,7 +260,7 @@ public class ChangesetConverter(
 
         var stateType = childRemoved.State.GetType();
         var isPrimitive = stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly);
-        var identifiedByProperty = (string)childRemoved.IdentifiedByProperty;
+        var identifiedByProperty = childRemoved.IdentifiedByProperty.Path.ToMongoDBPropertyName();
 
         if (!isPrimitive && !string.IsNullOrEmpty(identifiedByProperty))
         {
