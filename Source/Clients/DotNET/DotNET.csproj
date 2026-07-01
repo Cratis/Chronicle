@@ -28,6 +28,10 @@
         </ProjectReference>
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Include="../../Kernel/Concepts/Captures/*.cs" Link="Concepts/Captures/%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <Target Name="GrpcClients" BeforeTargets="Build" Condition=" '$(TargetFramework)' != '' AND '$(RuntimeIdentifier)' == '' AND '$(NoBuild)' != 'true' ">
         <Message Text="Generating gRPC clients" Importance="high" />
         <Exec Command="dotnet run &quot;$(TargetDir)Cratis.Chronicle.Contracts.dll&quot; $(ContractsImplementationAssembly)" WorkingDirectory="$(MSBuildThisFileDirectory)../../Tools/GrpcClients" />

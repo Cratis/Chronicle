@@ -1,0 +1,8 @@
+- name: Overview
+  href: index.md
+- name: Capture Declaration Language
+  href: capture-declaration-language/toc.yml
+- name: Declarative Captures
+  href: declarative/toc.yml
+- name: Model-Bound Captures
+  href: model-bound/toc.yml
