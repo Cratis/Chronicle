@@ -24,7 +24,7 @@
         "@monaco-editor/react": "^4.7.0",
         "allotment": "^1.20.5",
         "chart.js": "^4.5.1",
-        "echarts": "^6.0.0",
+        "echarts": "^6.1.0",
         "monaco-editor": "^0.55.1",
         "pluralize": "^8.0.0",
         "primeicons": "^7.0.0",
