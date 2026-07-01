@@ -9,9 +9,6 @@ env:
   DOTNET8_VERSION: "8.0.410"
   DOTNET9_VERSION: "9.0.x"
   DOTNET_VERSION: "10.0.x"
-  DOTNET_X64_CACHE: "dotnet-x64-cache-${{ github.sha }}"
-  DOTNET_ARM64_CACHE: "dotnet-arm64-cache-${{ github.sha }}"
-  WORKBENCH_CACHE: "web-cache-${{ github.sha }}"
 
 on:
   workflow_dispatch:
@@ -47,11 +44,6 @@ permissions:
   contents: write
   deployments: write
   id-token: write
-  # Required so cache-saving build jobs (dotnet-x64/arm64, workbench) can write to
-  # the GitHub Actions cache service, which enforces the `actions` write scope. The
-  # publish-docker-* jobs consume those caches with fail-on-cache-miss, so without
-  # this they fail with "cache write denied: token has no writable scopes".
-  actions: write
 
 jobs:
   release:
@@ -182,16 +174,16 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        id: dotnet-x64-output
-        with:
-          path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}
-
       - name: Build x64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Release -f net10.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
+
+      - name: Upload x64 kernel output
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-x64
+          path: ./Source/Kernel/Server/out/x64
 
   dotnet-arm64:
     if: needs.release.outputs.publish == 'true'
@@ -210,16 +202,16 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        id: dotnet-arm64-output
-        with:
-          path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}
-
       - name: Build arm64 Kernel - self contained, ready to run
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Release -f net10.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
+
+      - name: Upload arm64 kernel output
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-arm64
+          path: ./Source/Kernel/Server/out/arm64
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -229,12 +221,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - uses: actions/cache@v3
-        id: workbench-output
-        with:
-          path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup node
         uses: actions/setup-node@v4
@@ -264,6 +250,12 @@ jobs:
           CHRONICLE_VERSION: ${{ needs.release.outputs.version }}
           CHRONICLE_COMMIT_SHA: ${{ github.sha }}
 
+      - name: Upload workbench output
+        uses: actions/upload-artifact@v4
+        with:
+          name: workbench
+          path: ./Source/Workbench/wwwroot
+
   dotnet-pack-and-publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -276,11 +268,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
-        id: workbench-output
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
         with:
+          name: workbench
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -355,16 +347,16 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        id: dotnet-x64-development-output
-        with:
-          path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}-development
-
       - name: Build development x64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Debug -f net10.0 -r linux-x64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
+
+      - name: Upload x64 development kernel output
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-x64-development
+          path: ./Source/Kernel/Server/out/x64
 
   dotnet-arm64-development:
     if: needs.release.outputs.publish == 'true'
@@ -383,16 +375,16 @@ jobs:
             ${{ env.DOTNET9_VERSION }}
             ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        id: dotnet-arm64-development-output
-        with:
-          path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}-development
-
       - name: Build development arm64 Kernel (DEVELOPMENT symbol)
         working-directory: ./Source/Kernel/Server
         run: |
           dotnet publish -c Debug -f net10.0 -r linux-arm64 -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
+
+      - name: Upload arm64 development kernel output
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-arm64-development
+          path: ./Source/Kernel/Server/out/arm64
 
   publish-docker-production:
     if: needs.release.outputs.publish == 'true'
@@ -403,24 +395,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
-        id: dotnet-x64-output
+      - name: Download x64 kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-x64
           path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}
-          fail-on-cache-miss: true
 
-      - uses: actions/cache@v3
-        id: dotnet-arm64-output
+      - name: Download arm64 kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-arm64
           path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}
 
-      - uses: actions/cache@v3
-        id: workbench-output
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
         with:
+          name: workbench
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -469,12 +460,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
-        id: workbench-output
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
         with:
+          name: workbench
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
-          fail-on-cache-miss: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -522,25 +512,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
-        id: dotnet-x64-development-output
+      - name: Download x64 development kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-x64-development
           path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}-development
-          fail-on-cache-miss: true
 
-      - uses: actions/cache@v3
-        id: dotnet-arm64-development-output
+      - name: Download arm64 development kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-arm64-development
           path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}-development
-          fail-on-cache-miss: true
 
-      - uses: actions/cache@v3
-        id: workbench-output
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
         with:
+          name: workbench
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
@@ -603,26 +591,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
-        id: dotnet-x64-development-output
+      - name: Download x64 development kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-x64-development
           path: ./Source/Kernel/Server/out/x64
-          key: ${{ env.DOTNET_X64_CACHE }}-development
-          fail-on-cache-miss: true
 
-      - uses: actions/cache@v3
-        id: dotnet-arm64-development-output
+      - name: Download arm64 development kernel output
+        uses: actions/download-artifact@v4
         with:
+          name: dotnet-arm64-development
           path: ./Source/Kernel/Server/out/arm64
-          key: ${{ env.DOTNET_ARM64_CACHE }}-development
-          fail-on-cache-miss: true
 
-      - uses: actions/cache@v3
-        id: workbench-output
+      - name: Download workbench output
+        uses: actions/download-artifact@v4
         with:
+          name: workbench
           path: ./Source/Workbench/wwwroot
-          key: ${{ env.WORKBENCH_CACHE }}
-          fail-on-cache-miss: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@master
