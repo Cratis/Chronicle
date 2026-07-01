@@ -253,23 +253,31 @@ public class ChangesetConverter(
 
     void BuildChildRemoved(Key key, UpdateDefinitionBuilder<BsonDocument> updateDefinitionBuilder, ref UpdateDefinition<BsonDocument>? updateBuilder, ArrayFilters arrayFiltersForDocument, ChildRemoved childRemoved)
     {
-        BsonValue bsonValue;
-
-        var stateType = childRemoved.State.GetType();
-        if (stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly))
-        {
-            bsonValue = childRemoved.State.ToBsonValue();
-        }
-        else
-        {
-            var schema = readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty);
-            bsonValue = expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, schema);
-        }
-
         var childrenProperty = childRemoved.ChildrenProperty.GetChildrenProperty();
         var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
         var (property, arrayFilters) = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         arrayFiltersForDocument.AddRange(arrayFilters);
+
+        var stateType = childRemoved.State.GetType();
+        var isPrimitive = stateType.IsPrimitive || stateType == typeof(string) || stateType == typeof(Guid) || stateType == typeof(DateTime) || stateType == typeof(DateTimeOffset) || stateType == typeof(DateOnly) || stateType == typeof(TimeOnly);
+        var identifiedByProperty = childRemoved.IdentifiedByProperty.Path.ToMongoDBPropertyName();
+
+        if (!isPrimitive && !string.IsNullOrEmpty(identifiedByProperty))
+        {
+            // Pull an object child by its identifier rather than by whole-document equality. A child that
+            // carries a [PII] member is stored with that member encrypted at rest, so a full-document match
+            // against the plaintext removal state never matches and nothing is pulled — the in-memory sink
+            // removes by key, so the two sinks would otherwise silently diverge. The identifier is not PII.
+            var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
+            updateBuilder = updateBuilder is not null
+                ? updateBuilder.PullFilter(property, childFilter)
+                : updateDefinitionBuilder.PullFilter(property, childFilter);
+            return;
+        }
+
+        var bsonValue = isPrimitive
+            ? childRemoved.State.ToBsonValue()
+            : expandoObjectConverter.ToBsonDocument((childRemoved.State as ExpandoObject)!, readModel.GetSchemaForLatestGeneration().GetSchemaForPropertyPath(childRemoved.ChildrenProperty));
 
         updateBuilder = updateBuilder is not null
             ? updateBuilder.Pull(property, bsonValue)

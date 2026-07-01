@@ -31,6 +31,7 @@ public class when_a_reducer_releases_a_child_collection_with_a_pii_list(MongoDBF
     Exception? _error;
     bool _storedScoresAreCiphertextString;
     bool _storedScoresAreArray;
+    bool _releasedScoresAreArray;
     string _releasedScores = string.Empty;
 
     protected override string Identifier => "req-1";
@@ -97,6 +98,7 @@ public class when_a_reducer_releases_a_child_collection_with_a_pii_list(MongoDBF
                 Identifier,
                 new JsonObject { ["candidateId"] = "cand-1", ["evaluationScores"] = storedScores.AsString });
             _releasedScores = released["evaluationScores"]!.ToString();
+            _releasedScoresAreArray = released["evaluationScores"] is JsonArray;
         }
     }
 
@@ -105,6 +107,8 @@ public class when_a_reducer_releases_a_child_collection_with_a_pii_list(MongoDBF
     [Fact] void should_store_the_pii_list_as_ciphertext_string() => _storedScoresAreCiphertextString.ShouldBeTrue();
 
     [Fact] void should_not_shred_the_pii_list_into_an_array() => _storedScoresAreArray.ShouldBeFalse();
+
+    [Fact] void should_release_the_pii_list_back_into_an_array() => _releasedScoresAreArray.ShouldBeTrue();
 
     [Fact] void should_round_trip_the_pii_list_to_the_original_content() => _releasedScores.Contains(Criterion).ShouldBeTrue();
 
