@@ -47,6 +47,23 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
         return result;
     }
 
+    static JsonNode RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
+    {
+        // A coarse [PII] on a whole collection is blob-encrypted to a single ciphertext string, even though
+        // its schema type stays array. Releasing it decrypts back to the original JSON array text; re-parse
+        // that text into the JsonArray the schema expects so the read model round-trips into its collection
+        // type rather than a raw string (which fails to deserialize into IReadOnlyList<T>). A scalar PII
+        // decrypts to a plain string and is left untouched.
+        if (propertySchema.IsArray &&
+            released is JsonValue releasedValue &&
+            releasedValue.TryGetValue<string>(out var releasedText))
+        {
+            return JsonNode.Parse(releasedText) ?? released;
+        }
+
+        return released;
+    }
+
     async Task HandleActionFor(
         JsonSchema schema,
         string identifier,
@@ -69,7 +86,8 @@ public class JsonComplianceManager(IInstancesOf<IJsonCompliancePropertyValueHand
                     {
                         try
                         {
-                            json[property] = await action(handler, identifier, value);
+                            var handled = await action(handler, identifier, value);
+                            json[property] = actionName == "release" ? RestoreReleasedContainerShape(handled, propertySchema) : handled;
                             handlerApplied = true;
                         }
                         catch (Exception ex)
