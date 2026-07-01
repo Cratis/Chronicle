@@ -27,4 +27,5 @@ public class when_reducing_with_a_seeded_initial_state : Specification
         await _scenario.Given.ForEventSource(_id).Events(new Tallied());
 
     [Fact] void should_apply_the_event_on_top_of_the_seeded_state() => _scenario.Instance!.Count.ShouldEqual(101);
+    [Fact] void should_expose_the_reduced_instance_by_event_source_id() => _scenario.InstanceForEventSourceId(_id)!.Count.ShouldEqual(101);
 }

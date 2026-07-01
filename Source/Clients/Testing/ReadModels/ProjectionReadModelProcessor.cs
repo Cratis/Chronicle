@@ -79,9 +79,14 @@ internal static class ProjectionReadModelProcessor
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model schema.</param>
     /// <param name="initialState">Optional initial read model state.</param>
-    /// <returns>The projected read model, or <see langword="null"/> if the projection did not apply any changes.</returns>
+    /// <returns>
+    /// A tuple of the primary projected read model (the threaded result exposed as <c>Instance</c>, or
+    /// <see langword="null"/> if the projection did not apply any changes) and a dictionary of every
+    /// materialized instance keyed by its event source id (read per-key from the sink, so a multi-source
+    /// projection such as a join can be asserted against the intended instance deterministically).
+    /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when a deferred key cannot be resolved after retrying all events.</exception>
-    public static async Task<TReadModel?> Process<TReadModel>(
+    public static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
         IEventTypes eventTypes,
@@ -226,11 +231,17 @@ internal static class ProjectionReadModelProcessor
             await inMemorySink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
 
+        // Read every materialized instance per-key from the sink. Unlike the single threaded `state`
+        // (which blends events across sources into one object), the sink keeps one document per resolved
+        // root key — so a multi-source projection (e.g. a join whose join-source event was seeded first)
+        // can be asserted against the intended instance via InstanceForEventSourceId.
+        var instances = BuildInstancesFromSink<TReadModel>(inMemorySink);
+
         // A root-level removal (a class-level [RemovedWith]) deletes the read model document in the real
         // sink; mirror that here by returning null rather than the stale pre-removal state.
         if (removed)
         {
-            return null;
+            return (null, instances);
         }
 
         InjectIdentifierFromKey<TReadModel>(state, rootKey);
@@ -241,7 +252,39 @@ internal static class ProjectionReadModelProcessor
         // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
         // underlying primitive.
         var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
-        return JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+        var primary = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+        return (primary, instances);
+    }
+
+    /// <summary>
+    /// Deserializes every per-key document held by the in-memory sink into a <typeparamref name="TReadModel"/>,
+    /// keyed by its event source id — the faithful per-instance view the single threaded state cannot provide.
+    /// </summary>
+    /// <typeparam name="TReadModel">The read model type being projected.</typeparam>
+    /// <param name="sink">The in-memory sink populated during processing.</param>
+    /// <returns>A dictionary of every materialized instance keyed by its <see cref="EventSourceId"/>.</returns>
+    static Dictionary<EventSourceId, TReadModel> BuildInstancesFromSink<TReadModel>(InMemorySink sink)
+        where TReadModel : class
+    {
+        var instances = new Dictionary<EventSourceId, TReadModel>();
+        foreach (var (keyValue, document) in sink.Collection)
+        {
+            if (keyValue is null)
+            {
+                continue;
+            }
+
+            var json = JsonSerializer.Serialize(document, Globals.JsonSerializerOptions);
+            var instance = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+            if (instance is null)
+            {
+                continue;
+            }
+
+            instances[new EventSourceId(keyValue.ToString()!)] = instance;
+        }
+
+        return instances;
     }
 
     /// <summary>

@@ -57,6 +57,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     readonly EventStoreForTesting _eventStore = new(serviceProvider);
     readonly IServiceProvider _serviceProvider = serviceProvider ?? new DefaultServiceProvider();
     TReadModel? _instance;
+    IReadOnlyDictionary<EventSourceId, TReadModel> _instances = new Dictionary<EventSourceId, TReadModel>();
     bool _processed;
 
     /// <summary>
@@ -96,18 +97,42 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// the events produced no state changes. Accessing this property triggers event processing the first
     /// time it is called after events have been collected via <see cref="CollectEventsFor"/> or
     /// <see cref="ProcessEventsFor"/>.
+    /// When the seeded events materialize more than one instance — for example a multi-source join —
+    /// a single result is ambiguous, so this throws <see cref="MultipleInstancesMaterialized"/>; select the
+    /// intended instance with <see cref="InstanceForEventSourceId(EventSourceId)"/> or <see cref="Instances"/>.
     /// </remarks>
+    /// <exception cref="MultipleInstancesMaterialized">Thrown when more than one instance materialized.</exception>
     public TReadModel? Instance
     {
         get
         {
-            if (!_processed && _collectedEvents.Count > 0)
+            EnsureProcessed();
+            if (_instances.Count > 1)
             {
-                _instance = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
-                _processed = true;
+                throw new MultipleInstancesMaterialized(typeof(TReadModel), _instances.Keys);
             }
 
             return _instance;
+        }
+    }
+
+    /// <summary>
+    /// Gets every materialized read model instance, keyed by its event source id.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="Instance"/> — which returns a single threaded result and blends events across
+    /// sources into one object — this reads one document per resolved root key from the sink. Use it (or
+    /// <see cref="InstanceForEventSourceId"/>) for multi-source projections, such as a join whose
+    /// join-source event was seeded before the entity under test, to assert against the intended instance
+    /// deterministically. It is populated for projections; reducers are single-instance and expose their
+    /// result through <see cref="Instance"/> only.
+    /// </remarks>
+    public IReadOnlyDictionary<EventSourceId, TReadModel> Instances
+    {
+        get
+        {
+            EnsureProcessed();
+            return _instances;
         }
     }
 
@@ -138,6 +163,21 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
     /// <c>Given.ForEventSourceId(...).ReadModel(...)</c>.
     /// </remarks>
     public IReadModels ReadModels => _eventStore.ReadModels;
+
+    /// <summary>
+    /// Gets the materialized read model instance for a specific event source id.
+    /// </summary>
+    /// <param name="eventSourceId">The <see cref="EventSourceId"/> of the instance to return.</param>
+    /// <returns>The instance for the given event source id, or <see langword="null"/> if none was materialized.</returns>
+    /// <remarks>
+    /// This resolves a specific instance from the sink regardless of seed order, so a join/cross-stream
+    /// spec can assert against the intended entity even when another source's event was seeded first.
+    /// </remarks>
+    public TReadModel? InstanceForEventSourceId(EventSourceId eventSourceId)
+    {
+        EnsureProcessed();
+        return _instances.TryGetValue(eventSourceId, out var instance) ? instance : null;
+    }
 
     /// <summary>
     /// Registers a pre-built read model instance for a specific event source, making it available via
@@ -187,7 +227,16 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         return Task.CompletedTask;
     }
 
-    async Task<TReadModel?> ProcessEvents(IEnumerable<(EventSourceId EventSourceId, object Event)> events)
+    void EnsureProcessed()
+    {
+        if (!_processed && _collectedEvents.Count > 0)
+        {
+            (_instance, _instances) = ProcessEvents(_collectedEvents).GetAwaiter().GetResult();
+            _processed = true;
+        }
+    }
+
+    async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> ProcessEvents(IEnumerable<(EventSourceId EventSourceId, object Event)> events)
     {
         var eventsList = events.ToList();
         var readModelType = typeof(TReadModel);
@@ -195,7 +244,7 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
         var reducerType = FindReducerType(readModelType);
         if (reducerType is not null)
         {
-            return await ReducerReadModelProcessor.Process<TReadModel>(
+            var reduced = await ReducerReadModelProcessor.Process<TReadModel>(
                 reducerType,
                 eventsList.Select(e => new EventForEventSourceId(e.EventSourceId, e.Event, Causation.Unknown())),
                 _eventTypes,
@@ -203,6 +252,18 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
                 _serviceProvider,
                 _namingPolicy,
                 _initialState);
+
+            // A reducer is single-instance; key its result by the event source id it reduced so that
+            // InstanceForEventSourceId / Instances behave the same as for a projection. Only the single-source
+            // case is keyed — reducing events across more than one source is misuse of a single-instance API.
+            var reducerInstances = new Dictionary<EventSourceId, TReadModel>();
+            var distinctEventSourceIds = eventsList.Select(e => e.EventSourceId).Distinct().ToList();
+            if (reduced is not null && distinctEventSourceIds.Count == 1)
+            {
+                reducerInstances[distinctEventSourceIds[0]] = reduced;
+            }
+
+            return (reduced, reducerInstances);
         }
 
         var projectionDefinition = FindProjectionDefinition(readModelType);
