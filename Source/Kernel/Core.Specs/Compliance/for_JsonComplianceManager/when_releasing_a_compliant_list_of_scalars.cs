@@ -10,11 +10,13 @@ public class when_releasing_a_compliant_list_of_scalars : given.a_value_handler_
     const string Identifier = "9ae5067b-2920-4c97-a263-efe35bec2b43";
     JsonObject _result;
 
-    void Establish() =>
+    void Establish()
+    {
         // A coarse [PII] list of scalar concepts (e.g. IReadOnlyList<Email>) is blob-encrypted the same way;
         // releasing it must restore the array of scalars, not a single string.
         _valueHandler.Release(string.Empty, string.Empty, Identifier, Arg.Any<JsonNode>())
             .Returns(Task.FromResult<JsonNode>(JsonValue.Create("""["quality","speed"]""")));
+    }
 
     async Task Because() => _result = await _manager.Release(string.Empty, string.Empty, _schema, Identifier, _input);
 
