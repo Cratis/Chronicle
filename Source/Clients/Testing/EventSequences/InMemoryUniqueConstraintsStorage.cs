@@ -25,6 +25,9 @@ internal sealed class InMemoryUniqueConstraintsStorage : IUniqueConstraintsStora
         string scopeKey = "")
     {
         // Check if any OTHER event source has this value (unique across all sources)
+
+        // Note: Case-insensitive comparison is now handled by hashing the value with case normalization
+        // before it reaches the storage layer, so we can use a simple equality check here.
         var conflict = _index
             .FirstOrDefault(kv =>
                 kv.Key.ConstraintName == definition.Name.Value &&

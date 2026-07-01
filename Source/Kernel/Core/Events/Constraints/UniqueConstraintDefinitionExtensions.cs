@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Properties;
@@ -42,7 +44,31 @@ public static class UniqueConstraintDefinitionExtensions
     /// Get the unique value for the properties and values.
     /// </summary>
     /// <param name="propertiesWithValues">The <see cref="UniqueConstraintPropertyAndValue"/> to get for.</param>
-    /// <returns>A string representing the unique value.</returns>
-    public static string GetValue(this IEnumerable<UniqueConstraintPropertyAndValue> propertiesWithValues) =>
-        string.Join('-', propertiesWithValues.Select(_ => _.Value));
+    /// <param name="ignoreCasing">Whether to ignore casing when computing the hash.</param>
+    /// <returns>A SHA-256 hash of the concatenated string representing the unique value.</returns>
+    /// <remarks>
+    /// The value is hashed using SHA-256 to avoid storing PII data in the constraint indexes.
+    /// The hash is computed from the unencrypted concatenated property values.
+    /// </remarks>
+    public static string GetValue(this IEnumerable<UniqueConstraintPropertyAndValue> propertiesWithValues, bool ignoreCasing = false)
+    {
+        var concatenatedValue = string.Join('-', propertiesWithValues.Select(_ => _.Value));
+        if (ignoreCasing)
+        {
+            concatenatedValue = concatenatedValue.ToLowerInvariant();
+        }
+        return ComputeSha256Hash(concatenatedValue);
+    }
+
+    /// <summary>
+    /// Computes the SHA-256 hash of the given input string.
+    /// </summary>
+    /// <param name="input">The input string to hash.</param>
+    /// <returns>The SHA-256 hash as a lowercase hexadecimal string.</returns>
+    static string ComputeSha256Hash(string input)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
 }
