@@ -105,6 +105,22 @@ public class EventScenario(
     public EventScenarioGivenBuilder Given => new(_created.EventLog);
 
     /// <summary>
+    /// Gets the fluent builder used to append the event(s) under test during the act phase and return the resulting <see cref="AppendResult"/>.
+    /// </summary>
+    /// <remarks>
+    /// Symmetric to <see cref="Given"/>: where <c>Given</c> seeds pre-existing events, <c>When</c> performs the act being
+    /// tested. Its terminal <see cref="EventSourceWhenBuilder.Events"/> returns the <see cref="AppendResult"/> — the same
+    /// "the act returns its result" shape as <c>CommandScenario.Execute</c>, so constraint/append specs read as
+    /// Given / When / then without binding the raw <see cref="IEventSequence.Append"/> overload by hand.
+    /// <code>
+    /// await scenario.Given.ForEventSource(id).Events(seedEvent);
+    /// var result = await scenario.When.ForEventSource(id).Events(actEvent);
+    /// result.ShouldHaveConstraintViolationFor(name);
+    /// </code>
+    /// </remarks>
+    public EventScenarioWhenBuilder When => new(_created.EventLog);
+
+    /// <summary>
     /// Gets the <see cref="IEventLog"/> backed by the real kernel event sequence grain via the real client event log.
     /// </summary>
     public IEventLog EventLog => _created.EventLog;

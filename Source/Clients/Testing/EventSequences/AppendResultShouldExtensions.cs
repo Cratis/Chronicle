@@ -130,6 +130,18 @@ public static class AppendResultShouldExtensions
     }
 
     /// <summary>
+    /// Asserts that the result has at least one constraint violation for a specific <see cref="ConstraintName"/>.
+    /// </summary>
+    /// <param name="result">The result to assert on.</param>
+    /// <param name="constraintName">The <see cref="ConstraintName"/> to look for.</param>
+    /// <exception cref="AppendResultAssertionException">Thrown when the expected constraint violation is not present.</exception>
+    /// <remarks>
+    /// Singular convenience alias for <see cref="ShouldHaveConstraintViolationFor"/>.
+    /// </remarks>
+    public static void ShouldHaveConstraintViolation(this IAppendResult result, ConstraintName constraintName) =>
+        result.ShouldHaveConstraintViolationFor(constraintName);
+
+    /// <summary>
     /// Asserts that the result has at least one concurrency violation.
     /// </summary>
     /// <param name="result">The result to assert on.</param>
