@@ -30,6 +30,10 @@ RUN chmod +x ./entrypoint.sh
 
 COPY /Source/Kernel/Server/out /app
 
+# Restore the executable bit on the apphost — publish artifacts can arrive without it
+# (upload-artifact drops Unix permissions) and the entrypoint runs it directly (exit 126 otherwise).
+RUN chmod +x ./Cratis.Chronicle.Server
+
 # Microsoft.Data.SqlClient does not support Globalization Invariant Mode and throws
 # NotSupportedException on connection open. Server.csproj sets InvariantGlobalization=true
 # which bakes both switches into runtimeconfig.json; flip them so the MSSQL integration
