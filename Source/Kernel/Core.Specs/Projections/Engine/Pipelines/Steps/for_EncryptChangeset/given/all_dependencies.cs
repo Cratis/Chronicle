@@ -53,7 +53,7 @@ public class all_dependencies : Specification
         _step = new EncryptChangeset(new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), _objectComparer, EventStore, EventStoreNamespace);
     }
 
-    protected ProjectionEventContext CreateContext(string eventSourceId, Subject? subject = null)
+    protected ProjectionEventContext CreateContext(string eventSourceId, Subject? subject = null, string? key = null)
     {
         var @event = new AppendedEvent(
             EventContext.From(
@@ -72,7 +72,7 @@ public class all_dependencies : Specification
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(_objectComparer, @event, new ExpandoObject());
 
         return new ProjectionEventContext(
-            new Key(eventSourceId, new ArrayIndexers([])),
+            new Key(key ?? eventSourceId, new ArrayIndexers([])),
             @event,
             changeset,
             ProjectionOperationType.None,
