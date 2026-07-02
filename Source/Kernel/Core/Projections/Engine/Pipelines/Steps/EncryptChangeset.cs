@@ -33,9 +33,7 @@ public class EncryptChangeset(
             return context;
         }
 
-        var identifier = context.Event.Context.Subject?.IsSet == true
-            ? context.Event.Context.Subject.Value
-            : context.Event.Context.EventSourceId.Value;
+        var identifier = context.Event.Context.ResolveComplianceIdentifier(context.Key);
 
         var schema = projection.TargetReadModelSchema;
         var currentState = context.Changeset.CurrentState;
