@@ -100,8 +100,8 @@ public class all_dependencies : Specification
         return new AppendedEvent(context, new ExpandoObject());
     }
 
-    protected ReducerContext CreateContext(string eventSourceId, Subject? subject = null) =>
-        new([CreateEvent(eventSourceId, subject)], new Key(eventSourceId, new ArrayIndexers([])));
+    protected ReducerContext CreateContext(string eventSourceId, Subject? subject = null, string? key = null) =>
+        new([CreateEvent(eventSourceId, subject)], new Key(key ?? eventSourceId, new ArrayIndexers([])));
 
     protected ReducerDelegate CreateReducer(ExpandoObject? returnState) =>
         (_, _) => Task.FromResult(new ReducerSubscriberResult(
