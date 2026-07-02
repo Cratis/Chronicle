@@ -11,4 +11,10 @@ cp ./out/$ARCH_FOLDER/*.json .
 cp ./out/$ARCH_FOLDER/*.xml .
 cp ./out/$ARCH_FOLDER/*.so .
 cp ./out/$ARCH_FOLDER/Cratis.Chronicle.Server .
+
+# Restore the executable bit on the apphost. The published binary loses it in transit
+# (actions/upload-artifact does not preserve Unix permissions), and every entrypoint
+# invokes ./Cratis.Chronicle.Server directly — without +x the container exits 126.
+chmod +x Cratis.Chronicle.Server
+
 rm -rf ./out
