@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -39,6 +40,7 @@ namespace Cratis.Chronicle.Contracts;
 /// <param name="Reducers"><see cref="IReducers"/> instance.</param>
 /// <param name="Projections"><see cref="IProjections"/> instance.</param>
 /// <param name="Webhooks"><see cref="IWebhooks"/> instance.</param>
+/// <param name="ExternalServices"><see cref="IExternalServices"/> instance.</param>
 /// <param name="EventStoreSubscriptions"><see cref="IEventStoreSubscriptions"/> instance.</param>
 /// <param name="ReadModels"><see cref="IReadModels"/> instance.</param>
 /// <param name="MaterializedReadModels"><see cref="IMaterializedReadModels"/> instance.</param>
@@ -63,6 +65,7 @@ public sealed record Services(
     IReducers Reducers,
     IProjections Projections,
     IWebhooks Webhooks,
+    IExternalServices ExternalServices,
     IEventStoreSubscriptions EventStoreSubscriptions,
     IReadModels ReadModels,
     IMaterializedReadModels MaterializedReadModels,

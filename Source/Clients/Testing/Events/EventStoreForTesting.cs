@@ -19,6 +19,7 @@ using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventStoreSubscriptions;
+using Cratis.Chronicle.ExternalServices;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Json;
@@ -41,6 +42,7 @@ using Cratis.Traces;
 using Cratis.Types;
 using Microsoft.Extensions.Options;
 using EventStoreSubscriptionsImpl = Cratis.Chronicle.EventStoreSubscriptions.EventStoreSubscriptions;
+using ExternalServicesImpl = Cratis.Chronicle.ExternalServices.ExternalServices;
 using FailedPartitionsImpl = Cratis.Chronicle.Observation.FailedPartitions;
 using InMemoryClosedStreamsConstraintStorage = Cratis.Chronicle.Storage.InMemory.Events.Constraints.ClosedStreamsConstraintStorage;
 using InMemoryEventSequenceStorage = Cratis.Chronicle.Storage.InMemory.EventSequences.EventSequenceStorage;
@@ -76,6 +78,7 @@ public class EventStoreForTesting : IEventStore
     readonly Lazy<IConstraints> _constraints;
     readonly Lazy<IReactors> _reactors;
     readonly Lazy<IWebhooks> _webhooks;
+    readonly Lazy<IExternalServices> _externalServices;
     readonly Lazy<IEventStoreSubscriptions> _subscriptions;
     readonly Lazy<IFailedPartitions> _failedPartitions;
     readonly Lazy<IJobs> _jobs;
@@ -198,6 +201,7 @@ public class EventStoreForTesting : IEventStore
             NullLogger<ReactorsImpl>.Instance,
             new NullLoggerFactory()));
         _webhooks = new Lazy<IWebhooks>(() => new WebhooksImpl(_eventTypes, this, NullLogger<WebhooksImpl>.Instance));
+        _externalServices = new Lazy<IExternalServices>(() => new ExternalServicesImpl(this, NullLogger<ExternalServicesImpl>.Instance));
         _subscriptions = new Lazy<IEventStoreSubscriptions>(() => new EventStoreSubscriptionsImpl(
             _eventTypes,
             this,
@@ -250,6 +254,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IWebhooks Webhooks => _webhooks.Value;
+
+    /// <inheritdoc/>
+    public IExternalServices ExternalServices => _externalServices.Value;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions Subscriptions => _subscriptions.Value;

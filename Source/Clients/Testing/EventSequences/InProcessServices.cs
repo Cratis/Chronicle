@@ -6,6 +6,7 @@ using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -77,6 +78,9 @@ internal sealed class InProcessServices(
 
     /// <inheritdoc/>
     public IWebhooks Webhooks => throw new NotSupportedException("Webhooks is not supported in test scenarios.");
+
+    /// <inheritdoc/>
+    public IExternalServices ExternalServices => throw new NotSupportedException("ExternalServices is not supported in test scenarios.");
 
     /// <inheritdoc/>
     public IEventStoreSubscriptions EventStoreSubscriptions => throw new NotSupportedException("EventStoreSubscriptions is not supported in test scenarios.");

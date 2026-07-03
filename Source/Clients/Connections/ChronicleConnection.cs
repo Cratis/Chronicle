@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
 using Cratis.Chronicle.Contracts.EventSequences;
+using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -264,6 +265,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IReducers>(clientFactory),
             callInvoker.CreateGrpcService<IProjections>(clientFactory),
             callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
+            callInvoker.CreateGrpcService<IExternalServices>(clientFactory),
             callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IReadModels>(clientFactory),
             callInvoker.CreateGrpcService<Contracts.ReadModels.IMaterializedReadModels>(clientFactory),
