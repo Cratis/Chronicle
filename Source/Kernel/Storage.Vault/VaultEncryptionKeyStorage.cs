@@ -73,7 +73,7 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(
+    public async Task<EncryptionKey?> TryGetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
@@ -81,17 +81,21 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
     {
         var targetRevision = IsLatest(revision)
             ? await GetHighestRevision(eventStore, eventStoreNamespace, identifier)
-                ?? throw new MissingEncryptionKey(identifier)
             : revision;
 
-        var path = BuildPath(eventStore, eventStoreNamespace, identifier, targetRevision!);
+        if (targetRevision is null)
+        {
+            return null;
+        }
+
+        var path = BuildPath(eventStore, eventStoreNamespace, identifier, targetRevision);
         try
         {
             var secret = await _vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path, mountPoint: _mountPoint);
             if (!secret.Data.Data.TryGetValue(PublicKeyField, out var publicRaw) || publicRaw is null ||
                 !secret.Data.Data.TryGetValue(PrivateKeyField, out var privateRaw) || privateRaw is null)
             {
-                throw new MissingEncryptionKey(identifier);
+                return null;
             }
 
             var publicKey = Convert.FromBase64String(publicRaw.ToString()!);
@@ -100,9 +104,18 @@ public class VaultEncryptionKeyStorage(string connectionDetails, string? mountPo
         }
         catch (VaultApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            throw new MissingEncryptionKey(identifier);
+            return null;
         }
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+            ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public async Task DeleteFor(

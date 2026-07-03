@@ -40,7 +40,7 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
+    public async Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         var cacheRevision = revision ?? EncryptionKeyRevision.Latest;
         var cacheKey = new Key(eventStore, eventStoreNamespace, identifier, cacheRevision);
@@ -50,8 +50,18 @@ public class CacheEncryptionKeyStorage(IEncryptionKeyStorage actualKeyStore) : I
             return encryptionKey;
         }
 
-        return _keys[cacheKey] = await actualKeyStore.GetFor(eventStore, eventStoreNamespace, identifier, revision);
+        var key = await actualKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
+        if (key is not null)
+        {
+            _keys[cacheKey] = key;
+        }
+
+        return key;
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)

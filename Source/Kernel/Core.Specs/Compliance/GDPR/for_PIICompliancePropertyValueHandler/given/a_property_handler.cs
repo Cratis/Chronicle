@@ -22,7 +22,6 @@ public class a_property_handler : Specification
         _keyStore = Substitute.For<IEncryptionKeyStorage>();
         _encryption = Substitute.For<IEncryption>();
         _handler = new(_keyStore, _encryption);
-        _keyStore.HasFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult(true));
-        _keyStore.GetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult(_key));
+        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult<EncryptionKey?>(_key));
     }
 }

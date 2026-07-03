@@ -56,7 +56,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task<StoredEncryptionKey> GetFor(
+    public async Task<StoredEncryptionKey?> TryGetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
@@ -68,13 +68,21 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             ? await scope.DbContext.EncryptionKeys
                 .Where(e => e.Identifier == identifier.Value)
                 .OrderByDescending(e => e.Revision)
-                .FirstOrDefaultAsync() ?? throw new MissingEncryptionKey(identifier)
+                .FirstOrDefaultAsync()
             : await scope.DbContext.EncryptionKeys
-                .SingleOrDefaultAsync(e => e.Identifier == identifier.Value && e.Revision == revision!.Value)
-                ?? throw new MissingEncryptionKey(identifier);
+                .SingleOrDefaultAsync(e => e.Identifier == identifier.Value && e.Revision == revision!.Value);
 
-        return new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey);
+        return entity is null ? null : new StoredEncryptionKey(entity.PublicKey, entity.PrivateKey);
     }
+
+    /// <inheritdoc/>
+    public async Task<StoredEncryptionKey> GetFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+            ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public async Task DeleteFor(

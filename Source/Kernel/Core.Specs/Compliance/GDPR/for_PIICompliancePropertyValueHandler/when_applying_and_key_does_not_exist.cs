@@ -17,7 +17,7 @@ public class when_applying_and_key_does_not_exist : given.a_property_handler
 
     void Establish()
     {
-        _keyStore.HasFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult(false));
+        _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier).Returns(Task.FromResult<EncryptionKey?>(null));
         _generatedKey = new EncryptionKey(Encoding.UTF8.GetBytes("NewPublic"), Encoding.UTF8.GetBytes("NewPrivate"));
         _encryption.GenerateKey().Returns(_generatedKey);
         _encryptedBytes = Encoding.UTF8.GetBytes("encrypted");

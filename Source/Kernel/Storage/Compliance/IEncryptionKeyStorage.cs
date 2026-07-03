@@ -33,6 +33,16 @@ public interface IEncryptionKeyStorage
     Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null);
 
     /// <summary>
+    /// Try to get an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
+    /// </summary>
+    /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>
+    /// <param name="eventStoreNamespace"><see cref="EventStoreNamespaceName"/> the key belongs to.</param>
+    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to get for.</param>
+    /// <param name="revision">Optional <see cref="EncryptionKeyRevision"/>. Defaults to retrieving the latest revision when not specified.</param>
+    /// <returns>The <see cref="EncryptionKey"/>, or <see langword="null"/> when none exists (e.g. it was deleted for right-to-erasure).</returns>
+    Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null);
+
+    /// <summary>
     /// Get an <see cref="EncryptionKey"/> for a specific <see cref="EncryptionKeyIdentifier"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the key belongs to.</param>
@@ -40,6 +50,7 @@ public interface IEncryptionKeyStorage
     /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to get for.</param>
     /// <param name="revision">Optional <see cref="EncryptionKeyRevision"/>. Defaults to retrieving the latest revision when not specified.</param>
     /// <returns>The <see cref="EncryptionKey"/>.</returns>
+    /// <exception cref="MissingEncryptionKey">Thrown when no key exists for the identifier.</exception>
     Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null);
 
     /// <summary>

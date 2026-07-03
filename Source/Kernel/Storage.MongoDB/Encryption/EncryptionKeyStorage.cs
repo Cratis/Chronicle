@@ -56,7 +56,7 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(
+    public async Task<EncryptionKey?> TryGetFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier identifier,
@@ -79,9 +79,17 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             keyDoc = await result.SingleOrDefaultAsync();
         }
 
-        ThrowIfMissingEncryptionKey(identifier, keyDoc);
-        return new(keyDoc.PublicKey, keyDoc.PrivateKey);
+        return keyDoc == default ? null : new(keyDoc.PublicKey, keyDoc.PrivateKey);
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision)
+            ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public async Task DeleteFor(
@@ -112,14 +120,6 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
             .FirstOrDefaultAsync();
 
         return latestDoc is null ? (EncryptionKeyRevision)1u : latestDoc.Id.Revision.Value + 1u;
-    }
-
-    void ThrowIfMissingEncryptionKey(EncryptionKeyIdentifier identifier, EncryptionKeyForIdentifier? key)
-    {
-        if (key == default)
-        {
-            throw new MissingEncryptionKey(identifier);
-        }
     }
 
     IMongoCollection<EncryptionKeyForIdentifier> GetCollection(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace)
