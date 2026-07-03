@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Contracts.Compliance;
 using Cratis.Chronicle.Schemas;
@@ -15,9 +16,10 @@ namespace Cratis.Chronicle.Services.Compliance;
 /// <summary>
 /// Represents an implementation of <see cref="ICompliance"/>.
 /// </summary>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving the kernel <see cref="IPIIManager"/> grain.</param>
 /// <param name="jsonComplianceManager">The <see cref="IJsonComplianceManager"/> for handling compliance on JSON.</param>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
-internal sealed class ComplianceService(IJsonComplianceManager jsonComplianceManager, ILogger<ComplianceService> logger) : ICompliance
+internal sealed class ComplianceService(IGrainFactory grainFactory, IJsonComplianceManager jsonComplianceManager, ILogger<ComplianceService> logger) : ICompliance
 {
     /// <inheritdoc/>
     public async Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default)
@@ -52,4 +54,11 @@ internal sealed class ComplianceService(IJsonComplianceManager jsonComplianceMan
             return new ReleaseResponse { HasError = true, Error = ex.Message };
         }
     }
+
+    /// <inheritdoc/>
+    public Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default) =>
+        GetPIIManager(request.EventStore, request.Namespace).DeleteEncryptionKeyFor(request.Identifier);
+
+    IPIIManager GetPIIManager(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
+        grainFactory.GetGrain<IPIIManager>(Guid.Empty, new PIIManagerKey(eventStore, @namespace));
 }

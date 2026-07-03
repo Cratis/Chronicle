@@ -180,6 +180,7 @@ internal sealed class TestingServices(
 
     readonly Lazy<ICompliance> _compliance = new(() =>
         new KernelComplianceService(
+            grainFactory,
             new KernelJsonComplianceManager(new KnownInstancesOf<KernelJsonCompliancePropertyValueHandler>()),
             NullLogger<KernelComplianceService>.Instance));
 

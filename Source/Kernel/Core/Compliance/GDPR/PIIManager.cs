@@ -11,20 +11,9 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// <remarks>
 /// Initializes a new instance of the <see cref="PIIManager"/> class.
 /// </remarks>
-/// <param name="encryption"><see cref="IEncryption"/> system.</param>
 /// <param name="keyStore">The <see cref="IEncryptionKeyStorage"/>.</param>
-public class PIIManager(IEncryption encryption, IEncryptionKeyStorage keyStore) : Grain, IPIIManager
+public class PIIManager(IEncryptionKeyStorage keyStore) : Grain, IPIIManager
 {
-    /// <inheritdoc/>
-    public async Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier)
-    {
-        _ = this.GetPrimaryKey(out var primaryKeyExtension);
-        var primaryKey = (PIIManagerKey)primaryKeyExtension!;
-
-        var key = encryption.GenerateKey();
-        await keyStore.SaveFor(primaryKey.EventStore, primaryKey.Namespace, identifier, key);
-    }
-
     /// <inheritdoc/>
     public async Task DeleteEncryptionKeyFor(EncryptionKeyIdentifier identifier)
     {

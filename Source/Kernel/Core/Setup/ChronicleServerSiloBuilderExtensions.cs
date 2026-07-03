@@ -103,6 +103,7 @@ public static class ChronicleServerSiloBuilderExtensions
             var projections = new Cratis.Chronicle.Services.Projections.Projections(grainFactory, expandoObjectConverter, sp.GetRequiredService<ILanguageService>(), sp);
             return new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
+                    grainFactory,
                     sp.GetRequiredService<IJsonComplianceManager>(),
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Compliance.ComplianceService>>()),
                 new Cratis.Chronicle.Services.EventStores(
