@@ -9,14 +9,7 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 public interface IPIIManager
 {
     /// <summary>
-    /// Creates a new encryption key and registers it for the specific identifier.
-    /// </summary>
-    /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to register for.</param>
-    /// <returns>Awaitable task.</returns>
-    Task CreateAndRegisterKeyFor(EncryptionKeyIdentifier identifier);
-
-    /// <summary>
-    /// Deletes a specific encryption key based on th e<see cref="EncryptionKeyIdentifier"/>.
+    /// Deletes a specific encryption key based on the <see cref="EncryptionKeyIdentifier"/>.
     /// </summary>
     /// <param name="identifier"><see cref="EncryptionKeyIdentifier"/> to delete.</param>
     /// <returns>Awaitable task.</returns>

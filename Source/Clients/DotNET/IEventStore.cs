@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -102,6 +103,11 @@ public interface IEventStore
     /// Gets the <see cref="IEventSeeding"/> for the event store.
     /// </summary>
     IEventSeeding Seeding { get; }
+
+    /// <summary>
+    /// Gets the <see cref="IPIIManager"/> for managing PII encryption keys (GDPR right-to-erasure) for the event store.
+    /// </summary>
+    IPIIManager PII { get; }
 
     /// <summary>
     /// Discover all artifacts for the event store.
