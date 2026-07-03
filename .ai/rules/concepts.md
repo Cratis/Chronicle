@@ -27,6 +27,7 @@ Never use raw primitives (`string`, `int`, `Guid`) in domain models, commands, e
   - `Guid` → `NotSet` backed by `Guid.Empty`
   - `string` → `NotSet` backed by `string.Empty`
   - `int` / `long` → `NotSet` backed by `0` / `0L`
+- **Reference the sentinel — never reconstruct it.** When you need a concept's empty/unset value — in production code **and** specs — use its `NotSet` (or equivalently named) static property. Never pass a raw `string.Empty` / `Guid.Empty` / `0` (or the underlying primitive's empty) that implicitly converts to the concept: `EventStoreName.NotSet` states intent, reads as the domain value rather than a primitive, and survives a change to the sentinel's backing value (e.g. `EventStoreName.NotSet` is `"[NotSet]"`, not `""`). If a concept you need an empty of lacks a sentinel, add one.
 - For identity concepts, add a `static New()` factory — it reads better than `new AuthorId(Guid.NewGuid())`.
 - Place concepts in the folder they belong to — never a standalone `Concepts/` folder. Slice-specific → slice file; feature-shared → feature folder; module-shared → module folder; app-wide → `Common/`.
 - One concept per file, named after the concept (e.g. `AuthorId.cs`, `AuthorName.cs`).
