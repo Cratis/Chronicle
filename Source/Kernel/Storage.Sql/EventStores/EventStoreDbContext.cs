@@ -5,6 +5,7 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Constraints;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventStoreSubscriptions;
 using Cratis.Chronicle.Storage.Sql.EventStores.EventTypes;
+using Cratis.Chronicle.Storage.Sql.EventStores.ExternalServices;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Seeding;
 using Cratis.Chronicle.Storage.Sql.EventStores.Observers;
@@ -64,6 +65,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<WebhookDefinition> WebhookDefinitions { get; set; }
 
     /// <summary>
+    /// Gets or sets the external services DbSet.
+    /// </summary>
+    public DbSet<ExternalServiceDefinition> ExternalServiceDefinitions { get; set; }
+
+    /// <summary>
     /// Gets or sets the constraints DbSet.
     /// </summary>
     public DbSet<ConstraintDefinition> Constraints { get; set; }
@@ -85,6 +91,12 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
         // Ignore them so EF Core does not try to create shadow tables or require primary keys.
         modelBuilder.Ignore<WebhookTarget>()
             .Ignore<ObserverFilters>();
+
+        // ExternalServiceEndpoint (and its nested configurations) are value objects serialized as JSON
+        // via [Json] on ExternalServiceDefinition.Endpoint. Ignore them as entity types.
+        modelBuilder.Ignore<ExternalServiceEndpoint>();
+        modelBuilder.Ignore<HttpEndpointConfiguration>();
+        modelBuilder.Ignore<DatabaseEndpointConfiguration>();
 
         // ObserverDefinition is stored in the ObserverDefinitions table. Override the default
         // convention (DbSet name "Observers") so it doesn't collide with the NamespaceDbContext's

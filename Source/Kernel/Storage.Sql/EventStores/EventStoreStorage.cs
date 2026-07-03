@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Observation.EventStoreSubscriptions;
@@ -56,6 +57,9 @@ public class EventStoreStorage(EventStoreName eventStore, IDatabase database, II
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new Webhooks.WebhookDefinitionsStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServices.ExternalServiceDefinitionsStorage(eventStore, database);
 
     /// <inheritdoc/>
     public IReadModelDefinitionsStorage ReadModels { get; } = new ReadModels.ReadModelDefinitionsStorage(eventStore, database);

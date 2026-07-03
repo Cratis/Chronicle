@@ -8,8 +8,10 @@ using Cratis.Chronicle.Concepts.Jobs;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.ExternalServices;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.Events.EventTypes;
+using Cratis.Chronicle.Storage.MongoDB.ExternalServices;
 using Cratis.Chronicle.Storage.MongoDB.Namespaces;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
 using Cratis.Chronicle.Storage.MongoDB.Observation.EventStoreSubscriptions;
@@ -82,6 +84,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public IWebhookDefinitionsStorage Webhooks { get; } = new WebhookDefinitionsStorage(eventStoreDatabase);
+
+    /// <inheritdoc/>
+    public IExternalServiceDefinitionsStorage ExternalServices { get; } = new ExternalServiceDefinitionsStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionDefinitionsStorage EventStoreSubscriptions { get; } = new EventStoreSubscriptionDefinitionsStorage(eventStoreDatabase);
