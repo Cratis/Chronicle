@@ -218,6 +218,60 @@
                     "oauth": "OAuth (Client Credentials)"
                 }
             },
+            "externalServices": {
+                "title": "External Services",
+                "empty": "No external services found",
+                "actions": {
+                    "add": "Add",
+                    "remove": "Remove"
+                },
+                "columns": {
+                    "name": "Name",
+                    "endpointType": "Endpoint Type",
+                    "endpoint": "Endpoint",
+                    "url": "URL",
+                    "authorization": "Authorization",
+                    "host": "Host",
+                    "port": "Port",
+                    "database": "Database",
+                    "username": "Username"
+                },
+                "dialogs": {
+                    "addExternalService": {
+                        "title": "Add External Service",
+                        "name": "Name",
+                        "endpointType": "Endpoint Type",
+                        "url": "URL",
+                        "authType": "Authorization Type",
+                        "basicUsername": "Username",
+                        "basicPassword": "Password",
+                        "bearerToken": "Bearer Token",
+                        "oauthAuthority": "OAuth Authority URL",
+                        "oauthClientId": "Client ID",
+                        "oauthClientSecret": "Client Secret",
+                        "host": "Host",
+                        "port": "Port",
+                        "database": "Database",
+                        "username": "Username",
+                        "password": "Password"
+                    },
+                    "removeExternalService": {
+                        "title": "Remove External Service",
+                        "message": "Are you sure you want to remove the external service '{name}'?"
+                    }
+                },
+                "endpointTypes": {
+                    "http": "HTTP",
+                    "msSql": "Microsoft SQL Server",
+                    "postgreSql": "PostgreSQL"
+                },
+                "authTypes": {
+                    "none": "None",
+                    "basic": "Basic",
+                    "bearer": "Bearer Token",
+                    "oauth": "OAuth (Client Credentials)"
+                }
+            },
             "projections": {
                 "title": "Projections",
                 "empty": "No projections",

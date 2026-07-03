@@ -21,6 +21,7 @@ import { Reducers } from './General/Reducers/Reducers';
 import { Reactors } from './General/Reactors/Reactors';
 import { ReadModelTypes } from './General/ReadModelTypes/ReadModelTypes';
 import { Webhooks } from './General/Webhooks/Webhooks';
+import { ExternalServices } from './General/ExternalServices/ExternalServices';
 import { ReadModels } from './Namespaces/ReadModels/ReadModels';
 import { Pivot } from './Namespaces/Pivot/Pivot';
 import strings from 'Strings';
@@ -57,6 +58,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.general.eventTypes, url: 'event-types', icon: mdIcons.MdDataObject },
                 { label: strings.mainMenu.general.readModelTypes, url: 'read-model-types', icon: mdIcons.MdTypeSpecimen },
                 { label: 'Webhooks', url: 'webhooks', icon: mdIcons.MdWebhook },
+                { label: 'External Services', url: 'external-services', icon: mdIcons.MdCloud },
                 { label: strings.mainMenu.general.captures, url: 'captures', icon: mdIcons.MdCameraAlt },
                 { label: strings.mainMenu.general.projections, url: ':namespace/projections', icon: mdIcons.MdTransform },
                 { label: strings.mainMenu.general.namespaces, url: 'namespaces', icon: mdIcons.MdApps },
@@ -90,6 +92,7 @@ export const EventStore = () => {
                 <Route path={'event-types'} element={<EventTypes />} />
                 <Route path={'read-model-types'} element={<ReadModelTypes />} />
                 <Route path={'webhooks'} element={<Webhooks />} />
+                <Route path={'external-services'} element={<ExternalServices />} />
                 <Route path={'captures'} element={<Captures />} />
                 <Route path={'namespaces'} element={<Namespaces />} />
                 <Route path={'seed-data'} element={<EventsSeeding />} />
