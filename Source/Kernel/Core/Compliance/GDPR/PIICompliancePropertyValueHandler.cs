@@ -40,7 +40,16 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
     /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
-        var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+        var key = await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier);
+
+        // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
+        // the PII is permanently unreadable. Surface it as empty rather than throwing so that
+        // queries and read models for an erased subject keep working instead of crashing.
+        if (key is null)
+        {
+            return JsonValue.Create(string.Empty);
+        }
+
         var encryptedAsString = value.ToString();
         var encrypted = Convert.FromBase64String(encryptedAsString);
         var decrypted = _encryption.Decrypt(encrypted, key);
@@ -50,9 +59,9 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
 
     async Task<EncryptionKey> EnsureKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
-        if (await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
+        if (await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
         {
-            return await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+            return existing;
         }
 
         // Serialize key creation per subject. Appending a batch encrypts all events concurrently
@@ -63,9 +72,9 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
         await gate.WaitAsync();
         try
         {
-            if (await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
+            if (await _encryptionKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existingAfterGate)
             {
-                return await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
+                return existingAfterGate;
             }
 
             var key = _encryption.GenerateKey();

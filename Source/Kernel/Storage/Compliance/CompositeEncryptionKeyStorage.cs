@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner) : IEncryptionKeyStorage
 {
     /// <inheritdoc/>
-    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
+    public async Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         IEncryptionKeyStorage? store = default;
 
@@ -28,19 +28,23 @@ public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
             }
         }
 
-        if (store != default)
+        if (store == default)
         {
-            var key = await store.GetFor(eventStore, eventStoreNamespace, identifier, revision);
-            foreach (var storeToSaveIn in inner.Where(_ => _ != store))
-            {
-                await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
-            }
-
-            return key;
+            return null;
         }
 
-        throw new MissingEncryptionKey(identifier);
+        var key = await store.GetFor(eventStore, eventStoreNamespace, identifier, revision);
+        foreach (var storeToSaveIn in inner.Where(_ => _ != store))
+        {
+            await storeToSaveIn.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        }
+
+        return key;
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)

@@ -35,19 +35,24 @@ public class InMemoryEncryptionKeyStorage : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
-    public Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
+    public Task<EncryptionKey?> TryGetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         if (IsLatest(revision))
         {
             var entry = _keys
                 .Where(kv => kv.Key.EventStore == eventStore && kv.Key.EventStoreNamespace == eventStoreNamespace && kv.Key.Identifier == identifier)
                 .OrderByDescending(kv => kv.Key.Revision.Value)
-                .First();
-            return Task.FromResult(entry.Value);
+                .Select(kv => (EncryptionKey?)kv.Value)
+                .FirstOrDefault();
+            return Task.FromResult(entry);
         }
 
-        return Task.FromResult(_keys[new(eventStore, eventStoreNamespace, identifier, revision!)]);
+        return Task.FromResult(_keys.TryGetValue(new(eventStore, eventStoreNamespace, identifier, revision!), out var key) ? key : null);
     }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKey> GetFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null) =>
+        await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
     public Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)

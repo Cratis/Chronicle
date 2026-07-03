@@ -225,6 +225,8 @@ public class EventStore : IEventStore
             artifactActivator,
             loggerFactory.CreateLogger<EventSeeding>());
 
+        PII = new Compliance.GDPR.PIIManager(eventStoreName, @namespace, connection);
+
         if (autoDiscoverAndRegister)
         {
             Connection.Lifecycle.OnConnected += RegisterAll;
@@ -278,6 +280,9 @@ public class EventStore : IEventStore
 
     /// <inheritdoc/>
     public IEventSeeding Seeding { get; }
+
+    /// <inheritdoc/>
+    public Compliance.GDPR.IPIIManager PII { get; }
 
     /// <inheritdoc/>
     public async Task DiscoverAll()

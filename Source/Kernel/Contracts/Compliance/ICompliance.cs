@@ -17,4 +17,13 @@ public interface ICompliance
     /// <returns>A <see cref="ReleaseResponse"/> with the decrypted payload or an error.</returns>
     [Operation]
     Task<ReleaseResponse> Release(ReleaseRequest request, CallContext context = default);
+
+    /// <summary>
+    /// Delete (crypto-shred) the encryption key for the given identifier, making all PII encrypted under it unreadable.
+    /// </summary>
+    /// <param name="request">The <see cref="DeleteEncryptionKeyRequest"/>.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>Awaitable task.</returns>
+    [Operation]
+    Task DeleteEncryptionKey(DeleteEncryptionKeyRequest request, CallContext context = default);
 }

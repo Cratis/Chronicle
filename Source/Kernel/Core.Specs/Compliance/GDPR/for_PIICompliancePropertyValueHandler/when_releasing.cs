@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Compliance.GDPR.for_PIICompliancePropertyValueHandler;
 
@@ -20,7 +21,7 @@ public class when_releasing : given.a_property_handler
         _encryption.Decrypt(Arg.Any<byte[]>(), _key).Returns(_encryptedBytes);
     }
 
-    async Task Because() => _result = await _handler.Release(string.Empty, string.Empty, Identifier, _input);
+    async Task Because() => _result = await _handler.Release(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _input);
 
     [Fact] void should_return_encrypted_string() => _result.ToString().ShouldEqual(_decryptedString);
 }

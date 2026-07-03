@@ -10,6 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Compliance;
+using Cratis.Chronicle.Compliance.GDPR;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
@@ -76,6 +77,7 @@ public class EventStoreForTesting : IEventStore
     readonly Lazy<IJobs> _jobs;
     readonly Lazy<IUnitOfWorkManager> _unitOfWorkManager;
     readonly Lazy<IEventSeeding> _seeding;
+    readonly Lazy<IPIIManager> _pii;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventStoreForTesting"/> class.
@@ -205,6 +207,7 @@ public class EventStoreForTesting : IEventStore
             _serviceProvider,
             _artifactActivator,
             NullLogger<EventSeeding>.Instance));
+        _pii = new Lazy<IPIIManager>(() => new PIIManager(Name, Namespace, Connection));
     }
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
@@ -255,6 +258,9 @@ public class EventStoreForTesting : IEventStore
 
     /// <inheritdoc/>
     public IEventSeeding Seeding => _seeding.Value;
+
+    /// <inheritdoc/>
+    public IPIIManager PII => _pii.Value;
 
     /// <summary>
     /// Gets the <see cref="IJsonSchemaGenerator"/> used by this event store.
