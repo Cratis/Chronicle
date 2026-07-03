@@ -40,6 +40,14 @@ public class PIICompliancePropertyValueHandler(IEncryptionKeyStorage encryptionK
     /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
+        // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
+        // the PII is permanently unreadable. Surface it as empty rather than throwing so that
+        // queries and read models for an erased subject keep working instead of crashing.
+        if (!await _encryptionKeyStore.HasFor(eventStore, eventStoreNamespace, identifier))
+        {
+            return JsonValue.Create(string.Empty);
+        }
+
         var key = await _encryptionKeyStore.GetFor(eventStore, eventStoreNamespace, identifier);
         var encryptedAsString = value.ToString();
         var encrypted = Convert.FromBase64String(encryptedAsString);
