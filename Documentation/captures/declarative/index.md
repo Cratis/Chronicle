@@ -13,8 +13,7 @@ public class InvoiceCapture : ICapturer
     public void Define(ICaptureBuilder builder) => builder
         .FromApi("InvoicingApi", _ => _
             .OnRoute("/invoices")
-            .PollEvery("10m")
-            .WithBearerToken("$env.API_TOKEN"))
+            .PollEvery("10m"))
         .Key("id")
         .Append<InvoiceStatusChanged>(_ => _
             .WhenPropertyChanges("status")
@@ -33,14 +32,16 @@ API source options:
 
 - `OnRoute(route)`
 - `PollEvery(interval)`
+
+`FromApi(api, ...)` references a configured [External Service](../../external-services/index.md) by name. The External Service holds the base URL and authentication, so no authentication is configured on the API source. If no route is configured, the External Service base URL is used directly.
+
+Webhook source options (webhook sources are inbound and configure their own authentication):
+
+- `WithBasicAuth(username, password)`
 - `WithBearerToken(token)`
-- `WithAuth(auth)`
+- `WithOAuth(authority, clientId, clientSecret)`
 
-`FromApi(api, ...)` references a separately configured API source. If no route is configured, the API base URL is used directly.
-
-Webhook source option:
-
-- `WithAuth(auth)`
+Authentication is never part of the capture declaration text, so that secrets and tokens do not live in capture definitions.
 
 ## Defining identity
 

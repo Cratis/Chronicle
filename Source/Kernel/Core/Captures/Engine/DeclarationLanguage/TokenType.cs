@@ -101,11 +101,6 @@ public enum TokenType
     Poll = 17,
 
     /// <summary>
-    /// The keyword <c>auth</c>.
-    /// </summary>
-    Auth = 18,
-
-    /// <summary>
     /// The keyword <c>route</c>.
     /// </summary>
     Route = 19,
@@ -159,11 +154,6 @@ public enum TokenType
     /// The keyword <c>split</c>.
     /// </summary>
     Split = 29,
-
-    /// <summary>
-    /// The keyword <c>bearer</c>.
-    /// </summary>
-    Bearer = 30,
 
     /// <summary>
     /// The equals operator.

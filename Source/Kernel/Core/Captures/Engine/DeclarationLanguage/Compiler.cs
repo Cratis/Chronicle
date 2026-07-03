@@ -76,7 +76,6 @@ public class Compiler
         sourceBlock.SourceType,
         Api: GetValue(sourceBlock.Properties, "api"),
         Poll: GetValue(sourceBlock.Properties, "poll"),
-        Auth: GetValue(sourceBlock.Properties, "auth"),
         Route: GetValue(sourceBlock.Properties, "route"),
         Path: GetValue(sourceBlock.Properties, "path"),
         Topic: GetValue(sourceBlock.Properties, "topic"));

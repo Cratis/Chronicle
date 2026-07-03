@@ -9,7 +9,6 @@ public class a_capture_with_nested_block : for_LanguageService.given.a_language_
         capture Customers
           source webhook
             path /customers
-            auth bearer $env.WebhookToken
           key customerId
           nested billingAddress
             map

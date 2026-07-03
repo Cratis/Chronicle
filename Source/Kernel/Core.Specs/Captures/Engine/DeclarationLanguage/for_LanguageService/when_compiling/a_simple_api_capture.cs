@@ -12,7 +12,6 @@ public class a_simple_api_capture : for_LanguageService.given.a_language_service
           source api
             api CustomersApi
             poll 5m
-            auth bearer $env.CustomersApiToken
           key customerId
           append CustomerChanged
             when email
@@ -26,7 +25,7 @@ public class a_simple_api_capture : for_LanguageService.given.a_language_service
     [Fact] void should_have_api_source() => _result.Source.Type.ShouldEqual(SourceType.Api);
     [Fact] void should_have_api() => _result.Source.Api.ShouldEqual("CustomersApi");
     [Fact] void should_have_poll() => _result.Source.Poll.ShouldEqual("5m");
-    [Fact] void should_have_auth() => _result.Source.Auth.ShouldEqual("bearer $env.CustomersApiToken");
+    [Fact] void should_not_have_authorization() => _result.Source.Authorization.ShouldBeNull();
     [Fact] void should_have_key_property() => _result.KeyProperty.ShouldEqual("customerId");
     [Fact] void should_have_append_event() => _result.Appends[0].EventType.ShouldEqual("CustomerChanged");
 }

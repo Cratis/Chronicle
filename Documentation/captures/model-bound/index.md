@@ -6,18 +6,21 @@ Model-bound captures use attributes to declare source, key, append conditions, a
 
 Apply one source attribute and one key attribute on the capture type:
 
-- `[ApiCapture(api, Poll = ..., Auth = ..., Route = ...)]`
-- `[WebhookCapture(path, Auth = ...)]`
+- `[ApiCapture(api, Poll = ..., Route = ...)]`
+- `[WebhookCapture(path)]`
 - `[MessageCapture(topic)]`
 - `[CaptureKey(property)]`
 
 ```csharp
-[ApiCapture("InvoicingApi", Poll = "10m", Auth = "bearer $env.API_TOKEN", Route = "/invoices")]
+[ApiCapture("InvoicingApi", Poll = "10m", Route = "/invoices")]
 [CaptureKey("id")]
 public class InvoiceCapture;
 ```
 
 `ApiCapture` references a named API configuration. If `Route` is not set, the configured API base URL is used directly.
+
+> [!NOTE]
+> Authentication is not declared on the capture attribute. It is configured in code where the source is configured, so that secrets never live in the capture declaration. See [Configuring authentication](../capture-declaration-language/index.md#configuring-authentication).
 
 ## Append conditions on event types
 

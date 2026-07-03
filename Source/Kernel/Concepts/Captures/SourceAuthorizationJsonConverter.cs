@@ -1,0 +1,77 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Cratis.Chronicle.Concepts.Captures;
+
+/// <summary>
+/// JSON converter for <see cref="SourceAuthorization"/>.
+/// </summary>
+public class SourceAuthorizationJsonConverter : JsonConverter<SourceAuthorization>
+{
+    /// <inheritdoc/>
+    public override SourceAuthorization? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            var jsonDoc = JsonDocument.ParseValue(ref reader);
+            var root = jsonDoc.RootElement;
+
+            if (root.TryGetProperty("type", out var typeElement))
+            {
+                var authType = typeElement.GetString();
+                return authType switch
+                {
+                    "basic" => new SourceBasicAuthorization(
+                        root.GetProperty("username").GetString()!,
+                        root.GetProperty("password").GetString()!),
+                    "bearer" => new SourceBearerTokenAuthorization(
+                        root.GetProperty("token").GetString()!),
+                    "oauth" => new SourceOAuthAuthorization(
+                        root.GetProperty("authority").GetString()!,
+                        root.GetProperty("clientId").GetString()!,
+                        root.GetProperty("clientSecret").GetString()!),
+                    _ => SourceAuthorization.None
+                };
+            }
+        }
+
+        return SourceAuthorization.None;
+    }
+
+    /// <inheritdoc/>
+    public override void Write(Utf8JsonWriter writer, SourceAuthorization value, JsonSerializerOptions options) =>
+        value.Switch(
+            basic =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "basic");
+                writer.WriteString("username", basic.Username);
+                writer.WriteString("password", basic.Password);
+                writer.WriteEndObject();
+            },
+            bearer =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "bearer");
+                writer.WriteString("token", bearer.Token);
+                writer.WriteEndObject();
+            },
+            oauth =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "oauth");
+                writer.WriteString("authority", oauth.Authority);
+                writer.WriteString("clientId", oauth.ClientId);
+                writer.WriteString("clientSecret", oauth.ClientSecret);
+                writer.WriteEndObject();
+            },
+            none =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "none");
+                writer.WriteEndObject();
+            });
+}

@@ -11,12 +11,28 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="path">The webhook path.</param>
 public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
 {
-    string? _auth;
+    SourceAuthorization? _authorization;
 
     /// <inheritdoc/>
-    public IWebhookSourceBuilder WithAuth(string auth)
+    public IWebhookSourceBuilder WithBasicAuth(string username, string password)
     {
-        _auth = auth;
+        _authorization = new SourceBasicAuthorization(username, password);
+
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IWebhookSourceBuilder WithBearerToken(string token)
+    {
+        _authorization = new SourceBearerTokenAuthorization(token);
+
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IWebhookSourceBuilder WithOAuth(string authority, string clientId, string clientSecret)
+    {
+        _authorization = new SourceOAuthAuthorization(authority, clientId, clientSecret);
 
         return this;
     }
@@ -25,5 +41,5 @@ public class WebhookSourceBuilder(string path) : IWebhookSourceBuilder
     /// Builds the <see cref="SourceDefinition"/>.
     /// </summary>
     /// <returns>A new <see cref="SourceDefinition"/>.</returns>
-    public SourceDefinition Build() => new(SourceType.Webhook, Auth: _auth, Path: path);
+    public SourceDefinition Build() => new(SourceType.Webhook, Path: path, Authorization: _authorization);
 }

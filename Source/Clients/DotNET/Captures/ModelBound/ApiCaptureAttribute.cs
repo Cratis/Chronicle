@@ -24,11 +24,6 @@ public sealed class ApiCaptureAttribute(string api) : Attribute
     public string? Poll { get; init; }
 
     /// <summary>
-    /// Gets or sets the authentication configuration.
-    /// </summary>
-    public string? Auth { get; init; }
-
-    /// <summary>
     /// Gets or sets the route for the configured API.
     /// </summary>
     public string? Route { get; init; }

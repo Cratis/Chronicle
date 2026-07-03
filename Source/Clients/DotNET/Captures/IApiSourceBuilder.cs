@@ -6,6 +6,11 @@ namespace Cratis.Chronicle.Captures;
 /// <summary>
 /// Defines the builder for configuring API capture sources.
 /// </summary>
+/// <remarks>
+/// The API source references a configured External Service by name. The base URL and authentication
+/// for the connection are configured on the External Service, not on the capture - so no authentication
+/// is configured here.
+/// </remarks>
 public interface IApiSourceBuilder
 {
     /// <summary>
@@ -16,23 +21,9 @@ public interface IApiSourceBuilder
     IApiSourceBuilder PollEvery(string interval);
 
     /// <summary>
-    /// Sets the route to poll on the configured API source.
+    /// Sets the route to poll on the referenced External Service, relative to its configured base URL.
     /// </summary>
     /// <param name="route">The route to use.</param>
     /// <returns>The builder continuation.</returns>
     IApiSourceBuilder OnRoute(string route);
-
-    /// <summary>
-    /// Sets a bearer token authentication configuration.
-    /// </summary>
-    /// <param name="token">The bearer token expression.</param>
-    /// <returns>The builder continuation.</returns>
-    IApiSourceBuilder WithBearerToken(string token);
-
-    /// <summary>
-    /// Sets the raw authentication configuration.
-    /// </summary>
-    /// <param name="auth">The authentication configuration.</param>
-    /// <returns>The builder continuation.</returns>
-    IApiSourceBuilder WithAuth(string auth);
 }

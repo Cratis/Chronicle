@@ -31,7 +31,6 @@ public static class Keywords
             { "webhook", TokenType.Webhook },
             { "message", TokenType.Message },
             { "poll", TokenType.Poll },
-            { "auth", TokenType.Auth },
             { "route", TokenType.Route },
             { "path", TokenType.Path },
             { "topic", TokenType.Topic },
@@ -43,7 +42,6 @@ public static class Keywords
             { "removed", TokenType.Removed },
             { "translate", TokenType.Translate },
             { "split", TokenType.Split },
-            { "bearer", TokenType.Bearer },
             { "true", TokenType.True },
             { "false", TokenType.False },
             { "null", TokenType.Null }

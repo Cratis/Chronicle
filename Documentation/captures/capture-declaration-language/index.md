@@ -21,7 +21,6 @@ capture InvoiceCapture
     api InvoicingApi
     route /invoices
     poll 10m
-    auth bearer $env.API_TOKEN
   key id
   map
     status = status translate
@@ -59,11 +58,32 @@ source api|webhook|message
 
 Source properties:
 
-- API: `api`, `route`, `poll`, `auth`
-- Webhook: `path`, `auth`
+- API: `api`, `route`, `poll`
+- Webhook: `path`
 - Message: `topic`
 
-For API sources, `api` identifies the configured API definition. `route` is optional; if omitted, the base API URL is used as-is.
+For API sources, `api` identifies a configured **[External Service](../../external-services/index.md)** by name. The External Service holds the base URL and the authentication for the connection. `route` is optional and is appended to that base URL; if omitted, the base URL is used as-is.
+
+> [!NOTE]
+> Authentication is **not** part of the CDL. For API sources it is configured on the referenced External Service; for webhook sources it is configured in code on the source builder. Either way, secrets and tokens never live in capture text. See [Configuring authentication](#configuring-authentication) below.
+
+### Configuring authentication
+
+**API sources** connect through a configured External Service. Configure the base URL and authentication once on the External Service; the capture simply references it by name:
+
+```csharp
+builder.FromApi("InvoicingApi", source => source
+    .OnRoute("/invoices")
+    .PollEvery("10m"));
+```
+
+**Webhook sources** are inbound and configure their authentication in code on the source builder:
+
+- `WithBasicAuth(username, password)` — basic authentication
+- `WithBearerToken(token)` — bearer token authentication
+- `WithOAuth(authority, clientId, clientSecret)` — OAuth authentication
+
+When no authentication is configured, the source is treated as unauthenticated.
 
 ### Key directive
 

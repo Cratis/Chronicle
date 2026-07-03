@@ -17,9 +17,4 @@ public sealed class WebhookCaptureAttribute(string path) : Attribute
     /// Gets the webhook path.
     /// </summary>
     public string Path { get; } = path;
-
-    /// <summary>
-    /// Gets or sets the authentication configuration.
-    /// </summary>
-    public string? Auth { get; init; }
 }
