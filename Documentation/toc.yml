@@ -46,6 +46,8 @@
   href: projections/toc.yml
 - name: Captures
   href: captures/toc.yml
+- name: External Services
+  href: external-services/toc.yml
 - name: Reactors
   href: reactors/toc.yml
 - name: Subscriptions
