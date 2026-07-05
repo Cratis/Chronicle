@@ -1,0 +1,48 @@
+---
+title: React to an event
+description: Run a side effect — send a notification, call an external system, append a follow-up event — when an event occurs.
+---
+
+**Goal:** when something happens — a book is returned, an order ships — you need to *do* something: notify a member, call an external API, or record a follow-up fact. That's a [reactor](../reactors/).
+
+## Write the reactor
+
+A reactor is a class implementing the marker interface `IReactor`. You don't implement a method from it — you write a method whose **first parameter is the event type** you want to handle, and Chronicle routes matching events to it:
+
+<ChronicleClientTabs snippet="scenarios/react-to-an-event/basic-reactor" clients="csharp,kotlin,java,elixir,typescript" />
+
+Chronicle discovers it by convention — no registration.
+
+## Be safe to repeat
+
+A reactor may run more than once for the same event (replay, recovery, redeploy). Make the side effect idempotent — record that it happened and skip if it already did. For a side effect that must never run again during a replay — a welcome email, a payment call — mark the handler (or the whole class) with `[OnceOnly]` and Chronicle excludes it from replays. See [OnceOnly](../reactors/once-only).
+
+## Need state? Pick the right consistency
+
+Reach for the event first — it carries the truth of what happened, and `context.EventSourceId` tells you what it happened *to*. But some reactions genuinely need more state. Say the notification should include the book's title — that lives in the read model, not the event.
+
+:::tip
+You *can* read state from a reactor — just mind the consistency level. The **materialized** read model (what the projection writes to the sink) is [eventually consistent](../read-models/consistency.md) and may not have caught up with the very event you're reacting to. `IReadModels.GetInstanceById` is **strongly consistent**: it rebuilds the instance from the event log on demand, so it includes the event in your hand.
+:::
+
+<ChronicleClientTabs snippet="scenarios/react-to-an-event/reading-state" clients="csharp,kotlin,java,elixir,typescript" />
+
+The full menu of read APIs — single, all, paged, observed — is in [Get read models](./real-time-query).
+
+## Appending an event
+
+The common "translation" pattern — react to one slice's event by recording a new fact. The simplest way is to **return the event**: Chronicle appends it to the event log for you, against the triggering event's `EventSourceId`:
+
+<ChronicleClientTabs snippet="scenarios/react-to-an-event/return-event" clients="csharp" />
+
+`Task<StockDecreased>` and collections of events work too, and you can control the target event source — see [Returning side effects](../reactors/side-effects). Auto-appending a returned event is C#-only — every other client appends explicitly instead, shown next.
+
+When you want to inspect the outcome yourself, append explicitly and handle the `AppendResult` — and **throw if it failed**, so the partition pauses instead of the fact being silently lost:
+
+<ChronicleClientTabs snippet="scenarios/react-to-an-event/explicit-append" clients="csharp,kotlin,java,elixir,typescript" />
+
+## See also
+
+- [Reactors](../reactors/) — the full reactor model, filtering, and once-only handling.
+- [Returning side effects](../reactors/side-effects) — every supported return shape and metadata control.
+- [Projections, reducers, and reactors](../concepts/observer-patterns.md) — when a reactor is the right tool vs. building state.

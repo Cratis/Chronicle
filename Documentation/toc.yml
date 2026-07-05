@@ -1,11 +1,11 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: Why Event Sourcing
   href: why-event-sourcing.md
 - name: CRUD, EF Core, and Chronicle
-  href: coming-from-crud.md
+  href: coming-from-crud.mdx
 - name: Understanding constraints
-  href: understanding-constraints.md
+  href: understanding-constraints.mdx
 - name: Understanding event evolution
   href: understanding-event-evolution.md
 - name: Getting started
@@ -48,6 +48,10 @@
   href: reactors/toc.yml
 - name: Subscriptions
   href: subscriptions/toc.yml
+- name: Jobs
+  href: jobs/toc.yml
+- name: Webhooks
+  href: webhooks/toc.yml
 - name: Reducers
   href: reducers/toc.yml
 - name: Code Analysis

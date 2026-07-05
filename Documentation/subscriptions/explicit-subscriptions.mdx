@@ -1,0 +1,117 @@
+---
+uid: explicit-subscriptions
+---
+
+# Explicit Event Store Subscriptions
+
+Chronicle supports **explicit subscriptions** — manual registration of subscriptions between event stores using the `Subscriptions` API. When you configure a subscription explicitly, you control:
+
+- Which event types are forwarded
+- Subscription lifecycle and management
+- The subscription identifier for reference and cleanup
+
+Explicit subscriptions are ideal when:
+- You need fine-grained control over which event types are forwarded
+- The source service's event types are not in a shared NuGet package
+- You want to dynamically create or remove subscriptions
+- Events come from a legacy or external system
+
+:::note[Client coverage]
+Explicit subscriptions are real in Elixir (`Chronicle.subscribe_to_event_store/3,4`, `Chronicle.unsubscribe_from_event_store/1,2`) and TypeScript (`store.subscriptions.subscribe`/`.unsubscribe`) too — both map closely onto C#'s `Subscriptions` API. Kotlin and Java have no event-store-subscription support at all yet — nothing in the Kotlin SDK source corresponds to this API. The host-builder-specific registration patterns further down this page (ASP.NET Core startup) aren't ported — see each client's own startup/registration conventions for the equivalent.
+:::
+
+## Setting Up an Explicit Subscription
+
+Use the `Subscriptions` property on `IEventStore` to subscribe:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+The three arguments are:
+
+| Argument | Description |
+|---|---|
+| Subscription ID | A stable, unique string that identifies this subscription within the target event store |
+| Source event store | The name of the event store whose outbox to subscribe to |
+| Configuration callback | Optional — filters which event types to forward |
+
+### Subscription ID
+
+The subscription ID must be unique within the target event store. It serves as the persistent identifier for the subscription on the kernel side. If you call `Subscribe` with the same ID, the kernel treats it as idempotent — no duplicate subscription is created.
+
+A typical naming convention:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/naming-convention" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Filtering Event Types
+
+Without a configuration callback, **all events** from the source outbox are forwarded. Use `WithEventType<T>()` to limit the subscription to specific types:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/filtering" clients="csharp,kotlin,java,elixir,typescript" />
+
+If you need to subscribe to all events without filtering, omit the configuration callback entirely:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Accessing Forwarded Events
+
+Events forwarded via an explicit subscription are placed into the inbox sequence for the source event store. Access inbox events through any observer (reactor, projection, reducer):
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/inbox-reactor" clients="csharp,kotlin,java,elixir,typescript" />
+
+The kernel automatically routes incoming events to the appropriate `inbox-{sourceEventStore}` event sequence. You do not need to reference the subscription ID when observing the events.
+
+## Removing a Subscription
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/unsubscribe" clients="csharp,kotlin,java,elixir,typescript" />
+
+Calling `Unsubscribe` with the subscription ID:
+- Stops event forwarding from the source outbox
+- Removes the persistent subscription definition from the kernel
+- Existing inbox events are **not deleted** — they remain available for observation
+
+Once removed, no new events are forwarded to the inbox. If you later recreate the subscription with the same ID, forwarding resumes from that point forward.
+
+## Idempotent Registration
+
+Subscriptions are identified by their subscription ID. Calling `Subscribe` with the same ID more than once is safe — if the subscription already exists, no duplicate subscription is created.
+
+This makes it safe to register all subscriptions at application startup without checking if they already exist:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/startup-registration" clients="csharp" />
+
+If any of these subscriptions already exist on the kernel, they are left unchanged.
+
+## Subscription Lifecycle
+
+Explicit subscriptions are **kernel-managed** and **persistent**:
+
+- **Created** when you call `Subscribe`, stored on the kernel, and assigned a subscription ID
+- **Persisted** — survive client disconnections and kernel restarts
+- **Re-established** automatically when the kernel starts, even if the client is not connected
+- **Removed** only when you explicitly call `Unsubscribe`
+
+## Typical Setup Pattern
+
+A common pattern is to register all subscriptions once during application startup:
+
+<ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/typical-pattern" clients="csharp" />
+
+## When to Use Explicit Subscriptions
+
+**Use explicit subscriptions when:**
+- You need fine-grained control over which event types are forwarded
+- Event types are not published in a shared NuGet package
+- You need to dynamically create or remove subscriptions at runtime
+- The subscription relationship is consuming-service-specific
+
+**Use [implicit subscriptions](implicit-subscriptions) when:**
+- Event types are published in a shared NuGet package with `[EventStore]` attributes
+- All events from a source should be automatically forwarded
+- You prefer zero configuration and automatic routing
+
+## See Also
+
+- [Implicit Event Store Subscriptions](implicit-subscriptions) — automatic subscription via `[EventStore]` attributes
+- [Outbox and Inbox](outbox-inbox) — conceptual explanation of how events flow between stores
+- [Reactors](../reactors/index) — processing inbox events with reactors
+- [Projections](../projections/index.md) — building read models from inbox events

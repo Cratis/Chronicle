@@ -1,0 +1,39 @@
+# Getting Started with Reactors
+
+Reactors observe events and run side effects. Use them for work such as sending notifications, calling an external API, publishing integration messages, or triggering a workflow in another system.
+
+Reactors do not build queryable state. Use a [projection](/chronicle/projections/) or [reducer](/chronicle/reducers/) when the outcome should be a read model.
+
+## Define the event
+
+A reactor handles one or more event types. The event is still a normal Chronicle event: an immutable fact with a stable event type identity.
+
+<ChronicleClientTabs snippet="reactors/getting-started/event" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Define the reactor
+
+The client SDK decides how a reactor is declared. The common shape is the same: mark a type or module as a reactor, add a handler for the event, and accept event context when the side effect needs metadata such as sequence number, occurrence time, event store, namespace, or correlation.
+
+<ChronicleClientTabs snippet="reactors/getting-started/reactor" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Register the reactor
+
+Registration is client-specific. Some clients discover reactor types and register them as part of event-store startup. Others register a reactor instance or include the reactor module in client startup options.
+
+<ChronicleClientTabs snippet="reactors/getting-started/register" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Use a stable reactor ID
+
+By default, clients derive a reactor identifier from the type or module name. Set an explicit ID when the reactor's identity must survive a rename. Changing the ID makes Chronicle treat it as a different observer, with a different observation position.
+
+<ChronicleClientTabs snippet="reactors/getting-started/stable-id" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Design for replay
+
+Reactors may see the same event again after replay, recovery, reconnect, or a retry. Make every side effect idempotent. Common patterns are idempotency keys, check-then-act storage, database upserts, or downstream APIs that tolerate duplicate requests.
+
+## Next steps
+
+- Learn the shared [reactor event-processing model](event-processing)
+- Compare reactors with [reducers](/chronicle/reducers/) and [projections](/chronicle/projections/)
+- Use [tagging reactors](/chronicle/concepts/tagging-reactors/) when you need to organize observer behavior

@@ -1,0 +1,32 @@
+# DotNET client usage
+
+Chronicle uses connection strings to configure the .NET client. You can pass a connection string to `ChronicleOptions` or provide one when constructing a `ChronicleClient`.
+
+## Development defaults
+
+The `ChronicleConnectionString.Development` constant provides a pre-configured development connection string. Default constructors also use this value:
+
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults" clients="csharp" />
+
+This is equivalent to:
+
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults-equivalent" clients="csharp" />
+
+> [!NOTE]
+> In development, you can use `chronicle://localhost:35000` without credentials. The .NET client automatically attempts the built-in development credentials (`chronicle-dev-client` / `chronicle-dev-secret`).
+
+Use explicit configuration for production environments.
+
+## From connection string
+
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/from-connection-string" clients="csharp" />
+
+## Fluent builder
+
+Use `ChronicleConnectionStringBuilder` to construct a connection string programmatically:
+
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" clients="csharp" />
+
+## Authentication validation
+
+You cannot specify both client credentials and API key authentication in the same connection string. Doing so throws an `AmbiguousAuthenticationMode` error.

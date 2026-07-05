@@ -1,0 +1,32 @@
+---
+title: Jobs
+description: Inspect and control long-running Chronicle Kernel operations such as replays and rebuilds.
+---
+
+Jobs represent long-running operations the Chronicle Kernel performs in the background — replaying a projection, rebuilding a read model, and similar work that runs in steps over time rather than completing instantly. Use the jobs API to see what's running, check progress, and stop, resume, or delete a job.
+
+## List all jobs
+
+<ChronicleClientTabs snippet="jobs/index/list-all" clients="csharp,elixir,typescript" />
+
+## Get a single job
+
+<ChronicleClientTabs snippet="jobs/index/get-one" clients="csharp,elixir,typescript" />
+
+A missing job resolves to nothing rather than an error — check for that before using the result.
+
+## Get the steps for a job
+
+A job is made up of one or more steps. Get them to see fine-grained progress:
+
+<ChronicleClientTabs snippet="jobs/index/get-steps" clients="csharp,elixir,typescript" />
+
+## Stop, resume, and delete
+
+<ChronicleClientTabs snippet="jobs/index/stop-resume-delete" clients="csharp,elixir,typescript" />
+
+Kotlin and Java don't currently have a jobs API — there's no equivalent anywhere in the Kotlin client SDK yet.
+
+## Related topics
+
+- [Webhooks](../webhooks/) — pushing observed events to external HTTP endpoints, the other kernel-managed background concern.

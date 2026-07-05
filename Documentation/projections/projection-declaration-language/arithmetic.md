@@ -228,6 +228,6 @@ Chronicle handles arithmetic operations safely:
 
 ## See Also
 
-- [Counters](counters.md) - Fixed increment/decrement operations
+- [Counters](counters) - Fixed increment/decrement operations
 - [Property Mapping](property-mapping.md) - Setting properties to specific values
-- [Expressions](expressions.md) - Understanding expression syntax
+- [Expressions](expressions) - Understanding expression syntax

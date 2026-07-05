@@ -30,7 +30,7 @@ What that buys you is unusual, and worth sitting with:
 
 Migrations run inside the **kernel** — the server — not in your application. That matters more than it first appears: once a migrator is registered, it applies to every event that passes through, whether it came from a .NET client, a REST call, or an integration written long after the migration shipped. Clients that are offline or still running older code are unaffected; they keep reading the generation they understand.
 
-This is the same principle that answers the other question that makes people nervous about event sourcing — enforcing uniqueness without a unique index. The hard part lives in the kernel, is declared close to the event, and applies to every client with no coordination. See [Understanding constraints](./understanding-constraints.md) for that half of the story.
+This is the same principle that answers the other question that makes people nervous about event sourcing — enforcing uniqueness without a unique index. The hard part lives in the kernel, is declared close to the event, and applies to every client with no coordination. See [Understanding constraints](./understanding-constraints) for that half of the story.
 
 ## Where to go next
 

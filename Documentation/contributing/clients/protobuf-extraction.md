@@ -98,7 +98,7 @@ protoc \
 
 ### TypeScript Example
 
-See [TypeScript gRPC Package](typescript-grpc-package.md) for details on the TypeScript client generation.
+See [TypeScript gRPC Package](typescript-grpc-package) for details on the TypeScript client generation.
 
 ## Maintenance
 

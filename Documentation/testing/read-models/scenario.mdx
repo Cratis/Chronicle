@@ -1,0 +1,106 @@
+---
+uid: Chronicle.Testing.ReadModels.Scenario
+---
+# ReadModelScenario
+
+`ReadModelScenario<TReadModel>` is a lightweight, in-process test utility that lets you verify the output of read model projections and reducers without a running Chronicle server or database.
+
+It auto-detects how `TReadModel` is backed — by a reducer, a fluent projection, or a model-bound projection — and routes events through the appropriate engine.
+
+In a [Cratis Specification](/testing-with-cratis/), the event history is the **given**, `Because()` feeds that history through the scenario, and the read model properties are the **then**.
+
+## Why use ReadModelScenario
+
+Integration tests against a live database are accurate but slow and fragile. `ReadModelScenario<TReadModel>` runs the same projection and reducer logic entirely in-process using null-stub storage, so your test suite stays fast without sacrificing correctness.
+
+## Installation
+
+`ReadModelScenario<TReadModel>` is in the `Cratis.Chronicle.Testing` NuGet package:
+
+```bash
+dotnet add package Cratis.Specifications.XUnit
+dotnet add package Cratis.Chronicle.Testing
+```
+
+## Basic usage
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/basic" clients="csharp" />
+
+`Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
+
+## Optional initial state
+
+Pass an initial state to the constructor when the read model starts from a non-default baseline:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/initial-state" clients="csharp" />
+
+## Injecting dependencies
+
+Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" clients="csharp" />
+
+## Pre-seeding read model instances
+
+Use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built read model instance for
+production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
+fetches a read model by ID without replaying events through a full projection:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" clients="csharp" />
+
+`scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
+instances and delegates everything else to the real read model implementation.
+
+## Auto-detection
+
+`ReadModelScenario<TReadModel>` searches the current application's loaded assemblies for a handler in this order:
+
+1. **Reducer** — a class implementing `IReducerFor<TReadModel>`.
+2. **Fluent projection** — a class implementing `IProjectionFor<TReadModel>`.
+3. **Model-bound projection** — `TReadModel` itself carries `[FromEvent<T>]` or `[Key]` attributes.
+
+If none are found, `NoReadModelHandlerFound` is thrown.
+
+## Example: reducer
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/reducer-example" clients="csharp" />
+
+## Example: fluent projection
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/fluent-projection-example" clients="csharp" />
+
+## Example: model-bound projection
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/model-bound-example" clients="csharp" />
+
+## Child collections
+
+`[ChildrenFrom<TEvent>]` child collections are materialized the same way they are at runtime, so a spec can assert the child rows directly on `Instance`. The child `key` may be any value the runtime accepts:
+
+- `string`, `int`/`long`, `bool`, `enum`, `Guid`
+- the temporal primitives `DateOnly`, `TimeOnly`, `DateTime`, `DateTimeOffset`
+- a `ConceptAs<T>` over any of the above
+
+Both same-event-source children (parent and child events share one event source) and cross-stream children (child events on their own event source, linked with `parentKey`) are supported, and two events carrying the same child key merge into a single child — matching the real sink.
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/children" clients="csharp" />
+
+## Multiple instances (joins and cross-stream)
+
+`Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
+
+<ChronicleClientTabs snippet="testing/read-models/scenario/multiple-instances" clients="csharp" />
+
+`Instances` exposes every materialized instance keyed by its event source id. Both are populated for projections; reducers are single-instance and expose their result through `Instance`.
+
+If more than one instance materializes and you read `Instance`, it throws `MultipleInstancesMaterialized` rather than silently returning a blended object — a signal to reach for `InstanceForEventSourceId` or `Instances` instead.
+
+> [!IMPORTANT]
+> `InstanceForEventSourceId(id)` selects the right instance no matter the seed order, but a `[Join]` **value** is only populated when the joined-in (source) stream is seeded **before** the entity that joins it. The entity pulls the joined value as its own event is processed; a join-source event seeded afterwards resolves the entity's identity but leaves the joined value unset. Seed the source stream first, as the example above does.
+
+## Notes
+
+- `Instance` is `null` until `Given` is called, or if no events were processed.
+- Each `Given.ForEventSource(id).Events(...)` call applies events to the specified event source. Call it multiple times to simulate events from different event sources.
+- `Given.ForEventSourceId(id)` is an alias for `ForEventSource(id)` that also exposes `.ReadModel(instance)` for pre-seeding.
+- Cratis Specifications provides `ShouldEqual`, `ShouldBeTrue`, `ShouldBeNull`, and related assertions. If you use Shouldly or FluentAssertions, translate the assertions to your project's style.

@@ -1,0 +1,111 @@
+# Projection with NotRewindable
+
+The `NotRewindable()` method marks a projection as forward-only, meaning it cannot be replayed or rewound. This is useful for projections that maintain state that should not be recreated from scratch or for performance-critical scenarios where replay is not needed.
+
+:::note[Client coverage]
+Marking a projection as not-rewindable is currently supported in C# and TypeScript only. Kotlin and Java have no fluent API for it, and Elixir's declarative and model-bound projections always register as rewindable with no way to opt out yet.
+:::
+
+## Defining a non-rewindable projection
+
+Use `NotRewindable()` to mark a projection as forward-only:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+This projection:
+
+- Cannot be replayed or reset
+- Processes events only as they arrive in real-time
+- Maintains forward-only state progression
+- Is optimized for performance and append-only scenarios
+
+## Read model definition
+
+The read model can include timestamp and audit information:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event definitions
+
+Events should be designed for forward-only processing:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## How it works
+
+When a projection is marked as `NotRewindable()`:
+
+1. **No replay capability**: The projection cannot be reset and rebuilt from the beginning
+2. **Forward-only processing**: Events are processed only as they arrive in chronological order
+3. **Performance optimization**: Chronicle skips replay infrastructure and optimizations
+4. **State preservation**: Existing projection state is preserved and cannot be recreated
+5. **Error handling**: Failed events may require manual intervention since replay isn't available
+
+## Use cases for non-rewindable projections
+
+### Audit and logging projections
+
+Perfect for audit logs where you want to preserve the exact timing and sequence:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/audit-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+
+### Performance monitoring
+
+For real-time performance metrics that don't need historical accuracy:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/performance-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+
+### Financial transactions
+
+For append-only financial records where replay could cause confusion:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/financial-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+
+## When to use NotRewindable
+
+Use `NotRewindable()` when:
+
+- **Audit requirements**: You need to preserve exact event timestamps and sequence
+- **Performance critical**: The projection handles high-volume events and replay would be expensive
+- **Append-only data**: The projection represents data that should never be regenerated
+- **Real-time processing**: Only forward, real-time event flow matters — a rebuilt-from-replay history would not reflect current state
+- **External integrations**: The projection triggers external actions that shouldn't be repeated
+- **Compliance**: Regulatory requirements prevent data recreation or replay
+
+## When NOT to use NotRewindable
+
+Avoid `NotRewindable()` when:
+
+- **Business logic changes**: You might need to replay events with updated logic
+- **Bug fixes**: Errors in projection logic need to be corrected by replay
+- **Data migration**: You need to rebuild projections with new schemas
+- **Testing**: Development and testing scenarios benefit from replay capability
+- **Recovery**: System failures might require rebuilding projection state
+
+## Combining with other features
+
+NotRewindable can be combined with other projection features:
+
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/combined-features" clients="csharp,kotlin,java,elixir,typescript" />
+
+This combines non-rewindable behavior with event sequence specification, passive mode, and event-context timestamp mapping.
+
+## Error handling considerations
+
+With non-rewindable projections:
+
+- **Failed events**: Must be handled carefully since replay isn't available
+- **Dead letter queues**: Consider implementing for failed event processing
+- **Manual intervention**: May be required to fix projection state
+- **Monitoring**: Implement comprehensive monitoring and alerting
+- **Backup strategies**: Consider point-in-time snapshots for recovery
+
+## Performance benefits
+
+Non-rewindable projections offer several performance advantages:
+
+- **Reduced memory usage**: No need to store replay state or checkpoints
+- **Faster startup**: No replay phase during application startup
+- **Lower CPU usage**: Eliminates replay processing overhead
+- **Simplified infrastructure**: Fewer moving parts in the projection system
+- **Better throughput**: All processing power focused on real-time events

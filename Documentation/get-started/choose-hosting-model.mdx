@@ -45,9 +45,9 @@ flowchart TB
 
 | Level | What you write | What Chronicle wires | Use it when |
 | --- | --- | --- | --- |
-| [Console](./console.md) | `new ChronicleClient(...)`, `GetEventStore(...)`, append events yourself | Nothing hidden. You see the client and event store directly. | You are learning, debugging a small reproduction, or writing a script. |
-| [Worker Service](./worker.md) | `Host.CreateApplicationBuilder`, `AddCratisChronicle(...)`, a `BackgroundService` | DI registration and artifact discovery for reactors, reducers, and projections. | You process events, run background workflows, or keep derived state updated. |
-| [ASP.NET Core](./aspnetcore.md) | `WebApplication.CreateBuilder`, `AddCratisChronicle(...)`, `UseCratisChronicle()` | DI registration, artifact discovery, and request-pipeline integration. | You expose HTTP endpoints, controllers, or minimal APIs that append events. |
+| [Console](./console) | `new ChronicleClient(...)`, `GetEventStore(...)`, append events yourself | Nothing hidden. You see the client and event store directly. | You are learning, debugging a small reproduction, or writing a script. |
+| [Worker Service](./worker) | `Host.CreateApplicationBuilder`, `AddCratisChronicle(...)`, a `BackgroundService` | DI registration and artifact discovery for reactors, reducers, and projections. | You process events, run background workflows, or keep derived state updated. |
+| [ASP.NET Core](./aspnetcore) | `WebApplication.CreateBuilder`, `AddCratisChronicle(...)`, `UseCratisChronicle()` | DI registration, artifact discovery, and request-pipeline integration. | You expose HTTP endpoints, controllers, or minimal APIs that append events. |
 | [Arc + Chronicle](/arc/backend/chronicle/) | Arc commands and queries; Chronicle-backed command return values and projections | Arc's command/query pipeline plus Chronicle event appending, identity, tenancy, and read-model integration. | You want a typed full-stack CQRS app with generated TypeScript proxies. |
 
 <Aside type="note" title="Arc is not a host model">
@@ -291,16 +291,7 @@ dotnet add package Cratis.Chronicle.Aspire
 For development, one line gives you the same batteries-included kernel as the `docker run` above —
 `AddCratisChronicle()` uses the development image with embedded MongoDB:
 
-```csharp
-var builder = DistributedApplication.CreateBuilder(args);
-
-var chronicle = builder.AddCratisChronicle();
-
-builder.AddProject<Projects.MyApi>("api")
-    .WithReference(chronicle);
-
-builder.Build().Run();
-```
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/basic-apphost" clients="csharp" />
 
 To choose a database, pass a configure callback. Aspire then switches to the slim image (no embedded
 MongoDB) and the `With*` method you pick sets the kernel's storage type and connection string from the
@@ -310,11 +301,7 @@ your app model instead of hand-written:
 <Tabs syncKey="database">
 <TabItem label="MongoDB">
 
-```csharp
-var mongo = builder.AddConnectionString("chronicle-mongo");
-
-var chronicle = builder.AddCratisChronicle("chronicle", c => c.WithMongoDB(mongo));
-```
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/mongo-database" clients="csharp" />
 
 `mongo` can be any resource with a connection string — a MongoDB Atlas connection string as shown, or a
 container added directly in the AppHost with `builder.AddMongoDB("mongo")`.
@@ -322,29 +309,19 @@ container added directly in the AppHost with `builder.AddMongoDB("mongo")`.
 </TabItem>
 <TabItem label="PostgreSQL">
 
-```csharp
-var postgres = builder.AddPostgres("postgres").AddDatabase("chronicle-db");
-
-var chronicle = builder.AddCratisChronicle("chronicle", c => c.WithPostgreSql(postgres));
-```
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/postgres-database" clients="csharp" />
 
 </TabItem>
 <TabItem label="SQL Server">
 
-```csharp
-var sql = builder.AddSqlServer("sql").AddDatabase("chronicle-db");
-
-var chronicle = builder.AddCratisChronicle("chronicle", c => c.WithMsSql(sql));
-```
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlserver-database" clients="csharp" />
 
 </TabItem>
 <TabItem label="SQLite">
 
 SQLite is file-based, so you pass the connection string directly instead of a resource:
 
-```csharp
-var chronicle = builder.AddCratisChronicle("chronicle", c => c.WithSqlite("Data Source=/data/chronicle.db"));
-```
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlite-database" clients="csharp" />
 
 </TabItem>
 </Tabs>
@@ -359,17 +336,17 @@ key storage with HashiCorp Vault or Azure Key Vault, and the full AppHost walkth
 The kernel is running and listening on `chronicle://localhost:35000`. Now connect your app to it:
 
 - **Just exploring?** The [Get started quickstart](/chronicle/get-started/) scaffolds a ready-to-run app from a template — the fastest way to see the whole loop.
-- **[Console](./console.md)** — the bare-bones version, no DI container, every connection explicit.
-- **[Worker service](./worker.md)** — a background host for the reacting side of an event-sourced system.
-- **[ASP.NET Core](./aspnetcore.md)** — a web API that appends events straight from its endpoints.
+- **[Console](./console)** — the bare-bones version, no DI container, every connection explicit.
+- **[Worker service](./worker)** — a background host for the reacting side of an event-sourced system.
+- **[ASP.NET Core](./aspnetcore)** — a web API that appends events straight from its endpoints.
 
 ## Common paths
 
 | If you are... | Start with | Then move to |
 | --- | --- | --- |
-| Learning Chronicle from scratch | [Get started](/chronicle/get-started/), then [Console](./console.md) | [Tutorial](/chronicle/tutorial/) |
-| Adding events to an existing web API | [Run Chronicle locally](#run-chronicle-locally), then [ASP.NET Core](./aspnetcore.md) | [Production hosting](/chronicle/hosting/production/) |
-| Building background event processors | [Worker Service](./worker.md) | [Reactors](/chronicle/reactors/) and [Reducers](/chronicle/reducers/) |
+| Learning Chronicle from scratch | [Get started](/chronicle/get-started/), then [Console](./console) | [Tutorial](/chronicle/tutorial/) |
+| Adding events to an existing web API | [Run Chronicle locally](#run-chronicle-locally), then [ASP.NET Core](./aspnetcore) | [Production hosting](/chronicle/hosting/production/) |
+| Building background event processors | [Worker Service](./worker) | [Reactors](/chronicle/reactors/) and [Reducers](/chronicle/reducers/) |
 | Building a full-stack Cratis app | [Arc + Chronicle](/arc/backend/chronicle/) | [Build a full-stack feature](/build-a-full-app/) |
 | Preparing a team environment | [Docker Compose](/chronicle/hosting/docker-compose/) or [Aspire](#let-aspire-wire-it-up) | [Production hosting](/chronicle/hosting/production/) and [Data Protection Key Encryption](/chronicle/hosting/encryption-certificate/) |
 

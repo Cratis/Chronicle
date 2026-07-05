@@ -1,36 +1,36 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: Simple projection
-  href: simple-projection.md
+  href: simple-projection.mdx
 - name: AutoMap
-  href: auto-map.md
+  href: auto-map.mdx
 - name: Passive
-  href: passive.md
+  href: passive.mdx
 - name: Set properties
-  href: set-properties.md
+  href: set-properties.mdx
 - name: Children
-  href: children.md
+  href: children.mdx
 - name: Nested Objects
-  href: nested.md
+  href: nested.mdx
 - name: Joins
-  href: joins.md
+  href: joins.mdx
 - name: Functions
-  href: functions.md
+  href: functions.mdx
 - name: Composite keys
-  href: composite-keys.md
+  href: composite-keys.mdx
 - name: Constant key
-  href: constant-key.md
+  href: constant-key.mdx
 - name: Event context
-  href: event-context.md
+  href: event-context.mdx
 - name: FromEvery
-  href: from-every.md
+  href: from-every.mdx
 - name: FromAll
-  href: from-all.md
+  href: from-all.mdx
 - name: Initial values
-  href: initial-values.md
+  href: initial-values.mdx
 - name: RemoveWithJoin
-  href: remove-with-join.md
+  href: remove-with-join.mdx
 - name: FromEventSequence
-  href: from-event-sequence.md
+  href: from-event-sequence.mdx
 - name: NotRewindable
-  href: not-rewindable.md
+  href: not-rewindable.mdx

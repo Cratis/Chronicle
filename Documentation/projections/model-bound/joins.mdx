@@ -1,0 +1,67 @@
+# Joins
+
+Model-bound projections support joining data from different events using the `Join` attribute. This allows you to enrich your read models with data from related events.
+
+## Basic Join
+
+The `Join` attribute maps properties from events that are related through a common key:
+
+<ChronicleClientTabs snippet="projections/model-bound/joins/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+### Parameters
+
+- **on** (optional): Property on the read model to join on. For root projections, this is typically required unless joining within children
+- **eventPropertyName** (optional): Property name on the event. If not specified, uses the read model property name
+
+## Join in Children
+
+Joins work within child collections. When used in children, the `on` parameter is optional if the child has an `identifiedBy` property:
+
+<ChronicleClientTabs snippet="projections/model-bound/joins/children" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Multiple Joins
+
+You can join with multiple different events:
+
+<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-joins" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Recursive Join Processing
+
+Join attributes on related types are processed recursively:
+
+<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-join-sources" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Complete Example
+
+Here's a comprehensive example showing joins at multiple levels:
+
+<ChronicleClientTabs snippet="projections/model-bound/joins/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Processing Flow
+
+1. **CustomerRegistered** - Customer data becomes available for joining
+2. **ProductCreated** - Product data becomes available for joining
+3. **OrderPlaced** - Order is created, joins pull in customer data
+4. **LineItemAdded** - Line item is added, joins pull in product data
+5. **ProductPriceChanged** - Updates price on all relevant line items through join
+6. **CustomerProfileUpdated** - Updates phone number on all relevant orders through join
+
+## Join vs SetFrom
+
+**SetFrom:**
+- Maps properties from events directly related to the entity
+- Event is "about" the entity (same event source ID)
+- Direct parent-child relationship
+
+**Join:**
+- Maps properties from events about related entities
+- Event is about a different entity but shares a common key
+- Used for enrichment and denormalization
+
+## Best Practices
+
+1. **Use meaningful join keys** - Ensure the `on` parameter clearly identifies the relationship
+2. **Handle missing data** - Joins may not find matching data; consider nullable properties
+3. **Be mindful of updates** - Joined data updates when the source event changes
+4. **Avoid circular joins** - Don't create circular dependencies between projections
+5. **Consider cardinality** - Joins work best for one-to-one and many-to-one relationships

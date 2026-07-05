@@ -1,0 +1,33 @@
+# Constant Keys
+
+A constant key fixes the read model key to a literal string value, so all events of a given type accumulate into a **single** read model instance regardless of which event source they come from.
+
+## FromEvent with ConstantKey
+
+Use `ConstantKey` on the `[FromEvent]` attribute at the class level to route all matching events to a fixed read model instance:
+
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+Every `OrderPlaced` event from every event source updates the same `GlobalOrderSummary` instance.
+
+## Count, Increment, and Decrement with ConstantKey
+
+`Count`, `Increment`, and `Decrement` attributes also support `ConstantKey` for collecting events from all event sources into a single document:
+
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/counters" clients="csharp,kotlin,java,elixir,typescript" />
+
+All three properties converge on the `"metrics"` document regardless of which user or order they come from.
+
+## Mixing event source key and constant key
+
+You can mix regular key-based events with constant key events on the same read model:
+
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/mixed-keys" clients="csharp,kotlin,java,elixir,typescript" />
+
+> **Note:** When `ConstantKey` is set on a counter attribute, it affects *which read model instance the counter updates* — not the key of the read model the attribute belongs to. In this example, `PlatformTotalOrders` would update the document with key `"global-stats"`, not the `UserDashboard` instance.
+
+## Complete example
+
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+
+All events from all users and products accumulate into the single `StoreMetrics` document with key `"store"`.

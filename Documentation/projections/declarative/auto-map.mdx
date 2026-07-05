@@ -1,0 +1,76 @@
+# Projection AutoMap
+
+AutoMap maps event properties to read model properties when their names and types are compatible. It is the default behavior for declarative projections, so the usual projection only needs to say which events it consumes.
+
+Use explicit mapping when the event shape and read model shape intentionally differ. Use the AutoMap controls when a projection should opt out of convention-based mapping for part of its definition and then opt back in later.
+
+## Basic Usage
+
+When event and read model property names match, declare the events and let AutoMap fill the matching properties.
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## How AutoMap Works
+
+AutoMap applies the same convention to every event handled by the projection:
+
+| Rule | Behavior |
+| --- | --- |
+| Property names | Event and read model property names must match after the client's serialization naming policy is applied. |
+| Property types | Values must be assignable to the read model property type. |
+| Explicit mappings | Explicit mappings handle properties that do not match by convention. |
+| Scope | A projection can disable or re-enable AutoMap for the builder scope that the client supports. |
+
+AutoMap is evaluated when the projection definition is built. It does not add a per-event reflection step while projections process events.
+
+## Disable AutoMap
+
+Disable AutoMap when a projection should map only the properties you name explicitly.
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/disable" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Re-enable AutoMap In A Child Scope
+
+Calling the AutoMap enable method is redundant at the top level. It is useful in a child builder scope when the parent projection has disabled AutoMap and the child scope should opt back in.
+
+:::note[Client coverage]
+This scoped re-enable only makes sense in a client that supports child projection scopes at all. Kotlin, Java, Elixir, and TypeScript do not yet support declarative child collections (see [Children](./children)), so there is no child builder scope to re-enable AutoMap on. This example is C#-only until child projection scopes land elsewhere.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" clients="csharp" />
+
+## Combine With Explicit Mappings
+
+AutoMap and explicit mappings can be used together. Let convention handle the properties that match, and map the exceptional properties directly.
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/explicit-mappings" clients="csharp,kotlin,java,elixir,typescript" />
+
+## AutoMap With Joins
+
+Joined events can also contribute matching properties through AutoMap. Use the join condition to connect the joined event to the read model; matching joined-event properties can then flow into the model.
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/join" clients="csharp,kotlin,java,elixir,typescript" />
+
+## When To Use AutoMap
+
+Use AutoMap when:
+
+- Event property names match read model property names.
+- The property types are directly compatible.
+- The projection follows stable naming conventions.
+- The read model should reflect the event shape without transformation.
+
+Use explicit mappings when:
+
+- Property names differ.
+- A constant, event context field, or event source id should be mapped.
+- The projection increments, decrements, counts, or combines values.
+- You want a projection definition that documents every mapped property.
+
+## Related Projection Shapes
+
+Child and nested projections can have their own AutoMap behavior in clients that support those builder scopes. Use the dedicated pages for those shapes:
+
+- [Children](./children)
+- [Nested objects](./nested)
+- [Set properties](./set-properties)

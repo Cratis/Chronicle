@@ -21,7 +21,7 @@ Chronicle manages the subscription lifecycle on the Kernel side. Subscriptions s
 
 ## Topics
 
-- [Implicit Event Store Subscriptions](implicit-subscriptions.md) — automatic routing via `[EventStore]` attributes in shared NuGet packages
-- [Explicit Event Store Subscriptions](explicit-subscriptions.md) — manual subscription setup using the `Subscribe()` API
-- [Outbox and Inbox](outbox-inbox.md) — the outbox/inbox pattern and how events flow between stores
+- [Implicit Event Store Subscriptions](implicit-subscriptions) — automatic routing via `[EventStore]` attributes in shared NuGet packages
+- [Explicit Event Store Subscriptions](explicit-subscriptions) — manual subscription setup using the `Subscribe()` API
+- [Outbox and Inbox](outbox-inbox) — the outbox/inbox pattern and how events flow between stores
 - [Compliance and PII](compliance-and-pii.md) — preserving subject identity and encryption key availability across forwarded events

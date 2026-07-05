@@ -1,5 +1,5 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: Events
   href: events/toc.yml
 - name: Read Models

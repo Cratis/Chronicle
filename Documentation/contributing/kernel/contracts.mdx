@@ -1,0 +1,75 @@
+# Contracts
+
+The Contracts project contains all gRPC definitions for data and services, representing the complete protocol of the **Kernel**.
+Contracts are defined as C# types: data is represented using classes, and services as interfaces.
+
+We use [protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) to enable a *code-first* approach to defining protobuf contracts.
+
+The implementation of these contracts resides in the **Kernel**. For more details, see the [services documentation](./services.md).
+
+## Attributes
+
+[protobuf-net.Grpc](https://github.com/protobuf-net/protobuf-net.Grpc) supports defining contracts using annotations from `System.ServiceModel`
+as well as those from `Protobuf` and `Protobuf.Grpc`. We use the latter.
+
+For data types, decorate the class with `[ProtoContract]` and each property with `[ProtoMember(<id>)]`, where **id** is a sequential number
+indicating the field's position in the contract.
+
+Example:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/data-contract" clients="csharp" />
+
+Always add new properties at the end, without reordering existing ones.
+
+For service contracts, use the `[Service]` and `[Operation]` attributes.
+
+Example:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/service-contract" clients="csharp" />
+
+## Streaming APIs
+
+Some APIs require streaming data from client to server, server to client, or both. We use the `System.Reactive` type `IObservable<>` for streaming, as it is intuitive,
+consistent with our implementation, and provides expressive power through the fluent interfaces of `System.Reactive`.
+
+Example:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/streaming" clients="csharp" />
+
+## SerializableDateTimeOffset
+
+Protobuf does not natively support `DateTimeOffset`, so we provide `SerializableDateTimeOffset` in the `Contracts.Primitives` namespace.
+This type serializes a `DateTimeOffset` as an ISO 8601 string (round-trip format `"O"`, e.g. `"2024-01-15T12:30:00.0000000+02:00"`), which is protobuf-compatible.
+
+`SerializableDateTimeOffset` provides implicit conversion operators to and from `DateTimeOffset`, making it transparent to use in your code.
+
+**Always use `SerializableDateTimeOffset` instead of `DateTimeOffset` in contract definitions.**
+
+Example:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/serializable-datetimeoffset" clients="csharp" />
+
+The implicit conversions allow natural usage:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/datetimeoffset-usage" clients="csharp" />
+
+## OneOf
+
+When you need a contract property that can hold one of several different types (a discriminated union), use the `OneOf<T0, T1, ...>` generic types
+from the `Contracts.Primitives` namespace. These support 2, 3, or 4 type parameters.
+
+Each `OneOf` instance stores the value in one of its `Value0`, `Value1`, etc. properties, with the others set to `null`. The `Value` property
+returns whichever value is set, or throws `NoValueSetForOneOf` if none are set.
+
+Example with a service returning either a result or an error:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-service" clients="csharp" />
+
+Example with a message containing different content types:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-message" clients="csharp" />
+
+Usage on the client side:
+
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-usage" clients="csharp" />
+

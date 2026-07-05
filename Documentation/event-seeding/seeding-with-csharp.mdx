@@ -1,0 +1,61 @@
+# Seeding with C Sharp
+
+This page shows how to seed events using the Chronicle .NET client. Seeding is sent to the Chronicle Server when the event store connects, and the server applies it once per namespace.
+
+## Define events
+
+Use `record` types for event definitions in examples:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/events" clients="csharp" />
+
+## Implement a seeder
+
+Implement `ICanSeedEvents` and use `IEventSeedingBuilder` to define events to append:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seeder" clients="csharp" />
+
+## Seed multiple events of the same type
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seed-multiple-same-type" clients="csharp" />
+
+## Seed mixed event types
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seed-mixed-types" clients="csharp" />
+
+## Development-only seeding
+
+If seed data should only run in development, use conditional compilation or runtime configuration:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/development-only" clients="csharp" />
+
+Chronicle does not distinguish between development and production seed data. Decide when to seed based on build configuration or runtime settings.
+
+## Organize seeders by feature
+
+For larger solutions, split seeders by domain or feature:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/organize-by-feature" clients="csharp" />
+
+## Namespace-scoped seed data
+
+By default, seed data applies to all namespaces in the event store. To target a specific namespace, use `ForNamespace` to get a scoped builder:
+
+<ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/namespace-scoped" clients="csharp" />
+
+The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods as the global builder. Each namespace receives only its own scoped events in addition to any global events.
+
+## How it runs
+
+- Seeders are automatically discovered at application startup.
+- Seed batches are sent to the Chronicle Server when the event store connects.
+- The server deduplicates seeded events and applies them once per namespace.
+- Events are appended in a single batch for efficient startup.
+
+## Best practices
+
+- Keep seed data minimal and deterministic.
+- Use clear event source IDs to make debugging easier.
+- Group seeders by scenario so you can remove or adjust them easily.
+- Use build flags or runtime settings to prevent seeding in production.
+- Use `ForNamespace` when seed data is tenant-specific or environment-specific to avoid polluting other namespaces.
+

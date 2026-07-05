@@ -1,0 +1,23 @@
+---
+title: Webhooks
+description: Push observed events to external HTTP endpoints as they're appended.
+---
+
+A webhook forwards events Chronicle observes to an external HTTP endpoint — use it to notify another system without that system needing to connect to Chronicle itself. Webhooks are configured server-side (the Kernel makes the HTTP calls), so registering one is a one-time setup step, not something you do per request.
+
+## Register a webhook
+
+<ChronicleClientTabs snippet="webhooks/index/register" clients="csharp,elixir,typescript" />
+
+If no event types are configured, the webhook forwards every event type registered for the client.
+
+## Query registered webhooks
+
+<ChronicleClientTabs snippet="webhooks/index/query" clients="csharp,elixir,typescript" />
+
+Kotlin and Java don't currently have a webhooks API — there's no equivalent anywhere in the Kotlin client SDK yet.
+
+## Related topics
+
+- [Jobs](../jobs/) — inspecting and controlling long-running Kernel operations, the other kernel-managed background concern.
+- [Subscriptions](../subscriptions/) — forwarding events between event stores rather than to an external HTTP endpoint.

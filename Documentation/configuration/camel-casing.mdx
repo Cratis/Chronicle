@@ -1,0 +1,94 @@
+# Camel Casing
+
+Chronicle can apply a camel case naming policy when building projection definitions and persisting read models. This keeps property names consistent with common JSON naming conventions.
+
+## Overview
+
+By default, Chronicle uses property names as they appear in C# (PascalCase). Enabling camel case will:
+
+- Govern how projection definitions are built
+- Determine the property names used when projections update read models
+- Keep naming consistent across projection and read model data
+
+## Using a Direct Client
+
+For direct `ChronicleClient` usage outside of a hosted application, pass a `CamelCaseNamingPolicy` instance via the named `namingPolicy` constructor argument:
+
+<ChronicleClientTabs snippet="configuration/camel-casing/direct-client" clients="csharp" />
+
+## Using ASP.NET Core
+
+When building ASP.NET Core applications, use the dependency injection extensions to configure Chronicle with camel case naming policy.
+
+### Basic Configuration
+
+In your `Program.cs` file, configure Chronicle with camel case naming policy using the `IChronicleBuilder` callback:
+
+<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-basic" clients="csharp" />
+
+### Dependency Injection Configuration
+
+You can combine camel case naming policy with other Chronicle configuration options:
+
+<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-with-options" clients="csharp" />
+
+## Using .NET Host (Worker Services)
+
+For worker services or other non-web hosts using `IHostApplicationBuilder`:
+
+<ChronicleClientTabs snippet="configuration/camel-casing/worker-host" clients="csharp" />
+
+## Impact on Projections
+
+The naming policy configuration affects how Chronicle handles projections:
+
+### Projection Definition Building
+
+When you configure camel case naming policy, Chronicle uses this policy when building projection definitions. This means property mappings within projections will use camel case property names.
+
+### Read Models
+
+The naming policy affects the read model container name, which affects the name of the collection, table, or file that data is persisted as.
+
+When projections project to read models, the property names used will follow the configured naming policy. For example:
+
+#### Event Definition
+
+<ChronicleClientTabs snippet="configuration/camel-casing/event" clients="csharp" />
+
+#### Read Model Definition
+
+<ChronicleClientTabs snippet="configuration/camel-casing/read-model" clients="csharp" />
+
+#### Projection with Camel Case Naming Policy
+
+With camel case naming policy configured, Chronicle will use camel case property names when building the projection:
+
+<ChronicleClientTabs snippet="configuration/camel-casing/projection" clients="csharp" />
+
+The resulting read model data will have camel case property names: `firstName`, `lastName`, `emailAddress`, `registrationDate`.
+
+## Important Notes
+
+- The naming policy affects how Chronicle builds projection definitions internally.
+- Property names in read models will follow the configured naming policy when data is persisted.
+- This configuration is specific to Chronicle operations and does not affect general ASP.NET Core JSON serialization.
+- All projections in your application will use the same naming policy once configured.
+
+## Troubleshooting
+
+### Projection Property Names Not Converting
+
+If projection property names are not being converted to camel case:
+
+1. Verify that `WithCamelCaseNamingPolicy()` is called on the `IChronicleBuilder` during Chronicle configuration.
+2. Ensure the configuration is applied before Chronicle services are initialized.
+3. Check that all projections are using the same Chronicle client instance.
+
+### Inconsistent Property Naming
+
+If you see inconsistent property naming in your read models:
+
+1. Verify that Chronicle is configured with the camel case naming policy via `IChronicleBuilder.WithCamelCaseNamingPolicy()`.
+2. Check if any custom property mappings are overriding the global naming policy.
+3. Ensure all projection definitions are rebuilt after changing the naming policy.

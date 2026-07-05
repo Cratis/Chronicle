@@ -1,0 +1,58 @@
+# Projection With FromEvery
+
+Use an every-event mapping in a declarative projection when a read model property should update whenever any event handled by the projection is processed. This is most useful for audit metadata, event source identifiers, and other fields that should stay synchronized with the latest event.
+
+The exact API name depends on the client. .NET and TypeScript expose `FromEvery` / `fromEvery`, while Elixir exposes `from_every`.
+
+## Basic Usage
+
+Map event context metadata when the read model needs to know when it was last touched.
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Context Fields
+
+Every-event mappings can map more than one context field.
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/context-fields" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Source Id
+
+Map the event source id when the read model's primary identifier is not otherwise populated from each event payload.
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/event-source-id" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Child Projection Inclusion
+
+Some clients let the projection decide whether child projection events should update parent-level every-event fields.
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/exclude-children" clients="csharp,kotlin,java,elixir,typescript" />
+
+When child projections are included, parent metadata can update for events that only affect a child item.
+
+:::note[Client coverage]
+This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/with-children" clients="csharp" />
+
+## Multiple Declarations
+
+Clients that support multiple every-event declarations merge the property mappings into one projection definition.
+
+:::note[Elixir]
+Elixir's `from_every/1` macro accumulates multiple declarations, but the registration coordinator currently only sends the first one to the kernel — a second `from_every` call is silently dropped. Use a single `from_every` call with all of the property mappings combined instead.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/from-every/multiple-declarations" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Common Use Cases
+
+| Use case | Typical source |
+| --- | --- |
+| Audit timestamp | Event context occurrence time |
+| Event sequencing | Event context sequence number |
+| Correlation tracking | Event context correlation id |
+| Event source identification | Event source id |
+
+Use event-specific mappings when the property should update only for selected event types.

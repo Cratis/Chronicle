@@ -1,0 +1,34 @@
+# From All
+
+`FromAll` is the .NET client name for a projection-wide every-event mapping. Other clients expose the same Chronicle definition through their every-event APIs, so use [From Every Event](./from-every) for the portable, multi-client concept.
+
+Use `FromAll` in .NET when you want a property mapping to apply across the event types considered by the projection, especially when defining the projection with the fluent API.
+
+## Fluent .NET Projection
+
+The fluent `.FromAll(...)` API maps read model properties from event context for all events in the projection definition.
+
+<ChronicleClientTabs snippet="projections/model-bound/from-all/fluent-context" clients="csharp" />
+
+## Model-Bound Attribute
+
+The `[FromAll]` attribute is also available in the .NET model-bound API. Use the no-argument form when the read model property name matches the event payload property name by convention.
+
+<ChronicleClientTabs snippet="projections/model-bound/from-all/attribute-convention" clients="csharp" />
+
+For explicit model-bound event payload or event context mappings, prefer `[FromEvery(...)]`. It creates the same every-event projection definition while making the source kind explicit. See [From Every Event](./from-every) for examples.
+
+## Choosing Between FromAll And FromEvery
+
+| API | Use it when |
+| --- | --- |
+| `.FromAll(...)` | You are using the .NET fluent projection API and want to define an all-events mapping in the projection class. |
+| `[FromAll]` | You are using .NET model-bound projections and convention-based payload mapping is enough. |
+| `[FromEvery(...)]` | You are using .NET model-bound projections and need to name an event payload or event context source explicitly. |
+| Other clients' every-event API | You are writing Kotlin, Elixir, TypeScript, or another client and the client exposes the concept under a different name. |
+
+## Limitations
+
+- `FromAll` is a .NET client API name, not the portable name used by every client.
+- The model-bound `[FromAll]` attribute is best kept to the convention-based form.
+- Use an event-specific mapping when a property should update only for selected event types.

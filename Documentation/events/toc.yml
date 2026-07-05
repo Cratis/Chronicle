@@ -1,26 +1,28 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: Event Source Id
-  href: event-source-id.md
+  href: event-source-id.mdx
 - name: Appending
-  href: appending.md
+  href: appending.mdx
 - name: Appending with tags
-  href: appending-with-tags.md
+  href: appending-with-tags.mdx
 - name: Filtering
   href: filtering/toc.yml
 - name: Appending many
-  href: appending-many.md
+  href: appending-many.mdx
+- name: Transactions
+  href: transactions.mdx
 - name: Observing appends
-  href: observing-appends.md
+  href: observing-appends.mdx
 - name: Getting events
-  href: getting-events.md
+  href: getting-events.mdx
 - name: Getting state
-  href: getting-state.md
+  href: getting-state.mdx
 - name: Concurrency
-  href: concurrency.md
+  href: concurrency.mdx
 - name: Cross-cutting properties
-  href: cross-cutting-properties.md
+  href: cross-cutting-properties.mdx
 - name: Revision
   href: revision.md
 - name: Redaction
-  href: redaction.md
+  href: redaction.mdx

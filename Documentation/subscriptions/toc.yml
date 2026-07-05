@@ -1,10 +1,10 @@
 - name: Overview
   href: index.md
 - name: Implicit Event Store Subscriptions
-  href: implicit-subscriptions.md
+  href: implicit-subscriptions.mdx
 - name: Explicit Event Store Subscriptions
-  href: explicit-subscriptions.md
+  href: explicit-subscriptions.mdx
 - name: Outbox and Inbox
-  href: outbox-inbox.md
+  href: outbox-inbox.mdx
 - name: Compliance and PII
   href: compliance-and-pii.md

@@ -2,5 +2,5 @@
 
 | Topic | Description |
 | ------- | ----------- |
-| [Contracts](./contracts.md) | What are contracts - the Kernel protocol. |
+| [Contracts](./contracts) | What are contracts - the Kernel protocol. |
 | [Services](./services.md) | Working with services. |

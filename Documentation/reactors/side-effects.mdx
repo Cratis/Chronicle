@@ -1,0 +1,114 @@
+# Returning Side Effects from Reactor Handler Methods
+
+Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
+
+:::note[Client coverage]
+Auto-appending a reactor handler's return value is currently C#-only. Kotlin and Java reactor dispatch (`ReactorsService`) ignores the handler's return value entirely; Elixir's `handle/2` return value (`:ok` / `{:error, reason}`) reports success/failure, not an event to append; TypeScript's dispatch likewise doesn't inspect what the handler returns. In all four other clients, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
+:::
+
+> **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
+
+## Basic Usage
+
+Return a single event directly from a handler method — synchronously or as a `Task<T>`:
+
+<ChronicleClientTabs snippet="reactors/side-effects/basic" clients="csharp" />
+
+The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
+
+## Multiple Side Effects
+
+Return `IEnumerable<TEvent>` to append several events in one handler call:
+
+<ChronicleClientTabs snippet="reactors/side-effects/multiple" clients="csharp" />
+
+## Targeting a Specific Event Source Id
+
+Everything above lands the returned event on the *triggering* event's `EventSourceId` — optionally redirected once for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). That covers most reactors. But automation and translation reactors often need to write to a *different* entity than the one that triggered them — or to several at once.
+
+Picture a library. A member reserves a book, and that reservation is a fact about the *book*:
+
+<ChronicleClientTabs snippet="reactors/side-effects/source-event" clients="csharp" />
+
+When it happens you want to record activity on the *member* — a different event source altogether. Return an `EventForEventSourceId` and pick the target `EventSourceId` yourself:
+
+<ChronicleClientTabs snippet="reactors/side-effects/specific-event-source" clients="csharp" />
+
+`MemberActivityRecorded` is appended to `@event.MemberId`, **not** to the book that triggered the reactor — so it shows up on the member's stream, ready for a member-activity projection to pick up.
+
+A single reservation usually ripples to more than one entity: the member gains activity, and the book loses stock. Return `IEnumerable<EventForEventSourceId>` to fan out to several event source ids in one go — they are appended together as a single transaction:
+
+<ChronicleClientTabs snippet="reactors/side-effects/fan-out" clients="csharp" />
+
+Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time, tags and causation. Set only the ones you need — the rest fall back to sensible defaults:
+
+<ChronicleClientTabs snippet="reactors/side-effects/explicit-metadata" clients="csharp" />
+
+> **Two modes**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
+
+You can also **mix** the two in a single `IEnumerable<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
+
+<ChronicleClientTabs snippet="reactors/side-effects/mixed" clients="csharp" />
+
+## Reactor-Level Metadata Resolution
+
+Set metadata once on the reactor type so every returned event inherits it automatically.
+
+### `ICanProvideEventSourceId`
+
+Implement this interface to supply a custom `EventSourceId` for all side-effect events from this reactor:
+
+<ChronicleClientTabs snippet="reactors/side-effects/provide-event-source-id" clients="csharp" />
+
+### `ICanProvideSubject`
+
+Implement this interface to attach a `Subject` (e.g. a user or principal) to appended events:
+
+<ChronicleClientTabs snippet="reactors/side-effects/provide-subject" clients="csharp" />
+
+### `ICanProvideEventStreamId`
+
+Implement this interface to specify a runtime `EventStreamId`:
+
+<ChronicleClientTabs snippet="reactors/side-effects/provide-event-stream-id" clients="csharp" />
+
+### `[EventStreamType]` and `[EventSourceType]` Attributes
+
+Apply these attributes to the reactor class for a compile-time stream or source type:
+
+<ChronicleClientTabs snippet="reactors/side-effects/stream-and-source-type" clients="csharp" />
+
+### Priority Order
+
+| Metadata | Priority |
+|---|---|
+| `EventSourceId` | `ICanProvideEventSourceId` -> `eventContext.EventSourceId` |
+| `EventStreamId` | `ICanProvideEventStreamId` -> `[EventStreamId]` attribute -> `null` |
+| `EventStreamType` | `[EventStreamType]` attribute -> `null` |
+| `EventSourceType` | `[EventSourceType]` attribute -> `null` |
+| `Subject` | `ICanProvideSubject` -> `null` |
+
+## Custom Return Type Handlers
+
+Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
+
+<ChronicleClientTabs snippet="reactors/side-effects/custom-handler" clients="csharp" />
+
+## Supported Return Types
+
+| Return type | Handler invoked |
+|---|---|
+| `TEvent` | `EventResultHandler` — appends single event to the triggering/reactor event source id |
+| `Task<TEvent>` | `EventResultHandler` |
+| `IEnumerable<TEvent>` | `EventsResultHandler` — appends each event |
+| `Task<IEnumerable<TEvent>>` | `EventsResultHandler` |
+| `EventForEventSourceId` | `EventForEventSourceIdResultHandler` — appends to the event source id carried by the value |
+| `Task<EventForEventSourceId>` | `EventForEventSourceIdResultHandler` |
+| `IEnumerable<EventForEventSourceId>` | `EventsForEventSourceIdResultHandler` — appends all as one transaction |
+| `Task<IEnumerable<EventForEventSourceId>>` | `EventsForEventSourceIdResultHandler` |
+| `IEnumerable<object>` mixing events and `EventForEventSourceId` | `MixedSideEffectsResultHandler` — bare events use reactor metadata, each `EventForEventSourceId` keeps its own; all appended as one transaction |
+| `void` / `Task` | No side effects appended |
+
+## Error handling
+
+If a side-effect append fails, Chronicle marks the reactor partition as failed. Fix the underlying cause and retry or rewind the observer to continue processing.

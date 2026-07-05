@@ -1,0 +1,63 @@
+# Projection with composite keys
+
+When a single property isn't sufficient to uniquely identify a projection instance, you can use composite keys made up of multiple values. This is useful for multi-tenant scenarios, hierarchical data, or when you need complex keys.
+
+## Defining a composite key
+
+Define a key made up of multiple properties when one event value is not enough to identify the read model instance:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Composite key type
+
+Define a record or class to represent your composite key:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/key-type" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Read model with composite key
+
+The read model's `Id` property should match your composite key type:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Composite keys with event context
+
+You can combine event properties with event context properties in composite keys:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/context-key" clients="csharp,kotlin,java,elixir,typescript" />
+
+The corresponding key and read model:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/audit-model" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Composite keys in child collections
+
+Composite keys work with child collections too:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/child-collection" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Joins with composite keys
+
+Composite keys can be used in join scenarios:
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/join" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event definitions
+
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Key composition rules
+
+1. **Consistent structure**: All events that target the same projection must use the same composite key structure
+2. **Immutable parts**: Key components should not change during the lifetime of a projection instance
+3. **Uniqueness**: The combination of all key parts must uniquely identify each projection instance
+4. **Type safety**: Key components are strongly typed and validated at compile time
+
+## Performance considerations
+
+- **Index efficiency**: Composite keys create complex indexes in the underlying storage
+- **Query patterns**: Consider how you'll query the data when designing key structure
+- **Key size**: Larger composite keys use more storage and may impact performance
+- **Sort order**: The order of properties in the composite key affects index efficiency
+
+Composite keys provide powerful flexibility for complex identification scenarios while maintaining type safety and performance.

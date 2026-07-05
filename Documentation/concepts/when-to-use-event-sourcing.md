@@ -26,7 +26,7 @@ Be skeptical when:
 ## The trade-offs to weigh
 
 - **Eventual consistency.** Read models are built *after* events are appended, so a read immediately after a write may not reflect it yet. This is usually fine — but it's a shift if you expect read-after-write everywhere. See [Read Models](../read-models/).
-- **Modeling discipline.** Events are immutable facts; getting their granularity and naming right takes thought, and changing them later means [event type migrations](./event-type-migrations.md), not an `ALTER TABLE`.
+- **Modeling discipline.** Events are immutable facts; getting their granularity and naming right takes thought, and changing them later means [event type migrations](./event-type-migrations), not an `ALTER TABLE`.
 - **More moving parts.** Commands, events, projections, and reactors are more concepts than "save the row" — the framework removes the boilerplate, but the mental model is larger.
 - **Privacy.** Immutable history and "the right to be forgotten" need a deliberate strategy — see [Compliance](../compliance/).
 
@@ -37,4 +37,4 @@ You don't have to choose globally. Event-source the core domain and the processe
 ## Next
 
 - Convinced it fits? Start with [Get started](../get-started/) and the [tutorial](../tutorial/).
-- Comparing with a CRUD/EF Core model? Read [CRUD, EF Core, and Chronicle](../coming-from-crud.md).
+- Comparing with a CRUD/EF Core model? Read [CRUD, EF Core, and Chronicle](../coming-from-crud).

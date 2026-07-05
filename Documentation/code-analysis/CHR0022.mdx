@@ -1,0 +1,31 @@
+# CHR0022: Reactor methods returning event side effects must be marked with [OnceOnly]
+
+## Rule Description
+
+A reactor handler method that returns event(s) as a side effect causes Chronicle to append those events to the event log. Unless the method is marked with `[OnceOnly]`, it runs again during replay operations — appending duplicate events.
+
+Mark such a method with `[OnceOnly]`.
+
+## Severity
+
+Warning
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0022/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0022/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+A reactor observes events and produces side effects. When a handler **returns** an event, Chronicle appends it to the event log as a follow-up fact. Reactors are also re-run during replay operations — observer rewind, redaction, and revision — so a handler that appends an event and is not idempotent would append that event a second time on every replay, producing duplicate facts and, in turn, incorrect projected state.
+
+`[OnceOnly]` tells Chronicle to run the handler a single time per event source and to skip it during replays, so the side-effect event is appended exactly once. Side effects that are naturally idempotent, or that do not append events, don't need it — which is why the rule targets specifically the methods that *return* events.
+
+## Related Rules
+
+- [Reactors](/chronicle/reactors/) — reactor side effects and idempotency.

@@ -71,7 +71,7 @@ from UserRegistered automap
 
 AutoMap copies properties with matching names from the event to the read model, then applies any explicit mappings.
 
-See [Auto-Map](auto-map.md) for more details.
+See [Auto-Map](auto-map) for more details.
 
 ## Multiple From Blocks
 
@@ -95,7 +95,7 @@ projection User => UserReadModel
 
 ## With Parent Key
 
-When used within [Children](children.md) blocks, you can specify the parent relationship:
+When used within [Children](children) blocks, you can specify the parent relationship:
 
 ```pdl
 children members id userId

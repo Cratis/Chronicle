@@ -1,0 +1,94 @@
+# Projection with RemoveWithJoin
+
+The `RemovedWithJoin<>()` method allows you to remove child items from collections when events from other streams indicate that related data should be removed. This is particularly useful in scenarios where the removal event occurs on a different stream than the one that originally added the child.
+
+:::note[Client coverage]
+Every example on this page combines declarative child collections with joins, both of which are currently a C#-only mechanism (see [Children](./children) and [Joins](./joins)). Kotlin and Java have no fluent child-collection API, TypeScript's builder throws `not implemented yet` for child collections, and Elixir has no verified, working pattern for embedding a child collection into a parent read model. These examples are shown in C# only until child projection scopes are implemented for the other clients.
+:::
+
+## Understanding RemoveWithJoin vs RemovedWith
+
+- **`RemovedWith<>()`**: Removes children based on events from the same stream
+- **`RemovedWithJoin<>()`**: Removes children based on events from different streams (joins)
+
+## Basic RemoveWithJoin usage
+
+Use `RemovedWithJoin<>()` in child projections to specify which events should trigger child removal:
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/basic" clients="csharp" />
+
+In this example:
+
+- When a `UserAddedToGroup` event occurs, a group is added to the user's collection
+- `UsingParentKey(e => e.UserId)` extracts the parent (user) identifier from the event content
+- When a `GroupDeleted` event occurs anywhere in the system, that group is removed from all users
+- The removal is based on the group ID that was used to join the data
+
+> **Note**: If you don't specify `UsingParentKey()`, the framework uses the EventSourceId as the parent identifier by default. Use `UsingParentKey()` when the parent identifier is a property in the event content rather than the EventSourceId.
+
+## How RemoveWithJoin works
+
+When using `RemovedWithJoin<>()`:
+
+1. **Event occurs**: The specified event type (e.g., `GroupDeleted`) is processed
+2. **Key extraction**: The system extracts the key from the event source ID or specified key expression
+3. **Child lookup**: All projections with children joined on that key are found
+4. **Removal**: The matching child items are removed from all affected collections
+
+## RemoveWithJoin with explicit keys
+
+You can specify which property to use as the key for removal:
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/explicit-keys" clients="csharp" />
+
+## Real-world example: User groups
+
+Consider a system where users can be members of groups, and groups can be deleted:
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/user-groups-example" clients="csharp" />
+
+In this example:
+
+- **`RemovedWith<UserLeftGroup>`**: Removes membership when a user explicitly leaves a group
+- **`RemovedWithJoin<GroupDisbanded>`**: Removes membership from all users when a group is disbanded
+
+## Complex scenario: Project assignments
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/project-assignments-example" clients="csharp" />
+
+This handles three removal scenarios:
+
+1. **Individual unassignment**: `DeveloperUnassignedFromProject` removes one developer from one project
+2. **Project cancellation**: `ProjectCancelled` removes the project from all developers
+3. **Project completion**: `ProjectCompleted` removes the project from all developers
+
+## Read model examples
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/read-models" clients="csharp" />
+
+## Event definitions
+
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/events" clients="csharp" />
+
+## Best practices
+
+### Use for cross-stream cleanup
+
+`RemovedWithJoin<>()` is ideal when:
+
+- Events from one stream should trigger cleanup in projections of other stream
+- You need to maintain referential integrity across stream boundaries
+- Deletion or deactivation events should cascade to related read models
+
+### Combine with RemovedWith
+
+Often you'll use both removal methods together:
+
+- `RemovedWith<>()` for explicit removals within the same stream
+- `RemovedWithJoin<>()` for cascade removals from related streams
+
+### Consider event ordering
+
+Be aware that `RemovedWithJoin<>()` events might be processed before all related `Join<>()` events have completed, so ensure your system handles partial data gracefully.
+
+The `RemovedWithJoin<>()` method provides powerful cross-stream cleanup capabilities, ensuring that your read models stay consistent when related data is removed from other parts of your system.

@@ -492,5 +492,5 @@ This projection uses:
 
 ## See Also
 
-- [Expressions](expressions.md) - Understanding expression syntax
+- [Expressions](expressions) - Understanding expression syntax
 - All other topic pages for specific features described in the grammar

@@ -1,15 +1,17 @@
+- name: Overview
+  href: index.md
 - name: Event
   href: event.md
 - name: Event Type
   href: event-type.md
 - name: Modeling events well
-  href: modeling-events.md
+  href: modeling-events.mdx
 - name: Event Type Migrations
-  href: event-type-migrations.md
+  href: event-type-migrations.mdx
 - name: Event Source
   href: event-source.md
 - name: Subject
-  href: subject.md
+  href: subject.mdx
 - name: Event Store
   href: event-store.md
 - name: Namespaces
@@ -23,15 +25,21 @@
 - name: Projection
   href: projection.md
 - name: Designing read models
-  href: designing-read-models.md
+  href: designing-read-models.mdx
 - name: "Deep dive: consistency"
   href: consistency.md
 - name: Constraints
   href: constraints.md
 - name: Event Metadata Tags
   href: event-metadata-tags.md
+- name: Correlation, identity, and causation
+  href: correlation-identity-causation.mdx
+- name: Tagging
+  href: tagging.mdx
+- name: Tagging Reactors
+  href: tagging-reactors.mdx
 - name: Geospatial Coordinates
-  href: geospatial.md
+  href: geospatial.mdx
 - name: When to use event sourcing
   href: when-to-use-event-sourcing.md
 - name: Glossary

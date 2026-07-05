@@ -28,7 +28,7 @@ flowchart TD
 | **Reach for it when** | The read side is shaped like data | A projection can't express the logic cleanly | You must notify, integrate, or trigger a command |
 | **Must be idempotent** | Handled for you (rebuildable) | Handled for you (rebuildable) | **Yes — you own this** |
 
-Building state doesn't have to mean *materializing* it. Projections and reducers also compute state **on demand** — Chronicle replays the relevant events through them when you ask, which is how [reading a single instance](../read-models/getting-single-instance.md) serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/chronicle/aggregates/aggregate-root.md), or anything else that needs current state it can trust.
+Building state doesn't have to mean *materializing* it. Projections and reducers also compute state **on demand** — Chronicle replays the relevant events through them when you ask, which is how [reading a single instance](../read-models/getting-single-instance) serves strongly consistent results. That makes them useful beyond query views: validation rules, [aggregate roots in Arc](/arc/backend/chronicle/aggregates/aggregate-root.md), or anything else that needs current state it can trust.
 
 ## Choosing
 

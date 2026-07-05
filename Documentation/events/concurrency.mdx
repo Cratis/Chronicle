@@ -1,0 +1,92 @@
+---
+uid: Chronicle.ConcurrencyScope
+---
+# Concurrency
+
+Concurrency control in Chronicle ensures that multiple operations don't interfere with each other when appending events to the same event source. Chronicle provides a sophisticated concurrency control mechanism through the `ConcurrencyScope` concept, which allows you to define precisely how concurrency should be handled based on formalized event metadata tags.
+
+## Understanding ConcurrencyScope
+
+A `ConcurrencyScope` defines the boundaries and constraints for concurrent operations when appending events. It uses formalized, well-known event metadata tags that are indexed by Chronicle to scope concurrency control to specific aspects of your events, providing fine-grained control over when concurrency violations should be detected. These tags are separate from any user-controlled event tags you may add for categorization. See [Event Metadata Tags](../concepts/event-metadata-tags.md) for details.
+
+### Formalized Metadata Tags for Concurrency
+
+Chronicle uses the following formalized, indexed metadata tags to scope concurrency:
+
+- **EventSourceId**: Unique identifier for the event source
+- **EventSourceType**: Overarching, binding concept (e.g., Account)
+- **EventStreamType**: A concrete process related to event source type (e.g., Onboarding, Transactions)
+- **EventStreamId**: A marker to separate independent streams for a stream type (e.g., Monthly, Yearly)
+- **EventTypes**: Specific event types to scope concurrency to
+
+## Basic Usage
+
+### Simple Concurrency Scope
+
+The most basic form of concurrency control scopes to a specific sequence number for an event source:
+
+<ChronicleClientTabs snippet="events/concurrency/basic" clients="csharp,elixir,typescript" />
+
+### Using ConcurrencyScopeBuilder
+
+For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently construct concurrency scopes:
+
+<ChronicleClientTabs snippet="events/concurrency/builder" clients="csharp,elixir" />
+
+## Scoping by Event Metadata Tags
+
+### EventSourceType and EventStreamType
+
+You can scope concurrency to specific event source types and stream types:
+
+<ChronicleClientTabs snippet="events/concurrency/source-and-stream-type" clients="csharp,elixir" />
+
+### EventStreamId
+
+Use event stream IDs to scope concurrency to specific streams within a stream type:
+
+<ChronicleClientTabs snippet="events/concurrency/stream-id" clients="csharp,elixir" />
+
+### Event Types
+
+Scope concurrency to specific event types to allow concurrent operations on different types of events:
+
+<ChronicleClientTabs snippet="events/concurrency/event-types" clients="csharp,elixir" />
+
+## AppendMany with Concurrency Scopes
+
+When appending multiple events, you can specify different concurrency scopes for different event sources:
+
+<ChronicleClientTabs snippet="events/concurrency/append-many" clients="csharp,elixir" />
+
+## Event Source Operations with Concurrency
+
+You can also use concurrency scopes with event source operations:
+
+<ChronicleClientTabs snippet="events/concurrency/for-event-source-operations" clients="csharp" />
+
+## Handling Concurrency Violations
+
+When a concurrency violation occurs, Chronicle will return a `ConcurrencyViolation` in the append result:
+
+<ChronicleClientTabs snippet="events/concurrency/handling-violations" clients="csharp" />
+
+## Concurrency Strategies
+
+Chronicle provides built-in concurrency strategies:
+
+### Optimistic Concurrency Strategy
+
+This strategy gets the current tail sequence number and uses it as the expected sequence number:
+
+<ChronicleClientTabs snippet="events/concurrency/strategies" clients="csharp" />
+
+> **Note**: `[EventStreamType]` on a reactor or reducer scopes which events an *observer* receives (see [Filter by event stream type](filtering/by-event-stream-type)) — it does not set the `EventStreamType` used for concurrency scoping on an *append* call. Set `eventStreamType` explicitly on `Append`/`AppendMany`, or through `ConcurrencyScopeBuilder.WithEventStreamType(...)`, when you need concurrency scoped to a specific stream type.
+
+## Best Practices
+
+1. **Use specific scoping**: Scope concurrency as narrowly as possible to avoid unnecessary blocking
+2. **Event type scoping**: When possible, scope to specific event types to allow concurrent operations on different event types
+3. **Handle violations gracefully**: Always check for concurrency violations and implement appropriate retry or fallback logic
+4. **Use builders for complex scopes**: The `ConcurrencyScopeBuilder` provides a clear, fluent API for complex concurrency requirements
+5. **Use concurrency scope strategies**: Inject `IConcurrencyScopeStrategies` to get a built-in strategy (such as optimistic concurrency) instead of hand-rolling sequence-number lookups

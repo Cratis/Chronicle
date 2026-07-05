@@ -1,0 +1,68 @@
+# Tagging Reactors
+
+Tags provide a way to organize and categorize your reactors for better discoverability and management. By applying the `[Tag]` attribute to your reactor classes, you can assign one or more tags that describe the purpose or domain of the reactor.
+
+`[Tag]` and `[Tags]` label the reactor itself. They do not filter which appended events the reactor handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
+
+:::note[Client coverage]
+Tagging a reactor with `[Tag]`/`[Tags]` is currently C#-only — none of the other clients' reactor registration mechanisms (Kotlin's `@Reactor`, Elixir's `use Chronicle.Reactors.Reactor`, TypeScript's `reactor()`) expose a way to attach descriptive tags to the reactor itself.
+:::
+
+## Adding Tags
+
+You can tag reactors in multiple ways:
+
+### Single Tag
+
+Apply a single tag to your reactor:
+
+<ChronicleClientTabs snippet="concepts/tagging-reactors/single-tag" clients="csharp" />
+
+### Multiple Tags (Single Attribute)
+
+Use the params feature to specify multiple tags in a single attribute:
+
+<ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-single-attribute" clients="csharp" />
+
+### Multiple Tags (Multiple Attributes)
+
+Apply multiple `[Tag]` attributes:
+
+<ChronicleClientTabs snippet="concepts/tagging-reactors/multiple-tags-multiple-attributes" clients="csharp" />
+
+### Mixed Approach
+
+Combine both approaches:
+
+<ChronicleClientTabs snippet="concepts/tagging-reactors/mixed-approach" clients="csharp" />
+
+## Best Practices
+
+- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
+- **Be consistent**: Establish tag naming conventions across your organization
+- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
+- **Group related reactors**: Use tags to group reactors that serve similar purposes
+
+## Common Tag Examples
+
+Here are some common patterns for tagging reactors:
+
+<ChronicleClientTabs snippet="concepts/tagging-reactors/tag-categories" clients="csharp" />
+
+## Querying by Tag
+
+Tags stored in the event store definition can be used for:
+
+- Filtering and searching for specific reactors
+- Organizing reactors in administrative interfaces
+- Generating documentation
+- Managing reactor deployments by tag
+- Monitoring and alerting based on tag groups
+- Controlling reactor activation by tag
+
+Note: The specific querying capabilities depend on your Chronicle setup and tooling.
+
+## See Also
+
+- [Tagging](tagging) - Comprehensive guide to tagging in Chronicle
+- [Reducers Tagging](../reducers/tagging-reducers) - Tagging reducers

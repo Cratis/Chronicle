@@ -1,0 +1,23 @@
+# Filter reducers and reactors by event stream type
+
+Use `[EventStreamType]` on a reducer or reactor when it should only handle events appended to a specific stream type.
+
+## How the match works
+
+Chronicle compares the observer attribute to the `eventStreamType:` value used when appending the event. If the values do not match, the reducer or reactor is skipped.
+
+## Filter a reactor by event stream type
+
+<ChronicleClientTabs snippet="events/filtering/by-event-stream-type/reactor" clients="csharp" />
+
+The reactor only handles events appended to the `payments` stream type.
+
+## Filter a reducer by event stream type
+
+<ChronicleClientTabs snippet="events/filtering/by-event-stream-type/reducer" clients="csharp" />
+
+If the same event is appended with another stream type, such as `eventStreamType: "returns"`, this reducer does not receive it.
+
+## When to choose stream type filtering
+
+Use stream type filtering when the same event source can produce distinct processing flows and you want a reducer or reactor to observe only one of those flows.

@@ -5,10 +5,10 @@
 - name: Enforce a unique value
   href: enforce-a-unique-value.md
 - name: React to an event
-  href: react-to-an-event.md
+  href: react-to-an-event.mdx
 - name: Get read models
-  href: real-time-query.md
+  href: real-time-query.mdx
 - name: Test a slice
-  href: test-a-slice.md
+  href: test-a-slice.mdx
 - name: Evolve an event's shape
   href: evolve-an-event.md

@@ -1,0 +1,37 @@
+# CHR0005: Reactor event parameter must have [EventType] attribute
+
+## Rule Description
+
+Event parameters in reactor methods must be types marked with the `[EventType]` attribute. This ensures that reactors only handle properly identified event types.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0005/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0005/fix" clients="csharp" />
+
+## Quick Fix
+
+The analyzer provides a code fix that automatically adds the `[EventType]` attribute to the event parameter type.
+
+## Why This Rule Exists
+
+Reactors handle side effects when events occur. Ensuring all event types are properly marked:
+- Guarantees proper event routing to reactors
+- Enables type-safe event handling
+- Ensures events are correctly serialized/deserialized
+- Maintains schema tracking for events
+
+## Related Rules
+
+- [CHR0001](CHR0001): Event sequence append operations
+- [CHR0004](CHR0004): Reactor method signatures
+- [CHR0007](CHR0007): Reducer event parameters

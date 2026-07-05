@@ -1,8 +1,8 @@
 - name: Overview
   href: index.md
 - name: EventScenario
-  href: scenario.md
+  href: scenario.mdx
 - name: Append Assertions
-  href: assertions.md
+  href: assertions.mdx
 - name: Event Sequence Assertions
-  href: event-sequence-assertions.md
+  href: event-sequence-assertions.mdx

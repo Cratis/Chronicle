@@ -47,7 +47,7 @@ The top-level container for everything in a bounded context: event sequences, ob
 
 ## Event Type
 
-The schema and identity of a kind of event, declared with `[EventType]`. Chronicle validates appended events against their registered type and supports evolving them over time. See [Event Type](./event-type.md) and [Event Type Migrations](./event-type-migrations.md).
+The schema and identity of a kind of event, declared with `[EventType]`. Chronicle validates appended events against their registered type and supports evolving them over time. See [Event Type](./event-type.md) and [Event Type Migrations](./event-type-migrations).
 
 ## Namespace
 
@@ -83,7 +83,7 @@ The destination a [projection](./projection.md) writes its [read model](../read-
 
 ## Subject
 
-An observable stream you can subscribe to for real-time updates — the mechanism behind reactive queries that push new data to clients as events arrive. See [Subject](./subject.md).
+An observable stream you can subscribe to for real-time updates — the mechanism behind reactive queries that push new data to clients as events arrive. See [Subject](./subject).
 
 ## Tail Sequence Number
 

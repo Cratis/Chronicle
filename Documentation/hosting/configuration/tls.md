@@ -2,7 +2,7 @@
 
 Chronicle Server supports TLS for secure communication. TLS is enabled by default, but can be explicitly disabled when TLS is terminated upstream.
 
-For client-side TLS configuration, see [TLS Configuration (Client)](../../configuration/tls.md).
+For client-side TLS configuration, see [TLS Configuration (Client)](../../configuration/tls).
 
 ## Configuration file
 

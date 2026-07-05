@@ -1,0 +1,45 @@
+# Unique property constraint
+
+Adorn a property with `[Unique]` to enforce that the **value of that property is unique** across every event of this type in the event store.
+
+Chronicle discovers `[Unique]`-adorned properties automatically and registers the constraints with the Kernel when the client starts.
+
+## Defining a unique property constraint
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Strongly-typed properties
+
+`[Unique]` works on `ConceptAs<T>` properties — the idiomatic way to model a domain value in Cratis. Chronicle treats the concept as the underlying primitive it wraps (`string`, `Guid`, and so on), so a uniqueness rule on a strongly-typed `EmailAddress` or `OrganizationNumber` behaves exactly like one on the raw primitive, and registers and enforces identically through the [declarative](../declarative/unique) form too:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/strongly-typed" clients="csharp" />
+
+## Grouping constraints across event types
+
+When multiple event types share the same constraint `name`, Chronicle groups them into a single constraint. A value introduced by any of the participating events is checked against all others:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/grouping" clients="csharp,kotlin,java,elixir,typescript" />
+
+Both events now participate in the same `UniqueEmail` constraint, so neither `UserRegistered` nor `UserEmailChanged` can introduce an email address that already exists.
+
+## Violation message
+
+The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. A custom violation message is currently C#-only — none of the other clients' constraint declarations (model-bound or declarative) support one:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/violation-message" clients="csharp" />
+
+## Releasing a constraint
+
+Apply `[RemoveConstraint]` to the event type that signals a domain object has been removed. When this event is appended, Chronicle releases the named constraint and its previously held values can be claimed again:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/releasing" clients="csharp,kotlin,java,elixir,typescript" />
+
+The constraint name must exactly match the name used in the `[Unique]` attribute that established it.
+
+An event type can release more than one constraint by stacking multiple attributes:
+
+<ChronicleClientTabs snippet="constraints/model-bound/unique/multiple-remove-constraints" clients="csharp,kotlin,java,elixir,typescript" />
+
+## How constraints are enforced
+
+The Chronicle Kernel reads the `[Unique]` and `[RemoveConstraint]` attributes when the client connects and creates the indexes it needs. Every subsequent append is checked against those indexes server-side, so no constraint logic runs in client code.

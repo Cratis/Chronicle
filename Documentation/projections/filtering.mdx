@@ -1,0 +1,47 @@
+# Appended event metadata and projections
+
+Projections build read models by mapping events to fields. They observe all events of the types declared in their definition — they do not use `[FilterEventsByTag]`, `[EventSourceType]`, or `[EventStreamType]` to filter incoming events.
+
+## How projections select their input
+
+A projection declares the event types it observes through its event mappings:
+
+<ChronicleClientTabs snippet="projections/filtering/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+This projection receives every `OrderPlaced` and `OrderShipped` event regardless of any metadata attached during append. Metadata such as tags or stream type does not affect which events flow into a projection.
+
+## Tagging projections
+
+`[Tag]` and `[Tags]` on a projection label the projection definition for organizational purposes. They do not filter incoming events:
+
+<ChronicleClientTabs snippet="projections/filtering/tagging" clients="csharp" />
+
+:::note[Client coverage]
+Labeling a projection with `[Tag]`/`[Tags]`, and metadata-based observer filtering with `[FilterEventsByTag]`/`[EventSourceType]`/`[EventStreamType]` on a reactor or reducer, are currently C#-only. Kotlin, Elixir, and TypeScript have no equivalent tag or filter mechanism on their projection, reactor, or reducer registration APIs.
+:::
+
+## Combining a projection with metadata-based filtering
+
+When you need a side effect or secondary read model that reacts only to a subset of events based on appended metadata, pair the projection with a reactor or reducer that carries the appropriate filter attributes.
+
+The following example shows an `OrderSummaryProjection` that builds the full read model for all orders, alongside a `PremiumOrderNotifier` reactor that fires only when an order is appended with the `premium` tag:
+
+<ChronicleClientTabs snippet="projections/filtering/with-reactor" clients="csharp" />
+
+The same pattern works with a reducer instead of a reactor:
+
+<ChronicleClientTabs snippet="projections/filtering/with-reducer" clients="csharp" />
+
+Use this pattern whenever you need both a projection-based read model (covering all events) and a metadata-filtered view or side effect (covering a subset).
+
+## Appending with metadata
+
+The metadata you provide at append time drives the filters on any accompanying reducers or reactors:
+
+<ChronicleClientTabs snippet="projections/filtering/appending-with-metadata" clients="csharp,kotlin,java,elixir,typescript" />
+
+## See also
+
+- [Filter reactors by appended event metadata](../reactors/filtering)
+- [Filter reducers by appended event metadata](../reducers/filtering)
+- [Tagging Projections](tagging-projections)

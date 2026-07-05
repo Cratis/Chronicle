@@ -1,0 +1,60 @@
+# Basic Property Mapping
+
+Model-bound projections map event data to read model properties close to the read model definition. Use them when each event property maps directly to a read model property, when a property should accumulate numeric values, or when event metadata belongs in the read model.
+
+The exact syntax belongs to each client. The projection definition sent to Chronicle still has the same shape: event type, read model key, and property mappings.
+
+## Set A Property From An Event
+
+Set mappings copy a value from an event into the read model. This is the most common model-bound operation.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from" clients="csharp,kotlin,java,elixir,typescript" />
+
+When the event property and read model property have the same name, the client can use its convention-based form instead of repeating the property name.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-convention" clients="csharp,kotlin,java,elixir,typescript" />
+
+Use multiple set mappings when different events can update the same read model property.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-multiple-events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Add And Subtract Values
+
+Add mappings increase a numeric read model property by a value from an event. They are useful for balances, totals, counters, and other accumulated values.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/add-from" clients="csharp,kotlin,java,elixir,typescript" />
+
+Subtract mappings decrease a numeric read model property by a value from an event. Combine add and subtract mappings when the read model should track a net value.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/subtract-from" clients="csharp,kotlin,java,elixir,typescript" />
+
+The event flow for a balance-style read model is:
+
+1. The opening event sets the initial balance.
+2. Deposit events add to the balance.
+3. Withdrawal events subtract from the balance.
+4. Rename or profile events update descriptive properties without changing the balance.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/complete" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Set A Property From Event Context
+
+Event context contains metadata such as when the event occurred, which event source it belongs to, sequence information, and correlation metadata. Map context fields when the read model needs audit or lifecycle information.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-context" clients="csharp,kotlin,java,elixir,typescript" />
+
+Use an every-event mapping when a read model property should reflect the latest event that affected the projection, rather than one specific event type.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/context-vs-from-every" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Choosing The Mapping
+
+| Mapping | Use it when |
+| --- | --- |
+| Set | A read model property should take a value from a specific event. |
+| Add | A numeric property should increase when an event occurs. |
+| Subtract | A numeric property should decrease when an event occurs. |
+| Context | A read model property should come from event metadata. |
+| Every event | A property should update for any event that affects the projection. |
+
+Prefer the most direct mapping that expresses the read model. If the read model needs branching, state-dependent logic, or calculations that are clearer as code, use a [reducer](../../reducers/) instead.

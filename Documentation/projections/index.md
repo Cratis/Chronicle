@@ -27,11 +27,11 @@ you usually choose between three styles:
 
 | Style | What it looks like | Reach for it when |
 | --- | --- | --- |
-| [Model-bound](model-bound/index.md) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
-| [Declarative](declarative/index.md) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
+| [Model-bound](model-bound/index) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
+| [Declarative](declarative/index) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
 | [Reducer](/chronicle/reducers/) | An `IReducerFor<T>` that receives the event, current state, and event context | The read model is easier to express as state transitions or calculations over previous state. |
 
-[Choose a read-model style](choosing-a-read-model-style.md) builds the same read model as a
+[Choose a read-model style](choosing-a-read-model-style) builds the same read model as a
 model-bound projection, a declarative projection, and a reducer so the trade-offs are visible side by
 side.
 
@@ -39,7 +39,7 @@ side.
 
 The one decision worth making up front is *when* the read model has to be correct:
 
-| | [Eventual](eventual-consistency.md) | [Immediate](immediate-projections.md) |
+| | [Eventual](eventual-consistency) | [Immediate](immediate-projections.md) |
 | --- | --- | --- |
 | **When it updates** | Shortly after the event is appended (the default) | Synchronously, before the append returns |
 | **Cost** | Cheap, scales freely | More expensive — pay only when you need it |
@@ -52,13 +52,13 @@ read model being a moment behind.
 
 | Topic | Description |
 | ------ | ----------- |
-| [Architecture](architecture.md) | How the projection engine turns events into read models |
-| [Choose a read-model style](choosing-a-read-model-style.md) | Compare model-bound, declarative, and reducer approaches on the same read model |
-| [Model-Bound Projections](model-bound/index.md) | Build read models with attributes — the default style |
-| [Declarative Projections](declarative/index.md) | Build read models with the fluent `IProjectionFor<T>` API |
+| [Architecture](architecture) | How the projection engine turns events into read models |
+| [Choose a read-model style](choosing-a-read-model-style) | Compare model-bound, declarative, and reducer approaches on the same read model |
+| [Model-Bound Projections](model-bound/index) | Build read models with attributes — the default style |
+| [Declarative Projections](declarative/index) | Build read models with the fluent `IProjectionFor<T>` API |
 | [Immediate Projections](immediate-projections.md) | Strong consistency — the read model updates before the append returns |
-| [Eventual Consistency](eventual-consistency.md) | The default — how and when eventual projections catch up |
-| [Tagging Projections](tagging-projections.md) | Organize and tag projections |
+| [Eventual Consistency](eventual-consistency) | The default — how and when eventual projections catch up |
+| [Tagging Projections](tagging-projections) | Organize and tag projections |
 | [Appended event metadata filters](../events/filtering/index.md) | How tags and metadata correlate reducers and reactors that run alongside projections |
 
 Once your read model exists, expose it to the frontend with a [query](../read-models/index.md) — or see

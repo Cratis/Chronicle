@@ -1,21 +1,23 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: Getting Started
-  href: getting-started.md
+  href: getting-started.mdx
 - name: Passive Reducers
-  href: passive-reducers.md
+  href: passive-reducers.mdx
 - name: Event Processing
-  href: event-processing.md
+  href: event-processing.mdx
 - name: Event Sequence
-  href: event-sequence.md
+  href: event-sequence.mdx
 - name: Subscribe to External Event Stores
-  href: external-event-store-subscriptions.md
+  href: external-event-store-subscriptions.mdx
 - name: Filtering by appended event metadata
-  href: filtering.md
+  href: filtering.mdx
   items:
     - name: By tag
-      href: ../events/filtering/by-tag.md
+      href: ../events/filtering/by-tag.mdx
     - name: By event source type
-      href: ../events/filtering/by-event-source-type.md
+      href: ../events/filtering/by-event-source-type.mdx
     - name: By event stream type
-      href: ../events/filtering/by-event-stream-type.md
+      href: ../events/filtering/by-event-stream-type.mdx
+- name: Tagging Reducers
+  href: tagging-reducers.mdx

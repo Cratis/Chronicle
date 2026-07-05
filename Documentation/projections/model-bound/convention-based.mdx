@@ -1,0 +1,84 @@
+# Convention-Based Mapping
+
+Convention-based model-bound mapping lets a client say: "this read model is projected from this event, and matching property names should map automatically." It is the model-bound counterpart to AutoMap in a declarative projection.
+
+Use it when event properties and read model properties share names and compatible shapes. Add explicit mappings only for the properties that need a different source name, a context value, or a different operation.
+
+## How It Works
+
+Convention-based mapping follows the same projection rules as AutoMap:
+
+1. The event and read model property names must match.
+2. The property types must be compatible.
+3. Nested objects can be mapped when their internal property names match.
+4. Collections can be mapped when the element shape is compatible.
+5. Properties that do not exist on the event are skipped for that event.
+
+The client syntax differs, but the Chronicle projection definition still contains the event type, key expression, read model, and AutoMap behavior.
+
+## Basic Convention Mapping
+
+Apply the client's model-bound "from event" marker at the read model level. Matching properties are then mapped without per-property set mappings.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+This is equivalent to writing explicit set mappings for every property:
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/explicit-equivalent" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Multiple Events
+
+A read model can use convention mapping from more than one event type. Each event updates the matching properties it contains and leaves the rest unchanged.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/multiple-events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Custom Keys
+
+By default, convention-based mappings use the event source id as the read model key. Use a custom key when the event carries the identifier of the read model instance in its content.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/custom-key" clients="csharp,kotlin,java,elixir,typescript" />
+
+Custom keys are useful when:
+
+- the event source id is not the read model id
+- one event source can update multiple read model instances
+- an event from one source updates a cross-source or cross-aggregate view
+
+## Relationship To Declarative AutoMap
+
+Convention-based model-bound mapping and declarative AutoMap describe the same mapping behavior through different APIs.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/automap-equivalent" clients="csharp,kotlin,java,elixir,typescript" />
+
+Use the model-bound form when the mapping belongs naturally on the read model. Use a declarative projection when you need joins, richer key selection, or a projection definition that should stay separate from the read model shape.
+
+## Matching Structures
+
+Convention mapping also works for nested values and collections when the names and shapes match.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/matching-structures" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Partial Events
+
+Events do not need to contain every read model property. Chronicle maps the properties that exist on each event.
+
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/partial-events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## When To Use It
+
+Use convention-based mapping when:
+
+- the event and read model use consistent names
+- most properties are simple set mappings
+- the read model is easiest to understand next to its event mappings
+- you want to keep explicit attributes or decorators for the exceptions only
+
+Use explicit mappings when:
+
+- names differ between the event and read model
+- the property comes from event context
+- the property needs add, subtract, count, or another operation
+- the mapping needs a custom key for only one event
+- being explicit is clearer than relying on naming
+
+Convention-based mapping is evaluated when the projection definition is built. Event processing uses the compiled projection definition, so there is no per-event reflection penalty compared with explicit set mappings.

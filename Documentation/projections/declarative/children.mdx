@@ -1,0 +1,103 @@
+# Projection with children
+
+Projections can manage hierarchical data by defining child collections. This allows you to build read models that contain arrays or lists of related data.
+
+:::note[Client coverage]
+Declarative child-collection builders (`Children()`/`IdentifiedBy()`/`RemovedWith()`) are currently a C#-only mechanism. Kotlin and Java have no fluent child-collection API at all, TypeScript's builder throws `not implemented yet` for this method, and Elixir has no verified, working pattern for embedding a child collection into a parent read model. The examples on this page are shown in C# only until child projection scopes are implemented for the other clients.
+:::
+
+## Defining a projection with children
+
+Use the child-collection builder to select the collection property, declare how each child is identified, and map the events that add, update, or remove items.
+
+<ChronicleClientTabs snippet="projections/declarative/children/basic" clients="csharp" />
+
+## Read model with children
+
+The read model includes a collection property for the children:
+
+<ChronicleClientTabs snippet="projections/declarative/children/read-model" clients="csharp" />
+
+## Event definitions
+
+Events that affect children use keys to identify which child to update:
+
+<ChronicleClientTabs snippet="projections/declarative/children/events" clients="csharp" />
+
+## How children work
+
+1. **Root events** (`GroupCreated`) update properties on the main read model
+2. **Child events** (`UserAddedToGroup`, `UserRoleChanged`) are routed to child items
+3. `IdentifiedBy()` specifies how to identify child items (by `UserId` in this example)
+4. `UsingKey()` tells the projection which property contains the child identifier
+5. Child items are created, updated, or remain unchanged based on the events
+
+## Parent key resolution
+
+By default, when a child event is processed, the framework uses the **EventSourceId** to identify the parent. This works well when the event is appended with the parent's identifier as the EventSourceId.
+
+### Default behavior (EventSourceId as parent key)
+
+In most scenarios, you don't need to specify the parent key explicitly:
+
+<ChronicleClientTabs snippet="projections/declarative/children/default-parent-key" clients="csharp" />
+
+When you append the event:
+
+<ChronicleClientTabs snippet="projections/declarative/children/default-parent-key-append" clients="csharp" />
+
+The `groupId` (EventSourceId) is automatically used to find the parent `Group`.
+
+### Extracting parent key from event content
+
+If your event contains the parent key as a property (instead of using EventSourceId), use `UsingParentKey()`:
+
+<ChronicleClientTabs snippet="projections/declarative/children/event-parent-key" clients="csharp" />
+
+When you append the event:
+
+<ChronicleClientTabs snippet="projections/declarative/children/event-parent-key-append" clients="csharp" />
+
+The `groupId` property from the event content is used to find the parent `Group`.
+
+### Using EventSourceId explicitly with UsingParentKeyFromContext
+
+In some advanced scenarios, you might want to explicitly indicate that the EventSourceId should be used as the parent key (e.g., for documentation clarity):
+
+<ChronicleClientTabs snippet="projections/declarative/children/context-parent-key" clients="csharp" />
+
+This is functionally equivalent to not specifying the parent key at all, but can make the intent clearer in complex projections.
+
+### When to use each approach
+
+- **No parent key specified** (default): Use when EventSourceId represents the parent identifier
+- **`UsingParentKey(e => e.Property)`**: Use when parent identifier is in the event content
+- **`UsingParentKeyFromContext(ctx => ctx.EventSourceId)`**: Use for explicit documentation of default behavior
+
+## Child lifecycle
+
+- **Adding children**: When a new event arrives with a previously unseen key, a new child is created
+- **Updating children**: When an event arrives with an existing key, that child is updated
+- **Removing children**: Use `RemovedWith<>()` to specify which events remove child items
+
+## Removing children
+
+The `RemovedWith<>()` method specifies how to remove child items from collections:
+
+<ChronicleClientTabs snippet="projections/declarative/children/removing" clients="csharp" />
+
+When a `UserRemovedFromGroup` event is processed:
+
+1. The projection looks up the child using the specified key (`e.UserId`)
+2. If found, the child is removed from the collection
+3. If not found, the event is ignored
+
+You can also remove children conditionally or based on other criteria by using multiple `RemovedWith<>()` calls.
+
+## Multiple child collections
+
+A single projection can have multiple child collections:
+
+<ChronicleClientTabs snippet="projections/declarative/children/multiple-collections" clients="csharp" />
+
+This pattern allows you to build rich, hierarchical read models from events.

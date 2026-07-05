@@ -1,0 +1,102 @@
+# Eventual Consistency in Projections
+
+Projections in Chronicle operate under the principle of **eventual consistency**, meaning that read models are updated asynchronously as events are processed. This design provides significant performance benefits but requires understanding of how and when data becomes consistent.
+
+## Understanding Eventual Consistency
+
+When you append an event to Chronicle, the following sequence occurs:
+
+1. **Event is persisted** to the event store immediately
+2. **Event append operation returns** successfully to the caller
+3. **Projections are updated asynchronously** in the background
+4. **Read models become consistent** after processing completes
+
+This means there's a brief window where:
+
+- The event has been successfully stored
+- But projections may not yet reflect the changes
+
+## Asynchronous Processing
+
+Chronicle processes events for projections asynchronously to ensure optimal performance and scalability:
+
+### Processing Pipeline
+
+```mermaid
+graph TD
+    A[Event Appended] --> B[Event Stored]
+    B --> C[Append Operation Returns]
+    B --> D[Background Processor]
+    D --> E[Projection Updated]
+    D --> F[Reducer Executed]
+    D --> G[Observer Notified]
+```
+
+### Benefits of Asynchronous Processing
+
+- **High Throughput**: Event appends don't wait for projection updates
+- **Scalability**: Projection processing can be scaled independently
+- **Resilience**: Failed projection updates don't affect event persistence
+- **Performance**: Read and write operations are optimized separately
+
+## Consistency Guarantees
+
+### What Chronicle Guarantees
+
+- **Event Ordering**: Events for the same event source are processed in order
+- **At-Least-Once Processing**: Every event will be processed (with retries on failure)
+- **Partition Consistency**: All projections for a single event source will be eventually consistent
+
+### What Chronicle Does NOT Guarantee
+
+- **Immediate Consistency**: Projections may lag behind events
+- **Cross-Partition Ordering**: Events from different event sources may be processed out of relative order
+- **Synchronous Updates**: Projection updates are always asynchronous
+
+## Handling Eventual Consistency
+
+### 1. Design for Asynchronous Updates
+
+Structure your application to work naturally with eventual consistency:
+
+<ChronicleClientTabs snippet="projections/eventual-consistency/design-for-async" clients="csharp,kotlin,java,elixir,typescript" />
+
+### 2. Watch Projection Changes
+
+Chronicle provides a `.Watch<TReadModel>()` API that allows you to observe projection changes in real-time:
+
+<ChronicleClientTabs snippet="projections/eventual-consistency/watch" clients="csharp,kotlin,java,elixir,typescript" />
+
+### 3. Monitor Database Changes
+
+For applications that need to respond to database changes from external sources, you can:
+
+- **Use database change streams**: Most modern databases (MongoDB, PostgreSQL, SQL Server) provide change stream APIs
+- **Implement polling mechanisms**: Periodically check for changes using timestamps or version fields
+- **Leverage Chronicle's watch API**: Use the `.Watch<TReadModel>()` method to observe projection updates regardless of their source
+
+### 4. Use Command-Query Segregation
+
+Separate operations that create data from those that read data:
+
+<ChronicleClientTabs snippet="projections/eventual-consistency/cqs" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Best Practices
+
+### 1. Design for Eventual Consistency
+
+- Accept that reads may be slightly stale
+- Use optimistic UI updates where possible
+- Implement retry logic for critical consistency requirements
+
+### 2. Test Eventual Consistency Scenarios
+
+- Test your application behavior during projection lag
+- Verify retry mechanisms work correctly
+- Ensure UI handles missing data gracefully
+
+## Summary
+
+Eventual consistency in Chronicle projections provides excellent performance and scalability while requiring thoughtful application design. By understanding the asynchronous nature of projection updates and implementing appropriate patterns, you can build robust applications that work naturally with Chronicle's event-driven architecture.
+
+Remember: eventual consistency is a feature, not a limitation. It enables the high-performance, scalable systems that Chronicle is designed to support.

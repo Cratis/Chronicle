@@ -35,9 +35,9 @@ Chronicle uses formalized metadata tags to scope concurrency control. These tags
 - **EventStreamId**: A marker to separate independent streams for a stream type (e.g., Monthly, Yearly)
 - **EventTypes**: Specific event types to scope concurrency to
 
-For more details, see [Formalized metadata tags for concurrency](../events/concurrency.md#formalized-metadata-tags-for-concurrency).
+For more details, see [Formalized metadata tags for concurrency](../events/concurrency#formalized-metadata-tags-for-concurrency).
 
-You can also attach [custom tags](../events/appending-with-tags.md#custom-tags) to events when appending for categorization and filtering purposes.
+You can also attach [custom tags](../events/appending-with-tags#custom-tags) to events when appending for categorization and filtering purposes.
 
 ## Aggregate roots
 
@@ -70,9 +70,9 @@ flowchart LR
 ## Next steps
 
 - [Constraints](../constraints/index.md)
-- [Appending events](../events/appending.md)
-- [Appending with tags](../events/appending-with-tags.md)
-- [Concurrency scopes](../events/concurrency.md)
+- [Appending events](../events/appending)
+- [Appending with tags](../events/appending-with-tags)
+- [Concurrency scopes](../events/concurrency)
 - [Projections](../projections/index.md)
 
 ## Related resources

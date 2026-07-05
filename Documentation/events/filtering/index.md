@@ -23,6 +23,6 @@ Reducers and reactors use these filters during subscription. Projections still d
 
 ## Guides
 
-- [Filter reducers and reactors by tag](by-tag.md)
-- [Filter reducers and reactors by event source type](by-event-source-type.md)
-- [Filter reducers and reactors by event stream type](by-event-stream-type.md)
+- [Filter reducers and reactors by tag](by-tag)
+- [Filter reducers and reactors by event source type](by-event-source-type)
+- [Filter reducers and reactors by event stream type](by-event-stream-type)

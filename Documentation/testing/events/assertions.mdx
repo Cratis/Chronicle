@@ -1,0 +1,57 @@
+---
+uid: Chronicle.Testing.Events.Assertions
+---
+# Append Assertions
+
+Every `Append` and `AppendMany` call returns an `IAppendResult`. The `Cratis.Chronicle.Testing` package provides built-in `Should*` extension methods for asserting on these results.
+
+## Assertion reference
+
+| Method | Asserts |
+|--------|---------|
+| `result.ShouldBeSuccessful()` | Operation succeeded with no violations or errors |
+| `result.ShouldBeFailed()` | Operation failed (any violation or error) |
+| `result.ShouldHaveConstraintViolations()` | At least one constraint violation is present |
+| `result.ShouldNotHaveConstraintViolations()` | No constraint violations are present |
+| `result.ShouldHaveConstraintViolationFor(name)` | A violation for the named constraint is present |
+| `result.ShouldHaveConstraintViolation(name)` | Singular alias for `ShouldHaveConstraintViolationFor(name)` |
+| `result.ShouldHaveConcurrencyViolations()` | At least one concurrency violation is present |
+| `result.ShouldNotHaveConcurrencyViolations()` | No concurrency violations are present |
+| `result.ShouldHaveErrors()` | At least one error is present |
+| `result.ShouldNotHaveErrors()` | No errors are present |
+
+All `Should*` methods throw `AppendResultAssertionException` on failure. The exception message describes all violations and errors found, making it easy to diagnose failures.
+
+## Happy path assertion
+
+<ChronicleClientTabs snippet="testing/events/assertions/happy-path" clients="csharp" />
+
+## Failure assertions
+
+<ChronicleClientTabs snippet="testing/events/assertions/failure" clients="csharp" />
+
+## Constraint violation assertions
+
+Assert that a specific named constraint fired:
+
+<ChronicleClientTabs snippet="testing/events/assertions/constraint-violation" clients="csharp" />
+
+Assert that no constraint violations occurred:
+
+<ChronicleClientTabs snippet="testing/events/assertions/no-constraint-violation" clients="csharp" />
+
+## Concurrency violation assertions
+
+<ChronicleClientTabs snippet="testing/events/assertions/concurrency" clients="csharp" />
+
+## Error assertions
+
+<ChronicleClientTabs snippet="testing/events/assertions/errors" clients="csharp" />
+
+For asserting on the event sequence itself (tail sequence number, event types, and event content), see [Event Sequence Assertions](event-sequence-assertions).
+
+## Example: testing a constraint violation end-to-end
+
+Pre-seed state with `Given`, act with `When`, then assert on the captured `scenario.AppendResult` — including constraints declared on `ConceptAs<T>` properties:
+
+<ChronicleClientTabs snippet="testing/events/assertions/constraint-e2e" clients="csharp" />

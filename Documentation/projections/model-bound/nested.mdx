@@ -1,0 +1,105 @@
+# Nested Objects
+
+Nested model-bound projections populate a single nullable child object on a read model. Use them when an event should set, update, or clear one scalar object inside the parent, rather than managing a collection of child items.
+
+The current model-bound nested API is available in the .NET client. TypeScript currently rejects `@nested` during projection registration, and the Kotlin and Elixir clients do not expose an equivalent model-bound nested API.
+
+## Basic Lifecycle
+
+Mark the nullable parent property as nested. The nested type declares the events that populate it and, optionally, the events that clear it.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/basic-lifecycle" clients="csharp" />
+
+The lifecycle is:
+
+1. The first populate event creates the nested object.
+2. Later populate events update the existing nested object.
+3. A clear event sets the parent property back to `null`.
+
+## Parent Property
+
+The nested marker belongs on the single nullable property that holds the child object.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/parent-property" clients="csharp" />
+
+The nested type is scanned for its own model-bound projection annotations, including `FromEvent`, `ClearWith`, and property mappings.
+
+## Clearing Nested Objects
+
+Apply a clear annotation to the nested type when one event should remove the nested object from the parent.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/clear-with" clients="csharp" />
+
+Use multiple clear annotations when more than one event should clear the same nested object.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-clear-events" clients="csharp" />
+
+## Updating From Multiple Events
+
+A nested type can be populated or updated by several events. Matching property names are auto-mapped by default.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-from-events" clients="csharp" />
+
+When event property names differ from nested object property names, add explicit property mappings to the nested type.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/explicit-mapping" clients="csharp" />
+
+## Auto-Mapping
+
+AutoMap is enabled by default for nested types. Disable it on the nested type when every property should be mapped explicitly.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/no-automap" clients="csharp" />
+
+## Multiple Nested Objects
+
+A parent can hold more than one nested object. Each nested property points to a type with its own event lifecycle.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-nested" clients="csharp" />
+
+## Nested Objects Inside Children
+
+Nested objects can also appear inside child collection items.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/nested-in-children" clients="csharp" />
+
+## Complete Example
+
+This example shows a parent read model with a command definition that can be set, renamed, updated, and cleared.
+
+<ChronicleClientTabs snippet="projections/model-bound/nested/complete" clients="csharp" />
+
+| Event | Effect on the nested object |
+| --- | --- |
+| `SliceCreatedForNestedComplete` | Creates the parent read model; the nested command remains `null`. |
+| `CommandSetForNestedComplete` | Populates the command object. |
+| `CommandRenamedForNestedComplete` | Updates the command name in place. |
+| `CommandDefinitionUpdatedForNestedComplete` | Updates command definition fields in place. |
+| `CommandClearedForNestedComplete` | Sets the command property to `null`. |
+
+## Supported Nested Annotations
+
+| Annotation | Works on nested type |
+| --- | --- |
+| `FromEvent` | Yes |
+| `ClearWith` | Yes |
+| `SetFrom` | Yes |
+| `AddFrom` / `SubtractFrom` | Yes |
+| `SetFromContext` | Yes |
+| `Increment` / `Decrement` / `Count` | Yes |
+| `Join` | Yes |
+| `Nested` recursively | Yes |
+| `ChildrenFrom` inside nested objects | Yes |
+| `NoAutoMap` | Yes |
+
+## Best Practices
+
+1. Declare the nested property as nullable because it starts empty and is populated by events.
+2. Keep the populate and clear annotations close to the nested type so its lifecycle is visible.
+3. Rely on AutoMap when event and nested property names match.
+4. Use a child collection instead when there can be multiple independent child objects.
+
+## See Also
+
+- [Children Collections](children) — arrays of items managed independently within a parent
+- [Basic Mapping](basic-mapping) — getting started with model-bound projections
+- [Removal](removal) — removing root read models on an event

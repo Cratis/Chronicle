@@ -9,4 +9,4 @@ Chronicle provides the `ReactorScenario<TReactor>` utility for testing reactor i
 
 | Guide | Description |
 |-------|-------------|
-| [ReactorScenario](scenario.md) | Test reactor side-effects in-process using `ReactorScenario<TReactor>` |
+| [ReactorScenario](scenario) | Test reactor side-effects in-process using `ReactorScenario<TReactor>` |

@@ -21,6 +21,6 @@ If you use Cratis Arc with the Chronicle extension, tenancy is automatically con
 
 ## Topics
 
-- [DotNET client usage](dotnet-client.md)
-- [ASP.NET Core namespace resolution](aspnetcore.md)
+- [DotNET client usage](dotnet-client)
+- [ASP.NET Core namespace resolution](aspnetcore)
 

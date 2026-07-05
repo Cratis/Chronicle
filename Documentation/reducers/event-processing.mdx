@@ -1,0 +1,162 @@
+# Event Processing
+
+Understanding how reducers process events is crucial for building effective read models. This guide covers the event processing model, method patterns, and advanced techniques.
+
+:::note[Client coverage on this page]
+The patterns below are shown in C# and build on the shape already established in [Getting started with reducers](getting-started): Kotlin, Java, and TypeScript dispatch handlers with a fixed `(event, current)` shape and no `EventContext` parameter; Elixir dispatches through a single `reduce/3` callback that does receive a context map; only C# and Elixir can use event metadata (timestamps, sequence numbers) while computing the next state. The accumulation/state-transition/collection/time-window/conditional patterns on this page are illustrative C# idioms (`with` expressions, LINQ) rather than framework capabilities — the same ideas apply in every client using that language's own idioms for immutable updates.
+:::
+
+## Event Processing Model
+
+### Event Method Discovery
+
+Reducers use convention-based method discovery. Chronicle automatically finds and invokes methods that:
+
+- Accept a known event type as the first parameter — the method name itself can be anything; discovery matches on the parameter type, not the name (a descriptive name such as `OrderCreated` for an `OrderCreated` event is good practice, not a requirement)
+- Accept the current read model state (nullable) as the second parameter
+- Optionally accept `EventContext` as the third parameter
+
+<ChronicleClientTabs snippet="reducers/event-processing/method-discovery" clients="csharp" />
+
+### Event Source Isolation
+
+Each reducer method is called for a single event source:
+
+- Events for the same event source (e.g., the same order) are processed sequentially
+- The `current` parameter contains the current state for that specific event source
+- Each event source has its own independent state
+
+### Sequential Processing
+
+Events are guaranteed to be processed in sequence order:
+
+1. Events are ordered by their sequence number
+2. Each method is called once per event
+3. The return value becomes the `current` parameter for the next event
+
+## Method Signatures
+
+### Basic Synchronous Pattern
+
+The simplest pattern accepts the event and current state:
+
+<ChronicleClientTabs snippet="reducers/event-processing/basic-sync-pattern" clients="csharp" />
+
+### Pattern with Event Context
+
+Access event metadata by adding `EventContext` parameter:
+
+<ChronicleClientTabs snippet="reducers/event-processing/pattern-with-context" clients="csharp" />
+
+### Async Patterns
+
+Both patterns support async methods:
+
+<ChronicleClientTabs snippet="reducers/event-processing/async-patterns" clients="csharp" />
+
+## Event Context
+
+The `EventContext` provides metadata about the event:
+
+<ChronicleClientTabs snippet="reducers/event-processing/event-context-shape" clients="csharp" />
+
+### Using Event Context
+
+<ChronicleClientTabs snippet="reducers/event-processing/using-event-context" clients="csharp" />
+
+## Current State Parameter
+
+The `current` parameter represents the previously computed state for this event source.
+
+### First Event
+
+When processing the first event for an event source:
+
+- `current` is `null`
+- Initialize your read model with appropriate values
+- You can return `null` (declare the handler's return type as `TReadModel?`) to skip creating state for certain events
+
+<ChronicleClientTabs snippet="reducers/event-processing/first-event" clients="csharp" />
+
+### Subsequent Events
+
+For subsequent events:
+
+- `current` contains the state from the previous event
+- Use record's `with` expression to create modified copies
+- Return the new state
+
+## Processing Patterns
+
+### Pattern 1: Accumulation
+
+Accumulate values across events:
+
+<ChronicleClientTabs snippet="reducers/event-processing/accumulation-pattern" clients="csharp" />
+
+### Pattern 2: State Transitions
+
+Track state changes through events:
+
+<ChronicleClientTabs snippet="reducers/event-processing/state-transitions-pattern" clients="csharp" />
+
+### Pattern 3: Collection Building
+
+Build collections from events:
+
+<ChronicleClientTabs snippet="reducers/event-processing/collection-building-pattern" clients="csharp" />
+
+### Pattern 4: Time-Based Aggregation
+
+Aggregate events within time windows:
+
+<ChronicleClientTabs snippet="reducers/event-processing/time-based-aggregation-pattern" clients="csharp" />
+
+### Pattern 5: Conditional Processing
+
+Skip processing based on conditions:
+
+<ChronicleClientTabs snippet="reducers/event-processing/conditional-processing-pattern" clients="csharp" />
+
+## Error Handling
+
+### Handling Invalid State
+
+When there's no state to build on yet, return `null` from a nullable-returning handler (`TReadModel? Handle(...)`) to leave the read model unset:
+
+<ChronicleClientTabs snippet="reducers/event-processing/skip-invalid-state" clients="csharp" />
+
+Note the difference between **skipping** an event and **removing** a read model: returning `null` when `current` was already `null` is a no-op, but returning `null` when `current` holds real state deletes that read model. To ignore an event without discarding existing state, return `current` unchanged instead.
+
+### Recording Errors in State
+
+Include error information in your read model:
+
+<ChronicleClientTabs snippet="reducers/event-processing/recording-errors" clients="csharp" />
+
+## Performance Optimization
+
+### Minimize Object Creation
+
+Leverage record types with `with` expressions:
+
+<ChronicleClientTabs snippet="reducers/event-processing/minimize-object-creation" clients="csharp" />
+
+### Reuse Collections
+
+Copy a collection before mutating it — a previously-returned state instance may still be held by a snapshot or another reader, so mutating it in place can corrupt state you don't own:
+
+<ChronicleClientTabs snippet="reducers/event-processing/reuse-collections" clients="csharp" />
+
+## Best Practices
+
+1. **Use record types** - Prefer immutable record types for read models
+2. **Keep logic pure** - Avoid side effects; only compute state from events
+3. **Handle null safely** - Always check `current` for null on first event
+4. **Use with expressions** - Leverage record's `with` for clean state updates
+5. **Return null to skip or remove** - Declare the handler's return type as `TReadModel?` and return `null` — but only when you mean to clear the read model, not merely to ignore the event (return `current` unchanged for that)
+6. **Access context when needed** - Use `EventContext` for metadata like timestamps
+7. **Name methods clearly** - Use descriptive method names that match event types
+8. **Test thoroughly** - Unit test with various event sequences and edge cases
+
+
