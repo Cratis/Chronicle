@@ -61,7 +61,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     const [modelBoundCode, setModelBoundCode] = useState('');
     const [generateDeclarativeCode] = GenerateDeclarativeCode.use();
     const [generateModelBoundCode] = GenerateModelBoundCode.use();
-    const [allEventSequencesResult] = AllEventSequences.use(eventStore ? { eventStore } : undefined);
+    const [allEventSequencesResult] = AllEventSequences.when(!!eventStore && !!namespace).use({ eventStore: eventStore ?? '', namespace: namespace ?? '' });
 
     const fetchCode = async () => {
         if (eventStore && namespace && value) {
@@ -156,7 +156,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
     // Update event sequences when they're loaded
     useEffect(() => {
         if (allEventSequencesResult.data) {
-            setEventSequences(allEventSequencesResult.data);
+            setEventSequences(allEventSequencesResult.data.map(sequence => sequence.id));
         }
     }, [allEventSequencesResult.data]);
 

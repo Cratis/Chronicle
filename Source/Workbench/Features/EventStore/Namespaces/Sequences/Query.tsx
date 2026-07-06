@@ -210,7 +210,7 @@ export const Query = ({ query, onSave }: QueryProps) => {
         const queryResult = await query.perform({
             eventStore: params.eventStore!,
             namespace: params.namespace!,
-            eventTypeIds: [selectedEvent.context.eventType.id]
+            eventTypeIds: selectedEvent.context.eventType.id
         });
 
         const observers = queryResult.data;

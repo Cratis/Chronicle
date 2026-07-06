@@ -67,7 +67,7 @@ export const AddWebhookDialog = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
     const { closeDialog } = useDialogContext<object>();
 
-    const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore! });
+    const [allEventSequences] = AllEventSequences.use({ eventStore: params.eventStore!, namespace: params.namespace! });
     const [allEventTypes] = AllEventTypes.use({ eventStore: params.eventStore! });
 
     const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
@@ -83,7 +83,7 @@ export const AddWebhookDialog = () => {
         { label: strings.eventStore.general.webhooks.authTypes.oauth, value: AuthorizationType.OAuth }
     ];
 
-    const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq, value: seq }));
+    const eventSequenceOptions = allEventSequences.data.map(seq => ({ label: seq.name, value: seq.id }));
 
     const isUrlValidFormat = (urlString: string): boolean => {
         try {
