@@ -30,7 +30,9 @@
         "primeicons": "^7.0.0",
         "primereact": "^10.9.8",
         "react-icons": "^5.6.0",
+        "reflect-metadata": "0.2.2",
         "ts-deepmerge": "8.0.0",
+        "tsyringe": "4.10.0",
         "usehooks-ts": "3.1.1"
     },
     "devDependencies": {
@@ -86,8 +88,8 @@
         "vitest": "4.1.8"
     },
     "resolutions": {
-        "@cratis/arc.react": "^20.10.4",
-        "@cratis/arc": "^20.10.4"
+        "@cratis/arc.react": "^20.49.2",
+        "@cratis/arc": "^20.49.2"
     },
     "packageManager": "yarn@4.5.3"
 }
