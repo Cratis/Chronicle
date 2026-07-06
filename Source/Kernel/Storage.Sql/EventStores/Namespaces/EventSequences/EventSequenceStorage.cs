@@ -773,33 +773,6 @@ public class EventSequenceStorage(
         return new EventCursor(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken);
     }
 
-    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
-    {
-        var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
-        var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
-        var eventCausation = EventEntryConverter.GetCausation(redactionEntry);
-        var eventCausedBy = EventEntryConverter.GetCausedBy(redactionEntry);
-
-        var eventMetadata = new EventContext(
-            redactionEventType,
-            redactionEntry.EventSourceType,
-            redactionEntry.EventSourceId,
-            redactionEntry.EventStreamType,
-            redactionEntry.EventStreamId,
-            new EventSequenceNumber(redactionEntry.SequenceNumber),
-            redactionEntry.Occurred,
-            eventStore,
-            @namespace,
-            new CorrelationId(Guid.Parse(redactionEntry.CorrelationId)),
-            eventCausation,
-            await identityStorage.GetFor(eventCausedBy),
-            [],
-            EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
-            Subject: EventEntryConverter.GetSubject(redactionEntry));
-
-        return new AppendedEvent(eventMetadata, content);
-    }
-
     /// <inheritdoc/>
     public async Task<IEnumerable<HistogramBucket>> GetHistogram(
         HistogramResolution resolution,
@@ -854,5 +827,32 @@ public class EventSequenceStorage(
         var diff = (7 + (int)value.DayOfWeek - (int)DayOfWeek.Monday) % 7;
         var monday = value.Date.AddDays(-diff);
         return new DateTimeOffset(monday, value.Offset);
+    }
+
+    async Task<AppendedEvent> BuildAppendedEventFromRedactionEntry(EventEntry redactionEntry)
+    {
+        var redactionEventType = EventEntryConverter.GetEventType(redactionEntry);
+        var content = EventEntryConverter.GetContentForGeneration(redactionEntry, redactionEventType.Generation);
+        var eventCausation = EventEntryConverter.GetCausation(redactionEntry);
+        var eventCausedBy = EventEntryConverter.GetCausedBy(redactionEntry);
+
+        var eventMetadata = new EventContext(
+            redactionEventType,
+            redactionEntry.EventSourceType,
+            redactionEntry.EventSourceId,
+            redactionEntry.EventStreamType,
+            redactionEntry.EventStreamId,
+            new EventSequenceNumber(redactionEntry.SequenceNumber),
+            redactionEntry.Occurred,
+            eventStore,
+            @namespace,
+            new CorrelationId(Guid.Parse(redactionEntry.CorrelationId)),
+            eventCausation,
+            await identityStorage.GetFor(eventCausedBy),
+            [],
+            EventEntryConverter.GetHashForGeneration(redactionEntry, redactionEventType.Generation),
+            Subject: EventEntryConverter.GetSubject(redactionEntry));
+
+        return new AppendedEvent(eventMetadata, content);
     }
 }
