@@ -27,8 +27,8 @@ you usually choose between three styles:
 
 | Style | What it looks like | Reach for it when |
 | --- | --- | --- |
-| [Model-bound](model-bound/index) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
-| [Declarative](declarative/index) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
+| [Model-bound](model-bound/) | Attributes on the read model record (`[FromEvent<T>]`, `[Key]`, `[ChildrenFrom<T>]`) | **The default.** Most projections — it's the least boilerplate and reads as the model itself. |
+| [Declarative](declarative/) | A fluent `IProjectionFor<T>` definition | The mapping needs logic the attributes can't express cleanly. |
 | [Reducer](/chronicle/reducers/) | An `IReducerFor<T>` that receives the event, current state, and event context | The read model is easier to express as state transitions or calculations over previous state. |
 
 [Choose a read-model style](choosing-a-read-model-style) builds the same read model as a
@@ -54,8 +54,8 @@ read model being a moment behind.
 | ------ | ----------- |
 | [Architecture](architecture) | How the projection engine turns events into read models |
 | [Choose a read-model style](choosing-a-read-model-style) | Compare model-bound, declarative, and reducer approaches on the same read model |
-| [Model-Bound Projections](model-bound/index) | Build read models with attributes — the default style |
-| [Declarative Projections](declarative/index) | Build read models with the fluent `IProjectionFor<T>` API |
+| [Model-Bound Projections](model-bound/) | Build read models with attributes — the default style |
+| [Declarative Projections](declarative/) | Build read models with the fluent `IProjectionFor<T>` API |
 | [Immediate Projections](immediate-projections.md) | Strong consistency — the read model updates before the append returns |
 | [Eventual Consistency](eventual-consistency) | The default — how and when eventual projections catch up |
 | [Tagging Projections](tagging-projections) | Organize and tag projections |
