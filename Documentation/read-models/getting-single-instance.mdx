@@ -1,0 +1,51 @@
+---
+title: Getting a Single Instance
+description: Read one read model instance by key when you need the current state now, not after the materialized projection catches up.
+---
+
+When you need one read model and correctness matters more than query latency, read it by key from the event store. Chronicle rebuilds the instance from the events that feed that read model, so the result reflects the events that have been appended up to that call.
+
+Use this path for command-side decisions, read-after-write flows, and diagnostic tools. Use materialized read models when the same data is read frequently by lists, dashboards, or user interfaces that need paging.
+
+## How it works
+
+When you ask Chronicle for one read model instance, the client sends the read model type and key to the kernel. Chronicle resolves the projection or reducer that owns that read model, replays the relevant events, applies compliance release rules when needed, and returns the current shape for that key.
+
+This makes the read strongly consistent. The cost is replay: longer histories take longer to rebuild than a materialized lookup.
+
+## Read by key
+
+The read model type must already be registered by the client, either as a model-bound projection, a declarative projection, or the read model produced by a reducer.
+
+<ChronicleClientTabs snippet="read-models/getting-single-instance/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+Each client names the operation in its own idiom, but the inputs are the same: the read model type and the read model key.
+
+## Missing instances
+
+If no events have produced that read model key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure.
+
+If the read model type itself is unknown, that is a configuration error. Register the projection, reducer, or read model before querying it.
+
+## When to use this
+
+Use a single-instance replay when:
+
+- A command needs the exact current state before making a decision.
+- You append an event and immediately need to read the state it creates.
+- A debugging or audit tool needs deterministic state from the event log.
+- The event history for that key is short enough that replay cost is acceptable.
+
+Prefer a materialized read model when:
+
+- The same data is read often.
+- The history for each key can grow large.
+- You need paging, sorting, or database-native filtering.
+- Eventual consistency is acceptable.
+
+## Related topics
+
+- [Getting a Collection of Instances](getting-collection-instances) - Replay all instances for reporting or analysis
+- [Getting Snapshots](getting-snapshots) - Inspect how one instance evolved over time
+- [Watching Read Models](watching-read-models) - React to read model changes as they happen
+- [Materialized Read Models](materialized-pagination) - Page through sink-stored read models

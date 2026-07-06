@@ -36,9 +36,9 @@ Chronicle supports two complementary approaches for marking data as personally i
 | `[PII]` on an event property | The property is a primitive type or an untyped value that holds personal data in a specific event. |
 | `[PII]` on a `ConceptAs<T>` type | The concept itself is inherently personal — any use of this type anywhere in any event is PII by definition. |
 
-The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Applying PII to ConceptAs types](pii-with-concepts.md) for details.
+The `ConceptAs<T>` approach is the preferred one. It is declared once and applies everywhere the type is used, so there is no risk of forgetting to mark a property in a future event. See [Applying PII to ConceptAs types](pii-with-concepts) for details.
 
-For a full description of the `[PII]` attribute and its rules, see [PII Attribute](pii.md).
+For a full description of the `[PII]` attribute and its rules, see [PII Attribute](pii).
 
 ## Event source identifiers cannot be encrypted
 
@@ -50,9 +50,9 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 
 | Topic | Description |
 |---|---|
-| [PII Attribute](pii.md) | The `[PII]` attribute — rules, usage, and constraints |
-| [Applying PII to ConceptAs types](pii-with-concepts.md) | How to mark domain value types as PII once and apply everywhere |
-| [Working with compliance from the client](client.md) | How to annotate events and ConceptAs types in your .NET client code |
-| [Read models and PII](read-models.md) | How PII encryption affects projections, reducers, and read model queries |
+| [PII Attribute](pii) | The `[PII]` attribute — rules, usage, and constraints |
+| [Applying PII to ConceptAs types](pii-with-concepts) | How to mark domain value types as PII once and apply everywhere |
+| [Working with compliance from the client](client) | How to annotate events and ConceptAs types in your .NET client code |
+| [Read models and PII](read-models) | How PII encryption affects projections, reducers, and read model queries |
 | [Compliance in Arc applications](arc.md) | Using read models and queries with compliance in Arc |
-| [Event Redaction](../events/redaction.md) | Removing event content for GDPR right-to-erasure requests |
+| [Event Redaction](../events/redaction) | Removing event content for GDPR right-to-erasure requests |

@@ -1,0 +1,28 @@
+# Appending with Tags
+
+Chronicle lets you associate tags with appended events. Tags are stored as event metadata and can be used for categorization, filtering, and concurrency scoping.
+
+## Built-in metadata tags
+
+Chronicle maintains built-in metadata tags for event identity and stream routing:
+
+- `EventSourceType`
+- `EventSourceId`
+- `EventStreamType`
+- `EventStreamId`
+
+You can add custom tags in addition to these built-in tags. For the full list and behavior, see [Event Metadata Tags](../concepts/event-metadata-tags.md).
+
+## Custom tags
+
+Custom tags are simple strings that you provide when appending. They are merged with any static tags defined on the event type.
+
+## Append with tags
+
+<ChronicleClientTabs snippet="events/appending-with-tags/append" clients="csharp,kotlin,java,elixir,typescript" />
+
+## AppendMany with tags
+
+`AppendMany` applies the provided tags to each event in the batch.
+
+<ChronicleClientTabs snippet="events/appending-with-tags/append-many" clients="csharp,kotlin,java,elixir,typescript" />

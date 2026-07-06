@@ -7,8 +7,8 @@
 - name: Configuration
   href: configuration/toc.yml
 - name: Aspire
-  href: aspire.md
+  href: aspire.mdx
 - name: Docker Compose
   href: docker-compose.md
 - name: Local Certificates
-  href: local-certificates.md
+  href: local-certificates.mdx

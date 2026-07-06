@@ -1,0 +1,28 @@
+# CHR0017: Constraint must not have side effects
+
+## Rule Description
+
+A class implementing `IConstraint` must not inject `ICommandPipeline` or `IEventLog` via its constructor. Constraints are pure rule builders and must not produce side effects.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0017/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0017/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+Constraints declare rules about what combinations of events are valid. They are evaluated by the server in a pure, stateless fashion. Injecting `IEventLog` or `ICommandPipeline` implies side effects that cannot be guaranteed to execute at constraint-check time, leading to unpredictable behaviour.
+
+## Related Rules
+
+- [CHR0018](CHR0018): Constraint Define() must not contain imperative code
+- [CHR0015](CHR0015): Projection must not have side effects

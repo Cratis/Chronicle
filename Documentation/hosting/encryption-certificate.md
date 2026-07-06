@@ -196,7 +196,7 @@ If authentication fails after configuration:
 
 ## Next Steps
 
-- [Local Certificates](local-certificates.md) - TLS certificate setup for development
+- [Local Certificates](local-certificates) - TLS certificate setup for development
 - [Production Hosting](production.md) - Production deployment requirements
 - [Configuration](configuration/index.md) - Complete configuration reference
 

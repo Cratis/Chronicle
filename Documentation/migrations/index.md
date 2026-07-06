@@ -71,4 +71,4 @@ Once the job finishes, every event in the event store that had only older genera
 
 ## Topics
 
-- [C# client usage](dotnet-client.md)
+- [C# client usage](dotnet-client)

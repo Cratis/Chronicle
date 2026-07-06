@@ -28,10 +28,10 @@ the events:
 | Topic | What it covers |
 | ------- | ----------- |
 | [Consistency models](./consistency.md) | The key decision: when does the read model have to be correct — immediately, or eventually? |
-| [Getting a single instance](./getting-single-instance.md) | Retrieve one read model instance by its key. |
-| [Getting a collection](./getting-collection-instances.md) | Retrieve all instances of a read model. |
-| [Getting snapshots](./getting-snapshots.md) | Retrieve historical snapshots of a read model's state. |
-| [Watching read models](./watching-read-models.md) | Observe a read model and react to changes in real time. |
+| [Getting a single instance](./getting-single-instance) | Retrieve one read model instance by its key. |
+| [Getting a collection](./getting-collection-instances) | Retrieve all instances of a read model. |
+| [Getting snapshots](./getting-snapshots) | Retrieve historical snapshots of a read model's state. |
+| [Watching read models](./watching-read-models) | Observe a read model and react to changes in real time. |
 
 To expose a read model to a React frontend, pair it with an [Arc query](/arc/backend/queries/) — or see
 the whole loop in [Build a full-stack feature](/build-a-full-app/).

@@ -47,7 +47,7 @@ for every observer and consumer of the event.
 
 Chronicle supports nullable properties on event types when needed.
 However, consider this a design smell and prefer introducing a new event type when the meaning differs.
-The .NET analyzer rule [CHR0012](../code-analysis/CHR0012.md) warns when nullable event properties are used so you can review the design choice.
+The .NET analyzer rule [CHR0012](../code-analysis/CHR0012) warns when nullable event properties are used so you can review the design choice.
 
 > Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
 > For instance, a person might not have a middle name.

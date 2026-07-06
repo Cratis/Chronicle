@@ -1,0 +1,60 @@
+# Counters
+
+Model-bound projections provide three counter operations for tracking occurrences and quantities: Increment, Decrement, and Count.
+
+## Increment
+
+The `Increment` attribute increments a numeric property when an event occurs. This is useful for tracking counters that increase with specific events.
+
+<ChronicleClientTabs snippet="projections/model-bound/counters/basic-increment" clients="csharp,kotlin,java,elixir,typescript" />
+
+Each time a `UserLoggedIn` event occurs, `LoginCount` is incremented by 1.
+
+## Decrement
+
+The `Decrement` attribute decrements a numeric property when an event occurs. This is useful for tracking decreasing counters.
+
+<ChronicleClientTabs snippet="projections/model-bound/counters/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+
+When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a `UserDisconnected` event occurs, it decreases by 1.
+
+## Count
+
+The `Count` attribute counts the total number of times an event occurs. Unlike Increment, Count doesn't increment from a current value—it maintains an absolute count.
+
+<ChronicleClientTabs snippet="projections/model-bound/counters/count" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Multiple Events
+
+You can use multiple attributes on the same property to respond to different events:
+
+<ChronicleClientTabs snippet="projections/model-bound/counters/combined" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Complete Example
+
+Here's a complete example tracking various metrics:
+
+<ChronicleClientTabs snippet="projections/model-bound/counters/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Counter vs Count
+
+**Increment/Decrement:**
+
+- Modifies the current value
+- Useful for tracking active states (sessions, connections)
+- Can be combined with SetFrom to establish initial values
+- Changes are relative to current value
+
+**Count:**
+
+- Maintains absolute count of event occurrences
+- Useful for analytics and reporting
+- Independent of other operations
+- Always represents total occurrences
+
+## Best Practices
+
+1. **Use Increment/Decrement** for tracking active/current states that change over time
+2. **Use Count** for analytics and metrics that track total occurrences
+3. **Combine operations** on the same property when tracking both current state and history
+4. **Initialize counters** with SetFrom when you have an initial value from a creation event

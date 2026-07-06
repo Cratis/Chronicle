@@ -1,0 +1,84 @@
+# Projection with event context values
+
+Event context contains metadata about each event, such as when it occurred, its sequence number, and causation information. Projections can access these values to enrich read models with event metadata.
+
+## Available event context properties
+
+The `EventContext` contains the following properties you can map to:
+
+- `EventSourceId` - The identifier of the event source that produced the event
+- `SequenceNumber` - The position of the event in the event sequence
+- `Occurred` - When the event occurred (timestamp)
+- `EventType` - Information about the event type
+- `EventSourceType` - The type of the event source
+- `EventStreamType` - The type of the event stream
+- `EventStreamId` - The identifier of the event stream
+- `CorrelationId` - The correlation identifier linking related operations
+- `Causation` - Information about what caused this event
+- `CausedBy` - Identity information about who caused the event
+
+## Mapping to event source ID
+
+Use `ToEventSourceId()` to map the event source ID to a property:
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Mapping to event context properties
+
+Use `ToEventContextProperty()` to map any event context property:
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/automap-with-context" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Read models with context data
+
+Your read models can include properties for event metadata:
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/read-models" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Composite keys with event context
+
+Event context properties can be part of composite keys:
+
+:::note[Client coverage]
+Composite keys are currently a C#-only mechanism — Kotlin, Java, TypeScript, and Elixir have no working composite-key builder yet (see [Composite Keys](./composite-keys)). This example stays C#-only until that lands elsewhere.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/composite-key" clients="csharp" />
+
+## Event context in children and joins
+
+Event context properties work in child collections and joins:
+
+:::note[Client coverage]
+This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/children-context" clients="csharp" />
+
+## Event definitions
+
+<ChronicleClientTabs snippet="projections/declarative/event-context/events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Common use cases
+
+### Audit trails
+
+Map `Occurred`, `SequenceNumber`, and `CausedBy` for complete audit information.
+
+### Debugging and diagnostics
+
+Include `CorrelationId` to trace related operations across services.
+
+### Time-based queries
+
+Use `Occurred` for time-series analysis and historical reporting.
+
+### Event ordering
+
+Use `SequenceNumber` when you need to preserve exact event ordering.
+
+### Source tracking
+
+Use `EventSourceId` to identify which event source produced the event.
+
+Event context properties provide rich metadata that can significantly enhance your read models with timing, traceability, and debugging information.

@@ -1,0 +1,32 @@
+# CHR0020: Constraint expression lambda must only access members
+
+## Rule Description
+
+Expression lambdas passed to constraint builder methods (e.g. `On<TEvent>(e => ...)`) must only contain simple member access. They cannot contain method calls, arithmetic, conditional expressions, or any other executable code.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0020/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0020/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+In Chronicle's constraint builder, any parameter typed as `Expression<Func<...>>` is **parsed at startup** to extract a property name for the constraint rule—the lambda body is **never executed at runtime**. Writing method calls, arithmetic, conditional expressions, or similar executable code in such a lambda will be silently ignored, producing an incorrect or incomplete constraint definition.
+
+The only valid lambda body is a direct property access, for example `e => e.Email` or `e => e.OrderId`.
+
+If case-insensitive comparison is needed, use `builder.Unique(u => u.On<OrderPlaced>(e => e.Email).IgnoreCasing())` instead of transforming the value in the lambda.
+
+## Related Rules
+
+- [CHR0018](CHR0018): Constraint Define() must not contain imperative code
+- [CHR0019](CHR0019): Projection expression lambda must only access members

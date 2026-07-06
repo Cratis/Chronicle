@@ -1,0 +1,45 @@
+# Constant Keys
+
+A constant key allows all events of a given type to accumulate into a **single** read model instance, regardless of which event source the events originate from. This is useful for global aggregates, system-wide counters, and singleton read models.
+
+## Defining a constant key
+
+Use `UsingConstantKey(string value)` to specify a fixed key value for a `from` block. The read model is a normal record or class — the constant key becomes its `_id` in the underlying store:
+
+<ChronicleClientTabs snippet="projections/declarative/constant-key/basic" clients="csharp,kotlin,java,elixir" />
+
+Every `OrderPlaced` event, from every event source, updates the single `GlobalCounter` instance with the key `"global"`.
+
+> **TypeScript note:** the fluent builder's `count()` is not implemented yet (`FromBuilder.ts` throws at runtime even though it type-checks). This particular example — an unconditional occurrence counter — is C#-only for now. `increment()`/`decrement()` **are** implemented; see the next example.
+
+## Combining with functions
+
+Constant keys work with all counting and arithmetic functions, making them ideal for global aggregates. The TypeScript example below tracks only `activeSessions` via `increment()`/`decrement()` — it omits the C# example's `count()`-based `totalUsers`, since `count()` isn't implemented in TypeScript yet:
+
+<ChronicleClientTabs snippet="projections/declarative/constant-key/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Constant parent keys
+
+Use `UsingConstantParentKey(string value)` when working with child collections and you want all events to target the same parent read model:
+
+:::note[Client coverage]
+This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
+:::
+
+<ChronicleClientTabs snippet="projections/declarative/constant-key/constant-parent-key" clients="csharp" />
+
+## Comparison to other key strategies
+
+| Strategy | Method | When to use |
+|---|---|---|
+| Event source ID | (default) | Each event stream is one instance |
+| Event property | `UsingKey(e => e.Property)` | Property on the event identifies instance |
+| Event context | `UsingKeyFromContext(c => c.Property)` | Event context property identifies instance |
+| Composite | `UsingCompositeKey<T>(...)` | Multiple values together form identity |
+| **Constant** | **`UsingConstantKey("value")`** | **All events update the same instance** |
+
+## Full example
+
+<ChronicleClientTabs snippet="projections/declarative/constant-key/multi-event-metrics" clients="csharp,kotlin,java,elixir" />
+
+This projection collects engagement events from all users and event sources into a single `EngagementMetrics` document with the key `"metrics"`.

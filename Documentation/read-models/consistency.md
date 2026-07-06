@@ -64,7 +64,7 @@ On-demand computation is the right choice when:
 - The read model is accessed infrequently relative to how often events are appended
 - You are validating a command against current state before appending new events
 
-For a practical guide to working with read model instances using this approach, see [Getting a Single Instance](getting-single-instance.md) and [Getting a Collection of Instances](getting-collection-instances.md).
+For a practical guide to working with read model instances using this approach, see [Getting a Single Instance](getting-single-instance) and [Getting a Collection of Instances](getting-collection-instances).
 
 ### Performance Considerations
 
@@ -106,7 +106,7 @@ sequenceDiagram
 
 The append operation completes before any projection has run. There is a brief window during which the event is safely stored but the read model has not yet been updated. Under normal conditions this lag is milliseconds, but it grows under heavy load or during recovery.
 
-For a detailed look at how projections are compiled and materialized from definition through to storage — covering the three projection styles and the runtime execution pipeline — see [Projection Architecture](../projections/architecture.md).
+For a detailed look at how projections are compiled and materialized from definition through to storage — covering the three projection styles and the runtime execution pipeline — see [Projection Architecture](../projections/architecture).
 
 ### Consistency Guarantees
 
@@ -122,7 +122,7 @@ They do **not** guarantee:
 - **Cross-partition ordering**: Events from different event source keys may be projected out of relative order
 - **Synchronous updates**: Projection updates always happen after the append returns
 
-For patterns that help you design applications around eventual consistency, see [Eventual Consistency in Projections](../projections/eventual-consistency.md).
+For patterns that help you design applications around eventual consistency, see [Eventual Consistency in Projections](../projections/eventual-consistency).
 
 ### When to Use Materialized Projections
 

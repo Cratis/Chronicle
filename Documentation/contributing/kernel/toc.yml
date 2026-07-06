@@ -1,5 +1,7 @@
+- name: Overview
+  href: ./index.md
 - name: Contracts
-  href: ./contracts.md
+  href: ./contracts.mdx
 - name: Services
   href: ./services.md
 - name: Patches

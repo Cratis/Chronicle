@@ -1,0 +1,65 @@
+# Filter reactors by appended event metadata
+
+A reactor observes all events that match its handler method signatures by default. You can restrict which events a reactor receives by placing filter attributes on the reactor class. Chronicle evaluates these filters before dispatching an event — events that do not match are dropped before they ever reach the reactor.
+
+## Filter attributes
+
+| Attribute | Filters by | Matches when |
+|---|---|---|
+| `[FilterEventsByTag("...")]` | Appended or static event tag | Any filter tag matches any tag on the appended event |
+| `[EventSourceType("...")]` | Event source type set at append time | The event source type matches exactly |
+| `[EventStreamType("...")]` | Event stream type set at append time | The event stream type matches exactly |
+
+These attributes correlate directly to the metadata you provide when appending an event:
+
+<ChronicleClientTabs snippet="reactors/filtering/metadata-example" clients="csharp" />
+
+:::note[Client coverage]
+Observer-level filtering by tag, event source type, or event stream type is currently C#-only. Kotlin's `@Reactor`, Elixir's `use Chronicle.Reactors.Reactor`, and TypeScript's `reactor()` all register a reactor without a way to attach these filters.
+:::
+
+## Filter by tag
+
+Append an event with a tag and place `[FilterEventsByTag]` on the reactor to receive only tagged events.
+
+<ChronicleClientTabs snippet="reactors/filtering/by-tag" clients="csharp" />
+
+`PriorityOrderNotifier` receives the event because the append call includes the `priority` tag. Orders appended without that tag are not dispatched.
+
+### Multiple filter tags
+
+Multiple `[FilterEventsByTag]` attributes widen the match. The reactor receives the event if the appended event has any of the configured tags:
+
+<ChronicleClientTabs snippet="reactors/filtering/multiple-tags" clients="csharp" />
+
+## Filter by event source type
+
+Place `[EventSourceType]` on the reactor to receive only events appended with a matching `eventSourceType`:
+
+<ChronicleClientTabs snippet="reactors/filtering/by-event-source-type" clients="csharp" />
+
+## Filter by event stream type
+
+Place `[EventStreamType]` on the reactor to receive only events appended to a matching stream type:
+
+<ChronicleClientTabs snippet="reactors/filtering/by-event-stream-type" clients="csharp" />
+
+## Combine multiple filters
+
+You can combine `[FilterEventsByTag]`, `[EventSourceType]`, and `[EventStreamType]` on the same reactor. Chronicle requires all filter categories to match:
+
+<ChronicleClientTabs snippet="reactors/filtering/combine-filters" clients="csharp" />
+
+The reactor only receives events that match all three: the `express` tag, the `shipment` event source type, and the `logistics` stream type.
+
+## Tagging the reactor vs filtering events
+
+`[Tag]` and `[Tags]` on a reactor class label the reactor itself for organization and discoverability. They do not filter incoming events:
+
+<ChronicleClientTabs snippet="reactors/filtering/tag-vs-filter" clients="csharp" />
+
+## Detailed guides
+
+- [Filter by tag](../events/filtering/by-tag)
+- [Filter by event source type](../events/filtering/by-event-source-type)
+- [Filter by event stream type](../events/filtering/by-event-stream-type)

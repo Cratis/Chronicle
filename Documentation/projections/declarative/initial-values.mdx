@@ -1,0 +1,54 @@
+# Projection With Initial Values
+
+Initial values define the read model state Chronicle starts from before applying event mappings. Use them when a property needs a meaningful default even though no event has assigned it yet.
+
+The exact API name depends on the client. .NET exposes `WithInitialValues`, while TypeScript exposes `withInitialValues`.
+
+## Basic Usage
+
+Provide a factory that returns a fresh read model instance with the desired default values. Event mappings then apply on top of that initial state.
+
+Kotlin and Elixir don't have a `WithInitialValues`-style builder call, but they achieve the same result idiomatically: the read model's own constructor/struct default values become its initial state (see [Collections](#collections) below for a working example that doesn't need event context). This particular example also maps an event context property (`Occurred`), which neither client's fluent projection API can access yet.
+
+<ChronicleClientTabs snippet="projections/declarative/initial-values/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Why Use Initial Values
+
+Without initial values, properties that are not touched by a projection mapping keep the platform's default representation. That can mean `null`, `0`, `false`, an empty string, or an unset date depending on the client and storage representation.
+
+Initial values are useful for:
+
+| Need | Example |
+| --- | --- |
+| Business defaults | A new order starts as draft until an event changes its status. |
+| Non-null collections | A customer read model starts with empty address and tag collections. |
+| Sentinel values | A timestamp starts at a known sentinel until the first event provides a real value. |
+| Partial events | Inventory limits are configured once while stock events update only quantities. |
+
+## Business Defaults
+
+Set defaults that describe the domain state before the first relevant event changes it.
+
+<ChronicleClientTabs snippet="projections/declarative/initial-values/business-defaults" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Collections
+
+Initialize collections so consumers can treat them as empty collections instead of checking for missing values.
+
+<ChronicleClientTabs snippet="projections/declarative/initial-values/collections" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Events That Do Not Cover Every Property
+
+Initial values are useful when events update operational fields but leave configuration fields unchanged.
+
+> **TypeScript note:** this example uses `Add()`/`With()`, the fluent builder's variable-delta accumulation operators. TypeScript's `add()`/`subtract()` are not implemented yet (`FromBuilder.ts` throws at runtime even though the call type-checks), so this specific example is unsupported in TypeScript for now. Elixir's `add:`/`subtract:` property options **do** work, so this example is also shown there.
+
+<ChronicleClientTabs snippet="projections/declarative/initial-values/partial-events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Best Practices
+
+- Use the factory form so each read model starts from a fresh instance.
+- Prefer deterministic defaults. The initial state is captured when the projection definition is built.
+- Keep defaults domain meaningful; do not duplicate platform defaults unless the value communicates intent.
+- Initialize collections that readers naturally expect to enumerate.
+- Let events own facts that actually happened; initial values are for the state before those facts are projected.

@@ -1,0 +1,33 @@
+# Transactions and Unit of Work
+
+A unit of work groups event appends in the client and commits them as one append batch. Use it when one logical operation must produce multiple events and the operation should have one commit point, one correlation id, and one success or failure outcome.
+
+The transaction is still an event append operation. Chronicle validates constraints and concurrency when the unit of work commits, then persists the accepted events atomically for each committed batch.
+
+## When to Use a Unit of Work
+
+Use a unit of work when:
+
+- One command or workflow emits more than one event.
+- The events should share the same correlation id.
+- The operation should not send partial appends before the workflow is ready.
+- The appends should be committed or rejected together.
+
+Do not use a unit of work to hide modeling problems. If two facts can happen independently, append them independently. If one fact depends on another, model that invariant with constraints, concurrency, or the command decision that creates the events.
+
+## Commit Transactional Appends
+
+Create a unit of work, append through the transactional event sequence, and commit when every event has been staged.
+
+<ChronicleClientTabs snippet="events/transactions/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Roll Back
+
+Rollback discards the events staged in the unit of work. Nothing is sent to Chronicle for those staged events.
+
+## Related Topics
+
+- [Appending events](./appending)
+- [Appending many events](./appending-many)
+- [Optimistic concurrency](./concurrency)
+- [Constraints](/chronicle/constraints/)

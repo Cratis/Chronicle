@@ -1,0 +1,65 @@
+---
+uid: Chronicle.Testing.Events.Scenario
+---
+# EventScenario
+
+`EventScenario` is a lightweight, in-process test utility for exercising code that appends events to an `IEventLog` or `IEventSequence`. It runs entirely in memory with no Chronicle server, database, or network required.
+
+In a [Cratis Specification](/testing-with-cratis/), `EventScenario.Given` is the **given** part of the spec, `EventScenario.When` is the **when** — it appends the acted event(s) and returns the `AppendResult` — and the assertions on that result or the event sequence are the **then**. You can still call `EventLog.Append` / `EventSequence.Append` directly when you need the other overload parameters.
+
+## Why use EventScenario
+
+Chronicle integration tests against a live server are accurate but slow and require infrastructure. `EventScenario` lets you verify that your domain code appends the right events, handles constraint violations correctly, and reacts to pre-seeded state — all in a fast, isolated, and infrastructure-free way.
+
+## Installation
+
+`EventScenario` is in the `Cratis.Chronicle.Testing` NuGet package:
+
+```bash
+dotnet add package Cratis.Specifications.XUnit
+dotnet add package Cratis.Chronicle.Testing
+```
+
+## Basic usage
+
+<ChronicleClientTabs snippet="testing/events/scenario/basic" clients="csharp" />
+
+`EventLog` and `EventSequence` are backed by the same in-memory store. Use `EventLog` for domain tests (it maps to `EventSequenceId.Log`). Use `EventSequence` when you need a generic `IEventSequence` reference.
+
+## Pre-seeding state with Given
+
+Use the fluent `Given` builder to put the in-memory event log into a known state **before** running the act phase:
+
+<ChronicleClientTabs snippet="testing/events/scenario/given" clients="csharp" />
+
+Chain multiple `ForEventSource` calls to seed events for different event sources in the same scenario:
+
+<ChronicleClientTabs snippet="testing/events/scenario/given-multiple-sources" clients="csharp" />
+
+**Rules:**
+- Call `Given` before the act phase — seeded events get monotonically increasing sequence numbers.
+- Do not put the act under test inside `Given`; only pre-existing state goes here.
+
+## Acting with When
+
+`When` mirrors `Given`: where `Given` seeds pre-existing state, `When` performs the act under test. It appends the event(s) through the same in-memory kernel grain and returns the resulting `AppendResult` — the same "the act returns its result" shape as `CommandScenario.Execute` — so a constraint or append spec reads with `Given` / `When` / `then` symmetry without binding the raw `Append` overload by hand:
+
+<ChronicleClientTabs snippet="testing/events/scenario/when-builder" clients="csharp" />
+
+The returned value is an `AppendResult`, so every [append assertion](assertions) is available on it. When you supply more than one event to a single `When`, each is appended in order and the result of the final append is returned.
+
+## Testing AppendMany
+
+`AppendMany` appends a collection of events in one call and returns an `AppendManyResult`:
+
+<ChronicleClientTabs snippet="testing/events/scenario/append-many" clients="csharp" />
+
+## Isolation
+
+Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero.
+
+## Example: full test
+
+<ChronicleClientTabs snippet="testing/events/scenario/full-example" clients="csharp" />
+
+For information on asserting the result of an append operation, see [Assertions](assertions).

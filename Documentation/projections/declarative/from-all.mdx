@@ -1,0 +1,32 @@
+# Projection With FromAll
+
+`FromAll` is a .NET declarative projection API that maps properties from every event considered by the projection, excluding child projection events by default. Other clients expose the same underlying concept through their every-event APIs configured to exclude children; see [Projection With FromEvery](./from-every) for the full every-event feature set.
+
+Use `FromAll` in .NET when the projection should express that a mapping belongs to the all-events portion of the projection definition. In Elixir, the same default (excluding child projection events) is what `from_every` does when `:include_children` is omitted. In TypeScript, call `excludeChildProjections()` on the `fromEvery` builder to get the same behavior.
+
+## Basic Usage
+
+<ChronicleClientTabs snippet="projections/declarative/from-all/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Context Fields
+
+<ChronicleClientTabs snippet="projections/declarative/from-all/context-fields" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Source Id
+
+<ChronicleClientTabs snippet="projections/declarative/from-all/event-source-id" clients="csharp,kotlin,java,elixir,typescript" />
+
+## With Event-Specific Mappings
+
+`FromAll` can sit beside event-specific `From` mappings. Use event-specific mappings for business state, and reserve `FromAll` for metadata that should update for every projected event.
+
+<ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" clients="csharp,kotlin,java,elixir,typescript" />
+
+## FromAll And FromEvery
+
+| API | Use it when |
+| --- | --- |
+| `FromAll` | You are using the .NET declarative projection API and want to express an all-events mapping. |
+| `FromEvery` | You want the portable every-event concept, or you are using a client that exposes the concept under that name. |
+
+Prefer event context sources for audit fields because every event has the same context shape. Use event payload properties only when the event contracts intentionally share the same property.

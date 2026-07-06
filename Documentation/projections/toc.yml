@@ -1,24 +1,24 @@
 - name: Overview
   href: index.md
 - name: Choose a read-model style
-  href: choosing-a-read-model-style.md
+  href: choosing-a-read-model-style.mdx
 - name: Architecture
-  href: architecture.md
+  href: architecture.mdx
 - name: Eventual Consistency
-  href: eventual-consistency.md
+  href: eventual-consistency.mdx
 - name: Appended event metadata filters
-  href: filtering.md
+  href: filtering.mdx
   items:
     - name: By tag
-      href: ../events/filtering/by-tag.md
+      href: ../events/filtering/by-tag.mdx
     - name: By event source type
-      href: ../events/filtering/by-event-source-type.md
+      href: ../events/filtering/by-event-source-type.mdx
     - name: By event stream type
-      href: ../events/filtering/by-event-stream-type.md
+      href: ../events/filtering/by-event-stream-type.mdx
 - name: Tagging Projections
-  href: tagging-projections.md
+  href: tagging-projections.mdx
 - name: Nested Objects (Design)
-  href: nested-objects-design.md
+  href: nested-objects-design.mdx
 - name: Projection Declaration Language
   href: projection-declaration-language/toc.yml
 - name: Model-Bound Projections

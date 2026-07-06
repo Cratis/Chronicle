@@ -1,0 +1,59 @@
+# Projection with custom properties
+
+When auto-mapping isn't sufficient, you can explicitly map properties from events to your read model. This gives you full control over how data is transformed and mapped.
+
+## Explicit property mapping
+
+Instead of using `AutoMap()`, use `Set()` methods to explicitly define property mappings:
+
+<ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Combining AutoMap with explicit mapping
+
+You can use `AutoMap()` at the top level to automatically map matching properties, then add explicit mappings for specific transformations:
+
+<ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" clients="csharp,kotlin,java,elixir,typescript" />
+
+`AutoMap()` works recursively, automatically mapping:
+
+- Properties with matching names and compatible types
+- Nested objects and their properties
+- Collections and arrays
+
+`AutoMap()`/`NoAutoMap()` are set once at the projection level — there is no per-event-type toggle. Add explicit `.Set()` calls inside a specific `.From<TEvent>()` block for the properties that need custom mapping; AutoMap still fills in every other matching property for that event.
+
+## Read model definition
+
+The read model can have different property names and types than the events:
+
+<ChronicleClientTabs snippet="projections/declarative/set-properties/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event definitions
+
+Events can have different structures than the read model:
+
+<ChronicleClientTabs snippet="projections/declarative/set-properties/events" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Property mapping options
+
+You can map properties in several ways:
+
+- **From event property**: `.Set(m => m.CustomerName).To(e => e.Owner.Name)`
+- **From constant value**: `.Set(m => m.IsActive).ToValue(true)`
+- **From event context**: `.Set(m => m.OpenedAt).ToEventContextProperty(c => c.Occurred)`
+- **From event source ID**: `.Set(m => m.Id).ToEventSourceId()`
+
+> [!NOTE]
+> `.To(...)` maps a single **event property** — it reads the value straight off the event, it does not run code. It cannot produce a *computed* value: `.To(e => $"{e.FirstName} {e.LastName}")`, `.To(_ => DateTimeOffset.UtcNow)` and similar expressions are not supported, because the builder extracts a property path from the expression rather than executing it. To derive a value, either record it on the event as a fact (compute it in the command's `Handle()` before appending) or use a [reducer](/chronicle/reducers/), which can run arbitrary logic over the current state and the event.
+
+## Multiple events
+
+A single projection can handle multiple event types, each with its own property mappings. Properties are updated incrementally as events are processed.
+
+In the example above:
+
+- `AccountOpened` sets initial values for all properties
+- `MoneyDeposited` only updates `Balance` and `LastTransaction`
+- Other properties retain their previous values
+
+This approach gives you precise control over how your read models are built from events.

@@ -93,18 +93,18 @@ projection BadProjection
 
 - [From Event](from-event.md) - Define rules that trigger when events occur
 - [Property Mapping](property-mapping.md) - Map event data to read model properties
-- [Auto-Map](auto-map.md) - Automatically map matching properties
+- [Auto-Map](auto-map) - Automatically map matching properties
 - [Keys](keys.md) - Explicit and composite keys for projection instances
 - [Event Context](event-context.md) - Access event metadata like timestamps and correlation IDs
 - [From Every](from-every.md) - Apply rules to all events
 - [From All](from-all.md) - Subscribe to all event types without filtering
-- [Counters](counters.md) - Increment, decrement, and count operations
+- [Counters](counters) - Increment, decrement, and count operations
 - [Arithmetic](arithmetic.md) - Add and subtract operations
 - [Joins](joins.md) - Combine data from related events
-- [Children](children.md) - Define nested collections
+- [Children](children) - Define nested collections
 - [Removal](removal.md) - Remove projection instances based on events
-- [Expressions](expressions.md) - Understanding expression syntax
-- [Ad-hoc Querying](adhoc-querying.md) - Query the event log without registering a projection
+- [Expressions](expressions) - Understanding expression syntax
+- [Ad-hoc Querying](adhoc-querying) - Query the event log without registering a projection
 - [Grammar (EBNF)](grammar.md) - Complete formal grammar specification
 
 ## Example Projection

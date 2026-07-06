@@ -1,0 +1,95 @@
+# Getting Started with Reducers
+
+Reducers provide a powerful way to build read models by reducing a sequence of events into aggregated state. This guide will walk you through creating your first reducer.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- A Chronicle-enabled application
+- Basic understanding of events and event sourcing
+- A read model class to reduce events into
+
+## Creating a Reducer
+
+### 1. Define Your Read Model
+
+First, create a record representing the state you want to compute:
+
+<ChronicleClientTabs snippet="reducers/getting-started/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+
+### 2. Implement the Reducer
+
+Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each event type:
+
+<ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" clients="csharp,kotlin,java,elixir,typescript" />
+
+Kotlin, Java, and TypeScript handler methods only receive the event and the current state — unlike C# and Elixir, they don't get an `EventContext` parameter, so they can't use an event's metadata (like `Occurred`) when computing the next state.
+
+## Method Signatures
+
+Reducer methods are discovered by convention and support the following signatures:
+
+### Synchronous Methods
+
+<ChronicleClientTabs snippet="reducers/getting-started/sync-signatures" clients="csharp" />
+
+### Asynchronous Methods
+
+<ChronicleClientTabs snippet="reducers/getting-started/async-signatures" clients="csharp" />
+
+These overload tables are specific to C#'s method-overload-based dispatch. Kotlin, Java, and TypeScript each dispatch reducer handlers by matching the first parameter's event type against a fixed 2-parameter (event, current) shape — no context parameter. TypeScript's dispatch does `await` the handler, so an `async` handler works there; Kotlin and Java invoke the handler directly and cannot await it, so a suspend/async handler isn't supported in those two. Elixir dispatches through a single `reduce/3` callback per event, pattern-matched by struct type, which does receive a context map.
+
+**Key Points:**
+
+- Method names can be anything, but typically start with `On` followed by the event type name
+- The `@event` parameter is the specific event being processed
+- The `current` parameter contains the existing state (null if no previous state exists)
+- The `EventContext` parameter provides metadata like event source ID, occurred timestamp, and sequence number
+- Both synchronous and asynchronous methods are supported
+
+### 3. Using the Reducer Attribute (Optional)
+
+You can customize the reducer using the `[Reducer]` attribute:
+
+<ChronicleClientTabs snippet="reducers/getting-started/reducer-attribute" clients="csharp,kotlin,java,elixir,typescript" />
+
+**Attribute parameters:**
+
+- `id` - Custom identifier for the reducer (defaults to the fully qualified type name)
+- `eventSequence` - The event sequence to observe (defaults to the event log)
+- `isActive` - Whether the reducer actively observes events (defaults to `true`)
+
+Kotlin, Java, and Elixir only support setting a custom `id` — none of them currently support targeting a non-default event sequence or explicitly toggling active/passive from this attribute. TypeScript supports both `id` and the event sequence via the `reducer()` decorator's parameters, shown above.
+
+## Retrieving Reduced State
+
+Once your reducer is set up, you can retrieve the computed state:
+
+<ChronicleClientTabs snippet="reducers/getting-started/retrieving-state" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Processing
+
+Reducer methods are called for each event matching the event type:
+
+1. **Event Type Matching** - Chronicle calls the method that handles the specific event type
+2. **Event Source ID** - Each method receives events for a single event source
+3. **Sequential Processing** - Events are processed in the order they were appended
+
+The `current` parameter in each method:
+
+- Is `null` when no previous state exists for this event source
+- Contains the current persisted state for this event source
+
+## Best Practices
+
+1. **Keep reducers pure** - Avoid side effects; only compute state from events
+2. **Handle null current state** - Always check if `current` is null for the initial state
+3. **Use immutable state** - Create new instances rather than mutating the current state
+4. **Process events in order** - The events are provided in sequence order; respect that order
+5. **Consider performance** - For large event streams, optimize your reduction logic
+
+## Next Steps
+
+- Learn about [Passive Reducers](passive-reducers) to control when reducers observe
+- Explore [Event Processing](event-processing) for advanced patterns

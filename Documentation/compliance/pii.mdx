@@ -1,0 +1,82 @@
+---
+uid: Chronicle.Compliance.PII
+---
+
+# PII Attribute
+
+The `[PII]` attribute marks data as personally identifiable information (PII) under GDPR. When Chronicle sees this attribute on an event property or a `ConceptAs<T>` type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
+
+<ChronicleClientTabs snippet="compliance/pii/import" clients="csharp" />
+
+:::note[Client coverage]
+Kotlin (`@Pii`), Elixir (`pii/1,2`), and TypeScript (`@pii()`) all have a real, working equivalent for marking an **event property** as PII — see [Applying to an event property](#applying-to-an-event-property) below. The **class-level** form (marking a `ConceptAs<T>` type itself as PII, so every property using that type is covered) is tied to C#'s `ConceptAs<T>` pattern specifically; Kotlin/Java/Elixir have no equivalent typed-wrapper convention established in this corpus, so those tabs — and the two runtime restrictions that only make sense in that context (`EventSourceId`, non-`ConceptAs` classes) — stay C#-only for now.
+:::
+
+## Attribute definition
+
+The signature, for reference:
+
+```text
+// C#
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Parameter)]
+public sealed class PIIAttribute(string details = "") : Attribute
+
+// TypeScript
+export function pii(details?: string): PropertyDecorator & ClassDecorator
+```
+
+The optional `details` parameter lets you record *why* the value is classified as PII — for example, the legal basis under which it is collected or the retention period. This information is stored in the event schema and can be used by compliance reporting tools.
+
+<ChronicleClientTabs snippet="compliance/pii/with-details" clients="csharp,typescript" />
+
+## Where the attribute is valid
+
+| Target | Supported | Notes |
+|---|---|---|
+| `ConceptAs<T>` class | Yes | Preferred approach — marks the concept type itself as PII |
+| Event property | Yes | Marks a single property of an event as PII |
+| `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
+| Any other class type | **No** | Throws `PIIAppliedToNonConceptAsType` at runtime |
+
+## Applying to an event property
+
+You can mark a single property on an event record as PII. This is useful when the property type is a primitive and you cannot or do not want to introduce a dedicated concept type.
+
+<ChronicleClientTabs snippet="compliance/pii/property-level" clients="csharp,kotlin,java,elixir,typescript" />
+
+When this event is written, `FirstName` and `LastName` are encrypted. `Department` is stored as plaintext.
+
+## Applying to a ConceptAs type
+
+The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every property across every event that uses this type is then automatically encrypted — you declare the rule once and it applies everywhere.
+
+<ChronicleClientTabs snippet="compliance/pii/concept-level" clients="csharp,typescript" />
+
+> [!TIP]
+> Use <xref:Fundamentals.Concepts> as a reference for the full `ConceptAs<T>` pattern. For guidance on declaring compliance on concept types, see [Applying PII to ConceptAs types](pii-with-concepts).
+
+## Constraints
+
+### EventSourceId is not supported
+
+Applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `PIINotSupportedOnEventSourceId` at runtime:
+
+<ChronicleClientTabs snippet="compliance/pii/event-source-id-restriction" clients="csharp" />
+
+Event source identifiers are used to look up encryption keys and group events. Encrypting them would make key lookup impossible. If the identifier itself is sensitive, use a non-sensitive surrogate (such as a random `Guid`) as the event source identifier and store the sensitive value in a `[PII]`-marked event property.
+
+### Non-ConceptAs class types are not supported
+
+Applying `[PII]` to a class that does not inherit from `ConceptAs<T>` throws `PIIAppliedToNonConceptAsType` at runtime:
+
+<ChronicleClientTabs snippet="compliance/pii/non-concept-class" clients="csharp" />
+
+This restriction is .NET-client-specific — the TypeScript `@pii()` decorator does not check that its target extends `ConceptAs<T>`.
+
+The `[PII]` attribute at the class level is reserved for `ConceptAs<T>` types. Use a property-level `[PII]` annotation instead if you need to mark individual fields on a class.
+
+## Details parameter
+
+The `details` parameter is a free-text description stored in the event schema. It is never used for encryption — it exists solely to record *why* a value is classified as PII for compliance documentation and auditing purposes.
+
+<ChronicleClientTabs snippet="compliance/pii/legal-name-details" clients="csharp,typescript" />

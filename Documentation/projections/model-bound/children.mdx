@@ -1,0 +1,130 @@
+# Children Collections
+
+Model-bound projections support child collections through the `ChildrenFrom` attribute, allowing you to build hierarchical read models with parent-child relationships.
+
+## Basic Children
+
+The `ChildrenFrom` attribute defines how child entities are added to a collection:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/basic" clients="csharp,kotlin,java,elixir,typescript" />
+
+In this example, the `[Key]` attribute on the `LineItem.Id` property is automatically discovered by Chronicle, so you don't need to specify `identifiedBy` explicitly in the `ChildrenFrom` attribute.
+
+### Parameters
+
+- **key** (optional): Property on the event that identifies the child. Defaults to `EventSourceId`
+- **identifiedBy** (optional): Property on the child model that identifies it. If not specified, Chronicle will:
+  1. Look for a property with the `[Key]` attribute
+  2. Look for a property named `Id` (case-insensitive)
+  3. Fall back to `EventSourceId` if neither is found
+- **parentKey** (optional): Property that identifies the parent. Defaults to `EventSourceId`
+  - Use this when the parent identifier is a property in the event content rather than the EventSourceId
+  - Example: `parentKey: nameof(LineItemAdded.OrderId)` when OrderId is in the event
+
+Auto-mapping is enabled by default. To disable it for a child model, apply the `[NoAutoMap]` attribute on the child type.
+
+> **Note**: With automatic key discovery, you typically don't need to specify `identifiedBy` explicitly. Just mark your child model's key property with `[Key]` attribute, or name it `Id`, and Chronicle will automatically discover it.
+
+### Auto-Mapping
+
+By default, `ChildrenFrom` automatically maps properties from the event to the child model when property names match. This behavior is similar to the `FromEvent` attribute:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/automap" clients="csharp,kotlin,java,elixir,typescript" />
+
+You can disable auto-mapping if you want to control property mapping explicitly:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/no-automap" clients="csharp" />
+
+:::note[Client coverage]
+Disabling auto-mapping for a child type is a .NET-only mechanism today — Kotlin, Java, Elixir, and TypeScript model-bound child collections do not expose a `NoAutoMap`-equivalent switch.
+:::
+
+## Recursive Attribute Processing
+
+All projection attributes work recursively on child types. The child type's properties are automatically scanned for projection attributes:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/with-counters" clients="csharp,kotlin,java,elixir,typescript" />
+
+When an `ItemAddedToCart` event occurs:
+
+1. A new `CartItem` is added to the collection
+2. Properties are mapped from the event to the child
+3. The child's own attributes are processed
+
+When a `QuantityIncreased` event occurs later:
+
+- The projection finds the matching child by ID
+- Increments the `Quantity` on that specific child
+
+## Class-Level `FromEvent` on Child Types
+
+Use a class-level `FromEvent` on the child type when later child events should auto-map into the existing child instance. If those events come from the child's own event source, specify `parentKey` so Chronicle can still resolve the parent document:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/child-from-event" clients="csharp,kotlin,java,elixir,typescript" />
+
+`ChildrenFrom` handles how the child is first added to the collection. The child type's own `FromEvent` handles later updates, and `parentKey` is the equivalent of `.UsingParentKey(...)` in a fluent child projection. You do not need `identifiedBy` here because `Configuration.Id` is marked with `[Key]`.
+
+## Removing Children
+
+Use `RemovedWith` to remove children from collections. You can apply it either on the collection property or on the child type class:
+
+### Property-Level Removal
+
+<ChronicleClientTabs snippet="projections/model-bound/children/removal-property-level" clients="csharp,kotlin,java,elixir,typescript" />
+
+### Class-Level Removal
+
+Apply `RemovedWith` directly on the child type for better separation of concerns:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/removal-class-level" clients="csharp,kotlin,java,elixir,typescript" />
+
+### RemovedWithJoin
+
+For removal based on events from different streams (joins), use `RemovedWithJoin` on the collection property (it also works at the child type's class level, the same way `RemovedWith` does above):
+
+<ChronicleClientTabs snippet="projections/model-bound/children/removed-with-join" clients="csharp,kotlin,java,elixir,typescript" />
+
+> **Note**: For comprehensive documentation on removal options including removing root read models, see [Removal](./removal).
+
+## Complete Example
+
+Here's a comprehensive example showing children with full attribute support:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Event Processing Flow
+
+1. **OrderCreated** - Creates the parent Order with customer name
+2. **LineItemAdded** - Adds a new OrderLine to the collection with initial values
+3. **QuantityAdjusted** - Updates the Quantity on the matching OrderLine
+4. **LineItemRemoved** - Removes the OrderLine from the collection
+
+## Nested Children
+
+Children can have their own children, creating deeply nested structures. All projection attributes (joins, removal, counters, context mapping, etc.) work recursively at every level:
+
+<ChronicleClientTabs snippet="projections/model-bound/children/nested-hierarchy" clients="csharp,kotlin,java,elixir,typescript" />
+
+### What Works Recursively
+
+All projection attributes are fully supported on child types at any nesting level:
+
+| Attribute | Works on Children |
+|-----------|-------------------|
+| `SetFrom` | ✓ |
+| `AddFrom` / `SubtractFrom` | ✓ |
+| `SetFromContext` | ✓ |
+| `Join` | ✓ |
+| `Increment` / `Decrement` / `Count` | ✓ |
+| `ChildrenFrom` (nested children) | ✓ |
+| `RemovedWith` / `RemovedWithJoin` | ✓ |
+| `FromEvent` (class-level) | ✓ |
+
+This means you can build arbitrarily deep hierarchies with full projection capabilities at every level.
+
+## Best Practices
+
+1. **Always use Key attribute** on child types to identify them uniquely
+2. **Leverage recursive attributes** to build complex child projections without duplication
+3. **Use RemovedWith** to maintain collection integrity when items are removed
+4. **Consider performance** with large collections - deeply nested structures can impact query performance

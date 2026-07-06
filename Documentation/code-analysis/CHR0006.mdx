@@ -1,0 +1,40 @@
+# CHR0006: Reducer method signature must match allowed signatures
+
+## Rule Description
+
+Methods in reducer classes must follow one of the allowed signatures for event handling. This ensures proper integration with Chronicle's reducer infrastructure.
+
+## Severity
+
+Warning
+
+## Allowed Signatures
+
+Event handler methods in reducers must have one of the following signatures:
+
+<ChronicleClientTabs snippet="code-analysis/chr0006/allowed-signatures" clients="csharp" />
+
+Where `TEvent` is a type marked with `[EventType]`.
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0006/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0006/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+Reducers maintain state by processing events in sequence. Standardized method signatures ensure:
+- Predictable reducer behavior
+- Proper infrastructure integration
+- Clear code patterns across the codebase
+- Reliable state management
+
+## Related Rules
+
+- [CHR0004](CHR0004): Reactor method signatures
+- [CHR0007](CHR0007): Reducer event parameter must have [EventType] attribute

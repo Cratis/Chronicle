@@ -1,0 +1,35 @@
+# CHR0002: Declarative projection event type must have [EventType] attribute
+
+## Rule Description
+
+Generic type arguments in declarative projections that reference event types must be marked with the `[EventType]` attribute.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0002/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0002/fix" clients="csharp" />
+
+## Quick Fix
+
+The analyzer provides a code fix that automatically adds the `[EventType]` attribute to the referenced type.
+
+## Why This Rule Exists
+
+Declarative projections define how events are projected into read models. All event types used in these projections must be properly identified to ensure:
+- Correct event routing and handling
+- Proper schema tracking
+- Type-safe projection definitions
+
+## Related Rules
+
+- [CHR0001](CHR0001): Event sequence append operations
+- [CHR0003](CHR0003): Model bound projection attributes

@@ -1,12 +1,12 @@
 - name: Overview
-  href: index.md
+  href: index.mdx
 - name: ChronicleOptions Reference
-  href: chronicle-options.md
+  href: chronicle-options.mdx
 - name: Camel Casing
-  href: camel-casing.md
+  href: camel-casing.mdx
 - name: gRPC Message Size
-  href: grpc-message-size.md
+  href: grpc-message-size.mdx
 - name: Structural Dependencies
-  href: structural-dependencies.md
+  href: structural-dependencies.mdx
 - name: TLS
-  href: tls.md
+  href: tls.mdx

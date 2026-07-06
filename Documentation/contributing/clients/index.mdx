@@ -1,0 +1,154 @@
+# Contributing to Clients
+
+Below are the core principles for building public facing APIs exposed in our clients:
+
+- APIs should be lovable
+- Provide sane defaults but make them flexible, extensible and overridable
+- Consistency is king
+- It should be easy to do things right, hard to do things wrong
+- Never expose more than is needed
+
+## Shared documentation snippets
+
+Chronicle's shared public documentation is language agnostic. It uses unified language tabs for examples that apply across clients. The shared Chronicle page owns the explanation and where the tab group appears, but each client repo owns its own code snippet.
+
+This keeps the published docs readable while keeping client-specific APIs close to the code that can verify them.
+
+### Ownership
+
+Place snippets in `Documentation/client-snippets/**` in the repo that owns the client:
+
+- C#: `Chronicle/Documentation/client-snippets`
+- Kotlin: `Chronicle.Kotlin/Documentation/client-snippets`
+- Java: `Chronicle.Kotlin/Documentation/client-snippets-java`
+- Elixir: `Chronicle.Elixir/Documentation/client-snippets`
+- TypeScript: `Chronicle.TypeScript/Documentation/client-snippets`
+
+Snippet files can be `.md` or `.mdx`. Prefer `.md` for ordinary fenced code snippets; use `.mdx` only when the snippet file itself needs MDX syntax.
+
+Do not create a public client-specific Chronicle section just to hold equivalent snippets. The snippet folders are source-only and are expanded into the shared pages by the documentation site sync.
+
+Do not add new raw `csharp`, `cs`, `java`, `kotlin`, `elixir`, `typescript`, or `ts` fenced examples to shared Chronicle docs for client SDK behavior. Use `<ChronicleClientTabs />` instead. The Documentation repo runs `npm run chronicle-client-docs:check`, which fails on missing snippets and on any increase in direct client-language fences in shared Chronicle docs.
+
+### Add a shared example
+
+Shared Chronicle pages reference those snippets with a placeholder:
+
+```mdx
+<ChronicleClientTabs snippet="events/appending/example" />
+```
+
+The snippet id is extensionless. Add the same id under each participating client repo:
+
+```text
+Chronicle/Documentation/client-snippets/events/appending/example.md
+Chronicle.Kotlin/Documentation/client-snippets-java/events/appending/example.md
+Chronicle.Kotlin/Documentation/client-snippets/events/appending/example.md
+Chronicle.Elixir/Documentation/client-snippets/events/appending/example.md
+Chronicle.TypeScript/Documentation/client-snippets/events/appending/example.md
+```
+
+Use one fenced code block in each snippet file unless the language needs more than one block. The fenced language must match the owning client, for example `csharp`, `java`, `kotlin`, `elixir`, or `typescript`.
+
+Use `clients="csharp,elixir"` when only some clients expose the concept:
+
+```mdx
+<ChronicleClientTabs snippet="events/appending/occurred" clients="csharp,elixir" />
+```
+
+When a shared workflow should be visible for a client but that client does not support it yet, keep the tab visible with an explicit unsupported snippet instead of omitting the client:
+
+````md
+```text
+This Chronicle client does not support this workflow yet.
+Track the client SDK issue before using this API from this language.
+```
+````
+
+The default synchronized tab key is `chronicle-client`, so choosing TypeScript in one tab group selects TypeScript in the other tab groups on that page. Use a custom `syncKey` only when tab groups should not follow each other.
+
+### Validation and CI
+
+Each client repo must also keep `Documentation/validate-client-snippets.py` wired into its `Client Snippet Verification` workflow. That workflow compiles the snippets against the client source when either `Documentation/client-snippets/**` or `Source/**` changes, so a client API change cannot silently leave the shared Chronicle docs stale.
+
+Run the validator in each repo whose snippets changed:
+
+```bash
+python3 Documentation/validate-client-snippets.py
+```
+
+Then run the documentation site build from the Documentation repo:
+
+```bash
+cd web
+npm run build
+```
+
+External client repos also need a documentation sync workflow that triggers the `build-docs` workflow in the `Cratis/Documentation` repo after snippet changes land on `main`.
+
+### Client-specific pages
+
+Use snippets for examples that belong inside shared Chronicle pages. Use client-specific pages only when the content is genuinely different for that client, such as installation, connection setup, runtime integration, language-specific APIs, framework integration, decorators or annotations, package behavior, generated APIs, or troubleshooting.
+
+Chronicle concepts and feature workflows belong in the shared Chronicle docs. Do not add client-specific concept or guide trees for events, reactors, reducers, read models, projections, constraints, seeding, transactions, migrations, or compliance when the same explanation applies across clients.
+
+Client-specific pages still live in the owning client repo's `Documentation/**` folder:
+
+- .NET pages render under `/chronicle/clients/dotnet/` from `Chronicle/Documentation/clients/dotnet/**`
+- Kotlin pages render under `/chronicle/clients/kotlin/`
+- Elixir pages render under `/chronicle/clients/elixir/`
+- TypeScript pages render under `/chronicle/clients/typescript/`
+
+The documentation site imports those pages into the Chronicle navigation under **Client SDKs**. The `Documentation/client-snippets/**` folders are skipped and never become public pages.
+
+If a client-specific page later becomes generally useful across clients, move the explanation into the shared Chronicle docs and use `<ChronicleClientTabs />` for the code.
+
+`npm run chronicle-client-docs:check` audits public client docs for shared-topic overlap using `Documentation/web/chronicle-client-docs.yml`. That count is a ratchet: it can go down as duplicated client pages are consolidated into shared docs, but it must not increase.
+
+If an old client URL must remain as a pointer to the shared docs, mark it as a bridge page:
+
+```yaml
+---
+sharedTopicBridge: true
+---
+```
+
+Bridge pages should only explain where the canonical shared topic lives and where to find client-specific setup or reference details.
+
+### Add another Chronicle client
+
+To add another client language later:
+
+1. Add the client repo to the Documentation repo checkout/submodule setup.
+2. Add it to `Documentation/web/chronicle-client-docs.yml`.
+3. Mark `includeByDefault: false` when the client should be opt-in per tab group rather than required by every existing placeholder.
+4. Add `Documentation/client-snippets/**` to the client repo when it participates in shared tabs.
+5. Add `Documentation/validate-client-snippets.py` that compiles snippets against that client.
+6. Add a `Client Snippet Verification` workflow in the client repo.
+7. Add the documentation sync workflow that triggers the Documentation repo after `Documentation/**` changes land on `main`.
+8. Add the new language's snippet files for the shared Chronicle pages that should include it.
+9. Run the affected snippet validators, `npm run chronicle-client-docs:check`, and `npm run build` in `Documentation/web`.
+
+### Migration audit
+
+The current docs have migrated shared client examples behind `<ChronicleClientTabs />`. The Documentation repo keeps a direct-fence baseline in `web/scripts/chronicle-client-docs-baseline.json`; the normal audit allows direct-fence counts to decrease but fails if they increase.
+
+The aggregate client-doc check also reports public client pages that still look like shared Chronicle topic pages. Treat those counts as migration debt: move the shared explanation into Chronicle docs, replace code with synchronized tabs, then lower the manifest baseline.
+
+Use strict mode to see the remaining migration work:
+
+```bash
+cd Documentation/web
+npm run audit:chronicle-client-docs:strict
+```
+
+When migrating a page, replace each client SDK example with `<ChronicleClientTabs snippet="..." />`, add matching snippets in the participating client repos, run each affected client snippet validator, then refresh the baseline after the direct-fence count decreases.
+
+## Topics
+
+| Topic | Description |
+| ------- | ----------- |
+| [Client Types](./client-types.md) | The different client types and relationships between them. |
+| [.NET](./dotnet.md) | The .NET Client. |
+| [API](./api.md) | The REST API Client. |
+| [Internalization](./internalization.md) | The process of internalization. |

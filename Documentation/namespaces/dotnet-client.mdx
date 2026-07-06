@@ -1,0 +1,59 @@
+# DotNET client usage
+
+The .NET client resolves a namespace for every event store operation. You can configure namespace resolution by passing an `IEventStoreNamespaceResolver` implementation to the `ChronicleClient` constructor.
+
+:::note[Client coverage]
+This page and [ASP.NET Core namespace resolution](./aspnetcore) are intentionally .NET-specific — namespace resolution here is driven by .NET's DI/hosting model (`IEventStoreNamespaceResolver`, ASP.NET Core HTTP-header/subdomain/claims-based resolvers), which has no equivalent hosting model documented for Kotlin, Elixir, or TypeScript in this corpus. Passing a namespace explicitly per call (rather than resolving it from the host) works the same in every client — see each client's `IEventStore`/connection options.
+:::
+
+## IEventStoreNamespaceResolver
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/resolver-shape" clients="csharp" />
+
+The resolver returns the namespace name to use for the current context.
+
+## Built-in resolvers
+
+### DefaultEventStoreNamespaceResolver
+
+Always returns the default namespace. Use this when you do not need tenant isolation.
+This is the default when no resolver is supplied.
+
+### ClaimsBasedNamespaceResolver
+
+Resolves the namespace from the current principal's claims. This is useful when you have an authenticated user and want to map the tenant from a claim.
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/claims-based" clients="csharp" />
+
+If the claim is not found or the user is not authenticated, the default namespace is used.
+
+## Passing a resolver to ChronicleClient
+
+For console or direct-client scenarios, pass the resolver as a constructor parameter:
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/default-resolver" clients="csharp" />
+
+## Configuring in a hosted application
+
+When using `IHostApplicationBuilder` (worker service or web app), configure the resolver through `ChronicleClientOptions` or directly via `IChronicleBuilder`:
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/hosted-app-configuration" clients="csharp" />
+
+## Custom resolvers
+
+Implement a resolver when your namespace comes from a custom context, such as a tenant provider or a request-scoped service.
+
+If your application uses Arc Tenancy, you can resolve the namespace from its tenant context. See [Arc Tenancy](xref:Arc.Tenancy).
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver" clients="csharp" />
+
+<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver-usage" clients="csharp" />
+
+## Best practices
+
+- Keep resolvers deterministic within a request or operation
+- Provide a safe fallback to the default namespace
+- Avoid expensive resolution logic, as it is called frequently
+
+For web applications, see [ASP.NET Core namespace resolution](aspnetcore).
+

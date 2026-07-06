@@ -390,5 +390,5 @@ projection Subscription => SubscriptionReadModel
 ## See Also
 
 - [Joins](joins.md) - Understanding join relationships for removal
-- [Children](children.md) - Removing children collections
+- [Children](children) - Removing children collections
 - [Keys](keys.md) - Understanding key matching for removal

@@ -1,5 +1,5 @@
 - name: Contributing to Clients
-  href: ./index.md
+  href: ./index.mdx
 - name: Client Types
   href: ./client-types.md
 - name: .NET
@@ -11,4 +11,4 @@
 - name: Protobuf Extraction
   href: ./protobuf-extraction.md
 - name: TypeScript gRPC Client
-  href: ./typescript-grpc-package.md
+  href: ./typescript-grpc-package.mdx

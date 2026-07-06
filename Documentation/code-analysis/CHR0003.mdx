@@ -1,0 +1,46 @@
+# CHR0003: Model bound projection attribute must reference event type with [EventType] attribute
+
+## Rule Description
+
+Model bound projection attributes (such as `FromEventAttribute<TEvent>`, `RemovedWithAttribute<TEvent>`, etc.) must reference types that are marked with the `[EventType]` attribute.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0003/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0003/fix" clients="csharp" />
+
+## Applicable Attributes
+
+This rule applies to the following model bound projection attributes:
+- `FromEventAttribute<TEvent>`
+- `RemovedWithAttribute<TEvent>`
+- `RemovedWithJoinAttribute<TEvent>`
+- `JoinAttribute<TEvent>`
+- `ChildrenFromAttribute<TEvent>`
+- `FromEveryAttribute<TEvent>`
+
+## Quick Fix
+
+The analyzer provides a code fix that automatically adds the `[EventType]` attribute to the referenced event type.
+
+## Why This Rule Exists
+
+Model bound projections use attributes to define how events map to read models. These attributes must reference valid event types to ensure:
+- Proper event-to-model mapping
+- Correct projection materialization
+- Type-safe projection definitions
+- Accurate event handling
+
+## Related Rules
+
+- [CHR0001](CHR0001): Event sequence append operations
+- [CHR0002](CHR0002): Declarative projection event types

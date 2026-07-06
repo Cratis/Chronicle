@@ -1,0 +1,40 @@
+# CHR0004: Reactor method has a parameter that cannot be resolved
+
+## Rule Description
+
+A reactor handler method takes the event it reacts to as its first parameter. Any further parameters are resolved as dependencies when the method is invoked:
+
+- The `EventContext` for the triggering event.
+- A read model — a type that has a reducer or projection. It is materialized strongly consistent from that reducer or projection.
+- A service resolved from the service provider.
+
+A parameter that is a primitive, value type, or string can never be a read model and is almost never a service, so it is flagged: at runtime it would fail to resolve and the partition would fail.
+
+## Severity
+
+Warning
+
+## Allowed Signatures
+
+<ChronicleClientTabs snippet="code-analysis/chr0004/allowed-signatures" clients="csharp" />
+
+Where `TEvent` is a type marked with `[EventType]`, and `TReadModel` is a type that has a reducer or projection.
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0004/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0004/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+Reactors take dependencies on their handler methods. Read models are resolved directly by Chronicle, and other dependencies come from the service provider. A primitive, value type, or string is neither, so flagging it early prevents a runtime resolution failure that would pause the event source partition.
+
+## Related Rules
+
+- [CHR0005](CHR0005): Reactor event parameter must have [EventType] attribute
+- [CHR0006](CHR0006): Reducer method signatures

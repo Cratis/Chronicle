@@ -1,0 +1,75 @@
+# Projection with a Nested Object
+
+Projections can populate a single nullable child object on a read model using the `Nested()` method. Unlike [children collections](children), which manage an array of items identified by a key, `Nested()` targets a scalar nullable property that is set from an event and cleared (set to null) by another event.
+
+:::note[Client coverage]
+Declarative nested-object projections (`Nested()`/`ClearWith()`) are currently a C#-only mechanism. Kotlin and Java have no fluent nested-object API, TypeScript's builder throws `not implemented yet` for this method, and Elixir has no equivalent nested-object embedding pattern. The examples on this page are shown in C# only until nested projection scopes are implemented for the other clients.
+:::
+
+## Defining a nested object projection
+
+Use the `Nested()` method with `ClearWith<TEvent>()` to define the nested relationship:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/basic" clients="csharp" />
+
+## Read model with a nested property
+
+The nested property must be nullable on the read model:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/read-model" clients="csharp" />
+
+## Event definitions
+
+<ChronicleClientTabs snippet="projections/declarative/nested/events" clients="csharp" />
+
+## How nested objects work
+
+1. When `CommandSetForSlice` is appended the `Command` property is populated on the parent
+2. Subsequent `CommandSetForSlice` events replace the nested object with new values
+3. When `CommandClearedForSlice` is appended the `Command` property is set to `null`
+
+## Multiple from events
+
+Call `From<TEvent>()` multiple times to update the nested object from several event types:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/multiple-from-events" clients="csharp" />
+
+Each `From<TEvent>()` call updates only the properties it explicitly maps or auto-maps — it does not replace the entire nested object.
+
+## AutoMap on nested objects
+
+AutoMap is enabled on the nested builder and inherits from the parent. Properties on the nested read model that share a name with properties on the event are mapped automatically:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/automap" clients="csharp" />
+
+## Multiple nested objects
+
+A single projection can have multiple independent nested properties:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/multiple-nested" clients="csharp" />
+
+## Nested within children
+
+You can call `Nested()` from within a `Children()` builder to define a nested object on each child item:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/nested-in-children" clients="csharp" />
+
+## Examples
+
+### Employee with optional active contract
+
+<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract" clients="csharp" />
+
+Events:
+
+<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract-events" clients="csharp" />
+
+### Product with optional promotion
+
+<ChronicleClientTabs snippet="projections/declarative/nested/product-promotion" clients="csharp" />
+
+## See Also
+
+- [Children](children) — collections of items managed independently within a parent
+- [Simple projection](simple-projection) — getting started with projections
+- [AutoMap](auto-map) — automatic property mapping

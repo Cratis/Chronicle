@@ -1,0 +1,59 @@
+---
+title: Watching Read Models
+description: Subscribe to read model changes when a client needs pushed updates instead of polling.
+---
+
+Watching a read model gives a client a stream of changes as Chronicle applies projections and reducers. Use it for live dashboards, cache invalidation, background coordination, and interfaces that should update without polling.
+
+Not every Chronicle client exposes the watch API yet. The examples below show the clients that currently do.
+
+## What a change contains
+
+Each change tells you:
+
+| Field | Meaning |
+| --- | --- |
+| Namespace | The Chronicle namespace where the change happened |
+| Key | The read model key that changed |
+| Read model | The current state after the change |
+| Removed | Whether the instance was removed |
+
+The change carries the current read model state, not the previous state. If you need to detect a transition, keep the last value you saw for each key or react to the domain event with a reactor.
+
+## Watch a read model
+
+The read model type must be registered before you subscribe.
+
+<ChronicleClientTabs snippet="read-models/watching-read-models/basic" clients="csharp,typescript" />
+
+Dispose, cancel, or break out of the subscription when the caller no longer needs updates. Long-lived subscriptions should be owned by a service with an explicit lifetime.
+
+## Filter changes
+
+Filter as close to the subscription as the client allows. This keeps application code focused on the state changes it actually cares about.
+
+<ChronicleClientTabs snippet="read-models/watching-read-models/filtering" clients="csharp,typescript" />
+
+Filtering happens client-side. If the client subscribes to a busy read model, the server still sends matching change notifications for that read model type.
+
+## When to use this
+
+Use read-model watching when:
+
+- A UI needs pushed updates.
+- A cache should invalidate or refresh when state changes.
+- A background service reacts to state changes instead of raw events.
+- The consumer can manage a long-running subscription.
+
+Prefer current-state reads when:
+
+- The caller only needs a value once.
+- The process cannot own a long-running subscription.
+- The reaction should be based on the original event rather than derived state.
+
+## Related topics
+
+- [Getting a Single Instance](getting-single-instance) - Read current state on demand
+- [Getting a Collection of Instances](getting-collection-instances) - Replay all current instances
+- [Getting Snapshots](getting-snapshots) - Inspect historical state
+- [Reactors](../reactors/index) - React to events directly

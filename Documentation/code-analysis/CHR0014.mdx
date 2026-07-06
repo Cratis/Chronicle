@@ -1,0 +1,27 @@
+# CHR0014: Reducer cannot combine EventStore with explicit event sequence
+
+## Rule Description
+
+A reducer that declares `[EventStore("...")]` must use implicit inbox routing. It cannot also define an explicit event sequence.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0014/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0014/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+`[EventStore]` on a reducer is intended to drive outbox-to-inbox routing. Combining it with explicit event sequence configuration creates ambiguous routing intent.
+
+## Related Rules
+
+- [CHR0013](CHR0013): Reactor cannot combine EventStore with explicit event sequence

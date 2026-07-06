@@ -5,7 +5,7 @@
 - name: Property Mapping
   href: property-mapping.md
 - name: Auto-Map
-  href: auto-map.md
+  href: auto-map.mdx
 - name: Keys
   href: keys.md
 - name: Event Context
@@ -15,20 +15,20 @@
 - name: From All
   href: from-all.md
 - name: Counters
-  href: counters.md
+  href: counters.mdx
 - name: Arithmetic
   href: arithmetic.md
 - name: Joins
   href: joins.md
 - name: Children
-  href: children.md
+  href: children.mdx
 - name: Nested Objects
-  href: nested.md
+  href: nested.mdx
 - name: Removal
   href: removal.md
 - name: Expressions
-  href: expressions.md
+  href: expressions.mdx
 - name: Ad-hoc Querying
-  href: adhoc-querying.md
+  href: adhoc-querying.mdx
 - name: Grammar (EBNF)
   href: grammar.md

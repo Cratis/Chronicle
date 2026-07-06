@@ -1,0 +1,126 @@
+# Tagging
+
+Tags provide a flexible way to organize, categorize, and identify events and observers (reactors, reducers, projections, read models) within Chronicle. By applying the `[Tag]` or `[Tags]` attribute, you can assign one or more tags that describe the purpose, domain, or context of your artifacts.
+
+:::note[Client coverage]
+Static tags (the `[Tag]`/`[Tags]` attribute, on events, observers, or read models) and reading tags back from `EventContext` are currently C#-only. Dynamic tags supplied at append time are also supported in Elixir (shown below) — Kotlin, Java, and TypeScript don't expose a `tags` append option at all.
+:::
+
+> **Note**: Both `[Tag]` and `[Tags]` attributes can be used interchangeably. Use whichever feels more natural, or mix them - all tags will be merged together.
+
+## Overview
+
+Tags are strings that can be attached to:
+
+- **Events** - both statically (via attributes) and dynamically (when appending)
+- **Reactors** - for organizing and filtering reactive behaviors
+- **Reducers** - for categorizing state aggregation logic
+- **Projections** - for organizing view models and read models
+- **Read Models** - for categorizing data models
+
+Tags are stored with event metadata and observer definitions, enabling powerful filtering, querying, and organizational capabilities.
+
+## Tagging Events
+
+Events can be tagged in two ways: statically using attributes, or dynamically when appending events.
+
+### Static Event Tags
+
+Apply the `[Tag]` or `[Tags]` attribute to your event types to assign static tags that will always be associated with that event type:
+
+<ChronicleClientTabs snippet="concepts/tagging/static-event-tags" clients="csharp" />
+
+### Dynamic Event Tags
+
+When appending events, you can provide additional tags that will be merged with any static tags:
+
+<ChronicleClientTabs snippet="concepts/tagging/dynamic-event-tags" clients="csharp,kotlin,java,elixir,typescript" />
+
+In this example, the event will have four tags: `["analytics", "user-action", "production", "critical"]`.
+
+### Tags in Event Context
+
+All tags (both static and dynamic) are available on the `EventContext` when processing events:
+
+<ChronicleClientTabs snippet="concepts/tagging/tags-in-event-context" clients="csharp" />
+
+## Tagging Observers
+
+Observers (reactors, reducers, and projections) can be tagged to organize and categorize them:
+
+### Single Tag
+
+<ChronicleClientTabs snippet="concepts/tagging/observer-single-tag" clients="csharp" />
+
+### Multiple Tags (Single Attribute)
+
+You can use either `[Tag]` or `[Tags]` (plural) for convenience:
+
+<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-single-attribute" clients="csharp" />
+
+### Multiple Tags (Multiple Attributes)
+
+<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-multiple-attributes" clients="csharp" />
+
+### Mixed Approach
+
+You can mix both `[Tag]` and `[Tags]` attributes - all tags will be merged:
+
+<ChronicleClientTabs snippet="concepts/tagging/observer-mixed-approach" clients="csharp" />
+
+## Tagging Read Models
+
+Read models and projections can also be tagged:
+
+<ChronicleClientTabs snippet="concepts/tagging/read-model-tags" clients="csharp" />
+
+## Best Practices
+
+- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
+- **Be consistent**: Establish tag naming conventions across your organization
+- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
+- **Group related artifacts**: Use tags to group events and observers that serve similar purposes
+- **Consider hierarchies**: Use dot notation for hierarchical tags (e.g., `"customer.registration"`, `"customer.profile"`)
+
+## Common Tagging Patterns
+
+Here are some common patterns for organizing tags:
+
+### By Domain
+
+<ChronicleClientTabs snippet="concepts/tagging/by-domain" clients="csharp" />
+
+### By Purpose
+
+<ChronicleClientTabs snippet="concepts/tagging/by-purpose" clients="csharp" />
+
+### By Integration Type
+
+<ChronicleClientTabs snippet="concepts/tagging/by-integration-type" clients="csharp" />
+
+### By Communication Channel
+
+<ChronicleClientTabs snippet="concepts/tagging/by-communication-channel" clients="csharp" />
+
+### By Stakeholder
+
+<ChronicleClientTabs snippet="concepts/tagging/by-stakeholder" clients="csharp" />
+
+### By Environment or Context
+
+<ChronicleClientTabs snippet="concepts/tagging/dynamic-tags-patterns" clients="csharp" />
+
+## Using Tags
+
+Tags stored in the event store and observer definitions can be used for:
+
+- **Filtering and searching** for specific events or observers
+- **Organizing artifacts** in administrative interfaces
+- **Generating documentation** about your system
+- **Managing deployments** by tag
+- **Monitoring and alerting** based on tag groups
+- **Controlling activation** of observers by tag
+- **Analyzing event patterns** and flows
+- **Creating tag-based subscriptions** or filters
+
+Note: The specific querying and filtering capabilities depend on your Chronicle setup and tooling.

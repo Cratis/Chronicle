@@ -15,7 +15,7 @@ customization for those who need it.
 
 ## Packaging
 
-The .NET client uses runtime-only packaging to hide internal implementation details. It includes the [contracts](../kernel/contracts.md) and
+The .NET client uses runtime-only packaging to hide internal implementation details. It includes the [contracts](../kernel/contracts) and
 the `Connection` project as runtime-only assemblies, ensuring they're not exposed in IntelliSense or available for direct compilation by consumers.
 See [internalization](./internalization.md) for details on how this works.
 

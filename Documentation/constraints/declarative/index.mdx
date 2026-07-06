@@ -1,0 +1,30 @@
+# Declarative constraints
+
+The declarative API lets you define constraints in a dedicated class by implementing `IConstraint`. Chronicle discovers all `IConstraint` implementations automatically — no registration is needed.
+
+:::note[Client coverage]
+Kotlin and Java have a real `IConstraint`/`IConstraintBuilder` API, but it's narrower than C#'s: it has no `RemovedWith` (releasing a held value), no `WithName` (custom constraint names), no dynamic message callback, and its `on(...)` can only target a single event type per unique constraint — no chaining across multiple event types. Tabs on this page that need any of those are marked as gaps for Kotlin/Java rather than silently omitted. Elixir doesn't have a separate declarative-class style at all — see [Model-bound constraints](../model-bound/) for its event-type-attribute equivalent, which does support name-based grouping and releasing.
+:::
+
+Use declarative constraints when you need:
+
+- Uniqueness spanning multiple event types with different property names
+- A callback to compose dynamic violation messages
+- More explicit control over constraint names
+
+## Constraint types
+
+| Type | Description |
+|---|---|
+| [Unique property](unique) | Enforce that a property value is unique across one or more event types |
+| [Unique event type](unique-event-type) | Enforce that only one event of a specific type can be appended per event source |
+
+## Defining a constraint
+
+Implement `IConstraint` and call the builder in `Define`:
+
+<ChronicleClientTabs snippet="constraints/declarative/index/defining" clients="csharp,kotlin,java,typescript" />
+
+## Discovery
+
+Chronicle scans all loaded assemblies for types that implement `IConstraint` and registers them with the Kernel automatically when the client starts. No explicit registration is required.

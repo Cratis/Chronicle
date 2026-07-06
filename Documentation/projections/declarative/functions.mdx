@@ -1,0 +1,52 @@
+# Projection functions
+
+Projections support several built-in functions for mathematical operations and counting. These functions allow you to perform calculations directly within projections without needing custom logic.
+
+> **TypeScript note:** of these, only `Increment()`/`Decrement()` are implemented in TypeScript's fluent builder today. `Count()`, `Add()`, and `Subtract()` type-check but throw `Error('... is not implemented yet.')` at runtime (`FromBuilder.ts`), so those examples below are C#-only.
+
+## Counting events
+
+Use `Count()` to increment a counter each time an event is processed:
+
+<ChronicleClientTabs snippet="projections/declarative/functions/count" clients="csharp,kotlin,java,elixir" />
+
+## Increment and decrement
+
+Use `Increment()` and `Decrement()` to add or subtract 1 from a property:
+
+<ChronicleClientTabs snippet="projections/declarative/functions/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+
+These functions always change the value by exactly 1.
+
+## Add and subtract with values
+
+Use `Add()` and `Subtract()` to add or subtract specific values from event properties:
+
+<ChronicleClientTabs snippet="projections/declarative/functions/add-subtract" clients="csharp,kotlin,java,elixir" />
+
+## Supported types
+
+All projection functions work with these numeric types:
+
+- `int`
+- `long`
+- `float`
+- `double`
+- `decimal`
+
+The functions automatically handle type conversion and maintain the target property's type.
+
+## How functions work
+
+1. **Initialization**: Properties start at 0 (or their default value) when first accessed
+2. **Accumulation**: Functions apply their operations incrementally as events are processed
+3. **Type safety**: Values are converted to match the target property type
+4. **State preservation**: Current values are maintained between events
+
+## Combining functions
+
+You can use multiple functions in a single projection:
+
+<ChronicleClientTabs snippet="projections/declarative/functions/combined" clients="csharp,kotlin,java,elixir" />
+
+These functions provide powerful aggregation capabilities while keeping projection logic simple and declarative.

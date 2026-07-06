@@ -1,36 +1,40 @@
 - name: Code Analysis Rules
   href: index.md
 - name: CHR0001 - Event type must have [EventType] attribute
-  href: CHR0001.md
+  href: CHR0001.mdx
 - name: CHR0002 - Declarative projection event type must have [EventType] attribute
-  href: CHR0002.md
+  href: CHR0002.mdx
 - name: CHR0003 - Model bound projection attribute must reference event type
-  href: CHR0003.md
-- name: CHR0004 - Reactor method signature must match allowed signatures
-  href: CHR0004.md
+  href: CHR0003.mdx
+- name: CHR0004 - Reactor method has a parameter that cannot be resolved
+  href: CHR0004.mdx
 - name: CHR0005 - Reactor event parameter must have [EventType] attribute
-  href: CHR0005.md
+  href: CHR0005.mdx
 - name: CHR0006 - Reducer method signature must match allowed signatures
-  href: CHR0006.md
+  href: CHR0006.mdx
 - name: CHR0007 - Reducer event parameter must have [EventType] attribute
-  href: CHR0007.md
+  href: CHR0007.mdx
 - name: CHR0012 - Event types should avoid nullable properties
-  href: CHR0012.md
+  href: CHR0012.mdx
 - name: CHR0013 - Reactor cannot combine EventStore with explicit event sequence
-  href: CHR0013.md
+  href: CHR0013.mdx
 - name: CHR0014 - Reducer cannot combine EventStore with explicit event sequence
-  href: CHR0014.md
+  href: CHR0014.mdx
 - name: CHR0015 - Projection must not have side effects
-  href: CHR0015.md
+  href: CHR0015.mdx
 - name: CHR0016 - Projection Define() must not contain imperative code
-  href: CHR0016.md
+  href: CHR0016.mdx
 - name: CHR0017 - Constraint must not have side effects
-  href: CHR0017.md
+  href: CHR0017.mdx
 - name: CHR0018 - Constraint Define() must not contain imperative code
-  href: CHR0018.md
+  href: CHR0018.mdx
 - name: CHR0019 - Projection expression lambda must only access members
-  href: CHR0019.md
+  href: CHR0019.mdx
 - name: CHR0020 - Constraint expression lambda must only access members
-  href: CHR0020.md
+  href: CHR0020.mdx
 - name: CHR0021 - Event types should be record types
-  href: CHR0021.md
+  href: CHR0021.mdx
+- name: CHR0022 - Reactor methods returning event side effects must be marked with [OnceOnly]
+  href: CHR0022.mdx
+- name: CHR0023 - Ambiguous parent key for [ChildrenFrom] collection
+  href: CHR0023.mdx

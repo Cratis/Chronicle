@@ -1,0 +1,50 @@
+---
+title: Test a slice
+description: Prove a slice works — the right events appended, the right read model state — with EventScenario and ReadModelScenario running the real Chronicle engines in-process.
+---
+
+**Goal:** verify a feature actually works — the right events get appended (constraints included) and the read model derived from them comes out right — without standing up a Chronicle server or a database.
+
+## Real engines, in-memory storage
+
+The `Cratis.Chronicle.Testing` package gives you two scenario types that wire up the **real client and kernel code paths** — constraint validation, serialization, the projection and reducer engines. Only the storage layer is in-memory, so there's no expensive infrastructure to spin up: the specs are lightweight to run, yet exercise the same engine code that runs in production.
+
+:::note[Client coverage]
+This in-process scenario testing library is C#-only — see [Testing](../testing/) for why.
+:::
+
+```bash
+dotnet add package Cratis.Chronicle.Testing
+```
+
+The examples below use the [Cratis Specifications](/testing-with-cratis/) style (`Establish`/`Because`/`should_`), but the scenarios work with any test framework.
+
+## Test the events with EventScenario
+
+`EventScenario` exercises the appending side. Seed pre-existing history with `Given`, append through `EventLog` exactly like production code does, and assert on the `AppendResult`:
+
+<ChronicleClientTabs snippet="scenarios/test-a-slice/append-spec" clients="csharp" />
+
+Constraints are discovered automatically, the same way the real client discovers them. So given a unique-ISBN constraint (like the one in [Enforce a unique value](./enforce-a-unique-value.md)), seeding a book and appending a duplicate proves the rule fires:
+
+<ChronicleClientTabs snippet="scenarios/test-a-slice/constraint-spec" clients="csharp" />
+
+Beyond `ShouldBeSuccessful`/`ShouldBeFailed` and `ShouldHaveConstraintViolationFor`, there are assertions for concurrency violations and errors — the full family is in [Append result assertions](../testing/events/assertions). Create a fresh `EventScenario` per spec and dispose it; the in-memory log accumulates state across calls on the same instance.
+
+## Test the read model with ReadModelScenario
+
+`ReadModelScenario<TReadModel>` exercises the deriving side: feed a history of events through the **real projection or reducer engine** and assert on the resulting instance. It auto-detects how the read model is built — reducer, fluent projection, or model-bound attributes:
+
+<ChronicleClientTabs snippet="scenarios/test-a-slice/read-model-spec" clients="csharp" />
+
+For a read model spec the event history **is** the act — `Given` supplies the input, `Instance` is the output. If the spec fails, your mapping (`[SetFrom<T>]`/`[SetValue<T>]` attributes or reducer logic) is wrong, because the engine applying it is the real one.
+
+## What this does and doesn't cover
+
+Together the two scenarios prove the Chronicle slice: command logic appends the right facts, and the facts fold into the right state. They don't exercise your HTTP surface or UI — that's a concern for your application framework's own testing story.
+
+## See also
+
+- [Testing](../testing/) — the full testing model, including `ReactorScenario` for reactor side effects.
+- [EventScenario](../testing/events/scenario) and [ReadModelScenario](../testing/read-models/scenario) — every option, including initial state and dependency injection.
+- [Enforce a unique value](./enforce-a-unique-value.md) — the constraint the duplicate-ISBN spec exercises.

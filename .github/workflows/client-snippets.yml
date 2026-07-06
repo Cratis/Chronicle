@@ -1,0 +1,66 @@
+name: Client Snippet Verification
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET8_VERSION: "8.0.410"
+  DOTNET9_VERSION: "9.0.x"
+  DOTNET_VERSION: "10.0.x"
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Documentation/client-snippets/**"
+      - "Documentation/validate-client-snippets.py"
+      - "Source/**"
+      - ".github/workflows/client-snippets.yml"
+
+  push:
+    branches: ["main"]
+    paths:
+      - "Documentation/client-snippets/**"
+      - "Documentation/validate-client-snippets.py"
+      - "Source/**"
+      - ".github/workflows/client-snippets.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET8_VERSION }}
+            ${{ env.DOTNET9_VERSION }}
+            ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Add GitHub Package Registry to NuGet
+        run: |
+          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Compile client snippets
+        run: python3 Documentation/validate-client-snippets.py

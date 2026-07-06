@@ -6,7 +6,7 @@ Chronicle ships as a Docker image, making it straightforward to run anywhere con
 
 ## Getting Started
 
-For day-to-day development, [Docker Compose](docker-compose.md) is the fastest way to get a Kernel and MongoDB running locally. [Aspire](aspire.md) is an alternative if your team uses the .NET Aspire application model.
+For day-to-day development, [Docker Compose](docker-compose.md) is the fastest way to get a Kernel and MongoDB running locally. [Aspire](aspire) is an alternative if your team uses the .NET Aspire application model.
 
 ## Going to Production
 
@@ -22,6 +22,6 @@ Both steps are required. A production deployment that skips key encryption is no
 - **[Production](production.md)** — Docker-based production deployment
 - **[Data Protection Key Encryption](encryption-certificate.md)** — Certificate-backed key encryption for production
 - **[Configuration](configuration/index.md)** — Complete configuration reference
-- **[Aspire](aspire.md)** — Microsoft Aspire hosting integration
+- **[Aspire](aspire)** — Microsoft Aspire hosting integration
 - **[Docker Compose](docker-compose.md)** — Multi-container setup for development and testing
-- **[Local Certificates](local-certificates.md)** — TLS certificates for local development
+- **[Local Certificates](local-certificates)** — TLS certificates for local development

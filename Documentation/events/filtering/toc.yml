@@ -1,8 +1,8 @@
 - name: Overview
   href: index.md
 - name: By tag
-  href: by-tag.md
+  href: by-tag.mdx
 - name: By event source type
-  href: by-event-source-type.md
+  href: by-event-source-type.mdx
 - name: By event stream type
-  href: by-event-stream-type.md
+  href: by-event-stream-type.mdx

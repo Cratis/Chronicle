@@ -1,8 +1,8 @@
 - name: Overview
   href: index.md
 - name: 1. Your first event
-  href: first-event.md
+  href: first-event.mdx
 - name: 2. Building a read model
-  href: read-model.md
+  href: read-model.mdx
 - name: 3. Reacting to events
-  href: reacting.md
+  href: reacting.mdx

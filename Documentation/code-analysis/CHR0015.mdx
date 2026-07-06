@@ -1,0 +1,28 @@
+# CHR0015: Projection must not have side effects
+
+## Rule Description
+
+A class implementing `IProjectionFor<T>` must not inject `ICommandPipeline` or `IEventLog` via its constructor. Projections are pure state builders that derive read models from events and must not produce side effects.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0015/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0015/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+Projections declare how to build a read model from a stream of events. They are evaluated at replay time and must be purely declarative. Injecting `IEventLog` or `ICommandPipeline` implies intent to perform side effects during projection evaluation, which breaks idempotency and replay safety.
+
+## Related Rules
+
+- [CHR0016](CHR0016): Projection Define() must not contain imperative code
+- [CHR0017](CHR0017): Constraint must not have side effects

@@ -1,0 +1,50 @@
+# ASP.NET Core namespace resolution
+
+The ASP.NET Core client provides namespace resolution designed for multi-tenant web applications. It integrates with HTTP context and offers built-in resolvers for common request patterns.
+
+If your multi-tenant setup is based on Arc Tenancy, you can map the current tenant to a namespace. See [Arc Tenancy](xref:Arc.Tenancy).
+
+## Built-in resolvers
+
+### HTTP header resolution (default)
+
+The default resolver reads the namespace from an HTTP header. Configure it through `ChronicleAspNetCoreOptions`:
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/http-header-resolver" clients="csharp" />
+
+When the header is present, its value becomes the namespace for the request. If the header is missing, the default namespace is used.
+
+### Subdomain resolution
+
+The subdomain resolver extracts the namespace from the request host (for example, `tenant1.example.com`).
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/subdomain-resolver" clients="csharp" />
+
+## Custom resolvers
+
+You can configure a custom resolver either by type (DI) or using the `IChronicleBuilder` fluent API.
+
+### Using the builder (recommended)
+
+Pass a resolver instance using the `IChronicleBuilder` configure callback:
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/builder-custom-resolver" clients="csharp" />
+
+### Using type-based DI resolution
+
+Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI container resolve it:
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/type-based-custom-resolver" clients="csharp" />
+
+## Configuration priority
+
+1. Resolver set via `IChronicleBuilder.WithNamespaceResolver()` or `IChronicleBuilder.NamespaceResolver`
+2. Type configuration (`EventStoreNamespaceResolverType`) when provided
+3. Default HTTP header resolver
+
+## Example: Web app setup
+
+<ChronicleClientTabs snippet="namespaces/aspnetcore/web-app-example" clients="csharp" />
+
+For non-web contexts, see [DotNET client usage](dotnet-client).
+

@@ -1,8 +1,10 @@
+- name: Overview
+  href: index.mdx
 - name: Choose an application host model
   href: choose-hosting-model.mdx
 - name: Console
-  href: console.md
+  href: console.mdx
 - name: Worker Service
-  href: worker.md
+  href: worker.mdx
 - name: ASP.NET Core
-  href: aspnetcore.md
+  href: aspnetcore.mdx

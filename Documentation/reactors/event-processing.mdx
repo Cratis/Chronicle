@@ -1,0 +1,62 @@
+# Event Processing
+
+This guide explains how reactors discover methods, which signatures are supported, and how event context and errors are handled.
+
+## Event Method Discovery
+
+Reactors use convention-based method discovery. Chronicle finds and invokes public methods that:
+
+- Accept the event type as the first parameter
+- Optionally accept further dependency parameters (the `EventContext`, read models, or services)
+- Return `void`, `Task`, `Task<T>`, or a synchronous side-effect type (see below)
+
+Event parameter types must be marked with `[EventType]`.
+
+## Supported Signatures
+
+<ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" clients="csharp" />
+
+`TResult` can be an event type or `IEnumerable<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
+
+This overload table is specific to C#'s method-overload-based dispatch. Kotlin, Elixir, and TypeScript each use one canonical handler shape instead of a family of overloads — see [Getting started with reactors](getting-started) for what that shape looks like in each client. None of them auto-append a handler's return value the way C# does (see [Returning side effects](side-effects)).
+
+## Event Context
+
+The optional `EventContext` parameter provides metadata about the event, including the event source ID, sequence number, timestamps, and correlation identifiers.
+
+<ChronicleClientTabs snippet="reactors/event-processing/event-context" clients="csharp,kotlin,java,elixir,typescript" />
+
+## Taking Dependencies
+
+Beyond the event and `EventContext`, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed; it is the event that drives dispatch.
+
+<ChronicleClientTabs snippet="reactors/event-processing/dependencies" clients="csharp" />
+
+This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or strongly-consistent read models) into the handler call.
+
+Each parameter after the event resolves as follows:
+
+- An `EventContext` parameter receives the event context; its position does not matter.
+- A read model — a type with a reducer or projection — is materialized on demand from that reducer or projection, making it **strongly consistent** when the reactor runs. Read models are resolved directly by Chronicle, never through the service provider.
+- Any other type is resolved from the service provider.
+
+### Resolving the read model key
+
+By default the read model is materialized using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
+
+<ChronicleClientTabs snippet="reactors/event-processing/read-model-key" clients="csharp" />
+
+The resolved key applies to every read model parameter across all of the reactor's handler methods. This is also currently C#-only, since it exists to customize the read-model-parameter resolution described above.
+
+## Event Source Isolation
+
+Events are delivered per event source and in sequence order. Each reactor method is called for the specific event source that produced the event.
+
+## Error Handling
+
+If a reactor method throws an exception, the failing event source partition is marked as failed and processing for that partition is paused. Once the underlying issue is resolved, processing resumes from the last successful event.
+
+## Related Rules
+
+- [CHR0004](../code-analysis/CHR0004) - Reactor method signatures
+- [CHR0005](../code-analysis/CHR0005) - Event parameters require `[EventType]`

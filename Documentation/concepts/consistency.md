@@ -21,7 +21,7 @@ flowchart LR
 
 ## Why not just make reads immediate?
 
-Because eventual reads are what make the model scale and stay simple: projections run independently, read models specialize per use case, and the write path doesn't wait on every view being updated. The cost is the small lag — and most UIs handle it naturally, especially with [observable queries](../scenarios/real-time-query.md) that update the moment the projection catches up.
+Because eventual reads are what make the model scale and stay simple: projections run independently, read models specialize per use case, and the write path doesn't wait on every view being updated. The cost is the small lag — and most UIs handle it naturally, especially with [observable queries](../scenarios/real-time-query) that update the moment the projection catches up.
 
 When you genuinely need read-after-write for a specific case, Chronicle offers **immediate projections** — a read model materialized synchronously so it's current the instant the command returns. Use them deliberately and sparingly; they trade the benefits above for strong read consistency. See [Immediate projections](../projections/immediate-projections.md).
 
@@ -43,7 +43,7 @@ A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *dec
 | You need… | Use |
 |---|---|
 | A view to read and render | A normal [projection](./projection.md) — embrace eventual consistency |
-| The UI to update as data changes | An [observable query](../scenarios/real-time-query.md) |
+| The UI to update as data changes | An [observable query](../scenarios/real-time-query) |
 | An invariant guaranteed at write time | A [constraint](../constraints/) or a [DCB](../dynamic-consistency-boundary/) |
 | Read-after-write for one specific case | An [immediate projection](../projections/immediate-projections.md), deliberately |
 
@@ -51,4 +51,4 @@ A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the *dec
 
 - [Read Models](../read-models/) — consistency and retrieval in depth.
 - [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) — the full model.
-- [Designing read models](./designing-read-models.md) — designing for eventual consistency.
+- [Designing read models](./designing-read-models) — designing for eventual consistency.

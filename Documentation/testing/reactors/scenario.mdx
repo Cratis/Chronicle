@@ -1,0 +1,51 @@
+---
+uid: Chronicle.Testing.Reactors.Scenario
+---
+# ReactorScenario
+
+`ReactorScenario<TReactor>` is a lightweight, in-process test utility that lets you verify reactor side-effects without a running Chronicle server, gRPC transport, or observer registration.
+
+It activates a fresh instance of `TReactor` from the provided service provider and routes events directly through the `ReactorInvoker` — the same execution path used in production.
+
+In a [Cratis Specification](/testing-with-cratis/), the event delivered to the reactor is the **when**, and the side effect captured by a mock, fake, or test double is the **then**. The scenario keeps that test in-process while still using the production reactor invocation path.
+
+## Why use ReactorScenario
+
+End-to-end tests that require a live Chronicle server are accurate but slow. `ReactorScenario<TReactor>` drives the same reactor logic in-process so your specs remain fast and isolated without losing coverage of the handler logic.
+
+## Installation
+
+`ReactorScenario<TReactor>` is in the `Cratis.Chronicle.Testing` NuGet package:
+
+```bash
+dotnet add package Cratis.Specifications.XUnit
+dotnet add package Cratis.Chronicle.Testing
+```
+
+## Basic usage
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/basic" clients="csharp" />
+
+`Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to route events through the reactor in order.
+
+## Injecting dependencies
+
+Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reactor depends on:
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/injecting-dependencies" clients="csharp" />
+
+When no `IServiceProvider` is provided, `ReactorScenario<TReactor>` uses a `DefaultServiceProvider` that constructs the reactor via its default constructor.
+
+## Example: email notification
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/email-example" clients="csharp" />
+
+## Example: multiple events across event sources
+
+<ChronicleClientTabs snippet="testing/reactors/scenario/multiple-sources" clients="csharp" />
+
+## Notes
+
+- A fresh instance of `TReactor` is activated from the service provider for each `Events(...)` call, matching the production behavior where a new scope is created per event batch.
+- Event handling uses the same `ReactorInvoker` as in production, so convention-based method discovery (`On<TEvent>`) works identically.
+- The `.Received()` assertions in the examples come from [NSubstitute](https://nsubstitute.github.io/). Any mocking framework works.

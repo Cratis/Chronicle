@@ -27,8 +27,8 @@ A Chronicle project running locally — the [Get started](/chronicle/get-started
 
 ## The tour
 
-1. **[Your first event](./first-event.md)** — record the fact that a book arrived, and meet the event log.
-2. **[Building a read model](./read-model.md)** — turn that stream of facts into something you can actually query.
-3. **[Reacting to events](./reacting.md)** — do something useful when a book comes back.
+1. **[Your first event](./first-event)** — record the fact that a book arrived, and meet the event log.
+2. **[Building a read model](./read-model)** — turn that stream of facts into something you can actually query.
+3. **[Reacting to events](./reacting)** — do something useful when a book comes back.
 
-By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. Ready? [Let's record the first thing that happens →](./first-event.md)
+By the end you'll have built the loop at the heart of every Chronicle app — *append a fact, project it into state, react to it* — and you'll know it well enough to leave the library behind and model your own domain. Ready? [Let's record the first thing that happens →](./first-event)

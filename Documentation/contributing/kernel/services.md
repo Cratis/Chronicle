@@ -1,6 +1,6 @@
 # Services
 
-All gRPC service implementations for our [contracts](./contracts.md) reside in the `Services` project.
+All gRPC service implementations for our [contracts](./contracts) reside in the `Services` project.
 
 These services are owned by the `Kernel` and must remain internal. Every service implementation should
 be marked as `internal`, since integration testing can host the client and kernel in the same process.

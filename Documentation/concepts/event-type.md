@@ -21,4 +21,4 @@ flowchart LR
     G2 -->|migration| G3["Generation 3 + JSON schema"]
 ```
 
-For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations.md).
+For detailed information on how to define and use migrations, see [Event Type Migrations](./event-type-migrations).

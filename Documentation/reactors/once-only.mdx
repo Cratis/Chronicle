@@ -1,0 +1,16 @@
+# OnceOnly
+
+The `OnceOnly` attribute is used to mark reactor methods that should only execute once and never called again,
+for instance during a replay.
+
+There are scenarios where you need side effects to occur only on the initial event processing,
+such as sending notifications, triggering external integrations, or performing non-idempotent operations.
+
+<ChronicleClientTabs snippet="reactors/once-only/basic" clients="csharp" />
+
+The `OnceOnly` attribute ensures that the marked method is executed exactly once,
+providing a clean way to separate one-time operations from normal reactor behavior.
+
+:::note[Client coverage]
+`OnceOnly` is currently C#-only — Kotlin, Java, Elixir, and TypeScript have no equivalent marker, so a replay or retry always re-runs the full handler in those clients. Design side effects to be idempotent instead (see [Getting started with reactors](getting-started)).
+:::

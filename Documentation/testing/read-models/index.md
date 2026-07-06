@@ -9,4 +9,4 @@ Chronicle provides the `ReadModelScenario<TReadModel>` utility for testing read 
 
 | Guide | Description |
 |-------|-------------|
-| [ReadModelScenario](scenario.md) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |
+| [ReadModelScenario](scenario) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |

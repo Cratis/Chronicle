@@ -14,5 +14,8 @@ Use event seeding when you need deterministic, append-only data to be part of th
 
 ## Next steps
 
-- [Seeding with C Sharp](./seeding-with-csharp.md)
+- [Seeding with C Sharp](./seeding-with-csharp)
+- [Seeding with Kotlin](/chronicle/clients/kotlin/guides/seeding/)
+- [Seeding with Elixir](/chronicle/clients/elixir/seeding/)
+- [Seeding with TypeScript](/chronicle/clients/typescript/seeding/)
 

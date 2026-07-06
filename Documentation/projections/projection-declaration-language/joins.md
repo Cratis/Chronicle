@@ -340,6 +340,6 @@ children items identified by itemId
 
 ## See Also
 
-- [Children](children.md) - Nested collections with joins
+- [Children](children) - Nested collections with joins
 - [Removal](removal.md) - Removing projections based on joined events
 - [Keys](keys.md) - Understanding join key matching

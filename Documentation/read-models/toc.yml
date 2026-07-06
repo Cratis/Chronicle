@@ -3,14 +3,14 @@
 - name: Consistency Models
   href: consistency.md
 - name: Getting a Single Instance
-  href: getting-single-instance.md
+  href: getting-single-instance.mdx
 - name: Getting a Collection of Instances
-  href: getting-collection-instances.md
+  href: getting-collection-instances.mdx
 - name: Materialized Read Models
-  href: materialized-pagination.md
+  href: materialized-pagination.mdx
 - name: Getting Snapshots
-  href: getting-snapshots.md
+  href: getting-snapshots.mdx
 - name: Watching Read Models
-  href: watching-read-models.md
+  href: watching-read-models.mdx
 - name: Pagination and Observation
-  href: materialized-pagination.md
+  href: materialized-pagination.mdx

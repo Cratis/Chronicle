@@ -1,0 +1,33 @@
+# CHR0023: Ambiguous parent key for [ChildrenFrom] collection
+
+## Rule Description
+
+When a `[ChildrenFrom]` collection omits its `parentKey` argument, Chronicle infers the parent key by matching the parent read model's identifier type against the child event's properties (excluding the child `key`). When more than one property still matches that type, the inference is ambiguous — it would resolve by declaration order, which is fragile.
+
+Specify the `parentKey` argument to make the relationship explicit.
+
+## Severity
+
+Warning
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0023/violation" clients="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0023/fix" clients="csharp" />
+
+## Why This Rule Exists
+
+A `[ChildrenFrom]` collection projects child rows from an event stream and attaches them to a parent read model. Chronicle needs to know which event property carries the **parent** identifier so it can place each child under the right parent.
+
+When `parentKey` is omitted, Chronicle infers it: it takes the parent read model's identifier type and looks for a single event property of that type (the child `key` property is excluded, since one property can't be both the child key and the parent key). If exactly one property matches, the inference is safe. If **two or more** match, the choice is ambiguous — the projection would silently pick one by declaration order, so reordering the event's parameters, or adding another property of the same type later, could quietly re-point every child at a different parent.
+
+Naming `parentKey` explicitly removes that fragility: the relationship is stated in the read model, survives refactoring of the event, and makes the intent obvious to readers.
+
+## Related Rules
+
+- [Model-bound children](/chronicle/projections/model-bound/children/) — the full `[ChildrenFrom]` reference.

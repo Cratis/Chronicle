@@ -35,7 +35,7 @@ When an outbox event is forwarded to an inbox:
 
 ## See also
 
-- [Outbox and Inbox](outbox-inbox.md)
-- [Implicit Event Store Subscriptions](implicit-subscriptions.md)
-- [Explicit Event Store Subscriptions](explicit-subscriptions.md)
+- [Outbox and Inbox](outbox-inbox)
+- [Implicit Event Store Subscriptions](implicit-subscriptions)
+- [Explicit Event Store Subscriptions](explicit-subscriptions)
 - [Compliance](../compliance/index.md)
