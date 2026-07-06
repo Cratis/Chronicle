@@ -5,8 +5,13 @@ namespace Cratis.Chronicle.Projections;
 
 /// <summary>
 /// Attribute used to disable automatic property mapping for a projection model.
-/// Can be applied at class level to prevent AutoMap from mapping properties automatically.
-/// This attribute is inherited by child projections.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = true)]
+/// <remarks>
+/// Applied at class (or struct) level, it prevents AutoMap from mapping any property automatically, and is
+/// inherited by child projections. Applied at property or parameter level, it excludes only that single
+/// property from AutoMap while every other property keeps mapping — use it to stop an unrelated event that
+/// carries an identically named property from silently overwriting a property whose value is set explicitly
+/// (for example via <c>[SetFrom]</c>).
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Property | AttributeTargets.Parameter, Inherited = true)]
 public sealed class NoAutoMapAttribute : Attribute;

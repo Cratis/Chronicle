@@ -61,7 +61,7 @@ public class ProjectionFactory(
             eventTypeSchemas);
     }
 
-    static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap)
+    static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
     {
         var merged = fromDefinition.Properties.ToList();
 
@@ -84,6 +84,13 @@ public class ProjectionFactory(
 
             if (matchingReadModelProperty is not null)
             {
+                // A property flagged with [NoAutoMap] is only ever set from its explicit mapping, so an
+                // unrelated event carrying an identically named property must not auto-map onto it.
+                if (noAutoMapProperties.Contains(matchingReadModelProperty.Name))
+                {
+                    continue;
+                }
+
                 merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
                 existing.Add(matchingReadModelProperty.Name);
             }
@@ -282,7 +289,7 @@ public class ProjectionFactory(
                 var nestedSchema = currentReadModelSchema.Properties.TryGetValue(kvp.Key.LastSegment.Value, out var schemaProp)
                     ? schemaProp.ActualSchema ?? currentReadModelSchema
                     : currentReadModelSchema;
-                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, projection.AutoMap);
+                var mergedProperties = GetMergedFromProperties(fromDefinition, nestedSchema, matchingSchema?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
                 var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, nestedPropertyPath + p.Key, p.Value));
                 propertyMappers.AddRange(propertyMappersForEveryEventType);
 
@@ -338,6 +345,10 @@ public class ProjectionFactory(
         var childProjections = childResults.Select(r => r.Projection).Cast<IProjection>().ToArray();
         var initialState = GetInitialState(expandoObjectConverter, projectionDefinition, currentReadModelSchema);
 
+        var noAutoMapProperties = (projectionDefinition.NoAutoMapProperties ?? [])
+            .Select(_ => _.LastSegment.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var projection = new Projection(
             projectionDefinition.EventSequenceId,
             projectionId,
@@ -349,6 +360,7 @@ public class ProjectionFactory(
             currentReadModelSchema,
             projectionDefinition.IsRewindable,
             projectionDefinition.AutoMap,
+            noAutoMapProperties,
             childProjections);
 
         // Set parent relationships immediately after creation
@@ -520,7 +532,7 @@ public class ProjectionFactory(
     {
         var schemaList = eventTypeSchemas.ToList();
         var matchingSchema = schemaList.FirstOrDefault(ets => ets.Type == eventType);
-        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap);
+        var mergedFromProperties = GetMergedFromProperties(fromDefinition, currentReadModelSchema, matchingSchema?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
         var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event

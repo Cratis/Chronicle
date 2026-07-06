@@ -36,6 +36,7 @@ public class Projection : IProjection, IDisposable
     /// <param name="readModelSchema">The target <see cref="JsonSchema"/> for the read model.</param>
     /// <param name="rewindable">Whether the projection is rewindable.</param>
     /// <param name="autoMap">Whether properties should be auto-mapped from events at the projection level.</param>
+    /// <param name="noAutoMapProperties">Read model property names excluded from auto-mapping even when <paramref name="autoMap"/> is enabled.</param>
     /// <param name="childProjections">Collection of <see cref="IProjection">child projections</see>, if any.</param>
     public Projection(
         EventSequenceId eventSequenceId,
@@ -48,6 +49,7 @@ public class Projection : IProjection, IDisposable
         JsonSchema readModelSchema,
         bool rewindable,
         AutoMap autoMap,
+        IReadOnlySet<string> noAutoMapProperties,
         IEnumerable<IProjection> childProjections)
     {
         EventSequenceId = eventSequenceId;
@@ -57,6 +59,7 @@ public class Projection : IProjection, IDisposable
         TargetReadModelSchema = readModelSchema;
         IsRewindable = rewindable;
         AutoMap = autoMap;
+        NoAutoMapProperties = noAutoMapProperties;
         Event = FilterEventTypes(_subject);
         Path = path;
         ChildrenPropertyPath = childrenPropertyPath;
@@ -93,6 +96,9 @@ public class Projection : IProjection, IDisposable
 
     /// <inheritdoc/>
     public AutoMap AutoMap { get; }
+
+    /// <inheritdoc/>
+    public IReadOnlySet<string> NoAutoMapProperties { get; }
 
     /// <inheritdoc/>
     public IObservable<ProjectionEventContext> Event { get; }

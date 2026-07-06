@@ -78,6 +78,11 @@ public interface IProjection
     AutoMap AutoMap { get; }
 
     /// <summary>
+    /// Gets the read model property names excluded from auto-mapping even when <see cref="AutoMap"/> is enabled.
+    /// </summary>
+    IReadOnlySet<string> NoAutoMapProperties { get; }
+
+    /// <summary>
     /// Gets the <see cref="IObservable{T}">observable</see> <see cref="ProjectionEventContext">event</see>.
     /// </summary>
     IObservable<ProjectionEventContext> Event { get; }
