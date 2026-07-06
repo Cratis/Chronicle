@@ -55,6 +55,8 @@ public class a_performing_job_step : Specification
             Arg.Any<EventSequenceNumber>(),
             Arg.Any<EventSourceId>(),
             Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<DateTimeOffset?>(),
+            Arg.Any<DateTimeOffset?>(),
             Arg.Any<CancellationToken>()).Returns(Task.FromResult(_eventCursor));
 
         var subscription = new ObserverSubscription(
