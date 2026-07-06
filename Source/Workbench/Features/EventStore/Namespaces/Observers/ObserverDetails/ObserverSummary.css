@@ -1,0 +1,6 @@
+.observer-summary {
+    flex: 1;
+    min-height: 0;
+    padding: 8px 16px 16px 16px;
+    overflow: auto;
+}
