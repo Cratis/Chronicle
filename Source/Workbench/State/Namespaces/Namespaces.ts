@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IMessenger } from '@cratis/arc.react.mvvm/messaging';
+import { IMessenger } from '@cratis/arc/messaging';
 import { inject, injectable } from 'tsyringe';
 import { AllNamespaces } from 'Api/Namespaces';
 import { ILocalStorage } from '@cratis/arc.react.mvvm/browser';

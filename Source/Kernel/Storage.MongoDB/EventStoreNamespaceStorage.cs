@@ -207,4 +207,7 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
         return _closedStreamsConstraints[eventSequenceId] = new ClosedStreamsConstraintStorage(_eventStoreNamespaceDatabase, eventSequenceId);
     }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<EventSequenceId>> GetEventSequenceIds() => _eventStoreNamespaceDatabase.GetEventSequenceIds();
 }

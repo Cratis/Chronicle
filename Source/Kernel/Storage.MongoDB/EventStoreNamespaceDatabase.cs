@@ -75,6 +75,14 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// <inheritdoc/>
     public IMongoCollection<ObserverState> GetObserverStateCollection() => GetCollection<ObserverState>(WellKnownCollectionNames.Observers);
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<EventSequenceId>> GetEventSequenceIds()
+    {
+        var collection = _database.GetCollection<BsonDocument>(WellKnownCollectionNames.EventSequences);
+        var documents = await (await collection.FindAsync(FilterDefinition<BsonDocument>.Empty)).ToListAsync();
+        return documents.Select(document => (EventSequenceId)document["_id"].AsString).ToArray();
+    }
+
     void CreateIndexesForEventSequenceIfNotCreated(IMongoCollection<Event> collection, EventSequenceId eventSequenceId)
     {
         if (!_indexedEventSequences.ContainsKey(eventSequenceId))

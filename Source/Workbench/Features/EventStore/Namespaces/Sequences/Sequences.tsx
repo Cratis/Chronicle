@@ -1,276 +1,156 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { DataPage, MenuItem } from '@cratis/components/DataPage';
-import strings from 'Strings';
-import { AppendedEvents, AppendedEventsParameters } from 'Api/EventSequences';
-import { type EventStoreAndNamespaceParams } from 'Shared';
-import { useParams } from 'react-router-dom';
-import { Column, ColumnFilterElementTemplateOptions } from 'primereact/column';
-import { EventDetails } from './EventDetails';
-import { AppendedEvent } from 'Api/Events';
-import { AllEventTypes } from 'Api/EventTypes/AllEventTypes';
-import { MultiSelect } from 'primereact/multiselect';
-import { DataTableFilterMeta } from 'primereact/datatable';
-import { FilterMatchMode } from 'primereact/api';
-import { useDialog, useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
-import { AppendEventDialog } from './Add/AppendEventDialog';
-import { useState, useCallback } from 'react';
 import { Page } from 'Components/Common/Page';
-import { RedactEventDialog, RedactEventDialogProps } from './RedactEventDialog';
-import { ReviseDialog, ReviseDialogProps } from './ReviseDialog';
-import { GetReplayableObserversForEventTypes } from 'Api/Observation';
-import { ObserverType } from 'Api/Observation/ObserverType';
-import * as faIcons from 'react-icons/fa6';
+import { Bookmark } from './Bookmark/Bookmark';
+import { Query } from './Query';
+import { QueryDefinition } from './QueryDefinition';
+import { Allotment } from 'allotment';
+import { TabPanel, TabView } from 'primereact/tabview';
+import { Guid } from '@cratis/fundamentals';
+import { AllEventSequenceQueryFolders } from 'Api/SequenceQueries/Listing/AllEventSequenceQueryFolders';
+import { AddEventSequenceQuery } from 'Api/SequenceQueries/Adding/AddEventSequenceQuery';
+import { AddEventSequenceQueryFolder } from 'Api/SequenceQueries/Adding/AddEventSequenceQueryFolder';
+import { AddEventSequenceQueryFolderForUser } from 'Api/SequenceQueries/Adding/AddEventSequenceQueryFolderForUser';
+import { EventSequenceQueryFolder } from 'Api/SequenceQueries/Listing/EventSequenceQueryFolder';
+import { SequenceQueryFilter } from 'Api/SequenceQueries/SequenceQueryFilter';
+import { type EventStoreAndNamespaceParams } from 'Shared';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
-import { PropertyPathResolverProxyHandler } from '@cratis/fundamentals';
-
-const occurred = (event: AppendedEvent) => {
-    return event.context.occurred.toLocaleString();
-};
-
-// Delay in milliseconds to wait before refreshing data after adding an event
-// This allows the backend to process and persist the event before re-querying
-const REFRESH_DELAY_MS = 200;
-
-type Lambda<T> = (target: T) => unknown;
-
-function GetPathFor<T>(lambda: Lambda<T>): string {
-    const handler = new PropertyPathResolverProxyHandler();
-    const proxy = new Proxy({}, handler);
-    lambda(proxy);
-    return handler.path;
-}
+const flattenQueries = (folders: EventSequenceQueryFolder[]): QueryDefinition[] =>
+    folders.flatMap(folder => (folder.queries ?? []).map(query => ({
+        id: query.queryId?.toString(),
+        name: query.name,
+        eventSequenceId: query.eventSequenceId,
+        eventSourceId: query.filter?.eventSourceId ?? undefined,
+        eventTypes: query.filter?.eventTypes ?? [],
+        startTime: query.filter?.startTime ? new Date(query.filter.startTime as unknown as string) : undefined,
+        endTime: query.filter?.endTime ? new Date(query.filter.endTime as unknown as string) : undefined,
+        folderId: folder.folderId?.toString(),
+        isUnsaved: false,
+    } as QueryDefinition)));
 
 export const Sequences = () => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const [AppendEventWrapper, showAppendEvent] = useDialog(AppendEventDialog);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [selectedEvent, setSelectedEvent] = useState<AppendedEvent | null>(null);
-    const [showConfirmation] = useConfirmationDialog();
-    const [RedactEventWrapper, showRedactEvent] = useDialog<RedactEventDialogProps>(RedactEventDialog);
-    const [ReviseWrapper, showRevise] = useDialog<ReviseDialogProps>(ReviseDialog);
+    const eventStore = params.eventStore!;
+    const namespace = params.namespace!;
 
-    const queryArgs: AppendedEventsParameters = {
-        eventStore: params.eventStore!,
-        namespace: params.namespace!,
-        eventSequenceId: 'event-log'
-    };
+    const [folders, refresh] = AllEventSequenceQueryFolders.use({ eventStore, namespace });
 
-    const handleRedactEvent = async () => {
-        if (selectedEvent) {
-            const confirmResult = await showConfirmation(
-                strings.eventStore.namespaces.sequences.dialogs.redact.confirmTitle,
-                strings.eventStore.namespaces.sequences.dialogs.redact.confirmMessage,
-                DialogButtons.YesNo
-            );
-            if (confirmResult !== DialogResult.Yes) return;
+    const [queries, setQueries] = useState<QueryDefinition[]>([]);
+    const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
 
-            const [result] = await showRedactEvent({
-                eventStore: params.eventStore!,
-                namespace: params.namespace!,
+    const savedQueries = useMemo(() => flattenQueries(folders.data ?? []), [folders.data]);
+
+    useEffect(() => {
+        setQueries(previous => {
+            const drafts = previous.filter(query => query.isUnsaved === true);
+            return [...savedQueries, ...drafts];
+        });
+    }, [savedQueries]);
+
+    const handleAddFolder = useCallback(async (group: 'myQueries' | 'sharedQueries', name: string) => {
+        const folderId = Guid.create();
+        if (group === 'sharedQueries') {
+            const command = new AddEventSequenceQueryFolder();
+            command.eventStore = eventStore;
+            command.namespace = namespace;
+            command.folderId = folderId;
+            command.name = name;
+            await command.execute();
+        } else {
+            const command = new AddEventSequenceQueryFolderForUser();
+            command.eventStore = eventStore;
+            command.namespace = namespace;
+            command.folderId = folderId;
+            command.name = name;
+            await command.execute();
+        }
+        refresh();
+    }, [eventStore, namespace, refresh]);
+
+    const handleAddQueryForGroup = useCallback((group: 'myQueries' | 'sharedQueries') => {
+        const allFolders = folders.data ?? [];
+        const systemOwner = 'System';
+        const groupFolder = group === 'sharedQueries'
+            ? allFolders.find(folder => folder.owner === systemOwner)
+            : allFolders.find(folder => folder.owner !== systemOwner);
+
+        setQueries(previous => {
+            const draft: QueryDefinition = {
+                id: undefined,
+                name: `Query ${previous.length + 1}`,
                 eventSequenceId: 'event-log',
-                sequenceNumber: selectedEvent.context.sequenceNumber
-            });
-            if (result === DialogResult.Ok) {
-                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-            }
+                folderId: groupFolder?.folderId?.toString(),
+                isUnsaved: true,
+            };
+            const next = [...previous, draft];
+            setActiveTabIndex(next.length - 1);
+            return next;
+        });
+    }, [folders.data]);
+
+    const handleSaveQuery = useCallback(async (updated: QueryDefinition) => {
+        if (updated.folderId === undefined || updated.isUnsaved !== true) {
+            return;
         }
-    };
+        const queryId = Guid.create();
+        const command = new AddEventSequenceQuery();
+        command.eventStore = eventStore;
+        command.namespace = namespace;
+        command.queryId = queryId;
+        command.folderId = Guid.parse(updated.folderId);
+        command.name = updated.name;
+        command.eventSequenceId = updated.eventSequenceId;
 
-    const observerTypeName = (type: ObserverType): string => {
-        switch (type) {
-            case ObserverType.reactor: return 'Reactor';
-            case ObserverType.projection: return 'Projection';
-            case ObserverType.reducer: return 'Reducer';
-            case ObserverType.external: return 'External';
-            default: return 'Unknown';
-        }
-    };
+        const filter = new SequenceQueryFilter();
+        filter.eventSourceId = updated.eventSourceId ?? '';
+        filter.eventTypes = updated.eventTypes ?? [];
+        filter.startTime = updated.startTime ?? null as unknown as Date;
+        filter.endTime = updated.endTime ?? null as unknown as Date;
+        command.filter = filter;
 
-    const handleReviseEvent = async () => {
-        if (selectedEvent) {
-            const query = new GetReplayableObserversForEventTypes();
-            const queryResult = await query.perform({
-                eventStore: params.eventStore!,
-                namespace: params.namespace!,
-                eventTypeIds: selectedEvent.context.eventType.id
-            });
+        await command.execute();
+        refresh();
+    }, [eventStore, namespace, refresh]);
 
-            const observers = queryResult.data;
-            const reviseStrings = strings.eventStore.namespaces.sequences.dialogs.revise;
-            let confirmMessage: string;
-
-            if (observers.length > 0) {
-                const observerList = observers
-                    .map(o => `\u2022 ${o.id} (${observerTypeName(o.type)})`)
-                    .join('\n');
-                confirmMessage = `${reviseStrings.confirmMessage}\n\n${observerList}`;
-            } else {
-                confirmMessage = reviseStrings.confirmNoObservers;
-            }
-
-            const confirmResult = await showConfirmation(
-                reviseStrings.confirmTitle,
-                confirmMessage,
-                DialogButtons.YesNo
-            );
-            if (confirmResult !== DialogResult.Yes) return;
-
-            const [result] = await showRevise({
-                event: selectedEvent,
-                eventStore: params.eventStore!,
-                namespace: params.namespace!
-            });
-            if (result === DialogResult.Ok) {
-                setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-            }
-        }
-    };
-
-    const sequenceNumberPath = GetPathFor<AppendedEvent>(et => et.context.sequenceNumber);
-    const typePath = GetPathFor<AppendedEvent>(et => et.context.eventType.id);
-    const eventSourceIdPath = GetPathFor<AppendedEvent>(et => et.context.eventSourceId);
-    const occurredPath = GetPathFor<AppendedEvent>(et => et.context.occurred);
-
-    const filters: DataTableFilterMeta = {
-        idPath: { value: null, matchMode: FilterMatchMode.IN },
-        eventSourceIdPath: { value: null, matchMode: FilterMatchMode.EQUALS },
-        occurredPath: { value: null, matchMode: FilterMatchMode.BETWEEN }
-    };
-
-    const [eventTypes] = AllEventTypes.use({
-        eventStore: params.eventStore!
-    });
-
-    const handleAppendEvent = async () => {
-        const [result] = await showAppendEvent();
-        if (result === DialogResult.Ok) {
-            setTimeout(() => setRefreshTrigger(prev => prev + 1), REFRESH_DELAY_MS);
-        }
-    };
-
-    const handleExportEvents = useCallback(async () => {
-        const query = new AppendedEvents();
-        const result = await query.perform(queryArgs);
-        if (!result.hasData || result.data.length === 0) return;
-
-        const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
-
-        const exportData = result.data.map(event => ({
-            eventType: event.context.eventType.id,
-            eventSourceId: event.context.eventSourceId,
-            sequenceNumber: event.context.sequenceNumber,
-            occurred: event.context.occurred,
-            content: (() => {
-                try {
-                    return JSON.parse(event.content);
-                } catch {
-                    return event.content;
-                }
-            })()
-        }));
-
-        const json = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `events-${sanitize(params.eventStore!)}-${sanitize(params.namespace!)}-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [queryArgs, params.eventStore, params.namespace]);
-
-    const eventTypeFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
-        return (
-            <MultiSelect
-                value={options.value}
-                options={eventTypes.data}
-                onChange={(e) => options.filterCallback(e.value)}
-                optionLabel='id'
-                placeholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType}
-                maxSelectedLabels={1}
-                className='p-column-filter' />
-        );
-    };
+    const tabHeader = (query: QueryDefinition) => (
+        <span className="px-1">
+            {query.name}
+            {query.isUnsaved === true && <span className="ml-1">*</span>}
+        </span>
+    );
 
     return (
-        <Page title={strings.eventStore.namespaces.sequences.title}>
-            <DataPage
-                key={refreshTrigger}
-                title={strings.eventStore.namespaces.sequences.title}
-                query={AppendedEvents}
-                queryArguments={queryArgs}
-                selection={selectedEvent}
-                emptyMessage={strings.eventStore.namespaces.sequences.empty}
-                dataKey={sequenceNumberPath}
-                defaultFilters={filters}
-                globalFilterFields={['context.eventType.id']}
-                detailsComponent={EventDetails}
-                onSelectionChange={(e) => setSelectedEvent(e.value as AppendedEvent | null)}>
-
-                <DataPage.MenuItems>
-                    <MenuItem
-                        id='appendEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.appendEvent}
-                        icon={faIcons.FaPlus}
-                        command={handleAppendEvent} />
-                    <MenuItem
-                        id='redactEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.redact}
-                        icon={faIcons.FaEraser}
-                        disableOnUnselected
-                        command={handleRedactEvent} />
-                    <MenuItem
-                        id='reviseEvent'
-                        label={strings.eventStore.namespaces.sequences.actions.revise}
-                        icon={faIcons.FaArrowsRotate}
-                        disableOnUnselected
-                        command={handleReviseEvent} />
-                    <MenuItem
-                        id='exportEvents'
-                        label={strings.eventStore.namespaces.sequences.actions.export}
-                        icon={faIcons.FaFileExport}
-                        command={handleExportEvents} />
-                </DataPage.MenuItems>
-
-                <DataPage.Columns>
-                    <Column field={sequenceNumberPath} header={strings.eventStore.namespaces.sequences.columns.sequenceNumber} />
-
-                    <Column
-                        field={typePath}
-                        header={strings.eventStore.namespaces.sequences.columns.eventType}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={typePath}
-                        filterElement={eventTypeFilterTemplate}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventType} />
-
-                    <Column
-                        field={eventSourceIdPath}
-                        header={strings.eventStore.namespaces.sequences.columns.eventSourceId}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={eventSourceIdPath}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.eventSourceId} />
-
-                    <Column
-                        field={occurredPath}
-                        header={strings.eventStore.namespaces.sequences.columns.occurred} body={occurred}
-                        showFilterMatchModes={false}
-                        filter
-                        filterMenuStyle={{ width: '14rem' }}
-                        filterField={occurredPath}
-                        filterPlaceholder={strings.eventStore.namespaces.sequences.filters.placeholders.occurred} />
-                </DataPage.Columns>
-            </DataPage>
-            <AppendEventWrapper />
-            <RedactEventWrapper />
-            <ReviseWrapper />
+        <Page title='Sequences'>
+            <Allotment className="h-full" proportionalLayout={false}>
+                <Allotment.Pane preferredSize="270px">
+                    <Bookmark
+                        folders={folders.data ?? []}
+                        onAddFolder={handleAddFolder}
+                        onAddQuery={handleAddQueryForGroup}
+                    />
+                </Allotment.Pane>
+                <Allotment.Pane className="h-full">
+                    <TabView
+                        activeIndex={activeTabIndex}
+                        onTabChange={(event) => setActiveTabIndex(event.index)}
+                        pt={{
+                            root: { className: 'h-full flex flex-col' },
+                            panelContainer: { className: 'flex-1 min-h-0 overflow-hidden p-0' },
+                        }}>
+                        {queries.map((query, index) => (
+                            <TabPanel
+                                key={query.id ?? `draft-${index}`}
+                                header={tabHeader(query)}
+                                contentClassName="h-full">
+                                <Query query={query} onSave={handleSaveQuery} />
+                            </TabPanel>
+                        ))}
+                    </TabView>
+                </Allotment.Pane>
+            </Allotment>
         </Page>
     );
 };
