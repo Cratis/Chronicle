@@ -99,7 +99,7 @@ public class ProjectionFactory(
         return merged;
     }
 
-    static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap)
+    static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
     {
         var merged = joinDefinition.Properties.ToList();
 
@@ -123,6 +123,13 @@ public class ProjectionFactory(
 
             if (matchingReadModelProperty is not null)
             {
+                // A property flagged with [NoAutoMap] is only ever set from its explicit mapping, so a joined
+                // event carrying an identically named property must not auto-map onto it.
+                if (noAutoMapProperties.Contains(matchingReadModelProperty.Name))
+                {
+                    continue;
+                }
+
                 merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
                 existingReadModelProperties.Add(matchingReadModelProperty.Name);
                 existingEventProperties.Add(eventProperty.Name);
@@ -497,7 +504,7 @@ public class ProjectionFactory(
 
         foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap);
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == eventType)?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
             var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value));
             propertyMappers.AddRange(propertyMappersForEveryEventType);
             var joinObservable = projection.Event
@@ -575,7 +582,7 @@ public class ProjectionFactory(
 
         foreach (var (joinEventType, joinDefinition) in joinExpressions)
         {
-            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema, projection.AutoMap);
+            var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventTypeSchemas.FirstOrDefault(ets => ets.Type == joinEventType)?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
             var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(projection, childrenAccessorProperty + kvp.Key, kvp.Value)).ToArray();
             fromObservable
                 .ResolveJoin(eventSequenceStorage, joinEventType, childrenAccessorProperty + joinDefinition.On, logger)
