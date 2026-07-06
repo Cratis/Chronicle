@@ -55,8 +55,8 @@ with guard logic, temporal state, or calculations that span several previous eve
 
 | Style | Mental model | Strength | Cost |
 | --- | --- | --- | --- |
-| [Model-bound projection](model-bound/index) | The read model declares how events fill its properties. | Least code; best default for straightforward screen models. | Attributes can get dense when the mapping becomes complex. |
-| [Declarative projection](declarative/index) | A separate projection definition maps events to the read model. | Explicit mapping, joins, nested structures, transformations, and a clean read model type. | More ceremony than attributes. |
+| [Model-bound projection](model-bound/) | The read model declares how events fill its properties. | Least code; best default for straightforward screen models. | Attributes can get dense when the mapping becomes complex. |
+| [Declarative projection](declarative/) | A separate projection definition maps events to the read model. | Explicit mapping, joins, nested structures, transformations, and a clean read model type. | More ceremony than attributes. |
 | [Reducer](/chronicle/reducers/) | Event plus current state returns next state. | Complex calculations and temporal logic read naturally as code. | More responsibility: handle missing current state and keep the reducer pure. |
 
 Use the simplest style that keeps the intent obvious. Model-bound first, declarative when the mapping

@@ -33,7 +33,7 @@ Chronicle provides two ways to define constraints:
 | Approach | When to use |
 |---|---|
 | [Model-bound](model-bound/index.md) | Declaring constraints directly on event types using attributes — no separate class needed. **Preferred for most scenarios.** |
-| [Declarative](declarative/index) | Complex rules spanning multiple event types with different property names, or when you need a callback for constraint violation messages. |
+| [Declarative](declarative/) | Complex rules spanning multiple event types with different property names, or when you need a callback for constraint violation messages. |
 
 ## Topics
 

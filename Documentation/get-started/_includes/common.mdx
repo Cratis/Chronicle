@@ -57,7 +57,7 @@ By default Chronicle also **materializes** every projection into the **sink** st
 
 `skip` and `take` are plain paging (they default to `0` and `50`), so you can window through a large collection without ever loading all of it — [Materialized read models](../read-models/materialized-pagination) shows the paging and observing patterns.
 
-Neither call filters, though: `GetInstances` returns everything (you'd filter with LINQ in memory), and `Materialized` only pages. When you need to filter efficiently — "which books are on loan?" — query the [sink](../sinks/index)'s database directly with its native tools. Our sink is MongoDB, so the `Book` read model is an ordinary collection and the driver does what it does best:
+Neither call filters, though: `GetInstances` returns everything (you'd filter with LINQ in memory), and `Materialized` only pages. When you need to filter efficiently — "which books are on loan?" — query the [sink](../sinks/)'s database directly with its native tools. Our sink is MongoDB, so the `Book` read model is an ordinary collection and the driver does what it does best:
 
 <ChronicleClientTabs snippet="get-started/common/mongo-query" clients="csharp" />
 
@@ -69,6 +69,6 @@ Projections build *state*. When you need to *do something* the moment a fact lan
 
 <ChronicleClientTabs snippet="get-started/common/reactor" clients="csharp,kotlin,java,elixir,typescript" />
 
-No registration, no wiring — drop the class in and every `BookReturned` flows to it. Reactors must be idempotent, because the same event may be delivered more than once (during a replay or a recovery). In a real app you'd inject a notification service here — the [tutorial](/chronicle/tutorial/) and the [Reactors](../reactors/index) guide show that, along with how reactors get their dependencies under a host.
+No registration, no wiring — drop the class in and every `BookReturned` flows to it. Reactors must be idempotent, because the same event may be delivered more than once (during a replay or a recovery). In a real app you'd inject a notification service here — the [tutorial](/chronicle/tutorial/) and the [Reactors](../reactors/) guide show that, along with how reactors get their dependencies under a host.
 
-That's the whole loop — **append → project → react**. The [tutorial](/chronicle/tutorial/) builds exactly this library one concept at a time and explains each as you go; the [Projections](../projections/index.md), [Reducers](../reducers/index), and [Reactors](../reactors/index) guides go deeper on each piece.
+That's the whole loop — **append → project → react**. The [tutorial](/chronicle/tutorial/) builds exactly this library one concept at a time and explains each as you go; the [Projections](../projections/index.md), [Reducers](../reducers/), and [Reactors](../reactors/) guides go deeper on each piece.

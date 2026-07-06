@@ -23,4 +23,4 @@ Because immediate projections run synchronously, they can impact the performance
 ## See Also
 
 - [Eventual Consistency](eventual-consistency) - Learn about eventual consistency in projections
-- [Model-Bound Projections](model-bound/index) - How to work with model-bound projections
+- [Model-Bound Projections](model-bound/) - How to work with model-bound projections
