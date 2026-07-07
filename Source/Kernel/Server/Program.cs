@@ -206,6 +206,12 @@ hostBuilder
        // IEnumerable<T> returning all, so the implementations of the backends that are NOT active must be
        // removed to prevent DI failures (e.g. MongoDB types require a MongoDB connection, SQL types require
        // ITableMigrator<>). This removal runs last to catch any backend types added by all extensions.
+       //
+       // Sink factories are exempt: every backend's ISinkFactory resolves its infrastructure dependency
+       // lazily inside CreateFor rather than its constructor, so it is always safe to keep registered.
+       // ChronicleOptions.DefaultSinkTypeId (a read-model sink choice) is independent of the Kernel's
+       // storage backend - e.g. an app can run the Kernel on MongoDB while projecting some read models
+       // to the in-memory sink - so removing a sink namespace here would break that combination.
        var activeBackendNamespace = "Cratis.Chronicle.Storage.MongoDB";
        if (isInMemoryStorage)
            activeBackendNamespace = "Cratis.Chronicle.Storage.InMemory";
@@ -225,7 +231,8 @@ hostBuilder
                var ns = sd.ImplementationType?.Namespace;
                return ns is not null
                    && Array.Exists(backendNamespaces, ns.StartsWith)
-                   && !ns.StartsWith(activeBackendNamespace);
+                   && !ns.StartsWith(activeBackendNamespace)
+                   && !ns.Contains(".Sinks", StringComparison.Ordinal);
            })
            .ToList();
        foreach (var descriptor in inactiveStorageDescriptors)
