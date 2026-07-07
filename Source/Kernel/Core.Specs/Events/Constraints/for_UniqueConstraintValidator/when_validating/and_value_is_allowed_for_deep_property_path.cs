@@ -32,7 +32,6 @@ public class and_value_is_allowed_for_deep_property_path : given.a_unique_constr
     [Fact] void should_ask_storage_with_value_from_deep_property_path() => _storage.Received(1).IsAllowed(
         _context.EventSourceId,
         Arg.Any<UniqueConstraintDefinition>(),
-        // The value is now hashed with SHA-256
         (UniqueConstraintValue)"de650d61f5bd166a91f8ccec3158297db18b9d50eaedca238cd29dc3a214a916");
 
     protected override UniqueConstraintDefinition Definition => new("SomeConstraint", [new(_eventTypeId, ["Mobile.UniqueValue"])]);
