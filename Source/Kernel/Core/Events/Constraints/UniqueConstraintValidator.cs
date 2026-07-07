@@ -35,7 +35,7 @@ public class UniqueConstraintValidator(
             return ConstraintValidationResult.Success;
         }
 
-        var value = propertiesWithValues.GetValue();
+        var value = propertiesWithValues.GetValue(definition.IgnoreCasing);
         var scopeKey = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
         var (isAllowed, sequenceNumber) = await storage.IsAllowed(context.EventSourceId, definition, value, scopeKey);
 
@@ -43,8 +43,8 @@ public class UniqueConstraintValidator(
         // the in-batch claims to catch two events in one batch claiming the same value for different sources.
         if (isAllowed && context.BatchClaims is not null)
         {
-            var claimValue = definition.IgnoreCasing ? value.ToLowerInvariant() : value;
-            isAllowed = context.BatchClaims.TryClaim(definition.Name, scopeKey, claimValue, context.EventSourceId);
+            // Since the value is already hashed with case handling, we don't need to apply ToLowerInvariant here
+            isAllowed = context.BatchClaims.TryClaim(definition.Name, scopeKey, value, context.EventSourceId);
         }
 
         return isAllowed ?
