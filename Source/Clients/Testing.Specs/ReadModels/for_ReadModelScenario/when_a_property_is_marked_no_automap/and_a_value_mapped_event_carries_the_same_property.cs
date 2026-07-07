@@ -7,11 +7,11 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_a_prope
 
 /// <summary>
 /// Verifies that a property flagged with property-level <c>[NoAutoMap]</c> is not overwritten by AutoMap
-/// when an unrelated event the read model subscribes to (here only to <c>[Count]</c> it) happens to carry a
-/// property with the same name. The location must keep the value from its explicit
-/// <c>[SetFrom&lt;ArrangementSet&gt;]</c> source even after a later <see cref="CandidateSubmitted"/>.
+/// when another event the read model value-maps happens to carry a property with the same name. This is the
+/// case the aggregate heuristic cannot help with (the other event is subscribed for a real value mapping),
+/// so it isolates the <c>[NoAutoMap]</c> exclusion in the From AutoMap path.
 /// </summary>
-public class and_an_unrelated_counted_event_carries_the_same_property : Specification
+public class and_a_value_mapped_event_carries_the_same_property : Specification
 {
     ReadModelScenario<ArrangementSummary> _scenario;
     EventSourceId _summaryId;
@@ -27,10 +27,9 @@ public class and_an_unrelated_counted_event_carries_the_same_property : Specific
             .ForEventSource(_summaryId)
             .Events(
                 new ArrangementSet("Remote"),
-                new CandidateSubmitted("Oslo"),
-                new CandidateSubmitted("Bergen"));
+                new WorkModeSet("Hybrid", "Oslo"));
 
     [Fact] void should_have_an_instance() => _scenario.Instance.ShouldNotBeNull();
     [Fact] void should_keep_the_explicitly_sourced_location() => _scenario.Instance!.Location.ShouldEqual("Remote");
-    [Fact] void should_count_the_unrelated_events() => _scenario.Instance!.CandidateCount.ShouldEqual(2);
+    [Fact] void should_map_the_value_mapped_property() => _scenario.Instance!.WorkMode.ShouldEqual("Hybrid");
 }

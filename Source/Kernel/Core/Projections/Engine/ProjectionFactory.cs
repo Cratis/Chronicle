@@ -45,6 +45,15 @@ public class ProjectionFactory(
     IStorage storage,
     ILogger<ProjectionFactory> logger) : IProjectionFactory
 {
+    static readonly string[] _aggregateExpressions =
+    [
+        WellKnownExpressions.Count,
+        WellKnownExpressions.Increment,
+        WellKnownExpressions.Decrement,
+        WellKnownExpressions.Add,
+        WellKnownExpressions.Subtract
+    ];
+
     /// <inheritdoc/>
     public Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
@@ -61,11 +70,32 @@ public class ProjectionFactory(
             eventTypeSchemas);
     }
 
+    /// <summary>
+    /// Determines whether an event is subscribed only to be aggregated — every property it maps is a
+    /// <c>[Count]</c>/<c>[Increment]</c>/<c>[Decrement]</c>/<c>[Add]</c>/<c>[Subtract]</c> operation and
+    /// nothing else. The developer pulled the event in to aggregate it, not to copy values off it, so its
+    /// other properties must not be name-AutoMapped onto the read model.
+    /// </summary>
+    /// <param name="fromDefinition">The <see cref="FromDefinition"/> to inspect.</param>
+    /// <returns><see langword="true"/> if the event is subscribed only for an aggregate; otherwise <see langword="false"/>.</returns>
+    static bool IsAggregateOnly(FromDefinition fromDefinition) =>
+        fromDefinition.Properties.Count > 0 &&
+        fromDefinition.Properties.Values.All(expression =>
+            _aggregateExpressions.Any(aggregate => expression.StartsWith(aggregate, StringComparison.Ordinal)));
+
     static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
     {
         var merged = fromDefinition.Properties.ToList();
 
         if (autoMap == AutoMap.Disabled || eventSchema is null || currentReadModelSchema is null)
+        {
+            return merged;
+        }
+
+        // An event subscribed only to be aggregated does not name-AutoMap its other properties, so an
+        // unrelated same-named property cannot silently overwrite an explicitly sourced one. The developer
+        // can still opt a specific property out of AutoMap for the non-aggregate cases with [NoAutoMap].
+        if (IsAggregateOnly(fromDefinition))
         {
             return merged;
         }
