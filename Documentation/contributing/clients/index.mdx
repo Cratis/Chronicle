@@ -50,11 +50,7 @@ Chronicle.TypeScript/Documentation/client-snippets/events/appending/example.md
 
 Use one fenced code block in each snippet file unless the language needs more than one block. The fenced language must match the owning client, for example `csharp`, `java`, `kotlin`, `elixir`, or `typescript`.
 
-Use `clients="csharp,elixir"` when only some clients expose the concept:
-
-```mdx
-<ChronicleClientTabs snippet="events/appending/occurred" clients="csharp,elixir" />
-```
+`<ChronicleClientTabs />` has no `clients` property. Chronicle's shared docs never declare which clients apply to an example — the sync discovers that itself: it checks every registered client's snippet root for a file at that id and renders a tab only for the clients where one exists. When only some clients expose a concept, simply don't add a snippet file for the others; there is nothing to configure on the placeholder.
 
 When a shared workflow should be visible for a client but that client does not support it yet, keep the tab visible with an explicit unsupported snippet instead of omitting the client:
 
@@ -121,13 +117,12 @@ To add another client language later:
 
 1. Add the client repo to the Documentation repo checkout/submodule setup.
 2. Add it to `Documentation/web/chronicle-client-docs.yml`.
-3. Mark `includeByDefault: false` when the client should be opt-in per tab group rather than required by every existing placeholder.
-4. Add `Documentation/client-snippets/**` to the client repo when it participates in shared tabs.
-5. Add `Documentation/validate-client-snippets.py` that compiles snippets against that client.
-6. Add a `Client Snippet Verification` workflow in the client repo.
-7. Add the documentation sync workflow that triggers the Documentation repo after `Documentation/**` changes land on `main`.
-8. Add the new language's snippet files for the shared Chronicle pages that should include it.
-9. Run the affected snippet validators, `npm run chronicle-client-docs:check`, and `npm run build` in `Documentation/web`.
+3. Add `Documentation/client-snippets/**` to the client repo when it participates in shared tabs. A new client only shows up in a tab group once it has a matching snippet file — no other wiring makes it opt-in or required.
+4. Add `Documentation/validate-client-snippets.py` that compiles snippets against that client.
+5. Add a `Client Snippet Verification` workflow in the client repo.
+6. Add the documentation sync workflow that triggers the Documentation repo after `Documentation/**` changes land on `main`.
+7. Add the new language's snippet files for the shared Chronicle pages that should include it.
+8. Run the affected snippet validators, `npm run chronicle-client-docs:check`, and `npm run build` in `Documentation/web`.
 
 ### Migration audit
 
