@@ -6,10 +6,10 @@ using Cratis.Chronicle.Events;
 namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 
 /// <summary>
-/// Documents the seed-order requirement for a <c>[Join]</c> value: the entity pulls the joined value when
-/// its own event is processed, so a join-source event seeded AFTER the entity resolves the entity's
-/// identity but does not back-fill the joined value. Seed the join-source stream first for the value to
-/// be populated. (If a future change back-fills the join, this spec is the canary — update the docs then.)
+/// A <c>[Join]</c> is not order-sensitive: seeding the entity first and the join-source event second still
+/// back-fills the entity's joined value, mirroring the runtime where a join event enriches an already
+/// materialized instance whenever it arrives. The sibling spec <c>when_projecting_with_a_join</c> covers the
+/// opposite seed order; both must yield the same result.
 /// </summary>
 public class when_a_join_source_is_seeded_after_the_entity : Specification
 {
@@ -40,7 +40,7 @@ public class when_a_join_source_is_seeded_after_the_entity : Specification
         _order = _scenario.InstanceForEventSourceId(_orderId);
     }
 
-    [Fact] void should_still_resolve_the_entity_instance() => _order.ShouldNotBeNull();
+    [Fact] void should_resolve_the_entity_instance() => _order.ShouldNotBeNull();
     [Fact] void should_carry_the_entitys_own_data() => _order!.Amount.ShouldEqual(100m);
-    [Fact] void should_not_back_fill_the_joined_value() => _order!.CustomerName.ShouldBeNull();
+    [Fact] void should_back_fill_the_joined_value() => _order!.CustomerName.ShouldEqual("Ada");
 }

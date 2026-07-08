@@ -78,9 +78,14 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     /// </summary>
     /// <param name="projection"><see cref="IProjection"/> the join is for.</param>
     /// <param name="keyResolver"><see cref="KeyResolver"/> for resolving the key from the event.</param>
-    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> for the identified by property in the join relationship. Used as the child property path when looking up the root key for root-level joins.</param>
-    /// <param name="joinOnProperty">The <see cref="PropertyPath"/> of the property on the root read model that serves as the join target. Used when the projection has no parent.</param>
+    /// <param name="identifiedByProperty">The <see cref="PropertyPath"/> that identifies an element within a child collection. Used to build the array indexer when the projection is a child.</param>
+    /// <param name="joinOnProperty">The <see cref="PropertyPath"/> of the property on the root read model that holds the join value. Used to locate the root document to enrich when a join event arrives for a root-level join.</param>
     /// <returns><see cref="KeyResolver"/> that will be used to resolve.</returns>
+    /// <remarks>
+    /// For a root-level join the target document is the one whose <paramref name="joinOnProperty"/> equals the
+    /// join event's key. Looking it up by that property — rather than by the read model's own identifier — is what
+    /// lets a join event enrich an already-materialized entity regardless of whether it arrived before or after it.
+    /// </remarks>
     public KeyResolver ForJoin(IProjection projection, KeyResolver keyResolver, PropertyPath identifiedByProperty, PropertyPath joinOnProperty) =>
         CreateKeyResolver(nameof(ForJoin), async (eventSequenceStorage, sink, @event) =>
         {
@@ -97,7 +102,7 @@ public class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
             if (!projection.HasParent)
             {
-                var rootKeyResult = await sink.TryFindRootKeyByChildValue(identifiedByProperty, key.Value!);
+                var rootKeyResult = await sink.TryFindRootKeyByChildValue(joinOnProperty, key.Value!);
                 if (rootKeyResult.TryGetValue(out var rootKey))
                 {
                     return KeyResolverResult.Resolved(rootKey);
