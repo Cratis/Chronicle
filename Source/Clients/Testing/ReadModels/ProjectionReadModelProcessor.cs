@@ -79,6 +79,11 @@ internal static class ProjectionReadModelProcessor
     /// <param name="eventTypes"><see cref="IEventTypes"/> for looking up event type metadata.</param>
     /// <param name="jsonSchemaGenerator"><see cref="IJsonSchemaGenerator"/> for building the read model schema.</param>
     /// <param name="initialState">Optional initial read model state.</param>
+    /// <param name="strictEventSubscription">
+    /// When <see langword="false"/> (the default), a seeded event the projection does not subscribe to is
+    /// silently skipped, matching the production engine. When <see langword="true"/>, such an event raises
+    /// <see cref="UnsubscribedEventSeeded"/> instead.
+    /// </param>
     /// <returns>
     /// A tuple of the primary projected read model (the threaded result exposed as <c>Instance</c>, or
     /// <see langword="null"/> if the projection did not apply any changes) and a dictionary of every
@@ -86,12 +91,14 @@ internal static class ProjectionReadModelProcessor
     /// projection such as a join can be asserted against the intended instance deterministically).
     /// </returns>
     /// <exception cref="InvalidOperationException">Thrown when a deferred key cannot be resolved after retrying all events.</exception>
+    /// <exception cref="UnsubscribedEventSeeded">Thrown when strict mode is enabled and a seeded event is not subscribed to.</exception>
     public static async Task<(TReadModel? Primary, IReadOnlyDictionary<EventSourceId, TReadModel> Instances)> Process<TReadModel>(
         Contracts.Projections.ProjectionDefinition projectionDefinition,
         IEnumerable<(EventSourceId EventSourceId, object Event)> events,
         IEventTypes eventTypes,
         IJsonSchemaGenerator jsonSchemaGenerator,
-        TReadModel? initialState = null)
+        TReadModel? initialState = null,
+        bool strictEventSubscription = false)
         where TReadModel : class
     {
         var readModelType = typeof(TReadModel);
@@ -188,7 +195,7 @@ internal static class ProjectionReadModelProcessor
         var deferredEvents = new Queue<KernelAppendedEvent>();
         foreach (var @event in appendedEvents)
         {
-            var (newState, eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents);
+            var (newState, eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, inMemoryEventSequenceStorage, inMemorySink, @event, state, deferredEvents, strictEventSubscription);
             state = newState;
             rootKey ??= eventKey;
             removed = eventRemoved;
@@ -409,7 +416,8 @@ internal static class ProjectionReadModelProcessor
         InMemorySink sink,
         KernelAppendedEvent @event,
         ExpandoObject state,
-        Queue<KernelAppendedEvent> deferredEvents)
+        Queue<KernelAppendedEvent> deferredEvents,
+        bool strictEventSubscription)
     {
         // The production projection engine filters the event stream to the types the projection
         // subscribes to, so an event a projection does not handle never reaches it. A seeded stream
@@ -417,9 +425,15 @@ internal static class ProjectionReadModelProcessor
         // rather than letting GetKeyResolverFor throw MissingKeyResolverForEventType. HasKeyResolverFor
         // is the exact predicate for "would GetKeyResolverFor succeed" (same resolver map), and the
         // root projection's map includes child ([ChildrenFrom]) event types, so this is a faithful
-        // no-op filter for nested/join scenarios too.
+        // no-op filter for nested/join scenarios too. In strict mode the same condition is surfaced as a
+        // loud error instead, so a spec that opted in can catch the genuine mistake of seeding the wrong event.
         if (!projection.HasKeyResolverFor(@event.Context.EventType))
         {
+            if (strictEventSubscription)
+            {
+                throw new UnsubscribedEventSeeded(@event.Context.EventType.Id.ToString());
+            }
+
             return (state, null, false);
         }
 
