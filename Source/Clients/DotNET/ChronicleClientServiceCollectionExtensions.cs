@@ -24,13 +24,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </remarks>
 internal static class ChronicleClientServiceCollectionExtensions
 {
-#if NET8_0
-    static readonly object _eventStoreInitLock = new();
-#else
-    static readonly Lock _eventStoreInitLock = new();
-#endif
-
-    static readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStore> _eventStores = new();
+    static readonly ConcurrentDictionary<EventStoreNamespaceName, Lazy<IEventStore>> _eventStores = new();
 
     /// <summary>
     /// Add the Chronicle client services to the <see cref="IServiceCollection"/>.
@@ -79,22 +73,24 @@ internal static class ChronicleClientServiceCollectionExtensions
 
         services.AddScoped(sp =>
         {
-            lock (_eventStoreInitLock)
-            {
-                var options = sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value;
-                var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
-                var namespaceName = namespaceResolver.Resolve();
+            var options = sp.GetRequiredService<IOptions<ChronicleClientOptions>>().Value;
+            var namespaceResolver = sp.GetRequiredService<IEventStoreNamespaceResolver>();
+            var namespaceName = namespaceResolver.Resolve();
 
-                if (_eventStores.TryGetValue(namespaceName, out var eventStore))
-                {
-                    return eventStore;
-                }
+            // Lazy<T> with ExecutionAndPublication guarantees the value factory runs at most once per
+            // namespace, without holding a lock shared across unrelated namespaces or requests. A single
+            // process-wide lock here previously serialized every scoped IEventStore resolution - including
+            // cache hits - across the whole app, and held that lock across the blocking GetAwaiter().GetResult()
+            // below. Under concurrent request load that starves the thread pool and can make unrelated
+            // namespaces stall behind a single in-flight GetEventStore() call.
+            var lazyEventStore = _eventStores.GetOrAdd(
+                namespaceName,
+                static (_, arg) => new Lazy<IEventStore>(
+                    () => arg.ServiceProvider.GetRequiredService<IChronicleClient>().GetEventStore(arg.EventStoreName).GetAwaiter().GetResult(),
+                    LazyThreadSafetyMode.ExecutionAndPublication),
+                (ServiceProvider: sp, EventStoreName: options.EventStore));
 
-                var client = sp.GetRequiredService<IChronicleClient>();
-
-                eventStore = client.GetEventStore(options.EventStore).GetAwaiter().GetResult();
-                return _eventStores[namespaceName] = eventStore;
-            }
+            return lazyEventStore.Value;
         });
 
         services.AddScoped(sp => sp.GetRequiredService<IEventStore>().Constraints);
