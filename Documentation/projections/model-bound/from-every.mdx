@@ -8,27 +8,27 @@ Every-event mappings are different from event-specific mappings. A set mapping a
 
 Event context is the most common source for every-event mappings because every event has the same context shape. This keeps audit fields independent from the event payloads.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/context-property" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/context-property" />
 
 You can map multiple context fields when the read model needs a small audit trail.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/context-fields" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/context-fields" />
 
 ## Map Event Payload Properties
 
 Every-event mappings can also read from event payload properties. Use this only when each event in the projection carries the same property name and compatible value type.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/event-property" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/event-property" />
 
 If a client supports convention-based property mapping, omitting the source property uses the read model property name.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/convention" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/convention" />
 
 ## Combine With Event-Specific Mappings
 
 When an event is processed, Chronicle applies the event-specific mappings for that event and the every-event mappings for the projection. This lets the read model update business fields and audit metadata in the same event pass.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/combined" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/combined" />
 
 For example, when the name-change event in the examples above is processed:
 
@@ -39,7 +39,7 @@ For example, when the name-change event in the examples above is processed:
 
 Every-event mappings are part of the projection definition Chronicle receives. Clients that expose both model-bound and standalone projection definitions send the same kind of every-event definition to Chronicle.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-every/declarative-equivalent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/from-every/declarative-equivalent" />
 
 ## Use Cases
 

@@ -18,7 +18,7 @@ Services and providers that must be resolved at registration time (before the DI
 
 For console applications or other non-DI scenarios, pass structural dependencies as named constructor parameters:
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/direct-client" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/direct-client" />
 
 All parameters are optional. Any parameter you omit uses the default shown in the table above.
 
@@ -26,11 +26,11 @@ All parameters are optional. Any parameter you omit uses the default shown in th
 
 In DI-hosted applications (ASP.NET Core, worker services, or any `IHostApplicationBuilder`-based host), use the `configure` callback on `AddCratisChronicle` to set structural dependencies via the `IChronicleBuilder` fluent API. This callback runs at registration time, before the DI container is built.
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/chronicle-builder" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/chronicle-builder" />
 
 The same pattern works with `WebApplicationBuilder` in ASP.NET Core:
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/aspnetcore-builder" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/aspnetcore-builder" />
 
 The two callbacks are intentionally separate:
 - `configureOptions` feeds the options pipeline and can be overridden by `appsettings.json` or `IConfiguration`.
@@ -49,15 +49,15 @@ The two callbacks are intentionally separate:
 
 Implement `IClientArtifactsProvider` when you need to control exactly which types Chronicle discovers. This is useful in modular applications or when using assembly scanning that differs from the default:
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider" />
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider-usage" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/custom-artifacts-provider-usage" />
 
 ## DefaultClientArtifactsProvider
 
 `DefaultClientArtifactsProvider` scans loaded assemblies for artifacts at first access (lazy initialization). You can construct it with a custom assembly provider:
 
-<ChronicleClientTabs snippet="configuration/structural-dependencies/default-artifacts-provider" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/structural-dependencies/default-artifacts-provider" />
 
 The static `DefaultClientArtifactsProvider.Default` instance is used when no provider is supplied.
 

@@ -6,21 +6,21 @@ Use `FromAll` in .NET when the projection should express that a mapping belongs 
 
 ## Basic Usage
 
-<ChronicleClientTabs snippet="projections/declarative/from-all/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-all/basic" />
 
 ## Event Context Fields
 
-<ChronicleClientTabs snippet="projections/declarative/from-all/context-fields" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-all/context-fields" />
 
 ## Event Source Id
 
-<ChronicleClientTabs snippet="projections/declarative/from-all/event-source-id" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-all/event-source-id" />
 
 ## With Event-Specific Mappings
 
 `FromAll` can sit beside event-specific `From` mappings. Use event-specific mappings for business state, and reserve `FromAll` for metadata that should update for every projected event.
 
-<ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-all/with-specific-mappings" />
 
 ## FromAll And FromEvery
 

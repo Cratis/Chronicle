@@ -31,7 +31,7 @@ dotnet add package Cratis.Chronicle
 
 Everything in Chronicle is reached through a `ChronicleClient`. From a client you ask for the **event store** you want to work with — here, one named `Quickstart`. Because there's no DI container to do it for you, you create the client yourself:
 
-<ChronicleClientTabs snippet="get-started/console/connect" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="get-started/console/connect" />
 
 `ChronicleConnectionString.Development` is the built-in connection string for the local development kernel — the same one `new ChronicleClient()` uses when you call it with no arguments. Spelling it out keeps the console version explicit; point it elsewhere with `ChronicleConnectionString.Default` (no credentials) or your own `new ChronicleConnectionString("chronicle://…")`.
 

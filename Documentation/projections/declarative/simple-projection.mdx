@@ -6,7 +6,7 @@ A projection in Cratis is a way to create read models from events in the event s
 
 A projection implements `IProjectionFor<TReadModel>` and defines its behavior in the `Define` method:
 
-<ChronicleClientTabs snippet="projections/declarative/simple-projection/projection" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/simple-projection/projection" />
 
 This projection:
 
@@ -20,13 +20,13 @@ This projection:
 
 The read model is a simple record or class representing the projected data:
 
-<ChronicleClientTabs snippet="projections/declarative/simple-projection/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/simple-projection/read-model" />
 
 ## Event definition
 
 The event should match the read model structure for auto-mapping to work:
 
-<ChronicleClientTabs snippet="projections/declarative/simple-projection/event" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/simple-projection/event" />
 
 ## How it works
 

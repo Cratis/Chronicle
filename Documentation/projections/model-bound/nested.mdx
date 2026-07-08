@@ -8,7 +8,7 @@ The current model-bound nested API is available in the .NET client. TypeScript c
 
 Mark the nullable parent property as nested. The nested type declares the events that populate it and, optionally, the events that clear it.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/basic-lifecycle" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/basic-lifecycle" />
 
 The lifecycle is:
 
@@ -20,7 +20,7 @@ The lifecycle is:
 
 The nested marker belongs on the single nullable property that holds the child object.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/parent-property" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/parent-property" />
 
 The nested type is scanned for its own model-bound projection annotations, including `FromEvent`, `ClearWith`, and property mappings.
 
@@ -28,45 +28,45 @@ The nested type is scanned for its own model-bound projection annotations, inclu
 
 Apply a clear annotation to the nested type when one event should remove the nested object from the parent.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/clear-with" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/clear-with" />
 
 Use multiple clear annotations when more than one event should clear the same nested object.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-clear-events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-clear-events" />
 
 ## Updating From Multiple Events
 
 A nested type can be populated or updated by several events. Matching property names are auto-mapped by default.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-from-events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-from-events" />
 
 When event property names differ from nested object property names, add explicit property mappings to the nested type.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/explicit-mapping" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/explicit-mapping" />
 
 ## Auto-Mapping
 
 AutoMap is enabled by default for nested types. Disable it on the nested type when every property should be mapped explicitly.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/no-automap" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/no-automap" />
 
 ## Multiple Nested Objects
 
 A parent can hold more than one nested object. Each nested property points to a type with its own event lifecycle.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-nested" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/multiple-nested" />
 
 ## Nested Objects Inside Children
 
 Nested objects can also appear inside child collection items.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/nested-in-children" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/nested-in-children" />
 
 ## Complete Example
 
 This example shows a parent read model with a command definition that can be set, renamed, updated, and cleared.
 
-<ChronicleClientTabs snippet="projections/model-bound/nested/complete" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/nested/complete" />
 
 | Event | Effect on the nested object |
 | --- | --- |

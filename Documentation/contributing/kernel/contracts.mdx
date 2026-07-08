@@ -17,7 +17,7 @@ indicating the field's position in the contract.
 
 Example:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/data-contract" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/data-contract" />
 
 Always add new properties at the end, without reordering existing ones.
 
@@ -25,7 +25,7 @@ For service contracts, use the `[Service]` and `[Operation]` attributes.
 
 Example:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/service-contract" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/service-contract" />
 
 ## Streaming APIs
 
@@ -34,7 +34,7 @@ consistent with our implementation, and provides expressive power through the fl
 
 Example:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/streaming" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/streaming" />
 
 ## SerializableDateTimeOffset
 
@@ -47,11 +47,11 @@ This type serializes a `DateTimeOffset` as an ISO 8601 string (round-trip format
 
 Example:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/serializable-datetimeoffset" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/serializable-datetimeoffset" />
 
 The implicit conversions allow natural usage:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/datetimeoffset-usage" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/datetimeoffset-usage" />
 
 ## OneOf
 
@@ -63,13 +63,13 @@ returns whichever value is set, or throws `NoValueSetForOneOf` if none are set.
 
 Example with a service returning either a result or an error:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-service" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-service" />
 
 Example with a message containing different content types:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-message" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-message" />
 
 Usage on the client side:
 
-<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-usage" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/contracts/oneof-usage" />
 

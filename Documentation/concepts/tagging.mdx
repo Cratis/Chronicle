@@ -28,13 +28,13 @@ Events can be tagged in two ways: statically using attributes, or dynamically wh
 
 Apply the `[Tag]` or `[Tags]` attribute to your event types to assign static tags that will always be associated with that event type:
 
-<ChronicleClientTabs snippet="concepts/tagging/static-event-tags" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/static-event-tags" />
 
 ### Dynamic Event Tags
 
 When appending events, you can provide additional tags that will be merged with any static tags:
 
-<ChronicleClientTabs snippet="concepts/tagging/dynamic-event-tags" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/tagging/dynamic-event-tags" />
 
 In this example, the event will have four tags: `["analytics", "user-action", "production", "critical"]`.
 
@@ -42,7 +42,7 @@ In this example, the event will have four tags: `["analytics", "user-action", "p
 
 All tags (both static and dynamic) are available on the `EventContext` when processing events:
 
-<ChronicleClientTabs snippet="concepts/tagging/tags-in-event-context" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/tags-in-event-context" />
 
 ## Tagging Observers
 
@@ -50,29 +50,29 @@ Observers (reactors, reducers, and projections) can be tagged to organize and ca
 
 ### Single Tag
 
-<ChronicleClientTabs snippet="concepts/tagging/observer-single-tag" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/observer-single-tag" />
 
 ### Multiple Tags (Single Attribute)
 
 You can use either `[Tag]` or `[Tags]` (plural) for convenience:
 
-<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-single-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-single-attribute" />
 
 ### Multiple Tags (Multiple Attributes)
 
-<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-multiple-attributes" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/observer-multiple-tags-multiple-attributes" />
 
 ### Mixed Approach
 
 You can mix both `[Tag]` and `[Tags]` attributes - all tags will be merged:
 
-<ChronicleClientTabs snippet="concepts/tagging/observer-mixed-approach" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/observer-mixed-approach" />
 
 ## Tagging Read Models
 
 Read models and projections can also be tagged:
 
-<ChronicleClientTabs snippet="concepts/tagging/read-model-tags" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/read-model-tags" />
 
 ## Best Practices
 
@@ -88,27 +88,27 @@ Here are some common patterns for organizing tags:
 
 ### By Domain
 
-<ChronicleClientTabs snippet="concepts/tagging/by-domain" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/by-domain" />
 
 ### By Purpose
 
-<ChronicleClientTabs snippet="concepts/tagging/by-purpose" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/by-purpose" />
 
 ### By Integration Type
 
-<ChronicleClientTabs snippet="concepts/tagging/by-integration-type" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/by-integration-type" />
 
 ### By Communication Channel
 
-<ChronicleClientTabs snippet="concepts/tagging/by-communication-channel" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/by-communication-channel" />
 
 ### By Stakeholder
 
-<ChronicleClientTabs snippet="concepts/tagging/by-stakeholder" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/by-stakeholder" />
 
 ### By Environment or Context
 
-<ChronicleClientTabs snippet="concepts/tagging/dynamic-tags-patterns" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/tagging/dynamic-tags-patterns" />
 
 ## Using Tags
 

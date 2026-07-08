@@ -48,17 +48,17 @@ var current = await db.Customers.FindAsync(id);
 
 Chronicle: the same change is a fact you append and a read side you declare. First, define the verbs as event types:
 
-<ChronicleClientTabs snippet="coming-from-crud/events" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="coming-from-crud/events" />
 
 Then declare the read side. This is the [projection](/chronicle/concepts/projection.md) — and notice it is *not* a 1:1 copy of the CRUD `Customer` entity. It's shaped for the screen that reads it, and it answers something the overwritten row never could:
 
-<ChronicleClientTabs snippet="coming-from-crud/read-model" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="coming-from-crud/read-model" />
 
 `[FromEvent<T>]` (`@fromEvent` in TypeScript) maps event properties onto the record by name — the name arrives with `CustomerRegistered`, and the address is kept current by every `AddressChanged`. The counter tracks the moves. There is no `UPDATE` statement anywhere: Chronicle derives the card from the facts.
 
 Now the write and the read-back:
 
-<ChronicleClientTabs snippet="coming-from-crud/write-and-read" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="coming-from-crud/write-and-read" />
 
 `GetInstanceById` computes the card from its events on demand, so this read already reflects the append above — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran.
 

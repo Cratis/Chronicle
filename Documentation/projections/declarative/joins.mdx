@@ -6,19 +6,19 @@ Joins allow projections to incorporate data from events that don't share the sam
 
 Use the `Join()` method to include data from events with different keys:
 
-<ChronicleClientTabs snippet="projections/declarative/joins/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/joins/basic" />
 
 ## Read model with joined data
 
 The read model includes properties populated from different event sources:
 
-<ChronicleClientTabs snippet="projections/declarative/joins/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/joins/read-model" />
 
 ## Event definitions
 
 Events come from different streams but are joined based on common identifiers:
 
-<ChronicleClientTabs snippet="projections/declarative/joins/events" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/joins/events" />
 
 ## How joins work
 
@@ -41,7 +41,7 @@ Joins match events based on their event source ID and the join property — `.Jo
 
 A projection can join with multiple streams:
 
-<ChronicleClientTabs snippet="projections/declarative/joins/multiple-joins" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/joins/multiple-joins" />
 
 ### Joining children
 
@@ -51,7 +51,7 @@ Joins can also be used within child collections:
 This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
 :::
 
-<ChronicleClientTabs snippet="projections/declarative/joins/children-join" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/joins/children-join" />
 
 ## Performance considerations
 

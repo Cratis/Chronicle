@@ -6,11 +6,11 @@ Chronicle uses connection strings to configure the .NET client. You can pass a c
 
 The `ChronicleConnectionString.Development` constant provides a pre-configured development connection string. Default constructors also use this value:
 
-<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults" clients="csharp" />
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults" />
 
 This is equivalent to:
 
-<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults-equivalent" clients="csharp" />
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/development-defaults-equivalent" />
 
 > [!NOTE]
 > In development, you can use `chronicle://localhost:35000` without credentials. The .NET client automatically attempts the built-in development credentials (`chronicle-dev-client` / `chronicle-dev-secret`).
@@ -19,13 +19,13 @@ Use explicit configuration for production environments.
 
 ## From connection string
 
-<ChronicleClientTabs snippet="connection-strings/dotnet-client/from-connection-string" clients="csharp" />
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/from-connection-string" />
 
 ## Fluent builder
 
 Use `ChronicleConnectionStringBuilder` to construct a connection string programmatically:
 
-<ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" clients="csharp" />
+<ChronicleClientTabs snippet="connection-strings/dotnet-client/fluent-builder" />
 
 ## Authentication validation
 

@@ -2,11 +2,11 @@
 
 By default, model-bound projections read from the event log. Use `[EventSequence]` to specify a different event sequence:
 
-<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/model-bound" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/model-bound" />
 
 This corresponds to the fluent API for declarative projections:
 
-<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/fluent" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/fluent" />
 
 :::note[Client coverage]
 Explicitly overriding the event sequence a projection reads from is a .NET and TypeScript mechanism today — Kotlin, Java, and Elixir client projections always register against the event log and do not yet expose an `[EventSequence]`-equivalent override.
@@ -16,7 +16,7 @@ Explicitly overriding the event sequence a projection reads from is a .NET and T
 
 Use `[EventLog]` when you want to be explicit that the projection reads from the default event log, even when other event types in the assembly carry a `[EventStore]` attribute:
 
-<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/event-log" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/event-sequence-source/event-log" />
 
 ## Automatic Inbox Routing
 

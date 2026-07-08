@@ -7,11 +7,11 @@ Jobs represent long-running operations the Chronicle Kernel performs in the back
 
 ## List all jobs
 
-<ChronicleClientTabs snippet="jobs/index/list-all" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="jobs/index/list-all" />
 
 ## Get a single job
 
-<ChronicleClientTabs snippet="jobs/index/get-one" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="jobs/index/get-one" />
 
 A missing job resolves to nothing rather than an error — check for that before using the result.
 
@@ -19,11 +19,11 @@ A missing job resolves to nothing rather than an error — check for that before
 
 A job is made up of one or more steps. Get them to see fine-grained progress:
 
-<ChronicleClientTabs snippet="jobs/index/get-steps" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="jobs/index/get-steps" />
 
 ## Stop, resume, and delete
 
-<ChronicleClientTabs snippet="jobs/index/stop-resume-delete" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="jobs/index/stop-resume-delete" />
 
 Kotlin and Java don't currently have a jobs API — there's no equivalent anywhere in the Kotlin client SDK yet.
 

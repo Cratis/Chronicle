@@ -8,13 +8,13 @@ Chronicle compares the observer attribute to the `eventSourceType:` value used w
 
 ## Filter a reactor by event source type
 
-<ChronicleClientTabs snippet="events/filtering/by-event-source-type/reactor" clients="csharp" />
+<ChronicleClientTabs snippet="events/filtering/by-event-source-type/reactor" />
 
 The reactor is only invoked for events appended with `eventSourceType: "customer"`.
 
 ## Filter a reducer by event source type
 
-<ChronicleClientTabs snippet="events/filtering/by-event-source-type/reducer" clients="csharp" />
+<ChronicleClientTabs snippet="events/filtering/by-event-source-type/reducer" />
 
 If you append the same event with `eventSourceType: "supplier"`, this reducer does not receive it.
 

@@ -20,23 +20,23 @@ The client syntax differs, but the Chronicle projection definition still contain
 
 Apply the client's model-bound "from event" marker at the read model level. Matching properties are then mapped without per-property set mappings.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/basic" />
 
 This is equivalent to writing explicit set mappings for every property:
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/explicit-equivalent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/explicit-equivalent" />
 
 ## Multiple Events
 
 A read model can use convention mapping from more than one event type. Each event updates the matching properties it contains and leaves the rest unchanged.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/multiple-events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/multiple-events" />
 
 ## Custom Keys
 
 By default, convention-based mappings use the event source id as the read model key. Use a custom key when the event carries the identifier of the read model instance in its content.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/custom-key" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/custom-key" />
 
 Custom keys are useful when:
 
@@ -48,7 +48,7 @@ Custom keys are useful when:
 
 Convention-based model-bound mapping and declarative AutoMap describe the same mapping behavior through different APIs.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/automap-equivalent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/automap-equivalent" />
 
 Use the model-bound form when the mapping belongs naturally on the read model. Use a declarative projection when you need joins, richer key selection, or a projection definition that should stay separate from the read model shape.
 
@@ -56,13 +56,13 @@ Use the model-bound form when the mapping belongs naturally on the read model. U
 
 Convention mapping also works for nested values and collections when the names and shapes match.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/matching-structures" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/matching-structures" />
 
 ## Partial Events
 
 Events do not need to contain every read model property. Chronicle maps the properties that exist on each event.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/partial-events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/partial-events" />
 
 ## Excluding A Property From Mapping
 
@@ -72,13 +72,13 @@ Convention mapping applies to every event the read model subscribes to — inclu
 
 An event a read model subscribes to **only to aggregate** — `[Count]`, `[Increment]`, `[Decrement]`, `[Add]`, or `[Subtract]` — does not contribute its other properties to convention mapping. Counting an event does not copy its unrelated fields onto the read model, so a same-named property on it cannot overwrite an explicit value. No annotation is needed.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/aggregate-only" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/aggregate-only" />
 
 ### `[NoAutoMap]` On A Property
 
 For the collisions Chronicle cannot infer — a value-mapped (`[SetFrom]`) or `[Join]`ed event that carries an identically named property — apply `[NoAutoMap]` to the read model property (or record parameter). That property is then set only from its explicit source; convention mapping never touches it, while every other property keeps mapping.
 
-<ChronicleClientTabs snippet="projections/model-bound/convention-based/no-auto-map-property" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/convention-based/no-auto-map-property" />
 
 `[NoAutoMap]` also works at the read model (class) level to disable convention mapping for the whole read model. Use the property form when you only need to protect a single property and want convention mapping everywhere else.
 

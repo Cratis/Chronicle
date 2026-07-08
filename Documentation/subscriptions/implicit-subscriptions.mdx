@@ -23,7 +23,7 @@ When every event type handled by an observer shares the same `[EventStore]` attr
 
 Apply `[EventStore]` to any event type that originates from a foreign event store:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-store-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-store-attribute" />
 
 The string argument is the **name of the source event store** — the same name you would use if setting up an explicit subscription.
 
@@ -33,7 +33,7 @@ A common pattern is to publish your public event contracts as a NuGet package. C
 
 A typical public events package looks like this:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/nuget-package" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/nuget-package" />
 
 ## Assembly-Level Configuration with `[EventStore]`
 
@@ -123,7 +123,7 @@ MSBuild will emit `[assembly: Cratis.Chronicle.Events.EventStoreAttribute("fulfi
 
 Now your event types only need `[EventType]`:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-types-with-assembly-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/event-types-with-assembly-attribute" />
 
 All events in this assembly are automatically associated with the `fulfillment-service` event store.
 
@@ -141,7 +141,7 @@ All events in this assembly are automatically associated with the `fulfillment-s
 
 Example consumer setup:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/consumer-setup" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/consumer-setup" />
 
 ## Automatic Inbox Routing for Observers
 
@@ -152,7 +152,7 @@ Automatic inbox routing is documented per observer type:
 
 ### Projections
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/projection" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/projection" />
 
 ## Subscription Lifecycle
 
@@ -167,11 +167,11 @@ The kernel automatically manages the implicit subscription:
 
 An observer may only handle event types from a **single** event store. Mixing types annotated with different `[EventStore]` values on the same observer throws `MultipleEventStoresDefined` at startup:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/mixing-not-allowed" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/mixing-not-allowed" />
 
 To observe events from multiple sources, create a separate observer for each source event store:
 
-<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/separate-reactors" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/implicit-subscriptions/separate-reactors" />
 
 ## Schema Registration and Metadata
 

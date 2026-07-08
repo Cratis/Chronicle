@@ -20,17 +20,17 @@ If a new event is added months later and the developer forgets the annotation, a
 
 A concept type solves this by making the protection part of the type's identity. You cannot use `PersonName` without the encryption — the two are inseparable.
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/why-concept-level" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/why-concept-level" />
 
 ## Defining a PII concept type
 
 Follow the standard `ConceptAs<T>` pattern and add `[PII]` to the record declaration:
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/defining-concept" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/defining-concept" />
 
 Another example, documenting why the value is sensitive with the optional `details` parameter:
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/national-id" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/national-id" />
 
 ## Placement
 
@@ -50,7 +50,7 @@ Features/
 
 Use the optional `details` parameter on `[PII]` to document the legal basis or purpose of the PII classification. This is stored in the event schema and can be surfaced by compliance tooling.
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/with-details" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/with-details" />
 
 ## What cannot be marked PII
 
@@ -58,8 +58,8 @@ Use the optional `details` parameter on `[PII]` to document the legal basis or p
 
 Any type inheriting from `EventSourceId` or `EventSourceId<T>` cannot be marked with `[PII]`. Chronicle throws `PIINotSupportedOnEventSourceId` if you attempt this.
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/event-source-id-restriction" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/event-source-id-restriction" />
 
 Use a non-sensitive surrogate key as the event source identifier and store sensitive identity values in a separate event property:
 
-<ChronicleClientTabs snippet="compliance/pii-with-concepts/surrogate-key" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/pii-with-concepts/surrogate-key" />

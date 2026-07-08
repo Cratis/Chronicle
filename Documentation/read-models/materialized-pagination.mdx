@@ -35,7 +35,7 @@ For those needs, inject the sink's native client directly. If your sink is Mongo
 
 `IMaterializedReadModels` is exposed through `IReadModels.Materialized`:
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/accessing-api" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/accessing-api" />
 
 ## Getting Instances
 
@@ -43,13 +43,13 @@ For those needs, inject the sink's native client directly. If your sink is Mongo
 
 Retrieve the first page of stored instances using the defaults (skip: 0, take: 50):
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/basic-usage" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/basic-usage" />
 
 ### Pagination
 
 Both `skip` and `take` are optional with sensible defaults. Use them for page-based or offset-based navigation:
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/pagination" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/pagination" />
 
 ### Pagination Parameters
 
@@ -60,17 +60,17 @@ The parameters use strongly-typed concepts that convert implicitly from `int`:
 | `skip` | `InstanceCountToSkip?` | `0` | `InstanceCountToSkip.Zero` |
 | `take` | `InstanceCount?` | `50` | `InstanceCount.Default`, `InstanceCount.Unlimited` |
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/named-constants" clients="csharp" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/named-constants" />
 
 ### Building a Paged API Endpoint
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/paged-endpoint" clients="csharp" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/paged-endpoint" />
 
 ## Observing Changes
 
 `ObserveInstances` returns an `IObservable<IEnumerable<TReadModel>>` that emits a new page snapshot whenever the underlying stored data changes. This is useful for live-updating UIs, dashboards, and monitoring tools.
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/observing" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/observing" />
 
 Observation relies on the sink's change stream mechanism:
 
@@ -82,7 +82,7 @@ Observation relies on the sink's change stream mechanism:
 
 ### Observing in a Service
 
-<ChronicleClientTabs snippet="read-models/materialized-pagination/observing-in-service" clients="csharp" />
+<ChronicleClientTabs snippet="read-models/materialized-pagination/observing-in-service" />
 
 ## When to Use the Materialized API
 

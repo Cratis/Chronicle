@@ -26,7 +26,7 @@ An append that would introduce a duplicate is *rejected at the source* — it ne
 
 The simplest way to declare a rule is right where the value lives — adorn the event property with `[Unique]`:
 
-<ChronicleClientTabs snippet="understanding-constraints/property-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="understanding-constraints/property-attribute" />
 
 That one attribute is the whole client-side story. When your application starts, Chronicle scans for `[Unique]`-adorned types, registers the constraint with the kernel, and the kernel builds the indexes it needs to enforce it on every subsequent append.
 
@@ -35,11 +35,11 @@ A few things make this practical:
 - **One rule can span several events.** Give the same `name` to `[Unique]` on `UserRegistered.Email` and `UserEmailChanged.NewEmail`, and a changed email is checked against registered ones too — the rule follows the *value*, not a single event type.
 - **Some events are one-of-a-kind.** Put `[Unique]` on the event *type* instead of a property, and only one event of that type can ever be appended per event source — registering the same user twice becomes impossible by declaration:
 
-<ChronicleClientTabs snippet="understanding-constraints/event-type-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="understanding-constraints/event-type-attribute" />
 
 - **Values can be released.** When the thing that held the value goes away, mark that event with `[RemoveConstraint]` so the value can be claimed again:
 
-<ChronicleClientTabs snippet="understanding-constraints/remove-constraint" clients="csharp" />
+<ChronicleClientTabs snippet="understanding-constraints/remove-constraint" />
 
 The reference calls this attribute style [model-bound constraints](/chronicle/constraints/model-bound/) — every parameter and combination is documented there.
 
@@ -47,7 +47,7 @@ The reference calls this attribute style [model-bound constraints](/chronicle/co
 
 Attributes shine when the rule belongs to one event type. Some rules don't: the same logical value appears under *different property names* in different events, the comparison should ignore casing, or the violation message needs to be composed from context. For those, declare the rule in a dedicated class — implement `IConstraint` and describe it with the builder:
 
-<ChronicleClientTabs snippet="understanding-constraints/dedicated-class" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="understanding-constraints/dedicated-class" />
 
 Read it top to bottom and it says exactly what the rule is: one named constraint, fed by two events with differently named properties, case-insensitive, released when the user is removed, with a friendly message when it fires. The one-of-a-kind variant has a builder form too — `builder.Unique<UserRegistered>()` enforces a single `UserRegistered` per event source.
 

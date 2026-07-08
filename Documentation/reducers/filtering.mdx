@@ -12,7 +12,7 @@ A reducer observes all events that match its handler method signatures by defaul
 
 These attributes correlate directly to the metadata you provide when appending an event:
 
-<ChronicleClientTabs snippet="reducers/filtering/metadata-example" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/metadata-example" />
 
 :::note[Client coverage]
 Observer-level filtering by tag, event source type, or event stream type is currently C#-only. Kotlin's `@Reducer`, Elixir's `use Chronicle.Reducers.Reducer`, and TypeScript's `reducer()` all register a reducer without a way to attach these filters.
@@ -22,7 +22,7 @@ Observer-level filtering by tag, event source type, or event stream type is curr
 
 Append an event with a tag and place `[FilterEventsByTag]` on the reducer to accumulate state only from tagged events.
 
-<ChronicleClientTabs snippet="reducers/filtering/by-tag" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/by-tag" />
 
 `PriorityOrderTotalsReducer` updates only when the appended event carries the `priority` tag. Orders without that tag do not affect this read model.
 
@@ -30,13 +30,13 @@ Append an event with a tag and place `[FilterEventsByTag]` on the reducer to acc
 
 Multiple `[FilterEventsByTag]` attributes widen the match. The reducer receives the event if the appended event has any of the configured tags:
 
-<ChronicleClientTabs snippet="reducers/filtering/multiple-tags" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/multiple-tags" />
 
 ## Filter by event source type
 
 Place `[EventSourceType]` on the reducer to accumulate state only from events appended with a matching `eventSourceType`:
 
-<ChronicleClientTabs snippet="reducers/filtering/by-event-source-type" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/by-event-source-type" />
 
 If the same event is appended with `eventSourceType: "supplier"`, this reducer does not receive it.
 
@@ -44,13 +44,13 @@ If the same event is appended with `eventSourceType: "supplier"`, this reducer d
 
 Place `[EventStreamType]` on the reducer to accumulate state only from events appended to a matching stream type:
 
-<ChronicleClientTabs snippet="reducers/filtering/by-event-stream-type" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/by-event-stream-type" />
 
 ## Combine multiple filters
 
 You can combine `[FilterEventsByTag]`, `[EventSourceType]`, and `[EventStreamType]` on the same reducer. Chronicle requires all filter categories to match:
 
-<ChronicleClientTabs snippet="reducers/filtering/combine-filters" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/combine-filters" />
 
 The reducer only receives events that match all three: the `premium` tag, the `order` event source type, and the `fulfillment` stream type.
 
@@ -58,7 +58,7 @@ The reducer only receives events that match all three: the `premium` tag, the `o
 
 `[Tag]` and `[Tags]` on a reducer class label the reducer itself for organization and discoverability. They do not filter incoming events:
 
-<ChronicleClientTabs snippet="reducers/filtering/tag-vs-filter" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/filtering/tag-vs-filter" />
 
 ## Detailed guides
 

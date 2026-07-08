@@ -26,21 +26,21 @@ Do not use redaction as a way to undo domain decisions. If a correction is being
 
 To redact one specific event by its sequence number, call `Redact` on the event sequence and provide a reason:
 
-<ChronicleClientTabs snippet="events/redaction/by-sequence-number-unknown" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/by-sequence-number-unknown" />
 
 Always provide a meaningful reason when possible:
 
-<ChronicleClientTabs snippet="events/redaction/by-sequence-number-with-reason" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/by-sequence-number-with-reason" />
 
 ## Redacting all events for an event source
 
 To redact every event associated with a particular event source — for example, to erase all data for a specific user — pass the event source identifier and a reason:
 
-<ChronicleClientTabs snippet="events/redaction/by-event-source" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/by-event-source" />
 
 If you only want to redact a specific type of event rather than all events for the event source, provide the event types:
 
-<ChronicleClientTabs snippet="events/redaction/by-event-source-and-types" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/by-event-source-and-types" />
 
 ## How it works
 
@@ -68,7 +68,7 @@ When an event is redacted, the `EventRedacted` event is dispatched to any observ
 
 Add a handler method that accepts `EventRedacted` alongside the event type(s) you already handle. The Kernel will only dispatch `EventRedacted` to your Reactor when the redacted event belongs to a type that your Reactor is also subscribed to.
 
-<ChronicleClientTabs snippet="events/redaction/reactor" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/reactor" />
 
 The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
 
@@ -85,7 +85,7 @@ The `EventRedacted` record is defined in `Cratis.Chronicle.Events` and carries:
 
 The same approach applies to Reducers. Include `EventRedacted` handling inside the `IReducerFor<TReadModel>` implementation to update the read model when a source event is erased.
 
-<ChronicleClientTabs snippet="events/redaction/reducer" clients="csharp" />
+<ChronicleClientTabs snippet="events/redaction/reducer" />
 
 ### Filtering guarantee
 

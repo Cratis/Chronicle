@@ -20,7 +20,7 @@ The compliance identifier used for key lookup follows this rule: if an explicit 
 
 Projection-backed read models benefit from automatic PII lineage. The kernel knows which read model properties are mapped from PII event properties and encrypts them transparently before writing to storage. No `[PII]` attribute is needed on the read model type.
 
-<ChronicleClientTabs snippet="compliance/read-models/projection-lineage" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/read-models/projection-lineage" />
 
 The `Name` property is stored encrypted in MongoDB because `PersonName` is a PII-marked type. When a query returns `Employee` records, the kernel decrypts the values before they reach the caller.
 
@@ -28,7 +28,7 @@ The `Name` property is stored encrypted in MongoDB because `PersonName` is a PII
 
 Reducers use arbitrary C# logic to compute state. The kernel cannot infer which properties derive from PII fields because the transformation is opaque. You must annotate PII properties on the read model record with `[PII]`.
 
-<ChronicleClientTabs snippet="compliance/read-models/reducer-explicit-pii" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/read-models/reducer-explicit-pii" />
 
 The `[PII]` attribute on `Name` tells the kernel to encrypt that property before storage and decrypt it on retrieval.
 
@@ -56,6 +56,6 @@ For full erasure of event content, combine key deletion with [event redaction](.
 
 Read model queries are transparent to PII encryption. No changes to query code are needed:
 
-<ChronicleClientTabs snippet="compliance/read-models/querying" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/read-models/querying" />
 
 Chronicle decrypts PII fields automatically before returning results to the caller. When the encryption key has been deleted for a subject, `Name` returns an empty string — the caller receives an `Employee` record with an empty name, never an exception or partial result.

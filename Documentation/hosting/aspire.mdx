@@ -14,7 +14,7 @@ dotnet add package Cratis.Chronicle.Aspire
 
 For local development, call `AddCratisChronicle()` without arguments. This uses the Chronicle development image (`cratis/chronicle:latest-development`), which bundles MongoDB, so no external database is required.
 
-<ChronicleClientTabs snippet="hosting/aspire/dev-mode" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/dev-mode" />
 
 The development image is ideal for:
 
@@ -27,7 +27,7 @@ For production or staging environments, use the configure callback. This switche
 
 ### MongoDB
 
-<ChronicleClientTabs snippet="hosting/aspire/mongo" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/mongo" />
 
 The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis__Chronicle__Storage__ConnectionDetails` environment variables on the Chronicle container using the connection string from the provided MongoDB resource.
 
@@ -39,7 +39,7 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 
 ### PostgreSQL
 
-<ChronicleClientTabs snippet="hosting/aspire/postgres" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/postgres" />
 
 `postgres` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
 
@@ -48,7 +48,7 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 
 ### Microsoft SQL Server
 
-<ChronicleClientTabs snippet="hosting/aspire/sqlserver" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/sqlserver" />
 
 `sql` can be any `IResourceBuilder<IResourceWithConnectionString>`, including:
 
@@ -59,13 +59,13 @@ The `WithMongoDB` method sets the `Cratis__Chronicle__Storage__Type` and `Cratis
 
 For SQLite, provide the connection string directly (SQLite is file-based and does not require a network resource):
 
-<ChronicleClientTabs snippet="hosting/aspire/sqlite" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/sqlite" />
 
 ## Connecting a .NET Client
 
 Pass the Chronicle resource as a connection string reference to your application projects so they receive the correct endpoint at runtime:
 
-<ChronicleClientTabs snippet="hosting/aspire/connecting-client" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/connecting-client" />
 
 The connection string exposed by `ChronicleResource` uses the `chronicle://` scheme and points to the gRPC port (35000 by default), matching the format expected by `ChronicleOptions.FromConnectionString()`.
 
@@ -84,11 +84,11 @@ Both endpoints are registered automatically when you call `AddCratisChronicle()`
 
 A typical Aspire AppHost `Program.cs` for a production setup with MongoDB:
 
-<ChronicleClientTabs snippet="hosting/aspire/complete-example" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/complete-example" />
 
 For development, simplify further by dropping the MongoDB wiring:
 
-<ChronicleClientTabs snippet="hosting/aspire/complete-example-dev" clients="csharp" />
+<ChronicleClientTabs snippet="hosting/aspire/complete-example-dev" />
 
 ## Docker Images
 

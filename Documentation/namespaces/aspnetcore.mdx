@@ -10,7 +10,7 @@ If your multi-tenant setup is based on Arc Tenancy, you can map the current tena
 
 The default resolver reads the namespace from an HTTP header. Configure it through `ChronicleAspNetCoreOptions`:
 
-<ChronicleClientTabs snippet="namespaces/aspnetcore/http-header-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/aspnetcore/http-header-resolver" />
 
 When the header is present, its value becomes the namespace for the request. If the header is missing, the default namespace is used.
 
@@ -18,7 +18,7 @@ When the header is present, its value becomes the namespace for the request. If 
 
 The subdomain resolver extracts the namespace from the request host (for example, `tenant1.example.com`).
 
-<ChronicleClientTabs snippet="namespaces/aspnetcore/subdomain-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/aspnetcore/subdomain-resolver" />
 
 ## Custom resolvers
 
@@ -28,13 +28,13 @@ You can configure a custom resolver either by type (DI) or using the `IChronicle
 
 Pass a resolver instance using the `IChronicleBuilder` configure callback:
 
-<ChronicleClientTabs snippet="namespaces/aspnetcore/builder-custom-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/aspnetcore/builder-custom-resolver" />
 
 ### Using type-based DI resolution
 
 Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI container resolve it:
 
-<ChronicleClientTabs snippet="namespaces/aspnetcore/type-based-custom-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/aspnetcore/type-based-custom-resolver" />
 
 ## Configuration priority
 
@@ -44,7 +44,7 @@ Configure the resolver type through `ChronicleAspNetCoreOptions` to let the DI c
 
 ## Example: Web app setup
 
-<ChronicleClientTabs snippet="namespaces/aspnetcore/web-app-example" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/aspnetcore/web-app-example" />
 
 For non-web contexts, see [DotNET client usage](dotnet-client).
 

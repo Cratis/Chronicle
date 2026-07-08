@@ -16,7 +16,7 @@ Reducers use convention-based method discovery. Chronicle automatically finds an
 - Accept the current read model state (nullable) as the second parameter
 - Optionally accept `EventContext` as the third parameter
 
-<ChronicleClientTabs snippet="reducers/event-processing/method-discovery" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/method-discovery" />
 
 ### Event Source Isolation
 
@@ -40,29 +40,29 @@ Events are guaranteed to be processed in sequence order:
 
 The simplest pattern accepts the event and current state:
 
-<ChronicleClientTabs snippet="reducers/event-processing/basic-sync-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/basic-sync-pattern" />
 
 ### Pattern with Event Context
 
 Access event metadata by adding `EventContext` parameter:
 
-<ChronicleClientTabs snippet="reducers/event-processing/pattern-with-context" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/pattern-with-context" />
 
 ### Async Patterns
 
 Both patterns support async methods:
 
-<ChronicleClientTabs snippet="reducers/event-processing/async-patterns" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/async-patterns" />
 
 ## Event Context
 
 The `EventContext` provides metadata about the event:
 
-<ChronicleClientTabs snippet="reducers/event-processing/event-context-shape" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/event-context-shape" />
 
 ### Using Event Context
 
-<ChronicleClientTabs snippet="reducers/event-processing/using-event-context" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/using-event-context" />
 
 ## Current State Parameter
 
@@ -76,7 +76,7 @@ When processing the first event for an event source:
 - Initialize your read model with appropriate values
 - You can return `null` (declare the handler's return type as `TReadModel?`) to skip creating state for certain events
 
-<ChronicleClientTabs snippet="reducers/event-processing/first-event" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/first-event" />
 
 ### Subsequent Events
 
@@ -92,31 +92,31 @@ For subsequent events:
 
 Accumulate values across events:
 
-<ChronicleClientTabs snippet="reducers/event-processing/accumulation-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/accumulation-pattern" />
 
 ### Pattern 2: State Transitions
 
 Track state changes through events:
 
-<ChronicleClientTabs snippet="reducers/event-processing/state-transitions-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/state-transitions-pattern" />
 
 ### Pattern 3: Collection Building
 
 Build collections from events:
 
-<ChronicleClientTabs snippet="reducers/event-processing/collection-building-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/collection-building-pattern" />
 
 ### Pattern 4: Time-Based Aggregation
 
 Aggregate events within time windows:
 
-<ChronicleClientTabs snippet="reducers/event-processing/time-based-aggregation-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/time-based-aggregation-pattern" />
 
 ### Pattern 5: Conditional Processing
 
 Skip processing based on conditions:
 
-<ChronicleClientTabs snippet="reducers/event-processing/conditional-processing-pattern" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/conditional-processing-pattern" />
 
 ## Error Handling
 
@@ -124,7 +124,7 @@ Skip processing based on conditions:
 
 When there's no state to build on yet, return `null` from a nullable-returning handler (`TReadModel? Handle(...)`) to leave the read model unset:
 
-<ChronicleClientTabs snippet="reducers/event-processing/skip-invalid-state" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/skip-invalid-state" />
 
 Note the difference between **skipping** an event and **removing** a read model: returning `null` when `current` was already `null` is a no-op, but returning `null` when `current` holds real state deletes that read model. To ignore an event without discarding existing state, return `current` unchanged instead.
 
@@ -132,7 +132,7 @@ Note the difference between **skipping** an event and **removing** a read model:
 
 Include error information in your read model:
 
-<ChronicleClientTabs snippet="reducers/event-processing/recording-errors" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/recording-errors" />
 
 ## Performance Optimization
 
@@ -140,13 +140,13 @@ Include error information in your read model:
 
 Leverage record types with `with` expressions:
 
-<ChronicleClientTabs snippet="reducers/event-processing/minimize-object-creation" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/minimize-object-creation" />
 
 ### Reuse Collections
 
 Copy a collection before mutating it — a previously-returned state instance may still be held by a snapshot or another reader, so mutating it in place can corrupt state you don't own:
 
-<ChronicleClientTabs snippet="reducers/event-processing/reuse-collections" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-processing/reuse-collections" />
 
 ## Best Practices
 

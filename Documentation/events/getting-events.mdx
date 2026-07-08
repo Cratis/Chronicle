@@ -13,19 +13,19 @@ Use the client APIs to select the pattern that best matches your scenario, such 
 
 ### Read events for a single event source
 
-<ChronicleClientTabs snippet="events/getting-events/for-event-source" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="events/getting-events/for-event-source" />
 
 Kotlin, Java, and TypeScript don't currently expose a way to read raw events back for an event source — their public event sequence APIs only support appending and checking for existence.
 
 ### Read from a checkpoint
 
-<ChronicleClientTabs snippet="events/getting-events/from-checkpoint" clients="csharp" />
+<ChronicleClientTabs snippet="events/getting-events/from-checkpoint" />
 
 This is currently a C#-only capability — no other client exposes a way to resume reading from an arbitrary sequence number.
 
 ### Read the last events in a sequence
 
-<ChronicleClientTabs snippet="events/getting-events/tail" clients="csharp" />
+<ChronicleClientTabs snippet="events/getting-events/tail" />
 
 Reading the tail this way also relies on resuming from a sequence number, so it's currently C#-only too. Kotlin, Java, and TypeScript can still get the tail sequence *number* (see [Getting state](./getting-state)), just not the events at it.
 

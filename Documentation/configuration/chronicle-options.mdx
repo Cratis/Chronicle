@@ -56,7 +56,7 @@ Asks the Kernel to enforce strict migration chain validation when registering ev
 
 To opt in to strict validation during development (recommended once your event schemas are stable), set the flag to `true`:
 
-<ChronicleClientTabs snippet="configuration/chronicle-options/enable-validation" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/chronicle-options/enable-validation" />
 
 In `appsettings.json`: `"EnableEventTypeGenerationValidation": true`.
 
@@ -71,7 +71,7 @@ The gRPC endpoint for Chronicle Server.
 | Type | `ChronicleConnectionString` |
 | Default | Development connection string (`chronicle://localhost:35000` with default dev credentials) |
 
-<ChronicleClientTabs snippet="configuration/chronicle-options/connection-string" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/chronicle-options/connection-string" />
 
 In `appsettings.json`: `"ConnectionString": "chronicle://myserver:35000"`.
 
@@ -111,7 +111,7 @@ Controls which sink type is used when registering projections and reducers with 
 
 To use SQL as the storage backend for all read models:
 
-<ChronicleClientTabs snippet="configuration/chronicle-options/sql-sink" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/chronicle-options/sql-sink" />
 
 In `appsettings.json`:
 

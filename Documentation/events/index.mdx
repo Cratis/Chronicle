@@ -9,7 +9,7 @@ flowchart LR
     S --> O["Observers (projections · reducers · reactors)"]
 ```
 
-<ChronicleClientTabs snippet="events/index/event-type" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="events/index/event-type" />
 
 ## Event Sequences and the Event Log
 
@@ -17,7 +17,7 @@ Events live in event sequences, which are ordered, append-only streams. Each eve
 
 Chronicle includes a specialized event sequence called the event log. It is the default sequence used throughout the system and is exposed through the `IEventLog` API.
 
-<ChronicleClientTabs snippet="events/index/event-log" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="events/index/event-log" />
 
 ## Working with Events
 

@@ -14,7 +14,7 @@ By default, Chronicle uses property names as they appear in C# (PascalCase). Ena
 
 For direct `ChronicleClient` usage outside of a hosted application, pass a `CamelCaseNamingPolicy` instance via the named `namingPolicy` constructor argument:
 
-<ChronicleClientTabs snippet="configuration/camel-casing/direct-client" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/direct-client" />
 
 ## Using ASP.NET Core
 
@@ -24,19 +24,19 @@ When building ASP.NET Core applications, use the dependency injection extensions
 
 In your `Program.cs` file, configure Chronicle with camel case naming policy using the `IChronicleBuilder` callback:
 
-<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-basic" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-basic" />
 
 ### Dependency Injection Configuration
 
 You can combine camel case naming policy with other Chronicle configuration options:
 
-<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-with-options" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/aspnetcore-with-options" />
 
 ## Using .NET Host (Worker Services)
 
 For worker services or other non-web hosts using `IHostApplicationBuilder`:
 
-<ChronicleClientTabs snippet="configuration/camel-casing/worker-host" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/worker-host" />
 
 ## Impact on Projections
 
@@ -54,17 +54,17 @@ When projections project to read models, the property names used will follow the
 
 #### Event Definition
 
-<ChronicleClientTabs snippet="configuration/camel-casing/event" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/event" />
 
 #### Read Model Definition
 
-<ChronicleClientTabs snippet="configuration/camel-casing/read-model" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/read-model" />
 
 #### Projection with Camel Case Naming Policy
 
 With camel case naming policy configured, Chronicle will use camel case property names when building the projection:
 
-<ChronicleClientTabs snippet="configuration/camel-casing/projection" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/camel-casing/projection" />
 
 The resulting read model data will have camel case property names: `firstName`, `lastName`, `emailAddress`, `registrationDate`.
 

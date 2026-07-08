@@ -8,41 +8,41 @@ Chronicle discovers all `IConstraint` implementations automatically — no regis
 
 Implement `IConstraint` and call the builder in `Define`:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/basic" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/basic" />
 
 ## Uniqueness across multiple event types
 
 Use multiple `.On` calls when several event types each contribute to the same logical uniqueness rule. The constraint fires if any of the tracked events would introduce a duplicate value:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/multiple-event-types" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/multiple-event-types" />
 
 ## Constraint name
 
 Use `.WithName(...)` to give the constraint an explicit name. When not provided, Chronicle uses the class name of the `IConstraint` implementation:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/constraint-name" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/constraint-name" />
 
 ## Releasing a constraint
 
 Call `.RemovedWith<T>()` to register the event type that releases the constraint. When that event is appended, the previously held value is freed and can be claimed again:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/releasing" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/releasing" />
 
 ## Ignoring casing
 
 Call `.IgnoreCasing()` to make the uniqueness check case-insensitive:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/ignore-casing" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/ignore-casing" />
 
 ## Violation message
 
 Call `.WithMessage(...)` to provide a custom message when the constraint is violated:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/violation-message" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/violation-message" />
 
 Use a callback to compose the message dynamically from violation context:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique/violation-message-callback" clients="csharp" />
+<ChronicleClientTabs snippet="constraints/declarative/unique/violation-message-callback" />
 
 ## How constraints are enforced
 

@@ -6,23 +6,23 @@ Chronicle discovers all `IConstraint` implementations automatically — no regis
 
 ## Defining a unique event type constraint
 
-<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/basic" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/basic" />
 
 ## Violation message
 
 Provide a static message string:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message" />
 
 Or use a callback to compose the message dynamically from violation context:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message-callback" clients="csharp" />
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message-callback" />
 
 ## Constraint name
 
 An optional name can be provided to identify the constraint. When not provided, Chronicle uses the event type name as the default constraint name:
 
-<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/constraint-name" clients="csharp,kotlin,java,typescript" />
+<ChronicleClientTabs snippet="constraints/declarative/unique-event-type/constraint-name" />
 
 ## How constraints are enforced
 

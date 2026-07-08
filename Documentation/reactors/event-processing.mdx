@@ -14,7 +14,7 @@ Event parameter types must be marked with `[EventType]`.
 
 ## Supported Signatures
 
-<ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" clients="csharp" />
+<ChronicleClientTabs snippet="reactors/event-processing/supported-signatures" />
 
 `TResult` can be an event type or `IEnumerable<TEvent>`. See [Returning Side Effects](side-effects) for the full list of supported return types and metadata resolution.
 
@@ -24,13 +24,13 @@ This overload table is specific to C#'s method-overload-based dispatch. Kotlin, 
 
 The optional `EventContext` parameter provides metadata about the event, including the event source ID, sequence number, timestamps, and correlation identifiers.
 
-<ChronicleClientTabs snippet="reactors/event-processing/event-context" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="reactors/event-processing/event-context" />
 
 ## Taking Dependencies
 
 Beyond the event and `EventContext`, a handler method can take additional parameters that Chronicle resolves when the method runs. Only the first parameter is fixed; it is the event that drives dispatch.
 
-<ChronicleClientTabs snippet="reactors/event-processing/dependencies" clients="csharp" />
+<ChronicleClientTabs snippet="reactors/event-processing/dependencies" />
 
 This is currently a C#-only capability. Kotlin, Elixir, and TypeScript reactor handlers accept only the event and, optionally, the event context — there's no mechanism to have Chronicle resolve and inject further parameters (services or strongly-consistent read models) into the handler call.
 
@@ -44,7 +44,7 @@ Each parameter after the event resolves as follows:
 
 By default the read model is materialized using the `EventSourceId` from the event context. When the key differs, implement `ICanResolveReadModelKey` on the reactor to return the `ReadModelKey` to use:
 
-<ChronicleClientTabs snippet="reactors/event-processing/read-model-key" clients="csharp" />
+<ChronicleClientTabs snippet="reactors/event-processing/read-model-key" />
 
 The resolved key applies to every read model parameter across all of the reactor's handler methods. This is also currently C#-only, since it exists to customize the read-model-parameter resolution described above.
 

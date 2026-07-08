@@ -71,21 +71,21 @@ tf 03 pcr Demo.TestReactor
 
 Each client has its own syntax, but the Chronicle shape is the same: create a client, choose an event store, and append a fact to the event log.
 
-<ChronicleClientTabs snippet="get-started/client-flow" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="get-started/client-flow" />
 
 Reading top to bottom: the client connects to the kernel, asks for an **event store** by name, and **appends** a `TestEvent` to its event log. That append is the only operation that changes the event store. Everything else reacts to the recorded fact.
 
 The event itself is just a record marked as a fact:
 
-<ChronicleClientTabs snippet="get-started/test-event" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="get-started/test-event" />
 
 A **projection** folds that event into a read model: state you can query, rebuild, and store in a sink:
 
-<ChronicleClientTabs snippet="get-started/test-projection" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="get-started/test-projection" />
 
 A **reactor** does something when the event arrives:
 
-<ChronicleClientTabs snippet="get-started/test-reactor" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="get-started/test-reactor" />
 
 Discovery and registration are client-specific. Some hosts discover annotated artifacts; others register modules, classes, or functions explicitly. The invariant is the same: events are facts, projections derive read models, and reactors observe events to produce side effects.
 

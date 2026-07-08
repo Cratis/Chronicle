@@ -40,7 +40,7 @@ A *materialized* read model updates *after* the event is appended, so what's sto
 
 Eventual is the default, though — not a law. The `IReadModels` API can also compute a read model on demand by replaying its events, giving you a strongly consistent read that includes an event you appended a millisecond ago:
 
-<ChronicleClientTabs snippet="concepts/designing-read-models/strongly-consistent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/designing-read-models/strongly-consistent" />
 
 [Deep dive: consistency](./consistency.md) covers when each model is the right call.
 
@@ -48,7 +48,7 @@ Eventual is the default, though — not a law. The `IReadModels` API can also co
 
 When it's time to read, Chronicle gives you a ladder — trade consistency for cost as you descend:
 
-<ChronicleClientTabs snippet="concepts/designing-read-models/query-ladder" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/designing-read-models/query-ladder" />
 
 - **`GetInstances<T>()`** rebuilds every instance from the event log at call time, so the result reflects everything appended so far. You can cap the work with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Replay cost grows with history — great for [reporting and short histories](../read-models/getting-collection-instances), not necessarily your production list view.
 - **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).

@@ -97,7 +97,7 @@ Two new keywords are introduced: `nested` (block opener) and `clear with` (lifec
 
 The fluent builder exposes `Nested(...)` symmetrical to `Children(...)`, taking a property expression and a configuration callback. The callback receives an `INestedBuilder<TParent, TNested>` that inherits every method of the root projection builder and adds `ClearWith<TEvent>()`:
 
-<ChronicleClientTabs snippet="projections/nested-objects-design/declarative" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/nested-objects-design/declarative" />
 
 See [Declarative Nested Objects](declarative/nested) for the full surface.
 
@@ -108,7 +108,7 @@ Two attributes drive the model-bound surface:
 - `[Nested]` — placed on a nullable property or record parameter, marks it as a nested object on the parent.
 - `[ClearWith<TEvent>]` — placed on the nested type (or its properties), declares the event that nulls the parent's property.
 
-<ChronicleClientTabs snippet="projections/nested-objects-design/model-bound" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/nested-objects-design/model-bound" />
 
 The nested type is scanned for `[FromEvent<T>]`, `[ClearWith<T>]`, `[SetFrom<T>]`, `[AddFrom<T>]`, `[Nested]`, `[ChildrenFrom<T>]`, and the other standard projection annotations. See [Model-Bound Nested Objects](model-bound/nested).
 
@@ -133,7 +133,7 @@ projection Slice => SliceReadModel
     clear with CommandClearedForSlice
 ```
 
-<ChronicleClientTabs snippet="projections/nested-objects-design/recursive" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/nested-objects-design/recursive" />
 
 ### Nested within children
 

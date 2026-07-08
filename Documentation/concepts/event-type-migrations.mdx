@@ -20,7 +20,7 @@ Chronicle's migration system allows you to:
 
 To define a migration, extend the `EventTypeMigration<TUpgrade, TPrevious>` base class (it handles generation extraction and validation for you) and override `Upcast`/`Downcast`:
 
-<ChronicleClientTabs snippet="concepts/event-type-migrations/defining-migrations" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/event-type-migrations/defining-migrations" />
 
 Kotlin and Java don't currently have a migration API — there's no equivalent to `EventTypeMigration<TUpgrade, TPrevious>` in the Kotlin client SDK.
 
@@ -32,25 +32,25 @@ The migration builder supports the following operations:
 
 Splits a source property into parts using a separator:
 
-<ChronicleClientTabs snippet="concepts/event-type-migrations/split" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/event-type-migrations/split" />
 
 ### Combine
 
 Combines multiple source properties into a single value using a separator:
 
-<ChronicleClientTabs snippet="concepts/event-type-migrations/combine" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/event-type-migrations/combine" />
 
 ### Rename
 
 Renames a property from a previous name using `RenamedFrom`:
 
-<ChronicleClientTabs snippet="concepts/event-type-migrations/rename" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/event-type-migrations/rename" />
 
 ### Default Value
 
 Sets a default value for a new property:
 
-<ChronicleClientTabs snippet="concepts/event-type-migrations/default-value" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/event-type-migrations/default-value" />
 
 ## How Migrations Work
 

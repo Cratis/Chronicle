@@ -22,7 +22,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 ## Basic usage
 
-<ChronicleClientTabs snippet="testing/events/scenario/basic" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/basic" />
 
 `EventLog` and `EventSequence` are backed by the same in-memory store. Use `EventLog` for domain tests (it maps to `EventSequenceId.Log`). Use `EventSequence` when you need a generic `IEventSequence` reference.
 
@@ -30,11 +30,11 @@ dotnet add package Cratis.Chronicle.Testing
 
 Use the fluent `Given` builder to put the in-memory event log into a known state **before** running the act phase:
 
-<ChronicleClientTabs snippet="testing/events/scenario/given" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/given" />
 
 Chain multiple `ForEventSource` calls to seed events for different event sources in the same scenario:
 
-<ChronicleClientTabs snippet="testing/events/scenario/given-multiple-sources" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/given-multiple-sources" />
 
 **Rules:**
 - Call `Given` before the act phase — seeded events get monotonically increasing sequence numbers.
@@ -44,7 +44,7 @@ Chain multiple `ForEventSource` calls to seed events for different event sources
 
 `When` mirrors `Given`: where `Given` seeds pre-existing state, `When` performs the act under test. It appends the event(s) through the same in-memory kernel grain and returns the resulting `AppendResult` — the same "the act returns its result" shape as `CommandScenario.Execute` — so a constraint or append spec reads with `Given` / `When` / `then` symmetry without binding the raw `Append` overload by hand:
 
-<ChronicleClientTabs snippet="testing/events/scenario/when-builder" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/when-builder" />
 
 The returned value is an `AppendResult`, so every [append assertion](assertions) is available on it. When you supply more than one event to a single `When`, each is appended in order and the result of the final append is returned.
 
@@ -52,7 +52,7 @@ The returned value is an `AppendResult`, so every [append assertion](assertions)
 
 `AppendMany` appends a collection of events in one call and returns an `AppendManyResult`:
 
-<ChronicleClientTabs snippet="testing/events/scenario/append-many" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/append-many" />
 
 ## Isolation
 
@@ -60,6 +60,6 @@ Create a **new `EventScenario` instance per test** to keep tests isolated. The i
 
 ## Example: full test
 
-<ChronicleClientTabs snippet="testing/events/scenario/full-example" clients="csharp" />
+<ChronicleClientTabs snippet="testing/events/scenario/full-example" />
 
 For information on asserting the result of an append operation, see [Assertions](assertions).

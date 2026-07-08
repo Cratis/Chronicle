@@ -10,7 +10,7 @@ Internally, Chronicle represents all event source identifiers as plain strings. 
 
 The `EventSourceId` record is the primary type used throughout the Chronicle API. It wraps a `string` value and provides implicit conversions from both `string` and `Guid`, so you can pass either directly wherever an `EventSourceId` is expected.
 
-<ChronicleClientTabs snippet="events/event-source-id/conversions" clients="csharp" />
+<ChronicleClientTabs snippet="events/event-source-id/conversions" />
 
 The `Unspecified` sentinel value signals the absence of a meaningful identifier and corresponds to an empty string. Use it when an identifier is structurally required but contextually irrelevant.
 
@@ -18,7 +18,7 @@ The `Unspecified` sentinel value signals the absence of a meaningful identifier 
 
 The generic `EventSourceId<T>` type lets you carry a strongly-typed value through the client-side API while remaining wire-compatible with the plain `EventSourceId` that the server expects.
 
-<ChronicleClientTabs snippet="events/event-source-id/typed" clients="csharp" />
+<ChronicleClientTabs snippet="events/event-source-id/typed" />
 
 Because `EventSourceId<T>` carries an implicit conversion to `EventSourceId`, you can pass a typed identifier anywhere the untyped form is expected — including directly to `IEventLog.Append` — without any manual conversion. The typed form is most useful when you want the identifier to carry its concrete type through multiple layers so that callers always see the domain concept rather than a plain string.
 

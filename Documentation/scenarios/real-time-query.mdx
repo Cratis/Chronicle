@@ -13,7 +13,7 @@ Getting a single strongly-consistent instance (below) is real in every client. K
 
 `GetInstanceById` replays the key's events through the projection or reducer on demand — strongly consistent, reflecting everything appended up to this moment:
 
-<ChronicleClientTabs snippet="scenarios/real-time-query/get-one" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="scenarios/real-time-query/get-one" />
 
 `ReadModelKey` converts implicitly from `string`, `Guid`, and `EventSourceId`, so you can pass the id you already have.
 
@@ -21,19 +21,19 @@ Getting a single strongly-consistent instance (below) is real in every client. K
 
 `GetInstances` rebuilds every instance by replaying the event log — strongly consistent, suited to reads where accuracy beats latency. The cost grows with history; filter the result with LINQ:
 
-<ChronicleClientTabs snippet="scenarios/real-time-query/get-all" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/real-time-query/get-all" />
 
 ## Page through materialized state
 
 For list views and grids, skip the replay: `Materialized` reads the instances the projection has already persisted to the sink — eventually consistent (typically milliseconds behind), fast regardless of history, and paged:
 
-<ChronicleClientTabs snippet="scenarios/real-time-query/materialized-page" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/real-time-query/materialized-page" />
 
 ## Watch every change
 
 `Watch<T>()` returns an `IObservable<ReadModelChangeset<T>>` that emits whenever **any** instance of that read model type changes — the changeset carries the key, the new state, and whether the instance was removed:
 
-<ChronicleClientTabs snippet="scenarios/real-time-query/watch-changes" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/real-time-query/watch-changes" />
 
 Dispose the subscription when you're done. If you need explicit lifecycle control — for example awaiting the watcher's `Subscribed` before producing events — use `GetWatcherFor<Book>()` instead.
 
@@ -41,7 +41,7 @@ Dispose the subscription when you're done. If you need explicit lifecycle contro
 
 `Materialized.ObserveInstances` pushes a fresh page snapshot whenever the stored data changes — a live dashboard or table with no polling:
 
-<ChronicleClientTabs snippet="scenarios/real-time-query/observe-page" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/real-time-query/observe-page" />
 
 When a command appends `BookBorrowed`, the projection updates the materialized `Book` and every subscriber receives the new page. The brief gap between append and push is the normal [eventual consistency](../read-models/consistency.md) window — usually imperceptible.
 

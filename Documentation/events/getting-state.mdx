@@ -18,18 +18,18 @@ Related reading:
 
 ### Capture the tail for a checkpoint
 
-<ChronicleClientTabs snippet="events/getting-state/tail" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="events/getting-state/tail" />
 
 Kotlin and Java don't currently expose a way to read the tail sequence number at all — their public event sequence APIs only support appending and checking for existence.
 
 ### Capture the tail for a specific event source and event types
 
-<ChronicleClientTabs snippet="events/getting-state/tail-for-event-source" clients="csharp" />
+<ChronicleClientTabs snippet="events/getting-state/tail-for-event-source" />
 
 This scoped form (filtering by event source and event types) is currently C#-only. Elixir and TypeScript can capture the *overall* tail (see above), but neither exposes a way to scope it to specific event types.
 
 ### Check whether an observer is caught up
 
-<ChronicleClientTabs snippet="events/getting-state/tail-for-observer" clients="csharp" />
+<ChronicleClientTabs snippet="events/getting-state/tail-for-observer" />
 
 Computing the relevant tail for a specific observer is currently a C#-only capability.

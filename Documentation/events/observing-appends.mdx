@@ -9,7 +9,7 @@ events in real time — without polling the event log.
 
 ## AppendOperations
 
-<ChronicleClientTabs snippet="events/observing-appends/shape" clients="csharp" />
+<ChronicleClientTabs snippet="events/observing-appends/shape" />
 
 The observable emits a collection of `AppendedEventWithResult` after each operation:
 
@@ -32,7 +32,7 @@ This observable does not fire for transactional appends through `ITransactionalE
 
 Inject `IEventSequence` (or `IEventLog`) and subscribe to `AppendOperations`:
 
-<ChronicleClientTabs snippet="events/observing-appends/subscribing" clients="csharp" />
+<ChronicleClientTabs snippet="events/observing-appends/subscribing" />
 
 Always dispose the subscription when you no longer need it to avoid resource leaks.
 
@@ -52,8 +52,8 @@ If any affected observer fails while catching up, the returned result includes f
 
 ### Append
 
-<ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append" clients="csharp" />
+<ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append" />
 
 ### AppendMany
 
-<ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append-many" clients="csharp" />
+<ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append-many" />

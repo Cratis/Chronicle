@@ -10,7 +10,7 @@ Provide a factory that returns a fresh read model instance with the desired defa
 
 Kotlin and Elixir don't have a `WithInitialValues`-style builder call, but they achieve the same result idiomatically: the read model's own constructor/struct default values become its initial state (see [Collections](#collections) below for a working example that doesn't need event context). This particular example also maps an event context property (`Occurred`), which neither client's fluent projection API can access yet.
 
-<ChronicleClientTabs snippet="projections/declarative/initial-values/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/initial-values/basic" />
 
 ## Why Use Initial Values
 
@@ -29,13 +29,13 @@ Initial values are useful for:
 
 Set defaults that describe the domain state before the first relevant event changes it.
 
-<ChronicleClientTabs snippet="projections/declarative/initial-values/business-defaults" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/initial-values/business-defaults" />
 
 ## Collections
 
 Initialize collections so consumers can treat them as empty collections instead of checking for missing values.
 
-<ChronicleClientTabs snippet="projections/declarative/initial-values/collections" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/initial-values/collections" />
 
 ## Events That Do Not Cover Every Property
 
@@ -43,7 +43,7 @@ Initial values are useful when events update operational fields but leave config
 
 > **TypeScript note:** this example uses `Add()`/`With()`, the fluent builder's variable-delta accumulation operators. TypeScript's `add()`/`subtract()` are not implemented yet (`FromBuilder.ts` throws at runtime even though the call type-checks), so this specific example is unsupported in TypeScript for now. Elixir's `add:`/`subtract:` property options **do** work, so this example is also shown there.
 
-<ChronicleClientTabs snippet="projections/declarative/initial-values/partial-events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/initial-values/partial-events" />
 
 ## Best Practices
 

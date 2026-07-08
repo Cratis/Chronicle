@@ -16,13 +16,13 @@ Before you begin, ensure you have:
 
 First, create a record representing the state you want to compute:
 
-<ChronicleClientTabs snippet="reducers/getting-started/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="reducers/getting-started/read-model" />
 
 ### 2. Implement the Reducer
 
 Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each event type:
 
-<ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
 Kotlin, Java, and TypeScript handler methods only receive the event and the current state — unlike C# and Elixir, they don't get an `EventContext` parameter, so they can't use an event's metadata (like `Occurred`) when computing the next state.
 
@@ -32,11 +32,11 @@ Reducer methods are discovered by convention and support the following signature
 
 ### Synchronous Methods
 
-<ChronicleClientTabs snippet="reducers/getting-started/sync-signatures" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/getting-started/sync-signatures" />
 
 ### Asynchronous Methods
 
-<ChronicleClientTabs snippet="reducers/getting-started/async-signatures" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/getting-started/async-signatures" />
 
 These overload tables are specific to C#'s method-overload-based dispatch. Kotlin, Java, and TypeScript each dispatch reducer handlers by matching the first parameter's event type against a fixed 2-parameter (event, current) shape — no context parameter. TypeScript's dispatch does `await` the handler, so an `async` handler works there; Kotlin and Java invoke the handler directly and cannot await it, so a suspend/async handler isn't supported in those two. Elixir dispatches through a single `reduce/3` callback per event, pattern-matched by struct type, which does receive a context map.
 
@@ -52,7 +52,7 @@ These overload tables are specific to C#'s method-overload-based dispatch. Kotli
 
 You can customize the reducer using the `[Reducer]` attribute:
 
-<ChronicleClientTabs snippet="reducers/getting-started/reducer-attribute" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="reducers/getting-started/reducer-attribute" />
 
 **Attribute parameters:**
 
@@ -66,7 +66,7 @@ Kotlin, Java, and Elixir only support setting a custom `id` — none of them cur
 
 Once your reducer is set up, you can retrieve the computed state:
 
-<ChronicleClientTabs snippet="reducers/getting-started/retrieving-state" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="reducers/getting-started/retrieving-state" />
 
 ## Event Processing
 

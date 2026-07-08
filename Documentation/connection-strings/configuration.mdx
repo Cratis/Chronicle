@@ -19,7 +19,7 @@ The .NET client reads its connection string from configuration. A typical setup 
 
 **Program.cs:**
 
-<ChronicleClientTabs snippet="connection-strings/configuration/register" clients="csharp" />
+<ChronicleClientTabs snippet="connection-strings/configuration/register" />
 
 `AddCratisChronicle` is an extension on the host builder — `IHostApplicationBuilder` for worker and console hosts, `WebApplicationBuilder` for ASP.NET Core. It binds the `Cratis:Chronicle` section automatically, so the connection string comes from configuration rather than code. See [Add Chronicle to a worker service](../get-started/worker) and [Add Chronicle to an ASP.NET Core app](../get-started/aspnetcore) for the full host setup.
 

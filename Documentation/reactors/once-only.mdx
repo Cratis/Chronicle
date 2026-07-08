@@ -6,7 +6,7 @@ for instance during a replay.
 There are scenarios where you need side effects to occur only on the initial event processing,
 such as sending notifications, triggering external integrations, or performing non-idempotent operations.
 
-<ChronicleClientTabs snippet="reactors/once-only/basic" clients="csharp" />
+<ChronicleClientTabs snippet="reactors/once-only/basic" />
 
 The `OnceOnly` attribute ensures that the marked method is executed exactly once,
 providing a clean way to separate one-time operations from normal reactor behavior.

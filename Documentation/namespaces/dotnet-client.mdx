@@ -8,7 +8,7 @@ This page and [ASP.NET Core namespace resolution](./aspnetcore) are intentionall
 
 ## IEventStoreNamespaceResolver
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/resolver-shape" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/resolver-shape" />
 
 The resolver returns the namespace name to use for the current context.
 
@@ -23,7 +23,7 @@ This is the default when no resolver is supplied.
 
 Resolves the namespace from the current principal's claims. This is useful when you have an authenticated user and want to map the tenant from a claim.
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/claims-based" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/claims-based" />
 
 If the claim is not found or the user is not authenticated, the default namespace is used.
 
@@ -31,13 +31,13 @@ If the claim is not found or the user is not authenticated, the default namespac
 
 For console or direct-client scenarios, pass the resolver as a constructor parameter:
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/default-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/default-resolver" />
 
 ## Configuring in a hosted application
 
 When using `IHostApplicationBuilder` (worker service or web app), configure the resolver through `ChronicleClientOptions` or directly via `IChronicleBuilder`:
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/hosted-app-configuration" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/hosted-app-configuration" />
 
 ## Custom resolvers
 
@@ -45,9 +45,9 @@ Implement a resolver when your namespace comes from a custom context, such as a 
 
 If your application uses Arc Tenancy, you can resolve the namespace from its tenant context. See [Arc Tenancy](xref:Arc.Tenancy).
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver" />
 
-<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver-usage" clients="csharp" />
+<ChronicleClientTabs snippet="namespaces/dotnet-client/tenant-resolver-usage" />
 
 ## Best practices
 

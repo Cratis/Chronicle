@@ -13,19 +13,19 @@ All three are set once at the start of an operation (a request, a background job
 
 ## Correlation ID
 
-<ChronicleClientTabs snippet="concepts/correlation-identity-causation/correlation" clients="csharp,kotlin,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/correlation-identity-causation/correlation" />
 
 Kotlin's correlation manager scopes the id per-thread (`ThreadLocal`); Elixir and TypeScript scope it per logical call context (Elixir's process dictionary, TypeScript's `AsyncLocalStorage`) — in both cases automatically, without extra code, as long as you don't spawn new threads/processes/async contexts without carrying the value across explicitly.
 
 ## Identity
 
-<ChronicleClientTabs snippet="concepts/correlation-identity-causation/identity" clients="csharp,kotlin,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/correlation-identity-causation/identity" />
 
 Every client provides the same three sentinel identities for well-known cases — `System`, `NotSet`, and `Unknown` — and supports on-behalf-of delegation chains (an identity that acted *for* another identity) via a `withoutDuplicates()`/`without_duplicates/1` helper that collapses repeated subjects in a long chain.
 
 ## Causation
 
-<ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" clients="csharp,kotlin,elixir" />
+<ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" />
 
 TypeScript also has a real `causationManager.add(type, properties)` — the client-specific pages linked below cover it, along with more Kotlin/Elixir/TypeScript causation detail than fits here (defining/redefining the root cause, reading the full chain, framework-integration examples for scoping context per request).
 

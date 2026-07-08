@@ -31,7 +31,7 @@ dotnet add package Cratis.Chronicle.AspNetCore
 
 ASP.NET Core builds your app through the `WebApplicationBuilder`, which already has a dependency-injection container. Chronicle hooks straight into it — two calls in `Program.cs` are the entire integration:
 
-<ChronicleClientTabs snippet="get-started/aspnetcore/register" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/aspnetcore/register" />
 
 `AddCratisChronicle` registers Chronicle's services and names the event store to use; `UseCratisChronicle` hooks it into the request pipeline. Unlike the bare-bones [console](./console) version, all discovery and registration of your artifacts happens automatically — the container finds your reactors, reducers, and projections for you.
 
@@ -49,7 +49,7 @@ flowchart LR
 
 In a web app you usually append events from a route handler rather than inline. Take `IEventLog` as a dependency and append — the container injects it:
 
-<ChronicleClientTabs snippet="get-started/aspnetcore/endpoint" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/aspnetcore/endpoint" />
 
 The `bookId` from the route is the [event source](../concepts/event-source.md) — the book this fact is about — and `memberName` is the event's payload. That one `Append` is all it takes; the projections pick it up from there — `Book` flips to on loan and a `BorrowedBook` instance appears — along with any reactors.
 
@@ -57,11 +57,11 @@ The `bookId` from the route is the [event source](../concepts/event-source.md) �
 
 Chronicle creates its discovered artifacts — reactors, reducers, projections — through the container, so they need to be registered as services. For a handful, register them explicitly:
 
-<ChronicleClientTabs snippet="get-started/aspnetcore/register-artifact" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/aspnetcore/register-artifact" />
 
 As the solution grows this gets tedious, so Cratis Fundamentals can do it by convention:
 
-<ChronicleClientTabs snippet="get-started/aspnetcore/register-by-convention" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/aspnetcore/register-by-convention" />
 
 `AddBindingsByConvention` registers any service that implements an interface of the same name prefixed with `I` (`IFoo` → `Foo`); `AddSelfBindings` registers concrete classes as themselves, so you can depend on them directly without registering each one.
 
@@ -73,7 +73,7 @@ The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs t
 
 Then register the database and the collections you want to inject, so a type can take an `IMongoCollection<Book>` dependency without ever touching `MongoClient`:
 
-<ChronicleClientTabs snippet="get-started/aspnetcore/mongo-registration" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/aspnetcore/mongo-registration" />
 
 Now the `Books` query from the querying section above resolves its collection straight from the container.
 

@@ -40,7 +40,7 @@ Patches are tracked in MongoDB:
 
 Create a patch by implementing `ICanApplyPatch`:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/basic-structure" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/basic-structure" />
 
 ### Patch Naming Conventions
 
@@ -52,7 +52,7 @@ Create a patch by implementing `ICanApplyPatch`:
 
 Patches can inject any services registered in the DI container:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/dependencies" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/dependencies" />
 
 ## Best Practices
 
@@ -60,25 +60,25 @@ Patches can inject any services registered in the DI container:
 
 Use proper semantic logging with `LoggerMessage` attributes:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/semantic-logging" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/semantic-logging" />
 
 ### 2. Implement Down() for Safety
 
 Always implement `Down()` to support rollback scenarios:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/implement-down" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/implement-down" />
 
 ### 3. Handle Idempotency
 
 Patches should be idempotent where possible. The system prevents re-execution, but defensive coding helps:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/idempotency" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/idempotency" />
 
 ### 4. Test Thoroughly
 
 Write comprehensive specs for your patches:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/spec" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/spec" />
 
 ## Runtime Behavior
 
@@ -113,7 +113,7 @@ Patches are applied based on version comparison:
 
 The `RenameReactors` patch (version 15.3.0) demonstrates a real-world migration:
 
-<ChronicleClientTabs snippet="contributing/kernel/patches/index/rename-reactors-example" clients="csharp" />
+<ChronicleClientTabs snippet="contributing/kernel/patches/index/rename-reactors-example" />
 
 ## Troubleshooting
 
