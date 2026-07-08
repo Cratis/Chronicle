@@ -1,0 +1,27 @@
+# CHR0031: Reactor must not have mutable state
+
+## Rule Description
+
+A class implementing `IReactor` declares a mutable instance field or settable property. Reactors observe events and produce side effects; Chronicle re-creates and replays them, so mutable instance state is unreliable and leaks context between invocations.
+
+Keep reactors stateless: express dependencies as `readonly`, primary-constructor-injected fields, and derive everything else from the event and event context.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0031/violation" />
+
+## Why This Rule Exists
+
+A reactor has no reliable lifetime you can accumulate state across. Chronicle re-creates reactor instances and replays event streams through them, and a single event source may be processed more than once (recovery, rewind, redaction, revision). A mutable field or settable property therefore holds a value that depends on which events happened to run through this particular instance — a counter that is wrong after a replay, or a value that bleeds from one event source into the next.
+
+Everything a reactor needs is already available: the collaborators it calls (injected once through the primary constructor as `readonly` fields) and the facts of the event it is handling (the event payload and `EventContext`). Anything derived should be computed from those inputs each time the handler runs, not stored on the instance. `static const`, `static readonly`, `readonly`, and `init`-only members are fine — the rule flags only mutable non-static fields and properties with a non-`init` setter.
+
+## Related Rules
+
+- [CHR0030: Reactor handlers invoking ICommandPipeline.Execute must be marked with [OnceOnly]](CHR0030) — guard command side effects against replay.
+- [CHR0032: Reactor must not access storage directly](CHR0032) — reactors read state through read models.
+- **CHR0022** — a reactor handler returning side-effect events must be marked `[OnceOnly]`.

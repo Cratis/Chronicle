@@ -38,5 +38,23 @@
   href: CHR0022.mdx
 - name: CHR0023 - Ambiguous parent key for [ChildrenFrom] collection
   href: CHR0023.mdx
+- name: CHR0024 - Read model property has no mapping source
+  href: CHR0024.mdx
 - name: CHR0025 - Explicitly sourced property may be overwritten by AutoMap
   href: CHR0025.mdx
+- name: CHR0026 - [Key] or [Subject] on an EventSourceId identity is redundant
+  href: CHR0026.mdx
+- name: CHR0027 - Ambiguous event stream id
+  href: CHR0027.mdx
+- name: CHR0028 - Redundant .AutoMap() call
+  href: CHR0028.mdx
+- name: CHR0029 - Redundant .Set().To() with matching property names
+  href: CHR0029.mdx
+- name: CHR0030 - Reactor invoking ICommandPipeline.Execute must be [OnceOnly]
+  href: CHR0030.mdx
+- name: CHR0031 - Reactor must not have mutable state
+  href: CHR0031.mdx
+- name: CHR0032 - Reactor must not access storage directly
+  href: CHR0032.mdx
+- name: CHR0033 - [ChildrenFrom] child collection property auto-maps to nothing
+  href: CHR0033.mdx

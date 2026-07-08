@@ -1,0 +1,27 @@
+# CHR0030: Reactor handlers invoking ICommandPipeline.Execute must be marked with [OnceOnly]
+
+## Rule Description
+
+A reactor handler that invokes `ICommandPipeline.Execute` produces a side effect. Chronicle re-runs reactor handlers during replay operations (redaction, revision, observer rewind), so an unguarded handler re-executes the command and duplicates the side effect.
+
+Mark the handler method with `[OnceOnly]` so Chronicle skips it during replays.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0030/violation" />
+
+## Why This Rule Exists
+
+Reactors are the "if this then that" of event sourcing — they observe events and produce side effects. A reactor is not invoked only once: during a redaction, a revision, or an observer rewind, Chronicle replays the event stream and runs the handler again. A handler that calls `ICommandPipeline.Execute` runs the full command pipeline every time it fires, so on replay the command executes a second time and the side effect happens twice.
+
+`[OnceOnly]` tells Chronicle to fire the handler a single time per event source and skip it on replays. Applying it to a handler that executes a command keeps replay safe — the command runs when the event first arrives, and never again when the stream is reprocessed.
+
+## Related Rules
+
+- [CHR0031: Reactor must not have mutable state](CHR0031) — reactors must be stateless.
+- [CHR0032: Reactor must not access storage directly](CHR0032) — reactors read state through read models.
+- **CHR0022** — the sibling rule for a reactor handler that *returns* side-effect events, which must likewise be marked `[OnceOnly]`.

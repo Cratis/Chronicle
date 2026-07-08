@@ -1,0 +1,27 @@
+# CHR0027: Ambiguous event stream id
+
+## Rule Description
+
+A type that implements `ICanProvideEventStreamId` supplies the event stream id dynamically at runtime. Declaring a non-null `[EventStreamId]` attribute on the same type conflicts with that interface, and Chronicle throws `AmbiguousEventStreamId` when it starts.
+
+Remove either the interface or the attribute. The sanctioned `[EventStreamId(null)]` defers to the interface and is allowed.
+
+## Severity
+
+Error
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0027/violation" />
+
+## Why This Rule Exists
+
+There are two ways to set an event stream id: statically, with the `[EventStreamId("...")]` attribute, or dynamically, by implementing `ICanProvideEventStreamId.GetEventStreamId()`. They are mutually exclusive — Chronicle cannot know which one wins, so it refuses to guess and throws `AmbiguousEventStreamId` at startup rather than silently picking one.
+
+That failure happens when the application boots, not when the offending type is written — so without this analyzer the mistake ships and only surfaces as a startup crash. Reporting it as an **error** at build time turns a runtime bootstrapping failure into a compile-time one, right at the declaration.
+
+Pick one mechanism. If the id is known at compile time, keep the attribute and drop the interface. If it is only known at runtime, keep the interface and remove the attribute — or set the attribute value to `null` (`[EventStreamId(null)]`), the sanctioned way to declare "the interface decides."
+
+## Related Rules
+
+- [Event sequence](/chronicle/concepts/event-sequence/) — event streams and where events are appended.
