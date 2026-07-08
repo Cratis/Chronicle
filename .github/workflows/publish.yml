@@ -303,6 +303,20 @@ jobs:
       - name: Push NuGet packages
         run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
 
+  notify-arc:
+    if: needs.release.outputs.publish == 'true' && needs.release.outputs.prerelease != 'true'
+    runs-on: ubuntu-latest
+    needs: [release, dotnet-pack-and-publish]
+
+    steps:
+      - name: Trigger Chronicle update on Arc
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_DOCUMENTATION }}
+          repository: cratis/arc
+          event-type: chronicle-published
+          client-payload: '{"version": "${{ needs.release.outputs.version }}"}'
+
   publish-typescript-client:
     if: needs.release.outputs.publish == 'true'
     needs: [release, generate-protos]
