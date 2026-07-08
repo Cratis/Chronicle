@@ -122,4 +122,9 @@ public static class DiagnosticIds
     /// A [ChildrenFrom] collection that omits parentKey has an ambiguous parent key inference.
     /// </summary>
     public const string AmbiguousChildrenParentKey = "CHR0023";
+
+    /// <summary>
+    /// A [ChildrenFrom] child collection property has no matching event property and no explicit mapping, so it auto-maps to nothing.
+    /// </summary>
+    public const string ChildrenCollectionPropertyAutoMapsToNothing = "CHR0024";
 }
