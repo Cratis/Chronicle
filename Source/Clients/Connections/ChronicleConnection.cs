@@ -329,6 +329,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                         return cert.GetCertHashString() == certHashString;
                     }
 
+                    // For development: accept the self-signed certificate the Chronicle server
+                    // generates when no certificate is configured (untrusted root / partial chain).
+                    if (sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors &&
+                        chain?.ChainStatus.All(status =>
+                            status.Status is X509ChainStatusFlags.PartialChain or X509ChainStatusFlags.UntrustedRoot) == true)
+                    {
+                        return true;
+                    }
+
                     // For development: accept localhost certificates with name mismatches
                     return sslPolicyErrors == SslPolicyErrors.RemoteCertificateNameMismatch;
                 };

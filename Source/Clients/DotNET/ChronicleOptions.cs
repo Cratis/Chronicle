@@ -164,11 +164,6 @@ public class ChronicleOptions(
     public Authentication Authentication { get; set; } = new Authentication();
 
     /// <summary>
-    /// Gets or sets the port for the Management API and well-known certificate endpoint.
-    /// </summary>
-    public int ManagementPort { get; set; } = 8080;
-
-    /// <summary>
     /// Gets or sets the default <see cref="SinkTypeId"/> used when registering projections and reducers.
     /// When not explicitly configured, defaults to <see cref="WellKnownSinkTypes.MongoDB"/>.
     /// Set to <see cref="WellKnownSinkTypes.SQL"/> to persist read models into a SQL database.

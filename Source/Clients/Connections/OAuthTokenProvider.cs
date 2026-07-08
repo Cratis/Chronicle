@@ -29,19 +29,17 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     /// <param name="serverAddress">The Chronicle server address.</param>
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
-    /// <param name="managementPort">The management port where the token endpoint is hosted.</param>
     /// <param name="disableTls">Whether to disable TLS for the token request.</param>
     /// <param name="logger">Logger for logging.</param>
     public OAuthTokenProvider(
         ChronicleServerAddress serverAddress,
         string clientId,
         string clientSecret,
-        int managementPort,
         bool disableTls,
         ILogger<OAuthTokenProvider> logger)
     {
         var scheme = disableTls ? "http" : "https";
-        _tokenEndpoint = $"{scheme}://{serverAddress.Host}:{managementPort}/connect/token";
+        _tokenEndpoint = $"{scheme}://{serverAddress.Host}:{serverAddress.Port}/connect/token";
         _clientId = clientId;
         _clientSecret = clientSecret;
         _logger = logger;

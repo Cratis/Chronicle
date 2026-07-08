@@ -343,7 +343,6 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 options.ConnectionString.ServerAddress,
                 username!,
                 password!,
-                options.ManagementPort,
                 disableTls,
                 _loggerFactory.CreateLogger<OAuthTokenProvider>());
         }
