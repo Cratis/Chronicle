@@ -125,7 +125,13 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         var certificatePath = options.Tls.CertificatePath ?? options.ConnectionString.CertificatePath;
         var certificatePassword = options.Tls.CertificatePassword ?? options.ConnectionString.CertificatePassword;
-        var disableTls = string.IsNullOrEmpty(certificatePath) && (options.ConnectionString.DisableTls || options.Tls.IsDisabled);
+
+        // TLS is only turned off when it is explicitly requested through the connection string
+        // (disableTls=true). The absence of a client certificate does NOT disable TLS — the client
+        // still connects over TLS (server-authenticated), it just does not present a client certificate.
+        // The Chronicle server always serves its port over TLS, so defaulting to cleartext here would
+        // make certificate-less clients fail to connect.
+        var disableTls = string.IsNullOrEmpty(certificatePath) && options.ConnectionString.DisableTls;
 
         var tokenProvider = CreateTokenProvider(options, disableTls);
         _ownedConnectionCancellation = new();

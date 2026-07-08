@@ -298,7 +298,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         try
         {
 #pragma warning disable CA2000 // Certificate ownership is transferred to httpHandler.SslOptions.ClientCertificates
-            certificate = !_disableTls ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!) : null;
+            // Only load a client certificate when one is configured. Without a certificate the client
+            // still connects over TLS (server-authenticated) — it simply does not present a client
+            // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
+            certificate = !_disableTls && !string.IsNullOrEmpty(_certificatePath)
+                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword!)
+                : null;
             var httpHandler = new SocketsHttpHandler
             {
                 PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
