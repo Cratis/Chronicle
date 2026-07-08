@@ -344,47 +344,4 @@ public class ReadModelScenario<TReadModel>(TReadModel? initialState, Defaults de
 
         return result.AsT0;
     }
-
-    static class ProjectionDefinitionCreator<TModel>
-        where TModel : class
-    {
-        /// <summary>
-        /// Creates and builds a <see cref="Contracts.Projections.ProjectionDefinition"/> from an <see cref="IProjectionFor{TReadModel}"/> type.
-        /// </summary>
-        /// <param name="type">The projection type.</param>
-        /// <param name="namingPolicy">The <see cref="INamingPolicy"/> to use.</param>
-        /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
-        /// <param name="artifactsActivator">The <see cref="IClientArtifactsActivator"/>.</param>
-        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
-        /// <returns>A <see cref="Monads.Catch{T}"/> wrapping the built definition.</returns>
-        public static Monads.Catch<Contracts.Projections.ProjectionDefinition> CreateAndDefine(
-            Type type,
-            INamingPolicy namingPolicy,
-            IEventTypes eventTypes,
-            IClientArtifactsActivator artifactsActivator,
-            JsonSerializerOptions jsonSerializerOptions)
-        {
-            try
-            {
-                var activateResult = artifactsActivator.ActivateNonDisposable<IProjectionFor<TModel>>(type);
-                if (activateResult.TryGetException(out var activateException))
-                {
-                    return activateException;
-                }
-
-                var builder = new ProjectionBuilderFor<TModel>(
-                    type.GetProjectionId(),
-                    type,
-                    namingPolicy,
-                    eventTypes,
-                    jsonSerializerOptions);
-                activateResult.AsT0.Define(builder);
-                return builder.Build();
-            }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is TargetInvocationException)
-            {
-                return ex;
-            }
-        }
-    }
 }

@@ -124,4 +124,12 @@ public class ProjectionDefinition
     /// </summary>
     [ProtoMember(19)]
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the read model property names that must be excluded from auto-mapping, even when
+    /// <see cref="AutoMap"/> is enabled. Used by property-level <c>[NoAutoMap]</c> to stop an unrelated
+    /// event's identically named property from silently overwriting an explicitly mapped property.
+    /// </summary>
+    [ProtoMember(20, IsRequired = true)]
+    public IList<string> NoAutoMapProperties { get; set; } = [];
 }

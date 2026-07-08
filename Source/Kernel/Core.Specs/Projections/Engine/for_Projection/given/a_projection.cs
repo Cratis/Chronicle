@@ -29,6 +29,7 @@ public class a_projection : Specification
             new JsonSchema(),
             true,
             AutoMap.Enabled,
+            new HashSet<string>(),
             []);
         keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
     }

@@ -112,4 +112,10 @@ public class ProjectionDefinition
     /// Gets or sets whether the projection subscribes to all event types in the system.
     /// </summary>
     public bool SubscribesToAllEvents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the read model property names excluded from auto-mapping even when
+    /// <see cref="AutoMap"/> is enabled.
+    /// </summary>
+    public IEnumerable<string> NoAutoMapProperties { get; set; } = [];
 }

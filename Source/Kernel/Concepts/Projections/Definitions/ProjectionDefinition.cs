@@ -32,6 +32,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="AutoMap">Whether properties should be auto-mapped from events at the projection level.</param>
 /// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 /// <param name="SubscribesToAllEvents">Whether the projection subscribes to all event types in the system.</param>
+/// <param name="NoAutoMapProperties">Read model properties excluded from auto-mapping even when <paramref name="AutoMap"/> is enabled.</param>
 public record ProjectionDefinition(
     ProjectionOwner Owner,
     EventSequenceId EventSequenceId,
@@ -52,7 +53,8 @@ public record ProjectionDefinition(
     IEnumerable<string>? Tags = default,
     AutoMap AutoMap = AutoMap.Enabled,
     IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
-    bool SubscribesToAllEvents = false)
+    bool SubscribesToAllEvents = false,
+    IEnumerable<PropertyPath>? NoAutoMapProperties = default)
 {
     /// <summary>
     /// Checks if the definition is empty or not. Empty meaning that there is no definition.

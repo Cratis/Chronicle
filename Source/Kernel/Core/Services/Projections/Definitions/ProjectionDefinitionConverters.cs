@@ -41,7 +41,8 @@ internal static class ProjectionDefinitionConverters
             LastUpdated = definition.LastUpdated,
             AutoMap = (Contracts.Projections.AutoMap)definition.AutoMap,
             Nested = (definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>()).ToDictionary(_ => (string)_.Key, _ => _.Value.ToContract()),
-            SubscribesToAllEvents = definition.SubscribesToAllEvents
+            SubscribesToAllEvents = definition.SubscribesToAllEvents,
+            NoAutoMapProperties = (definition.NoAutoMapProperties ?? []).Select(_ => (string)_).ToList()
         };
     }
 
@@ -72,7 +73,8 @@ internal static class ProjectionDefinitionConverters
             contract.LastUpdated ?? null!,
             AutoMap: (AutoMap)contract.AutoMap,
             Nested: contract.Nested.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
-            SubscribesToAllEvents: contract.SubscribesToAllEvents
+            SubscribesToAllEvents: contract.SubscribesToAllEvents,
+            NoAutoMapProperties: contract.NoAutoMapProperties.Select(_ => new PropertyPath(_)).ToList()
         );
     }
 }
