@@ -122,4 +122,52 @@ public static class DiagnosticIds
     /// A [ChildrenFrom] collection that omits parentKey has an ambiguous parent key inference.
     /// </summary>
     public const string AmbiguousChildrenParentKey = "CHR0023";
+
+    /// <summary>
+    /// A model-bound read model property has no provable mapping source (no mapping attribute and no
+    /// subscribed event carrying a same-named property for AutoMap to bind).
+    /// </summary>
+    public const string ReadModelPropertyMustHaveMappingSource = "CHR0024";
+
+    /// <summary>
+    /// An explicitly sourced read model property is overwritten by AutoMap from another subscribed event
+    /// that carries an identically named property.
+    /// </summary>
+    public const string AutoMapSameNamePropertyCollision = "CHR0025";
+
+    /// <summary>
+    /// A [Key] or [Subject] attribute is placed on a property whose type derives from EventSourceId&lt;T&gt;.
+    /// </summary>
+    public const string KeyOrSubjectOnEventSourceId = "CHR0026";
+
+    /// <summary>
+    /// A command both implements ICanProvideEventStreamId and carries a non-null [EventStreamId] attribute.
+    /// </summary>
+    public const string AmbiguousEventStreamId = "CHR0027";
+
+    /// <summary>
+    /// A projection Define() calls .AutoMap(), which is already the default and therefore redundant.
+    /// </summary>
+    public const string RedundantAutoMapCall = "CHR0028";
+
+    /// <summary>
+    /// A projection .Set(x =&gt; x.P).To(e =&gt; e.P) maps a property from an identically named event property,
+    /// which AutoMap already does, and is therefore redundant.
+    /// </summary>
+    public const string RedundantSetToWithMatchingNames = "CHR0029";
+
+    /// <summary>
+    /// A reactor handler invokes ICommandPipeline.Execute without being marked [OnceOnly].
+    /// </summary>
+    public const string ReactorCommandPipelineExecuteMustBeOnceOnly = "CHR0030";
+
+    /// <summary>
+    /// A reactor declares mutable instance state (a non-readonly field or a settable property).
+    /// </summary>
+    public const string ReactorMustNotHaveMutableState = "CHR0031";
+
+    /// <summary>
+    /// A reactor injects a storage primitive (e.g. IMongoCollection&lt;T&gt;) directly.
+    /// </summary>
+    public const string ReactorMustNotAccessStorageDirectly = "CHR0032";
 }

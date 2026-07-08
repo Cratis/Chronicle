@@ -102,6 +102,69 @@ public static class WellKnownTypes
     public const string IConstraintName = "Cratis.Chronicle.Events.Constraints.IConstraint";
 
     /// <summary>
+    /// The full name of the Key attribute.
+    /// </summary>
+    public const string KeyAttributeName = "Cratis.Chronicle.Keys.KeyAttribute";
+
+    /// <summary>
+    /// The full name of the Subject attribute.
+    /// </summary>
+    public const string SubjectAttributeName = "Cratis.Chronicle.SubjectAttribute";
+
+    /// <summary>
+    /// The full name of the NoAutoMap attribute.
+    /// </summary>
+    public const string NoAutoMapAttributeName = "Cratis.Chronicle.Projections.NoAutoMapAttribute";
+
+    /// <summary>
+    /// The full name of the EventStreamId attribute.
+    /// </summary>
+    public const string EventStreamIdAttributeName = "Cratis.Chronicle.Events.EventStreamIdAttribute";
+
+    /// <summary>
+    /// The full name of the ICanProvideEventStreamId interface.
+    /// </summary>
+    public const string ICanProvideEventStreamIdName = "Cratis.Chronicle.Events.ICanProvideEventStreamId";
+
+    /// <summary>
+    /// The full name of the open generic IMongoCollection interface.
+    /// </summary>
+    public const string IMongoCollectionName = "MongoDB.Driver.IMongoCollection`1";
+
+    /// <summary>
+    /// The open-generic display string of the client EventSourceId&lt;T&gt; type.
+    /// </summary>
+    public const string ClientEventSourceIdGenericDisplay = "Cratis.Chronicle.Events.EventSourceId<T>";
+
+    /// <summary>
+    /// The open-generic display string of the kernel EventSourceId&lt;T&gt; type.
+    /// </summary>
+    public const string KernelEventSourceIdGenericDisplay = "Cratis.Chronicle.Concepts.Events.EventSourceId<T>";
+
+    /// <summary>
+    /// Check whether a type is, or derives from, the strongly-typed <c>EventSourceId&lt;T&gt;</c>.
+    /// </summary>
+    /// <param name="type">The type symbol to check.</param>
+    /// <returns>True if the type is or derives from <c>EventSourceId&lt;T&gt;</c>, false otherwise.</returns>
+    public static bool DerivesFromEventSourceId(ITypeSymbol? type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current is INamedTypeSymbol { IsGenericType: true } named)
+            {
+                var definition = named.OriginalDefinition.ToDisplayString();
+                if (definition == ClientEventSourceIdGenericDisplay ||
+                    definition == KernelEventSourceIdGenericDisplay)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Check if a type has the EventType attribute.
     /// </summary>
     /// <param name="typeSymbol">The type symbol to check.</param>
