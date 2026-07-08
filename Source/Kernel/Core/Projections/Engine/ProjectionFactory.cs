@@ -71,6 +71,99 @@ public class ProjectionFactory(
     }
 
     /// <summary>
+    /// Finds collection (array) read-model properties that AutoMap to nothing — a property Chronicle expects to
+    /// fill by matching an event property of the same name, but for which no source event carries a matching
+    /// property and no explicit mapping exists. Such a property silently projects as an empty collection.
+    /// </summary>
+    /// <param name="projectionDefinition">The <see cref="ProjectionDefinition"/> for the projection level being inspected.</param>
+    /// <param name="currentReadModelSchema">The <see cref="JsonSchema"/> for the read model (or child) at this level.</param>
+    /// <param name="autoMap">The effective <see cref="AutoMap"/> setting for this projection level.</param>
+    /// <param name="noAutoMapProperties">Read model properties explicitly opted out of AutoMap.</param>
+    /// <param name="eventTypeSchemas">The <see cref="EventTypeSchema">schemas</see> for the participating event types.</param>
+    /// <returns>The collection properties that will always project empty; empty when everything maps.</returns>
+    internal static IReadOnlyList<UnmappedCollectionProperty> FindUnmappedCollectionProperties(
+        ProjectionDefinition projectionDefinition,
+        JsonSchema currentReadModelSchema,
+        AutoMap autoMap,
+        IReadOnlySet<string> noAutoMapProperties,
+        IEnumerable<EventTypeSchema> eventTypeSchemas)
+    {
+        // The silent-empty failure only happens when AutoMap is expected to wire the property by name. With
+        // AutoMap disabled the developer has taken over mapping, so an unmapped collection is intentional.
+        if (autoMap != AutoMap.Enabled || projectionDefinition.From.Count == 0 || currentReadModelSchema is null)
+        {
+            return [];
+        }
+
+        var schemaList = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? eventTypeSchemas.ToList();
+        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void CoverFrom(FromDefinition fromDefinition, EventType eventType)
+        {
+            var eventSchema = schemaList.FirstOrDefault(_ => _.Type == eventType)?.Schema;
+            foreach (var mapping in GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventSchema, autoMap, noAutoMapProperties))
+            {
+                covered.Add(mapping.Key.LastSegment.Value);
+            }
+        }
+
+        foreach (var (eventType, fromDefinition) in projectionDefinition.From)
+        {
+            CoverFrom(fromDefinition, eventType);
+        }
+
+        foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
+        {
+            var eventSchema = schemaList.FirstOrDefault(_ => _.Type == eventType)?.Schema;
+            foreach (var mapping in GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventSchema, autoMap, noAutoMapProperties))
+            {
+                covered.Add(mapping.Key.LastSegment.Value);
+            }
+        }
+
+        foreach (var mapping in projectionDefinition.FromEvery.Properties)
+        {
+            covered.Add(mapping.Key.LastSegment.Value);
+        }
+
+        if (projectionDefinition.FromDerivatives is not null)
+        {
+            foreach (var derivative in projectionDefinition.FromDerivatives)
+            {
+                foreach (var eventType in derivative.EventTypes)
+                {
+                    CoverFrom(derivative.From, eventType);
+                }
+            }
+        }
+
+        // Child and nested collections are materialized as their own projection structures, not by name-AutoMap.
+        var structural = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in projectionDefinition.Children.Keys)
+        {
+            structural.Add(key.LastSegment.Value);
+        }
+
+        if (projectionDefinition.Nested is not null)
+        {
+            foreach (var key in projectionDefinition.Nested.Keys)
+            {
+                structural.Add(key.LastSegment.Value);
+            }
+        }
+
+        var eventTypeNames = string.Join(", ", projectionDefinition.From.Keys.Select(_ => _.Id.Value));
+
+        return currentReadModelSchema.Properties.Values
+            .Where(property => property.IsArray &&
+                               !covered.Contains(property.Name) &&
+                               !structural.Contains(property.Name) &&
+                               !noAutoMapProperties.Contains(property.Name))
+            .Select(property => new UnmappedCollectionProperty(property.Name, eventTypeNames))
+            .ToList();
+    }
+
+    /// <summary>
     /// Determines whether an event is subscribed only to be aggregated — every property it maps is a
     /// <c>[Count]</c>/<c>[Increment]</c>/<c>[Decrement]</c>/<c>[Add]</c>/<c>[Subtract]</c> operation and
     /// nothing else. The developer pulled the event in to aggregate it, not to copy values off it, so its
@@ -554,6 +647,12 @@ public class ProjectionFactory(
                     propertyMappersForEveryEventType,
                     subscriptions: projection.Subscriptions);
             }
+        }
+
+        foreach (var unmapped in FindUnmappedCollectionProperties(projectionDefinition, currentReadModelSchema, projection.AutoMap, projection.NoAutoMapProperties, eventTypeSchemas))
+        {
+            var propertyPath = childrenAccessorProperty.IsRoot ? unmapped.Property : $"{childrenAccessorProperty.Path}.{unmapped.Property}";
+            logger.CollectionPropertyAutoMapsToNothing(rootReadModel.DisplayName.ToString(), propertyPath, unmapped.EventTypes);
         }
     }
 
