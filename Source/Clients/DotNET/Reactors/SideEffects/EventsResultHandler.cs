@@ -22,8 +22,9 @@ public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHan
     /// <inheritdoc/>
     public async Task<Result<ReactorSideEffectFailure>> Handle(ReactorContext reactorContext, IEventStore eventStore, object value)
     {
+        var eventSourceId = reactorContext.GetEventSourceId();
         var result = await eventStore.EventLog.AppendMany(
-            reactorContext.GetEventSourceId(),
+            eventSourceId,
             (IEnumerable<object>)value,
             reactorContext.GetEventStreamType(),
             reactorContext.GetEventStreamId(),
@@ -35,6 +36,6 @@ public class EventsResultHandler(IEventTypes eventTypes) : IReactorSideEffectHan
             return Result.Success<ReactorSideEffectFailure>();
         }
 
-        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
+        return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, [eventSourceId]));
     }
 }

@@ -47,13 +47,13 @@ public class MixedSideEffectsResultHandler(IEventTypes eventTypes) : IReactorSid
                 EventStreamId = eventStreamId,
                 EventSourceType = eventSourceType,
                 Subject = subject
-            });
+            }).ToList();
 
         var result = await eventStore.EventLog.AppendMany(events);
 
         if (!result.IsSuccess)
         {
-            return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result));
+            return Result.Failed(ReactorSideEffectFailure.FromAppendResult(result, events.Select(@event => @event.EventSourceId)));
         }
 
         return Result.Success<ReactorSideEffectFailure>();

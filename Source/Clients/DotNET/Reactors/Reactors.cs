@@ -492,7 +492,10 @@ public class Reactors : IReactors
             }
             else
             {
-                _logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, string.Join(Environment.NewLine, exceptionMessages));
+                var targetEventSourceIds = invocationResult.SideEffectFailure is not null
+                    ? string.Join(", ", invocationResult.SideEffectFailure.GetTargetEventSourceIds())
+                    : string.Empty;
+                _logger.ReactorSideEffectAppendFailed(eventTypeId, handler.Id, targetEventSourceIds, string.Join(Environment.NewLine, exceptionMessages));
             }
         }
 
