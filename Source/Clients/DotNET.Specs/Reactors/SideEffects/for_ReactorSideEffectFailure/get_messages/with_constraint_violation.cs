@@ -10,7 +10,7 @@ public class with_constraint_violation : Specification
     void Because()
     {
         var failure = new ReactorSideEffectFailure(
-            [new AppendFailure([new ReactorConstraintViolation("SomeEvent", "must be unique")], false, [])]);
+            [new AppendFailure([new ReactorConstraintViolation("SomeEvent", "must be unique")], false, [], [])]);
 
         _result = failure.GetMessages().ToArray();
     }

@@ -11,8 +11,8 @@ public class with_multiple_append_failures : Specification
     {
         var failure = new ReactorSideEffectFailure(
             [
-                new AppendFailure([new ReactorConstraintViolation("FirstEvent", "first failed")], false, []),
-                new AppendFailure([], true, ["second failed"])
+                new AppendFailure([new ReactorConstraintViolation("FirstEvent", "first failed")], false, [], []),
+                new AppendFailure([], true, ["second failed"], [])
             ]);
 
         _result = failure.GetMessages().ToArray();

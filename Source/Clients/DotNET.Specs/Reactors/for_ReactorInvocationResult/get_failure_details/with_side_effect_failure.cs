@@ -12,7 +12,7 @@ public class with_side_effect_failure : Specification
     void Because()
     {
         var sideEffectFailure = new ReactorSideEffectFailure(
-            [new AppendFailure([new ReactorConstraintViolation("SomeEvent", "not unique")], false, [])]);
+            [new AppendFailure([new ReactorConstraintViolation("SomeEvent", "not unique")], false, [], [])]);
 
         _result = ReactorInvocationResult.FromSideEffectFailure(sideEffectFailure).GetFailureDetails();
     }

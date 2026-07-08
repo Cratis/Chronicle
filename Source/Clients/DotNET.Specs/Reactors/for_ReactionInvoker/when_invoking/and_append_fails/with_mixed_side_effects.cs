@@ -9,8 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Reactors.for_ObserverInvoker.when_invoking.and_append_fails;
 
-public class with_event_for_event_source_id : Specification
+public class with_mixed_side_effects : Specification
 {
+    static readonly EventSourceId _explicitEventSourceId = EventSourceId.New();
+
     ReactorInvocationResult _result;
     IReactorMiddlewares _middlewares;
     ReactorInvoker _invoker;
@@ -18,13 +20,13 @@ public class with_event_for_event_source_id : Specification
     IEventLog _eventLog;
     EventContext _eventContext;
     AppendManyResult _failedAppendResult;
-    EventSourceId _targetEventSourceId;
+    EventSourceId _contextEventSourceId;
 
     void Establish()
     {
-        _targetEventSourceId = EventSourceId.New();
         var eventTypes = new EventTypesForSpecifications([typeof(MyEvent), typeof(MyOutboundEvent)]);
         _middlewares = Substitute.For<IReactorMiddlewares>();
+        _contextEventSourceId = EventSourceId.New();
 
         _eventLog = Substitute.For<IEventLog>();
         _eventStore = Substitute.For<IEventStore>();
@@ -43,44 +45,39 @@ public class with_event_for_event_source_id : Specification
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(_failedAppendResult);
 
-        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new EventForEventSourceIdResultHandler()]));
-        var reactor = new ReactorWithEventForEventSourceIdReturnType(_targetEventSourceId);
+        var sideEffectHandlers = new ReactorSideEffectHandlers(new KnownInstancesOf<IReactorSideEffectHandler>([new MixedSideEffectsResultHandler(eventTypes)]));
+        var reactor = new ReactorWithMixedSideEffectsReturnType();
 
         _invoker = new ReactorInvoker(
             eventTypes,
             _middlewares,
-            typeof(ReactorWithEventForEventSourceIdReturnType),
-            new ActivatedArtifact(reactor, typeof(ReactorWithEventForEventSourceIdReturnType), Substitute.For<ILogger<ActivatedArtifact>>()),
+            typeof(ReactorWithMixedSideEffectsReturnType),
+            new ActivatedArtifact(reactor, typeof(ReactorWithMixedSideEffectsReturnType), Substitute.For<ILogger<ActivatedArtifact>>()),
             Substitute.For<ILogger<ReactorInvoker>>(),
             sideEffectHandlers,
             _eventStore,
             ReactorContextValuesBuilders.ForSpecifications());
 
-        _eventContext = EventContext.EmptyWithEventSourceId(EventSourceId.New());
+        _eventContext = EventContext.EmptyWithEventSourceId(_contextEventSourceId);
     }
 
     async Task Because() => _result = await _invoker.Invoke(new MyEvent(), _eventContext);
 
     [Fact] void should_fail() => _result.IsFailed.ShouldBeTrue();
     [Fact] void should_have_side_effect_failure() => _result.SideEffectFailure.ShouldNotBeNull();
-    [Fact] void should_have_append_failure() => _result.SideEffectFailure!.AppendFailures.Count().ShouldEqual(1);
-    [Fact] void should_have_constraint_violation() => _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.Count().ShouldEqual(1);
-    [Fact] void should_include_constraint_violation_details()
-    {
-        var violation = _result.SideEffectFailure!.AppendFailures.First().ConstraintViolations.First();
-        violation.EventTypeId.ShouldEqual("MyOutboundEvent");
-        violation.Message.ShouldEqual("Constraint violated");
-    }
+    [Fact] void should_capture_both_target_event_source_ids() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().Count().ShouldEqual(2);
+    [Fact] void should_capture_the_bare_events_triggering_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_contextEventSourceId);
+    [Fact] void should_capture_the_explicit_target_event_source_id() =>
+        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_explicitEventSourceId);
 
-    [Fact] void should_capture_only_the_target_event_source_id() =>
-        _result.SideEffectFailure!.GetTargetEventSourceIds().Count().ShouldEqual(1);
-    [Fact] void should_capture_the_target_event_source_id() =>
-        _result.SideEffectFailure!.GetTargetEventSourceIds().ShouldContain(_targetEventSourceId);
-    [Fact] void should_include_target_event_source_id_in_messages() =>
-        _result.SideEffectFailure!.GetMessages().ShouldContain($"Append failure 1: Failed appending to event source id(s) '{_targetEventSourceId}'");
-
-    class ReactorWithEventForEventSourceIdReturnType(EventSourceId targetEventSourceId) : IReactor
+    class ReactorWithMixedSideEffectsReturnType : IReactor
     {
-        public EventForEventSourceId Handle(MyEvent @event) => new(targetEventSourceId, new MyOutboundEvent());
+        public IEnumerable<object> Handle(MyEvent @event) =>
+        [
+            new MyOutboundEvent(),
+            new EventForEventSourceId(_explicitEventSourceId, new MyOutboundEvent())
+        ];
     }
 }
