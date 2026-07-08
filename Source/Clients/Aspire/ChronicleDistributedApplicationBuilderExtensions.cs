@@ -49,8 +49,7 @@ public static class ChronicleDistributedApplicationBuilderExtensions
             .AddResource(resource)
             .WithImage(ChronicleContainerImageTags.Image, imageTag)
             .WithImageRegistry(ChronicleContainerImageTags.Registry)
-            .WithHttpEndpoint(targetPort: ChronicleResource.DefaultGrpcPort, name: ChronicleContainerImageTags.GrpcEndpointName)
-            .WithHttpEndpoint(targetPort: ChronicleResource.DefaultManagementPort, name: ChronicleContainerImageTags.ManagementEndpointName);
+            .WithHttpEndpoint(targetPort: ChronicleResource.DefaultGrpcPort, name: ChronicleContainerImageTags.GrpcEndpointName);
 
         if (configure is not null)
         {

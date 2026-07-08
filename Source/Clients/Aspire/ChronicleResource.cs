@@ -12,24 +12,14 @@ namespace Cratis.Chronicle.Aspire;
 public class ChronicleResource(string name) : ContainerResource(name), IResourceWithConnectionString
 {
     /// <summary>
-    /// Gets the default gRPC port for the Chronicle server.
+    /// Gets the default port for the Chronicle server — serves gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1).
     /// </summary>
     public const int DefaultGrpcPort = 35000;
-
-    /// <summary>
-    /// Gets the default management API port for the Chronicle server.
-    /// </summary>
-    public const int DefaultManagementPort = 8080;
 
     /// <summary>
     /// Gets the gRPC endpoint reference.
     /// </summary>
     public EndpointReference GrpcEndpoint => new(this, ChronicleContainerImageTags.GrpcEndpointName);
-
-    /// <summary>
-    /// Gets the management endpoint reference.
-    /// </summary>
-    public EndpointReference ManagementEndpoint => new(this, ChronicleContainerImageTags.ManagementEndpointName);
 
     /// <inheritdoc/>
     public ReferenceExpression ConnectionStringExpression =>

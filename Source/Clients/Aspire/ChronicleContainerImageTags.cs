@@ -39,11 +39,6 @@ public static class ChronicleContainerImageTags
     public const string GrpcEndpointName = "grpc";
 
     /// <summary>
-    /// Name of the management HTTP endpoint.
-    /// </summary>
-    public const string ManagementEndpointName = "management";
-
-    /// <summary>
     /// Environment variable key for the Chronicle storage type (e.g. <c>MongoDB</c>).
     /// Maps to <c>Cratis:Chronicle:Storage:Type</c> in the Chronicle server configuration.
     /// </summary>
