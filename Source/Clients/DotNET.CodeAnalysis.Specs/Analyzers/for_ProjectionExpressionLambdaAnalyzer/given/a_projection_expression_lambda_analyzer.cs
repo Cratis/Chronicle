@@ -22,6 +22,8 @@ public class a_projection_expression_lambda_analyzer : Specification
             "    public interface IFromBuilder<TReadModel, TEvent>",
             "    {",
             "        ISetBuilder<TReadModel, TEvent, TProperty> Set<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
+            "        IFromBuilder<TReadModel, TEvent> UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> accessor);",
+            "        IFromBuilder<TReadModel, TEvent> IdentifiedBy<TProperty>(Expression<Func<TReadModel, TProperty>> accessor);",
             "    }",
             "    public interface IProjectionBuilderFor<TReadModel>",
             "    {",
