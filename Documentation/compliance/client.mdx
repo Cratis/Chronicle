@@ -14,7 +14,7 @@ Property-level PII annotation (Option 1) is real in Kotlin and Elixir too — se
 
 Apply `[PII]` directly to individual properties on your event records. This is the simplest starting point and works well when a value is PII only in the context of one specific event.
 
-<ChronicleClientTabs snippet="compliance/client/property-annotation" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="compliance/client/property-annotation" />
 
 `FirstName` and `LastName` are encrypted when the event is written. `Department` and `StartDate` are stored as plaintext.
 
@@ -34,11 +34,11 @@ The main drawback of property-level annotation is that you must remember to add 
 
 Apply `[PII]` to a `ConceptAs<T>` concept type. Chronicle then encrypts every event property that uses that type, automatically, across all events.
 
-<ChronicleClientTabs snippet="compliance/client/concept-annotation" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="compliance/client/concept-annotation" />
 
 Any event that uses `PersonName` is automatically encrypted — no further annotation is needed:
 
-<ChronicleClientTabs snippet="compliance/client/concept-usage" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/client/concept-usage" />
 
 > [!TIP]
 > For the full `ConceptAs<T>` declaration pattern and placement rules, see [Applying PII to ConceptAs types](pii-with-concepts) and <xref:Fundamentals.Concepts>.
@@ -57,13 +57,13 @@ This is the **recommended approach** for any value that is personal by nature.
 
 The two approaches complement each other. Use concept types for inherently personal domain values, and use property-level annotation for one-off cases where creating a concept type is not warranted.
 
-<ChronicleClientTabs snippet="compliance/client/combining" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/client/combining" />
 
 ## EventSourceId cannot be marked PII
 
 Do not apply `[PII]` to types that inherit from `EventSourceId` or `EventSourceId<T>`. Chronicle throws `PIINotSupportedOnEventSourceId` because event source identifiers are required for key lookup and cannot be encrypted.
 
-<ChronicleClientTabs snippet="compliance/client/event-source-id-restriction" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/client/event-source-id-restriction" />
 
 If the identifier itself is sensitive, use a non-sensitive surrogate key as the event source identifier (a randomly generated `Guid` works well) and store the sensitive value in a `[PII]`-marked event property.
 
@@ -71,6 +71,6 @@ If the identifier itself is sensitive, use a non-sensitive surrogate key as the 
 
 Compliance support is registered with a single extension method in your ASP.NET Core setup:
 
-<ChronicleClientTabs snippet="compliance/client/registering-compliance" clients="csharp" />
+<ChronicleClientTabs snippet="compliance/client/registering-compliance" />
 
 This registers `PIIMetadataProvider` and all supporting infrastructure needed for the kernel to discover and encrypt PII properties.

@@ -10,7 +10,7 @@ By default, Chronicle sets both `MaxReceiveMessageSize` and `MaxSendMessageSize`
 
 You can configure the message sizes when creating a `ChronicleClient` or through options:
 
-<ChronicleClientTabs snippet="configuration/grpc-message-size/configure" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/grpc-message-size/configure" />
 
 ## Configuration via appsettings.json
 
@@ -58,4 +58,4 @@ This indicates that the response from the server exceeds `MaxReceiveMessageSize`
 
 Setting either property to `null` will use the gRPC default (4 MB), which is generally not recommended for Chronicle applications:
 
-<ChronicleClientTabs snippet="configuration/grpc-message-size/null-values" clients="csharp" />
+<ChronicleClientTabs snippet="configuration/grpc-message-size/null-values" />

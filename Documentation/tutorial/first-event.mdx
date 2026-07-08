@@ -11,7 +11,7 @@ Your instinct, coming from most databases, is probably to create a `Book` row an
 
 So let's name it. A `BookAdded` event, as a `record` marked with `[EventType]`:
 
-<ChronicleClientTabs snippet="tutorial/first-event/book-added" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="tutorial/first-event/book-added" />
 
 A couple of things worth noticing here:
 
@@ -22,7 +22,7 @@ A couple of things worth noticing here:
 
 Every event is about *something* — here, a specific book. Chronicle calls that the **event source**, and the events that share a source form that book's own little stream of history. In C#, we'll identify a book with a strongly-typed id rather than a bare `Guid`, so the compiler stops us from ever mixing a book's id up with, say, a member's:
 
-<ChronicleClientTabs snippet="tutorial/first-event/book-id" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="tutorial/first-event/book-id" />
 
 By inheriting from `EventSourceId<Guid>`, `BookId` becomes a specialized concept — a `ConceptAs<>` targeting `EventSourceId` — so it converts to and from the stream key automatically: you hand a `BookId` straight to Chronicle, no ceremony. And because the *type itself* says "I am an event source id", conventions elsewhere in the stack pick it up — [Arc](/arc/), for instance, recognizes an `EventSourceId`-derived parameter on a command and resolves which stream to write to without any wiring from you. One small record, and the whole stack knows what a book's identity is. The [event source concept](../concepts/event-source.md) goes deeper on how these per-thing streams of facts work.
 
@@ -32,7 +32,7 @@ Kotlin, Java, Elixir, and TypeScript don't currently have an equivalent typed-id
 
 Now the moment itself. With a `ChronicleClient` connected to your event store, append the event against the book's id (in C#, the strongly-typed `BookId`; in the other clients, a plain string you generate yourself):
 
-<ChronicleClientTabs snippet="tutorial/first-event/append" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="tutorial/first-event/append" />
 
 Run it. Nothing dramatic appears on screen — and that's exactly right. Behind that one line, Chronicle validated the event against its registered schema, assigned it the next sequence number, and committed it to the **event log** — permanently, and in order. The fact is now part of your system's history; nothing will ever quietly overwrite it.
 

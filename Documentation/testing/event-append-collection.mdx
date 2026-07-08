@@ -28,7 +28,7 @@ collection definition so every test class in the project shares one `ChronicleIn
 `Specification` convenience base that closes the generic `Specification<TChronicleFixture>` over
 your fixture type:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" />
 
 Every other example on this page builds on this same setup.
 
@@ -37,7 +37,7 @@ Every other example on this page builds on this same setup.
 Create a scope immediately before the operation under test so no earlier events are captured. Dispose
 it when the operation is done. The recommended pattern, on a `given` context class:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/scope-lifetime" />
 
 Disposal unsubscribes the collection immediately. Any appends that occur after disposal are not
 captured, which prevents tests sharing a fixture from interfering with each other.
@@ -81,13 +81,13 @@ full outcome of the operation:
 Pairing the `given` context above with a `Given<TSetup>`-derived spec class gives you access to the
 collected events through `Context`:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/single-event" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/single-event" />
 
 ### Multiple events
 
 When several events land in the same collection scope, use LINQ to locate the one you want:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/multiple-events" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/multiple-events" />
 
 ## Waiting for Asynchronous Appends
 
@@ -95,15 +95,15 @@ When a reactor appends events after handling an incoming event, those appends ha
 on the server. Use `WaitForCount()` to wait for the expected number of events to arrive before
 asserting. The events and reactor:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/shipment-events-and-reactor" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/shipment-events-and-reactor" />
 
 The shared `given` context:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/shipment-given-context" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/shipment-given-context" />
 
 The spec, waiting for both the original event and the reactor's follow-up to be captured:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/shipment-spec" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/shipment-spec" />
 
 `WaitForCount` accepts an optional `TimeSpan` timeout (default: 5 seconds) and throws
 `TimeoutException` if the expected count is not reached in time. `WaitTillActive()` ensures the
@@ -114,17 +114,17 @@ reactor is registered and listening on the server before the test appends the tr
 When a reactor appends directly and the append is rejected by a constraint, the violation is captured
 on the `AppendedEventWithResult.Result` instead of throwing. The events, constraint, and reactor:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/violation-events-and-reactor" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/violation-events-and-reactor" />
 
 The shared `given` context:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/violation-given-context" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/violation-given-context" />
 
 The spec appends the same unique value from two different event sources — the reactor's second
 follow-up violates the uniqueness constraint, so `HasConstraintViolations` is `true` and `IsSuccess`
 is `false` for that entry, while the append itself still completes and is captured in the collection:
 
-<ChronicleClientTabs snippet="testing/event-append-collection/violation-spec" clients="csharp" />
+<ChronicleClientTabs snippet="testing/event-append-collection/violation-spec" />
 
 ## Full Example
 

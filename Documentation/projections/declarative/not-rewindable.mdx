@@ -10,7 +10,7 @@ Marking a projection as not-rewindable is currently supported in C# and TypeScri
 
 Use `NotRewindable()` to mark a projection as forward-only:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/basic" />
 
 This projection:
 
@@ -23,13 +23,13 @@ This projection:
 
 The read model can include timestamp and audit information:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/read-model" />
 
 ## Event definitions
 
 Events should be designed for forward-only processing:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/events" />
 
 ## How it works
 
@@ -47,19 +47,19 @@ When a projection is marked as `NotRewindable()`:
 
 Perfect for audit logs where you want to preserve the exact timing and sequence:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/audit-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/audit-use-case" />
 
 ### Performance monitoring
 
 For real-time performance metrics that don't need historical accuracy:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/performance-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/performance-use-case" />
 
 ### Financial transactions
 
 For append-only financial records where replay could cause confusion:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/financial-use-case" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/financial-use-case" />
 
 ## When to use NotRewindable
 
@@ -86,7 +86,7 @@ Avoid `NotRewindable()` when:
 
 NotRewindable can be combined with other projection features:
 
-<ChronicleClientTabs snippet="projections/declarative/not-rewindable/combined-features" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/not-rewindable/combined-features" />
 
 This combines non-rewindable behavior with event sequence specification, passive mode, and event-context timestamp mapping.
 

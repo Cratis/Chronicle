@@ -32,7 +32,7 @@ This allows teams using SQL databases (SQL Server, PostgreSQL, SQLite) to take a
 
 Set `DefaultSinkTypeId` in `ChronicleOptions`:
 
-<ChronicleClientTabs snippet="sinks/index/enable-sql-sink" clients="csharp" />
+<ChronicleClientTabs snippet="sinks/index/enable-sql-sink" />
 
 Or in `appsettings.json`:
 
@@ -50,7 +50,7 @@ Or in `appsettings.json`:
 
 The SQL sink is provided by the `Cratis.Chronicle.Storage.Sql` NuGet package. Add it to your Kernel host project and register it in the `IChronicleBuilder`:
 
-<ChronicleClientTabs snippet="sinks/index/register-sql-storage" clients="csharp" />
+<ChronicleClientTabs snippet="sinks/index/register-sql-storage" />
 
 Refer to the hosting documentation for full server setup details.
 

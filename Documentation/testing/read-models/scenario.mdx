@@ -24,7 +24,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 ## Basic usage
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/basic" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/basic" />
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to feed events through the read model's projection or reducer in order. The result is stored in `Instance`.
 
@@ -32,13 +32,13 @@ dotnet add package Cratis.Chronicle.Testing
 
 Pass an initial state to the constructor when the read model starts from a non-default baseline:
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/initial-state" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/initial-state" />
 
 ## Injecting dependencies
 
 Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reducer or projection depends on:
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/injecting-dependencies" />
 
 ## Pre-seeding read model instances
 
@@ -46,7 +46,7 @@ Use `Given.ForEventSourceId(id).ReadModel(instance)` to register a pre-built rea
 production code under test that calls `IReadModels.GetInstanceById`. This lets you test a service that
 fetches a read model by ID without replaying events through a full projection:
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/preseeding-instances" />
 
 `scenario.ReadModels` returns an `IReadModels` instance that intercepts `GetInstanceById` for registered
 instances and delegates everything else to the real read model implementation.
@@ -63,15 +63,15 @@ If none are found, `NoReadModelHandlerFound` is thrown.
 
 ## Example: reducer
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/reducer-example" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/reducer-example" />
 
 ## Example: fluent projection
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/fluent-projection-example" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/fluent-projection-example" />
 
 ## Example: model-bound projection
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/model-bound-example" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/model-bound-example" />
 
 ## Child collections
 
@@ -83,13 +83,13 @@ If none are found, `NoReadModelHandlerFound` is thrown.
 
 Both same-event-source children (parent and child events share one event source) and cross-stream children (child events on their own event source, linked with `parentKey`) are supported, and two events carrying the same child key merge into a single child — matching the real sink.
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/children" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/children" />
 
 ## Multiple instances (joins and cross-stream)
 
 `Instance` returns a single threaded result, which is ambiguous when events span more than one event source — for example a `[Join]`, whose join-source event materializes a second instance. For those specs, assert against a specific instance with `InstanceForEventSourceId`, which resolves the intended instance from the sink even when another source's event was seeded first:
 
-<ChronicleClientTabs snippet="testing/read-models/scenario/multiple-instances" clients="csharp" />
+<ChronicleClientTabs snippet="testing/read-models/scenario/multiple-instances" />
 
 `Instances` exposes every materialized instance keyed by its event source id. Both are populated for projections; reducers are single-instance and expose their result through `Instance`.
 

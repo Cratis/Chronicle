@@ -50,7 +50,7 @@ This throws `MissingEventTypeMigrators`.
 
 When a new generation adds a property that did not exist in older events, declare a default value for it in the upcast. Chronicle applies this default to any event stored before the property was introduced.
 
-<ChronicleClientTabs snippet="migrations/validation/default-value" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="migrations/validation/default-value" />
 
 `DefaultValue` tells Chronicle: "if this property is absent from the event when upcasting, fill it with this value." Properties that already carry a value are left unchanged.
 
@@ -72,7 +72,7 @@ Strict validation is **always enforced in the production image** of the Kernel. 
 
 `EnableEventTypeGenerationValidation` defaults to `false` in `ChronicleOptions`, so no extra configuration is needed during early development. When your event schemas are stable, opt into strict validation by setting it to `true`:
 
-<ChronicleClientTabs snippet="migrations/validation/enable-validation" clients="csharp" />
+<ChronicleClientTabs snippet="migrations/validation/enable-validation" />
 
 Alternatively, set it in `appsettings.json` under the `Cratis:Chronicle` section:
 

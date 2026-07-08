@@ -6,13 +6,13 @@ When auto-mapping isn't sufficient, you can explicitly map properties from event
 
 Instead of using `AutoMap()`, use `Set()` methods to explicitly define property mappings:
 
-<ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/set-properties/explicit" />
 
 ## Combining AutoMap with explicit mapping
 
 You can use `AutoMap()` at the top level to automatically map matching properties, then add explicit mappings for specific transformations:
 
-<ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/set-properties/combined-automap" />
 
 `AutoMap()` works recursively, automatically mapping:
 
@@ -26,13 +26,13 @@ You can use `AutoMap()` at the top level to automatically map matching propertie
 
 The read model can have different property names and types than the events:
 
-<ChronicleClientTabs snippet="projections/declarative/set-properties/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/set-properties/read-model" />
 
 ## Event definitions
 
 Events can have different structures than the read model:
 
-<ChronicleClientTabs snippet="projections/declarative/set-properties/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/set-properties/events" />
 
 ## Property mapping options
 

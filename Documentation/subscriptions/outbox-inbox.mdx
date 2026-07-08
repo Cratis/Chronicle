@@ -12,7 +12,7 @@ The outbox exists by convention — you do not need to create it. Append events 
 
 When event store **A** subscribes to event store **B**, Chronicle automatically manages an **inbox** sequence on A for events forwarded from B. The well-known inbox sequence is `EventSequenceId.Inbox`, and the per-source inbox identifier is derived from the source event store name using `EventSequenceId.InboxPrefix`:
 
-<ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-id" clients="csharp" />
+<ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-id" />
 
 `EventSequenceId.InboxPrefix` is a small C#-only convenience constant — the other clients don't have a dedicated helper for it, since the inbox sequence id itself (`"inbox-<source-event-store>"`) is just a plain string wherever event sequence ids are used.
 
@@ -46,7 +46,7 @@ The `EventStoreSubscriptionObserverSubscriber` grain on the Kernel side observes
 
 Client-side observers (reactors, projections, reducers) can target `EventSequenceId.Inbox` to process all events arriving from subscribed sources. The client SDK automatically routes inbox-targeted observers to the correct per-source inbox sequence.
 
-<ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-reactor" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="subscriptions/outbox-inbox/inbox-reactor" />
 
 ## See Also
 

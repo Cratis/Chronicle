@@ -6,7 +6,7 @@ A constant key fixes the read model key to a literal string value, so all events
 
 Use `ConstantKey` on the `[FromEvent]` attribute at the class level to route all matching events to a fixed read model instance:
 
-<ChronicleClientTabs snippet="projections/model-bound/constant-key/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/basic" />
 
 Every `OrderPlaced` event from every event source updates the same `GlobalOrderSummary` instance.
 
@@ -14,7 +14,7 @@ Every `OrderPlaced` event from every event source updates the same `GlobalOrderS
 
 `Count`, `Increment`, and `Decrement` attributes also support `ConstantKey` for collecting events from all event sources into a single document:
 
-<ChronicleClientTabs snippet="projections/model-bound/constant-key/counters" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/counters" />
 
 All three properties converge on the `"metrics"` document regardless of which user or order they come from.
 
@@ -22,12 +22,12 @@ All three properties converge on the `"metrics"` document regardless of which us
 
 You can mix regular key-based events with constant key events on the same read model:
 
-<ChronicleClientTabs snippet="projections/model-bound/constant-key/mixed-keys" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/mixed-keys" />
 
 > **Note:** When `ConstantKey` is set on a counter attribute, it affects *which read model instance the counter updates* — not the key of the read model the attribute belongs to. In this example, `PlatformTotalOrders` would update the document with key `"global-stats"`, not the `UserDashboard` instance.
 
 ## Complete example
 
-<ChronicleClientTabs snippet="projections/model-bound/constant-key/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/constant-key/full-example" />
 
 All events from all users and products accumulate into the single `StoreMetrics` document with key `"store"`.

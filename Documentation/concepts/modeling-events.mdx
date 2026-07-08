@@ -11,19 +11,19 @@ The guiding principle behind all of it: **an event is a fact — an immutable re
 
 An event states what *happened*, so its name is a past-tense verb phrase in the language of the domain: `OrderPlaced`, `AddressChanged`, `PaymentCaptured`, `BookReturned`. Not `CreateOrder` (that's a command — an intent), not `OrderState` (that's a model). If you can't name it in the past tense, it isn't an event yet.
 
-<ChronicleClientTabs snippet="concepts/modeling-events/fact-vs-intent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/modeling-events/fact-vs-intent" />
 
 ## One event, one purpose
 
 Each event captures a single, meaningful change. Resist the "kitchen-sink" event that carries everything about an entity with most fields irrelevant on any given change. Multipurpose events force every consumer to figure out *which* change actually happened.
 
-<ChronicleClientTabs snippet="concepts/modeling-events/single-purpose" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/modeling-events/single-purpose" />
 
 ## Never nullable — if it's optional, you need a second event
 
 This is the rule that trips up newcomers most, and it's the most important. An event records what *was true* at the moment it happened. A nullable property means "this fact sometimes didn't happen" — which is a contradiction. If a value is sometimes present and sometimes not, that's **two different facts**, so model two events.
 
-<ChronicleClientTabs snippet="concepts/modeling-events/no-nullable" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/modeling-events/no-nullable" />
 
 ## Capture the decision, not the field write
 

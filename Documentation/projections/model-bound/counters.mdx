@@ -6,7 +6,7 @@ Model-bound projections provide three counter operations for tracking occurrence
 
 The `Increment` attribute increments a numeric property when an event occurs. This is useful for tracking counters that increase with specific events.
 
-<ChronicleClientTabs snippet="projections/model-bound/counters/basic-increment" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/counters/basic-increment" />
 
 Each time a `UserLoggedIn` event occurs, `LoginCount` is incremented by 1.
 
@@ -14,7 +14,7 @@ Each time a `UserLoggedIn` event occurs, `LoginCount` is incremented by 1.
 
 The `Decrement` attribute decrements a numeric property when an event occurs. This is useful for tracking decreasing counters.
 
-<ChronicleClientTabs snippet="projections/model-bound/counters/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/counters/increment-decrement" />
 
 When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a `UserDisconnected` event occurs, it decreases by 1.
 
@@ -22,19 +22,19 @@ When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a 
 
 The `Count` attribute counts the total number of times an event occurs. Unlike Increment, Count doesn't increment from a current value—it maintains an absolute count.
 
-<ChronicleClientTabs snippet="projections/model-bound/counters/count" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/counters/count" />
 
 ## Multiple Events
 
 You can use multiple attributes on the same property to respond to different events:
 
-<ChronicleClientTabs snippet="projections/model-bound/counters/combined" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/counters/combined" />
 
 ## Complete Example
 
 Here's a complete example tracking various metrics:
 
-<ChronicleClientTabs snippet="projections/model-bound/counters/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/counters/full-example" />
 
 ## Counter vs Count
 

@@ -6,7 +6,7 @@ Model-bound projections support joining data from different events using the `Jo
 
 The `Join` attribute maps properties from events that are related through a common key:
 
-<ChronicleClientTabs snippet="projections/model-bound/joins/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/joins/basic" />
 
 ### Parameters
 
@@ -17,25 +17,25 @@ The `Join` attribute maps properties from events that are related through a comm
 
 Joins work within child collections. When used in children, the `on` parameter is optional if the child has an `identifiedBy` property:
 
-<ChronicleClientTabs snippet="projections/model-bound/joins/children" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/joins/children" />
 
 ## Multiple Joins
 
 You can join with multiple different events:
 
-<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-joins" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-joins" />
 
 ## Recursive Join Processing
 
 Join attributes on related types are processed recursively:
 
-<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-join-sources" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/joins/multiple-join-sources" />
 
 ## Complete Example
 
 Here's a comprehensive example showing joins at multiple levels:
 
-<ChronicleClientTabs snippet="projections/model-bound/joins/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/joins/full-example" />
 
 ## Event Processing Flow
 

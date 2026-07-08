@@ -24,7 +24,7 @@ The change carries the current read model state, not the previous state. If you 
 
 The read model type must be registered before you subscribe.
 
-<ChronicleClientTabs snippet="read-models/watching-read-models/basic" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="read-models/watching-read-models/basic" />
 
 Dispose, cancel, or break out of the subscription when the caller no longer needs updates. Long-lived subscriptions should be owned by a service with an explicit lifetime.
 
@@ -32,7 +32,7 @@ Dispose, cancel, or break out of the subscription when the caller no longer need
 
 Filter as close to the subscription as the client allows. This keeps application code focused on the state changes it actually cares about.
 
-<ChronicleClientTabs snippet="read-models/watching-read-models/filtering" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="read-models/watching-read-models/filtering" />
 
 Filtering happens client-side. If the client subscribes to a busy read model, the server still sends matching change notifications for that read model type.
 

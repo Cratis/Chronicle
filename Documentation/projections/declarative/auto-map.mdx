@@ -8,7 +8,7 @@ Use explicit mapping when the event shape and read model shape intentionally dif
 
 When event and read model property names match, declare the events and let AutoMap fill the matching properties.
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/basic" />
 
 ## How AutoMap Works
 
@@ -27,7 +27,7 @@ AutoMap is evaluated when the projection definition is built. It does not add a 
 
 Disable AutoMap when a projection should map only the properties you name explicitly.
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/disable" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/disable" />
 
 ## Re-enable AutoMap In A Child Scope
 
@@ -37,25 +37,25 @@ Calling the AutoMap enable method is redundant at the top level. It is useful in
 This scoped re-enable only makes sense in a client that supports child projection scopes at all. Kotlin, Java, Elixir, and TypeScript do not yet support declarative child collections (see [Children](./children)), so there is no child builder scope to re-enable AutoMap on. This example is C#-only until child projection scopes land elsewhere.
 :::
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/re-enable-child-scope" />
 
 ## Combine With Explicit Mappings
 
 AutoMap and explicit mappings can be used together. Let convention handle the properties that match, and map the exceptional properties directly.
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/explicit-mappings" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/explicit-mappings" />
 
 ## AutoMap With Joins
 
 Joined events can also contribute matching properties through AutoMap. Use the join condition to connect the joined event to the read model; matching joined-event properties can then flow into the model.
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/join" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/join" />
 
 ## Aggregate-Only Events
 
 An event a projection subscribes to **only to aggregate** — `Count`, `Increment`, `Decrement`, `Add`, or `Subtract` — does not contribute its other properties to AutoMap. Aggregating an event does not copy its unrelated fields onto the read model, so a property on it that happens to share a name with one you set from another event cannot overwrite that value. You do not need to disable AutoMap for this — it is the default behavior.
 
-<ChronicleClientTabs snippet="projections/declarative/auto-map/aggregate-only" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/auto-map/aggregate-only" />
 
 ## When To Use AutoMap
 

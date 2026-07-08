@@ -59,13 +59,13 @@ graph TD
 
 Structure your application to work naturally with eventual consistency:
 
-<ChronicleClientTabs snippet="projections/eventual-consistency/design-for-async" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/eventual-consistency/design-for-async" />
 
 ### 2. Watch Projection Changes
 
 Chronicle provides a `.Watch<TReadModel>()` API that allows you to observe projection changes in real-time:
 
-<ChronicleClientTabs snippet="projections/eventual-consistency/watch" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/eventual-consistency/watch" />
 
 ### 3. Monitor Database Changes
 
@@ -79,7 +79,7 @@ For applications that need to respond to database changes from external sources,
 
 Separate operations that create data from those that read data:
 
-<ChronicleClientTabs snippet="projections/eventual-consistency/cqs" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/eventual-consistency/cqs" />
 
 ## Best Practices
 

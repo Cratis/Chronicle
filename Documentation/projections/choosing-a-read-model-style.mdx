@@ -9,18 +9,18 @@ problems read better in different shapes.
 
 Let's keep one library read model up to date. A book is registered, borrowed, and returned:
 
-<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/events" />
 
 The read model we want is deliberately small:
 
-<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/read-model" />
 
 ## Model-bound projection: put the mapping on the model
 
 For simple property mapping, model-bound projections are the shortest route. The read model declares how
 events populate it:
 
-<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/model-bound" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/model-bound" />
 
 Chronicle discovers the projection from the attributes. There is no separate projection class, and the
 mapping sits directly next to the read model the UI or query will read. Reach for this first when the
@@ -31,7 +31,7 @@ events set, add, subtract, count, or clear properties in a way the attributes ca
 When the mapping needs to be more explicit, keep the read model clean and define the projection with
 `IProjectionFor<T>`:
 
-<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/fluent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/fluent" />
 
 This produces the same `BookStatus` documents as the model-bound version, but the trade-off is different:
 more code, more room for explicit mapping, and the read model stays free of Chronicle attributes. Use it
@@ -43,7 +43,7 @@ logic that would make attributes hard to scan.
 Reducers build read models too, but the shape is imperative: Chronicle passes the event and the current
 state into a method, and you return the next state.
 
-<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/reducer" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/choosing-a-read-model-style/reducer" />
 
 > **TypeScript note:** the C# reducer also receives the `EventContext` (used above to read the event source ID into `Id`) — the TypeScript reducer's handler methods only receive `(event, currentState)`, with no context parameter, so the TypeScript example omits the `Id` field.
 

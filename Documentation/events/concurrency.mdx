@@ -25,13 +25,13 @@ Chronicle uses the following formalized, indexed metadata tags to scope concurre
 
 The most basic form of concurrency control scopes to a specific sequence number for an event source:
 
-<ChronicleClientTabs snippet="events/concurrency/basic" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="events/concurrency/basic" />
 
 ### Using ConcurrencyScopeBuilder
 
 For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently construct concurrency scopes:
 
-<ChronicleClientTabs snippet="events/concurrency/builder" clients="csharp,elixir" />
+<ChronicleClientTabs snippet="events/concurrency/builder" />
 
 ## Scoping by Event Metadata Tags
 
@@ -39,37 +39,37 @@ For more complex scenarios, use the `ConcurrencyScopeBuilder` to fluently constr
 
 You can scope concurrency to specific event source types and stream types:
 
-<ChronicleClientTabs snippet="events/concurrency/source-and-stream-type" clients="csharp,elixir" />
+<ChronicleClientTabs snippet="events/concurrency/source-and-stream-type" />
 
 ### EventStreamId
 
 Use event stream IDs to scope concurrency to specific streams within a stream type:
 
-<ChronicleClientTabs snippet="events/concurrency/stream-id" clients="csharp,elixir" />
+<ChronicleClientTabs snippet="events/concurrency/stream-id" />
 
 ### Event Types
 
 Scope concurrency to specific event types to allow concurrent operations on different types of events:
 
-<ChronicleClientTabs snippet="events/concurrency/event-types" clients="csharp,elixir" />
+<ChronicleClientTabs snippet="events/concurrency/event-types" />
 
 ## AppendMany with Concurrency Scopes
 
 When appending multiple events, you can specify different concurrency scopes for different event sources:
 
-<ChronicleClientTabs snippet="events/concurrency/append-many" clients="csharp,elixir" />
+<ChronicleClientTabs snippet="events/concurrency/append-many" />
 
 ## Event Source Operations with Concurrency
 
 You can also use concurrency scopes with event source operations:
 
-<ChronicleClientTabs snippet="events/concurrency/for-event-source-operations" clients="csharp" />
+<ChronicleClientTabs snippet="events/concurrency/for-event-source-operations" />
 
 ## Handling Concurrency Violations
 
 When a concurrency violation occurs, Chronicle will return a `ConcurrencyViolation` in the append result:
 
-<ChronicleClientTabs snippet="events/concurrency/handling-violations" clients="csharp" />
+<ChronicleClientTabs snippet="events/concurrency/handling-violations" />
 
 ## Concurrency Strategies
 
@@ -79,7 +79,7 @@ Chronicle provides built-in concurrency strategies:
 
 This strategy gets the current tail sequence number and uses it as the expected sequence number:
 
-<ChronicleClientTabs snippet="events/concurrency/strategies" clients="csharp" />
+<ChronicleClientTabs snippet="events/concurrency/strategies" />
 
 > **Note**: `[EventStreamType]` on a reactor or reducer scopes which events an *observer* receives (see [Filter by event stream type](filtering/by-event-stream-type)) — it does not set the `EventStreamType` used for concurrency scoping on an *append* call. Set `eventStreamType` explicitly on `Append`/`AppendMany`, or through `ConcurrencyScopeBuilder.WithEventStreamType(...)`, when you need concurrency scoped to a specific stream type.
 

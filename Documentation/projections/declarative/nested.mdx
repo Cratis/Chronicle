@@ -10,17 +10,17 @@ Declarative nested-object projections (`Nested()`/`ClearWith()`) are currently a
 
 Use the `Nested()` method with `ClearWith<TEvent>()` to define the nested relationship:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/basic" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/basic" />
 
 ## Read model with a nested property
 
 The nested property must be nullable on the read model:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/read-model" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/read-model" />
 
 ## Event definitions
 
-<ChronicleClientTabs snippet="projections/declarative/nested/events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/events" />
 
 ## How nested objects work
 
@@ -32,7 +32,7 @@ The nested property must be nullable on the read model:
 
 Call `From<TEvent>()` multiple times to update the nested object from several event types:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/multiple-from-events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/multiple-from-events" />
 
 Each `From<TEvent>()` call updates only the properties it explicitly maps or auto-maps — it does not replace the entire nested object.
 
@@ -40,33 +40,33 @@ Each `From<TEvent>()` call updates only the properties it explicitly maps or aut
 
 AutoMap is enabled on the nested builder and inherits from the parent. Properties on the nested read model that share a name with properties on the event are mapped automatically:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/automap" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/automap" />
 
 ## Multiple nested objects
 
 A single projection can have multiple independent nested properties:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/multiple-nested" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/multiple-nested" />
 
 ## Nested within children
 
 You can call `Nested()` from within a `Children()` builder to define a nested object on each child item:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/nested-in-children" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/nested-in-children" />
 
 ## Examples
 
 ### Employee with optional active contract
 
-<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract" />
 
 Events:
 
-<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract-events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/employee-contract-events" />
 
 ### Product with optional promotion
 
-<ChronicleClientTabs snippet="projections/declarative/nested/product-promotion" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/nested/product-promotion" />
 
 ## See Also
 

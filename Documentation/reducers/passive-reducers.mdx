@@ -34,13 +34,13 @@ There are two ways to make a reducer passive:
 
 Set the `isActive` parameter to `false` on the reducer class:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/reducer-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/reducer-attribute" />
 
 ### Option 2: Using the Passive Attribute on the Read Model
 
 Mark the read model class with the `[Passive]` attribute:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/passive-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/passive-attribute" />
 
 **Note:** The `[Passive]` attribute on the read model automatically makes all reducers targeting that read model passive, regardless of individual reducer settings.
 
@@ -60,31 +60,31 @@ This means the `[Passive]` attribute on the read model takes precedence over the
 
 Generate reports only when requested, avoiding the overhead of continuous state maintenance:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/on-demand-reports" />
 
 ### 2. Temporary Analysis
 
 Perform exploratory data analysis without polluting your persistent storage:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/temporary-analysis" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/temporary-analysis" />
 
 ### 3. Historical Snapshots
 
 Compute read model state at specific points in time without maintaining continuous state:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/historical-snapshots" />
 
 ### 4. Development and Testing
 
 During development, you might want to register reducers without activating them:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/development-testing" />
 
 ## Retrieving State from Passive Reducers
 
 Passive reducers compute state on-demand using the same API as active reducers:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/retrieving-state" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/retrieving-state" />
 
 ## Performance Considerations
 
@@ -116,7 +116,7 @@ Passive reducers compute state on-demand using the same API as active reducers:
 
 You can change a reducer from active to passive (or vice versa) by updating the attribute:
 
-<ChronicleClientTabs snippet="reducers/passive-reducers/switching-active-passive" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/passive-reducers/switching-active-passive" />
 
 When you change the `isActive` setting:
 

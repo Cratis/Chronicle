@@ -24,7 +24,7 @@ dotnet add package Cratis.Chronicle.Testing
 
 ## Basic usage
 
-<ChronicleClientTabs snippet="testing/reactors/scenario/basic" clients="csharp" />
+<ChronicleClientTabs snippet="testing/reactors/scenario/basic" />
 
 `Given` is a fluent builder: call `ForEventSource(id)` to specify the event source, then `Events(...)` to route events through the reactor in order.
 
@@ -32,17 +32,17 @@ dotnet add package Cratis.Chronicle.Testing
 
 Pass an `IServiceProvider` to the constructor to supply mocks and stubs that the reactor depends on:
 
-<ChronicleClientTabs snippet="testing/reactors/scenario/injecting-dependencies" clients="csharp" />
+<ChronicleClientTabs snippet="testing/reactors/scenario/injecting-dependencies" />
 
 When no `IServiceProvider` is provided, `ReactorScenario<TReactor>` uses a `DefaultServiceProvider` that constructs the reactor via its default constructor.
 
 ## Example: email notification
 
-<ChronicleClientTabs snippet="testing/reactors/scenario/email-example" clients="csharp" />
+<ChronicleClientTabs snippet="testing/reactors/scenario/email-example" />
 
 ## Example: multiple events across event sources
 
-<ChronicleClientTabs snippet="testing/reactors/scenario/multiple-sources" clients="csharp" />
+<ChronicleClientTabs snippet="testing/reactors/scenario/multiple-sources" />
 
 ## Notes
 

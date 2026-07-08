@@ -6,7 +6,7 @@ A constant key allows all events of a given type to accumulate into a **single**
 
 Use `UsingConstantKey(string value)` to specify a fixed key value for a `from` block. The read model is a normal record or class — the constant key becomes its `_id` in the underlying store:
 
-<ChronicleClientTabs snippet="projections/declarative/constant-key/basic" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/constant-key/basic" />
 
 Every `OrderPlaced` event, from every event source, updates the single `GlobalCounter` instance with the key `"global"`.
 
@@ -16,7 +16,7 @@ Every `OrderPlaced` event, from every event source, updates the single `GlobalCo
 
 Constant keys work with all counting and arithmetic functions, making them ideal for global aggregates. The TypeScript example below tracks only `activeSessions` via `increment()`/`decrement()` — it omits the C# example's `count()`-based `totalUsers`, since `count()` isn't implemented in TypeScript yet:
 
-<ChronicleClientTabs snippet="projections/declarative/constant-key/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/constant-key/increment-decrement" />
 
 ## Constant parent keys
 
@@ -26,7 +26,7 @@ Use `UsingConstantParentKey(string value)` when working with child collections a
 This example depends on declarative child collections, which are currently C#-only (see [Children](./children)). It stays C#-only until child projection scopes are available in the other clients.
 :::
 
-<ChronicleClientTabs snippet="projections/declarative/constant-key/constant-parent-key" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/constant-key/constant-parent-key" />
 
 ## Comparison to other key strategies
 
@@ -40,6 +40,6 @@ This example depends on declarative child collections, which are currently C#-on
 
 ## Full example
 
-<ChronicleClientTabs snippet="projections/declarative/constant-key/multi-event-metrics" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/constant-key/multi-event-metrics" />
 
 This projection collects engagement events from all users and event sources into a single `EngagementMetrics` document with the key `"metrics"`.

@@ -24,7 +24,7 @@ Every snapshot includes:
 
 The read model type must be registered, and the key must identify the read model instance you want to inspect.
 
-<ChronicleClientTabs snippet="read-models/getting-snapshots/basic" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/getting-snapshots/basic" />
 
 Kotlin currently exposes single-instance read-model lookup only, so snapshots are not shown for that client.
 
@@ -32,7 +32,7 @@ Kotlin currently exposes single-instance read-model lookup only, so snapshots ar
 
 Snapshot data is usually most useful when you print or inspect the correlation ID, event count, timestamp, and resulting state together.
 
-<ChronicleClientTabs snippet="read-models/getting-snapshots/analyze" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/getting-snapshots/analyze" />
 
 If you need to compare two states, materialize the snapshot list and compare neighboring entries. Chronicle gives you the timeline; your diagnostic tool decides which properties matter.
 

@@ -23,11 +23,11 @@ The examples below use the [Cratis Specifications](/testing-with-cratis/) style 
 
 `EventScenario` exercises the appending side. Seed pre-existing history with `Given`, append through `EventLog` exactly like production code does, and assert on the `AppendResult`:
 
-<ChronicleClientTabs snippet="scenarios/test-a-slice/append-spec" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/test-a-slice/append-spec" />
 
 Constraints are discovered automatically, the same way the real client discovers them. So given a unique-ISBN constraint (like the one in [Enforce a unique value](./enforce-a-unique-value.md)), seeding a book and appending a duplicate proves the rule fires:
 
-<ChronicleClientTabs snippet="scenarios/test-a-slice/constraint-spec" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/test-a-slice/constraint-spec" />
 
 Beyond `ShouldBeSuccessful`/`ShouldBeFailed` and `ShouldHaveConstraintViolationFor`, there are assertions for concurrency violations and errors — the full family is in [Append result assertions](../testing/events/assertions). Create a fresh `EventScenario` per spec and dispose it; the in-memory log accumulates state across calls on the same instance.
 
@@ -35,7 +35,7 @@ Beyond `ShouldBeSuccessful`/`ShouldBeFailed` and `ShouldHaveConstraintViolationF
 
 `ReadModelScenario<TReadModel>` exercises the deriving side: feed a history of events through the **real projection or reducer engine** and assert on the resulting instance. It auto-detects how the read model is built — reducer, fluent projection, or model-bound attributes:
 
-<ChronicleClientTabs snippet="scenarios/test-a-slice/read-model-spec" clients="csharp" />
+<ChronicleClientTabs snippet="scenarios/test-a-slice/read-model-spec" />
 
 For a read model spec the event history **is** the act — `Given` supplies the input, `Instance` is the output. If the spec fails, your mapping (`[SetFrom<T>]`/`[SetValue<T>]` attributes or reducer logic) is wrong, because the engine applying it is the real one.
 

@@ -18,7 +18,7 @@ Closing a stream is useful when a logical unit of work is complete and no furthe
 
 Call `CompleteStream` on the event log with the stream type and stream identifier you want to close:
 
-<ChronicleClientTabs snippet="closing-streams/index/complete-stream" clients="csharp" />
+<ChronicleClientTabs snippet="closing-streams/index/complete-stream" />
 
 The method returns `Result<EventSequenceNumber, CompleteStreamError>`.
 
@@ -33,6 +33,6 @@ The method returns `Result<EventSequenceNumber, CompleteStreamError>`.
 
 After a stream is closed, any append targeting that stream is rejected with a `StreamClosed` constraint violation:
 
-<ChronicleClientTabs snippet="closing-streams/index/append-rejected" clients="csharp" />
+<ChronicleClientTabs snippet="closing-streams/index/append-rejected" />
 
 The rejection is enforced by the `ClosedStreamConstraintValidator` which is automatically active for every event sequence — no additional configuration is required.

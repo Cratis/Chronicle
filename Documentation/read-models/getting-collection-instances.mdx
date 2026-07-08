@@ -11,7 +11,7 @@ This is a strong-consistency operation. It is also proportional to event history
 
 Use collection replay when the result set is small enough to fit comfortably in memory and the caller needs state that includes every event appended so far.
 
-<ChronicleClientTabs snippet="read-models/getting-collection-instances/basic" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/getting-collection-instances/basic" />
 
 Kotlin currently exposes single-instance read-model lookup only, so collection replay is not shown for that client.
 
@@ -19,7 +19,7 @@ Kotlin currently exposes single-instance read-model lookup only, so collection r
 
 Replay returns every instance. Apply language-native filtering after the read, and keep that in-memory cost in mind.
 
-<ChronicleClientTabs snippet="read-models/getting-collection-instances/filtering" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/getting-collection-instances/filtering" />
 
 For large result sets, query the materialized sink directly or use a product-specific query model instead of replaying everything and filtering afterward.
 
@@ -27,7 +27,7 @@ For large result sets, query the materialized sink directly or use a product-spe
 
 You can cap the number of events Chronicle processes. This can make diagnostics faster, but it can also return incomplete state if the cap cuts off events that matter.
 
-<ChronicleClientTabs snippet="read-models/getting-collection-instances/event-count" clients="csharp,elixir,typescript" />
+<ChronicleClientTabs snippet="read-models/getting-collection-instances/event-count" />
 
 Use an event-count cap for historical analysis, back-testing, or bounded diagnostics. Do not use it when the reader expects the current truth.
 

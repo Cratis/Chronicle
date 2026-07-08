@@ -15,7 +15,7 @@ Every example on this page combines declarative child collections with joins, bo
 
 Use `RemovedWithJoin<>()` in child projections to specify which events should trigger child removal:
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/basic" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/basic" />
 
 In this example:
 
@@ -39,13 +39,13 @@ When using `RemovedWithJoin<>()`:
 
 You can specify which property to use as the key for removal:
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/explicit-keys" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/explicit-keys" />
 
 ## Real-world example: User groups
 
 Consider a system where users can be members of groups, and groups can be deleted:
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/user-groups-example" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/user-groups-example" />
 
 In this example:
 
@@ -54,7 +54,7 @@ In this example:
 
 ## Complex scenario: Project assignments
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/project-assignments-example" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/project-assignments-example" />
 
 This handles three removal scenarios:
 
@@ -64,11 +64,11 @@ This handles three removal scenarios:
 
 ## Read model examples
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/read-models" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/read-models" />
 
 ## Event definitions
 
-<ChronicleClientTabs snippet="projections/declarative/remove-with-join/events" clients="csharp" />
+<ChronicleClientTabs snippet="projections/declarative/remove-with-join/events" />
 
 ## Best practices
 

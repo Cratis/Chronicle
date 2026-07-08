@@ -28,14 +28,14 @@ flowchart TB
 When you don't specify a subject, Chronicle uses the `EventSourceId` as the subject. This is
 the right default for most slices where the aggregate and the subject coincide:
 
-<ChronicleClientTabs snippet="concepts/subject/default" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/subject/default" />
 
 ## Specifying an explicit subject
 
 When the event source is different from the subject, pass `Subject` explicitly. `Subject` has
 an implicit conversion from `EventSourceId`, so mixing the two is painless:
 
-<ChronicleClientTabs snippet="concepts/subject/explicit" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="concepts/subject/explicit" />
 
 `Subject` also converts implicitly from `string` and `Guid`. Kotlin, Java, and TypeScript don't currently expose a `subject` append option at all — only C# and Elixir do.
 
@@ -45,7 +45,7 @@ Rather than threading `subject` through every call site, decorate the relevant p
 event type with `[Subject]`. Chronicle will read the property value automatically when no
 explicit subject is provided:
 
-<ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="concepts/subject/implicit-with-attribute" />
 
 An explicit `subject` argument always takes precedence over a `[Subject]` property. This declarative form is C#-only — Elixir requires passing `subject:` explicitly on every append (shown above); Kotlin, Java, and TypeScript don't support a subject at all yet.
 

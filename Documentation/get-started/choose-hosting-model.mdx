@@ -291,7 +291,7 @@ dotnet add package Cratis.Chronicle.Aspire
 For development, one line gives you the same batteries-included kernel as the `docker run` above —
 `AddCratisChronicle()` uses the development image with embedded MongoDB:
 
-<ChronicleClientTabs snippet="get-started/choose-hosting-model/basic-apphost" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/basic-apphost" />
 
 To choose a database, pass a configure callback. Aspire then switches to the slim image (no embedded
 MongoDB) and the `With*` method you pick sets the kernel's storage type and connection string from the
@@ -301,7 +301,7 @@ your app model instead of hand-written:
 <Tabs syncKey="database">
 <TabItem label="MongoDB">
 
-<ChronicleClientTabs snippet="get-started/choose-hosting-model/mongo-database" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/mongo-database" />
 
 `mongo` can be any resource with a connection string — a MongoDB Atlas connection string as shown, or a
 container added directly in the AppHost with `builder.AddMongoDB("mongo")`.
@@ -309,19 +309,19 @@ container added directly in the AppHost with `builder.AddMongoDB("mongo")`.
 </TabItem>
 <TabItem label="PostgreSQL">
 
-<ChronicleClientTabs snippet="get-started/choose-hosting-model/postgres-database" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/postgres-database" />
 
 </TabItem>
 <TabItem label="SQL Server">
 
-<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlserver-database" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlserver-database" />
 
 </TabItem>
 <TabItem label="SQLite">
 
 SQLite is file-based, so you pass the connection string directly instead of a resource:
 
-<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlite-database" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/choose-hosting-model/sqlite-database" />
 
 </TabItem>
 </Tabs>

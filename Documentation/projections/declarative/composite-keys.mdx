@@ -6,45 +6,45 @@ When a single property isn't sufficient to uniquely identify a projection instan
 
 Define a key made up of multiple properties when one event value is not enough to identify the read model instance:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/basic" />
 
 ## Composite key type
 
 Define a record or class to represent your composite key:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/key-type" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/key-type" />
 
 ## Read model with composite key
 
 The read model's `Id` property should match your composite key type:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/read-model" />
 
 ## Composite keys with event context
 
 You can combine event properties with event context properties in composite keys:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/context-key" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/context-key" />
 
 The corresponding key and read model:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/audit-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/audit-model" />
 
 ## Composite keys in child collections
 
 Composite keys work with child collections too:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/child-collection" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/child-collection" />
 
 ## Joins with composite keys
 
 Composite keys can be used in join scenarios:
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/join" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/join" />
 
 ## Event definitions
 
-<ChronicleClientTabs snippet="projections/declarative/composite-keys/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/composite-keys/events" />
 
 ## Key composition rules
 

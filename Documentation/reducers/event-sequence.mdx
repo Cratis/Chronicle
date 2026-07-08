@@ -6,7 +6,7 @@ By default, reducers observe the default event log. You can override this by spe
 
 Apply `[EventSequence]` directly to your reducer class to pin it to a specific event sequence:
 
-<ChronicleClientTabs snippet="reducers/event-sequence/event-sequence-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-sequence/event-sequence-attribute" />
 
 TypeScript reaches the same result through the `reducer()` decorator's event-sequence parameter shown below rather than a separate attribute. Kotlin, Java, and Elixir don't currently support targeting a non-default event sequence for a reducer at all.
 
@@ -14,7 +14,7 @@ TypeScript reaches the same result through the `reducer()` decorator's event-seq
 
 When you are already using the `[Reducer]` attribute to set a custom identifier or other options, use its `eventSequence` parameter instead of adding a separate `[EventSequence]` attribute:
 
-<ChronicleClientTabs snippet="reducers/event-sequence/reducer-attribute" clients="csharp,typescript" />
+<ChronicleClientTabs snippet="reducers/event-sequence/reducer-attribute" />
 
 Both approaches produce the same result. Prefer `[Reducer(eventSequence: ...)]` when you are already customizing the reducer with other parameters on that attribute.
 
@@ -22,7 +22,7 @@ Both approaches produce the same result. Prefer `[Reducer(eventSequence: ...)]` 
 
 Use `[EventLog]` when you want to be explicit that the reducer reads from the default event log, even when event types in the assembly carry a `[EventStore]` attribute pointing elsewhere:
 
-<ChronicleClientTabs snippet="reducers/event-sequence/event-log-attribute" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/event-sequence/event-log-attribute" />
 
 This convenience is C#-only — it exists to disambiguate against C#'s `[EventStore]` attribute on event types, which the other clients don't have.
 

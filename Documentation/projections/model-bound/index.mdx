@@ -8,7 +8,7 @@ Start with convention-based mapping and add explicit attributes only where the e
 
 ## Basic Example
 
-<ChronicleClientTabs snippet="projections/model-bound/index/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/index/basic" />
 
 In this example:
 
@@ -74,21 +74,21 @@ Use fluent projections (`IProjectionFor<T>`) as a fallback when the projection c
 
 **Fluent Projection:**
 
-<ChronicleClientTabs snippet="projections/model-bound/index/explicit-mapping-fluent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/index/explicit-mapping-fluent" />
 
 **Model-Bound Projection:**
 
-<ChronicleClientTabs snippet="projections/model-bound/index/explicit-mapping-model-bound" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/index/explicit-mapping-model-bound" />
 
 ### Automatic Property Mapping
 
 **Fluent Projection with AutoMap:**
 
-<ChronicleClientTabs snippet="projections/model-bound/index/automap-fluent" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/index/automap-fluent" />
 
 **Model-Bound Projection with FromEvent:**
 
-<ChronicleClientTabs snippet="projections/model-bound/index/automap-model-bound" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/index/automap-model-bound" />
 
 Both approaches produce the same result. Model-bound projections with `FromEvent` are particularly concise when property names match between events and read models, providing the same automatic mapping benefits as `.AutoMap()` in fluent projections.
 

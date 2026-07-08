@@ -6,7 +6,7 @@ The `FromEventSequence()` method allows you to specify which event sequence a pr
 
 Use `FromEventSequence()` to specify the event sequence to source events from:
 
-<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/basic" />
 
 This projection:
 
@@ -18,19 +18,19 @@ This projection:
 
 Event sequences can be identified using string names or EventSequenceId:
 
-<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/using-constant" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/using-constant" />
 
 ## Read model definition
 
 The read model remains the same regardless of the event sequence:
 
-<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/read-model" />
 
 ## Event definitions
 
 Events should be designed to work within the specific sequence context:
 
-<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/events" />
 
 ## How it works
 
@@ -45,7 +45,7 @@ When using `FromEventSequence()`:
 
 You can create different projections for different event sequences:
 
-<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/multiple-sequences" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/from-event-sequence/multiple-sequences" />
 
 ## When to use FromEventSequence
 

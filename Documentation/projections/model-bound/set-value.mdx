@@ -4,7 +4,7 @@ The `SetValue` attribute sets a property to a compile-time constant whenever an 
 
 ## Basic Usage
 
-<ChronicleClientTabs snippet="projections/model-bound/set-value/order" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/set-value/order" />
 
 When an `OrderPlaced` event occurs, `Status` is set to `"active"`. When an `OrderCanceled` event occurs, `Status` is set to `"canceled"`.
 
@@ -12,13 +12,13 @@ When an `OrderPlaced` event occurs, `Status` is set to `"active"`. When an `Orde
 
 `SetValue` accepts any compile-time constant: strings, integers, longs, doubles, booleans, and enum values.
 
-<ChronicleClientTabs snippet="projections/model-bound/set-value/thing" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/set-value/thing" />
 
 ## Multiple Events
 
 Apply the attribute more than once to respond to multiple event types:
 
-<ChronicleClientTabs snippet="projections/model-bound/set-value/subscription" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/set-value/subscription" />
 
 ## SetValue vs SetFrom
 
@@ -29,4 +29,4 @@ Apply the attribute more than once to respond to multiple event types:
 
 Combine both on the same read model when different properties come from different sources:
 
-<ChronicleClientTabs snippet="projections/model-bound/set-value/invoice" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/set-value/invoice" />

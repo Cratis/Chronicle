@@ -6,7 +6,7 @@ A passive projection is a projection that is not actively materialized to a pers
 
 Use the `.Passive()` method to mark a projection as passive:
 
-<ChronicleClientTabs snippet="projections/declarative/passive/projection" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/passive/projection" />
 
 This projection:
 
@@ -18,19 +18,19 @@ This projection:
 
 Passive projections are accessed through the event store's `ReadModels` using the `GetInstanceById` method:
 
-<ChronicleClientTabs snippet="projections/declarative/passive/service" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/passive/service" />
 
 ## Read model definition
 
 The read model is defined the same way as for regular projections:
 
-<ChronicleClientTabs snippet="projections/declarative/passive/read-model" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/passive/read-model" />
 
 ## Event definitions
 
 Events should match the read model structure or use explicit mapping:
 
-<ChronicleClientTabs snippet="projections/declarative/passive/events" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/passive/events" />
 
 ## How it works
 

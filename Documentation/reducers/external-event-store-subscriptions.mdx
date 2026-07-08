@@ -13,7 +13,7 @@ When all event types reduced by a reducer come from the same source event store,
 
 This works when the source is declared on event types (or assembly) using `[EventStore("...")]`, and no explicit event sequence is configured on the reducer.
 
-<ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/automatic-routing" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/automatic-routing" />
 
 ## Observer-Level EventStore for Missing Event Metadata
 
@@ -21,7 +21,7 @@ When event contracts cannot carry `[EventStore]` metadata, apply `[EventStore]` 
 
 Chronicle resolves the reducer to the inbox for that source event store and implicitly creates or reuses the outbox-to-inbox subscription.
 
-<ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/observer-level-event-store" clients="csharp" />
+<ChronicleClientTabs snippet="reducers/external-event-store-subscriptions/observer-level-event-store" />
 
 ## Implicit Combined Event Type Filtering
 

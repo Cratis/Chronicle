@@ -8,13 +8,13 @@ Use `FromAll` in .NET when you want a property mapping to apply across the event
 
 The fluent `.FromAll(...)` API maps read model properties from event context for all events in the projection definition.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-all/fluent-context" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/from-all/fluent-context" />
 
 ## Model-Bound Attribute
 
 The `[FromAll]` attribute is also available in the .NET model-bound API. Use the no-argument form when the read model property name matches the event payload property name by convention.
 
-<ChronicleClientTabs snippet="projections/model-bound/from-all/attribute-convention" clients="csharp" />
+<ChronicleClientTabs snippet="projections/model-bound/from-all/attribute-convention" />
 
 For explicit model-bound event payload or event context mappings, prefer `[FromEvery(...)]`. It creates the same every-event projection definition while making the source kind explicit. See [From Every Event](./from-every) for examples.
 

@@ -13,13 +13,13 @@ Chronicle compares the filter tag against the tags on the appended event. Those 
 
 ## Filter a reactor by tag
 
-<ChronicleClientTabs snippet="events/filtering/by-tag/reactor" clients="csharp" />
+<ChronicleClientTabs snippet="events/filtering/by-tag/reactor" />
 
 The reactor receives the event because the append call added the `vip` tag.
 
 ## Filter a reducer by tag
 
-<ChronicleClientTabs snippet="events/filtering/by-tag/reducer" clients="csharp" />
+<ChronicleClientTabs snippet="events/filtering/by-tag/reducer" />
 
 The reducer only updates when the appended event carries the `priority` tag.
 
@@ -27,6 +27,6 @@ The reducer only updates when the appended event carries the `priority` tag.
 
 Multiple `[FilterEventsByTag]` attributes widen the match:
 
-<ChronicleClientTabs snippet="events/filtering/by-tag/multiple-filters" clients="csharp" />
+<ChronicleClientTabs snippet="events/filtering/by-tag/multiple-filters" />
 
 Chronicle dispatches the event if it has either `vip` or `priority`.

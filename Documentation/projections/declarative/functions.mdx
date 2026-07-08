@@ -8,13 +8,13 @@ Projections support several built-in functions for mathematical operations and c
 
 Use `Count()` to increment a counter each time an event is processed:
 
-<ChronicleClientTabs snippet="projections/declarative/functions/count" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/functions/count" />
 
 ## Increment and decrement
 
 Use `Increment()` and `Decrement()` to add or subtract 1 from a property:
 
-<ChronicleClientTabs snippet="projections/declarative/functions/increment-decrement" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/declarative/functions/increment-decrement" />
 
 These functions always change the value by exactly 1.
 
@@ -22,7 +22,7 @@ These functions always change the value by exactly 1.
 
 Use `Add()` and `Subtract()` to add or subtract specific values from event properties:
 
-<ChronicleClientTabs snippet="projections/declarative/functions/add-subtract" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/functions/add-subtract" />
 
 ## Supported types
 
@@ -47,6 +47,6 @@ The functions automatically handle type conversion and maintain the target prope
 
 You can use multiple functions in a single projection:
 
-<ChronicleClientTabs snippet="projections/declarative/functions/combined" clients="csharp,kotlin,java,elixir" />
+<ChronicleClientTabs snippet="projections/declarative/functions/combined" />
 
 These functions provide powerful aggregation capabilities while keeping projection logic simple and declarative.

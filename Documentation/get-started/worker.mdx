@@ -32,7 +32,7 @@ dotnet add package Cratis.Chronicle
 
 The generic host builds your app through `IHostApplicationBuilder`, which already has a dependency-injection container. One call hooks Chronicle into it and names the event store to use:
 
-<ChronicleClientTabs snippet="get-started/worker/register" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/worker/register" />
 
 Like the [ASP.NET Core](./aspnetcore) host, `AddCratisChronicle` registers Chronicle's services — `IEventStore`, `IEventLog`, `IReactors`, `IReducers`, `IProjections` — and automatically discovers and registers your artifacts (reactors, reducers, projections) from the loaded assemblies. It reads its connection settings from the `Cratis:Chronicle` section of `appsettings.json`:
 
@@ -60,7 +60,7 @@ flowchart LR
 
 In a worker you append from your `BackgroundService` rather than inline. Inject `IEventStore` (or `IEventLog` directly) and append inside `ExecuteAsync`:
 
-<ChronicleClientTabs snippet="get-started/worker/worker-service" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/worker/worker-service" />
 
 The projections and the `BookReturnedNotifier` reactor pick those events up from the kernel — the worker stays alive to keep processing them.
 
@@ -72,13 +72,13 @@ The `Books` query reads documents Chronicle wrote, so the MongoDB driver needs t
 
 Then register the database and the collection so a type can take an `IMongoCollection<Book>` dependency:
 
-<ChronicleClientTabs snippet="get-started/worker/mongo-registration" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/worker/mongo-registration" />
 
 ## Register your artifacts
 
 Chronicle creates its discovered artifacts through the container, so they need to be registered as services. For a handful, register them explicitly; as the solution grows, let Cratis Fundamentals do it by convention:
 
-<ChronicleClientTabs snippet="get-started/worker/register-by-convention" clients="csharp" />
+<ChronicleClientTabs snippet="get-started/worker/register-by-convention" />
 
 `AddBindingsByConvention` registers any service that implements an interface of the same name prefixed with `I` (`IFoo` → `Foo`); `AddSelfBindings` registers concrete classes as themselves.
 

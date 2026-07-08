@@ -6,7 +6,7 @@ Model-bound projections support removing read models and child items through the
 
 Use `RemovedWith` at the class level to specify which event removes the entire read model instance:
 
-<ChronicleClientTabs snippet="projections/model-bound/removal/basic" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/removal/basic" />
 
 When an `AccountClosed` event occurs, the corresponding `Account` read model is removed from the store.
 
@@ -14,13 +14,13 @@ When an `AccountClosed` event occurs, the corresponding `Account` read model is 
 
 You can specify which property on the event identifies the read model to remove:
 
-<ChronicleClientTabs snippet="projections/model-bound/removal/with-key" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/removal/with-key" />
 
 ## Multiple Removal Options
 
 A read model can be removed by multiple different events:
 
-<ChronicleClientTabs snippet="projections/model-bound/removal/multiple-triggers" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/removal/multiple-triggers" />
 
 In this example, an account can be removed by:
 
@@ -32,7 +32,7 @@ In this example, an account can be removed by:
 
 Use `RemovedWithJoin` when the removal event comes from a different stream (join relationship):
 
-<ChronicleClientTabs snippet="projections/model-bound/removal/join-on-class" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/removal/join-on-class" />
 
 When the company is dissolved, all employees associated with that company are removed.
 
@@ -44,13 +44,13 @@ Children can be removed in two ways:
 
 Apply `RemovedWith` on the collection property alongside `ChildrenFrom`:
 
-<ChronicleClientTabs snippet="projections/model-bound/children/removal-property-level" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/children/removal-property-level" />
 
 ### Class-Level Removal on Child Types
 
 Apply `RemovedWith` directly on the child type. This is particularly useful when the same child model is used in multiple parents or when you want to keep removal logic with the child definition:
 
-<ChronicleClientTabs snippet="projections/model-bound/children/removal-class-level" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/children/removal-class-level" />
 
 Both approaches produce the same result. The class-level approach keeps the removal definition with the child type, while the property-level approach keeps it with the parent.
 
@@ -65,13 +65,13 @@ For child removal, you can specify:
 
 For children that should be removed based on join events, apply `RemovedWithJoin` on the collection property (it also works at the child type's class level, the same way `RemovedWith` does above):
 
-<ChronicleClientTabs snippet="projections/model-bound/children/removed-with-join" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/children/removed-with-join" />
 
 ## Complete Example
 
 Here's a comprehensive example showing both root and child removal:
 
-<ChronicleClientTabs snippet="projections/model-bound/removal/full-example" clients="csharp,kotlin,java,elixir,typescript" />
+<ChronicleClientTabs snippet="projections/model-bound/removal/full-example" />
 
 ## Best Practices
 
