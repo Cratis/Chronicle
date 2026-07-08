@@ -73,8 +73,8 @@ public class when_identifying_read_model_key_for_root_join : Specification
     }
 
     [Fact]
-    void should_query_using_join_on_property() =>
-        _queriedPropertyPath.ShouldEqual((PropertyPath)"groupId");
+    void should_query_using_the_read_model_identifier() =>
+        _queriedPropertyPath.ShouldEqual((PropertyPath)"id");
 
     [Fact]
     void should_resolve_to_the_root_read_model_key() =>
