@@ -27,7 +27,12 @@ public class KeyBuilder<TEvent, TBuilder>(INamingPolicy namingPolicy) : IKeyBuil
     /// <inheritdoc/>
     public TBuilder UsingKey<TProperty>(Expression<Func<TEvent, TProperty>> keyAccessor)
     {
-        _keyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(keyAccessor.GetPropertyPath())).Build();
+        if (!keyAccessor.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the key on event '{typeof(TEvent).FullName}'", keyAccessor);
+        }
+
+        _keyExpression = new EventContentPropertyExpression(namingPolicy.GetPropertyName(propertyPath)).Build();
         return (this as TBuilder)!;
     }
 
