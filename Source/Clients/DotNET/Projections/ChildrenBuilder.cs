@@ -55,7 +55,12 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     /// <inheritdoc/>
     public IChildrenBuilder<TParentReadModel, TChildReadModel> IdentifiedBy<TProperty>(Expression<Func<TChildReadModel, TProperty>> propertyExpression)
     {
-        _identifiedBy = _namingPolicy.GetPropertyName(propertyExpression.GetPropertyPath());
+        if (!propertyExpression.TryGetPropertyPath(out var propertyPath))
+        {
+            throw new InvalidPropertyExpression($"the identifier of child read model '{typeof(TChildReadModel).FullName}'", propertyExpression);
+        }
+
+        _identifiedBy = _namingPolicy.GetPropertyName(propertyPath);
         return this;
     }
 
