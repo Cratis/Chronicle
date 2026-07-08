@@ -50,6 +50,7 @@ Every rule here reduces noise. `var` avoids redundant type repetition. Expressio
 - Use string interpolation instead of `string.Format()` or concatenation.
 - Favor collection initializers and object initializers.
 - Use `IEnumerable<T>` for collections that are not modified; never return mutable collections from public APIs.
+- Prefer LINQ (`.Where`, `.Any`, `.Select`, `.FirstOrDefault`) over a `foreach` that filters inside its body with an `if`/`continue` or an early `return` — put the filter in the query so the intent is explicit (`items.Where(predicate)`, `return items.Any(predicate);`). Reserve `foreach` for genuine iteration with side effects. (Filtering inside a loop is what the analyzers flag as a "missed opportunity to use Where".)
 - Don't use regions — they hide code instead of organizing it. If a file needs regions, it needs refactoring.
 - Never add postfixes like `Async`, `Impl`, `Service` to class names — they add noise without information.
 - For types with no implementation body, omit the braces (e.g. `public interface IMyInterface;`).
@@ -117,6 +118,7 @@ Every exception type in the codebase should communicate *what went wrong* in dom
 - Never suffix exception class names with `Exception` — `AuthorNotFound` reads better than `AuthorNotFoundException`.
 - Always provide a meaningful message when throwing.
 - Add XML doc on the exception type starting with "The exception that is thrown when ...".
+- Never write an empty or silently-swallowing `catch` block. Handle the exception, log it, or let it propagate. When ignoring is genuinely correct, use an exception filter (`catch (SomeException) when (…)`) with a body that states the decision (a comment and/or a fallback) — never a bare `catch { }`.
 
 ## Dependency Injection
 
