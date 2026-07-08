@@ -27,7 +27,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
             .ConfigureServices(services =>
             {
                 services.Configure<ChronicleOptions>(options =>
-                    options.ConnectionString = "chronicle://localhost:35001?disableTls=true");
+                    options.ConnectionString = "chronicle://localhost:35001");
 
                 // Use delegating provider so the shared factory can serve artifacts
                 // from whichever test fixture is currently active.

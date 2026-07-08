@@ -22,7 +22,7 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
     {
         var waitStrategy = Wait.ForUnixContainer()
             .UntilInternalTcpPortIsAvailable(27017)
-            .UntilHttpRequestIsSucceeded(req => req.ForPort(8080).ForPath("/health"));
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
@@ -31,7 +31,6 @@ public class ChronicleOutOfProcessFixture : ChronicleFixture
             // .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
             .WithPortBinding(MongoDBPort, 27017)
-            .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")

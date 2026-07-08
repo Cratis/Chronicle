@@ -298,11 +298,10 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
         // Random host ports avoid back-to-back test sessions colliding on the previous
         // container's still-bound ports while Docker tears it down. The actual mapped
-        // ports are exposed through KernelGrpcHostPort and KernelManagementHostPort and
-        // forwarded to the in-process silo + the reset client.
+        // port is exposed through KernelGrpcHostPort and forwarded to the in-process
+        // silo + the reset client.
         var builder = new ContainerBuilder(_imageName)
             .WithImage(_imageName)
-            .WithPortBinding(8080, assignRandomHostPort: true)
             .WithPortBinding(35000, assignRandomHostPort: true)
             .WithHostname(ChronicleOutOfProcessFixture.HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
@@ -317,8 +316,8 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // SQL backends (especially MSSQL) run EF Core migrations against a freshly-started
         // database container on startup. Give the health endpoint 5 minutes to respond.
         var waitStrategy = Wait.ForUnixContainer()
-            .UntilHttpRequestIsSucceeded(
-                req => req.ForPort(8080).ForPath("/health"),
+            .AddCustomWaitStrategy(
+                new XUnit.Integration.HttpsHealthWait(35000),
                 s => s.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1)));
 
         var kernelContainer = builder.WithWaitStrategy(waitStrategy).Build();
@@ -338,19 +337,6 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     public int KernelGrpcHostPort => _outOfProcessKernelContainer is not null
         ? _outOfProcessKernelContainer.GetMappedPublicPort(35000)
         : throw new InvalidOperationException("KernelGrpcHostPort is only valid in OutOfProcess mode after the kernel container has been built.");
-
-    /// <summary>
-    /// Gets the host port the OOP kernel container's management endpoint (internal port 8080)
-    /// is mapped to. Valid only in <see cref="ChronicleRuntimeMode.OutOfProcess"/> mode after
-    /// the container has been started.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when invoked before the OOP kernel container has been built (e.g. when running
-    /// in <see cref="ChronicleRuntimeMode.InProcess"/> mode).
-    /// </exception>
-    public int KernelManagementHostPort => _outOfProcessKernelContainer is not null
-        ? _outOfProcessKernelContainer.GetMappedPublicPort(8080)
-        : throw new InvalidOperationException("KernelManagementHostPort is only valid in OutOfProcess mode after the kernel container has been built.");
 
     string BuildAndStartMongoDB(INetwork network)
     {
@@ -470,13 +456,12 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     async Task ResetOutOfProcessKernelState()
     {
-        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/?disableTls=true");
+        var connectionString = new ChronicleConnectionString($"chronicle://localhost:{KernelGrpcHostPort}/");
         var options = new ChronicleClientOptions
         {
             ConnectionString = connectionString,
             EventStore = "Testing",
             AutoDiscoverAndRegister = false,
-            ManagementPort = KernelManagementHostPort,
 
             // Reset is a one-shot operation that can take longer than the 5-second keep-alive
             // watchdog window (especially on SQL backends, where wiping enumerates and truncates
