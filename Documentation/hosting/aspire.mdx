@@ -75,10 +75,9 @@ Chronicle exposes the following ports:
 
 | Port  | Endpoint Name | Description                                |
 |-------|---------------|--------------------------------------------|
-| 35000 | `grpc`        | Primary Chronicle gRPC service             |
-| 8080  | `management`  | Management API, Workbench, and health checks |
+| 35000 | `grpc`        | Primary Chronicle service — gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) |
 
-Both endpoints are registered automatically when you call `AddCratisChronicle()`.
+The `grpc` endpoint is registered automatically when you call `AddCratisChronicle()`. `ChronicleResource` no longer exposes a separate `management` endpoint — everything is served on the single `grpc` endpoint.
 
 ## Complete Example
 

@@ -6,7 +6,6 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 
 ```json
 {
-  "managementPort": 8080,
   "port": 35000,
   "storage": {
     "type": "MongoDB",
@@ -24,8 +23,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 | Read models | Replay retention for replay-generated read model versions |
 | Events | Event queue configuration |
 | Authentication | External authority and default admin settings |
-| TLS | gRPC TLS certificate configuration |
-| Workbench TLS | Dedicated Workbench TLS and certificate configuration |
+| TLS | TLS certificate configuration for the Chronicle port |
 | Identity Provider Certificate | Dedicated certificate configuration for internal OAuth authority |
 
 ## Topics
@@ -38,8 +36,7 @@ Chronicle Server can be configured using a `chronicle.json` file or environment 
 - [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
 - [Events](events.md) - Configure event queues.
 - [Authentication](authentication.md) - External authority and default admin settings.
-- [TLS](tls.md) - Configure top-level gRPC TLS certificates.
-- [Workbench TLS](workbench-tls.md) - Configure Workbench TLS and certificates.
+- [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
 - [Identity Provider Certificate](identity-provider-certificate.md) - Configure internal OAuth authority certificates.
 - [Environment Variables](environment-variables.md) - Configure with `Cratis__Chronicle__` settings.
 - [Open Telemetry](open-telemetry.md) - Export metrics, traces, and logs via OTLP.

@@ -34,10 +34,10 @@ Java examples are owned by the Kotlin/JVM client repo. Use the JVM setup guide, 
 Chronicle application code connects to a running Chronicle kernel. For local development, the fastest path is the development image:
 
 ```shell
-docker run -d -p 27017:27017 -p 8080:8080 -p 35000:35000 cratis/chronicle:latest-development
+docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development
 ```
 
-The kernel listens on `chronicle://localhost:35000`, the workbench runs on `http://localhost:8080`, and the bundled MongoDB stores materialized read models. If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
+The kernel listens on `chronicle://localhost:35000`, the workbench runs on `https://localhost:35000` — the same, single TLS-secured port — and the bundled MongoDB stores materialized read models. If you need Docker Compose, Aspire, a separate database, or production-style hosting, use [Choose an application host model](./choose-hosting-model).
 
 ## The Chronicle loop
 
@@ -95,7 +95,7 @@ Append a fact → a projection builds state from it → a reactor acts on it. **
 
 ## Inspect it in the workbench
 
-The development image includes the **Chronicle workbench** — a web UI for inspecting event stores. Open [http://localhost:8080](http://localhost:8080) and log in with the development credentials: username `Admin`, password `ChangeMeNow!`.
+The development image includes the **Chronicle workbench** — a web UI for inspecting event stores. Open [https://localhost:35000](https://localhost:35000) and log in with the development credentials: username `Admin`, password `ChangeMeNow!`. In development the port uses a self-signed certificate, so accept your browser's certificate warning the first time.
 
 After you run one of the client setup guides or the example flow above, choose the event store your client used and open **Sequences**. The `TestEvent` is permanent and ordered in the event log. Append more events and watch the sequence grow. That log is the source of truth your projections and reactors read from.
 

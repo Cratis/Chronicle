@@ -81,7 +81,6 @@ services:
   chronicle:
     image: cratis/chronicle:latest
     ports:
-      - "8080:8080"
       - "35000:35000"
     volumes:
       - ./certs/encryption-cert.pfx:/app/certs/encryption-cert.pfx:ro
@@ -159,7 +158,6 @@ To run without a certificate in development:
 # No certificate configuration needed in development
 docker run -d \
   --name chronicle-dev \
-  -p 8080:8080 \
   -p 35000:35000 \
   -e Cratis__Chronicle__Storage__ConnectionDetails=mongodb://localhost:27017 \
   cratis/chronicle:latest-development

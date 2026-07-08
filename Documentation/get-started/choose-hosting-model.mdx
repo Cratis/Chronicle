@@ -69,7 +69,7 @@ application code:
 
 | How you run it | What it gives you | Use it when |
 | --- | --- | --- |
-| [Local Docker](#run-chronicle-locally) | One kernel reachable at `chronicle://localhost:35000`, with the workbench on port `8080`. | You need the fastest local feedback loop. |
+| [Local Docker](#run-chronicle-locally) | One kernel reachable at `chronicle://localhost:35000`, with the workbench at `https://localhost:35000` on the same port. | You need the fastest local feedback loop. |
 | [Docker Compose](/chronicle/hosting/docker-compose/) | Chronicle and storage as named services in a local or CI topology. | You want repeatable local infrastructure for a team or pipeline. |
 | [Aspire AppHost](#let-aspire-wire-it-up) | Chronicle as an Aspire resource with endpoints and storage references wired into dependent projects. | Your .NET solution already uses Aspire to compose services locally. |
 | [Production-managed kernel](/chronicle/hosting/production/) | A Chronicle container, durable storage, TLS, secrets, health checks, and versioned deployment owned by your platform. | The application should only know the Chronicle connection string and credentials. |
@@ -98,15 +98,14 @@ The `latest-development` image bundles MongoDB, so there's nothing else to insta
 command and the kernel is running:
 
 ```shell
-docker run -d -p 27017:27017 -p 8080:8080 -p 35000:35000 cratis/chronicle:latest-development
+docker run -d -p 27017:27017 -p 35000:35000 cratis/chronicle:latest-development
 ```
 
-Three ports, three jobs:
+Two ports, two jobs — Chronicle now serves everything on one port, and it's TLS:
 
 | Port | What it is |
 | --- | --- |
-| `35000` | The kernel endpoint your app connects to (`chronicle://localhost:35000`). |
-| `8080` | The [Chronicle workbench](#see-it-in-the-workbench) — a web UI for browsing your event store. |
+| `35000` | The kernel endpoint your app connects to (`chronicle://localhost:35000`), and the [Chronicle workbench](#see-it-in-the-workbench) — a web UI for browsing your event store — at `https://localhost:35000`. |
 | `27017` | The bundled MongoDB, where projections write their read models. |
 
 That's everything most local work needs. If you'd rather run against a database you already have — or a
@@ -140,7 +139,6 @@ services:
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
-      - 8080:8080
       - 35000:35000
 
   mongodb:
@@ -192,7 +190,6 @@ services:
       - Cratis__Chronicle__Storage__Type=PostgreSql
       - Cratis__Chronicle__Storage__ConnectionDetails=Host=postgres;Port=5432;Database=chronicle;Username=postgres;Password=postgres
     ports:
-      - 8080:8080
       - 35000:35000
 
   postgres:
@@ -223,7 +220,6 @@ services:
       - Cratis__Chronicle__Storage__Type=MsSql
       - Cratis__Chronicle__Storage__ConnectionDetails=Server=sqlserver,1433;Database=Chronicle;User Id=sa;Password=Your_strong_password123!;TrustServerCertificate=True;Encrypt=False
     ports:
-      - 8080:8080
       - 35000:35000
 
   sqlserver:
@@ -250,7 +246,6 @@ services:
     volumes:
       - chronicle-data:/data
     ports:
-      - 8080:8080
       - 35000:35000
 
 volumes:
@@ -273,10 +268,11 @@ topology.
 ### See it in the workbench
 
 Whichever image you ran, it includes the **Chronicle workbench** — a web UI for poking at your event
-store. Open [http://localhost:8080](http://localhost:8080) and log in with the development credentials
-(username `Admin`, password `ChangeMeNow!`). Pick an event store and look at **Sequences** to watch
-events land in order. It's the quickest way to confirm the kernel is up and your app is actually
-appending.
+store. Open [https://localhost:35000](https://localhost:35000) and log in with the development credentials
+(username `Admin`, password `ChangeMeNow!`). It's HTTPS now — in development Chronicle serves the port
+with a self-signed certificate it generates on the fly, so your browser will warn you the first time;
+accept it to continue. Pick an event store and look at **Sequences** to watch events land in order. It's
+the quickest way to confirm the kernel is up and your app is actually appending.
 
 ## Let Aspire wire it up
 

@@ -1,6 +1,6 @@
 # TLS Configuration (Server)
 
-Chronicle Server supports TLS for secure communication. TLS is enabled by default, but can be explicitly disabled when TLS is terminated upstream.
+The Chronicle port serves gRPC (HTTP/2) and the Workbench, REST API, OAuth and health endpoints (HTTP/1.1) on a single port. Kestrel can only multiplex the two protocols on one port over TLS, where ALPN negotiates the protocol per connection — so **the port always uses TLS and requires a certificate**.
 
 For client-side TLS configuration, see [TLS Configuration (Client)](../../configuration/tls).
 
@@ -9,7 +9,6 @@ For client-side TLS configuration, see [TLS Configuration (Client)](../../config
 ```json
 {
   "tls": {
-    "enabled": true,
     "certificatePath": "/path/to/certificate.pfx",
     "certificatePassword": "your-password"
   }
@@ -19,7 +18,6 @@ For client-side TLS configuration, see [TLS Configuration (Client)](../../config
 ## Environment variables
 
 ```bash
-Cratis__Chronicle__Tls__Enabled=true
 Cratis__Chronicle__Tls__CertificatePath=/path/to/certificate.pfx
 Cratis__Chronicle__Tls__CertificatePassword=your-password
 ```
@@ -28,28 +26,20 @@ Cratis__Chronicle__Tls__CertificatePassword=your-password
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| enabled | boolean | true | Whether TLS is enabled. Set to `false` to run Chronicle without local HTTPS when TLS is terminated upstream. |
 | certificatePath | string | null | Path to the TLS certificate file (PFX format) |
 | certificatePassword | string | null | Password for the certificate file |
 
-## gRPC TLS behavior
+## TLS behavior
 
-The top-level `tls` configuration controls the gRPC listener:
+- **A certificate is provided** (`certificatePath` set): Chronicle serves the port with that certificate.
+- **No certificate is provided, development**: Chronicle generates an in-memory self-signed certificate so the port works out of the box. Clients accept it automatically in development, and browsers show a certificate warning you can bypass.
+- **No certificate is provided, production**: the server fails to start — a certificate is required.
 
-- `tls.enabled=true` (default): Chronicle expects a certificate and uses HTTPS.
-- `tls.enabled=false`: Chronicle runs gRPC without HTTPS.
-
-Use `tls.enabled=false` only when TLS is terminated by upstream infrastructure such as ingress or reverse proxies.
+When TLS is terminated upstream by an ingress or reverse proxy, re-encrypt the connection to Chronicle (the backend port is always TLS) and provide a certificate for it.
 
 ## Related TLS and certificate pages
 
-- [Workbench TLS Configuration](workbench-tls.md) for Workbench-specific TLS and certificates.
 - [Identity Provider Certificate Configuration](identity-provider-certificate.md) for internal OAuth authority certificates.
-
-## Development vs production
-
-- **Development**: The server can run with or without TLS.
-- **Production**: The server can run with or without TLS based on `tls.enabled`. When `tls.enabled=true`, a certificate is required. Workbench TLS can be configured independently.
 
 ## Certificate requirements
 
@@ -75,10 +65,6 @@ services:
 
 ### Server fails to start
 
-**Error**: "No TLS certificate is configured for gRPC while TLS is enabled"
+**Error**: "No TLS certificate is configured. The Chronicle port ... requires a certificate."
 
-**Solution**: Provide `certificatePath` and `certificatePassword` in the top-level `tls` configuration, or set `tls.enabled` to `false` when TLS is terminated upstream.
-
-**Error**: "No TLS certificate is configured for the Workbench"
-
-**Solution**: Either provide a certificate path, or set `workbench.tls.enabled` to `false` if TLS is terminated upstream.
+**Solution**: Provide `certificatePath` and `certificatePassword` in the top-level `tls` configuration. In development the server generates a self-signed certificate automatically, so this error only occurs in production.

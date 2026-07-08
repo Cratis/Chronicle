@@ -20,8 +20,6 @@
   href: authentication.md
 - name: TLS
   href: tls.md
-- name: Workbench TLS
-  href: workbench-tls.md
 - name: Identity Provider Certificate
   href: identity-provider-certificate.md
 - name: Client Bootstrap
