@@ -856,7 +856,11 @@ public class ProjectionFactory(
 
     EventTypeWithKeyResolver GetEventTypeWithKeyResolverForJoin(Projection projection, EventType eventType, PropertyExpression key, PropertyPath actualIdentifiedByProperty, PropertyPath joinOnProperty)
     {
-        var keyResolver = GetKeyResolverFor(projection, key, actualIdentifiedByProperty);
+        // The join key value is matched against the join `on` property, so it must be typed as that property
+        // (which mirrors the join SOURCE's key type) — not the joining read model's own identifier. Using the
+        // identifier here force-converts the value to the read model's key type, which breaks a source keyed by
+        // a string concept (the string org number would be Guid.Parse'd).
+        var keyResolver = GetKeyResolverFor(projection, key, joinOnProperty);
         keyResolver = keyResolvers.ForJoin(projection, keyResolver, actualIdentifiedByProperty, joinOnProperty);
         return new EventTypeWithKeyResolver(eventType, keyResolver);
     }
