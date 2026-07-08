@@ -11,9 +11,12 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
 /// <summary>
-/// Analyzer that warns when a model-bound read model property is explicitly sourced via <c>[SetFrom]</c> or
-/// <c>[Join]</c>, but another subscribed event carries an identically named property that AutoMap will silently
-/// overwrite the explicit value with — unless the property is marked with property-level <c>[NoAutoMap]</c>.
+/// Analyzer that emits an informational heads-up when a model-bound read model property is explicitly sourced
+/// (via <c>[SetFrom]</c>, <c>[SetFromContext]</c>, <c>[SetValue]</c>, <c>[AddFrom]</c>, <c>[SubtractFrom]</c>,
+/// or <c>[Join]</c>) but another value-mapped event referenced by the same projection carries an identically
+/// named property that AutoMap will write on top of it. It is informational — not a warning — because the
+/// collision has two legitimate resolutions and only the developer knows which was intended: fence the property
+/// with property-level <c>[NoAutoMap]</c>, or leave it because updates from the other event are wanted.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
@@ -45,17 +48,21 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
     static readonly HashSet<string> ExplicitSourceAttributeNames = new(StringComparer.Ordinal)
     {
         "SetFromAttribute",
+        "SetFromContextAttribute",
+        "SetValueAttribute",
+        "AddFromAttribute",
+        "SubtractFromAttribute",
         "JoinAttribute"
     };
 
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.AutoMapSameNamePropertyCollision,
-        title: "Explicitly sourced read model property is overwritten by AutoMap",
-        messageFormat: "Read model property '{0}' is explicitly sourced but event '{1}' carries an identically named property; AutoMap from '{1}' will overwrite it. Add [NoAutoMap] to the property.",
+        title: "Explicitly sourced read model property may be overwritten by AutoMap",
+        messageFormat: "Property '{0}' is set explicitly, but event '{1}' (also referenced by this projection) carries a property named '{0}' that AutoMap will write on top of it. If '{1}' should not overwrite it, add [NoAutoMap] to '{0}'. If updates from '{1}' are intended (for example a later event updating the value by name), this is fine — no change is needed.",
         category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true,
-        description: "When a read model property is explicitly sourced via [SetFrom<A>] or [Join<A>], but another subscribed event B carries a property with the same name, AutoMap from B silently overwrites the explicit value. Add property-level [NoAutoMap] to the property so only the explicit mapping applies.");
+        description: "In a model-bound projection, AutoMap runs per event across every event the projection references — it does not defer to explicit setters. A property set with [SetFrom<A>] (or another value setter) can therefore be overwritten when another referenced event B carries a property of the same name and AutoMap writes B's value on top. This is reported as information, not a warning, because the collision is sometimes intended (a later event legitimately updating the value by name); the two resolutions are to add [NoAutoMap] to the property, or to leave it. Name matching compares the C# member names (OrdinalIgnoreCase) and does not account for explicit [SetFrom<T>(\"eventProperty\")] targets or a custom INamingPolicy, so it is an approximation.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -71,6 +78,13 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
     static void AnalyzeType(SymbolAnalysisContext context)
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
+
+        // A class-level [NoAutoMap] disables AutoMap for the whole read model, so no property can be
+        // overwritten by name-AutoMap and there is nothing to flag.
+        if (HasNoAutoMap(typeSymbol))
+        {
+            return;
+        }
 
         var subscribedEvents = CollectSubscribedEvents(typeSymbol);
         if (subscribedEvents.Count == 0)

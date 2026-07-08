@@ -6,7 +6,11 @@ using Microsoft.CodeAnalysis;
 
 namespace Cratis.Chronicle.CodeAnalysis.Specs.Analyzers.for_AutoMapSameNamePropertyCollisionAnalyzer.when_analyzing;
 
-public class and_join_property_collides_with_another_event : given.an_auto_map_same_name_property_collision_analyzer
+/// <summary>
+/// The mapping attribute placed directly on a property (rather than a positional-record parameter) is flagged
+/// the same way.
+/// </summary>
+public class and_a_plain_property_collides_with_another_event : given.an_auto_map_same_name_property_collision_analyzer
 {
     const string Usage = """
     public record Opened(Guid Id, string Name);
@@ -14,9 +18,12 @@ public class and_join_property_collides_with_another_event : given.an_auto_map_s
 
     [FromEvent<Opened>]
     [FromEvent<Renamed>]
-    public record Account(
-        Guid Id,
-        {|#0:[Join<Opened>] string Name|});
+    public class Account
+    {
+        public Guid Id { get; init; }
+
+        {|#0:[SetFrom<Opened>(nameof(Opened.Name))] public string Name { get; init; }|}
+    }
     """;
 
     Task _result;

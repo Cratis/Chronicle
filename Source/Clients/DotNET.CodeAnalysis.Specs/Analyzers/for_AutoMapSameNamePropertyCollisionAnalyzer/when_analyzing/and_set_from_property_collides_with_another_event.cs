@@ -23,7 +23,7 @@ public class and_set_from_property_collides_with_another_event : given.an_auto_m
 
     void Because() => _result = AnalyzerVerifier<CodeAnalysis.Analyzers.AutoMapSameNamePropertyCollisionAnalyzer>.VerifyAnalyzer(
         CreateSource(Usage),
-        new ExpectedDiagnostic(DiagnosticIds.AutoMapSameNamePropertyCollision, DiagnosticSeverity.Warning, "Name", "Renamed"));
+        new ExpectedDiagnostic(DiagnosticIds.AutoMapSameNamePropertyCollision, DiagnosticSeverity.Info, "Name", "Renamed"));
 
     [Fact] Task should_report_the_diagnostic() => _result;
 }
