@@ -209,18 +209,16 @@ static class ChildrenDefinitionExtensions
                     var paramPath = new PropertyPath(parameter.Name!);
                     var paramPropertyName = namingPolicy.GetPropertyName(paramPath);
 
-                    // Process SetFromContext attributes on constructor parameters
-                    var setFromContextAttrs = parameter.GetCustomAttributes()
-                        .Where(a => a.GetType().IsGenericType &&
-                                     a.GetType().GetGenericTypeDefinition() == typeof(SetFromContextAttribute<>))
-                        .ToList();
-
-                    foreach (var contextAttr in setFromContextAttrs)
+                    // Process SetFromContext attributes on constructor parameters. The generic event type is honored,
+                    // so [SetFromContext<OtherEvent>] binds the context mapping to OtherEvent rather than the child's
+                    // creating event - matching the property-level path in ModelBoundProjectionBuilder.ProcessMember
+                    // and the sibling [SetValue<OtherEvent>] handling below.
+                    foreach (var (setFromContextAttr, setFromContextEventType) in parameter.GetAttributesOfGenericType<SetFromContextAttribute<object>>())
                     {
-                        var contextPropertyNameProperty = contextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
-                        var contextPropertyName = contextPropertyNameProperty?.GetValue(contextAttr) as string;
+                        var contextPropertyNameProperty = setFromContextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
+                        var contextPropertyName = contextPropertyNameProperty?.GetValue(setFromContextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
-                        fromDefinition.Properties[paramPropertyName] = $"{WellKnownExpressions.EventContext}({propertyToUse})";
+                        childrenDef.From.AddContextPropertyMapping(getOrCreateEventType, namingPolicy, setFromContextEventType, paramPropertyName, propertyToUse);
                     }
 
                     // Process SetValue attributes on constructor parameters
