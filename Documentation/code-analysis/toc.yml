@@ -38,3 +38,5 @@
   href: CHR0022.mdx
 - name: CHR0023 - Ambiguous parent key for [ChildrenFrom] collection
   href: CHR0023.mdx
+- name: CHR0025 - Explicitly sourced property may be overwritten by AutoMap
+  href: CHR0025.mdx

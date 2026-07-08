@@ -27,6 +27,7 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0021](CHR0021) | Event types should be record types | Warning | Event types should be declared as record types for immutability |
 | [CHR0022](CHR0022) | Reactor methods returning event side effects must be marked with [OnceOnly] | Warning | Reactor methods that return events must be [OnceOnly] to avoid appending duplicates during replay |
 | [CHR0023](CHR0023) | Ambiguous parent key for [ChildrenFrom] collection | Warning | Parent-key inference is ambiguous when the child event has more than one property of the parent identifier type; specify parentKey |
+| [CHR0025](CHR0025) | Explicitly sourced read model property may be overwritten by AutoMap | Info | A property set with [SetFrom]/[SetValue]/… collides by name with another referenced event that AutoMap writes on top; add [NoAutoMap] or accept the update |
 
 ## Quick Fixes
 

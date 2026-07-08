@@ -1,0 +1,44 @@
+# CHR0025: Explicitly sourced read model property may be overwritten by AutoMap
+
+## Rule Description
+
+AutoMap runs per *event* across every event a model-bound projection references — it does **not** defer to your explicit setters. A property set with `[SetFrom<A>]` (or `[SetValue]`, `[AddFrom]`, `[SubtractFrom]`, `[SetFromContext]`, `[Join]`) can therefore be overwritten when another referenced event `B` carries a property of the same name, because AutoMap writes `B`'s value on top of the value you mapped explicitly.
+
+This is reported as **information**, not a warning: the collision has two legitimate resolutions and only you know which was intended.
+
+## Severity
+
+Info
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0025/violation" />
+
+## Resolving
+
+There are two valid resolutions, depending on intent:
+
+- **The other event should not overwrite it** — fence the property with property-level `[NoAutoMap]` so only your explicit setter writes it:
+
+  ```csharp
+  [SetFrom<Chr0025Opened>]
+  [NoAutoMap]
+  string Location,
+  ```
+
+- **Updates from the other event are intended** — for example a later event legitimately updating the value by name-match (the *create-then-rename* pattern). In that case leave it as is; no change is needed.
+
+Because either can be correct, CHR0025 is informational and offers no code fix — it must not push you toward one of two valid answers.
+
+## Why This Rule Exists
+
+In a model-bound projection, Chronicle wires each referenced event's properties onto identically named read-model properties (AutoMap). It does this for *every* referenced event, and it does not know that a property is "owned" by an explicit `[SetFrom]`. So when two referenced events both carry a `Location`, the one that runs last wins — and that can silently be the event you did **not** mean, producing an actively wrong value rather than a missing one.
+
+The escape hatch is property-level `[NoAutoMap]`, which is deliberately opt-in: leaving AutoMap on is exactly what enables the common create-then-rename pattern, where a later event updates a property by name. A blanket "explicit beats implicit" rule was tried and reverted for breaking that pattern.
+
+An event referenced only through an aggregate (`[Count]`, `[Increment]`, `[Decrement]`) does not auto-map its other properties, so it cannot collide and is not flagged. Name matching compares the C# member names case-insensitively and does not account for explicit `[SetFrom<T>("eventProperty")]` targets or a custom naming policy, so the diagnostic is an approximation.
+
+## Related Rules
+
+- **CHR0033** — the mirror image: a `[ChildrenFrom]` child collection that auto-maps to *nothing*.
+- [Model-bound projections](/chronicle/projections/model-bound/) — the full reference.
