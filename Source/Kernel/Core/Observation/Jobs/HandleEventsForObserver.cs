@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="throttle">The <see cref="IJobStepThrottle"/> for limiting parallel execution.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="eventCompliance"><see cref="IEventCompliance"/> for decrypting PII event content before dispatching to subscribers.</param>
+/// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving subscriber grains off the activation thread.</param>
 /// <param name="logger">The logger.</param>
 public class HandleEventsForObserver(
     [PersistentState(nameof(JobStepState), WellKnownGrainStorageProviders.JobSteps)]
@@ -32,6 +33,7 @@ public class HandleEventsForObserver(
     IJobStepThrottle throttle,
     IStorage storage,
     IEventCompliance eventCompliance,
+    IGrainFactory grainFactory,
     ILogger<HandleEventsForObserver> logger) : JobStep<HandleEventsForObserverArguments, HandleEventsForPartitionResult, HandleEventsForObserverState>(state, throttle, logger), IHandleEventsForObserver
 {
     const string SubscriberDisconnected = "Subscriber is disconnected";
@@ -392,7 +394,13 @@ public class HandleEventsForObserver(
         try
         {
             var decryptedEvents = await DecryptEvents(events);
-            var subscriber = GrainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition)) as IObserverSubscriber;
+
+            // PerformStep (and everything it calls, including this method) runs off the grain's activation
+            // thread - see the <remarks> on JobStep.PerformStep. The ambient Grain.GrainFactory property
+            // validates the Orleans activation context on the calling thread and throws "Activation access
+            // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
+            // service) is used instead of the ambient property.
+            var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, GetObserverSubscriberKey(partition)) as IObserverSubscriber;
             var result = await subscriber!.OnNext(partition, decryptedEvents, subscriberContext);
             return (result, decryptedEvents);
         }
