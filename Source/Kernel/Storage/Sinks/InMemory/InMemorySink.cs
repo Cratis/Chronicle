@@ -203,9 +203,9 @@ public class InMemorySink(
         }
 
         var targetType = readModel.GetSchemaForLatestGeneration().GetTargetTypeForPropertyPath("id", typeFormats);
-        if (targetType is not null && TryConvert(targetType, key.Value, out var converted))
+        if (targetType is not null)
         {
-            return converted;
+            return TypeConversion.Convert(targetType, key.Value);
         }
 
         if (key.Value.IsConcept())
@@ -219,26 +219,6 @@ public class InMemorySink(
         }
 
         return key.Value;
-    }
-
-#pragma warning disable SA1204 // Static elements should appear before instance elements
-    static bool TryConvert(Type targetType, object value, out object converted)
-#pragma warning restore SA1204
-    {
-        // A join event whose target root is not yet materialized resolves to the join SOURCE's key, which may
-        // be a different type than the joining read model's own id (for example a string organization number
-        // vs a Guid). Convert when the value fits the id type; otherwise keep it as-is rather than forcing a
-        // conversion (e.g. Guid.Parse of a non-Guid string) that would throw and crash the whole projection.
-        try
-        {
-            converted = TypeConversion.Convert(targetType, value);
-            return true;
-        }
-        catch (FormatException)
-        {
-            converted = null!;
-            return false;
-        }
     }
 
     ExpandoObject ApplyActualChanges(Key key, IEnumerable<Change> changes, ExpandoObject state)

@@ -87,18 +87,7 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
         var targetType = schemaProperty.GetTargetTypeForJsonSchemaProperty(typeFormats);
         if (targetType is not null)
         {
-            try
-            {
-                return TypeConversion.Convert(targetType, input);
-            }
-            catch (FormatException)
-            {
-                // The value does not fit the target type — e.g. a join key resolved from a string-concept-keyed
-                // source (an organization number) being converted against a Guid-keyed read model's id. Keep the
-                // value as-is rather than crashing the whole projection; the join then matches it against the
-                // correctly typed 'on' property. Conversions that already succeed are unaffected.
-                return input;
-            }
+            return TypeConversion.Convert(targetType, input);
         }
 
         if (input.GetType().IsEnumerable())
