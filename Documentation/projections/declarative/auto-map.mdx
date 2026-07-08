@@ -51,6 +51,12 @@ Joined events can also contribute matching properties through AutoMap. Use the j
 
 <ChronicleClientTabs snippet="projections/declarative/auto-map/join" clients="csharp,kotlin,java,elixir,typescript" />
 
+## Aggregate-Only Events
+
+An event a projection subscribes to **only to aggregate** — `Count`, `Increment`, `Decrement`, `Add`, or `Subtract` — does not contribute its other properties to AutoMap. Aggregating an event does not copy its unrelated fields onto the read model, so a property on it that happens to share a name with one you set from another event cannot overwrite that value. You do not need to disable AutoMap for this — it is the default behavior.
+
+<ChronicleClientTabs snippet="projections/declarative/auto-map/aggregate-only" clients="csharp" />
+
 ## When To Use AutoMap
 
 Use AutoMap when:
