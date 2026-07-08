@@ -411,6 +411,18 @@ internal static class ProjectionReadModelProcessor
         ExpandoObject state,
         Queue<KernelAppendedEvent> deferredEvents)
     {
+        // The production projection engine filters the event stream to the types the projection
+        // subscribes to, so an event a projection does not handle never reaches it. A seeded stream
+        // may legitimately carry such unrelated events (e.g. an audit/marker event); skip them here
+        // rather than letting GetKeyResolverFor throw MissingKeyResolverForEventType. HasKeyResolverFor
+        // is the exact predicate for "would GetKeyResolverFor succeed" (same resolver map), and the
+        // root projection's map includes child ([ChildrenFrom]) event types, so this is a faithful
+        // no-op filter for nested/join scenarios too.
+        if (!projection.HasKeyResolverFor(@event.Context.EventType))
+        {
+            return (state, null, false);
+        }
+
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
         var keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
 
