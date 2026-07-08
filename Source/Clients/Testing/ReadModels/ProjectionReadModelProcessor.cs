@@ -258,8 +258,20 @@ internal static class ProjectionReadModelProcessor
         // unwrapped primitive form. Without these options a concept CLR object serializes as an object
         // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
         // underlying primitive.
-        var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
-        var primary = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+        // The blended single-threaded state can carry a join-source key as its identifier when the join
+        // source was seeded before the entity — that does not deserialize into the read model's own id type.
+        // The per-key sink instances (InstanceForEventSourceId) are the reliable view in that case, so fall
+        // back to no primary rather than crashing the whole scenario.
+        TReadModel? primary = null;
+        try
+        {
+            var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
+            primary = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+        }
+        catch (Exception exception) when (exception is JsonException or FormatException)
+        {
+        }
+
         return (primary, instances);
     }
 
@@ -281,8 +293,20 @@ internal static class ProjectionReadModelProcessor
                 continue;
             }
 
-            var json = JsonSerializer.Serialize(document, Globals.JsonSerializerOptions);
-            var instance = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+            // A root-level join whose entity is not yet materialized stores a partial document keyed by the
+            // join SOURCE's key (e.g. a string org number), which is not a valid instance of a read model
+            // keyed by a different type (e.g. a Guid). Skip such artifact documents rather than crashing.
+            TReadModel? instance;
+            try
+            {
+                var json = JsonSerializer.Serialize(document, Globals.JsonSerializerOptions);
+                instance = JsonSerializer.Deserialize<TReadModel>(json, Globals.JsonSerializerOptions);
+            }
+            catch (Exception exception) when (exception is JsonException or FormatException)
+            {
+                continue;
+            }
+
             if (instance is null)
             {
                 continue;
