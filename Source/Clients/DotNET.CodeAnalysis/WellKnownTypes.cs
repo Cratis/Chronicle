@@ -268,6 +268,35 @@ public static class WellKnownTypes
         };
 
     /// <summary>
+    /// Determines whether an expression is a supported projection property accessor - a member-access chain rooted in a lambda parameter.
+    /// </summary>
+    /// <param name="expression">The expression to check.</param>
+    /// <param name="semanticModel">The <see cref="SemanticModel"/> used to resolve the root identifier.</param>
+    /// <returns>True if the expression is a member-access chain that bottoms out at a lambda parameter, false otherwise.</returns>
+    /// <remarks>
+    /// This is stricter than <see cref="IsPureMemberAccessChain(ExpressionSyntax)"/>: it rejects member-access chains rooted in
+    /// something other than the lambda parameter (for example <c>_ =&gt; DateTimeOffset.UtcNow</c>, which reads a static member and
+    /// ignores the parameter), as well as a bare parameter reference that maps no property. Projection builder accessors extract a
+    /// property path at definition time and are never executed, so only <c>parameter.Property</c> chains are valid.
+    /// </remarks>
+    public static bool IsProjectionPropertyAccessor(ExpressionSyntax expression, SemanticModel semanticModel)
+    {
+        if (expression is not MemberAccessExpressionSyntax)
+        {
+            return false;
+        }
+
+        var current = expression;
+        while (current is MemberAccessExpressionSyntax memberAccess)
+        {
+            current = memberAccess.Expression;
+        }
+
+        return current is IdentifierNameSyntax identifier &&
+               semanticModel.GetSymbolInfo(identifier).Symbol is IParameterSymbol;
+    }
+
+    /// <summary>
     /// Determines whether a statement is considered imperative (not a pure builder call).
     /// </summary>
     /// <param name="statement">The statement to check.</param>
