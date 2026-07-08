@@ -22,14 +22,9 @@ public class ChronicleOptions
     public static readonly string SectionPath = ConfigurationPath.Combine(SectionPaths);
 
     /// <summary>
-    /// Port to listen on for gRPC.
+    /// Port to listen on for all Chronicle traffic — gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1).
     /// </summary>
     public int Port { get; init; } = 35000;
-
-    /// <summary>
-    /// Gets the port for the Management API and well-known certificate endpoint.
-    /// </summary>
-    public int ManagementPort { get; init; } = 8080;
 
     /// <summary>
     /// Gets the health check endpoint.
@@ -94,22 +89,10 @@ public class ChronicleOptions
     public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
-    /// Gets or inits the optional Workbench configuration.
-    /// When not set, the Workbench uses the top-level <see cref="Tls"/> configuration.
-    /// </summary>
-    public Workbench? Workbench { get; init; }
-
-    /// <summary>
     /// Gets or inits the bootstrap client configurations.
     /// Clients defined here are registered on startup with hashed secrets.
     /// </summary>
     public IEnumerable<ClientBootstrapConfig> Clients { get; init; } = [];
-
-    /// <summary>
-    /// Gets the effective TLS configuration for the Workbench.
-    /// Falls back to the top-level <see cref="Tls"/> if <see cref="Workbench"/> or <see cref="Workbench.Tls"/> is not set.
-    /// </summary>
-    public Tls WorkbenchTls => Workbench?.Tls ?? Tls;
 
     /// <summary>
     /// Adds the Chronicle configuration.

@@ -52,76 +52,43 @@ if (chronicleOptions.Features.Api)
     builder.Services.AddCratisChronicleApi(useGrpc: false);
 }
 
-var grpcCertificate = CertificateLoader.LoadCertificate(chronicleOptions);
-var workbenchCertificate = CertificateLoader.LoadWorkbenchCertificate(chronicleOptions);
-var grpcTls = chronicleOptions.Tls;
-
-if (!grpcTls.Enabled)
-{
-    logger.TlsDisabled();
-}
-else if (grpcCertificate is not null)
+// The Chronicle port multiplexes gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1)
+// on a single port. Kestrel can only serve both protocols on one port over TLS, where ALPN
+// negotiates the protocol per connection — cleartext HTTP/2 (h2c) cannot share a port with HTTP/1.1.
+// A configured certificate is therefore required; in development one is generated automatically.
+var certificate = CertificateLoader.LoadCertificate(chronicleOptions);
+if (certificate is not null)
 {
     logger.TlsCertificateLoaded();
 }
 else
 {
 #if DEVELOPMENT
-    logger.TlsCertificateMissingDevelopment();
+    // The certificate must live for the lifetime of the process; Kestrel uses it for every TLS handshake.
+#pragma warning disable CA2000 // Dispose objects before losing scope
+    certificate = DevelopmentCertificate.Create();
+#pragma warning restore CA2000
+    logger.DevelopmentCertificateGenerated();
 #else
     logger.TlsCertificateMissingProduction();
+    throw new InvalidOperationException(
+        "No TLS certificate is configured. The Chronicle port serves gRPC (HTTP/2) and the Workbench, " +
+        "API and OAuth flows (HTTP/1.1) on a single TLS port, which requires a certificate. " +
+        "Provide one through Tls:CertificatePath (and Tls:CertificatePassword) in configuration. " +
+        "When TLS is terminated upstream by an ingress/reverse proxy, re-encrypt the connection to Chronicle.");
 #endif
 }
 
-logger.ServerListening(chronicleOptions.ManagementPort, chronicleOptions.Port);
+logger.ServerListening(chronicleOptions.Port);
 
 builder.WebHost.UseKestrel(options =>
 {
-    // Listen on ManagementPort for Workbench and API (HTTP/1.1)
-    // Uses Workbench-specific TLS config, falling back to top-level TLS
-    options.ListenAnyIP(chronicleOptions.ManagementPort, listenOptions =>
-    {
-        listenOptions.Protocols = HttpProtocols.Http1;
-
-        if (workbenchCertificate is not null)
-        {
-            listenOptions.UseHttps(workbenchCertificate);
-        }
-#if !DEVELOPMENT
-        else
-        {
-            // In production, Workbench TLS can be explicitly disabled for deployments
-            // behind an ingress/reverse proxy that terminates TLS upstream.
-            var workbenchTls = chronicleOptions.WorkbenchTls;
-            if (workbenchTls.Enabled)
-            {
-                throw new InvalidOperationException(
-                    "No TLS certificate is configured for the Workbench. " +
-                    "Either provide a certificate path in configuration, or set Workbench:Tls:Enabled to false " +
-                    "if TLS is terminated upstream by an ingress/reverse proxy.");
-            }
-        }
-#endif
-    });
-
-    // Listen on Port for gRPC (HTTP/2)
-    // Uses top-level TLS config and can run without TLS when explicitly disabled.
+    // A single TLS port for both gRPC (HTTP/2) and the Workbench, API and OAuth flows (HTTP/1.1),
+    // multiplexed per connection through ALPN.
     options.ListenAnyIP(chronicleOptions.Port, listenOptions =>
     {
-        listenOptions.Protocols = HttpProtocols.Http2;
-
-        if (grpcCertificate is not null)
-        {
-            listenOptions.UseHttps(grpcCertificate);
-        }
-#if !DEVELOPMENT
-        else if (grpcTls.Enabled)
-        {
-            throw new InvalidOperationException(
-                "No TLS certificate is configured for gRPC while TLS is enabled. " +
-                "Please provide a certificate path in configuration, or set Tls:Enabled to false.");
-        }
-#endif
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+        listenOptions.UseHttps(certificate);
     });
 
     options.Limits.Http2.MaxStreamsPerConnection = 100;
@@ -281,9 +248,7 @@ Console.CancelKeyPress += (sender, eventArgs) =>
     eventArgs.Cancel = true;
 };
 
-logger.ServerStarted(
-    chronicleOptions.ManagementPort,
-    chronicleOptions.Port);
+logger.ServerStarted(chronicleOptions.Port);
 
 await app.RunAsync(cancellationToken.Token);
 
