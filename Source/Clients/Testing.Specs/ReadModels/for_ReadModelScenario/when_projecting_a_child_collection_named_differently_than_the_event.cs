@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario;
 /// <summary>
 /// Documents the silent AutoMap-to-nothing failure: when a child bulk-list property is named differently from
 /// the event's list and nothing bridges them, the child materializes with an empty list — no error at runtime.
-/// CHR0024 (compile-time) and the projection-factory warning (runtime) exist to surface exactly this.
+/// CHR0033 (compile-time) and the projection-factory warning (runtime) exist to surface exactly this.
 /// </summary>
 public class when_projecting_a_child_collection_named_differently_than_the_event : Specification
 {
