@@ -175,25 +175,17 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
 
         if (typeSymbol.IsRecord && primaryConstructor is not null)
         {
-            foreach (var parameter in primaryConstructor.Parameters)
+            // A positional parameter generates a matching property; filtering on propertyNames excludes the
+            // compiler-generated copy constructor's parameter, which has no corresponding property.
+            foreach (var parameter in primaryConstructor.Parameters.Where(parameter => propertyNames.Contains(parameter.Name)))
             {
-                // A positional parameter generates a matching property; this filters out the compiler-generated
-                // copy constructor's parameter, which has no corresponding property.
-                if (propertyNames.Contains(parameter.Name))
-                {
-                    handledByParameter.Add(parameter.Name);
-                    yield return (parameter, parameter.Type);
-                }
+                handledByParameter.Add(parameter.Name);
+                yield return (parameter, parameter.Type);
             }
         }
 
-        foreach (var property in properties)
+        foreach (var property in properties.Where(property => !handledByParameter.Contains(property.Name)))
         {
-            if (handledByParameter.Contains(property.Name))
-            {
-                continue;
-            }
-
             yield return (property, property.Type);
         }
     }

@@ -194,22 +194,15 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    static INamedTypeSymbol? GetExplicitSourceEvent(ISymbol member)
-    {
-        foreach (var attribute in member.GetAttributes())
-        {
-            if (attribute.AttributeClass is { } attributeClass &&
+    static INamedTypeSymbol? GetExplicitSourceEvent(ISymbol member) =>
+        member.GetAttributes()
+            .Where(attribute =>
+                attribute.AttributeClass is { TypeArguments.Length: 1 } attributeClass &&
                 attributeClass.ContainingNamespace?.ToDisplayString() == ModelBoundNamespace &&
                 ExplicitSourceAttributeNames.Contains(attributeClass.Name) &&
-                attributeClass.TypeArguments.Length == 1 &&
-                attributeClass.TypeArguments[0] is INamedTypeSymbol eventType)
-            {
-                return eventType;
-            }
-        }
-
-        return null;
-    }
+                attributeClass.TypeArguments[0] is INamedTypeSymbol)
+            .Select(attribute => attribute.AttributeClass!.TypeArguments[0] as INamedTypeSymbol)
+            .FirstOrDefault();
 
     static bool HasNoAutoMap(ISymbol member) =>
         member.GetAttributes().Any(attribute =>
@@ -225,12 +218,9 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
 
     static IEnumerable<ISymbol> GetPropertiesAndParameters(INamedTypeSymbol typeSymbol)
     {
-        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>())
+        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>().Where(property => !property.IsStatic))
         {
-            if (!property.IsStatic)
-            {
-                yield return property;
-            }
+            yield return property;
         }
 
         // For a positional record, attributes without an explicit target land on the constructor parameter

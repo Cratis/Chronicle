@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -169,14 +170,6 @@ public class RedundantSetToWithMatchingNamesAnalyzer : DiagnosticAnalyzer
         }
 
         var typeName = containingType.OriginalDefinition.ToDisplayString();
-        foreach (var builderInterfaceName in _builderInterfaceNames)
-        {
-            if (typeName.Contains(builderInterfaceName))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return _builderInterfaceNames.Any(builderInterfaceName => typeName.Contains(builderInterfaceName));
     }
 }
