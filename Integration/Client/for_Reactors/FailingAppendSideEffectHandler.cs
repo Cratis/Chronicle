@@ -19,6 +19,7 @@ public class FailingAppendSideEffectHandler : IReactorSideEffectHandler
                 new AppendFailure(
                     [new ReactorConstraintViolation(nameof(FailingAppendSideEffect), "Simulated reactor side-effect append failure")],
                     false,
+                    [],
                     [])
             ]);
         return Task.FromResult(Result.Failed(failure));

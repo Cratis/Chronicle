@@ -41,13 +41,13 @@ public static class ExpressionExtensions
     /// member-access accessor rooted in the lambda parameter (for example <c>e => e.Property</c> or <c>e => e.Parent.Child</c>).
     /// </summary>
     /// <param name="expression"><see cref="Expression"/> to get from.</param>
-    /// <param name="propertyPath">When this method returns <c>true</c>, the extracted <see cref="PropertyPath"/>; otherwise <see cref="PropertyPath.NotSet"/>.</param>
+    /// <param name="propertyPath">When this method returns <see langword="true"/>, the extracted <see cref="PropertyPath"/>; otherwise <see cref="PropertyPath.NotSet"/>.</param>
     /// <returns>True if the expression is a supported member-access accessor, false otherwise.</returns>
     /// <remarks>
     /// Unlike <see cref="GetPropertyPath(Expression)"/> — which silently returns an empty or partial path for
     /// unsupported shapes — this method rejects anything that is not a pure member-access chain bottoming out at the
     /// lambda parameter. Method calls, string interpolation, arithmetic, conditionals, constants, and expressions that
-    /// ignore the parameter (such as <c>_ => DateTimeOffset.UtcNow</c>) all return <c>false</c>, because the builder
+    /// ignore the parameter (such as <c>_ => DateTimeOffset.UtcNow</c>) all return <see langword="false"/>, because the builder
     /// extracts a property path from the expression at definition time rather than executing it.
     /// </remarks>
     public static bool TryGetPropertyPath(this Expression expression, out PropertyPath propertyPath)
