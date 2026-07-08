@@ -25,7 +25,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
 
 WORKDIR /app
 
-EXPOSE 8080 11111 30000 35000
+EXPOSE 11111 30000 35000
 
 # Copy prepared files from prep stage
 COPY --from=prep /app/. ./

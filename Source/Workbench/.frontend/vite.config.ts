@@ -64,19 +64,25 @@ export default defineConfig({
         port: 9000,
         open: false,
         proxy: {
+            // The Chronicle kernel serves everything on a single TLS port; `secure: false`
+            // accepts the self-signed certificate generated in development.
             '/api': {
-                target: 'http://localhost:8080',
+                target: 'https://localhost:35000',
+                secure: false,
                 ws: true
             },
             '/identity': {
-                target: 'http://localhost:8080',
+                target: 'https://localhost:35000',
+                secure: false,
                 ws: true
             },
             '/swagger': {
-                target: 'http://localhost:8080'
+                target: 'https://localhost:35000',
+                secure: false
             },
             '/.cratis': {
-                target: 'http://localhost:8080',
+                target: 'https://localhost:35000',
+                secure: false,
                 ws: true
             }
         }
