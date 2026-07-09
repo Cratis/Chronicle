@@ -6,15 +6,15 @@ Chronicle Server exposes the following ports:
 
 ```json
 {
-  "managementPort": 8080,
   "port": 35000
 }
 ```
 
 | Port | Service | Description |
 | --- | --- | --- |
-| 8080 | Management API | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo | Internal Orleans clustering |
 | 30000 | Orleans Gateway | Client connections to Orleans cluster |
-| 35000 | Main Service | Primary Chronicle gRPC service port |
+| 35000 | Chronicle | gRPC (HTTP/2) and Workbench, REST API, OAuth and health (HTTP/1.1), multiplexed over TLS |
+
+The port requires TLS. In development, when no certificate is configured, Chronicle generates a self-signed certificate automatically so the port works out of the box.
 

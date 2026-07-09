@@ -106,13 +106,12 @@ public static class OpenIddictServiceCollectionExtensions
                 }
 #endif
 
-                // Determine if the identity provider has TLS enabled (token endpoint runs on the management port).
-                // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls for backward compatibility.
-                var identityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
-                var identityProviderHasSecureCertificate = identityProviderCertificate.Enabled && !string.IsNullOrEmpty(identityProviderCertificate.CertificatePath);
+                // When no certificate is explicitly configured, development serves the token endpoint
+                // with an auto-generated self-signed certificate. Relax OpenIddict's transport-security
+                // requirement in that case so a proxy/forwarded-header setup that reports http still works.
+                var hasExplicitCertificate = chronicleOptions.Tls.Enabled && !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath);
 
-                // Allow HTTP connections when Workbench TLS is disabled (e.g. behind ingress/reverse proxy)
-                if (!identityProviderHasSecureCertificate)
+                if (!hasExplicitCertificate)
                 {
                     options.UseAspNetCore()
                            .EnableTokenEndpointPassthrough()
@@ -130,10 +129,9 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // Use identity provider certificate config to determine the issuer scheme
-                    // since the token endpoint is served on the management port
-                    var internalScheme = identityProviderHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-                    var internalAuthority = new UriBuilder(internalScheme, "localhost", chronicleOptions.ManagementPort).Uri;
+                    // The Chronicle port always serves TLS, so the token endpoint (and therefore the
+                    // issuer) is always https.
+                    var internalAuthority = new UriBuilder(Uri.UriSchemeHttps, "localhost", chronicleOptions.Port).Uri;
                     options.SetIssuer(internalAuthority);
                 }
             })
@@ -155,15 +153,12 @@ public static class OpenIddictServiceCollectionExtensions
                 }
                 else
                 {
-                    // Use identity provider certificate config since tokens are served on the management port.
-                    // Prefer IdentityProvider:Certificate when configured and fall back to top-level Tls.
-                    var validationIdentityProviderCertificate = chronicleOptions.IdentityProvider?.Certificate ?? chronicleOptions.Tls;
-                    var validationHasSecureCertificate = validationIdentityProviderCertificate.Enabled && !string.IsNullOrEmpty(validationIdentityProviderCertificate.CertificatePath);
-                    scheme = validationHasSecureCertificate ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+                    // The Chronicle port always serves TLS, so tokens are issued and validated over https.
+                    scheme = Uri.UriSchemeHttps;
                     host = "localhost";
                 }
 
-                var baseAuthority = (authorityValue ?? new UriBuilder(scheme, host, chronicleOptions.ManagementPort).Uri.ToString()).TrimEnd('/');
+                var baseAuthority = (authorityValue ?? new UriBuilder(scheme, host, chronicleOptions.Port).Uri.ToString()).TrimEnd('/');
 
                 var issuers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -171,11 +166,8 @@ public static class OpenIddictServiceCollectionExtensions
                         $"{baseAuthority}/"
                 };
 
-                var management = new UriBuilder(scheme, host, chronicleOptions.ManagementPort).Uri.ToString().TrimEnd('/');
                 var main = new UriBuilder(scheme, host, chronicleOptions.Port).Uri.ToString().TrimEnd('/');
 
-                issuers.Add(management);
-                issuers.Add($"{management}/");
                 issuers.Add(main);
                 issuers.Add($"{main}/");
 

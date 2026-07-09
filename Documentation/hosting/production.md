@@ -28,10 +28,11 @@ Chronicle exposes the following ports:
 
 | Port  | Service           | Description                              |
 |-------|-------------------|------------------------------------------|
-| 8080  | Management API    | REST API, Workbench, and well-known endpoints |
 | 11111 | Orleans Silo      | Internal Orleans clustering              |
 | 30000 | Orleans Gateway   | Client connections to Orleans cluster    |
-| 35000 | Main Service      | Primary Chronicle gRPC service port      |
+| 35000 | Main Service      | gRPC (HTTP/2) plus REST API, Workbench, OAuth, and health checks (HTTP/1.1), multiplexed over one TLS port |
+
+> **Note**: Port 35000 serves both HTTP/2 (gRPC) and HTTP/1.1 over TLS, so it **requires** a certificate. In production you must supply one via `Tls:CertificatePath` (and `Tls:CertificatePassword` if the certificate is protected). See [TLS Configuration](configuration/tls.md).
 
 ## Docker Deployment
 
@@ -40,7 +41,6 @@ Chronicle exposes the following ports:
 ```bash
 docker run -d \
   --name chronicle \
-  -p 8080:8080 \
   -p 35000:35000 \
   -v /path/to/chronicle.json:/app/chronicle.json:ro \
   cratis/chronicle:latest
@@ -55,7 +55,6 @@ services:
   chronicle:
     image: cratis/chronicle:latest
     ports:
-      - "8080:8080"
       - "35000:35000"
     volumes:
       - ./chronicle.json:/app/chronicle.json:ro
@@ -92,7 +91,7 @@ Chronicle exposes a health check endpoint at `/health` by default. Add health ch
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD curl -fk https://localhost:35000/health || exit 1
 ```
 
 > **Note**: The health check endpoint path is configurable. See [Root Properties](configuration/root-properties.md#health-check-endpoint) for details.
@@ -111,6 +110,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 Chronicle supports horizontal scaling through Orleans clustering:
 
 1. **Multiple Instances**: Deploy multiple Chronicle containers
-2. **Load Balancing**: Use a load balancer for API traffic (port 8080)
+2. **Load Balancing**: Use a load balancer for API traffic (port 35000)
 3. **Orleans Clustering**: Ensure Orleans ports (11111, 30000) are accessible between instances
 4. **Shared Storage**: All instances must connect to the same MongoDB cluster

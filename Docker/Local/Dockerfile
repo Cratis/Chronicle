@@ -25,5 +25,5 @@ RUN chmod +x ./Cratis.Chronicle.Server
 RUN sed -i 's/"System.Globalization.Invariant": true/"System.Globalization.Invariant": false/g' \
     Cratis.Chronicle.Server.runtimeconfig.json
 
-EXPOSE 8080 11111 30000 35000
+EXPOSE 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

@@ -12,7 +12,6 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
     ports:
       - 27017:27017
-      - 8080:8080
       - 11111:11111
       - 30000:30000
       - 35000:35000

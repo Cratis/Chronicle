@@ -19,7 +19,7 @@ That first argument is the [event source id](../concepts/event-source.md) — th
 > [!TIP]
 > We use a raw generated id here to keep the quickstart short. In C#, real code would wrap it in a strongly-typed `BookId` so the compiler can't confuse a book's id with a member's — the [tutorial](/chronicle/tutorial/) shows exactly that. Kotlin, Elixir, and TypeScript event source ids are plain strings; those clients don't currently have an equivalent typed-id wrapper.
 
-Run your app, then open the <a href="http://localhost:8080" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
+Run your app, then open the <a href="https://localhost:35000" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `BookAdded` is sitting there at sequence number `0`, permanent and in order.
 
 > [!NOTE]
 > If you are using the Development or Development-slim image, log in with username **Admin** and password **ChangeMeNow!**. See [Workbench — Development](../workbench/development.md) for details.

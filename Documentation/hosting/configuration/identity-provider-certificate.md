@@ -2,7 +2,7 @@
 
 When Chronicle uses the internal OAuth authority (`authentication.authority` is not set), you can configure a dedicated certificate for identity provider endpoints.
 
-This certificate configuration is separate from Workbench TLS and uses its own configuration path:
+This certificate configuration is separate from the top-level TLS certificate and uses its own configuration path:
 
 - `identityProvider.certificate`
 
@@ -71,4 +71,3 @@ Cratis__Chronicle__IdentityProvider__Certificate__CertificatePassword=your-passw
 
 - [Authentication](authentication.md)
 - [TLS](tls.md)
-- [Workbench TLS Configuration](workbench-tls.md)

@@ -6,7 +6,6 @@ All configuration options can be set using environment variables with the prefix
 
 ```json
 {
-  "managementPort": 8080,
   "port": 35000,
   "features": {
     "api": true,
@@ -23,8 +22,7 @@ All configuration options can be set using environment variables with the prefix
 
 | Variable | Description |
 | --- | --- |
-| Cratis__Chronicle__Port | gRPC service port |
-| Cratis__Chronicle__ManagementPort | Management API port |
+| Cratis__Chronicle__Port | The single Chronicle port — gRPC (HTTP/2) and HTTP/1.1 |
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
@@ -53,11 +51,8 @@ All configuration options can be set using environment variables with the prefix
 ## Port Configuration
 
 ```bash
-# gRPC port (default: 35000)
+# The single Chronicle port — gRPC (HTTP/2) plus HTTP/1.1 (default: 35000)
 Cratis__Chronicle__Port=35000
-
-# Management API port (default: 8080)
-Cratis__Chronicle__ManagementPort=8080
 ```
 
 ## Health Check Endpoint

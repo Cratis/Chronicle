@@ -145,7 +145,6 @@ Chronicle ships with:
 ```shell
 docker run -d --name chronicle \
   -p 35000:35000 \
-  -p 8080:8080 \
   cratis/chronicle:latest-development
 ```
 
@@ -156,8 +155,7 @@ services:
   chronicle:
     image: cratis/chronicle:latest-development
     ports:
-      - "35000:35000"   # gRPC / API
-      - "8080:8080"     # Web Workbench
+      - "35000:35000"   # gRPC, REST API and Web Workbench (single TLS port)
 ```
 
 ```shell
@@ -282,7 +280,7 @@ Chronicle follows a **client-server** model:
 | **Chronicle Kernel** | Server that manages event storage, observer dispatch, projection processing, and querying |
 | **Client SDK** | .NET libraries (`Cratis.Chronicle` / `Cratis.Chronicle.AspNetCore`) that connect your app to the Kernel |
 | **MongoDB Backend** | Default event and read-model storage; extensible to other providers |
-| **Web Workbench** | Browser-based dashboard available at `http://localhost:8080` when running the development image |
+| **Web Workbench** | Browser-based dashboard available at `https://localhost:35000` when running the development image |
 
 ---
 

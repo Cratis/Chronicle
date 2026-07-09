@@ -6,7 +6,6 @@ Chronicle Server loads configuration from a `chronicle.json` file in the applica
 
 ```json
 {
-    "managementPort": 8080,
     "port": 35000,
     "healthCheckEndpoint": "/health",
     "features": {
@@ -51,7 +50,7 @@ Environment variables can override any of these values. See [Configuration Prece
 
 | Section | Description |
 | --- | --- |
-| managementPort, port, healthCheckEndpoint | Root properties for ports and health check path |
+| port, healthCheckEndpoint | Root properties for the port and health check path |
 | features | Feature toggles for API, Workbench, and OAuth authority |
 | storage | Storage provider configuration |
 | observers | Retry and timeout settings for observers |

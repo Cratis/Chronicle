@@ -1,6 +1,6 @@
 # TLS Configuration (Client)
 
-Chronicle .NET clients support TLS for secure communication with Chronicle Server. TLS is enabled by default on the server, but can be disabled.
+Chronicle .NET clients communicate with Chronicle Server over TLS. The server always serves its single port over TLS — in development it generates a self-signed certificate automatically — so the client connects over TLS by default.
 
 For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/configuration/tls.md).
 
@@ -30,11 +30,11 @@ For server-side TLS configuration, see [TLS Configuration (Server)](../hosting/c
 | --- | --- | --- | --- |
 | CertificatePath | string | null | Path to the client certificate (PFX format) if mutual TLS is used |
 | CertificatePassword | string | null | Password for the certificate file |
-| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. To connect to a non-TLS development server, use `?disableTls=true` in the connection string (see below) |
+| IsDisabled | boolean (read-only) | computed | `true` when no certificate path/password is set. Use `?disableTls=true` in the connection string only to reach a genuinely non-TLS endpoint (a standard Chronicle server always serves TLS) |
 
 ## Connection string option
 
-TLS can also be disabled through the connection string in development:
+For the rare case of a non-TLS endpoint, TLS can be turned off through the connection string:
 
 <ChronicleClientTabs snippet="configuration/tls/connection-string-disable" />
 
@@ -43,16 +43,15 @@ TLS can also be disabled through the connection string in development:
 When we talk about **Development** vs **Production**, we're talking about the development Docker image
 vs the Production Docker image.
 
-- **Development**: TLS is disabled by default.
-- **Production**: TLS should remain enabled but can be disabled.
+- **Development**: the server serves TLS with an auto-generated self-signed certificate, and the client accepts it automatically — no certificate setup is needed on either side.
+- **Production**: the server uses a real certificate you supply; the client validates it with standard TLS rules.
 
 ## Certificate validation
 
 The client validates server certificates using standard TLS rules:
 
 - Valid certificates are accepted without extra configuration.
-- Self-signed certificates require trust on the client machine.
-- Name mismatches for localhost are accepted for development.
+- The self-signed certificate a Chronicle server generates in development is accepted automatically (untrusted root / name mismatch) — no manual trust-store setup is required.
 
 ## Troubleshooting
 
@@ -63,7 +62,6 @@ The client validates server certificates using standard TLS rules:
 **Solutions**:
 1. Ensure the server certificate is valid and not expired.
 2. Verify the client trusts the certificate authority.
-3. For development, install the self-signed certificate in the system trust store.
-4. As a last resort for development only, disable TLS with `?disableTls=true` in the connection string.
+3. In development, the client already accepts the server's auto-generated self-signed certificate — no action is needed.
 
 

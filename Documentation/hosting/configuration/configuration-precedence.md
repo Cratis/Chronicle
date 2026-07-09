@@ -12,8 +12,7 @@ This allows you to set baseline configuration in `chronicle.json` and override s
 
 ```json
 {
-  "port": 35000,
-  "managementPort": 8080
+  "port": 35000
 }
 ```
 

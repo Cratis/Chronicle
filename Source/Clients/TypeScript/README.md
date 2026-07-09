@@ -157,12 +157,12 @@ const connection = new ChronicleConnection({
 // With custom authority
 const connection = new ChronicleConnection({
     connectionString: 'chronicle://client-id:client-secret@localhost:35000',
-    authority: 'https://my-auth-server.com',
-    managementPort: 8080 // Optional, defaults to 8080
+    authority: 'https://my-auth-server.com'
 });
 ```
 
-The token is automatically included as a Bearer token in the authorization header for all gRPC calls.
+The token endpoint is served on the same port as gRPC (the single Chronicle port). The token is
+automatically included as a Bearer token in the authorization header for all gRPC calls.
 
 #### API Key
 
@@ -210,10 +210,7 @@ const connection = new ChronicleConnection({
     
     // Optional: Custom authentication authority URL
     // If not set, uses Chronicle server as the authority
-    authority: 'https://my-auth-server.com',
-    
-    // Optional: Management port for authentication endpoint (defaults to 8080)
-    managementPort: 8080
+    authority: 'https://my-auth-server.com'
 });
 ```
 

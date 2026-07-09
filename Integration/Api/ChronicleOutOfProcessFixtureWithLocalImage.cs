@@ -77,7 +77,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             ["password"] = DefaultAdminPassword
         });
 
-        var response = await httpClient.PostAsync("https://localhost:8081/connect/token", tokenRequest);
+        var response = await httpClient.PostAsync("https://localhost:35001/connect/token", tokenRequest);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -91,7 +91,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
                 ["password"] = DefaultAdminPassword
             });
 
-            response = await httpClient.PostAsync("https://localhost:8081/connect/token", retryTokenRequest);
+            response = await httpClient.PostAsync("https://localhost:35001/connect/token", retryTokenRequest);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -195,13 +195,12 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     protected override IContainer BuildContainer(INetwork network)
     {
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(8080));
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000));
 
         var builder = new ContainerBuilder("cratis/chronicle:latest-development");
         builder = ConfigureImage(builder)
             .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
             .WithPortBinding(MongoDBPort, 27017)
-            .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")

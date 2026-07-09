@@ -43,5 +43,5 @@ RUN sed -i \
         -e 's/"System.Globalization.PredefinedCulturesOnly": true/"System.Globalization.PredefinedCulturesOnly": false/g' \
     Cratis.Chronicle.Server.runtimeconfig.json
 
-EXPOSE 8080 11111 30000 35000
+EXPOSE 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

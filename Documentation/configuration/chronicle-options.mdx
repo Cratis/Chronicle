@@ -26,7 +26,6 @@ All bindable settings live under `Cratis:Chronicle`:
       "AutoDiscoverAndRegister": true,
       "MaxReceiveMessageSize": 104857600,
       "MaxSendMessageSize": 104857600,
-      "ManagementPort": 8080,
       "ProgramIdentifier": "my-app",
       "ClaimsBasedNamespaceResolverClaimType": "tenant_id",
       "Tls": {
@@ -129,15 +128,6 @@ Maximum gRPC message sizes in bytes. See [gRPC Message Size](grpc-message-size) 
 |---|---|
 | Type | `int?` |
 | Default | `104857600` (100 MB) |
-
-### ManagementPort
-
-Port used for the Management API and the well-known certificate endpoint.
-
-| | |
-|---|---|
-| Type | `int` |
-| Default | `8080` |
 
 ### ProgramIdentifier
 

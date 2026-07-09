@@ -44,5 +44,5 @@ RUN chmod +x ./entrypoint.sh
 COPY --from=prep /app/. ./
 COPY ./Docker/Development/appsettings.json ./appsettings.json
 
-EXPOSE 8080 11111 30000 35000
+EXPOSE 11111 30000 35000
 ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/app/entrypoint.sh"]

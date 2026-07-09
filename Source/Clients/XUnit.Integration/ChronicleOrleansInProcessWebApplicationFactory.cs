@@ -102,15 +102,11 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
 
                 // For SQL OOP modes the in-process silo has its own separate database and
                 // therefore its own empty auth tables. The OOP Chronicle container owns the
-                // canonical chronicle-dev-client registration and exposes its management
-                // endpoint on host port 8081. Point the in-process ChronicleClient at that
-                // port so it authenticates against the OOP container rather than against
-                // the in-process silo's empty auth tables.
-                if (storageHostConfiguration is not null)
-                {
-                    services.PostConfigure<ChronicleClientOptions>(options => options.ManagementPort = 8081);
-                }
-
+                // canonical chronicle-dev-client registration. The ChronicleClient already
+                // points at the OOP container (chronicle://localhost:35001), and since the
+                // OAuth token endpoint is served on that same consolidated port, the client
+                // authenticates against the OOP container rather than the in-process silo's
+                // empty auth tables without any extra configuration.
                 if (defaultSinkTypeId is not null)
                 {
                     services.PostConfigure<ChronicleClientOptions>(options => options.DefaultSinkTypeId = defaultSinkTypeId);

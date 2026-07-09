@@ -11,24 +11,13 @@ namespace Cratis.Chronicle.Server;
 public static class CertificateLoader
 {
     /// <summary>
-    /// Loads the gRPC TLS certificate from the top-level TLS configuration.
+    /// Loads the TLS certificate from the top-level TLS configuration.
     /// </summary>
     /// <param name="options">The Chronicle options.</param>
     /// <returns>The loaded certificate or null if no certificate is available.</returns>
     public static X509Certificate2? LoadCertificate(Configuration.ChronicleOptions options)
     {
         return LoadFromTls(options.Tls);
-    }
-
-    /// <summary>
-    /// Loads the Workbench TLS certificate using the Workbench TLS fallback chain.
-    /// </summary>
-    /// <param name="options">The Chronicle options.</param>
-    /// <returns>The loaded certificate or null if no certificate is available.</returns>
-    public static X509Certificate2? LoadWorkbenchCertificate(Configuration.ChronicleOptions options)
-    {
-        var workbenchTls = options.WorkbenchTls;
-        return LoadFromTls(workbenchTls);
     }
 
     static X509Certificate2? LoadFromTls(Configuration.Tls tls)
