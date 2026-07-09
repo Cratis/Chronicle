@@ -8,7 +8,8 @@ using MongoDB.Driver;
 // through an injected read model parameter or IReadModels.GetInstanceById instead.
 public class Chr0032OrderProcessor(IMongoCollection<Chr0032Order> orders) : IReactor
 {
-    public Task OrderPlaced(Chr0032OrderPlaced @event, EventContext context) => Task.CompletedTask;
+    public async Task OrderPlaced(Chr0032OrderPlaced @event, EventContext context) =>
+        await orders.Find(order => order.OrderNumber == @event.OrderNumber).FirstOrDefaultAsync();
 }
 
 [EventType]

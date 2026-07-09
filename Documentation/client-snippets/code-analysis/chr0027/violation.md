@@ -7,6 +7,6 @@ using Cratis.Chronicle.Events;
 [EventStreamId("orders")]
 public class Chr0027PlaceOrder : ICanProvideEventStreamId
 {
-    public string GetEventStreamId() => "orders";
+    public EventStreamId GetEventStreamId() => "orders";
 }
 ```
