@@ -2,7 +2,7 @@
 
 This section documents the code analysis rules provided by the Chronicle Code Analyzer for the .NET client.
 
-All rules follow the identifier format `CHR####` where the numbers are sequential without gaps.
+All rules follow the identifier format `CHR####`. Numbers are assigned sequentially; an occasional id is reserved for a rule still in progress, so a gap in the published set is expected.
 
 ## Rules Overview
 
@@ -36,6 +36,10 @@ All rules follow the identifier format `CHR####` where the numbers are sequentia
 | [CHR0030](CHR0030) | [ChildrenFrom] child collection property auto-maps to nothing | Warning | A [ChildrenFrom] child collection property matching no event property and with no explicit mapping always projects empty; rename it or bridge with `[SetFrom<T>]` |
 | [CHR0031](CHR0031) | Reactor must not have mutable state | Warning | Reactors are re-created and replayed, so mutable instance state is unreliable; use readonly, primary-constructor-injected dependencies |
 | [CHR0032](CHR0032) | Reactor must not access storage directly | Warning | Injecting a storage primitive like `IMongoCollection<T>` couples the reactor to a sink; read state via a read model or IReadModels.GetInstanceById |
+| [CHR0034](CHR0034) | [PII] cannot be applied to an `EventSourceId<T>` | Error | The event source id is the encryption-key lookup identity, so it cannot be encrypted; [PII] on it throws PIINotSupportedOnEventSourceId at runtime |
+| [CHR0035](CHR0035) | Read model declares a reserved '_subject' property | Error | Chronicle reserves the `_subject` field in a read model's document for internal compliance-subject tracking; a same-named property collides with it |
+| [CHR0036](CHR0036) | Reducer must not have mutable state | Warning | Reducers are re-created and replayed, so mutable instance state or direct storage injection makes the fold non-deterministic; keep them stateless |
+| [CHR0037](CHR0037) | Event type migration generations must share one explicit [EventType] id | Warning | The two generations referenced by an EventTypeMigration must carry the same explicit [EventType] id and differ only by generation, or the migration never applies |
 
 ## Quick Fixes
 

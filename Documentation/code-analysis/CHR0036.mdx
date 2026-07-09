@@ -1,0 +1,30 @@
+# CHR0036: Reducer must not have mutable state
+
+## Rule Description
+
+A class implementing `IReducerFor<T>` declares mutable instance state — a non-`readonly` field or a settable (non-`init`) property — or injects a storage primitive such as `IMongoCollection<T>` through its constructor. Reducers fold events into read-model state and Chronicle re-creates and replays them, so they must be stateless and deterministic.
+
+Keep the reducer stateless: express dependencies as `readonly`, primary-constructor-injected fields, read keyed state through an injected read model or `IReadModels.GetInstanceById`, and derive everything else from the current state and the event.
+
+## Severity
+
+Warning
+
+## Example
+
+<ChronicleClientTabs snippet="code-analysis/chr0036/violation" />
+
+## Why This Rule Exists
+
+A reducer is a pure function of `(current state, event) → next state`. Chronicle drives that function by replaying the event stream — during initial projection, after a rewind, on recovery, or when rebuilding a read model — and a single event source may be folded more than once.
+
+Mutable instance state breaks that contract. A running total accumulated in a field is wrong the moment the stream replays, and a value can bleed from one event source into the next when the instance is reused. Everything the next state depends on is already available: the `current` state parameter (the fold's accumulator, which Chronicle persists between events) and the event being handled. Anything derived should be computed from those inputs each time, not stored on the instance.
+
+Injecting a storage primitive like `IMongoCollection<T>` is the same failure from the other side: it lets the reducer read or write the sink directly, outside the deterministic fold, coupling it to where state is persisted. Read state through the read-model abstraction instead.
+
+This rule mirrors [CHR0031](CHR0031) and [CHR0032](CHR0032) for reactors — reducers carry the identical statelessness requirement.
+
+## Related Rules
+
+- [CHR0031: Reactor must not have mutable state](CHR0031) — the same requirement for reactors.
+- [CHR0032: Reactor must not access storage directly](CHR0032) — read state through a read model, not a sink.
