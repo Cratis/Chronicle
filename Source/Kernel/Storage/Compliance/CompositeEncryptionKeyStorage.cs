@@ -47,6 +47,25 @@ public class CompositeEncryptionKeyStorage(params IEncryptionKeyStorage[] inner)
         await TryGetFor(eventStore, eventStoreNamespace, identifier, revision) ?? throw new MissingEncryptionKey(identifier);
 
     /// <inheritdoc/>
+    public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
+    {
+        if (inner.Length == 0)
+        {
+            return key;
+        }
+
+        // Provision atomically on the first store, then mirror the winning key to the rest so every store
+        // converges on the same key pair. Using GetOrAddFor on the mirrors keeps them idempotent.
+        var provisioned = await inner[0].GetOrAddFor(eventStore, eventStoreNamespace, identifier, key);
+        foreach (var store in inner.Skip(1))
+        {
+            await store.GetOrAddFor(eventStore, eventStoreNamespace, identifier, provisioned);
+        }
+
+        return provisioned;
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
     {
         foreach (var innerStore in inner)

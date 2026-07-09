@@ -39,6 +39,35 @@ public class EncryptionKeyStorage(IDatabase database) : IEncryptionKeyStorage
     }
 
     /// <inheritdoc/>
+    public async Task<EncryptionKey> GetOrAddFor(
+        EventStoreName eventStore,
+        EventStoreNamespaceName eventStoreNamespace,
+        EncryptionKeyIdentifier identifier,
+        EncryptionKey key)
+    {
+        var collection = GetCollection(eventStore, eventStoreNamespace);
+        if (await TryGetFor(eventStore, eventStoreNamespace, identifier) is { } existing)
+        {
+            return existing;
+        }
+
+        var id = new EncryptionKeyId(identifier, EncryptionKeyRevision.Initial);
+        try
+        {
+            await collection.InsertOneAsync(new EncryptionKeyForIdentifier(id, key.Public, key.Private));
+            return key;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // Another provisioner created the initial key concurrently. Converge on the persisted key so
+            // every writer encrypts under the same one — the insert on the primary is the ordering point,
+            // so this is race-safe even when the pre-check above read a stale replica.
+            var winner = await collection.Find(_ => _.Id == id).FirstOrDefaultAsync();
+            return winner is null ? key : new(winner.PublicKey, winner.PrivateKey);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasFor(
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
