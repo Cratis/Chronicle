@@ -36,8 +36,7 @@ public class and_event_has_explicit_subject : Specification
 
         _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
         _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.HasFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(true);
-        _encryptionKeyStorage.GetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKey([], []));
+        _encryptionKeyStorage.TryGetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKey([], []));
         _silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();
@@ -109,7 +108,7 @@ public class and_event_has_explicit_subject : Specification
 
     [Fact]
     Task should_copy_encryption_key_to_target_event_store() =>
-        _encryptionKeyStorage.Received(1).SaveFor(
+        _encryptionKeyStorage.Received(1).GetOrAddFor(
             "Lobby",
             EventStoreNamespaceName.Default,
             Arg.Is<EncryptionKeyIdentifier>(identifier => identifier.Value == _explicitSubject.Value),

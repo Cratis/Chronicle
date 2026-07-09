@@ -90,7 +90,7 @@ public class and_target_store_already_has_encryption_key : Specification
 
     [Fact]
     Task should_not_copy_encryption_key_to_target_event_store() =>
-        _encryptionKeyStorage.DidNotReceive().SaveFor(
+        _encryptionKeyStorage.DidNotReceive().GetOrAddFor(
             Arg.Any<EventStoreName>(),
             Arg.Any<EventStoreNamespaceName>(),
             Arg.Any<EncryptionKeyIdentifier>(),
