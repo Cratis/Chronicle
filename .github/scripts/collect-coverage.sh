@@ -67,7 +67,7 @@ current_date=$(date +%Y-%m-%d)
 year=$(date +%Y)
 month=$(date +%m)
 day=$(date +%d)
-week_of_month=$(( (day + 6) / 7 ))
+week_of_month=$(( (10#$day + 6) / 7 ))
 current_week="${year}-M${month}-W${week_of_month}"
 
 # Extract commit hash (first 7 chars)
